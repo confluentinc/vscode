@@ -1,0 +1,100 @@
+name: 'Report a bug'
+description: Report a bug with the Confluent extension for VS Code.
+labels:
+  - 'bug'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to tell us about your issue using the Confluent extension for VS Code!
+
+        Requests for features and improvements to the extension or documentation should be opened in [discussions](https://github.com/confluentinc/vscode/discussions/new?category=ideas). For more information about opening a feature request, [read more](https://github.com/confluentinc/vscode/blob/main/CONTRIBUTING.md).
+
+        Before opening a new issue, please do a [search](https://github.com/confluentinc/vscode/issues) of existing issues and :+1: upvote the existing issue instead. This will result in a quicker resolution.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/confluentinc/vscode/blob/master/CODE_OF_CONDUCT.md). 
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: On what operating system are you seeing the problem?
+      multiple: true
+      options:
+        - macOS (Intel/x64)
+        - macOS (Apple/arm64)
+        - Linux (x64)
+        - Linux (arm64)
+        - Other
+  - type: textarea
+    id: vscode_version
+    attributes:
+      label: VS Code version
+      description: What is the VS Code version in which the Confluent extension is installed?
+      placeholder: Copy from 'About Visual Studio Code' and paste here
+    validations:
+      required: true
+  - type: input
+    id: contact
+    attributes:
+      label: Version of Confluent extension
+      description: What version of Confluent extension for VS Code did you use?
+      placeholder: ex. v0.10.0
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: To Reproduce
+      description: A step-by-step description of how to reproduce the issue. Screenshots can be provided in the issue body below. If using code blocks, make sure that [syntax highlighting is correct](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks#syntax-highlighting) and double check that the rendered preview is not broken.
+      placeholder: |
+        1. 
+        2. Click X
+        3. Y will happen
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Current vs. Expected behavior
+      description: A clear and concise description of what the bug is, and what you expected to happen.
+      placeholder: 'Following the steps from the previous section, I expected A to happen, but I observed B instead'
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: dropdown
+    attributes:
+      label: Which area(s) are affected? (Select all that apply)
+      multiple: true
+      options:
+        - 'Not sure'
+        - 'Installation'
+        - 'Connections'
+        - 'Confluent Cloud'
+        - 'Confluent Platform'
+        - 'Local'
+        - 'Topics'
+        - 'Schemas'
+        - 'Messages'
+        - 'Project generation'
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: |
+        Any extra information that might help us investigate. Does the issue happen repeatedly? Are you able to log into Confluent Cloud? 
+      placeholder: |
+        Yes, the issue happens (almost) every time I perform the steps above.
+
+        or
+
+        No, the issue is intermittent. 
+
