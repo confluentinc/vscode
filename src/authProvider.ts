@@ -294,7 +294,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
 /** Converts a {@link Connection} to a {@link vscode.AuthenticationSession}. */
 function convertToAuthSession(connection: Connection): vscode.AuthenticationSession {
-  logger.debug("convertToAuthSession()", connection);
+  logger.debug("convertToAuthSession()", connection.status.authentication.status);
   const session: vscode.AuthenticationSession = {
     id: CCLOUD_CONNECTION_ID,
     accessToken: connection.status.authentication.status,
