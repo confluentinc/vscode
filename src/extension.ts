@@ -40,7 +40,6 @@ import { commands as schemaRegistryCommands } from "./commands/schemaRegistry";
 import { commands as schemaCommands } from "./commands/schemas";
 import { commands as supportCommands } from "./commands/support";
 import { commands as topicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
