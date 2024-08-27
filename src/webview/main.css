@@ -1,0 +1,9 @@
+@import "../../node_modules/@vscode/codicons/dist/codicon.css";
+@import "./popover/popover.css";
+@import "./uikit/uikit.css";
+
+@font-face {
+  font-family: confluenticons;
+  font-display: block;
+  src: url("../../resources/dist/confluenticons.woff2") format("woff2");
+}
