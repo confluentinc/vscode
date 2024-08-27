@@ -443,17 +443,17 @@
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
-          "when": "view == confluent-topics && confluentKafkaClusterSelected",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@1"
         },
         {
           "command": "confluent.topics.copyKafkaClusterName",
-          "when": "view == confluent-topics && confluentKafkaClusterSelected",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@2"
         },
         {
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
-          "when": "view == confluent-topics && confluentKafkaClusterSelected",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@3"
         }
       ],
