@@ -1,6 +1,6 @@
 # Confluent Extension for VSCode
 
-[![Build Status](https://semaphore.ci.confluent.io/badges/vscode/branches/main.svg?style=shields&key=e8a9229c-641d-4ebe-b198-433c71ff47cc)](https://semaphore.ci.confluent.io/projects/vscode)
+[![Build Status](https://semaphore.ci.confluent.io/badges/vscode/branches/main.svg?style=shields&key=333d39fa-5f9e-4c87-aca5-dc8618ff3864)](https://semaphore.ci.confluent.io/projects/vscode)
 ![Release](release.svg)
 [![Lines of Code](https://sonarqube.dp.confluent.io/api/project_badges/measure?project=vscode&metric=ncloc&token=sqb_9831824953870c5267d6f56b32dd2d339f2b1e78)](https://sonarqube.dp.confluent.io/dashboard?id=vscode)
 
