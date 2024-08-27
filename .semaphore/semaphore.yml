@@ -1,0 +1,128 @@
+# This file is managed by ServiceBot plugin - Semaphore. The content in this file is created using a common
+# template and configurations in service.yml.
+# Any modifications made to version, name, agent, and global_job_config will be overwritten by the generated
+# content in nightly runs. Code changes made to the remaining sections will not be affected.
+# For more information, please refer to the page:
+# https://confluentinc.atlassian.net/wiki/spaces/Foundations/pages/2871296194/Add+SemaphoreCI
+version: v1.0
+name: build-test-release
+agent:
+  machine:
+    type: s1-prod-ubuntu20-04-amd64-1
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - . vault-setup
+  epilogue:
+    always:
+      commands:
+        - make store-test-results-to-semaphore
+
+blocks:
+  - name: "Build & Test"
+    dependencies: []
+    # Skip when:
+    # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
+    # - change in the .versions/next.txt file, signaling a release PR merge commit.
+    skip:
+      when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    task:
+      jobs:
+        - name: "Build & Test"
+          commands:
+            - make test
+      epilogue:
+        always:
+          commands:
+            - make remove-test-env
+
+  - name: "Bump microversion"
+    dependencies: ["Build & Test"]
+    skip:
+      # For main branch:    Always bump microversion on every commit (except those that bump next.txt
+      #                       to set the next version under development)
+      # For release branches: Skip bumping microversion on `chore: none version bump vN.N.N` commits (release commits)
+      #                       and on merge commits that bump `next.txt` file (releases current version and prepares for next version).
+      # For pull requests:    Skips on all pull requests.
+      when: >
+        (branch =~ '^v[0-9]+\.[0-9]+\.x$' and change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'}))
+        or (branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'}))
+        or pull_request =~ '.*'
+    task:
+      jobs:
+        - name: "Bump microversion and commit (no tag)"
+          commands:
+            - make bump-microversion
+
+  - name: "Set next version under development"
+    dependencies: ["Build & Test"]
+    run:
+      when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
+    task:
+      jobs:
+        - name: "Set next version under development"
+          commands:
+            # Sets the next version under development with microversion set to 1
+            - MICROVERSION_POST=-1 make bump-microversion
+
+  # We always release from a release branch, and never directly from main
+  - name: "[Release branch] Release current version and prepare for next version"
+    dependencies: []
+    run:
+      # IMPORTANT: We must set the branch_range to $SEMAPHORE_GIT_COMMIT_RANGE to ensure that the change_in function
+      #            examines only the commit(s) within the push that triggered the pipeline. We do this because the default
+      #            behavior for change_in on non-main branches is to examine commits up to the common ancestor of the
+      #            branch and the main branch. This may erroneously detect changes in the next.txt file that are not
+      #            part of the current push, but instead were part of a previous push.
+      #            Reference: https://docs.semaphoreci.com/reference/conditions-reference/#change_in
+      when: "branch =~ '^v[0-9]+.[0-9]+.x$' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    task:
+      jobs:
+        - name: "Release current version and prepare for next version"
+          commands:
+            # Release the current version
+            - make release-current-version
+            # Prepare for the next version under development
+            - make bump-microversion
+
+  - name: "Validate Release PR"
+    dependencies: []
+    run:
+      when: "pull_request =~ '.*' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
+    task:
+      jobs:
+      - name: "Release"
+        commands:
+          # In builds triggered by a Pull Request, the value of the SEMAPHORE_GIT_BRANCH
+          # is the name of the git branch targeted by the Pull Request.
+          - export GIT_BRANCH=$SEMAPHORE_GIT_BRANCH
+          - make validate-bump
+
+  - name: "Update third party notices PR"
+    dependencies: ["Bump microversion"]
+    run:
+      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main'})"
+    task:
+      jobs:
+        - name: "Update Third Party Notices PR"
+          commands:
+            - make update-third-party-notices-pr
+
+promotions:
+  - name: Multi-Arch VSIX Packaging and Upload
+    pipeline_file: multi-arch-packaging.yml
+    auto_promote:
+      when: "result = 'passed' and branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"

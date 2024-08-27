@@ -1,0 +1,1949 @@
+Confluent vscode
+Copyright 2024-2024 Confluent Inc.
+
+This product includes software developed at
+Confluent Inc. (https://confluent.io)
+
+For a full list of third-party libraries and their respective licenses bundled
+in this distribution, please refer to the THIRD_PARTY_NOTICES.txt file.
+
+A portion of the code in scripts/notices/collect-notices-vsix.sh is based on a
+similar script in the Apache Flink project, which is licensed under the
+Apache License 2.0. The original script can be found at the following URL:
+https://github.com/apache/flink/blob/9e6bcee710b13b8f64a73c99c3164f7551e1e829/tools/releasing/collect_license_files.sh
+
+This distribution has a binary dependency on ide-sidecar, which is available under the Apache License, Version 2.0.
+The source code of ide-sidecar can be found at https://github.com/confluentinc/ide-sidecar.
+For a full list of third-party libraries and their respective licenses bundled
+in this distribution through the ide-sidecar binary,
+please refer to the THIRD_PARTY_NOTICES_IDE_SIDECAR.txt file.
+
+========================
+
+microsoft-vscode-webview-ui-toolkit
+
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+Do Not Translate or Localize
+
+This project incorporates components from the projects listed below. The original copyright notices and the licenses under which Microsoft received such components are set forth below. Microsoft reserves all rights not expressly granted herein, whether by implication, estoppel or otherwise.
+
+---
+
+tslib 2.2.0 - 0BSD
+https://www.typescriptlang.org/
+
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+---
+
+---
+
+tslib 1.14.1 - 0BSD
+https://www.typescriptlang.org/
+
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+---
+
+---
+
+uri-js 4.4.1 - BSD-2-Clause
+https://github.com/garycourt/uri-js
+
+(c) 2011 Gary Court.
+Copyright 2011 Gary Court.
+
+Copyright 2011 Gary Court. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY GARY COURT "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL GARY COURT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as representing official policies, either expressed or implied, of Gary Court.
+
+---
+
+---
+
+@microsoft/fast-element 1.4.0 - MIT
+https://github.com/Microsoft/fast#readme
+
+MIT License
+
+Copyright (c) <year> <copyright holders>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+@microsoft/fast-foundation 1.24.7 - MIT
+https://github.com/Microsoft/fast#readme
+
+Copyright (c) Microsoft Corporation.
+
+MIT License
+
+Copyright (c) <year> <copyright holders>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+@microsoft/fast-web-utilities 4.8.0 - MIT
+https://github.com/Microsoft/fast#readme
+
+MIT License
+
+Copyright (c) <year> <copyright holders>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+@microsoft/tsdoc 0.12.24 - MIT
+https://tsdoc.org/
+
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+@microsoft/tsdoc-config 0.13.9 - MIT
+https://tsdoc.org/
+
+Copyright (c) Microsoft Corporation.
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+ajv 6.12.6 - MIT
+https://github.com/ajv-validator/ajv
+
+(c) 2011 Gary Court.
+Copyright 2011 Gary Court.
+Copyright (c) 2015-2017 Evgeny Poberezkin
+
+The MIT License (MIT)
+
+Copyright (c) 2015-2017 Evgeny Poberezkin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+---
+
+exenv-es6 1.0.0 - MIT
+https://github.com/chrisdholt/exenv-es6#readme
+
+Copyright (c) 2018 Chris Holt
+
+MIT License
+
+Copyright (c) 2018 Chris Holt
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+---
+
+fast-deep-equal 3.1.3 - MIT
+https://github.com/epoberezkin/fast-deep-equal#readme
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+MIT License
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+---
+
+fast-json-stable-stringify 2.1.0 - MIT
+https://github.com/epoberezkin/fast-json-stable-stringify
+
+Copyright (c) 2013 James Halliday
+Copyright (c) 2017 Evgeny Poberezkin
+
+This software is released under the MIT license:
+
+Copyright (c) 2017 Evgeny Poberezkin
+Copyright (c) 2013 James Halliday
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+function-bind 1.1.1 - MIT
+https://github.com/Raynos/function-bind
+
+Copyright (c) 2013 Raynos.
+
+Copyright (c) 2013 Raynos.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+---
+
+---
+
+has 1.0.3 - MIT
+https://github.com/tarruda/has
+
+Copyright (c) 2013 Thiago de Arruda
+
+Copyright (c) 2013 Thiago de Arruda
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+is-core-module 2.3.0 - MIT
+https://github.com/inspect-js/is-core-module
+
+Copyright (c) 2014 Dave Justice
+
+The MIT License (MIT)
+
+Copyright (c) 2014 Dave Justice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+jju 1.4.0 - MIT
+http://rlidwka.github.io/jju/
+
+Copyright (c) 2013 Alex Kocharin
+
+(The MIT License)
+
+Copyright (c) 2013 Alex Kocharin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+---
+
+---
+
+json-schema-traverse 0.4.1 - MIT
+https://github.com/epoberezkin/json-schema-traverse#readme
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+MIT License
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+---
+
+lodash-es 4.17.21 - MIT
+https://lodash.com/custom-builds
+
+Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
+Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
+
+Based on Underscore.js, copyright Jeremy Ashkenas,
+DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+This software consists of voluntary contributions made by many
+individuals. For exact contribution history, see the revision history
+available at https://github.com/lodash/lodash
+
+The following license applies to all parts of this software except as
+documented below:
+
+====
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+====
+
+Copyright and related rights for sample code are waived via CC0. Sample
+code is defined as all source code displayed within the prose of the
+documentation.
+
+CC0: http://creativecommons.org/publicdomain/zero/1.0/
+
+====
+
+Files located in the node_modules and vendor directories are externally
+maintained libraries used by this software which have their own
+licenses; we recommend you read them, as their terms may differ from the
+terms above.
+
+---
+
+---
+
+path-parse 1.0.6 - MIT
+https://github.com/jbgutierrez/path-parse#readme
+
+Copyright (c) 2015 Javier Blanco
+(c) Javier Blanco (http://jbgutierrez.info)
+
+The MIT License (MIT)
+
+Copyright (c) 2015 Javier Blanco
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+---
+
+punycode 2.1.1 - MIT
+https://mths.be/punycode
+
+Copyright Mathias Bynens <https://mathiasbynens.be/>
+
+Copyright Mathias Bynens <https://mathiasbynens.be/>
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+---
+
+resolve 1.19.0 - MIT
+https://github.com/browserify/resolve#readme
+
+Copyright (c) 2012 James Halliday
+
+MIT License
+
+Copyright (c) 2012 James Halliday
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+---
+
+tabbable 5.2.0 - MIT
+https://github.com/focus-trap/tabbable#readme
+
+The MIT License (MIT)
+
+Copyright (c) 2015 David Clark
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+========================
+
+import-in-the-middle is licensed for use as follows:
+
+Copyright 2024 Node.js contributors. All rights reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+This license applies to parts of import-in-the-middle originating from the
+https://github.com/DataDog/import-in-the-middle repository:
+
+    This product includes software developed at Datadog (https://www.datadoghq.com/).
+
+    Copyright 2021 Datadog, Inc.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+========================
+
+Datadog import-in-the-middle
+Copyright 2021 Datadog, Inc.
+
+This product includes software developed at Datadog (https://www.datadoghq.com/).
+
+========================
+
+Confluent ide-sidecar
+Copyright 2024-2024 Confluent Inc.
+
+This product includes software developed at
+Confluent Inc. (https://www.confluent.io).
+
+For a full list of third-party libraries and their respective licenses,
+please refer to the THIRD_PARTY_NOTICES.txt file included with this distribution.
+
+A portion of the code in scripts/collect-notices-binary.sh is based on a
+similar script in the Apache Flink project, which is licensed under the
+Apache License 2.0. The original script can be found at the following URL:
+https://github.com/apache/flink/blob/9e6bcee710b13b8f64a73c99c3164f7551e1e829/tools/releasing/collect_license_files.sh
+
+============ com.fasterxml.classmate-1.7.0 ============
+
+Java ClassMate library was originally written by Tatu Saloranta (tatu.saloranta@iki.fi)
+
+Other developers who have contributed code are:
+
+* Brian Langel
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+============ com.fasterxml.jackson.core.jackson-annotations-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+## Licensing
+
+Jackson 2.x core and extension components are licensed under Apache License 2.0
+To find the details that apply to this artifact see the accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS(-2.x) file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.core.jackson-core-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+## Licensing
+
+Jackson 2.x core and extension components are licensed under Apache License 2.0
+To find the details that apply to this artifact see the accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS(-2.x) file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+## FastDoubleParser
+
+jackson-core bundles a shaded copy of FastDoubleParser <https://github.com/wrandelshofer/FastDoubleParser>.
+That code is available under an MIT license <https://github.com/wrandelshofer/FastDoubleParser/blob/main/LICENSE>
+under the following copyright.
+
+Copyright © 2023 Werner Randelshofer, Switzerland. MIT License.
+
+See FastDoubleParser-NOTICE for details of other source code included in FastDoubleParser
+and the licenses and copyrights that apply to that code.
+
+============ com.fasterxml.jackson.core.jackson-databind-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+## Licensing
+
+Jackson 2.x core and extension components are licensed under Apache License 2.0
+To find the details that apply to this artifact see the accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS(-2.x) file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-avro-2.17.1 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+## Licensing
+
+Jackson components are licensed under Apache (Software) License, version 2.0,
+as per accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-csv-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+## Licensing
+
+Jackson components are licensed under Apache (Software) License, version 2.0,
+as per accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.dataformat.jackson-dataformat-yaml-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Copyright
+
+Copyright 2007-, Tatu Saloranta (tatu.saloranta@iki.fi)
+
+## Licensing
+
+Jackson components are licensed under Apache (Software) License, version 2.0,
+as per accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.datatype.jackson-datatype-jdk8-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Licensing
+
+Jackson components are licensed under Apache (Software) License, version 2.0,
+as per accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.datatype.jackson-datatype-jsr310-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Licensing
+
+Jackson components are licensed under Apache (Software) License, version 2.0,
+as per accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ com.fasterxml.jackson.module.jackson-module-parameter-names-2.17.2 ============
+
+# Jackson JSON processor
+
+Jackson is a high-performance, Free/Open Source JSON processing library.
+It was originally written by Tatu Saloranta (tatu.saloranta@iki.fi), and has
+been in development since 2007.
+It is currently developed by a community of developers.
+
+## Licensing
+
+Jackson components are licensed under Apache (Software) License, version 2.0,
+as per accompanying LICENSE file.
+
+## Credits
+
+A list of contributors may be found from CREDITS file, which is included
+in some artifacts (usually source distributions); but is always available
+from the source code management (SCM) system project uses.
+
+============ commons-codec.commons-codec-1.17.0 ============
+
+Apache Commons Codec
+Copyright 2002-2024 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+============ commons-collections.commons-collections-3.2.2 ============
+
+Apache Commons Collections
+Copyright 2001-2015 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+============ commons-digester.commons-digester-2.1 ============
+
+Apache Commons Digester
+Copyright 2001-2010 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+============ commons-io.commons-io-2.16.1 ============
+
+Apache Commons IO
+Copyright 2002-2024 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+============ commons-logging.commons-logging-1.2 ============
+
+Apache Commons Logging
+Copyright 2003-2014 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+============ commons-validator.commons-validator-1.7 ============
+
+Apache Commons Validator
+Copyright 2001-2020 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+============ jakarta.activation.jakarta.activation-api-2.1.3 ============
+
+# Notices for Jakarta Activation
+
+This content is produced and maintained by the Jakarta Activation project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jaf
+
+## Trademarks
+
+Jakarta Activation is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+https://www.eclipse.org/legal/epl-2.0, or the Eclipse Distribution License v1.0
+which is available at https://www.eclipse.org/org/documents/edl-v10.php. This
+Source Code may also be made available under the following Secondary Licenses
+when the conditions for such availability set forth in the Eclipse Public
+License v. 2.0 are satisfied: (secondary) GPL-2.0 with Classpath-exception-2.0
+which is available at https://openjdk.java.net/legal/gplv2+ce.html.
+
+SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause OR GPL-2.0-only with
+Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/jakartaee/jaf-api
+* https://github.com/jakartaee/jaf-tck
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+Apache Ant (1.9.6)
+
+* License: Apache License, 2.0, W3C License, Public Domain
+
+Apache Ant (1.9.6)
+
+* License: Apache License, 2.0, W3C License, Public Domain
+
+Apache commons-lang (3.5)
+
+* License: Apache-2.0
+
+font-awesome (4.7.0)
+
+* License: OFL-1.1 AND MIT
+
+jsoup (1.10.2)
+
+* License: MIT
+
+JTHarness (5.0)
+
+* License: (GPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0)
+* Project: https://wiki.openjdk.java.net/display/CodeTools/JT+Harness
+* Source: http://hg.openjdk.java.net/code-tools/jtharness/
+
+JUnit (4.12)
+
+* License: Eclipse Public License
+
+normalize.css (3.0.2)
+
+* License: MIT
+* Project: http://necolas.github.io/normalize.css/
+* Source: http://necolas.github.io/normalize.css/
+
+SigTest (4.0)
+
+* License: GPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+* Project: https://wiki.openjdk.java.net/display/CodeTools/sigtest
+* Source: http://hg.openjdk.java.net/code-tools/sigtest/file/c57f97e2ac2f
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+============ jakarta.annotation.jakarta.annotation-api-3.0.0 ============
+
+# Notices for Jakarta Annotations
+
+This content is produced and maintained by the Jakarta Annotations project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.ca
+
+## Trademarks
+
+Jakarta Annotations™ is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+https://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied:
+GPL-2.0 with Classpath-exception-2.0 which is available at
+https://openjdk.java.net/legal/gplv2+ce.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only with Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/jakartaee/common-annotations-api
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.el.jakarta.el-api-5.0.1 ============
+
+# Notices for Jakarta Expression Language
+
+This content is produced and maintained by the Jakarta Expression Language project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.el
+
+## Trademarks
+
+Jakarta Expression Language is a trademark of the Eclipse
+Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License, version 2 with the GNU Classpath Exception which is
+available at https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/el-ri
+
+## Third-party Content
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.enterprise.jakarta.enterprise.cdi-api-4.1.0 ============
+
+# Notices for Jakarta Contexts and Dependency Injection
+
+This content is produced and maintained by the Jakarta Contexts and Dependency Injection
+project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.cdi
+
+## Trademarks
+
+Jakarta Contexts and Dependency Injection is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Apache License v. 2.0 which is available at
+http://www.apache.org/licenses/LICENSE-2.0
+
+SPDX-License-Identifier: Apache-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/jakartaee/cdi
+* https://github.com/jakartaee/cdi-tck
+* https://github.com/jakartaee/inject
+* https://github.com/jakartaee/inject-spec
+* https://github.com/jakartaee/inject-tck
+
+The project also maintains the following legacy CPL licensed source code repositories:
+
+* https://github.com/eclipse-ee4j/cdi-cpl
+* https://github.com/eclipse-ee4j/cdi-tck-cpl
+
+## Third-party Content
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.enterprise.jakarta.enterprise.lang-model-4.1.0 ============
+
+# Notices for Jakarta Contexts and Dependency Injection
+
+This content is produced and maintained by the Jakarta Contexts and Dependency Injection
+project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.cdi
+
+## Trademarks
+
+Jakarta Contexts and Dependency Injection is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Apache License v. 2.0 which is available at
+http://www.apache.org/licenses/LICENSE-2.0
+
+SPDX-License-Identifier: Apache-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/jakartaee/cdi
+* https://github.com/jakartaee/cdi-tck
+* https://github.com/jakartaee/inject
+* https://github.com/jakartaee/inject-spec
+* https://github.com/jakartaee/inject-tck
+
+The project also maintains the following legacy CPL licensed source code repositories:
+
+* https://github.com/eclipse-ee4j/cdi-cpl
+* https://github.com/eclipse-ee4j/cdi-tck-cpl
+
+## Third-party Content
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.inject.jakarta.inject-api-2.0.1 ============
+
+# Notices for Eclipse Jakarta Dependency Injection
+
+This content is produced and maintained by the Eclipse Jakarta Dependency Injection project.
+
+* Project home: https://projects.eclipse.org/projects/cdi.batch
+
+## Trademarks
+
+Jakarta Dependency Injection is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Apache License, Version 2.0 which is available at
+https://www.apache.org/licenses/LICENSE-2.0.
+
+SPDX-License-Identifier: Apache-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+https://github.com/eclipse-ee4j/injection-api
+https://github.com/eclipse-ee4j/injection-spec
+https://github.com/eclipse-ee4j/injection-tck
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+None
+
+## Cryptography
+
+None
+============ jakarta.interceptor.jakarta.interceptor-api-2.2.0 ============
+
+# Notices for Eclipse Project for Interceptors
+
+This content is produced and maintained by the Eclipse Project for Interceptors
+project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.interceptors
+
+## Trademarks
+
+Eclipse Project for Interceptors is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License, version 2 with the GNU Classpath Exception which is
+available at https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/interceptor-api
+
+## Third-party Content
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.json.bind.jakarta.json.bind-api-3.0.1 ============
+
+# Notices for Jakarta JSON Binding
+
+This content is produced and maintained by the Jakarta JSON Binding project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jsonb
+
+## Trademarks
+
+Jakarta JSON Binding™ is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+https://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied:
+GPL-2.0 with Classpath-exception-2.0 which is available at
+https://openjdk.java.net/legal/gplv2+ce.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-only with Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/jakartaee/jsonb-api
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.json.jakarta.json-api-2.1.3 ============
+
+[//]: # " Copyright (c) 2018, 2020 Oracle and/or its affiliates. All rights reserved. "
+[//]: # "  "
+[//]: # " This program and the accompanying materials are made available under the "
+[//]: # " terms of the Eclipse Public License v. 2.0, which is available at "
+[//]: # " http://www.eclipse.org/legal/epl-2.0. "
+[//]: # "  "
+[//]: # " This Source Code may also be made available under the following Secondary "
+[//]: # " Licenses when the conditions for such availability set forth in the "
+[//]: # " Eclipse Public License v. 2.0 are satisfied: GNU General Public License, "
+[//]: # " version 2 with the GNU Classpath Exception, which is available at "
+[//]: # " https://www.gnu.org/software/classpath/license.html. "
+[//]: # "  "
+[//]: # " SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 "
+
+# Notices for Jakarta JSON Processing
+
+This content is produced and maintained by the Jakarta JSON Processing project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jsonp
+
+## Trademarks
+
+ Jakarta JSON Processing is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License v2.0 w/Classpath exception which is available at
+https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/jsonp
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+javax.ws.rs-api:2.0.1 (2.0.1)
+
+* License: (CDDL-1.1 OR GPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0) AND
+   Apache-2.0
+* Project: https://github.com/jax-rs/api
+* Source: https://github.com/jax-rs/api
+
+javax.ws.rs:jsr311-api:jar:1.1.1 (1.1.1)
+
+* License: CDDL-1.0 AND Apache-2.0
+* Project: https://github.com/jax-rs/api
+* Source:
+   http://search.maven.org/remotecontent?filepath=javax/ws/rs/jsr311-api/1.1.1/jsr311-api-1.1.1-sources.jar
+
+javax:javaee-web-api:jar:7.0 (7.0)
+
+* License: (CDDL-1.0 OR GPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0) AND
+   (EPL-1.0 OR BSD-3-Clause) AND Apache-2.0 AND LicenseRef-Public Domain
+* Project: https://javaee.github.io
+* Source:
+   http://search.maven.org/remotecontent?filepath=javax/javaee-web-api/7.0/javaee-web-api-7.0-sources.jar
+
+JUnit (4.12)
+
+* License: Eclipse Public License
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+============ jakarta.transaction.jakarta.transaction-api-2.0.1 ============
+
+# Notices for Jakarta Transactions
+
+This content is produced and maintained by the Jakarta Transactions project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jta
+
+## Trademarks
+
+Jakarta Transactions is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License, version 2 with the GNU Classpath Exception which is
+available at https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/jta-api
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+None
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ jakarta.ws.rs.jakarta.ws.rs-api-3.1.0 ============
+
+# Notices for Jakarta RESTful Web Services
+
+This content is produced and maintained by the **Jakarta RESTful Web Services**
+project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jaxrs
+
+## Trademarks
+
+**Jakarta RESTful Web Services** is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0. This Source Code may also be made
+available under the following Secondary Licenses when the conditions for such
+availability set forth in the Eclipse Public License v. 2.0 are satisfied: GNU
+General Public License, version 2 with the GNU Classpath Exception which is
+available at https://www.gnu.org/software/classpath/license.html.
+
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/jaxrs-api
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+javaee-api (7.0)
+
+* License: Apache-2.0 AND W3C
+
+JUnit (4.11)
+
+* License: Common Public License 1.0
+
+Mockito (2.16.0)
+
+* Project: http://site.mockito.org
+* Source: https://github.com/mockito/mockito/releases/tag/v2.16.0
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+
+============ jakarta.xml.bind.jakarta.xml.bind-api-4.0.2 ============
+
+[//]: # " Copyright (c) 2018, 2024 Oracle and/or its affiliates. All rights reserved. "
+[//]: # "  "
+[//]: # " This program and the accompanying materials are made available under the "
+[//]: # " terms of the Eclipse Distribution License v. 1.0, which is available at "
+[//]: # " http://www.eclipse.org/org/documents/edl-v10.php. "
+[//]: # "  "
+[//]: # " SPDX-License-Identifier: BSD-3-Clause "
+
+# Notices for Jakarta XML Binding
+
+This content is produced and maintained by the Jakarta XML Binding project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.jaxb
+
+## Trademarks
+
+Jakarta XML Binding™ is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Distribution License v1.0 which is available at
+https://www.eclipse.org/org/documents/edl-v10.php.
+
+SPDX-License-Identifier: BSD-3-Clause
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/jakartaee/jaxb-api
+* https://github.com/jakartaee/jaxb-tck
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+
+============ joda-time.joda-time-2.12.7 ============
+
+=============================================================================
+= NOTICE file corresponding to section 4d of the Apache License Version 2.0 =
+=============================================================================
+This product includes software developed by
+Joda.org (https://www.joda.org/).
+
+============ org.apache.avro.avro-1.11.3 ============
+
+
+Apache Avro
+Copyright 2009-2023 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+============ org.apache.commons.commons-compress-1.26.2 ============
+
+Apache Commons Compress
+Copyright 2002-2024 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+============ org.apache.commons.commons-lang3-3.14.0 ============
+
+Apache Commons Lang
+Copyright 2001-2023 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+============ org.apache.maven.shared.maven-shared-utils-3.4.2 ============
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+============ org.eclipse.microprofile.config.microprofile-config-api-3.1 ============
+
+=========================================================================
+==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
+==  Version 2.0, in this case for Microprofile Config                  ==
+=========================================================================
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+Portions of this software were originally based on the following:
+* Apache DeltaSpike Config
+  https://deltaspike.apache.org
+  under Apache License, v2.0
+
+SPDXVersion: SPDX-2.1
+PackageName: Eclipse Microprofile
+PackageHomePage: http://www.eclipse.org/microprofile
+PackageLicenseDeclared: Apache-2.0
+
+PackageCopyrightText: <text>
+Mark Struberg struberg@apache.org,
+Gerhard Petracek gpetracek@apache.org,
+Romain Manni-Bucau rmannibucau@apache.org,
+Ron Smeral rsmeral@apache.org,
+Emily Jiang emijiang@uk.ibm.com,
+Ondrej Mihalyi ondrej.mihalyi@gmail.com,
+Gunnar Morling gunnar@hibernate.org
+</text>
+
+============ org.eclipse.microprofile.graphql.microprofile-graphql-api-2.0 ============
+
+=========================================================================
+==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
+==  Version 2.0, in this case for Microprofile GraphQL                 ==
+=========================================================================
+
+SPDXVersion: SPDX-2.1
+PackageName: MicroProfile
+PackageHomePage: http://www.eclipse.org/microprofile
+PackageLicenseDeclared: Apache-2.0
+
+PackageCopyrightText: <text>
+J. Andrew McCright j.andrew.mccright@gmail.com
+</text>
+
+============ org.eclipse.microprofile.health.microprofile-health-api-4.0.1 ============
+
+=========================================================================
+==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
+==  Version 2.0, in this case for Microprofile Health                  ==
+=========================================================================
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+SPDXVersion: SPDX-2.1
+PackageName: Eclipse Microprofile
+PackageHomePage: http://www.eclipse.org/microprofile
+PackageLicenseDeclared: Apache-2.0
+
+PackageCopyrightText: <text>
+Heiko Braun hbraun@redhat.com
+</text>
+
+============ org.eclipse.microprofile.metrics.microprofile-metrics-api-4.0.1 ============
+
+=========================================================================
+==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
+==  Version 2.0, in this case for Microprofile Metrics                 ==
+=========================================================================
+
+
+SPDXVersion: SPDX-2.1
+PackageName: Eclipse Microprofile
+PackageHomePage: http://www.eclipse.org/microprofile
+PackageLicenseDeclared: Apache-2.0
+
+PackageCopyrightText: <text>
+Heiko Rupp hrupp@redhat.com,
+Raymond Lam lamr@ca.ibm.com,
+Brennan Nichyporuk brennan.nichyporuk@gmail.com,
+David Chan chdavid@ca.ibm.com,
+Don Bourne dbourne@ca.ibm.com,
+Antonin Stefanutti antonin@stefanutti.fr,
+Mike Croft mike.croft@payara.fish,
+Werner Keil werner@catmedia.us,
+Jan Martiska jmartisk@redhat.com
+</text>
+
+============ org.eclipse.microprofile.openapi.microprofile-openapi-api-3.1.1 ============
+
+=========================================================================
+==  NOTICE file corresponding to section 4(d) of the Apache License,   ==
+==  Version 2.0, in this case for MicroProfile OpenAPI                 ==
+=========================================================================
+
+The majority of this software were originally based on the following:
+* Swagger Core
+  https://github.com/swagger-api/swagger-core
+  under Apache License, v2.0
+
+
+SPDXVersion: SPDX-2.1
+PackageName: Eclipse MicroProfile
+PackageHomePage: http://www.eclipse.org/microprofile
+PackageLicenseDeclared: Apache-2.0
+
+PackageCopyrightText: <text>
+Arthur De Magalhaes arthurdm@ca.ibm.com
+</text>
+
+============ org.eclipse.parsson.parsson-1.1.7 ============
+
+[//]: # " Copyright (c) 2018, 2020 Oracle and/or its affiliates. All rights reserved. "
+[//]: # "  "
+[//]: # " This program and the accompanying materials are made available under the "
+[//]: # " terms of the Eclipse Public License v. 2.0, which is available at "
+[//]: # " http://www.eclipse.org/legal/epl-2.0. "
+[//]: # "  "
+[//]: # " This Source Code may also be made available under the following Secondary "
+[//]: # " Licenses when the conditions for such availability set forth in the "
+[//]: # " Eclipse Public License v. 2.0 are satisfied: GNU General Public License, "
+[//]: # " version 2 with the GNU Classpath Exception, which is available at "
+[//]: # " https://www.gnu.org/software/classpath/license.html. "
+[//]: # "  "
+[//]: # " SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 "
+
+# Notices for Eclipse Parsson
+
+This content is produced and maintained by the Eclipse Parsson project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.parsson
+
+## Trademarks
+
+ Eclipse Parsson is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+https://www.eclipse.org/legal/epl-2.0.
+
+SPDX-License-Identifier: EPL-2.0
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse-ee4j/parsson
+
+## Third-party Content
+
+This project leverages the following third party content.
+
+None
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.
+============ org.eclipse.yasson-3.0.4 ============
+
+# Notices for Eclipse Yasson
+
+This content is produced and maintained by the Eclipse Yasson project.
+
+* Project home: https://projects.eclipse.org/projects/ee4j.yasson
+
+## Trademarks
+
+Eclipse Yasson is a trademark of the Eclipse Foundation.
+
+## Copyright
+
+All content is the property of the respective authors or their employers. For
+more information regarding authorship of content, please consult the listed
+source code repository logs.
+
+## Declared Project Licenses
+
+This program and the accompanying materials are made available under the terms
+of the Eclipse Public License v. 2.0 which is available at
+http://www.eclipse.org/legal/epl-v20.html, or the Eclipse Distribution License
+v. 1.0 which is available at http://www.eclipse.org/org/documents/edl-v10.php.
+
+SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
+
+## Source Code
+
+The project maintains the following source code repositories:
+
+* https://github.com/eclipse/yasson
+* https://github.com/eclipse-ee4j/yasson
+
+## Third-party Content
+
+cdi-api 2.0 (JSR 365: Contexts and Dependency Injection for Java (2.0)
+
+
+## Cryptography
+
+Content may contain encryption software. The country in which you are currently
+may have restrictions on the import, possession, and use, and/or re-export to
+another country, of encryption software. BEFORE using any encryption software,
+please check the country's laws, regulations and policies concerning the import,
+possession, or use, and re-export of encryption software, to see if this is
+permitted.

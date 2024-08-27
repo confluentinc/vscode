@@ -1,0 +1,134 @@
+version: v1.0
+name: multi-arch-packaging
+agent:
+  machine:
+    type: s1-prod-ubuntu20-04-amd64-1
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - . vault-setup
+
+blocks:
+  - name: "Package VSIX (MacOS AMD64)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-amd64
+      prologue:
+        commands_file: scripts/package_vsix_prologue.sh
+      env_vars:
+        # From https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions:
+        # The currently available platforms are: win32-x64, win32-arm64, linux-x64, linux-arm64, linux-armhf,
+        #                                        alpine-x64, alpine-arm64, darwin-x64, darwin-arm64 and web.
+        - name: TARGET
+          value: darwin-x64
+        - name: SIDECAR_OS_ARCH
+          value: macos-amd64
+      jobs:
+        - name: "Package VSIX (MacOS AMD64)"
+          commands:
+            - make package-vsix
+      epilogue:
+        on_pass:
+          commands_file: scripts/package_vsix_epilogue.sh
+
+  - name: "Package VSIX (MacOS ARM64)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-arm64
+      prologue:
+        commands_file: scripts/package_vsix_prologue.sh
+      env_vars:
+        - name: TARGET
+          value: darwin-arm64
+        - name: SIDECAR_OS_ARCH
+          value: macos-arm64
+      jobs:
+        - name: "Package VSIX (MacOS ARM64)"
+          commands:
+            - make package-vsix
+      epilogue:
+        on_pass:
+          commands_file: scripts/package_vsix_epilogue.sh
+
+  - name: "Package VSIX (Linux AMD64)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-amd64-1
+      prologue:
+        commands_file: scripts/package_vsix_prologue.sh
+      env_vars:
+        - name: TARGET
+          value: linux-x64
+        - name: SIDECAR_OS_ARCH
+          value: linux-amd64
+      jobs:
+        - name: "Package VSIX (Linux AMD64)"
+          commands:
+            - make package-vsix
+      epilogue:
+        on_pass:
+          commands_file: scripts/package_vsix_epilogue.sh
+
+  - name: "Package VSIX (Linux ARM64)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-arm64-1
+      prologue:
+        commands_file: scripts/package_vsix_prologue.sh
+      env_vars:
+        - name: TARGET
+          value: linux-arm64
+        - name: SIDECAR_OS_ARCH
+          value: linux-arm64
+      jobs:
+        - name: "Package VSIX (Linux ARM64)"
+          commands:
+            - make package-vsix
+      epilogue:
+        on_pass:
+          commands_file: scripts/package_vsix_epilogue.sh
+
+  - name: "Upload VSIX and ZIP files to S3"
+    run:
+      when: "branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    dependencies:
+      - "Package VSIX (MacOS AMD64)"
+      - "Package VSIX (MacOS ARM64)"
+      - "Package VSIX (Linux AMD64)"
+      - "Package VSIX (Linux ARM64)"
+    task:
+      prologue:
+        commands:
+          - artifact pull workflow packaged-vsix-files/
+      jobs:
+        - name: "Upload VSIX files to S3"
+          commands:
+            - make upload-vsix-files-to-s3 || true
+            - make upload-vsix-files-to-gh-releases
+        - name: "Package and upload ZIP file to S3"
+          commands:
+            - make package-multiarch-archive
+            - make push-multiarch-archive || true
+            - make upload-multiarch-archive-to-s3 || true
+            - make upload-multiarch-archive-to-gh-releases

@@ -1,0 +1,13 @@
+Confluent vscode
+Copyright 2024-2024 Confluent Inc.
+
+This product includes software developed at
+Confluent Inc. (https://confluent.io)
+
+For a full list of third-party libraries and their respective licenses bundled
+in this distribution, please refer to the THIRD_PARTY_NOTICES.txt file.
+
+A portion of the code in scripts/notices/collect-notices-vsix.sh is based on a
+similar script in the Apache Flink project, which is licensed under the
+Apache License 2.0. The original script can be found at the following URL:
+https://github.com/apache/flink/blob/9e6bcee710b13b8f64a73c99c3164f7551e1e829/tools/releasing/collect_license_files.sh

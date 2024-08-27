@@ -1,0 +1,111 @@
+type CCloudConnection {
+  environments: [CCloudEnvironment]!
+  id: String!
+  name: String!
+  organizations: [CCloudOrganization]!
+  type: ConnectionType!
+}
+
+type CCloudEnvironment {
+  connectionId: String!
+  governancePackage: CCloudGovernancePackage!
+  id: String!
+  kafkaClusters: [CCloudKafkaCluster]!
+  name: String!
+  organization: CCloudReference!
+  schemaRegistry: CCloudSchemaRegistry
+}
+
+type CCloudKafkaCluster {
+  bootstrapServers: String!
+  connectionId: String!
+  environment: CCloudReference!
+  id: String!
+  name: String!
+  organization: CCloudReference!
+  provider: CloudProvider!
+  region: String!
+  uri: String!
+}
+
+type CCloudOrganization {
+  connectionId: String!
+  current: Boolean!
+  id: String!
+  name: String!
+}
+
+type CCloudReference {
+  id: String!
+  name: String
+}
+
+type CCloudSchemaRegistry {
+  connectionId: String!
+  environment: CCloudReference!
+  id: String!
+  organization: CCloudReference!
+  provider: CloudProvider!
+  region: String!
+  uri: String!
+}
+
+type ConfluentLocalKafkaCluster {
+  bootstrapServers: String!
+  connectionId: String!
+  id: String!
+  kafkaRestHostName: String
+  name: String!
+  uri: String!
+}
+
+type LocalConnection {
+  id: String!
+  kafkaCluster: ConfluentLocalKafkaCluster
+  name: String!
+  schemaRegistry: LocalSchemaRegistry
+  type: ConnectionType!
+}
+
+type LocalSchemaRegistry {
+  connectionId: String!
+  id: String!
+  uri: String!
+}
+
+"Query root"
+type Query {
+  "Get a CCloud connection with a particular ID"
+  ccloudConnectionById(id: String!): CCloudConnection
+  "Get all CCloud connections"
+  ccloudConnections: [CCloudConnection]!
+  "Find CCloud Kafka clusters using a connection and various criteria"
+  findCCloudKafkaClusters(
+    connectionId: String!
+    environmentId: String = ""
+    name: String = ""
+    provider: String = ""
+    region: String = ""
+  ): [CCloudKafkaCluster]!
+  "Get all local connections"
+  localConnections: [LocalConnection]!
+}
+
+enum CCloudGovernancePackage {
+  ADVANCED
+  ESSENTIALS
+  NONE
+}
+
+enum CloudProvider {
+  AWS
+  AZURE
+  GCP
+  NONE
+}
+
+enum ConnectionType {
+  CCLOUD
+  LOCAL
+  PLATFORM
+}
