@@ -11,7 +11,7 @@ The following OpenAPI specs are supported by the sidecar.
   are NOT managed/published by ide-sidecar itself.
 
 | OpenAPI Spec                                                   | Source                                                                                     | Paths Supported by Sidecar (at http://localhost:26636) |
-| -------------------------------------------------------------- |--------------------------------------------------------------------------------------------| ------------------------------------------------------ |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
 | [sidecar.openapi.yaml](./sidecar.openapi.yaml)                 | https://github.com/confluentinc/ide-sidecar/blob/main/src/generated/resources/openapi.yaml | All paths                                              |
-| [ce-kafka-rest.openapi.yaml](./ce-kafka-rest.openapi.yaml)     | | All paths (`/kafka/v3/clusters*`)                      |
-| [schema-registry.openapi.yaml](./schema-registry.openapi.yaml) | | Only paths under `/schemas*`, `/subjects*`             |
+| [ce-kafka-rest.openapi.yaml](./ce-kafka-rest.openapi.yaml)     |                                                                                            | All paths (`/kafka/v3/clusters*`)                      |
+| [schema-registry.openapi.yaml](./schema-registry.openapi.yaml) |                                                                                            | Only paths under `/schemas*`, `/subjects*`             |
