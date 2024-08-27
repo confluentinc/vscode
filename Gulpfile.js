@@ -1,0 +1,719 @@
+import commonjs from "@rollup/plugin-commonjs";
+import json from "@rollup/plugin-json";
+import node from "@rollup/plugin-node-resolve";
+import replace from "@rollup/plugin-replace";
+import virtual from "@rollup/plugin-virtual";
+import { sentryRollupPlugin } from "@sentry/rollup-plugin";
+import { createFilter } from "@rollup/pluginutils";
+import { FontAssetType, OtherAssetType, generateFonts } from "@twbs/fantasticon";
+import { runTests } from "@vscode/test-electron";
+import { configDotenv } from "dotenv";
+import { ESLint } from "eslint";
+import { globSync } from "glob";
+import { dest, parallel, series, src } from "gulp";
+import libCoverage from "istanbul-lib-coverage";
+import libInstrument from "istanbul-lib-instrument";
+import libReport from "istanbul-lib-report";
+import libSourceMaps from "istanbul-lib-source-maps";
+import reports from "istanbul-reports";
+import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, resolve } from "node:path";
+import { pipeline } from "node:stream/promises";
+import { rollup, watch } from "rollup";
+import external from "rollup-plugin-auto-external";
+import copy from "rollup-plugin-copy";
+import esbuild from "rollup-plugin-esbuild";
+import ts from "typescript";
+
+configDotenv();
+const DESTINATION = "out";
+const IS_CI = process.env.CI != null;
+
+export const ci = parallel(check, build, lint);
+
+export const bundle = series(clean, build, pack);
+
+clean.description = "Clean up static assets.";
+export function clean(done) {
+  const result = spawnSync("rm", ["-rf", DESTINATION], { stdio: "inherit" });
+  return done(result.status);
+}
+
+pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
+export function pack(done) {
+  var vsceCommandArgs = ["vsce", "package"];
+  // Check if TARGET is set, if so, add it to the command
+  if (process.env.TARGET) {
+    vsceCommandArgs.push("--target");
+    vsceCommandArgs.push(process.env.TARGET);
+  }
+  const result = spawnSync("npx", vsceCommandArgs, { stdio: "inherit", cwd: DESTINATION });
+  return done(result.status);
+}
+
+build.description = "Build static assets for extension and webviews. Use -w for watch mode.";
+export function build(done) {
+  const incremental = process.argv.indexOf("-w", 2) > -1;
+  const production = process.env.NODE_ENV === "production";
+
+  // Download the sidecar executable from GitHub Releases
+  const result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
+  if (result.error) throw result.error;
+
+  if (production) {
+    setupSegment();
+    setupSentry();
+  }
+
+  /** @type {import("rollup").LogHandlerWithDefault} */
+  const handleBuildLog = (level, log, handler) => {
+    // skip log messages about circular dependencies inside node_modules
+    if (log.code === "CIRCULAR_DEPENDENCY" && log.ids.every((id) => id.includes("node_modules")))
+      return;
+    handler(level, log);
+  };
+
+  /** @type {import("rollup").RollupOptions} */
+  const extInput = {
+    input: {
+      extension: "src/extension.ts",
+      sidecar: "ide-sidecar",
+    },
+    plugins: [
+      sidecar(),
+      pkgjson(),
+      node({ preferBuiltins: true, exportConditions: ["node"] }),
+      commonjs(),
+      json(),
+      esbuild({ sourceMap: true, minify: production }),
+      template({ include: ["**/*.html"] }),
+      replace({
+        // inline EdgeRuntime as an arbitrary string to eliminate unnecessary code for edge runtimes that sentry/segment support
+        EdgeRuntime: JSON.stringify("vscode"),
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
+        "process.env.SEGMENT_WRITE_KEY": JSON.stringify(process.env.SEGMENT_WRITE_KEY),
+        "process.env.SENTRY_AUTH_TOKEN": JSON.stringify(process.env.SENTRY_AUTH_TOKEN),
+        "process.env.SENTRY_RELEASE": JSON.stringify(process.env.SENTRY_RELEASE),
+        "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN),
+        preventAssignment: true,
+      }),
+      copy({
+        copyOnce: true,
+        targets: [
+          { src: ["resources"], dest: DESTINATION },
+          {
+            src: [
+              "LICENSE.txt",
+              "NOTICE-vsix.txt",
+              "THIRD_PARTY_NOTICES.txt",
+              "THIRD_PARTY_NOTICES_IDE_SIDECAR.txt",
+            ],
+            dest: DESTINATION,
+          },
+          { src: ["public/README.md"], dest: DESTINATION, rename: "README.md" },
+          { src: ["CHANGELOG.md"], dest: DESTINATION },
+        ],
+      }),
+      sentryRollupPlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        org: "confluent",
+        project: "vscode-extension",
+        release: { name: process.env.SENTRY_RELEASE },
+        disable: !process.env.SENTRY_AUTH_TOKEN,
+      }),
+    ],
+    onLog: handleBuildLog,
+    external: ["vscode"],
+    context: "globalThis",
+  };
+  /** @type {import("rollup").OutputOptions} */
+  const extOutput = { dir: DESTINATION, format: "cjs", sourcemap: true, exports: "named" };
+
+  /** @type {import("rollup").RollupOptions} */
+  const webInput = {
+    // TODO I should probably convert this to array of configs so I isolate modules
+    input: globSync("src/webview/*.ts", { ignore: "src/webview/*.spec.ts" }),
+    plugins: [
+      stylesheet({
+        include: ["**/*.css"],
+        minify: production,
+      }),
+      esbuild({
+        sourceMap: !production,
+        minify: production,
+        target: "es2020",
+      }),
+      replace({
+        "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
+        preventAssignment: true,
+      }),
+      json(),
+      node(),
+      commonjs(),
+    ],
+    onLog: handleBuildLog,
+    context: "globalThis",
+  };
+  /** @type {import("rollup").OutputOptions} */
+  const webOutput = {
+    dir: `${DESTINATION}/webview`,
+    format: "esm",
+    sourcemap: !production,
+    sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/webview/`,
+  };
+
+  if (incremental) {
+    const webview = watch({ ...webInput, output: webOutput });
+    webview.on("event", ({ error, result }) => {
+      if (error != null) console.error(error);
+      result?.close();
+    });
+    webview.on("close", done).on("error", done);
+    const extension = watch({ ...extInput, output: extOutput });
+    extension.on("event", ({ error, result }) => {
+      if (error != null) console.error(error);
+      result?.close();
+    });
+    extension.on("close", done).on("error", done);
+  } else {
+    return rollup(webInput)
+      .then((bundle) => bundle.write(webOutput))
+      .then(() => rollup(extInput))
+      .then((bundle) => bundle.write(extOutput));
+  }
+}
+
+/** Used by Sentry rollup plugin during build, we need a version to identify releases in Sentry so they can line up with source map uploads
+ * Combines our VSCode extension version as it appears in package.json, and adds the shortened SHA of the latest HEAD commit if not on a CI build.
+ */
+function getSentryReleaseVersion() {
+  let version = "0.0.0";
+  let revision = "noRevision";
+  try {
+    // add "dirty" to the revision instead of sha if there are uncommmited changes
+    // eslint-disable-next-line eqeqeq
+    const isDirty = spawnSync("git", ["diff", "--quiet"], { stdio: "pipe" }).status != 0;
+    if (isDirty) revision = "dirty";
+    else {
+      revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], { stdio: "pipe" })
+        .stdout.toString()
+        .trim();
+    }
+  } catch (e) {
+    console.error("Failed to get revision", e);
+  }
+
+  try {
+    const extensionManifest = JSON.parse(readFileSync("package.json", "utf8"));
+    version = extensionManifest.version;
+  } catch (e) {
+    console.error("Failed to read version in package.json", e);
+  }
+  // If CI, don't use the revision
+  if (IS_CI) {
+    return "vscode-confluent@" + version;
+  }
+  return "vscode-confluent@" + version + "-" + revision;
+}
+
+/** Get the Sentry token, dsn from Vault and get the appropriate Sentry "release" ID from the getSentryReleaseVersion, and
+ * save them as env variables for access when Initiating Sentry or using the Sentry sourcemap rollup plugin
+ */
+function setupSentry() {
+  console.log("Fetching Sentry token from Vault for sourcemaps...");
+  const sentryToken = spawnSync(
+    "vault",
+    ["kv", "get", "-field", "SENTRY_AUTH_TOKEN", "v1/ci/kv/vscodeextension/telemetry"],
+    { stdio: "pipe" },
+  );
+  if (sentryToken.error != null) {
+    if (IS_CI) throw sentryToken.error;
+    else console.error(sentryToken.error);
+  } else if (sentryToken.status !== 0) {
+    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${sentryToken.stderr}`);
+    else console.error(sentryToken.stderr.toString());
+  } else {
+    process.env.SENTRY_AUTH_TOKEN = sentryToken.stdout.toString().trim();
+    process.env.SENTRY_RELEASE = getSentryReleaseVersion();
+  }
+  const sentryDsn = spawnSync(
+    "vault",
+    ["kv", "get", "-field", "SENTRY_DSN", "v1/ci/kv/vscodeextension/telemetry"],
+    { stdio: "pipe" },
+  );
+  if (sentryDsn.error != null) {
+    if (IS_CI) throw sentryDsn.error;
+    else console.error(sentryDsn.error);
+  } else if (sentryDsn.status !== 0) {
+    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${sentryDsn.stderr}`);
+    else console.error(sentryDsn.stderr.toString());
+  } else {
+    process.env.SENTRY_DSN = sentryDsn.stdout.toString().trim();
+  }
+}
+
+/** Get the Segment write key from Vault and save it as an env variable for reference in Segment setup */
+function setupSegment() {
+  console.log("Fetching Segment key from Vault...");
+  const segmentKey = spawnSync(
+    "vault",
+    ["kv", "get", "-field", "SEGMENT_WRITE_KEY", "v1/ci/kv/vscodeextension/telemetry"],
+    { stdio: "pipe" },
+  );
+  if (segmentKey.error != null) {
+    if (IS_CI) throw segmentKey.error;
+    else console.error(segmentKey.error);
+  } else if (segmentKey.status !== 0) {
+    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${segmentKey.stderr}`);
+    else console.error(segmentKey.stderr.toString());
+  } else {
+    process.env.SEGMENT_WRITE_KEY = segmentKey.stdout.toString().trim();
+  }
+}
+
+/**
+ * Used by the built task, based on existing package.json, it generates
+ * production-ready package.json for the extension: without any dev-related
+ * keys and dependencies listing.
+ */
+function pkgjson() {
+  return copy({
+    copyOnce: true,
+    targets: [
+      {
+        src: "package.json",
+        dest: DESTINATION,
+        transform(contents) {
+          let pkg = JSON.parse(contents.toString());
+          // add random hex suffix the version for non-CI builds to avoid caching issues
+          pkg.version += process.env.CI ? "" : `+${Math.random().toString(16).slice(2, 8)}`;
+          // no package.type: the bundle is CommonJS module
+          delete pkg.type;
+          // no dev only manifests: scripts, dependencies
+          delete pkg.scripts;
+          delete pkg.dependencies;
+          delete pkg.devDependencies;
+          // the target folder is flat so the entry point is known to be in the root
+          pkg.main = "extension.js";
+          return JSON.stringify(pkg, null, 2);
+        },
+      },
+    ],
+  });
+}
+
+/**
+ * Bundles sidecar binary of appropriate version.
+ * Provides `ide-sidecar` module for the source code to use.
+ */
+function sidecar() {
+  const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
+  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
+  return [
+    virtual({
+      "ide-sidecar": `export const version = "${sidecarVersion}"; export default new URL("./${sidecarFilename}", import.meta.url).pathname;`,
+    }),
+    copy({
+      copyOnce: true,
+      targets: [{ src: `bin/${sidecarFilename}`, dest: DESTINATION }],
+    }),
+  ];
+}
+
+/**
+ * Enable modules to import html files as template generating functions.
+ *
+ * @example
+ * ```html
+ * <!-- template.html -->
+ * <section>
+ *   <p>Hello, ${name}!</p>
+ * </section>
+ * ```
+ *
+ * ```js
+ * // module.js
+ * import viewTemplate from "./template.html";
+ *
+ * document.body.innerHTML = viewTemplate({ name: "World" });
+ * ```
+ *
+ * @returns {import("rollup").Plugin}
+ */
+function template(options = {}) {
+  const filter = createFilter(options.include, options.exclude);
+  return {
+    name: "template",
+    transform(code, id) {
+      if (filter(id)) {
+        return {
+          code: `const template = ${JSON.stringify(code)}; export default (variables) => template.replace(/\\$\\{([^}]+)\\}/g, (_, v) => variables[v]);`,
+          map: { mappings: "" },
+        };
+      }
+    },
+  };
+}
+
+/**
+ * Basic CSS bundling plugin for Rollup. Import CSS file from JS source and it
+ * will generate a CSS bundle with the same name in output folder.
+ *
+ * Following example will generate `styles.css` bundle (including dependencies)
+ * next to the file that imported the styles file.
+ *
+ * @example
+ * ```js
+ * // main.js
+ * import "./styles.css";
+ * // ...
+ * ```
+ *
+ * ```css
+ * // styles.css
+ * @import "some-other-styles.css"
+ *
+ * html {
+ *   font-size: 16px;
+ * }
+ * body {
+ *   margin: 0;
+ * }
+ * ```
+ *
+ * @returns {import("rollup").Plugin}
+ */
+function stylesheet(options = {}) {
+  const filter = createFilter(options.include, options.exclude);
+  return {
+    name: "stylesheet",
+    async transform(code, id) {
+      if (filter(id)) {
+        const { bundleAsync } = await import("lightningcss");
+        const { code, dependencies } = await bundleAsync({
+          filename: id,
+          minify: options.minify ?? false,
+          analyzeDependencies: true,
+        });
+
+        let output = code.toString();
+        for (const dependency of dependencies ?? []) {
+          // css files may include ?query in static dependecies
+          const path = dependency.url.replace(/\?.+$/, "");
+          // resolve the static file from the one requesting it
+          const origin = resolve(dirname(dependency.loc.filePath), path.replace(/\?.+$/, ""));
+          // putting it in the folder next to the css bundle
+          const destFilename = basename(origin);
+          this.emitFile({ type: "asset", fileName: destFilename, source: readFileSync(origin) });
+
+          // lightningcss keeps a unique placeholder in the source code for bundlers to replace
+          output = output.replace(dependency.placeholder, destFilename);
+        }
+
+        // css bundle is just a static asset for rollup
+        this.emitFile({ type: "asset", fileName: basename(id), source: output });
+        // returning an empty module so rollup doesn't try processing css
+        return { code: "" };
+      }
+    },
+  };
+}
+
+check.description = "Run TypeScript compiler to check for any type errors.";
+export function check(done) {
+  // Before running type checking, make sure to generate declarations for GraphQL schemas
+  const precheck = spawnSync("npx", ["gql.tada", "generate-output"], { stdio: "ignore" });
+  if (precheck.error) throw precheck.error;
+
+  // Entry points are the extension.ts and webview script files
+  const rootNames = ["src/extension.ts", ...globSync("src/webview/*.ts")];
+  const defaults = ["lib.dom.d.ts", "lib.es2022.d.ts", "lib.dom.iterable.d.ts"];
+  const customdts = globSync(["src/**/*.d.ts", "bin/*.d.ts"], { absolute: true });
+
+  // The options here are similar to tsconfig.json, but don't support some fields
+  const program = ts.createProgram({
+    rootNames,
+    options: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ES2022,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      strict: true,
+      lib: defaults.concat(customdts),
+      skipLibCheck: true,
+    },
+  });
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+
+  const filteredDiagnostics = diagnostics.filter((diagnostic) => {
+    if (diagnostic.file.fileName.match(/\/src\/clients\//)) return diagnostic.code !== 2308;
+    return true;
+  });
+
+  const output = ts.formatDiagnosticsWithColorAndContext(filteredDiagnostics, {
+    getCurrentDirectory: () => process.cwd(),
+    getNewLine: () => "\n",
+    getCanonicalFileName: (v) => v,
+  });
+  if (output.length > 0) console.log(output);
+  if (filteredDiagnostics.length > 0) {
+    throw new Error(`Found ${filteredDiagnostics.length} type error(s)`);
+  }
+  return done(0);
+}
+
+lint.description = "Run ESLint to check lint rules and formattings. Use -f to automatically fix.";
+export async function lint() {
+  const fix = process.argv.indexOf("-f", 2) > -1;
+  const eslint = new ESLint({ fix, cache: !IS_CI });
+  const result = await eslint.lintFiles(["src", "*.{js,mjs}"]);
+  if (fix) await ESLint.outputFixes(result);
+  const format = await eslint.loadFormatter("stylish");
+  console.log(format.format(result));
+  const errorCount = result.reduce((sum, res) => sum + res.errorCount, 0);
+  const warnCount = result.reduce((sum, res) => sum + res.warningCount, 0);
+  if (errorCount > 0) throw new Error("ESLint found errors");
+  if (warnCount > 50) throw new Error("ESLint found too many warnings (maximum: 50).");
+}
+
+test.description = "Run tests using @vscode/test-cli. Use --coverage for coverage report.";
+export async function test() {
+  const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
+  // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
+  const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
+  const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts"]);
+  const entryMap = Object.fromEntries(
+    testFiles.map((filename) => [filename.slice(0, -extname(filename).length), filename]),
+  );
+  /** @type {import("rollup").RollupOptions} */
+  const testInput = {
+    input: {
+      ...entryMap,
+      sidecar: "ide-sidecar",
+    },
+    plugins: [
+      sidecar(),
+      pkgjson(),
+      esbuild({ sourceMap: true, minify: false }),
+      template({ include: ["**/*.html"] }),
+      node(),
+      json(),
+      // dependencies are installed via npm so they don't need to be bundled
+      external(),
+      coverage({
+        enabled: reportCoverage,
+        include: ["src/**/*.ts"],
+        exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
+      }),
+    ],
+    external: ["vscode", "assert", "winston", "mocha", "@playwright/test", "dotenv", "glob"],
+  };
+  /** @type {import("rollup").OutputOptions} */
+  const testOutput = {
+    dir: DESTINATION,
+    format: "cjs",
+    sourcemap: true,
+    preserveModules: true,
+    exports: "named",
+  };
+  const bundle = await rollup(testInput);
+  await bundle.write(testOutput);
+  await runTests({
+    extensionDevelopmentPath: resolve(DESTINATION),
+    extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
+    extensionTestsEnv: {
+      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
+      FGREP: testFilter,
+    },
+    launchArgs: [
+      "--no-sandbox",
+      "--profile-temp",
+      "--skip-release-notes",
+      "--skip-welcome",
+      "--disable-gpu-sandbox",
+      "--disable-updates",
+      "--disable-workspace-trust",
+      "--disable-extensions",
+    ],
+  });
+  if (reportCoverage) {
+    let coverageMap = libCoverage.createCoverageMap();
+    let sourceMapStore = libSourceMaps.createSourceMapStore();
+    coverageMap.merge(JSON.parse(await readFile("./coverage.json")));
+    let data = await sourceMapStore.transformCoverage(coverageMap);
+    let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
+    let context = libReport.createContext({ coverageMap: data });
+    report.execute(context);
+    // clean up temp file used for coverage reporting
+    await unlink("./coverage.json");
+  }
+  // runTests() will throw an error if tests failed, otherwise report happy execution
+  return 0;
+}
+
+/**
+ * Instruments TS/JS code with istanbul. Coverage data stored to `global.__coverage__`.
+ *
+ * @returns {import("rollup").Plugin}
+ */
+function coverage(options) {
+  let filter = createFilter(options?.include, options?.exclude);
+  return {
+    name: "coverage",
+    transform(code, id) {
+      if (!options.enabled || !filter(id)) return;
+      let instrumenter = libInstrument.createInstrumenter();
+      let sourceMaps = this.getCombinedSourcemap();
+      let instrumentedCode = instrumenter.instrumentSync(code, id, sourceMaps);
+      return { code: instrumentedCode, map: instrumenter.lastSourceMap() };
+    },
+  };
+}
+
+export function functional(done) {
+  const result = spawnSync("npx", ["playwright", "test"], { stdio: "inherit" });
+  if (result.error) throw result.error;
+  return done(result.status);
+}
+
+apigen.description = "Generate API clients from OpenAPI specs.";
+export async function apigen() {
+  // Lock down the version of openapi-generator-cli to avoid breaking changes or surprises
+  // per https://openapi-generator.tech/docs/installation/
+  const openapiGeneratorVersion = "7.7.0";
+
+  const lockResult = spawnSync(
+    "npx",
+    ["openapi-generator-cli", "version-manager", "set", openapiGeneratorVersion],
+    { stdio: "inherit" },
+  );
+  if (lockResult.error) throw lockResult.error;
+  if (lockResult.status !== 0)
+    throw new Error(`Failed to lock openapi-generator version to ${openapiGeneratorVersion}`);
+
+  // On to generating all our clients from the multiple OpenAPI specs
+  const clients = [
+    ["src/clients/sidecar-openapi-specs/sidecar.openapi.yaml", "src/clients/sidecar"],
+    ["src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml", "src/clients/kafkaRest"],
+    [
+      "src/clients/sidecar-openapi-specs/schema-registry.openapi.yaml",
+      "src/clients/schemaRegistryRest",
+    ],
+  ];
+
+  // other configs here: https://openapi-generator.tech/docs/generators/typescript-fetch/#config-options
+  const additionalProperties = {
+    modelPropertyNaming: "original",
+    paramNaming: "original",
+  };
+  // join key-value pairs into a string `key1=value1,key2=value2,...`
+  const additionalPropertiesString = Object.entries(additionalProperties)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(",");
+
+  for (const [spec, path] of clients) {
+    // other client generator types: https://openapi-generator.tech/docs/generators#client-generators
+    const result = spawnSync(
+      "npx",
+      [
+        "openapi-generator-cli",
+        "generate",
+        "-i",
+        spec,
+        "-g",
+        "typescript-fetch",
+        "-o",
+        path,
+        "--additional-properties",
+        additionalPropertiesString,
+      ],
+      {
+        stdio: "inherit",
+      },
+    );
+    if (result.error) throw result.error;
+    if (result.status !== 0) throw new Error(`Failed to generate client for ${spec}`);
+  }
+}
+
+format.description = "Enforce Prettier formatting for all TS/JS/MD/HTML/YAML files.";
+export async function format() {
+  const transform = await prettier();
+  // Prettier's API does not have a magic method to just fix everything
+  // So this is where we add some Gulp FileSystem API to make it work
+  return pipeline(
+    src([
+      "src/**/*.ts",
+      "src/**/*.css",
+      "src/**/*.html",
+      "src/**/*.graphql",
+      "*.md",
+      "*.js",
+      "src/clients/sidecar-openapi-specs/*",
+    ]),
+    transform,
+    dest((file) => file.base),
+  );
+}
+
+async function prettier() {
+  const { check, format, resolveConfigFile, resolveConfig } = await import("prettier");
+  const file = (await resolveConfigFile()) ?? ".prettierrc";
+  const config = await resolveConfig(file);
+  /** @param {AsyncIterator<import("vinyl")>} source */
+  return async function* process(source) {
+    for await (const file of source) {
+      if (file.contents != null) {
+        const options = { filepath: file.path, ...config };
+        const code = file.contents.toString();
+        const valid = await check(code, options);
+        if (!valid) {
+          const contents = await format(code, options);
+          const clone = file.clone({ contents: false });
+          yield Object.assign(clone, { contents: Buffer.from(contents) });
+        }
+      }
+    }
+  };
+}
+
+icongen.description = "Generate font files from SVG icons, and update package.json accordingly.";
+export async function icongen() {
+  const result = await generateFonts({
+    name: "confluenticons",
+    prefix: "confluenticon",
+    inputDir: "./resources/icons",
+    outputDir: "./resources/dist",
+    fontTypes: [FontAssetType.WOFF2],
+    assetTypes: [OtherAssetType.HTML, OtherAssetType.JSON],
+    formatOptions: {},
+    templates: {
+      html: "./resources/icons/template/icons-contribution.hbs",
+    },
+    pathOptions: {},
+    codepoints: {},
+    fontHeight: 1000,
+    round: undefined,
+    descent: undefined, // Will use `svgicons2svgfont` defaults
+    normalize: true, // if this is `undefined`, we may get wildly different icon sizes in the font
+    selector: null,
+    tag: "i",
+    fontsUrl: "#{root}/dist",
+  });
+  if (result.error) throw result.error;
+
+  // NOTE: there doesn't seem to be a way to generate the `contributes.icons` block using the
+  // mustache templates in `./resources/templates`, so we end up creating an "HTML" file that's
+  // really just JSON in the format we need it to be.
+  // With that JSON-in-HTML hack, we can update the package.json with the generated icons.
+  const html = result.assetsOut.html;
+  if (html == null) throw new Error("Failed to find generated HTML file");
+  const iconContributions = JSON.parse(html);
+  // read package.json, add the `contributes.icons` section, then write it back
+  const extensionManifestString = await readFile("package.json", "utf8");
+  const extensionManifest = JSON.parse(extensionManifestString);
+  extensionManifest.contributes.icons = iconContributions.icons;
+  await writeFile("package.json", JSON.stringify(extensionManifest, null, 2), "utf8");
+  await appendFile("package.json", "\n", "utf8");
+}

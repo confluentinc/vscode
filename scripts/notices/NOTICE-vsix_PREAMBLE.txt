@@ -1,0 +1,5 @@
+This distribution has a binary dependency on ide-sidecar, which is available under the Apache License, Version 2.0.
+The source code of ide-sidecar can be found at https://github.com/confluentinc/ide-sidecar.
+For a full list of third-party libraries and their respective licenses bundled
+in this distribution through the ide-sidecar binary,
+please refer to the THIRD_PARTY_NOTICES_IDE_SIDECAR.txt file.

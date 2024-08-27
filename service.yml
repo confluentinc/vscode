@@ -1,9 +1,36 @@
 name: vscode
-lang: unknown
-lang_version: unknown
+lang: node
+lang_version: 18.12.0
 git:
   enable: true
 github:
   enable: true
 codeowners:
   enable: true
+semaphore:
+  enable: true
+  pipeline_enable: false
+  triggers: ['branches', 'pull_requests']
+sonarqube:
+  languages:
+    - javascript
+    - typescript
+  enable: true
+  coverage_reports:
+    - coverage/lcov.info
+    - coverage/lcov-functional.info
+  # Allows servicebot to set `sonar.exclusions` in the `sonar-project.properties` file
+  # see: https://confluent.slack.com/archives/C01T51MQKEF/p1691697588950519?thread_ts=1691677626.179979&cid=C01T51MQKEF
+  coverage_exclusions:
+    - ".vscode-test/**/*"
+    - "bin/**/*"
+    - "node_modules/**/*"
+    - "mk-files/**/*"
+    - "src/clients/**/*"
+    - "tests/**/*"
+    - "userdata/**/*"
+    - "Gulpfile.mjs"
+    - "src/testing.ts"
+    - "playwright.config.ts"
+make:
+  enable: false

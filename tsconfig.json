@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "es2022",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": ["DOM", "ES2022", "dom.iterable"],
+    "sourceMap": true,
+    "outDir": "out",
+    "strict": true,
+    "plugins": [
+      {
+        "name": "@0no-co/graphqlsp",
+        "schema": "./src/graphql/sidecar.graphql",
+        "tadaOutputLocation": "./src/graphql/sidecarGraphQL.d.ts"
+      }
+    ]
+  },
+  "exclude": ["openapi-ts.config.ts"]
+}

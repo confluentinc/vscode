@@ -1,0 +1,720 @@
+{
+  "name": "vscode-confluent",
+  "type": "module",
+  "displayName": "Confluent",
+  "description": "A tool for interacting with Confluent resources for easier development against Confluent Cloud and Apache Kafka®.",
+  "version": "0.14.0-40",
+  "preview": true,
+  "publisher": "confluentinc",
+  "author": {
+    "name": "Confluent, Inc."
+  },
+  "license": "https://www.confluent.io/software-evaluation-license/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/confluentinc/vscode.git"
+  },
+  "icon": "resources/confluent_logo-mark-meadow.png",
+  "engines": {
+    "vscode": "^1.87.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "confluent",
+    "kafka",
+    "message",
+    "schema"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.confluent.*"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "authentication": [
+      {
+        "id": "confluent-cloud-auth-provider",
+        "label": "Confluent Cloud"
+      }
+    ],
+    "commands": [
+      {
+        "command": "confluent.connections.create",
+        "icon": "$(plus)",
+        "title": "Log in to Confluent Cloud",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.copyResourceId",
+        "title": "Copy ID",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.copyResourceName",
+        "title": "Copy Name",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.debugtools.globalState.showWebView",
+        "title": "Show Global State Inspector",
+        "category": "Confluent: Debug Tools"
+      },
+      {
+        "command": "confluent.debugtools.globalState.reset",
+        "title": "Reset Global State",
+        "category": "Confluent: Debug Tools"
+      },
+      {
+        "command": "confluent.debugtools.workspaceState.showWebView",
+        "title": "Show Workspace State Inspector",
+        "category": "Confluent: Debug Tools"
+      },
+      {
+        "command": "confluent.debugtools.workspaceState.reset",
+        "title": "Reset Workspace State",
+        "category": "Confluent: Debug Tools"
+      },
+      {
+        "command": "confluent.diff.selectForCompare",
+        "icon": "$(pass-filled)",
+        "title": "Select for Compare",
+        "category": "Confluent: Compare Resources"
+      },
+      {
+        "command": "confluent.diff.compareWithSelected",
+        "icon": "$(diff)",
+        "title": "Compare with Selected",
+        "category": "Confluent: Compare Resources",
+        "enablement": "resourceSelectedForCompare"
+      },
+      {
+        "command": "confluent.organizations.use",
+        "icon": "$(organization)",
+        "title": "Change Organization",
+        "category": "Confluent: Organizations"
+      },
+      {
+        "command": "confluent.resources.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.resources.item.rename",
+        "icon": "$(pencil)",
+        "title": "Rename Environment",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.kafka-clusters.item.rename",
+        "icon": "$(pencil)",
+        "title": "Rename Kafka Cluster",
+        "category": "Confluent: Kafka Clusters"
+      },
+      {
+        "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
+        "title": "Copy Bootstrap Server(s)",
+        "category": "Confluent: Kafka Clusters"
+      },
+      {
+        "command": "confluent.resources.kafka-cluster.select",
+        "icon": "$(confluent-kafka-cluster)",
+        "title": "Select Kafka Cluster",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.resources.schema-registry.select",
+        "icon": "$(confluent-schema-registry)",
+        "title": "Select Schema Registry",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.scaffold",
+        "title": "Generate New Project",
+        "category": "Confluent: Project"
+      },
+      {
+        "command": "confluent.schemaViewer.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh Schema",
+        "category": "Confluent: Schema"
+      },
+      {
+        "command": "confluent.schemaViewer.validate",
+        "icon": "$(check)",
+        "title": "Validate",
+        "category": "Confluent: Schema"
+      },
+      {
+        "command": "confluent.schemaViewer.viewLocally",
+        "icon": "$(file-code)",
+        "title": "View Schema",
+        "category": "Confluent: Schema"
+      },
+      {
+        "command": "confluent.schemaViewer.uploadVersion",
+        "icon": "$(cloud-upload)",
+        "title": "Upload New Version to Schema Registry",
+        "category": "Confluent: Schema"
+      },
+      {
+        "command": "confluent.schemas.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.copySchemaRegistryId",
+        "title": "Copy Schema Registry ID",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.showOutputChannel",
+        "title": "Show Output Channel",
+        "icon": "$(output)",
+        "category": "Confluent"
+      },
+      {
+        "command": "confluent.support.confluent-walkthrough.launch",
+        "title": "Get Started with Kafka",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.feedback",
+        "title": "Give Feedback",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.issue",
+        "title": "Report an Issue",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.topic.consume",
+        "icon": "$(debug-start)",
+        "title": "Open message viewer",
+        "category": "Confluent: Topic",
+        "enablement": "view == confluent-topics"
+      },
+      {
+        "command": "confluent.topics.create",
+        "icon": "$(plus)",
+        "title": "Create Topic",
+        "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.delete",
+        "title": "Delete Topic",
+        "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh",
+        "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.copyKafkaClusterId",
+        "title": "Copy Kafka Cluster ID",
+        "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.copyKafkaClusterName",
+        "title": "Copy Kafka Cluster Name",
+        "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.copyKafkaClusterBootstrapServers",
+        "title": "Copy Kafka Cluster Bootstrap Server(s)",
+        "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.openCCloudLink",
+        "icon": "$(confluent-logo)",
+        "title": "View in Confluent Cloud",
+        "category": "Confluent: Resources"
+      }
+    ],
+    "configuration": {
+      "title": "Confluent",
+      "properties": {
+        "confluent.debugging.showSidecarExceptions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Alert on sidecar process exceptions"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "confluent",
+          "title": "Confluent",
+          "icon": "resources/confluent-logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "confluent": [
+        {
+          "id": "confluent-resources",
+          "name": "Resources"
+        },
+        {
+          "id": "confluent-topics",
+          "name": "Topics",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "confluent-schemas",
+          "name": "Schemas",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "confluent-support",
+          "name": "Support"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "confluent-resources",
+        "contents": "No resources found."
+      },
+      {
+        "view": "confluent-schemas",
+        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.create)",
+        "when": "!confluent.ccloudConnectionAvailable"
+      },
+      {
+        "view": "confluent-schemas",
+        "contents": "No Schema Registry selected. Click below to get started.\n[Select Schema Registry](command:confluent.resources.schema-registry.select)",
+        "when": "confluent.ccloudConnectionAvailable && !confluent.schemaRegistrySelected"
+      },
+      {
+        "view": "confluent-schemas",
+        "contents": "No schemas found.",
+        "when": "confluent.ccloudConnectionAvailable && confluent.schemaRegistrySelected"
+      },
+      {
+        "view": "confluent-topics",
+        "contents": "Not connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr [click here](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html) to learn more about running Kafka locally.",
+        "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable)"
+      },
+      {
+        "view": "confluent-topics",
+        "contents": "No Kafka cluster selected. Click below to get started.\n[Select Kafka Cluster](command:confluent.resources.kafka-cluster.select)",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable) && !confluent.kafkaClusterSelected"
+      },
+      {
+        "view": "confluent-topics",
+        "contents": "No topics found.\n[Create Topic](command:confluent.topics.create)",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable) && confluent.kafkaClusterSelected"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "confluent.connections.create",
+          "when": "!confluent.ccloudConnectionAvailable"
+        },
+        {
+          "command": "confluent.copyResourceId",
+          "when": "false"
+        },
+        {
+          "command": "confluent.copyResourceName",
+          "when": "false"
+        },
+        {
+          "command": "confluent.debugtools.globalState.showWebView",
+          "when": "true"
+        },
+        {
+          "command": "confluent.debugtools.globalState.reset",
+          "when": "true"
+        },
+        {
+          "command": "confluent.debugtools.workspaceState.showWebView",
+          "when": "true"
+        },
+        {
+          "command": "confluent.debugtools.workspaceState.reset",
+          "when": "true"
+        },
+        {
+          "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemaViewer.refresh",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemaViewer.validate",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemaViewer.viewLocally",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemaViewer.uploadVersion",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.refresh",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.copySchemaRegistryId",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.delete",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterId",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterName",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterBootstrapServers",
+          "when": "false"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "confluent.schemaViewer.refresh",
+          "group": "navigation@1",
+          "when": "resourceFilename =~ /.*\\.confluent\\.(avsc|json|proto)/"
+        },
+        {
+          "command": "confluent.schemaViewer.validate",
+          "group": "navigation@2",
+          "when": "resourceFilename =~ /.*\\.confluent\\.(avsc|json|proto)/"
+        },
+        {
+          "command": "confluent.schemaViewer.uploadVersion",
+          "group": "navigation@3",
+          "when": "resourceFilename =~ /.*\\.confluent\\.(avsc|json|proto)/"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "confluent.resources.refresh",
+          "when": "view == confluent-resources",
+          "group": "navigation"
+        },
+        {
+          "command": "confluent.resources.schema-registry.select",
+          "when": "view == confluent-schemas",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.schemas.refresh",
+          "when": "view == confluent-schemas",
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.schemas.copySchemaRegistryId",
+          "when": "view == confluent-schemas && confluentSchemaRegistrySelected",
+          "group": "2_copy@1"
+        },
+        {
+          "command": "confluent.topics.create",
+          "when": "view == confluent-topics",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.resources.kafka-cluster.select",
+          "when": "view == confluent-topics",
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.topics.refresh",
+          "when": "view == confluent-topics",
+          "group": "navigation@3"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterId",
+          "when": "view == confluent-topics && confluentKafkaClusterSelected",
+          "group": "2_copy@1"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterName",
+          "when": "view == confluent-topics && confluentKafkaClusterSelected",
+          "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterBootstrapServers",
+          "when": "view == confluent-topics && confluentKafkaClusterSelected",
+          "group": "2_copy@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "confluent.copyResourceId",
+          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithIDs",
+          "group": "2_copy@1"
+        },
+        {
+          "command": "confluent.copyResourceName",
+          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
+          "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.diff.selectForCompare",
+          "when": "viewItem in confluent.readOnlyDiffableResources",
+          "group": "3_compare"
+        },
+        {
+          "command": "confluent.diff.compareWithSelected",
+          "when": "resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
+          "group": "3_compare"
+        },
+        {
+          "command": "confluent.kafka-clusters.item.rename",
+          "when": "view == confluent-resources && viewItem == ccloud-kafka-cluster",
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.connections.create",
+          "when": "viewItem == resources-ccloud-container",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.organizations.use",
+          "when": "viewItem == resources-ccloud-container-connected",
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.resources.item.rename",
+          "when": "view == confluent-resources && viewItem == ccloud-environment",
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
+          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
+          "group": "2_copy@3"
+        },
+        {
+          "command": "confluent.schemas.copySchemaRegistryId",
+          "when": "view == confluent-schemas && viewItem == ccloud-schema",
+          "group": "4_copy@1"
+        },
+        {
+          "command": "confluent.schemaViewer.viewLocally",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem == ccloud-schema",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.topic.consume",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.topics.delete",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "topics"
+        },
+        {
+          "command": "confluent.topics.create",
+          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
+          "group": "topics"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterId",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "4_copy@1"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterName",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "4_copy@2"
+        },
+        {
+          "command": "confluent.topics.copyKafkaClusterBootstrapServers",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "4_copy@3"
+        },
+        {
+          "command": "confluent.openCCloudLink",
+          "when": "view in confluent.viewsWithResources && viewItem in confluent.ccloudResources",
+          "group": "z_openInCloud"
+        }
+      ]
+    },
+    "colors": [],
+    "icons": {
+      "confluent-environment": {
+        "description": "environment icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f101"
+        }
+      },
+      "confluent-flink-compute-pool": {
+        "description": "flink-compute-pool icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f102"
+        }
+      },
+      "confluent-kafka-cluster": {
+        "description": "kafka-cluster icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f103"
+        }
+      },
+      "confluent-logo": {
+        "description": "logo icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f104"
+        }
+      },
+      "confluent-schema-registry": {
+        "description": "schema-registry icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f105"
+        }
+      },
+      "confluent-topic-without-schema": {
+        "description": "topic-without-schema icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f106"
+        }
+      },
+      "confluent-topic": {
+        "description": "topic icon",
+        "default": {
+          "fontPath": "./resources/dist/confluenticons.woff2",
+          "fontCharacter": "\\f107"
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "confluent-walkthrough",
+        "title": "Connect to Kafka Clusters",
+        "description": "Interact with Apache Kafka® clusters running locally or on Confluent Cloud.",
+        "steps": [
+          {
+            "id": "connect-local-cluster",
+            "title": "Connect to Kafka",
+            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources \n[Get a Confluent Account](https://www.confluent.io/get-started/)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources panel \n[Confluent CLI for Local Clusters](https://docs.confluent.io/confluent-cli/current/overview.html)",
+            "media": {
+              "image": "resources/walkthrough/streams.png",
+              "altText": "Connect to Kafka clusters"
+            },
+            "completionEvents": []
+          },
+          {
+            "id": "inspect-schemas",
+            "title": "Inspect Schemas",
+            "description": "Examine schemas associated with your topics either from the Topics panel or the Schemas panel",
+            "media": {
+              "image": "resources/walkthrough/schema-inspector.png",
+              "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics panel or the Schemas panel"
+            },
+            "completionEvents": []
+          },
+          {
+            "id": "view-topics",
+            "title": "View Messages",
+            "description": "Click the $(play) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
+            "media": {
+              "image": "resources/walkthrough/message-viewer.png",
+              "altText": "Click the Play button next to a topic to see the Message viewer."
+            },
+            "completionEvents": []
+          },
+          {
+            "id": "generate-project",
+            "title": "Generate Files for a New Project",
+            "description": "Just starting out? Run ``Generate New Project`` to get a complete scaffolding setup with all the necessary boilerplate files to kickstart your Kafka project.",
+            "media": {
+              "markdown": "resources/walkthrough/generate-project.md"
+            },
+            "completionEvents": [
+              "onCommand:confluent.scaffold"
+            ]
+          },
+          {
+            "id": "give-feedback",
+            "title": "Provide Feedback",
+            "description": "The Confluent VS Code Extension is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
+            "media": {
+              "markdown": "resources/walkthrough/feedback.md"
+            },
+            "completionEvents": []
+          }
+        ]
+      }
+    ]
+  },
+  "devDependencies": {
+    "@0no-co/graphqlsp": "^1.12.8",
+    "@eslint/js": "^9.4.0",
+    "@openapitools/openapi-generator-cli": "^2.13.5",
+    "@playwright/test": "^1.45.0",
+    "@rollup/plugin-alias": "^5.1.0",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.7",
+    "@rollup/plugin-virtual": "^3.0.2",
+    "@twbs/fantasticon": "3.0.0",
+    "@types/eslint__js": "^8.42.3",
+    "@types/gulp": "^4.0.17",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/sinon": "^17.0.3",
+    "@types/tail": "^2.2.3",
+    "@types/vscode": "^1.87.0",
+    "@vscode/test-cli": "^0.0.6",
+    "@vscode/test-electron": "^2.3.9",
+    "dotenv": "^16.4.5",
+    "esbuild": "^0.21.4",
+    "eslint": "^9.4.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "globals": "^15.4.0",
+    "gulp": "^5.0.0",
+    "lightningcss": "^1.26.0",
+    "mocha-junit-reporter": "^2.2.1",
+    "mocha-multi-reporters": "^1.5.1",
+    "prettier": "3.2.5",
+    "rollup": "^4.18.0",
+    "rollup-plugin-auto-external": "^2.0.0",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-esbuild": "^6.1.1",
+    "rollwright": "^0.0.6",
+    "sinon": "^18.0.0",
+    "typescript": "^5.4.2",
+    "typescript-eslint": "^8.0.0-alpha.28"
+  },
+  "dependencies": {
+    "@segment/analytics-node": "^2.1.2",
+    "@sentry/node": "^8.17.0",
+    "@sentry/profiling-node": "^8.17.0",
+    "@sentry/rollup-plugin": "^2.21.1",
+    "@vscode/codicons": "^0.0.36",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "dataclass": "^3.0.0-beta.1",
+    "gql.tada": "^1.8.3",
+    "graphql": "^16.8.2",
+    "inertial": "^0.2.2",
+    "tail": "^2.2.6",
+    "unzipit": "^1.4.3"
+  }
+}
