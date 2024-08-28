@@ -60,13 +60,15 @@
                 </template>
               </div>
 
-              <vscode-button
-                appearance="primary"
-                data-prop-disabled="this.partitionsConsumedSelectionPristine()"
-                data-on-click="this.changePartitionsConsumed()"
-              >
-                Consume selected partitions
-              </vscode-button>
+              <footer class="partition-sticky-footer">
+                <vscode-button
+                  appearance="primary"
+                  data-prop-disabled="this.partitionsConsumedSelectionPristine()"
+                  data-on-click="this.changePartitionsConsumed()"
+                >
+                  Consume selected
+                </vscode-button>
+              </footer>
             </div>
           </div>
 
@@ -388,6 +390,14 @@
         background: var(--background);
         position: sticky;
         top: -0.5rem;
+        z-index: 1;
+      }
+      .partition-sticky-footer {
+        margin: 0 -0.5rem -0.5rem -0.5rem;
+        padding: 0.5rem;
+        background: var(--background);
+        position: sticky;
+        bottom: -0.5rem;
         z-index: 1;
       }
 
