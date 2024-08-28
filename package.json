@@ -613,7 +613,7 @@
             "title": "Connect to Kafka",
             "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources \n[Get a Confluent Account](https://www.confluent.io/get-started/)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources panel \n[Confluent CLI for Local Clusters](https://docs.confluent.io/confluent-cli/current/overview.html)",
             "media": {
-              "image": "resources/walkthrough/streams.png",
+              "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
             },
             "completionEvents": []
