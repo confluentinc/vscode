@@ -159,10 +159,10 @@ export class SidecarHandle {
               switch (context.error.name) {
                 case "TimeoutError":
                 case "AbortError":
-                  return new Response(JSON.stringify({ message: context.error.message }), {
-                    status: 504,
-                    headers: { "Content-Type": "application/json" },
-                  });
+                  return new Response(
+                    JSON.stringify({ message: context.error.message, aborted: true }),
+                    { status: 504, headers: { "Content-Type": "application/json" } },
+                  );
               }
             }
             if (context.error instanceof Error) {
