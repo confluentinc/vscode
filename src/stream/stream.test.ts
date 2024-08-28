@@ -132,7 +132,7 @@ describe("skiplist", () => {
     );
   });
 
-  it("should allow range searhes (smoke)", () => {
+  it("should allow range searches (smoke)", () => {
     const b = new CircularBuffer<number>(20);
     const s = new SkipList(20, 1 / 2, (p) => b.values[p], ascending);
     deepEqual(b.values, []);
@@ -191,7 +191,7 @@ describe("skiplist", () => {
     }
 
     deepEqual(
-      Array.from(collect(timestamp, ...timestamp.range(1719962960009, 1719962960009 + 10_000))),
+      Array.from(collect(timestamp, ...timestamp.range(1719962960009, 1719962960009 + 10_000)!)),
       batches
         .flatMap((b) => b.flatMap((p) => p.flatMap((m) => m.timestamp)))
         .sort(descending)
@@ -199,7 +199,7 @@ describe("skiplist", () => {
     );
 
     deepEqual(
-      Array.from(collect(partition, ...partition.range(4, 5))),
+      Array.from(collect(partition, ...partition.range(4, 5)!)),
       batches
         .flatMap((b) => b.flatMap((p) => p.flatMap((m) => m.partition)))
         .sort(ascending)
