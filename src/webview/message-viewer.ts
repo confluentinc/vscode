@@ -384,6 +384,10 @@ class MessageViewerViewModel extends ViewModel {
     const index = indices[messages.indexOf(message)];
     return post("PreviewMessageByIndex", { index });
   }
+
+  previewJSON() {
+    return post("PreviewJSON", {});
+  }
 }
 
 function highlight(input: string, query: string) {
@@ -434,6 +438,7 @@ export function post(type: "SearchMessages", body: { search: string | null }): P
 export function post(type: "StreamPause", body: object): Promise<null>;
 export function post(type: "StreamResume", body: object): Promise<null>;
 export function post(type: "PreviewMessageByIndex", body: { index: number }): Promise<null>;
+export function post(type: "PreviewJSON", body: object): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
