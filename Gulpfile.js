@@ -3,8 +3,8 @@ import json from "@rollup/plugin-json";
 import node from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import virtual from "@rollup/plugin-virtual";
-import { sentryRollupPlugin } from "@sentry/rollup-plugin";
 import { createFilter } from "@rollup/pluginutils";
+import { sentryRollupPlugin } from "@sentry/rollup-plugin";
 import { FontAssetType, OtherAssetType, generateFonts } from "@twbs/fantasticon";
 import { runTests } from "@vscode/test-electron";
 import { configDotenv } from "dotenv";
@@ -34,6 +34,8 @@ const IS_CI = process.env.CI != null;
 export const ci = parallel(check, build, lint);
 
 export const bundle = series(clean, build, pack);
+
+export const clicktest = series(bundle, install);
 
 clean.description = "Clean up static assets.";
 export function clean(done) {
@@ -716,4 +718,38 @@ export async function icongen() {
   extensionManifest.contributes.icons = iconContributions.icons;
   await writeFile("package.json", JSON.stringify(extensionManifest, null, 2), "utf8");
   await appendFile("package.json", "\n", "utf8");
+}
+
+install.description = "Install the extension in VS Code for testing.";
+export function install(done) {
+  if (IS_CI) {
+    console.error("This is meant to be run locally and should not be used in CI.");
+    return done(1);
+  }
+  // uninstall any existing extension first
+  // (may holler about "Extension 'confluent.vscode-confluent' is not installed.", but that's fine)
+  spawnSync("code", ["--uninstall-extension", "confluent.vscode-confluent"], {
+    stdio: "inherit",
+  });
+
+  const files = globSync("out/*.vsix");
+  if (files.length === 0) {
+    console.error(
+      "No .vsix files found in the out directory. Make sure to run `gulp bundle` first.",
+    );
+    return done(1);
+  }
+
+  const extensionVsix = files[0];
+  if (files.length > 1) {
+    console.warn(
+      `Multiple .vsix files found in the out directory. Only installing "${extensionVsix}"`,
+    );
+  }
+  // "--install-extension: Installs or updates an extension. The argument is either an extension id
+  // or a path to a VSIX. The identifier of an extension is '${publisher}.${name}'. Use '--force'
+  // argument to update to latest version. To install a specific version provide '@${version}'.
+  // For example: 'vscode.csharp@1.2.3'."
+  const result = spawnSync("code", ["--install-extension", extensionVsix], { stdio: "inherit" });
+  return done(result.status);
 }
