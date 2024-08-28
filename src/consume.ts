@@ -339,6 +339,30 @@ function messageViewerStartPollingCommand(
           });
         return null;
       }
+      case "PreviewJSON": {
+        const {
+          timestamp,
+          messages: { values },
+        } = stream();
+        const records: string[] = [];
+        for (
+          let i = 0, p = timestamp.head, payload;
+          i < timestamp.size;
+          i++, p = timestamp.next[p]
+        ) {
+          payload = values[p];
+          records.push("\t" + JSON.stringify(payload));
+        }
+        const content = `[\n${records.join(",\n")}\n]`;
+        workspace.openTextDocument({ content, language: "jsonc" }).then((preview) => {
+          return window.showTextDocument(preview, {
+            preview: false,
+            viewColumn: ViewColumn.Beside,
+            preserveFocus: false,
+          });
+        });
+        return null satisfies MessageResponse<"PreviewJSON">;
+      }
       case "SearchMessages": {
         if (body.search != null) {
           const { capacity, messages } = stream();
