@@ -143,8 +143,24 @@ function messageViewerStartPollingCommand(
     return bitset;
   });
 
+  /** Provides timestamp range filter bitset based on the most recent consumed result. */
   const timestampBitset = os.derive<BitSet | null>(() => {
-    return null;
+    const result = latestResult();
+    const { capacity, timestamp } = stream();
+    const ts = timestampFilter();
+    if (ts == null || result == null) return null;
+    const bitset = new BitSet(capacity);
+    const [lo, hi] = ts;
+    let range = timestamp.range(lo, hi);
+    if (range == null) return bitset;
+    const next = timestamp.next;
+    let cursor = range[0];
+    while (true) {
+      bitset.set(cursor);
+      if (cursor === range[1]) break;
+      cursor = next[cursor];
+    }
+    return bitset;
   });
 
   /** Used in derive below. Search bitset retains reference but internal value keeps changing */
