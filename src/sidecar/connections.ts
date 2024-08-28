@@ -10,7 +10,7 @@ import {
 } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
-import { IntervalPoller } from "../utils/interval_poller";
+import { IntervalPoller } from "../utils/timing";
 
 const logger = new Logger("sidecarManager.connections");
 

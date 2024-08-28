@@ -7,6 +7,8 @@ import * as vscode from "vscode";
  */
 export const outputChannel = vscode.window.createOutputChannel("Confluent", { log: true });
 
+const callpointCounter = new Map<string, number>();
+
 /**
  * Lightweight wrapper class using `console` log methods with timestamps, log levels, and original
  * logger name. Also appends messages and additional args to the "Confluent" output channel.
@@ -15,6 +17,13 @@ export class Logger {
   // matches the default values from `env.logLevel`
   levels = ["off", "trace", "debug", "info", "warning", "error"];
   constructor(private name: string) {}
+
+  /** Returns a new 'bound' logger with a common prefix to correlate a sequence of calls with */
+  public withCallpoint(callpoint: string): Logger {
+    const count = callpointCounter.get(callpoint) || 0;
+    callpointCounter.set(callpoint, count + 1);
+    return new Logger(`${this.name} ${callpoint} ${count}`);
+  }
 
   /** More verbose form of "debug" according to the LogOutputChannel */
   trace(message: string, ...args: any[]) {
