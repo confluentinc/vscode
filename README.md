@@ -64,7 +64,10 @@ repo.
 Follow [CONTRIBUTING.md](/CONTRIBUTING.md) to for information on setting up your development
 environment, how to propose bugfixes and improvements, and how to build and test your changes.
 
-See our [Code of Conduct - coming soon](#TODO) for guidelines on what we expect from participants,
+See our [Code of Conduct](/CODE_OF_CONDUCT.md) for guidelines on what we expect from participants,
 and what actions will and will not be tolerated.
 
 ## License
+
+This project is licensed under the Apache License, Version 2.0. See [LICENSE](/LICENSE.txt) for
+the full license text.
