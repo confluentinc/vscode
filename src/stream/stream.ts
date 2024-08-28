@@ -5,7 +5,6 @@ export class Stream {
   messages: CircularBuffer<PartitionConsumeRecord>;
   timestamp: SkipList<number | undefined>;
   partition: SkipList<number | undefined>;
-  bitset: BitSet | null;
   order: SkipList<PartitionConsumeRecord> | null;
 
   constructor(capacity = 2 ** 24) {
@@ -28,7 +27,6 @@ export class Stream {
     let partitionOf = (point: number) => values[point].partition_id;
     this.partition = new SkipList(capacity, 1 / 2, partitionOf, ascending);
 
-    this.bitset = null;
     this.order = null;
   }
 
@@ -45,20 +43,16 @@ export class Stream {
     this.partition.insert(index);
     // TEMP (July 12th) disabling this since we don't have sorting feature yet
     // this.order?.insert(index);
+    return index;
   }
 
   get size() {
     return this.messages.size;
   }
 
-  count() {
-    return { total: this.messages.size, filter: this.bitset?.count() ?? null };
-  }
-
-  slice(offset: number, limit: number) {
+  slice(offset: number, limit: number, includes: (index: number) => boolean = () => true) {
     let results: Array<PartitionConsumeRecord> = [];
     let indices: Array<number> = [];
-    let includes = this.bitset?.predicate() ?? ((_: number) => true);
     let local = this.order ?? this.timestamp;
     let messages = this.messages.values;
 
@@ -423,5 +417,18 @@ export class BitSet {
       count += (((value + (value >> 4)) & 0xf0f0f0f) * 0x1010101) >> 24;
     }
     return count;
+  }
+
+  copy() {
+    const copy = new BitSet(0);
+    copy.bits = this.bits.slice();
+    return copy;
+  }
+
+  intersection(other: BitSet) {
+    for (let i = 0, a = this.bits, b = other.bits; i < a.length; i++) {
+      a[i] &= b[i];
+    }
+    return this;
   }
 }
