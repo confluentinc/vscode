@@ -69,5 +69,5 @@ and what actions will and will not be tolerated.
 
 ## License
 
-This project is licensed under the Apache License, Version 2.0. See [LICENSE](/LICENSE.txt) for
+This project is licensed under the Apache License, Version 2.0. See [LICENSE.txt](/LICENSE.txt) for
 the full license text.
