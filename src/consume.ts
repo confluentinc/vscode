@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
-import { EventEmitter, ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
-import { KafkaTopic } from "./models/topic";
+import { ObservableScope } from "inertial";
+import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
+import { type KafkaTopic } from "./models/topic";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
@@ -12,32 +13,20 @@ import {
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { Logger } from "./logging";
-import { getSidecar } from "./sidecar";
-import { BitSet, Stream } from "./stream/stream";
+import { type SidecarHandle, getSidecar } from "./sidecar";
+import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
 
 export function activateMessageViewer(context: ExtensionContext) {
   // commands
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
-    registerCommandWithLogging("confluent.topic.consume", (topic: KafkaTopic) => {
-      return messageViewerStartPollingCommand(context, topic);
+    registerCommandWithLogging("confluent.topic.consume", async (topic: KafkaTopic) => {
+      const sidecar = await getSidecar();
+      return messageViewerStartPollingCommand(context, topic, sidecar);
     }),
   );
 }
-
-type TopicRecord = {
-  uri: Uri;
-  stream: Stream;
-  actl: AbortController;
-  full: boolean;
-  mode: "beginning" | "latest" | "timestamp";
-  state: "running" | "paused" | "errored";
-  // TEMP tracking partition filter as just a property; will be removed later
-  partition_filter: number[] | null;
-  partitions: number[] | null;
-  params: SimpleConsumeMultiPartitionRequest;
-};
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
@@ -45,6 +34,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 const DEFAULT_MAX_POLL_RECORDS = 250;
+const DEFAULT_RECORDS_CAPACITY = 100_000;
 
 const DEFAULT_CONSUME_PARAMS = {
   max_poll_records: DEFAULT_MAX_POLL_RECORDS,
@@ -52,52 +42,18 @@ const DEFAULT_CONSUME_PARAMS = {
   fetch_max_bytes: 40 * 1024 * 1024,
 };
 
-async function messageViewerStartPollingCommand(context: ExtensionContext, topic: KafkaTopic) {
-  const topicName = topic.name;
-  const clusterId = topic.clusterId;
-  const id = `${clusterId}/${topicName}`;
-  const uri = Uri.parse(`confluent:${topicName}.json?${JSON.stringify({ id })}`);
-  const emitter = new EventEmitter<Uri>();
-
-  const sidecar = await getSidecar();
-  const service = sidecar.getKafkaConsumeApi(topic.connectionId);
-  const partitionApi = sidecar.getPartitionV3Api(clusterId, topic.connectionId);
-
-  const consume = async (
-    SimpleConsumeMultiPartitionRequest: SimpleConsumeMultiPartitionRequest,
-  ) => {
-    const response =
-      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw({
-        cluster_id: clusterId,
-        topic_name: topicName,
-        x_connection_id: topic.connectionId,
-        SimpleConsumeMultiPartitionRequest: SimpleConsumeMultiPartitionRequest,
-      });
-    return response.raw.json();
-  };
-
-  const actl = new AbortController();
-  // TODO remove hardcoded limit, make sure array buffers are resizable
-  const record: TopicRecord = {
-    uri,
-    stream: new Stream(100_000),
-    actl,
-    full: false,
-    mode: "beginning",
-    state: "running",
-    partition_filter: null,
-    partitions: null,
-    params: {
-      ...DEFAULT_CONSUME_PARAMS,
-      from_beginning: true,
-    },
-  };
-
+function messageViewerStartPollingCommand(
+  context: ExtensionContext,
+  topic: KafkaTopic,
+  sidecar: SidecarHandle,
+) {
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
-  const panel = window.createWebviewPanel("message-viewer", `Topic: ${topicName}`, ViewColumn.One, {
-    enableScripts: true,
-    localResourceRoots: [staticRoot],
-  });
+  const panel = window.createWebviewPanel(
+    "message-viewer",
+    `Topic: ${topic.name}`,
+    ViewColumn.One,
+    { enableScripts: true, localResourceRoots: [staticRoot] },
+  );
 
   panel.webview.html = messageViewerTemplate({
     cspSource: panel.webview.cspSource,
@@ -107,12 +63,234 @@ async function messageViewerStartPollingCommand(context: ExtensionContext, topic
     messageViewerUri: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "message-viewer.js")),
   });
 
+  const service = sidecar.getKafkaConsumeApi(topic.connectionId);
+  const partitionApi = sidecar.getPartitionV3Api(topic.clusterId, topic.connectionId);
+
+  const consume = async (
+    request: SimpleConsumeMultiPartitionRequest,
+    signal: AbortSignal,
+  ): Promise<SimpleConsumeMultiPartitionResponse> => {
+    const response =
+      await service.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
+        {
+          cluster_id: topic.clusterId,
+          topic_name: topic.name,
+          x_connection_id: topic.connectionId,
+          SimpleConsumeMultiPartitionRequest: request,
+        },
+        { signal },
+      );
+    return response.raw.json();
+  };
+
+  const os = ObservableScope();
+
+  /** Is stream currently running or being paused?  */
+  const state = os.signal<"running" | "paused">("running");
+  /** Consume mode: are we consuming from the beginning, expecting the newest messages, or targeting a timestamp. */
+  const mode = os.signal<"beginning" | "latest" | "timestamp">("beginning");
+  /** Parameters used by Consume API. */
+  const params = os.signal<SimpleConsumeMultiPartitionRequest>({
+    ...DEFAULT_CONSUME_PARAMS,
+    from_beginning: true,
+  });
+  /** List of currently consumed partitions. `null` for all partitions. */
+  const partitionConsumed = os.signal<number[] | null>(null);
+  /** List of currently filtered partitions. `null` for all consumed partitions. */
+  const partitionFilter = os.signal<number[] | null>(null);
+  /** Filter by range of timestamps. `null` for all consumed messages. */
+  const timestampFilter = os.signal<[number, number] | null>(null);
+  /** Filter by substring text query. Persists bitset instead of computing it. */
+  const textFilter = os.signal<[BitSet, string] | null>(null);
+  /** The stream instance that holds consumed messages and index them by timestamp and partition. */
+  const stream = os.signal(new Stream(DEFAULT_RECORDS_CAPACITY));
+  /**
+   * A boolean that indicates if the stream reached its capacity.
+   * Continuing consumption after this means overriding oldest messages.
+   */
+  const isStreamFull = os.signal(false);
+
+  /** Index of the latest inserted message in the stream. */
+  const latestInsert = os.signal<number>(-1);
+  /** Most recent response payload from Consume API. */
+  const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
+  /** Timestamp of the most recent successful consumption request. */
+  const latestFetch = os.signal<number>(0);
+
+  /** Notify the webview only after flushing the rest of updates. */
+  const notifyUI = () => {
+    queueMicrotask(() => panel.webview.postMessage(["Timestamp", "Success", Date.now()]));
+  };
+
+  /** Provides partition filter bitset based on the most recent consumed result. */
+  const partitionBitset = os.derive<BitSet | null>(() => {
+    const result = latestResult();
+    const { capacity, partition } = stream();
+    const ids = partitionFilter();
+    if (ids == null || result == null) return null;
+    const bitset = new BitSet(capacity);
+    for (const partitionId of ids) {
+      let range = partition.range(partitionId, partitionId);
+      if (range == null) continue;
+      const next = partition.next;
+      let cursor = range[0];
+      while (true) {
+        bitset.set(cursor);
+        if (cursor === range[1]) break;
+        cursor = next[cursor];
+      }
+    }
+    return bitset;
+  });
+
+  /** Provides timestamp range filter bitset based on the most recent consumed result. */
+  const timestampBitset = os.derive<BitSet | null>(() => {
+    const result = latestResult();
+    const { capacity, timestamp } = stream();
+    const ts = timestampFilter();
+    if (ts == null || result == null) return null;
+    const bitset = new BitSet(capacity);
+    const [lo, hi] = ts;
+    let range = timestamp.range(lo, hi);
+    if (range == null) return bitset;
+    const next = timestamp.next;
+    let cursor = range[0];
+    while (true) {
+      bitset.set(cursor);
+      if (cursor === range[1]) break;
+      cursor = next[cursor];
+    }
+    return bitset;
+  });
+
+  /** Used in derive below. Search bitset retains reference but internal value keeps changing */
+  const alwaysNotEqual = () => false;
+  /** Unlike partition and timestamp filter, keeps updating previously created bitset with latest messages added. */
+  const searchBitset = os.derive<BitSet | null>(() => {
+    // can i catch up here? maybe if I can track the cursor in the search object and compare to the stream size?
+    const messageStream = stream();
+    const search = textFilter();
+    const index = latestInsert();
+    if (search == null) return null;
+    const [bitset, query] = search;
+    const value = messageStream.messages.values[index];
+    if (includesSubstring(value, query)) {
+      bitset.set(index);
+    } else {
+      bitset.unset(index);
+    }
+    return bitset;
+  }, alwaysNotEqual);
+
+  /** Single bitset that represents the intersection of all currently applied filters. */
+  const bitset = os.derive(() => {
+    const partition = partitionBitset();
+    const timestamp = timestampBitset();
+    const search = searchBitset();
+    let result: BitSet | null = null;
+    for (const bitset of [partition, timestamp, search]) {
+      if (bitset == null) continue;
+      result = result == null ? bitset.copy() : result.intersection(bitset);
+    }
+    return result;
+  });
+
+  os.watch(() => {
+    /* This is the main consumption cycle. Every time input parameters change,
+    any in-flight requests should be aborted. See this controller's references,
+    it has to be passed to any async calls happening below. */
+    const ctl = new AbortController();
+
+    /* This functions is IIFE because os.watch() needs a sync function. Input
+    parameters are all read in the same place to make sure no branches affect
+    this watchers dependency list. */
+    (async (streamParams, streamState, stream, partitions, prevResult) => {
+      /* Cannot proceed any further if state got paused by the user or other
+      events. If the state changes, this watcher is notified once again. */
+      if (streamState !== "running") return;
+      try {
+        const now = Date.now();
+        const old = os.peek(latestFetch);
+        /* Ensure to wait at least some time before following polling request
+        if at least one was already made. The condition below should allow for
+        faster requests when the stream was resumed. */
+        if (now - old < MIN_POLLING_INTERVAL_MS) await sleep(ctl.signal);
+
+        /* If current parameters were already used for successful request, the
+        following request should consider offsets provided in previous results. */
+        const params = getOffsets(streamParams, prevResult, partitions);
+        const result = await consume(params, ctl.signal);
+
+        const datalist = result.partition_data_list ?? [];
+        outer: for (const partition of datalist) {
+          /* The very first request always going to include messages from all
+          partitions. If we consume a subset of partitions, some messages need
+          to be dropped. */
+          if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
+
+          const records = partition.records ?? [];
+          for (const message of records) {
+            /* New messages inserted into the stream instance and its index is
+            stored for further processing by existing filters. */
+            const index = stream.insert(message);
+            latestInsert(index);
+            /* For the first time when the stream reaches defined capacity, we
+            pause consumption so the user can work exactly with the batch they
+            expected to consume.
+
+            They still can resume the stream back to get into "windowed" mode. */
+            if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {
+              os.batch(() => {
+                isStreamFull(true);
+                state("paused");
+              });
+              break outer;
+            }
+          }
+        }
+
+        /* After successful tracking of all new messages, store the payload and
+        notify UI side to start re-rendering necessary pieces. */
+        os.batch(() => {
+          latestResult(result);
+          latestFetch(Date.now());
+          notifyUI();
+        });
+      } catch (error) {
+        /* Async operations can be aborted by provided AbortController that is
+        controlled by the watcher. Nothing to log in this case. */
+        if (error instanceof Error && error.name === "AbortError") return;
+        /* In case of network issue, the current assumption is that the user is
+        going to see auth related error alerts. Logging and error displays is WIP. */
+        if (error instanceof ResponseError) {
+          const payload = await error.response.json();
+          // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
+          if (!payload?.aborted) {
+            logger.error(
+              `An error occurred during messages consumption. Status ${error.response.status}`,
+            );
+          }
+        } else if (error instanceof Error) {
+          logger.error(error.message);
+        }
+
+        os.batch(() => {
+          latestFetch(Date.now());
+          // TODO store error to show in the UI
+        });
+      }
+    })(params(), state(), stream(), partitionConsumed(), latestResult());
+
+    return () => ctl.abort();
+  });
+
   function processMessage(...[type, body]: Parameters<MessageSender>) {
     switch (type) {
       case "GetMessages": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const { results, indices } = record.stream.slice(offset, limit);
+        const includes = bitset()?.predicate() ?? ((_: number) => true);
+        const { results, indices } = stream().slice(offset, limit, includes);
         return {
           indices,
           messages: results.map(({ partition_id, offset, timestamp, key, value }) => {
@@ -121,31 +299,35 @@ async function messageViewerStartPollingCommand(context: ExtensionContext, topic
         } satisfies MessageResponse<"GetMessages">;
       }
       case "GetMessagesCount": {
-        return record.stream.count() satisfies MessageResponse<"GetMessagesCount">;
+        return {
+          total: stream().messages.size,
+          filter: bitset()?.count() ?? null,
+        } satisfies MessageResponse<"GetMessagesCount">;
       }
       case "GetPartitionStats": {
         return partitionApi
-          .listKafkaPartitions({ cluster_id: clusterId, topic_name: topicName })
+          .listKafkaPartitions({ cluster_id: topic.clusterId, topic_name: topic.name })
           .then((v) => v.data) satisfies Promise<MessageResponse<"GetPartitionStats">>;
       }
       case "GetConsumedPartitions": {
-        return record.partitions satisfies MessageResponse<"GetConsumedPartitions">;
+        return partitionConsumed() satisfies MessageResponse<"GetConsumedPartitions">;
       }
       case "GetFilteredPartitions": {
-        return record.partition_filter satisfies MessageResponse<"GetFilteredPartitions">;
+        return partitionFilter() satisfies MessageResponse<"GetFilteredPartitions">;
       }
       case "GetMaxSize": {
-        return String(record.stream.capacity) satisfies MessageResponse<"GetMaxSize">;
+        return String(stream().capacity) satisfies MessageResponse<"GetMaxSize">;
       }
       case "GetStreamState": {
-        return record.state satisfies MessageResponse<"GetStreamState">;
+        return state() satisfies MessageResponse<"GetStreamState">;
       }
       case "PreviewMessageByIndex": {
+        const { messages } = stream();
         workspace
           .openTextDocument({
             content:
-              `// message ${record.stream.messages.at(body.index).key} from ${topicName}\n` +
-              JSON.stringify(record.stream.messages.at(body.index), null, 2),
+              `// message ${messages.at(body.index).key} from ${topic.name}\n` +
+              JSON.stringify(messages.at(body.index), null, 2),
             language: "jsonc",
           })
           .then((preview) => {
@@ -157,101 +339,119 @@ async function messageViewerStartPollingCommand(context: ExtensionContext, topic
           });
         return null;
       }
+      case "PreviewJSON": {
+        const {
+          timestamp,
+          messages: { values },
+        } = stream();
+        const includes = bitset()?.predicate() ?? ((_: number) => true);
+        const records: string[] = [];
+        for (
+          let i = 0, p = timestamp.head, payload;
+          i < timestamp.size;
+          i++, p = timestamp.next[p]
+        ) {
+          if (includes(p)) {
+            payload = values[p];
+            records.push("\t" + JSON.stringify(payload));
+          }
+        }
+        const content = `[\n${records.join(",\n")}\n]`;
+        workspace.openTextDocument({ content, language: "jsonc" }).then((preview) => {
+          return window.showTextDocument(preview, {
+            preview: false,
+            viewColumn: ViewColumn.Beside,
+            preserveFocus: false,
+          });
+        });
+        return null satisfies MessageResponse<"PreviewJSON">;
+      }
       case "SearchMessages": {
+        if (body.search != null) {
+          const { capacity, messages } = stream();
+          const values = messages.values;
+          const bitset = new BitSet(capacity);
+          for (let i = 0; i < values.length; i++) {
+            if (includesSubstring(values[i], body.search)) {
+              bitset.set(i);
+            }
+          }
+          textFilter([bitset, body.search]);
+        } else {
+          textFilter(null);
+        }
+        notifyUI();
         return null satisfies MessageResponse<"SearchMessages">;
       }
       case "StreamPause": {
-        record.state = "paused";
-        emitter.fire(uri);
+        state("paused");
+        notifyUI();
         return null satisfies MessageResponse<"StreamPause">;
       }
       case "StreamResume": {
-        record.state = "running";
-        emitter.fire(uri);
+        state("running");
+        notifyUI();
         return null satisfies MessageResponse<"StreamResume">;
       }
       case "ConsumeModeChange": {
-        record.mode = body.mode;
-        const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, record.stream.capacity);
-        record.params = getParams(body.mode, body.timestamp, maxPollRecords);
-        record.stream = new Stream(record.stream.capacity);
-        record.state = "running";
-        record.partition_filter = null;
-        emitter.fire(uri);
+        mode(body.mode);
+        const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
+        params(getParams(body.mode, body.timestamp, maxPollRecords));
+        stream((value) => new Stream(value.capacity));
+        state("running");
+        latestResult(null);
+        partitionFilter(null);
+        notifyUI();
         return null satisfies MessageResponse<"ConsumeModeChange">;
       }
       case "PartitionConsumeChange": {
-        record.partitions = body.partitions;
-        const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, record.stream.capacity);
-        record.params = getParams(record.mode, record.params.timestamp, maxPollRecords);
-        record.stream = new Stream(record.stream.capacity);
-        record.state = "running";
-        record.partition_filter = null;
-        emitter.fire(uri);
+        partitionConsumed(body.partitions);
+        const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
+        params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
+        stream((value) => new Stream(value.capacity));
+        state("running");
+        latestResult(null);
+        partitionFilter(null);
+        notifyUI();
         return null satisfies MessageResponse<"PartitionConsumeChange">;
       }
       case "PartitionFilterChange": {
-        record.partition_filter = body.partitions;
-        emitter.fire(uri);
+        partitionFilter(body.partitions);
+        notifyUI();
         return null satisfies MessageResponse<"PartitionFilterChange">;
       }
       case "MessageLimitChange": {
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, body.limit);
-        record.params = getParams(record.mode, record.params.timestamp, maxPollRecords);
-        record.stream = new Stream(body.limit);
-        record.state = "running";
-        emitter.fire(uri);
+        params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
+        stream(new Stream(body.limit));
+        state("running");
+        latestResult(null);
+        notifyUI();
         return null satisfies MessageResponse<"MessageLimitChange">;
       }
     }
   }
 
-  context.subscriptions.push(
-    // panel is closed, shut down the stream
-    panel.onDidDispose(() => {
-      record.actl.abort();
-      emitter.dispose();
-    }),
+  const handler = handleWebviewMessage(panel.webview, (...args) => {
+    let result;
+    os.batch(() => (result = processMessage(...args)));
+    return result;
+  });
 
-    handleWebviewMessage(panel.webview, processMessage),
-
-    // send the message to webview whenever stream updates
-    emitter.event(() => {
-      // TEMP partition filter is the first filter to be implemented,
-      // gonna live here for now, while Oleksii figures out the pipeline for multiple filters
-      if (record.partition_filter != null) {
-        let bitset = new BitSet(record.stream.capacity);
-        for (const partitionId of record.partition_filter) {
-          let range = record.stream.partition.range(partitionId, partitionId);
-          if (range != null) {
-            const next = record.stream.partition.next;
-            let cursor = range[0];
-            while (true) {
-              bitset.set(cursor);
-              if (cursor === range[1]) break;
-              cursor = next[cursor];
-            }
-          }
-        }
-        record.stream.bitset = bitset;
-      } else {
-        record.stream.bitset = null;
-      }
-      // notify the webview only after flushing the rest of updates
-      queueMicrotask(() => panel.webview.postMessage(["Timestamp", "Success", Date.now()]));
-    }),
-  );
-
-  await startConsuming(record, emitter, consume);
+  panel.onDidDispose(() => {
+    handler.dispose();
+    os.dispose();
+  });
 }
 
 const logger = new Logger("consume");
 
+/** Define basic consume params based on desired consume mode. */
 function getParams(
   mode: "beginning" | "latest" | "timestamp",
   timestamp: number | undefined,
   max_poll_records: number,
-) {
+): SimpleConsumeMultiPartitionRequest {
   return mode === "beginning"
     ? { ...DEFAULT_CONSUME_PARAMS, max_poll_records, from_beginning: true }
     : mode === "timestamp"
@@ -259,99 +459,13 @@ function getParams(
       : { ...DEFAULT_CONSUME_PARAMS, max_poll_records };
 }
 
-async function startConsuming(
-  record: TopicRecord,
-  emitter: EventEmitter<Uri>,
-  consume: (
-    state: SimpleConsumeMultiPartitionRequest,
-  ) => Promise<SimpleConsumeMultiPartitionResponse>,
-) {
-  consume: while (!record.actl.signal.aborted) {
-    try {
-      let params = record.params;
-      let result = await consume(params);
-      if (record.state === "paused") {
-        // consumption was paused while we were waiting for the result
-        // let's wait for the user to resume, before we show the result on the screen
-        await waitForState(record, emitter, "running");
-      }
-      if (params !== record.params) {
-        // the params were changed while we were waiting for the result
-        // so we need to dismiss this result and start with fresh params
-        continue;
-      }
-      if (record.actl.signal.aborted) {
-        // the consumption was aborted while we were waiting for the result
-        return;
-      }
-      for (const partition of result.partition_data_list ?? []) {
-        if (record.partitions != null && !record.partitions.includes(partition.partition_id!)) {
-          // the first request always going to include messages from all partitions
-          // if we consume a subset of partitions, some messages need to be dropped
-          continue;
-        }
-        for (const message of partition.records ?? []) {
-          record.stream.insert(message);
-          // the first time when the stream size reaches message limit, we pause it until the user resumes it
-          if (!record.full && record.stream.size >= record.stream.capacity) {
-            record.full = true;
-            record.state = "paused";
-            emitter.fire(record.uri);
-            await waitForState(record, emitter, "running");
-            if (params !== record.params) {
-              // the params were changed while we were waiting for resume
-              // any leftover messages should be dismissed
-              // and we need to start consuming using the new params
-              continue consume;
-            }
-          }
-        }
-      }
-      // if record includes a list of partition ids, I can pass it here for filtering
-      record.params = nextOffsets(record.params, result, record.partitions);
-      emitter.fire(record.uri);
-      await sleep();
-    } catch (error) {
-      // do nothing, for now. if it was a network issue,
-      // the user going to see auth related error alert
-      if (error instanceof ResponseError) {
-        logger.error(
-          `An error occurred during messages consumption. Status ${error.response.status}, ${error.response.statusText}`,
-        );
-      } else if (error instanceof Error) {
-        logger.error(error.message);
-      }
-      // still need to wait for some time before making next request
-      await sleep();
-    }
-  }
-}
-
-function waitForState(
-  record: TopicRecord,
-  emitter: EventEmitter<Uri>,
-  state: "running" | "paused" | "errored",
-) {
-  return new Promise<void>((resolve) => {
-    let listener = emitter.event(() => {
-      if (record.state === state) {
-        listener.dispose();
-        resolve();
-      }
-    });
-    record.actl.signal.addEventListener("abort", () => {
-      listener.dispose();
-      resolve();
-    });
-  });
-}
-
-function nextOffsets(
+/** Compute partition offsets for the next consume request, based on response of the previous one. */
+function getOffsets(
   params: SimpleConsumeMultiPartitionRequest,
-  results: SimpleConsumeMultiPartitionResponse,
+  results: SimpleConsumeMultiPartitionResponse | null,
   partitions: number[] | null,
 ): SimpleConsumeMultiPartitionRequest {
-  if (results.partition_data_list != null) {
+  if (results?.partition_data_list != null) {
     const { max_poll_records, message_max_bytes, fetch_max_bytes } = params;
     const offsets = results.partition_data_list.reduce((list, { partition_id, next_offset }) => {
       return partitions == null || (partition_id != null && partitions.includes(partition_id))
@@ -366,9 +480,26 @@ function nextOffsets(
 const MIN_POLLING_INTERVAL_MS = 2 * 1000;
 const THRESHOLD_POLLING_INTERVAL_MS = 1 * 1000;
 
-function sleep() {
+/**
+ * Await for a variable time. A random threshold added to avoid syncing with
+ * other consumers running in parallel. AbortSignal can be provided to abort
+ * the timer, in case the following procedure should not be executed anyway.
+ */
+function sleep(signal: AbortSignal) {
   const delay = MIN_POLLING_INTERVAL_MS + THRESHOLD_POLLING_INTERVAL_MS * Math.random();
-  return new Promise((resolve) => setTimeout(resolve, delay));
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout>;
+    const abort = () => {
+      clearTimeout(timer);
+      const error = Object.assign(new Error(signal.reason), { name: "AbortError" });
+      reject(error);
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve(null);
+    }, delay);
+  });
 }
 
 /**
