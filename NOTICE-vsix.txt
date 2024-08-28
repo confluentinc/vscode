@@ -12,6 +12,10 @@ similar script in the Apache Flink project, which is licensed under the
 Apache License 2.0. The original script can be found at the following URL:
 https://github.com/apache/flink/blob/9e6bcee710b13b8f64a73c99c3164f7551e1e829/tools/releasing/collect_license_files.sh
 
+A portion of the code in src/webview/popover/popover.ts was adapted from
+Floating UI (https://github.com/floating-ui/floating-ui).
+Copyright (c) 2021 Floating UI contributors
+
 This distribution has a binary dependency on ide-sidecar, which is available under the Apache License, Version 2.0.
 The source code of ide-sidecar can be found at https://github.com/confluentinc/ide-sidecar.
 For a full list of third-party libraries and their respective licenses bundled
