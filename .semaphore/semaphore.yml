@@ -114,7 +114,7 @@ blocks:
   - name: "Update third party notices PR"
     dependencies: ["Bump microversion"]
     run:
-      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main'})"
+      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
     task:
       jobs:
         - name: "Update Third Party Notices PR"
