@@ -722,6 +722,10 @@ export async function icongen() {
 
 install.description = "Install the extension in VS Code for testing.";
 export function install(done) {
+  if (IS_CI) {
+    console.error("This is meant to be run locally and should not be used in CI.");
+    return done(1);
+  }
   // uninstall any existing extension first
   // (may holler about "Extension 'confluent.vscode-confluent' is not installed.", but that's fine)
   spawnSync("code", ["--uninstall-extension", "confluent.vscode-confluent"], {
