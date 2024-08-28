@@ -735,10 +735,17 @@ export function install(done) {
     );
     return done(1);
   }
+
+  const extensionVsix = files[0];
+  if (files.length > 1) {
+    console.warn(
+      `Multiple .vsix files found in the out directory. Only installing "${extensionVsix}"`,
+    );
+  }
   // "--install-extension: Installs or updates an extension. The argument is either an extension id
   // or a path to a VSIX. The identifier of an extension is '${publisher}.${name}'. Use '--force'
   // argument to update to latest version. To install a specific version provide '@${version}'.
   // For example: 'vscode.csharp@1.2.3'."
-  const result = spawnSync("code", ["--install-extension", ...files], { stdio: "inherit" });
+  const result = spawnSync("code", ["--install-extension", extensionVsix], { stdio: "inherit" });
   return done(result.status);
 }
