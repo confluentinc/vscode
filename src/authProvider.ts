@@ -108,11 +108,29 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    */
   async getSessions(): Promise<readonly vscode.AuthenticationSession[]> {
     logger.debug("getSessions()");
-    // check with the sidecar to see if we have an existing CCloud connection
-    const connection = await getCCloudConnection();
+    const storageManager = getStorageManager();
+    // check with the sidecar to see if we have an existing CCloud connection, and also check in to
+    // see what the (persistent, cross-workspace) secret store says about existence of a session
+    const [connection, sessionSecret] = await Promise.all([
+      getCCloudConnection(),
+      storageManager.getSecret(this.sessionKey),
+    ]);
 
     const connectionExists: boolean = !!connection; // sidecar says we have a connection
     const cachedSessionExists: boolean = !!this._session; // we have a cached session
+    const sessionSecretExists: boolean = !!sessionSecret;
+    if (sessionSecretExists && !connectionExists) {
+      // NOTE: this may happen if the user was previously signed in, then VS Code was closed and the
+      // sidecar process was stopped, because the secret would still exist in storage. In this case,
+      // we need to remove the secret so that the user can sign in again (and other workspaces will
+      // react to the actual change in secret state).
+      logger.debug("getSessions() session secret exists but no connection found, removing secret");
+      await storageManager.deleteSecret(this.sessionKey);
+    } else if (!sessionSecretExists && connectionExists) {
+      // NOTE: this should never happen, because in order for the connection to be made with the
+      // sidecar, we should have also stored the secret, so we mainly just want to log this
+      logger.error("getSessions() no session secret found but connection exists");
+    }
 
     // NOTE: if either of these two are true, it's due to a change in the auth state outside of the
     // user signing in (createSession) or out (removeSession) from the Accounts action in **this**
@@ -135,6 +153,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     if (!connection) {
       if (changedToDisconnected) {
+        // NOTE: this will mainly happen if something goes wrong with the connection or the sidecar
+        // process and the poller notices the connection is gone
         logger.debug("getSessions() transitioned from connected to disconnected", logBody);
         await this.handleSessionRemoved(true);
       }
@@ -144,6 +164,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     const session = convertToAuthSession(connection);
     if (changedToConnected) {
+      // TODO: possibly remove this check since this transition is either very rare or impossible to
+      // get into altogether, because changes from disconnected->connected will update secret state
+      // or go through `createSession()`, and the poller won't be running to notice this kind of change
       logger.debug("getSessions() transitioned from disconnected to connected", logBody);
       await this.handleSessionCreated(session, true);
     }
