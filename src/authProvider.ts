@@ -126,6 +126,10 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       // react to the actual change in secret state).
       logger.debug("getSessions() session secret exists but no connection found, removing secret");
       await storageManager.deleteSecret(this.sessionKey);
+    } else if (!sessionSecretExists && connectionExists) {
+      // NOTE: this should never happen, because in order for the connection to be made with the
+      // sidecar, we should have also stored the secret, so we mainly just want to log this
+      logger.error("getSessions() no session secret found but connection exists");
     }
 
     // NOTE: if either of these two are true, it's due to a change in the auth state outside of the
