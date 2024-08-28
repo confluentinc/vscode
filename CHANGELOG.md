@@ -16,6 +16,7 @@ All notable changes to this extension will be documented in this file.
 - Text search fields in Message Viewer that works along with partition filter providing intersection
   of filtered results. This first iteration of text search is case sensitive and substring-only
   (i.e. no "exact" value matching).
+- Button to open currently consumed messages as a JSON file.
 
 ### Changed
 
