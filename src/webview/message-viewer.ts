@@ -277,6 +277,21 @@ class MessageViewerViewModel extends ViewModel {
 
   /** The text search query string. */
   search = this.signal("");
+  async handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Enter") {
+      const value = (event.target as HTMLInputElement).value;
+      if (value.length > 0) {
+        await post("SearchMessages", { search: value });
+      } else {
+        await post("SearchMessages", { search: null });
+      }
+    }
+  }
+  async handleInput(event: Event | InputEvent) {
+    if (event.type === "input" && !(event instanceof InputEvent)) {
+      await post("SearchMessages", { search: null });
+    }
+  }
 
   /** Consume mode affects parameters used for consuming messages. */
   consumeMode = this.signal<ConsumeMode>("beginning");
@@ -415,7 +430,7 @@ export function post(
   body: { mode: ConsumeMode; timestamp?: number },
 ): Promise<null>;
 export function post(type: "MessageLimitChange", body: { limit: number }): Promise<null>;
-export function post(type: "SearchMessages", body: object): Promise<null>;
+export function post(type: "SearchMessages", body: { search: string | null }): Promise<null>;
 export function post(type: "StreamPause", body: object): Promise<null>;
 export function post(type: "StreamResume", body: object): Promise<null>;
 export function post(type: "PreviewMessageByIndex", body: { index: number }): Promise<null>;
