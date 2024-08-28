@@ -149,8 +149,21 @@ function messageViewerStartPollingCommand(
 
   /** Used in derive below. Search bitset retains reference but internal value keeps changing */
   const alwaysNotEqual = () => false;
+  /** Unlike partition and timestamp filter, keeps updating previously created bitset with latest messages added. */
   const searchBitset = os.derive<BitSet | null>(() => {
-    return null;
+    // can i catch up here? maybe if I can track the cursor in the search object and compare to the stream size?
+    const messageStream = stream();
+    const search = textFilter();
+    const index = latestInsert();
+    if (search == null) return null;
+    const [bitset, query] = search;
+    const value = messageStream.messages.values[index];
+    if (includesSubstring(value, query)) {
+      bitset.set(index);
+    } else {
+      bitset.unset(index);
+    }
+    return bitset;
   }, alwaysNotEqual);
 
   /** Single bitset that represents the intersection of all currently applied filters. */
@@ -311,6 +324,20 @@ function messageViewerStartPollingCommand(
         return null;
       }
       case "SearchMessages": {
+        if (body.search != null) {
+          const { capacity, messages } = stream();
+          const values = messages.values;
+          const bitset = new BitSet(capacity);
+          for (let i = 0; i < values.length; i++) {
+            if (includesSubstring(values[i], body.search)) {
+              bitset.set(i);
+            }
+          }
+          textFilter([bitset, body.search]);
+        } else {
+          textFilter(null);
+        }
+        notifyUI();
         return null satisfies MessageResponse<"SearchMessages">;
       }
       case "StreamPause": {
