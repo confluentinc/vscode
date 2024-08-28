@@ -40,7 +40,6 @@ import { commands as schemaRegistryCommands } from "./commands/schemaRegistry";
 import { commands as schemaCommands } from "./commands/schemas";
 import { commands as supportCommands } from "./commands/support";
 import { commands as topicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
@@ -83,15 +82,16 @@ async function _activateExtension(
 ): Promise<vscode.ExtensionContext> {
   getTelemetryLogger().logUsage("Extension Activated");
 
+  // must be done first to allow any other downstream callers to call `getExtensionContext()`
+  // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
   setExtensionContext(context);
 
   context = await setupDebugHelpers(context);
+  await setupContextValues();
 
-  // these three need to be in order because they depend on each other
+  // these two need to be in order because they depend on each other
   context = await setupStorage(context);
   context = await setupAuthProvider(context);
-
-  await setupContextValues();
 
   context = setupViewProviders(context);
   context = setupCommands(context);
@@ -124,19 +124,17 @@ async function setupDebugHelpers(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // starting states before resources/connections populate, because these won't clear out between
-  // reloading the extension/window
-  const initialcontextKeys = [
-    "confluent.ccloudConnectionAvailable",
-    "confluent.localKafkaClusterAvailable",
+  // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
+  const kafkaClusterSelected = vscode.commands.executeCommand(
+    "setContext",
     "confluent.kafkaClusterSelected",
-    "confluent.schemaRegistrySelected",
-  ];
-  const initialContextPromises = initialcontextKeys.map((key) =>
-    vscode.commands.executeCommand("setContext", key, false),
+    false,
   );
-  await Promise.all(initialContextPromises);
-
+  const schemaRegistrySelected = vscode.commands.executeCommand(
+    "setContext",
+    "confluent.schemaRegistrySelected",
+    false,
+  );
   // enables the "Select for Compare" / "Compare with Selected" commands
   const diffResources = vscode.commands.executeCommand(
     "setContext",
@@ -189,6 +187,8 @@ async function setupContextValues() {
     ],
   );
   await Promise.all([
+    kafkaClusterSelected,
+    schemaRegistrySelected,
     diffResources,
     openInCCloudResources,
     viewsWithResources,
@@ -212,6 +212,16 @@ async function setupAuthProvider(
 ): Promise<vscode.ExtensionContext> {
   logger.debug("setupAuthProvider()");
   const provider = new ConfluentCloudAuthProvider(context);
+
+  // set the initial connection states of our main views; these will be adjusted by the following:
+  // - ccloudConnectionAvailable: `true/false` if the auth provider has a valid CCloud connection
+  // - localKafkaClusterAvailable: `true/false` if the Resources view loads/refreshes and can find a
+  //   local Kafka cluster (and CCloud connection changes will refresh the Resources view via the
+  //   `ccloudConnected` event emitter)
+  await Promise.all([
+    vscode.commands.executeCommand("setContext", "confluent.ccloudConnectionAvailable", false),
+    vscode.commands.executeCommand("setContext", "confluent.localKafkaClusterAvailable", false),
+  ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
   await getAuthSession();

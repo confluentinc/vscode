@@ -1,8 +1,6 @@
 # Confluent Extension for VSCode
 
-[![Build Status](https://semaphore.ci.confluent.io/badges/vscode/branches/main.svg?style=shields&key=333d39fa-5f9e-4c87-aca5-dc8618ff3864)](https://semaphore.ci.confluent.io/projects/vscode)
 ![Release](release.svg)
-[![Lines of Code](https://sonarqube.dp.confluent.io/api/project_badges/measure?project=vscode&metric=ncloc&token=sqb_9831824953870c5267d6f56b32dd2d339f2b1e78)](https://sonarqube.dp.confluent.io/dashboard?id=vscode)
 
 Our goal for the [Confluent extension for VS Code](https://github.com/confluentinc/vscode) is to
 help make it very easy for developers to build stream processing applications using Confluent by
@@ -66,7 +64,10 @@ repo.
 Follow [CONTRIBUTING.md](/CONTRIBUTING.md) to for information on setting up your development
 environment, how to propose bugfixes and improvements, and how to build and test your changes.
 
-See our [Code of Conduct - coming soon](#TODO) for guidelines on what we expect from participants,
+See our [Code of Conduct](/CODE_OF_CONDUCT.md) for guidelines on what we expect from participants,
 and what actions will and will not be tolerated.
 
 ## License
+
+This project is licensed under the Apache License, Version 2.0. See [LICENSE.txt](/LICENSE.txt) for
+the full license text.
