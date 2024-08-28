@@ -204,7 +204,7 @@ function messageViewerStartPollingCommand(
     /* This functions is IIFE because os.watch() needs a sync function. Input
     parameters are all read in the same place to make sure no branches affect
     this watchers dependency list. */
-    (async (streamParams, streamState, stream, partitions, prevResult) => {
+    (async (streamParams, streamState, stream, partitions, prevResult, _timestamp) => {
       /* Cannot proceed any further if state got paused by the user or other
       events. If the state changes, this watcher is notified once again. */
       if (streamState !== "running") return;
@@ -279,7 +279,7 @@ function messageViewerStartPollingCommand(
           // TODO store error to show in the UI
         });
       }
-    })(params(), state(), stream(), partitionConsumed(), latestResult());
+    })(params(), state(), stream(), partitionConsumed(), latestResult(), latestFetch());
 
     return () => ctl.abort();
   });
