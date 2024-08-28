@@ -80,7 +80,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       // this will block until we handle the URI event or the user cancels
       await this.browserAuthFlow(signInUri);
     } catch (e) {
-      throw new Error(`Failed to log in: ${e}`);
+      if (e instanceof Error) {
+        await vscode.window.showErrorMessage(e.message);
+      }
+      // this won't re-notify the user of the error, so no issue with re-throwing while showing the
+      // error notification above (if it exists)
+      throw e;
     }
 
     const authenticatedConnection = await getCCloudConnection();
@@ -213,26 +218,33 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       },
       async (_, token) => {
         await openExternal(vscode.Uri.parse(uri));
-        await Promise.race([
-          new Promise<void>((_, reject) => token.onCancellationRequested(() => reject())),
-          new Promise<void>((resolve) => {
-            this._uriHandler.event(async (event) => {
-              await this.handleAuthCallback(event);
-              resolve();
-            });
-          }),
-        ]);
+        await Promise.race([this.waitForCancellationRequest(token), this.waitForUriHandling()]);
       },
     );
   }
 
-  private handleAuthCallback(uri: vscode.Uri) {
-    const query = new URLSearchParams(uri.query);
-    if (!query.has("authCallback")) {
-      return;
-    }
-    logger.debug("Got auth callback URI", query);
-    // nothing else to do here; this resolves and the browserAuthFlow() promise is resolved
+  private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
+    return new Promise<void>((_, reject) => token.onCancellationRequested(() => reject()));
+  }
+
+  private waitForUriHandling(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const disposable = this._uriHandler.event(async (uri: vscode.Uri) => {
+        try {
+          const success = uri.query.includes("success=true");
+          if (!success) {
+            logger.error("Non-successful auth callback URI received", uri);
+            throw new Error("Authentication failed, see browser for details");
+          }
+          resolve();
+        } catch (e) {
+          // success=false or some other error
+          reject(e);
+        } finally {
+          disposable.dispose();
+        }
+      });
+    });
   }
 
   /**
