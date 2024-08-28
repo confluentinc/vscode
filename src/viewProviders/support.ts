@@ -19,7 +19,7 @@ export class SupportViewProvider implements vscode.TreeDataProvider<vscode.TreeI
       const walkthroughItem: vscode.TreeItem = new vscode.TreeItem(
         "Confluent Extension Walkthrough",
       );
-      walkthroughItem.iconPath = new vscode.ThemeIcon("server");
+      walkthroughItem.iconPath = new vscode.ThemeIcon("book");
       walkthroughItem.command = {
         command: "confluent.support.confluent-walkthrough.launch",
         title: "Launch Kafka Cluster Walkthrough",
