@@ -66,6 +66,9 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     nonce: randomBytes(16).toString("base64"),
   });
 
+  /** Stores a map of options with key: value pairs that is then updated on form input
+   * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   */
   let optionValues: { [key: string]: string | boolean } = {};
   let options = (pickedTemplate.spec.options as TemplateManifest["options"]) || {};
   Object.entries(options).map(([option, properties]) => {
