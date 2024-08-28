@@ -344,14 +344,17 @@ function messageViewerStartPollingCommand(
           timestamp,
           messages: { values },
         } = stream();
+        const includes = bitset()?.predicate() ?? ((_: number) => true);
         const records: string[] = [];
         for (
           let i = 0, p = timestamp.head, payload;
           i < timestamp.size;
           i++, p = timestamp.next[p]
         ) {
-          payload = values[p];
-          records.push("\t" + JSON.stringify(payload));
+          if (includes(p)) {
+            payload = values[p];
+            records.push("\t" + JSON.stringify(payload));
+          }
         }
         const content = `[\n${records.join(",\n")}\n]`;
         workspace.openTextDocument({ content, language: "jsonc" }).then((preview) => {
