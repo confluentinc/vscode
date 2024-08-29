@@ -17,6 +17,7 @@
         Take the first steps in creating a fully functional application by providing the options
         below. You can always change them later in the project file.
       </p>
+      <hr />
       <form data-on-submit="this.handleSubmit(event)">
         <template data-if="this.noOptions()">
           <p class="info">
@@ -47,18 +48,22 @@
             </template>
             <template data-if="!this.isEnumField(this.field())">
               <div class="input-container">
-                <vscode-text-field
-                  size="90"
-                  data-text="this.field()[1].display_name"
-                  data-attr-id="this.field()[0]"
-                  data-attr-name="this.field()[0]"
-                  data-attr-value="this.getFieldValue(this.field()[0])"
-                  data-on-input="this.handleInput(event)"
-                  data-attr-required="this.field()[1].default_value == null"
-                  data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
-                  data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
-                >
-                </vscode-text-field>
+                <div>
+                  <label
+                    data-text="this.field()[1].display_name"
+                    data-attr-for="this.field()[0]"
+                    data-attr-class="this.field()[1].default_value == null ? 'required' : ''"
+                  ></label>
+                  <input
+                    data-text="this.field()[1].display_name"
+                    data-attr-id="this.field()[0]"
+                    data-attr-name="this.field()[0]"
+                    data-attr-value="this.getFieldValue(this.field()[0])"
+                    data-on-input="this.handleInput(event)"
+                    data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
+                    data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
+                  />
+                </div>
                 <span class="description" data-text="this.field()[1].description"></span>
               </div>
             </template>
@@ -101,11 +106,21 @@
         margin-top: 26px;
       }
       .input-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
         align-items: center;
         gap: 16px;
+        width: 100%;
         font-weight: 500;
+      }
+      @media screen and (max-width: 1000px) {
+        .input-container {
+          flex-wrap: wrap;
+          gap: 8px;
+          padding-bottom: 5px;
+        }
+      }
+      input {
+        width: 250px;
       }
       .dropdown {
         display: flex;
@@ -115,28 +130,16 @@
       }
       .description {
         font-weight: 700;
-        color: #ccc;
-        font-size: 11px;
-        padding-top: 1rem;
+        color: var(--vscode-descriptionForeground);
+        font-size: 12px;
       }
       .dropdown > label > vscode-dropdown {
         width: 100%;
       }
       .info {
-        color: #ccc;
+        color: var(--vscode-descriptionForeground);
         font-weight: 700;
         font-style: italic;
-      }
-      input[type="submit"] {
-        padding: 0.5rem 1rem;
-        background-color: var(--button-primary-background, #0e639c);
-        color: var(--button-primary-foreground, white);
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      input[type="submit"]:hover {
-        background-color: var(--button-primary-hover-background, #1177bb);
       }
     </style>
   </body>
