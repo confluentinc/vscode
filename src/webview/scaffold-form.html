@@ -7,6 +7,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; font-src ${cspSource}; style-src 'nonce-${nonce}'; style-src-attr 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';"
     />
+    <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${webviewStylesheet}" />
   </head>
   <body>
     <main class="container">
