@@ -253,9 +253,9 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     if (total === 0) return null;
     if (filter != null) {
-      return `Showing ${offset}..${Math.min(offset + this.pageSize(), filter)} of ${filter} messages (total: ${total}).`;
+      return `Showing ${offset.toLocaleString()}..${Math.min(offset + this.pageSize(), filter).toLocaleString()} of ${filter.toLocaleString()} messages (total: ${total.toLocaleString()}).`;
     }
-    return `Showing ${offset}..${Math.min(offset + this.pageSize(), total)} of ${total} messages.`;
+    return `Showing ${offset.toLocaleString()}..${Math.min(offset + this.pageSize(), total).toLocaleString()} of ${total.toLocaleString()} messages.`;
   });
   prevPageAvailable = this.derive(() => this.page() > 0);
   nextPageAvailable = this.derive(() => {
