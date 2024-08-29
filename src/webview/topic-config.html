@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'nonce-${nonce}'; style-src-attr 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';"
+    />
+  </head>
+  <body>
+    <main>
+      <template data-if="this.topic() != null">
+        <h1 data-text="this.topic().name"></h1>
+      </template>
+
+      <template data-if="this.successfulPost()">
+        <h2 data-text="this.successfulPost()"></h2>
+        <h3>Current state: <span data-text="this.cleanupPolicy()"></span></h3>
+      </template>
+
+      <template data-if="this.errorPost()">
+        <h2 style="color: red" data-text="this.errorPost()"></h2>
+      </template>
+
+      <h3>SuccessfulPost: <span data-text="this.successfulPost()"></span></h3>
+      <h3>errorPost: <span data-text="this.errorPost()"></span></h3>
+
+      <form>
+        <label for="cleanupPolicyControl">Cleanup policy:</label>
+        <vscode-dropdown
+          id="cleanupPolicyControl"
+          data-prop-value="this.cleanupPolicy()"
+          data-on-change="this.cleanupPolicy(event.target.value)"
+        >
+          <template data-for="option of this.cleanupOptions">
+            <vscode-option
+              data-prop-value="this.option().value"
+              data-text="this.option().label"
+            ></vscode-option>
+          </template>
+        </vscode-dropdown>
+
+        <vscode-button appearance="primary" data-on-click="this.submitForm()">Save</vscode-button>
+      </form>
+    </main>
+    <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
+    <script type="module" nonce="${nonce}" src="${topicConfigUri}"></script>
+  </body>
+</html>

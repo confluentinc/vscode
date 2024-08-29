@@ -13,6 +13,15 @@ describe("Test KafkaTopic methods", () => {
   it("CCLoud topics should not smell local", () => {
     assert.strictEqual(false, TEST_CCLOUD_KAFKA_TOPIC.isLocalTopic());
   });
+});
+
+describe("Test KafkaTopic properties", () => {
+  it("uniqueId should return a unique identifier for the topic", () => {
+    assert.strictEqual(
+      `${TEST_LOCAL_KAFKA_TOPIC.clusterId}-${TEST_LOCAL_KAFKA_TOPIC.name}`,
+      TEST_LOCAL_KAFKA_TOPIC.uniqueId,
+    );
+  });
 
   it("ccloudUrl should return the correct URL for ccloud-resident topics", () => {
     assert.strictEqual(

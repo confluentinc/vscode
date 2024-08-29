@@ -4,6 +4,7 @@ import { print } from "graphql";
 // OpenAPI generated static client classes
 
 import {
+  ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
   PartitionV3Api,
   TopicV3Api,
@@ -37,6 +38,8 @@ import {
 } from "./middlewares";
 
 const logger = new Logger("sidecarHandle");
+
+type ApiClientConstructor<T, C> = new (config: C) => T;
 
 // sidecar handle module
 // Represents a short-term handle to a running, handshaken sidecar process.
@@ -128,11 +131,40 @@ export class SidecarHandle {
     return this.getClient(VersionResourceApi, configParams);
   }
 
-  public getTopicV3Api(clusterId: string, connectionId: string): TopicV3Api {
-    const config: unknown = this.createClientConfig({
+  /**
+   * Return a client instance for making REST requests to the sidecar specific for a given
+   * connection and cluster.
+   */
+  public getConnectionClusterClient<T, C>(
+    ApiClient: ApiClientConstructor<T, C>,
+    configType: new () => C,
+    clusterId: string,
+    connectionId: string,
+    middleware: Middleware[] = [],
+  ): T {
+    const config: C = this.createClientConfig({
       headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
-    });
-    return new TopicV3Api(config as KafkaRestConfiguration);
+      middleware,
+    }) as C;
+    return new ApiClient(config);
+  }
+
+  public getTopicV3Api(clusterId: string, connectionId: string): TopicV3Api {
+    return this.getConnectionClusterClient(
+      TopicV3Api,
+      KafkaRestConfiguration,
+      clusterId,
+      connectionId,
+    );
+  }
+
+  public getConfigsV3Api(clusterId: string, connectionId: string): ConfigsV3Api {
+    return this.getConnectionClusterClient(
+      ConfigsV3Api,
+      KafkaRestConfiguration,
+      clusterId,
+      connectionId,
+    );
   }
 
   public getPartitionV3Api(clusterId: string, connectionId: string): PartitionV3Api {
@@ -143,10 +175,12 @@ export class SidecarHandle {
   }
 
   public getSchemasV1Api(clusterId: string, connectionId: string): SchemasV1Api {
-    const config: unknown = this.createClientConfig({
-      headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
-    });
-    return new SchemasV1Api(config as SchemaRegistryRestConfiguration);
+    return this.getConnectionClusterClient(
+      SchemasV1Api,
+      SchemaRegistryRestConfiguration,
+      clusterId,
+      connectionId,
+    );
   }
 
   public getKafkaConsumeApi(connectionId: string) {

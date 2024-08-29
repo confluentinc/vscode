@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { TopicV3Api } from "../clients/kafkaRest";
+import {
+  ResponseError,
+  TopicV3Api,
+  UpdateKafkaTopicConfigBatchRequest,
+} from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -9,6 +13,8 @@ import { kafkaClusterQuickPick } from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { getTopicViewProvider } from "../viewProviders/topics";
+import topicConfigTemplate from "../webview/topic-config.html";
+import { WebviewPanelCache, getNonce, getStaticRoot, getUriPath } from "../webview/utils";
 
 const logger = new Logger("commands.kafkaClusters");
 
@@ -62,67 +68,6 @@ async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
   // action or command palette option
   currentKafkaClusterChanged.fire(kafkaCluster);
   vscode.commands.executeCommand("confluent-topics.focus");
-}
-
-async function deleteTopicCommand(topic: KafkaTopic) {
-  const cluster: KafkaCluster | null =
-    topic.environmentId != null
-      ? await getResourceManager().getCCloudKafkaCluster(topic.environmentId, topic.clusterId)
-      : await getResourceManager().getLocalKafkaCluster(topic.clusterId);
-  if (!cluster) {
-    throw new Error(`Failed to find Kafka cluster for topic "${topic.name}"`);
-  }
-
-  logger.info(`Deleting topic "${topic.name}" from cluster ${cluster.name}...`);
-  const confirmMessage = `Are you sure you want to delete the topic "${topic.name}"?`;
-
-  const topicName: string | undefined = await vscode.window.showInputBox({
-    title: confirmMessage,
-    prompt: "Enter the name of the topic to confirm",
-    ignoreFocusOut: true,
-  });
-  if (!topicName) {
-    return;
-  }
-
-  if (topicName !== topic.name) {
-    const errorMessage = `Topic name "${topicName}" does not match "${topic.name}"`;
-    logger.error(errorMessage);
-    vscode.window.showErrorMessage(errorMessage);
-    return;
-  }
-
-  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
-
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Deleting topic "${topic.name}"...`,
-    },
-    async (progress) => {
-      try {
-        await client.deleteKafkaTopic({
-          cluster_id: cluster.id,
-          topic_name: topic.name,
-        });
-        // indicate progress done 33 % now.
-        progress.report({ increment: 33 });
-
-        await waitForTopicToBeDeleted(client, cluster.id, topic.name, cluster.isLocal);
-        // Another 1/3 way done now.
-        progress.report({ increment: 33 });
-
-        // explicitly refresh the topics view after deleting a topic, so that repainting
-        // ommitting the newly deleted topic is a foreground task we block on before
-        // closing the progress window.
-        getTopicViewProvider().refresh();
-      } catch (error) {
-        const errorMessage = `Failed to delete topic: ${error}`;
-        logger.error(errorMessage);
-        vscode.window.showErrorMessage(errorMessage);
-      }
-    },
-  );
 }
 
 async function createTopicCommand(item?: KafkaCluster) {
@@ -210,6 +155,172 @@ async function createTopicCommand(item?: KafkaCluster) {
   );
 }
 
+async function deleteTopicCommand(topic: KafkaTopic) {
+  const cluster = await getResourceManager().getClusterForTopic(topic);
+  if (!cluster) {
+    logger.error(`Failed to find cluster for topic "${topic.name}"`);
+    vscode.window.showErrorMessage(`Failed to find cluster for topic "${topic.name}"`);
+    return;
+  }
+  logger.info(`Deleting topic "${topic.name}" from cluster ${cluster.name}...`);
+
+  const confirmMessage = `Are you sure you want to delete the topic "${topic.name}"?`;
+
+  const topicName: string | undefined = await vscode.window.showInputBox({
+    title: confirmMessage,
+    prompt: "Enter the name of the topic to confirm",
+    ignoreFocusOut: true,
+  });
+  if (!topicName) {
+    return;
+  }
+
+  if (topicName !== topic.name) {
+    const errorMessage = `Topic name "${topicName}" does not match "${topic.name}"`;
+    logger.error(errorMessage);
+    vscode.window.showErrorMessage(errorMessage);
+    return;
+  }
+
+  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Deleting topic "${topic.name}"...`,
+    },
+    async (progress) => {
+      try {
+        await client.deleteKafkaTopic({
+          cluster_id: cluster.id,
+          topic_name: topic.name,
+        });
+        // indicate progress done 33 % now.
+        progress.report({ increment: 33 });
+
+        await waitForTopicToBeDeleted(client, cluster.id, topic.name, cluster.isLocal);
+        // Another 1/3 way done now.
+        progress.report({ increment: 33 });
+
+        // explicitly refresh the topics view after deleting a topic, so that repainting
+        // ommitting the newly deleted topic is a foreground task we block on before
+        // closing the progress window.
+        getTopicViewProvider().refresh();
+      } catch (error) {
+        const errorMessage = `Failed to delete topic: ${error}`;
+        logger.error(errorMessage);
+        vscode.window.showErrorMessage(errorMessage);
+      }
+    },
+  );
+}
+
+/** Cache of open "configure topic" webviews */
+const configTopicPanelCache = new WebviewPanelCache();
+
+async function configureTopicCommand(topic: KafkaTopic) {
+  const cluster = await getResourceManager().getClusterForTopic(topic);
+  if (!cluster) {
+    logger.error(`Failed to find cluster for topic "${topic.name}"`);
+    vscode.window.showErrorMessage(`Failed to find cluster for topic "${topic.name}"`);
+    return;
+  }
+  logger.info(`Configuring topic "${topic.name}" in cluster "${cluster.name}"...`);
+
+  const panel_id = topic.uniqueId;
+  const existingPanel = configTopicPanelCache.getWebviewPanel(panel_id);
+  if (existingPanel) {
+    // Panel exists already. Will have been revealed to the user.
+    return;
+  }
+
+  // Fetch the topic's current configuration
+  const configClient = (await getSidecar()).getConfigsV3Api(cluster.id, cluster.connectionId);
+  const topicConfig = await configClient.listKafkaTopicConfigs({
+    cluster_id: cluster.id,
+    topic_name: topic.name,
+  });
+
+  logger.info(`Fetched topic configuration for "${topic.name}" in cluster "${cluster.name}.`);
+
+  // collect all non-read-only config name + value pairs into a map
+  const topicConfigMap: Record<string, string> = topicConfig.data
+    .filter((config) => !config.is_read_only)
+    .reduce((acc: Record<string, string>, config) => {
+      acc[config.name] = config.value!;
+      return acc;
+    }, {});
+
+  logger.info(
+    `Configurable topic configuration for "${topic.name}": ${JSON.stringify(topicConfigMap)}`,
+  );
+
+  const staticRoot = getStaticRoot();
+  const panel = vscode.window.createWebviewPanel(
+    "topic-config",
+    `Configure Topic ${topic.name}`,
+    vscode.ViewColumn.One,
+    { enableScripts: true, localResourceRoots: [staticRoot] },
+  );
+
+  // track in cache.
+  configTopicPanelCache.addWebviewPanel(panel_id, panel);
+
+  const webview = panel.webview;
+
+  // Set the webview's HTML content with the expansion of the templated HTML ...
+  // (gulp creates this function from the HTML file)
+  webview.html = topicConfigTemplate({
+    cspSource: webview.cspSource,
+    nonce: getNonce(),
+    webviewUri: getUriPath(webview, staticRoot, "main.js"),
+    topicConfigUri: getUriPath(webview, staticRoot, "topic-config.js"),
+  });
+
+  // Wire up event listeners to handle messages from the webview.
+  webview.onDidReceiveMessage(async (event) => {
+    const [id, message] = event;
+    switch (message.type) {
+      case "GetTopic": {
+        // Webview has requested the main bits about the topic, namely the name.
+        webview.postMessage([id, "Success", topic]);
+        break;
+      }
+
+      case "GetInitialConfig": {
+        // Webview has requested the topic's initial/current configuration
+        webview.postMessage([id, "Success", topicConfigMap]);
+        break;
+      }
+
+      case "UpdateTopic": {
+        logger.info(`Posted form results from webview: ${JSON.stringify(message)}`);
+
+        // Update the topic configuration with the new values.
+        const configClient = (await getSidecar()).getConfigsV3Api(cluster.id, cluster.connectionId);
+        try {
+          await configClient.updateKafkaTopicConfigBatch({
+            cluster_id: cluster.id,
+            topic_name: topic.name,
+            AlterConfigBatchRequestData: message,
+          } as UpdateKafkaTopicConfigBatchRequest);
+
+          logger.info("Successfully updated topic configuration!");
+          webview.postMessage([id, "Success", "Topic configuration updated successfully."]);
+          // webview.html = "<h1>Topic reset</h1>";
+        } catch (error) {
+          logger.error(`Failed to update topic configuration: ${error}`, { error });
+          if (error instanceof ResponseError) {
+            logger.error("Is indeed a ResponseError");
+            const errorBody: { message: string } = await error.response.json();
+            webview.postMessage([id, "Failure", errorBody.message]);
+          }
+        }
+      }
+    }
+  });
+}
+
 async function waitForTopicToExist(
   client: TopicV3Api,
   clusterId: string,
@@ -257,6 +368,7 @@ async function waitForTopicToBeDeleted(
         topic_name: topicName,
       });
       logger.warn(`${topicKind} topic "${topicName}" still exists`);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // topic is no longer found, yay, deletion complete.
       const elapsedMs = Date.now() - startTime;
@@ -283,6 +395,7 @@ export const commands = [
   registerCommandWithLogging("confluent.resources.kafka-cluster.select", selectKafkaClusterCommand),
   registerCommandWithLogging("confluent.topics.create", createTopicCommand),
   registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
+  registerCommandWithLogging("confluent.topics.configure", configureTopicCommand),
   registerCommandWithLogging(
     "confluent.resources.kafka-cluster.copyBootstrapServers",
     copyBootstrapServers,
