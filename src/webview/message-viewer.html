@@ -11,166 +11,298 @@
   </head>
   <body>
     <main class="wrapper">
-      <header class="sticky">
-        <div class="flex-row">
-          <div class="dropdown-container fixed-min-width">
-            <label for="partition-control-toggle">Partitions:</label>
-            <button class="control" popovertarget="partitionConsumeControl">
-              <span class="control-label" data-text="this.partitionsConsumedDescription()"></span>
-              <span class="codicon codicon-chevron-down"></span>
-            </button>
+      <header class="message-viewer-settings">
+        <section class="consume-settings">
+          <h4>Working View Settings</h4>
 
-            <div
-              popover
-              id="partitionConsumeControl"
-              class="partition-control"
-              data-on-toggle="this.prepareConsumePartitionControl(event.newState)"
+          <div class="flex-row">
+            <div class="dropdown-container fixed-min-width">
+              <label for="partition-control-toggle">Partitions:</label>
+              <button class="control" popovertarget="partitionConsumeControl">
+                <span class="control-label" data-text="this.partitionsConsumedDescription()"></span>
+                <span class="codicon codicon-chevron-down"></span>
+              </button>
+
+              <div
+                popover
+                id="partitionConsumeControl"
+                class="partition-control"
+                data-on-toggle="this.prepareConsumePartitionControl(event.newState)"
+              >
+                <div class="flex-column" style="--gap: 0">
+                  <div class="partition-sticky-header">
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        data-prop-checked="this.partitionsConsumedTemp() == null"
+                        data-prop-indeterminate="this.partitionsConsumedTemp() != null && this.partitionsConsumedTemp().length > 0"
+                        data-on-change="event.preventDefault(); this.toggleAllTempPartitionsConsumed()"
+                      />
+                      <span>All partitions</span>
+                    </label>
+                  </div>
+
+                  <template data-for="partition of this.partitionStats()">
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        data-prop-checked="this.isPartitionIncluded(this.partition().partition_id, this.partitionsConsumedTemp())"
+                        data-on-change="event.preventDefault(); this.toggleTempPartitionsConsumed(this.partition().partition_id)"
+                      />
+                      <span data-text="'Partition ' + this.partition().partition_id"></span>
+                    </label>
+                  </template>
+                </div>
+
+                <footer class="partition-sticky-footer">
+                  <vscode-button
+                    appearance="primary"
+                    data-prop-disabled="this.partitionsConsumedSelectionPristine()"
+                    data-on-click="this.changePartitionsConsumed()"
+                  >
+                    Consume selected
+                  </vscode-button>
+                </footer>
+              </div>
+            </div>
+
+            <div class="dropdown-container fixed-min-width">
+              <label for="consume-mode">Consume mode:</label>
+              <vscode-dropdown
+                id="consume-mode"
+                value="beginning"
+                data-prop-value="this.consumeMode()"
+                data-on-change="this.handleConsumeModeChange(event.target.value)"
+              >
+                <vscode-option value="latest">Latest</vscode-option>
+                <vscode-option value="beginning">From beginning</vscode-option>
+                <vscode-option value="timestamp">From timestamp</vscode-option>
+              </vscode-dropdown>
+            </div>
+
+            <template data-if="this.consumeMode() === 'timestamp'">
+              <div class="dropdown-container">
+                <label for="consume-mode-timestamp">Timestamp:</label>
+                <vscode-text-field
+                  id="consume-mode-timestamp"
+                  data-prop-value="this.consumeModeTimestamp()"
+                  data-on-change="this.handleConsumeModeTimestampChange(event.target.value)"
+                  placeholder="Timestamp"
+                >
+                </vscode-text-field>
+              </div>
+            </template>
+
+            <div class="dropdown-container">
+              <label for="messages-limit">Max results:</label>
+              <vscode-dropdown
+                id="messages-limit"
+                data-prop-value="this.messageLimit()"
+                data-on-change="this.handleMessageLimitChange(event.target.value)"
+              >
+                <vscode-option value="100">100</vscode-option>
+                <vscode-option value="1k">1,000</vscode-option>
+                <vscode-option value="10k">10,000</vscode-option>
+                <vscode-option value="100k">100,000</vscode-option>
+                <vscode-option value="1m">1,000,000</vscode-option>
+              </vscode-dropdown>
+            </div>
+
+            <div class="dropdown-container">
+              <!-- Empty label for aligned layout with the rest of controls -->
+              <label for="stream-toggle"><span>&nbsp;</span></label>
+              <vscode-button
+                appearance="secondary"
+                id="stream-toggle"
+                data-on-click="this.handleStreamToggle(this.streamState())"
+                data-text="this.streamStateLabel()"
+                data-attr-title="this.streamStateTooltip()"
+              >
+              </vscode-button>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h4>Message Quick Search</h4>
+          <div class="flex-row">
+            <vscode-text-field
+              id="message-search"
+              placeholder="Search across consumed messages…"
+              type="search"
+              size="50"
+              data-prop-value="this.search()"
+              data-on-change="this.search(event.target.value)"
+              data-on-keydown="this.handleKeydown(event)"
+              data-on-input="this.handleInput(event)"
+              >Search</vscode-text-field
             >
-              <div class="flex-column" style="--gap: 0">
+
+            <div class="dropdown-container fixed-min-width">
+              <label for="partition-control-toggle">Partitions filter:</label>
+              <button
+                class="control"
+                popovertarget="partitionFilterControl"
+                data-prop-disabled="!this.canFilterPartition()"
+              >
+                <span class="control-label" data-text="this.partitionsFilteredDescription()"></span>
+                <span class="codicon codicon-chevron-down"></span>
+              </button>
+              <div popover id="partitionFilterControl" class="partition-control">
                 <div class="partition-sticky-header">
                   <label class="checkbox">
                     <input
                       type="checkbox"
-                      data-prop-checked="this.partitionsConsumedTemp() == null"
-                      data-prop-indeterminate="this.partitionsConsumedTemp() != null && this.partitionsConsumedTemp().length > 0"
-                      data-on-change="event.preventDefault(); this.toggleAllTempPartitionsConsumed()"
+                      data-prop-checked="this.partitionsFiltered() == null"
+                      data-prop-indeterminate="this.partitionsFiltered() != null && this.partitionsFiltered().length > 0"
+                      data-on-change="event.preventDefault(); this.toggleAllPartitionsFiltered()"
                     />
                     <span>All partitions</span>
                   </label>
                 </div>
 
-                <template data-for="partition of this.partitionStats()">
-                  <label class="checkbox">
-                    <input
-                      type="checkbox"
-                      data-prop-checked="this.isPartitionIncluded(this.partition().partition_id, this.partitionsConsumedTemp())"
-                      data-on-change="event.preventDefault(); this.toggleTempPartitionsConsumed(this.partition().partition_id)"
-                    />
-                    <span data-text="'Partition ' + this.partition().partition_id"></span>
-                  </label>
-                </template>
+                <div class="flex-column" style="--gap: 0">
+                  <template data-for="partition of this.filterablePartitions()">
+                    <label class="checkbox">
+                      <input
+                        type="checkbox"
+                        data-prop-checked="this.isPartitionIncluded(this.partition().partition_id, this.partitionsFiltered())"
+                        data-on-change="event.preventDefault(); this.togglePartitionsFiltered(this.partition().partition_id)"
+                      />
+                      <span data-text="'Partition ' + this.partition().partition_id"></span>
+                    </label>
+                  </template>
+                </div>
               </div>
-
-              <footer class="partition-sticky-footer">
-                <vscode-button
-                  appearance="primary"
-                  data-prop-disabled="this.partitionsConsumedSelectionPristine()"
-                  data-on-click="this.changePartitionsConsumed()"
-                >
-                  Consume selected
-                </vscode-button>
-              </footer>
             </div>
           </div>
+        </section>
+      </header>
 
-          <div class="dropdown-container fixed-min-width">
-            <label for="consume-mode">Consume mode:</label>
-            <vscode-dropdown
-              id="consume-mode"
-              value="beginning"
-              data-prop-value="this.consumeMode()"
-              data-on-change="this.handleConsumeModeChange(event.target.value)"
-            >
-              <vscode-option value="latest">Latest</vscode-option>
-              <vscode-option value="beginning">From beginning</vscode-option>
-              <vscode-option value="timestamp">From timestamp</vscode-option>
-            </vscode-dropdown>
+      <section class="content">
+        <template data-if="this.waitingForMessages()">
+          <div class="grid-banner">
+            <vscode-progress-ring></vscode-progress-ring>
           </div>
+        </template>
 
-          <template data-if="this.consumeMode() === 'timestamp'">
-            <div class="dropdown-container">
-              <label for="consume-mode-timestamp">Timestamp:</label>
-              <vscode-text-field
-                id="consume-mode-timestamp"
-                data-prop-value="this.consumeModeTimestamp()"
-                data-on-change="this.handleConsumeModeTimestampChange(event.target.value)"
-                placeholder="Timestamp"
-              >
-              </vscode-text-field>
-            </div>
-          </template>
-
-          <div class="dropdown-container">
-            <label for="messages-limit">Max results:</label>
-            <vscode-dropdown
-              id="messages-limit"
-              data-prop-value="this.messageLimit()"
-              data-on-change="this.handleMessageLimitChange(event.target.value)"
-            >
-              <vscode-option value="100">100</vscode-option>
-              <vscode-option value="1k">1,000</vscode-option>
-              <vscode-option value="10k">10,000</vscode-option>
-              <vscode-option value="100k">100,000</vscode-option>
-              <vscode-option value="1m">1,000,000</vscode-option>
-            </vscode-dropdown>
+        <template data-if="this.emptyFilterResult()">
+          <div class="grid-banner">
+            <p>Unable to find messages for currently set filters</p>
           </div>
+        </template>
 
-          <div class="dropdown-container">
-            <!-- Empty label for aligned layout with the rest of controls -->
-            <label for="stream-toggle"><span>&nbsp;</span></label>
-            <vscode-button
-              appearance="secondary"
-              id="stream-toggle"
-              data-on-click="this.handleStreamToggle(this.streamState())"
-              data-text="this.streamStateLabel()"
-              data-attr-title="this.streamStateTooltip()"
-            >
-            </vscode-button>
-          </div>
-        </div>
-
-        <div class="flex-row">
-          <vscode-text-field
-            id="message-search"
-            placeholder="Search across consumed messages…"
-            type="search"
-            size="50"
-            data-prop-value="this.search()"
-            data-on-change="this.search(event.target.value)"
-            data-on-keydown="this.handleKeydown(event)"
-            data-on-input="this.handleInput(event)"
-            >Search</vscode-text-field
+        <template data-if="this.hasMessages()">
+          <table
+            class="grid"
+            cellpadding="0"
+            cellspacing="0"
+            data-prop-style="this.gridTemplateColumns()"
           >
+            <thead class="sticky-table-header">
+              <tr class="grid-row">
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow"
+                  tabindex="-1"
+                  title="Timestamp"
+                >
+                  <span>Timestamp</span>
+                  <div
+                    class="resize-handler"
+                    data-on-pointerdown="this.handleStartResize(event, 0)"
+                    data-on-pointermove="this.handleMoveResize(event, 0)"
+                    data-on-pointerup="this.handleStopResize(event)"
+                  ></div>
+                </th>
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow"
+                  tabindex="-1"
+                  title="Partition"
+                >
+                  <span>Partition</span>
+                  <div
+                    class="resize-handler"
+                    data-on-pointerdown="this.handleStartResize(event, 1)"
+                    data-on-pointermove="this.handleMoveResize(event, 1)"
+                    data-on-pointerup="this.handleStopResize(event)"
+                  ></div>
+                </th>
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow"
+                  tabindex="-1"
+                  title="Offset"
+                >
+                  <span>Offset</span>
+                  <div
+                    class="resize-handler"
+                    data-on-pointerdown="this.handleStartResize(event, 2)"
+                    data-on-pointermove="this.handleMoveResize(event, 2)"
+                    data-on-pointerup="this.handleStopResize(event)"
+                  ></div>
+                </th>
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow"
+                  tabindex="-1"
+                  title="Key"
+                >
+                  <span>Key</span>
+                  <div
+                    class="resize-handler"
+                    data-on-pointerdown="this.handleStartResize(event, 3)"
+                    data-on-pointermove="this.handleMoveResize(event, 3)"
+                    data-on-pointerup="this.handleStopResize(event)"
+                  ></div>
+                </th>
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow"
+                  tabindex="-1"
+                  title="Value"
+                >
+                  <span>Value</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <template data-for="message of this.snapshot().messages">
+                <tr class="grid-row" data-on-dblclick="this.preview(this.message())">
+                  <td
+                    class="grid-cell cell-text-overflow"
+                    tabindex="-1"
+                    data-text="this.formatTimestamp(this.message().timestamp, this.timestampStyle())"
+                    data-prop-title="this.message().timestamp"
+                  ></td>
+                  <td
+                    class="grid-cell cell-text-overflow"
+                    tabindex="-1"
+                    data-text="this.message().partition_id"
+                    data-prop-title="this.message().partition_id"
+                  ></td>
+                  <td
+                    class="grid-cell cell-text-overflow"
+                    tabindex="-1"
+                    data-text="this.message().offset"
+                    data-prop-title="this.message().offset"
+                  ></td>
+                  <td
+                    class="grid-cell cell-text-overflow"
+                    tabindex="-1"
+                    data-text="this.message().key"
+                    data-prop-title="this.message().key"
+                  ></td>
+                  <td
+                    class="grid-cell cell-text-overflow"
+                    tabindex="-1"
+                    data-html="this.formatMessageValue(this.message(), this.search())"
+                    data-prop-title="this.formatMessageValueFull(this.message())"
+                  ></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
+      </section>
 
-          <div class="dropdown-container fixed-min-width">
-            <label for="partition-control-toggle">Partitions filter:</label>
-            <button
-              class="control"
-              popovertarget="partitionFilterControl"
-              data-prop-disabled="!this.canFilterPartition()"
-            >
-              <span class="control-label" data-text="this.partitionsFilteredDescription()"></span>
-              <span class="codicon codicon-chevron-down"></span>
-            </button>
-            <div popover id="partitionFilterControl" class="partition-control">
-              <div class="partition-sticky-header">
-                <label class="checkbox">
-                  <input
-                    type="checkbox"
-                    data-prop-checked="this.partitionsFiltered() == null"
-                    data-prop-indeterminate="this.partitionsFiltered() != null && this.partitionsFiltered().length > 0"
-                    data-on-change="event.preventDefault(); this.toggleAllPartitionsFiltered()"
-                  />
-                  <span>All partitions</span>
-                </label>
-              </div>
-
-              <div class="flex-column" style="--gap: 0">
-                <template data-for="partition of this.filterablePartitions()">
-                  <label class="checkbox">
-                    <input
-                      type="checkbox"
-                      data-prop-checked="this.isPartitionIncluded(this.partition().partition_id, this.partitionsFiltered())"
-                      data-on-change="event.preventDefault(); this.togglePartitionsFiltered(this.partition().partition_id)"
-                    />
-                    <span data-text="'Partition ' + this.partition().partition_id"></span>
-                  </label>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <footer class="message-viewer-pagination">
         <div>
           <vscode-button
             appearance="icon"
@@ -180,7 +312,7 @@
             data-on-click="this.page((v) => v - 1)"
             data-attr-disabled="!this.prevPageAvailable()"
           >
-            <span>&larr;</span>
+            <span class="codicon codicon-arrow-left"></span>
           </vscode-button>
 
           <vscode-button
@@ -191,7 +323,7 @@
             data-on-click="this.page((v) => v + 1)"
             data-attr-disabled="!this.nextPageAvailable()"
           >
-            <span>&rarr;</span>
+            <span class="codicon codicon-arrow-right"></span>
           </vscode-button>
 
           <vscode-button
@@ -202,152 +334,63 @@
             data-text="this.pageStatLabel()"
           ></vscode-button>
 
-          <vscode-button appearance="icon" data-on-click="this.previewJSON()">json</vscode-button>
-        </div>
-      </header>
+          <vscode-button
+            appearance="icon"
+            aria-label="Open consumed messages as JSON"
+            title="Open consumed messages as JSON"
+            data-on-click="this.previewJSON()"
+          >
+            <span class="codicon codicon-json"></span>
+          </vscode-button>
 
-      <template data-if="this.waitingForMessages()">
-        <div class="grid-banner">
-          <vscode-progress-ring></vscode-progress-ring>
         </div>
-      </template>
-
-      <template data-if="this.emptyFilterResult()">
-        <div class="grid-banner">
-          <p>Unable to find messages for currently set filters</p>
-        </div>
-      </template>
-
-      <template data-if="this.hasMessages()">
-        <table
-          class="grid"
-          cellpadding="0"
-          cellspacing="0"
-          data-prop-style="this.gridTemplateColumns()"
-        >
-          <thead class="sticky-table-header">
-            <tr class="grid-row">
-              <th
-                class="grid-cell grid-column-header cell-text-overflow"
-                tabindex="-1"
-                title="Timestamp"
-              >
-                <span>Timestamp</span>
-                <div
-                  class="resize-handler"
-                  data-on-pointerdown="this.handleStartResize(event, 0)"
-                  data-on-pointermove="this.handleMoveResize(event, 0)"
-                  data-on-pointerup="this.handleStopResize(event)"
-                ></div>
-              </th>
-              <th
-                class="grid-cell grid-column-header cell-text-overflow"
-                tabindex="-1"
-                title="Partition"
-              >
-                <span>Partition</span>
-                <div
-                  class="resize-handler"
-                  data-on-pointerdown="this.handleStartResize(event, 1)"
-                  data-on-pointermove="this.handleMoveResize(event, 1)"
-                  data-on-pointerup="this.handleStopResize(event)"
-                ></div>
-              </th>
-              <th
-                class="grid-cell grid-column-header cell-text-overflow"
-                tabindex="-1"
-                title="Offset"
-              >
-                <span>Offset</span>
-                <div
-                  class="resize-handler"
-                  data-on-pointerdown="this.handleStartResize(event, 2)"
-                  data-on-pointermove="this.handleMoveResize(event, 2)"
-                  data-on-pointerup="this.handleStopResize(event)"
-                ></div>
-              </th>
-              <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1" title="Key">
-                <span>Key</span>
-                <div
-                  class="resize-handler"
-                  data-on-pointerdown="this.handleStartResize(event, 3)"
-                  data-on-pointermove="this.handleMoveResize(event, 3)"
-                  data-on-pointerup="this.handleStopResize(event)"
-                ></div>
-              </th>
-              <th
-                class="grid-cell grid-column-header cell-text-overflow"
-                tabindex="-1"
-                title="Value"
-              >
-                <span>Value</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <template data-for="message of this.snapshot().messages">
-              <tr class="grid-row" data-on-dblclick="this.preview(this.message())">
-                <td
-                  class="grid-cell cell-text-overflow"
-                  tabindex="-1"
-                  data-text="this.formatTimestamp(this.message().timestamp, this.timestampStyle())"
-                  data-prop-title="this.message().timestamp"
-                ></td>
-                <td
-                  class="grid-cell cell-text-overflow"
-                  tabindex="-1"
-                  data-text="this.message().partition_id"
-                  data-prop-title="this.message().partition_id"
-                ></td>
-                <td
-                  class="grid-cell cell-text-overflow"
-                  tabindex="-1"
-                  data-text="this.message().offset"
-                  data-prop-title="this.message().offset"
-                ></td>
-                <td
-                  class="grid-cell cell-text-overflow"
-                  tabindex="-1"
-                  data-text="this.message().key"
-                  data-prop-title="this.message().key"
-                ></td>
-                <td
-                  class="grid-cell cell-text-overflow"
-                  tabindex="-1"
-                  data-html="this.formatMessageValue(this.message(), this.search())"
-                  data-prop-title="this.formatMessageValueFull(this.message())"
-                ></td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </template>
+      </footer>
     </main>
 
     <style nonce="${nonce}">
-      .sticky {
-        background: gray;
-        position: sticky;
-        top: 0;
+      html,
+      body,
+      main {
+        height: 100%;
+      }
+      body {
+        padding: 0; /* override */
+      }
+
+      h4 {
+        text-transform: uppercase;
+
+        margin: 0 0 0.5rem 0;
+        font-size: 95%;
+      }
+
+      .message-viewer-settings {
         display: flex;
         flex-direction: column;
-        background: var(--background);
-        z-index: 2;
-        padding-block: 20px;
-        gap: 0.5rem;
+      }
+      .message-viewer-settings > * {
+        padding: 12px;
+      }
+      .message-viewer-pagination {
+        padding: 6px 12px;
+      }
+      .consume-settings {
+        /*        background: var(--vscode-tab-inactiveBackground);*/
+        background: var(--vscode-sideBarTitle-background);
       }
       .sticky-table-header {
         position: sticky;
-        top: 166px;
-        background: var(--background);
+        top: 0;
+        background: var(--vscode-editor-background);
         z-index: 1;
       }
       .wrapper {
         display: flex;
         flex-direction: column;
       }
-      vscode-data-grid-cell {
-        min-width: 0;
+      .content {
+        flex: 1;
+        overflow: auto;
       }
 
       .cell-text-overflow {
@@ -367,6 +410,9 @@
         gap: var(--gap, 1rem);
       }
 
+      #pageStatControl {
+        --gap: 0.5rem;
+      }
       .dropdown-container {
         box-sizing: border-box;
         display: flex;
@@ -394,7 +440,7 @@
       .partition-sticky-header {
         margin: -0.5rem -0.5rem 0 -0.5rem;
         padding: 0.5rem;
-        background: var(--background);
+        background: var(--vscode-editor-background);
         position: sticky;
         top: -0.5rem;
         z-index: 1;
@@ -402,7 +448,7 @@
       .partition-sticky-footer {
         margin: 0 -0.5rem -0.5rem -0.5rem;
         padding: 0.5rem;
-        background: var(--background);
+        background: var(--vscode-editor-background);
         position: sticky;
         bottom: -0.5rem;
         z-index: 1;
