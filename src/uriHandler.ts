@@ -10,6 +10,15 @@ const logger = new Logger("uriHandler");
  * capture auth completion events from the sidecar.
  */
 export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements vscode.UriHandler {
+  static instance: UriEventHandler | null = null;
+
+  static getInstance(): UriEventHandler {
+    if (!this.instance) {
+      this.instance = new UriEventHandler();
+    }
+    return this.instance;
+  }
+
   public handleUri(uri: vscode.Uri) {
     switch (uri.path) {
       case "/authCallback":
@@ -20,4 +29,8 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
         logger.warn("Got unexpected URI, ignoring", uri);
     }
   }
+}
+
+export function getUriHandler(): UriEventHandler {
+  return UriEventHandler.getInstance();
 }
