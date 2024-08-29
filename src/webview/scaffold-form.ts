@@ -28,6 +28,14 @@ class ScaffoldFormViewModel extends ViewModel {
     return Object.entries(this.spec()?.options ?? {});
   });
 
+  optionValues = this.resolve(async () => {
+    return await post("GetOptionValues", {});
+  }, {});
+
+  getFieldValue = (key: string) => {
+    return this.optionValues()[key] ?? "";
+  };
+
   noOptions = this.derive(() => {
     for (const key in this.spec()?.options) return false;
     return true;
@@ -35,6 +43,13 @@ class ScaffoldFormViewModel extends ViewModel {
 
   isEnumField(field: [string, OptionProperties]) {
     return field[1]._enum;
+  }
+
+  handleInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const key = input.name;
+    const value = input.value;
+    post("SetOptionValue", { key, value });
   }
 
   handleSubmit(event: Event) {
@@ -46,6 +61,11 @@ class ScaffoldFormViewModel extends ViewModel {
   }
 }
 
+export function post(
+  type: "SetOptionValue",
+  body: { key: string; value: string },
+): Promise<unknown>;
+export function post(type: "GetOptionValues", body: any): Promise<{ [key: string]: unknown }>;
 export function post(type: "GetTemplateSpec", body: any): Promise<TemplateManifest | null>;
 export function post(type: "Submit", body: { data: { [key: string]: unknown } }): Promise<unknown>;
 export function post(type: any, body: any): Promise<unknown> {
