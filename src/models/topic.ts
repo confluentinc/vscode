@@ -5,23 +5,33 @@ import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constan
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data {
   name!: Enforced<string>;
-  is_internal!: Enforced<boolean>;
   replication_factor!: Enforced<number>;
   partition_count!: Enforced<number>;
   partitions!: Enforced<object>;
   configs!: Enforced<object>;
+  /** Is this a topic internal to the cluster's operation
+   * ("__consumer_offsets", "__transaction_state", etc.)
+   * Most likely false.
+   */
+  is_internal!: Enforced<boolean>;
 
   clusterId!: Enforced<string>;
   /** CCloud env id. If null, implies a "local cluster" topic. */
   environmentId: string | null = null;
   hasSchema: boolean = false;
 
+  /** Property producing a URL for the topic in the Confluent Cloud UI */
   get ccloudUrl(): string {
     // Only ccloud topics have a ccloud URL.
     if (this.isLocalTopic()) {
       return "";
     }
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.clusterId}/topics/${this.name}/overview`;
+  }
+
+  /** Property producing a unique identifier for a topic based on both the cluster id and the topic name */
+  get uniqueId(): string {
+    return `${this.clusterId}-${this.name}`;
   }
 
   /** Is this a local cluster topic (if not, then is ccloud)? */
