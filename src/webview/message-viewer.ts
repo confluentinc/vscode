@@ -213,6 +213,44 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     return filter != null ? filter > 0 : total > 0;
   });
+  hasPages = this.derive(() => {
+    const { total, filter } = this.messageCount();
+    return filter != null ? filter > this.pageSize() : total > this.pageSize();
+  });
+  /**
+   * Short list of pages generated based on current messages count and current
+   * page. Always shows first and last page, current page with two siblings.
+   * For larger total number of pages adds … spacing between disconnected pages.
+   *
+   * Examples: [0, 1, 2], [0, 1, 2, 'rdot', 6], [0, 'ldot', 3, 4, 5, 'rdot', 8],
+   * [0, 'ldot', 6, 7, 8], etc. Values `rdot` and `ldot` are sentinel values
+   * because the template needs unique keys to keep buttons state persisted.
+   */
+  pageButtons = this.derive(() => {
+    const { total, filter } = this.messageCount();
+    const max = Math.floor((filter ?? total) / this.pageSize());
+    const current = this.page();
+    const offset = 2;
+    const lo = Math.max(0, current - offset);
+    const hi = Math.min(current + offset, max);
+    const chunk: (number | "ldot" | "rdot")[] = Array.from(
+      { length: hi - lo + 1 },
+      (_, i) => i + lo,
+    );
+    if (lo > 0) {
+      if (lo > 1) chunk.unshift(0, "ldot");
+      else chunk.unshift(0);
+    }
+    if (hi < max) {
+      if (hi < max - 1) chunk.push("rdot", max);
+      else chunk.push(max);
+    }
+
+    return chunk;
+  });
+  isPageButton(input: unknown) {
+    return typeof input === "number";
+  }
   /** A description of current messages range, based on the page and total number of messages. */
   pageStatLabel = this.derive(() => {
     const offset = this.page() * this.pageSize();
