@@ -372,7 +372,22 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   formatMessageValue(message: PartitionConsumeRecord, search: string) {
-    return highlight(JSON.stringify(message.value, null, " "), search);
+    const value = message.value;
+    const input = typeof value === "string" ? value : JSON.stringify(message.value, null, " ");
+    if (search.length === 0) return input;
+    let index = input.indexOf(search);
+    let fragment = document.createDocumentFragment();
+    let cursor = 0;
+    while (index >= 0) {
+      fragment.append(input.substring(cursor, index));
+      let mark = document.createElement("mark");
+      mark.append(input.substring(index, index + search.length));
+      fragment.append(mark);
+      cursor = index + search.length;
+      index = input.indexOf(search, cursor);
+    }
+    fragment.append(input.substring(cursor));
+    return fragment;
   }
 
   formatMessageValueFull(message: PartitionConsumeRecord) {
@@ -388,20 +403,6 @@ class MessageViewerViewModel extends ViewModel {
   previewJSON() {
     return post("PreviewJSON", {});
   }
-}
-
-function highlight(input: string, query: string) {
-  if (query.length === 0) return input;
-  let index = input.indexOf(query);
-  let result = "";
-  let cursor = 0;
-  while (index >= 0) {
-    result += input.substring(cursor, index);
-    result += `<mark>${input.substring(index, index + query.length)}</mark>`;
-    cursor = index + query.length;
-    index = input.indexOf(query, cursor);
-  }
-  return result + input.substring(cursor);
 }
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
