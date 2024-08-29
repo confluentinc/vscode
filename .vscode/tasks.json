@@ -6,7 +6,7 @@
     {
       "label": "gulp build",
       "type": "shell",
-      "command": "npx gulp build",
+      "command": "npx gulp --series check build",
       "group": {
         "kind": "build",
         "isDefault": true
