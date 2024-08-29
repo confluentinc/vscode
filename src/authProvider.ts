@@ -70,7 +70,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // and will trigger the secrets.onDidChange event described above
     getUriHandler().event(async (uri: vscode.Uri) => {
       if (uri.path === "/authCallback") {
-        const success: boolean = uri.query.includes("success=true");
+        const queryParams = new URLSearchParams(uri.query);
+        const success: boolean = queryParams.get("success") === "true";
         logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", {
           success,
         });
