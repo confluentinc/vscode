@@ -12,7 +12,7 @@ import {
   pollCCloudConnectionAuth,
 } from "./sidecar/connections";
 import { getStorageManager } from "./storage";
-import { AUTH_COMPLETED_KEY } from "./storage/constants";
+import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "./storage/constants";
 import { getResourceManager } from "./storage/resourceManager";
 import { getUriHandler } from "./uriHandler";
 
@@ -30,8 +30,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   // used to notify the extension when the user has completed the auth flow and resolve any promises
   private _onAuthFlowCompletedSuccessfully = new vscode.EventEmitter<boolean>();
 
-  /** Only used as a way to kick off cross-workspace events. Only ever set to "true" or deleted. */
-  private sessionKey = "authSession";
   /** Used to check for changes in auth state between extension instance and sidecar. */
   private _session: vscode.AuthenticationSession | null = null;
 
@@ -48,15 +46,24 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // NOTE: the onDidChangeSessions event does not appear cross-workspace, so this needs to stay
     context.secrets.onDidChange(async ({ key }: vscode.SecretStorageChangeEvent) => {
       logger.debug("authProvider: secrets.onDidChange event", { key });
-      if (key === this.sessionKey) {
-        await this.handleSessionSecretChange();
-      } else if (key === AUTH_COMPLETED_KEY) {
-        // the user has completed the auth flow outside the view of this auth provider -- (e.g they
-        // started the auth flow in one window and another window handled the callback URI) -- so we
-        // need to notify any listeners in this extension instance that the auth flow has completed
-        // to resolve any promises that may still be waiting
-        const success: boolean = await resourceManager.getAuthFlowCompleted();
-        this._onAuthFlowCompletedSuccessfully.fire(success);
+      switch (key) {
+        case AUTH_SESSION_EXISTS_KEY: {
+          // another workspace noticed a change in the auth status, so we need to update our internal
+          // state and notify any listeners in this extension instance
+          await this.handleSessionSecretChange();
+          break;
+        }
+        case AUTH_COMPLETED_KEY: {
+          // the user has completed the auth flow in some way, whether in this window or another --
+          // (e.g they started the auth flow in one window and another handled the callback URI) --
+          // so we need to notify any listeners in this extension instance that the auth flow has
+          // completed to resolve any promises that may still be waiting
+          const success: boolean = await resourceManager.getAuthFlowCompleted();
+          this._onAuthFlowCompletedSuccessfully.fire(success);
+          break;
+        }
+        default:
+          logger.warn("authProvider: secrets.onDidChange event not handled", { key });
       }
     });
     // general listener for the URI handling event, which is used to resolve any auth flow promises
@@ -145,7 +152,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // see what the (persistent, cross-workspace) secret store says about existence of a session
     const [connection, sessionSecret] = await Promise.all([
       getCCloudConnection(),
-      storageManager.getSecret(this.sessionKey),
+      storageManager.getSecret(AUTH_SESSION_EXISTS_KEY),
     ]);
 
     const connectionExists: boolean = !!connection; // sidecar says we have a connection
@@ -153,11 +160,14 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     const sessionSecretExists: boolean = !!sessionSecret;
     if (sessionSecretExists && !connectionExists) {
       // NOTE: this may happen if the user was previously signed in, then VS Code was closed and the
-      // sidecar process was stopped, because the secret would still exist in storage. In this case,
+      // sidecar process was stopped, because the secrets would still exist in storage. In this case,
       // we need to remove the secret so that the user can sign in again (and other workspaces will
       // react to the actual change in secret state).
       logger.debug("getSessions() session secret exists but no connection found, removing secret");
-      await storageManager.deleteSecret(this.sessionKey);
+      await Promise.all([
+        storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
+        storageManager.deleteSecret(AUTH_COMPLETED_KEY),
+      ]);
     } else if (!sessionSecretExists && connectionExists) {
       // NOTE: this should never happen, because in order for the connection to be made with the
       // sidecar, we should have also stored the secret, so we mainly just want to log this
@@ -239,19 +249,11 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       },
       async (_, token) => {
         await openExternal(vscode.Uri.parse(uri));
-        await Promise.race([this.waitForCancellationRequest(token), this.waitForUriHandling()]);
+        // keep progress notification open until one of two things happens:
+        // - we handle the auth completion event and resolve/reject based on success value
+        // - user clicks the "Cancel" button from the notification
+        await Promise.race([this.waitForUriHandling(), this.waitForCancellationRequest(token)]);
       },
-    );
-  }
-
-  private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
-    return new Promise<void>((_, reject) =>
-      token.onCancellationRequested(async () => {
-        // TODO(shoup): remove this once we're managing a persistent connection and transitioning
-        // between NO_TOKEN->VALID_TOKEN->NO_TOKEN instead of creating/deleting connections
-        await this.deleteCCloudConnection();
-        reject();
-      }),
     );
   }
 
@@ -272,6 +274,18 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         }
       });
     });
+  }
+
+  /** Only used for when the user clicks "Cancel" during the "Logging in..." progress notification. */
+  private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
+    return new Promise<void>((_, reject) =>
+      token.onCancellationRequested(async () => {
+        // TODO(shoup): remove this once we're managing a persistent connection and transitioning
+        // between NO_TOKEN->VALID_TOKEN->NO_TOKEN instead of creating/deleting connections
+        await this.deleteCCloudConnection();
+        reject();
+      }),
+    );
   }
 
   /**
@@ -297,7 +311,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     pollCCloudConnectionAuth.start();
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
-      await getStorageManager().setSecret(this.sessionKey, "true");
+      await getStorageManager().setSecret(AUTH_SESSION_EXISTS_KEY, "true");
     }
   }
 
@@ -326,7 +340,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     const storageManager = getStorageManager();
     if (updateSecret) {
       await Promise.all([
-        storageManager.deleteSecret(this.sessionKey),
+        storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
         storageManager.deleteSecret(AUTH_COMPLETED_KEY),
       ]);
     }
