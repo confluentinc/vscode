@@ -114,6 +114,8 @@ function messageViewerStartPollingCommand(
   const latestInsert = os.signal<number>(-1);
   /** Most recent response payload from Consume API. */
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
+  /** Most recent failure info */
+  const latestError = os.signal<string[] | null>(null);
   /** Timestamp of the most recent successful consumption request. */
   const latestFetch = os.signal<number>(0);
 
@@ -257,6 +259,7 @@ function messageViewerStartPollingCommand(
           notifyUI();
         });
       } catch (error) {
+        let reportable: any = null;
         /* Async operations can be aborted by provided AbortController that is
         controlled by the watcher. Nothing to log in this case. */
         if (error instanceof Error && error.name === "AbortError") return;
@@ -266,17 +269,24 @@ function messageViewerStartPollingCommand(
           const payload = await error.response.json();
           // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
           if (!payload?.aborted) {
+            reportable = JSON.stringify(payload);
             logger.error(
               `An error occurred during messages consumption. Status ${error.response.status}`,
             );
           }
         } else if (error instanceof Error) {
           logger.error(error.message);
+          reportable = error.message;
         }
 
         os.batch(() => {
           latestFetch(Date.now());
-          // TODO store error to show in the UI
+          if (reportable != null) {
+            latestError((errors) => {
+              return errors == null ? [reportable] : [reportable].concat(errors).slice(0, 10);
+            });
+          }
+          notifyUI();
         });
       }
     })(params(), state(), stream(), partitionConsumed(), latestResult(), latestFetch());
@@ -320,6 +330,9 @@ function messageViewerStartPollingCommand(
       }
       case "GetStreamState": {
         return state() satisfies MessageResponse<"GetStreamState">;
+      }
+      case "GetStreamError": {
+        return latestError() satisfies MessageResponse<"GetStreamError">;
       }
       case "PreviewMessageByIndex": {
         const { messages } = stream();
