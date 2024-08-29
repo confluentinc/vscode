@@ -245,32 +245,30 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   }
 
   private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
-    return new Promise<void>((_, reject) => token.onCancellationRequested(() => reject()));
+    return new Promise<void>((_, reject) =>
+      token.onCancellationRequested(async () => {
+        // TODO(shoup): remove this once we're managing a persistent connection and transitioning
+        // between NO_TOKEN->VALID_TOKEN->NO_TOKEN instead of creating/deleting connections
+        await this.deleteCCloudConnection();
+        reject();
+      }),
+    );
   }
 
+  /**
+   * Wait for the user to complete the authentication flow in the browser and resolve the promise,
+   * whether triggered from this workspace or another.
+   */
   waitForUriHandling(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       // this will only fire if the auth flow didn't initially start from the Accounts action, or
       // if it was done in another window entirely -- see
       this._onAuthFlowCompletedSuccessfully.event((success: boolean) => {
-        return success ? resolve() : reject();
-      });
-
-      // listen for the URI handling event and resolve or reject the promise accordingly for this
-      // workspace
-      const disposable = getUriHandler().event(async (uri: vscode.Uri) => {
-        try {
-          const success = uri.query.includes("success=true");
-          if (!success) {
-            logger.error("Non-successful auth callback URI received", uri);
-            throw new Error("Authentication failed, see browser for details");
-          }
+        logger.debug("handling _onAuthFlowCompletedSuccessfully event", { success });
+        if (success) {
           resolve();
-        } catch (e) {
-          // success=false or some other error
-          reject(e);
-        } finally {
-          disposable.dispose();
+        } else {
+          reject(new Error("Authentication failed, see browser for details"));
         }
       });
     });
