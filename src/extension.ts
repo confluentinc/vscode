@@ -27,7 +27,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
 }
 
-import { ConfluentCloudAuthProvider, getAuthSession } from "./authProvider";
+import { ConfluentCloudAuthProvider, getAuthProvider, getAuthSession } from "./authProvider";
 import { registerCommandWithLogging } from "./commands";
 import { commands as connectionCommands } from "./commands/connections";
 import { commands as debugCommands } from "./commands/debugtools";
@@ -40,6 +40,7 @@ import { commands as schemaRegistryCommands } from "./commands/schemaRegistry";
 import { commands as schemaCommands } from "./commands/schemas";
 import { commands as supportCommands } from "./commands/support";
 import { commands as topicCommands } from "./commands/topics";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
@@ -49,6 +50,7 @@ import { sidecarOutputChannel } from "./sidecar";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { getTelemetryLogger } from "./telemetry";
+import { UriEventHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
@@ -91,7 +93,8 @@ async function _activateExtension(
 
   // these two need to be in order because they depend on each other
   context = await setupStorage(context);
-  context = await setupAuthProvider(context);
+  const authProviderDisposables = await setupAuthProvider();
+  context.subscriptions.push(...authProviderDisposables);
 
   context = setupViewProviders(context);
   context = setupCommands(context);
@@ -207,11 +210,21 @@ async function setupStorage(context: vscode.ExtensionContext): Promise<vscode.Ex
   return context;
 }
 
-async function setupAuthProvider(
-  context: vscode.ExtensionContext,
-): Promise<vscode.ExtensionContext> {
-  logger.debug("setupAuthProvider()");
-  const provider = new ConfluentCloudAuthProvider(context);
+async function setupAuthProvider(): Promise<vscode.Disposable[]> {
+  const disposables: vscode.Disposable[] = [];
+
+  const provider: ConfluentCloudAuthProvider = getAuthProvider();
+  const providerDisposable = vscode.authentication.registerAuthenticationProvider(
+    AUTH_PROVIDER_ID,
+    AUTH_PROVIDER_LABEL,
+    provider,
+    {
+      supportsMultipleAccounts: false, // this is the default, but just to be explicit
+    },
+  );
+
+  const uriHandlerDisposable = vscode.window.registerUriHandler(new UriEventHandler());
+  disposables.push(providerDisposable, uriHandlerDisposable);
 
   // set the initial connection states of our main views; these will be adjusted by the following:
   // - ccloudConnectionAvailable: `true/false` if the auth provider has a valid CCloud connection
@@ -226,7 +239,7 @@ async function setupAuthProvider(
   // attempt to get a session to trigger the initial auth badge for signing in
   await getAuthSession();
 
-  return context;
+  return disposables;
 }
 
 function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionContext {
