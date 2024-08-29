@@ -1,24 +1,26 @@
 import * as vscode from "vscode";
 
-import { randomBytes } from "crypto";
 import { posix } from "path";
 import { unzip } from "unzipit";
 import { Template, TemplateList, TemplatesApi } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
-import { ExtensionContext, Uri, ViewColumn, window } from "vscode";
+import { ExtensionContext, ViewColumn, window } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { getTelemetryLogger } from "./telemetry";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
+import { getNonce, getStaticRoot, getUriPath, WebviewPanelCache } from "./webview/utils";
+
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
 
 const logger = new Logger("scaffold");
+const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommand = (context: ExtensionContext) => {
   const scaffoldProjectCommand = registerCommandWithLogging("confluent.scaffold", () =>
@@ -50,6 +52,13 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     return;
   }
 
+  // webview panel for this teplate form may be open already, look in the cache.
+  const preexistingForm = scaffoldWebviewCache.getWebviewPanel(pickedTemplate.spec.name);
+  if (preexistingForm) {
+    // Will have been revealed by getWebviewPanel.
+    return;
+  }
+
   const optionsForm = window.createWebviewPanel(
     "template-options-form",
     `Generate ${pickedTemplate.spec.display_name} Template`,
@@ -58,12 +67,16 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
       enableScripts: true,
     },
   );
-  const staticRoot = Uri.joinPath(context.extensionUri, "webview");
+
+  // Cache the webview panel for future reference.
+  scaffoldWebviewCache.addWebviewPanel(pickedTemplate.spec.name, optionsForm);
+
+  const staticRoot = getStaticRoot();
 
   optionsForm.webview.html = scaffoldFormTemplate({
-    webviewUri: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
-    submitScriptUri: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "scaffold-form.js")),
-    nonce: randomBytes(16).toString("base64"),
+    webviewUri: getUriPath(optionsForm.webview, staticRoot, "main.js"),
+    submitScriptUri: getUriPath(optionsForm.webview, staticRoot, "scaffold-form.js"),
+    nonce: getNonce(),
   });
 
   const processMessage = (...[type, body]: Parameters<MessageSender>) => {
