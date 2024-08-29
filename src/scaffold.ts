@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { randomBytes } from "crypto";
 import { posix } from "path";
 import { unzip } from "unzipit";
-import { Template, TemplateList, TemplatesApi } from "./clients/sidecar";
+import { Template, TemplateList, TemplateManifest, TemplatesApi } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
@@ -75,11 +75,30 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     nonce: randomBytes(16).toString("base64"),
   });
 
+  /** Stores a map of options with key: value pairs that is then updated on form input
+   * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   */
+  let optionValues: { [key: string]: string | boolean } = {};
+  let options = (pickedTemplate.spec.options as TemplateManifest["options"]) || {};
+  Object.entries(options).map(([option, properties]) => {
+    optionValues[option] = properties.default_value ?? "";
+  });
+  function updateOptionValue(key: string, value: string) {
+    optionValues[key] = value;
+  }
   const processMessage = (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "GetTemplateSpec": {
         const spec = pickedTemplate ? pickedTemplate.spec : null;
         return spec satisfies MessageResponse<"GetTemplateSpec">;
+      }
+      case "GetOptionValues": {
+        return optionValues satisfies MessageResponse<"GetOptionValues">;
+      }
+      case "SetOptionValue": {
+        const { key, value } = body;
+        updateOptionValue(key, value);
+        return null satisfies MessageResponse<"SetOptionValue">;
       }
       case "Submit":
         getTelemetryLogger().logUsage("Scaffold Form Submitted", {

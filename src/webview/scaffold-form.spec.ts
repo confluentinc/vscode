@@ -51,7 +51,58 @@ test("dummy form submission", async ({ execute, page }) => {
 
   await execute(async (stub) => {
     // prettier-ignore
-    const dummy = {"template_api_version":"0.0.1","name":"go-consumer","display_name":"Go Consumer Application","description":"A simple Go project that reads messages from a topic in Confluent Cloud. Ideal for developers new to Kafka who want to learn about stream processing with Kafka.\n","language":"Go","version":"0.0.1","tags":["consumer","getting started","go"],"options":{"cc_bootstrap_server":{"display_name":"Kafka Bootstrap Server","description":"One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.","pattern":"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))(,([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))*$"},"api_key":{"display_name":"Kafka Cluster API Key","description":"The API key for accessing the Kafka cluster in Confluent Cloud.","pattern":"^[A-Z0-7=]{16}$"},"api_secret":{"display_name":"Kafka Cluster API Secret","description":"The API secret for accessing the Kafka cluster in Confluent Cloud.","format":"password","pattern":"^[A-Z0-7=]{64,72}$"},"cc_topic":{"display_name":"Topic Name","description":"The name of the Kafka topic to consume.","pattern":"^([a-zA-Z0-9._-]{1,255})$"},"group_id":{"display_name":"Consumer Group","description":"A unique string that identifies the consumer group this consumer belongs to. This property is required if the consumer subscribes to a topic or uses the Kafka-based offset management strategy.","pattern":"^([a-zA-Z0-9._-]{1,255})$"},"auto_offset_reset":{"display_name":"Begin Consuming From","description":"What to do when there is no initial offset in the Kafka topic or if the current offset does not exist any more on the server (e.g. because that data has been deleted).","_enum":["earliest","latest"],"default_value":"earliest"}}}
+    const dummy: TemplateManifest = {
+      template_api_version: "0.0.1",
+      name: "go-consumer",
+      display_name: "Go Consumer Application",
+      description:
+        "A simple Go project that reads messages from a topic in Confluent Cloud. Ideal for developers new to Kafka who want to learn about stream processing with Kafka.\n",
+      language: "Go",
+      version: "0.0.1",
+      tags: ["consumer", "getting started", "go"],
+      options: {
+        cc_bootstrap_server: {
+          display_name: "Kafka Bootstrap Server",
+          description:
+            "One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.",
+          pattern:
+            "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))(,([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))*$",
+          default_value: "confluent.cloud:9092",
+        },
+        api_key: {
+          display_name: "Kafka Cluster API Key",
+          description: "The API key for accessing the Kafka cluster in Confluent Cloud.",
+          pattern: "^[A-Z0-7=]{16}$",
+        },
+        api_secret: {
+          display_name: "Kafka Cluster API Secret",
+          description: "The API secret for accessing the Kafka cluster in Confluent Cloud.",
+          format: "password",
+          pattern: "^[A-Z0-7=]{64,72}$",
+        },
+        cc_topic: {
+          display_name: "Topic Name",
+          description: "The name of the Kafka topic to consume.",
+          pattern: "^([a-zA-Z0-9._-]{1,255})$",
+        },
+        group_id: {
+          display_name: "Consumer Group",
+          description:
+            "A unique string that identifies the consumer group this consumer belongs to. This property is required if the consumer subscribes to a topic or uses the Kafka-based offset management strategy.",
+          pattern: "^([a-zA-Z0-9._-]{1,255})$",
+        },
+        auto_offset_reset: {
+          display_name: "Begin Consuming From",
+          description:
+            "What to do when there is no initial offset in the Kafka topic or if the current offset does not exist any more on the server (e.g. because that data has been deleted).",
+          _enum: ["earliest", "latest"],
+          default_value: "earliest",
+        },
+      },
+    };
+
+    stub.withArgs("GetOptionValues").resolves(dummy.options);
+    stub.withArgs("SetOptionValue").resolves(null);
     stub.withArgs("GetTemplateSpec").resolves(dummy satisfies TemplateManifest);
     stub.withArgs("Submit").resolves(null);
   }, sendWebviewMessage);
@@ -81,9 +132,14 @@ test("dummy form submission", async ({ execute, page }) => {
   const specCall = await specCallHandle.jsonValue();
   expect(specCall[0]).toBe("GetTemplateSpec");
 
-  const submitCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(1).args);
-  const submitCall = await submitCallHandle.jsonValue();
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  // @ts-expect-error we already checked for undefined
   expect(submitCall[0]).toBe("Submit");
+  // @ts-expect-error we already checked for undefined
   expect(submitCall[1]).toEqual({
     data: {
       cc_bootstrap_server: "cc_bootstrap_server",
