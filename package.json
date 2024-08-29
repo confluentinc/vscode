@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "A tool for interacting with Confluent resources for easier development against Confluent Cloud and Apache Kafka®.",
-  "version": "0.14.0-51",
+  "version": "0.14.0-52",
   "preview": true,
   "publisher": "confluentinc",
   "author": {
