@@ -52,6 +52,8 @@ export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
 
 // must match the `contributes.authentication` ID in package.json
 export const AUTH_PROVIDER_ID = "confluent-cloud-auth-provider";
+/** This is what appears in "Sign in with <label> to use Confluent" from the Accounts action. */
+export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
 
 /** Single CCloud connection spec to be used with the sidecar Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
