@@ -337,16 +337,19 @@
           >
             <span class="codicon codicon-arrow-right"></span>
           </vscode-button>
-
-          <vscode-button
-            appearance="icon"
-            aria-label="Message consumption stats"
-            title="Message consumption stats"
-            id="pageOutput"
-            data-text="this.pageStatLabel()"
-            data-hidden="this.pageStatLabel() == null"
-          ></vscode-button>
-
+        </div>
+        <template data-if="this.pageStatLabel() != null">
+          <div>
+            <vscode-button
+              appearance="icon"
+              aria-label="Message consumption stats"
+              title="Message consumption stats"
+              id="pageOutput"
+              data-text="this.pageStatLabel()"
+            ></vscode-button>
+          </div>
+        </template>
+        <div>
           <vscode-button
             appearance="icon"
             aria-label="Open consumed messages as JSON"
@@ -385,6 +388,9 @@
       }
       .message-viewer-pagination {
         padding: 6px 12px;
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
       }
       .message-viewer-pagination vscode-button {
         min-width: 22px;
