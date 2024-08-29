@@ -191,12 +191,14 @@ class MessageViewerViewModel extends ViewModel {
       }
     }
     await post("PartitionFilterChange", { partitions: filtered });
+    this.page(0);
   }
   /** Toggle filtered partitions all at once. */
   async toggleAllPartitionsFiltered() {
     let filtered = this.partitionsFiltered();
     filtered = filtered == null ? [] : null;
     await post("PartitionFilterChange", { partitions: filtered });
+    this.page(0);
   }
 
   /** Total count of consumed messages, along with count of filtered ones. */
