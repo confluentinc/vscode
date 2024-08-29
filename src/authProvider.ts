@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Connection } from "./clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
+import { getExtensionContext } from "./context";
 import { ccloudConnected } from "./emitters";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
@@ -11,16 +12,11 @@ import {
   pollCCloudConnectionAuth,
 } from "./sidecar/connections";
 import { getStorageManager } from "./storage";
-import { UriEventHandler } from "./uriHandler";
+import { getUriHandler } from "./uriHandler";
 
 const logger = new Logger("authProvider");
 
-/** This is what appears in "Sign in with <label> to use Confluent" from the Accounts action. */
-const AUTH_PROVIDER_LABEL = "Confluent Cloud";
-
 export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
-  private _uriHandler = new UriEventHandler();
-
   // tells VS Code which sessions have been added, removed, or changed for this extension instance
   // NOTE: does not trigger cross-workspace events
   private _onDidChangeSessions =
@@ -34,18 +30,14 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   /** Used to check for changes in auth state between extension instance and sidecar. */
   private _session: vscode.AuthenticationSession | null = null;
 
-  constructor(private context: vscode.ExtensionContext) {
-    const providerDisposable = vscode.authentication.registerAuthenticationProvider(
-      AUTH_PROVIDER_ID,
-      AUTH_PROVIDER_LABEL,
-      this,
-      {
-        supportsMultipleAccounts: false, // this is the default, but just to be explicit
-      },
-    );
-    const uriHandlerDisposable = vscode.window.registerUriHandler(this._uriHandler);
-    context.subscriptions.push(providerDisposable, uriHandlerDisposable);
+  static instance: ConfluentCloudAuthProvider | null = null;
 
+  // private to enforce singleton pattern and avoid attempting to re-register the auth provider
+  private constructor() {
+    const context: vscode.ExtensionContext = getExtensionContext();
+    if (!context) {
+      throw new Error("ExtensionContext not set yet");
+    }
     // watch for changes in the stored auth session that may occur from other workspaces/windows
     // NOTE: the onDidChangeSessions event does not appear cross-workspace, so this needs to stay
     context.secrets.onDidChange(async (e) => {
@@ -53,6 +45,13 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         await this.handleSessionSecretChange();
       }
     });
+  }
+
+  static getInstance(): ConfluentCloudAuthProvider {
+    if (!this.instance) {
+      this.instance = new ConfluentCloudAuthProvider();
+    }
+    return this.instance;
   }
 
   /**
@@ -227,9 +226,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     return new Promise<void>((_, reject) => token.onCancellationRequested(() => reject()));
   }
 
-  private waitForUriHandling(): Promise<void> {
+  waitForUriHandling(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const disposable = this._uriHandler.event(async (uri: vscode.Uri) => {
+      const disposable = getUriHandler().event(async (uri: vscode.Uri) => {
         try {
           const success = uri.query.includes("success=true");
           if (!success) {
@@ -347,4 +346,8 @@ export async function getAuthSession(): Promise<vscode.AuthenticationSession | u
   return await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
     createIfNone: false,
   });
+}
+
+export function getAuthProvider(): ConfluentCloudAuthProvider {
+  return ConfluentCloudAuthProvider.getInstance();
 }
