@@ -50,7 +50,7 @@ import { sidecarOutputChannel } from "./sidecar";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { getTelemetryLogger } from "./telemetry";
-import { UriEventHandler } from "./uriHandler";
+import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
@@ -223,7 +223,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
     },
   );
 
-  const uriHandlerDisposable = vscode.window.registerUriHandler(new UriEventHandler());
+  const uriHandlerDisposable = vscode.window.registerUriHandler(getUriHandler());
   disposables.push(providerDisposable, uriHandlerDisposable);
 
   // set the initial connection states of our main views; these will be adjusted by the following:
