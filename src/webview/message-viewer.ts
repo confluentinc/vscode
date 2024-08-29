@@ -286,6 +286,7 @@ class MessageViewerViewModel extends ViewModel {
       } else {
         await post("SearchMessages", { search: null });
       }
+      this.page(0);
     }
   }
   async handleInput(event: Event | InputEvent) {
