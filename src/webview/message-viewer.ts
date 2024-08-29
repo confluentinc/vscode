@@ -213,10 +213,6 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     return filter != null ? filter > 0 : total > 0;
   });
-  hasPages = this.derive(() => {
-    const { total, filter } = this.messageCount();
-    return filter != null ? filter > this.pageSize() : total > this.pageSize();
-  });
   /**
    * Short list of pages generated based on current messages count and current
    * page. Always shows first and last page, current page with two siblings.
@@ -229,6 +225,7 @@ class MessageViewerViewModel extends ViewModel {
   pageButtons = this.derive(() => {
     const { total, filter } = this.messageCount();
     const max = Math.floor((filter ?? total) / this.pageSize());
+    if (max === 0) return [];
     const current = this.page();
     const offset = 2;
     const lo = Math.max(0, current - offset);
@@ -245,7 +242,6 @@ class MessageViewerViewModel extends ViewModel {
       if (hi < max - 1) chunk.push("rdot", max);
       else chunk.push(max);
     }
-
     return chunk;
   });
   isPageButton(input: unknown) {

@@ -315,18 +315,16 @@
             <span class="codicon codicon-arrow-left"></span>
           </vscode-button>
 
-          <template data-if="this.hasPages()">
-            <template data-for="pageButton of this.pageButtons() by pageButton">
-              <vscode-button
-                appearance="icon"
-                data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-                data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-                data-on-click="this.page(this.pageButton())"
-                data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
-                data-attr-disabled="!this.isPageButton(this.pageButton())"
-                data-attr-active="this.page() === this.pageButton()"
-              ></vscode-button>
-            </template>
+          <template data-for="pageButton of this.pageButtons() by pageButton">
+            <vscode-button
+              appearance="icon"
+              data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+              data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+              data-on-click="this.page(this.pageButton())"
+              data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
+              data-attr-disabled="!this.isPageButton(this.pageButton())"
+              data-attr-active="this.page() === this.pageButton()"
+            ></vscode-button>
           </template>
 
           <vscode-button
