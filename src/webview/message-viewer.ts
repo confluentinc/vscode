@@ -216,11 +216,12 @@ class MessageViewerViewModel extends ViewModel {
   /** A description of current messages range, based on the page and total number of messages. */
   pageStatLabel = this.derive(() => {
     const offset = this.page() * this.pageSize();
-    const count = this.messageCount();
-    if (count.filter != null) {
-      return `${offset}..${Math.min(offset + this.pageSize(), count.filter)} of ${count.filter} (total: ${count.total})`;
+    const { total, filter } = this.messageCount();
+    if (total === 0) return null;
+    if (filter != null) {
+      return `Showing ${offset}..${Math.min(offset + this.pageSize(), filter)} of ${filter} messages (total: ${total}).`;
     }
-    return `${offset}..${Math.min(offset + this.pageSize(), count.total)} of ${count.total}`;
+    return `Showing ${offset}..${Math.min(offset + this.pageSize(), total)} of ${total} messages.`;
   });
   prevPageAvailable = this.derive(() => this.page() > 0);
   nextPageAvailable = this.derive(() => {
