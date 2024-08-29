@@ -13,10 +13,10 @@ async function createConnectionCommand() {
     await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
       createIfNone: true,
     });
-    resourceManager.setAuthFlowCompleted(true);
+    await resourceManager.setAuthFlowCompleted(true);
   } catch (error) {
     logger.error("error handling CCloud auth flow", error);
-    resourceManager.setAuthFlowCompleted(false);
+    await resourceManager.setAuthFlowCompleted(false);
     throw new Error("Failed to create new connection. Please try again.");
   }
 }
