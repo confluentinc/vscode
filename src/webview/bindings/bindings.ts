@@ -133,6 +133,13 @@ export function applyBindings(root: Element, os: Scope, vm: object) {
       } else if (Object.hasOwn(node.dataset, "html")) {
         let expression = node.dataset.html as string;
         disposables.push(nodeProperty(node, "innerHTML", expression, os, vm));
+      } else if (Object.hasOwn(node.dataset, "children")) {
+        let expression = node.dataset.children as string;
+        let get = new Function(`return (${expression});`);
+        let dispose = os.watch(() => {
+          node.replaceChildren(get.call(vm));
+        });
+        disposables.push(dispose);
       } else if (Object.hasOwn(node.dataset, "value")) {
         assert(
           node instanceof HTMLInputElement ||

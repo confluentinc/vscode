@@ -213,14 +213,49 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     return filter != null ? filter > 0 : total > 0;
   });
+  /**
+   * Short list of pages generated based on current messages count and current
+   * page. Always shows first and last page, current page with two siblings.
+   * For larger total number of pages adds … spacing between disconnected pages.
+   *
+   * Examples: [0, 1, 2], [0, 1, 2, 'rdot', 6], [0, 'ldot', 3, 4, 5, 'rdot', 8],
+   * [0, 'ldot', 6, 7, 8], etc. Values `rdot` and `ldot` are sentinel values
+   * because the template needs unique keys to keep buttons state persisted.
+   */
+  pageButtons = this.derive(() => {
+    const { total, filter } = this.messageCount();
+    const max = Math.floor((filter ?? total) / this.pageSize());
+    const current = this.page();
+    if (max === 0) return [];
+    const offset = 2;
+    const lo = Math.max(0, current - offset);
+    const hi = Math.min(current + offset, max);
+    const chunk: (number | "ldot" | "rdot")[] = Array.from(
+      { length: hi - lo + 1 },
+      (_, i) => i + lo,
+    );
+    if (lo > 0) {
+      if (lo > 1) chunk.unshift(0, "ldot");
+      else chunk.unshift(0);
+    }
+    if (hi < max) {
+      if (hi < max - 1) chunk.push("rdot", max);
+      else chunk.push(max);
+    }
+    return chunk;
+  });
+  isPageButton(input: unknown) {
+    return typeof input === "number";
+  }
   /** A description of current messages range, based on the page and total number of messages. */
   pageStatLabel = this.derive(() => {
     const offset = this.page() * this.pageSize();
-    const count = this.messageCount();
-    if (count.filter != null) {
-      return `${offset}..${Math.min(offset + this.pageSize(), count.filter)} of ${count.filter} (total: ${count.total})`;
+    const { total, filter } = this.messageCount();
+    if (total === 0) return null;
+    if (filter != null) {
+      return `Showing ${offset}..${Math.min(offset + this.pageSize(), filter)} of ${filter} messages (total: ${total}).`;
     }
-    return `${offset}..${Math.min(offset + this.pageSize(), count.total)} of ${count.total}`;
+    return `Showing ${offset}..${Math.min(offset + this.pageSize(), total)} of ${total} messages.`;
   });
   prevPageAvailable = this.derive(() => this.page() > 0);
   nextPageAvailable = this.derive(() => {
@@ -285,6 +320,7 @@ class MessageViewerViewModel extends ViewModel {
       } else {
         await post("SearchMessages", { search: null });
       }
+      this.page(0);
     }
   }
   async handleInput(event: Event | InputEvent) {
@@ -371,8 +407,23 @@ class MessageViewerViewModel extends ViewModel {
     }
   }
 
-  formatMessageValue(message: PartitionConsumeRecord, search: string) {
-    return highlight(JSON.stringify(message.value, null, " "), search);
+  formatMessageValue(value: unknown, search: string) {
+    if (value == null) return "";
+    const input = typeof value === "string" ? value : JSON.stringify(value, null, " ");
+    if (search.length === 0) return input;
+    let index = input.indexOf(search);
+    let fragment = document.createDocumentFragment();
+    let cursor = 0;
+    while (index >= 0) {
+      fragment.append(input.substring(cursor, index));
+      let mark = document.createElement("mark");
+      mark.append(input.substring(index, index + search.length));
+      fragment.append(mark);
+      cursor = index + search.length;
+      index = input.indexOf(search, cursor);
+    }
+    fragment.append(input.substring(cursor));
+    return fragment;
   }
 
   formatMessageValueFull(message: PartitionConsumeRecord) {
@@ -388,20 +439,6 @@ class MessageViewerViewModel extends ViewModel {
   previewJSON() {
     return post("PreviewJSON", {});
   }
-}
-
-function highlight(input: string, query: string) {
-  if (query.length === 0) return input;
-  let index = input.indexOf(query);
-  let result = "";
-  let cursor = 0;
-  while (index >= 0) {
-    result += input.substring(cursor, index);
-    result += `<mark>${input.substring(index, index + query.length)}</mark>`;
-    cursor = index + query.length;
-    index = input.indexOf(query, cursor);
-  }
-  return result + input.substring(cursor);
 }
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;

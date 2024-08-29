@@ -65,6 +65,45 @@ test("data-html", async ({ execute, page }) => {
   await expect(page.locator("strong")).toHaveText("world");
 });
 
+test("data-children", async ({ execute, page }) => {
+  let vm = await execute(async () => {
+    let { ObservableScope } = await import("inertial");
+    let os = ObservableScope();
+    let vm = {
+      os,
+      message: os.signal("hello world"),
+      highlightMessage() {
+        let input = this.message();
+        let index = input.indexOf("world");
+        if (index >= 0) {
+          let nodes = document.createDocumentFragment();
+          nodes.append(document.createTextNode(input.substring(0, index)));
+          let mark = document.createElement("mark");
+          mark.append(document.createTextNode(input.substring(index, index + 5)));
+          nodes.append(mark);
+          nodes.append(document.createTextNode(input.substring(index + 5)));
+          return nodes;
+        }
+        return input;
+      },
+    };
+    return vm;
+  });
+
+  await execute(async (vm) => {
+    let { applyBindings } = await import("./bindings");
+    let root = document.createElement("main");
+    root.innerHTML = /* html */ `
+      <span data-children="this.highlightMessage()"></span>
+    `;
+    document.body.append(root);
+    return applyBindings(root, vm.os, vm);
+  }, vm);
+
+  await expect(page.locator("span")).toHaveText("hello world");
+  await expect(page.locator("mark")).toHaveText("world");
+});
+
 test("data-on-*", async ({ execute, page }) => {
   let vm = await execute(async () => {
     let { ObservableScope } = await import("inertial");
