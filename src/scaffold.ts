@@ -10,6 +10,7 @@ import { getSidecar } from "./sidecar";
 import { ExtensionContext, Uri, ViewColumn, window } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { getTelemetryLogger } from "./telemetry";
+import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
@@ -19,6 +20,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 const logger = new Logger("scaffold");
+const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommand = (context: ExtensionContext) => {
   const scaffoldProjectCommand = registerCommandWithLogging("confluent.scaffold", () =>
@@ -50,6 +52,12 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     return;
   }
 
+  if (scaffoldWebviewCache.getWebviewPanel(pickedTemplate.spec.name)) {
+    // If preexisting webview is found, it will have been revealed().
+    // No need to open a new one.
+    return;
+  }
+
   const optionsForm = window.createWebviewPanel(
     "template-options-form",
     `Generate ${pickedTemplate.spec.display_name} Template`,
@@ -58,6 +66,9 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
       enableScripts: true,
     },
   );
+
+  scaffoldWebviewCache.addWebviewPanel(pickedTemplate.spec.name, optionsForm);
+
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
 
   optionsForm.webview.html = scaffoldFormTemplate({
