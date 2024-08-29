@@ -820,9 +820,6 @@ components:
     HealthCheck:
       type: object
       properties:
-        data:
-          type: object
-          nullable: true
         name:
           type: string
         status:
@@ -830,3 +827,6 @@ components:
             - UP
             - DOWN
           type: string
+        data:
+          type: object
+          nullable: true
