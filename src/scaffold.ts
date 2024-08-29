@@ -7,9 +7,10 @@ import { Template, TemplateList, TemplatesApi } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
-import { ExtensionContext, Uri, ViewColumn, window } from "vscode";
+import { ExtensionContext, Uri, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { getTelemetryLogger } from "./telemetry";
+import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
@@ -19,6 +20,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 const logger = new Logger("scaffold");
+const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommand = (context: ExtensionContext) => {
   const scaffoldProjectCommand = registerCommandWithLogging("confluent.scaffold", () =>
@@ -50,7 +52,8 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     return;
   }
 
-  const optionsForm = window.createWebviewPanel(
+  const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
+    pickedTemplate.spec.name,
     "template-options-form",
     `Generate ${pickedTemplate.spec.display_name} Template`,
     ViewColumn.One,
@@ -58,6 +61,12 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
       enableScripts: true,
     },
   );
+
+  if (wasExisting) {
+    optionsForm.reveal();
+    return;
+  }
+
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
 
   optionsForm.webview.html = scaffoldFormTemplate({
