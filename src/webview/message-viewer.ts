@@ -226,9 +226,9 @@ class MessageViewerViewModel extends ViewModel {
    */
   pageButtons = this.derive(() => {
     const { total, filter } = this.messageCount();
-    const max = Math.floor((filter ?? total) / this.pageSize());
+    const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
     const current = this.page();
-    if (max === 0) return [];
+    if (max <= 0) return [];
     const offset = 2;
     const lo = Math.max(0, current - offset);
     const hi = Math.min(current + offset, max);

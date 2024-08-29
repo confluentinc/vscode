@@ -315,6 +315,17 @@
             <span class="codicon codicon-arrow-left"></span>
           </vscode-button>
 
+          <vscode-button
+            appearance="icon"
+            aria-label="Next page"
+            title="Next page"
+            id="nextPage"
+            data-on-click="this.page((v) => v + 1)"
+            data-attr-disabled="!this.nextPageAvailable()"
+          >
+            <span class="codicon codicon-arrow-right"></span>
+          </vscode-button>
+
           <template data-for="pageButton of this.pageButtons() by pageButton">
             <vscode-button
               appearance="icon"
@@ -326,17 +337,6 @@
               data-attr-active="this.page() === this.pageButton()"
             ></vscode-button>
           </template>
-
-          <vscode-button
-            appearance="icon"
-            aria-label="Next page"
-            title="Next page"
-            id="nextPage"
-            data-on-click="this.page((v) => v + 1)"
-            data-attr-disabled="!this.nextPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-right"></span>
-          </vscode-button>
         </div>
         <template data-if="this.pageStatLabel() != null">
           <div>
@@ -392,6 +392,7 @@
         flex-direction: row;
         gap: 1rem;
         background: var(--vscode-sideBarTitle-background);
+        border-top: 1px solid var(--vscode-sideBar-border);
       }
       .message-viewer-pagination vscode-button {
         min-width: 22px;
@@ -402,6 +403,7 @@
       }
       .consume-settings {
         background: var(--vscode-sideBarTitle-background);
+        border-bottom: 1px solid var(--vscode-sideBar-border);
       }
       .sticky-table-header {
         position: sticky;
