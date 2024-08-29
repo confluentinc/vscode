@@ -339,33 +339,20 @@ export class SkipList<Value> {
   }
 }
 
-export function includesSubstring(value: unknown, query: string, level = 0): boolean {
-  if (value == null) return false;
+export function includesSubstring(value: PartitionConsumeRecord, query: string): boolean {
+  let key = value.key;
 
-  switch (typeof value) {
-    case "string":
-      return value.indexOf(query) >= 0;
-    case "boolean":
-      return String(value) === query;
-    case "number":
-      return String(value).indexOf(query) >= 0;
+  if (typeof key === "string") {
+    if ((key as string).indexOf(query) >= 0) return true;
+  } else {
+    if (JSON.stringify(key, null, " ").indexOf(query) >= 0) return true;
   }
+  let val = value.value;
 
-  // give up on deeply nested objects
-  if (level >= 8) return false;
-
-  let nextLevel = level + 1;
-  if (Array.isArray(value)) {
-    for (let index = 0; index < value.length; index++) {
-      if (includesSubstring(value[index], query, nextLevel)) return true;
-    }
-  }
-
-  if (typeof value === "object") {
-    for (let key in value) {
-      let prop = (value as Record<string, unknown>)[key];
-      if (includesSubstring(prop, query, nextLevel)) return true;
-    }
+  if (typeof val === "string") {
+    if ((val as string).indexOf(query) >= 0) return true;
+  } else {
+    if (JSON.stringify(val, null, " ").indexOf(query) >= 0) return true;
   }
 
   return false;
