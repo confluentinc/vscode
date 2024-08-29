@@ -120,6 +120,27 @@
               >
               </vscode-button>
             </div>
+
+            <template data-if="this.streamError() != null">
+              <div class="dropdown-container">
+                <!-- Empty label for aligned layout with the rest of controls -->
+                <label for="stream-toggle"><span>&nbsp;</span></label>
+                <vscode-button
+                  appearance="secondary"
+                  popovertarget="errorLog"
+                  data-on-click="window.errorLog.togglePopover()"
+                >
+                  <span class="codicon codicon-error"></span>
+                  <label>&nbsp;An error occurred</label>
+                </vscode-button>
+
+                <div popover id="errorLog" class="partition-control">
+                  <template data-for="error of this.streamError()">
+                    <p data-text="this.error()"></p>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
         </section>
 
