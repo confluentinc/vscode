@@ -411,9 +411,9 @@ class MessageViewerViewModel extends ViewModel {
     }
   }
 
-  formatMessageValue(message: PartitionConsumeRecord, search: string) {
-    const value = message.value;
-    const input = typeof value === "string" ? value : JSON.stringify(message.value, null, " ");
+  formatMessageValue(value: unknown, search: string) {
+    if (value == null) return "";
+    const input = typeof value === "string" ? value : JSON.stringify(value, null, " ");
     if (search.length === 0) return input;
     let index = input.indexOf(search);
     let fragment = document.createDocumentFragment();
