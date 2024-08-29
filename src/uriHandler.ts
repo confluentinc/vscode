@@ -10,13 +10,19 @@ const logger = new Logger("uriHandler");
  * capture auth completion events from the sidecar.
  */
 export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements vscode.UriHandler {
-  static instance: UriEventHandler | null = null;
+  private static instance: UriEventHandler | null = null;
+
+  // enforce singleton pattern since extension UriHandlers can only be registered once anyways, so
+  // there's no point in having multiple instances of this class
+  private constructor() {
+    super();
+  }
 
   static getInstance(): UriEventHandler {
-    if (!this.instance) {
-      this.instance = new UriEventHandler();
+    if (!UriEventHandler.instance) {
+      UriEventHandler.instance = new UriEventHandler();
     }
-    return this.instance;
+    return UriEventHandler.instance;
   }
 
   public handleUri(uri: vscode.Uri) {
