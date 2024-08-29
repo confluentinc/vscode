@@ -12,6 +12,7 @@ import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/k
 import { Schema } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { AUTH_COMPLETED_KEY } from "./constants";
 
 const logger = new Logger("storage.resourceManager");
 
@@ -554,6 +555,24 @@ export class ResourceManager {
     const schemas = await this.getCCloudSchemas();
     schemas.delete(cluster);
     await this.storage.setWorkspaceState(StateSchemas.CCLOUD, schemas);
+  }
+
+  // AUTH PROVIDER
+
+  /**
+   * Set the secret key to indicate that the CCloud auth flow has completed successfully.
+   */
+  async setAuthFlowCompleted(success: boolean): Promise<void> {
+    await this.storage.setSecret(AUTH_COMPLETED_KEY, String(success));
+  }
+
+  /**
+   * Get the secret key that indicates whether the CCloud auth flow has completed successfully.
+   * @returns `true` if the auth flow completed successfully; `false` otherwise
+   */
+  async getAuthFlowCompleted(): Promise<boolean> {
+    const success: string | undefined = await this.storage.getSecret(AUTH_COMPLETED_KEY);
+    return success === "true";
   }
 }
 
