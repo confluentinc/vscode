@@ -1,10 +1,6 @@
-import { ObservableScope } from "inertial";
-import { applyBindings } from "./bindings/bindings";
-import { ViewModel } from "./bindings/view-model";
-import { sendWebviewMessage } from "./comms/comms";
 // import all symbols from topicConfigTypes into current namespace
-import * as messages from "./topicConfigTypes";
 
+/*
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
   const ui = document.querySelector("main")!;
@@ -100,3 +96,4 @@ export function post(
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
+*/

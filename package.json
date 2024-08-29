@@ -204,6 +204,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.configure",
+        "title": "Configure Topic",
+        "category": "Confluent: Topics"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -376,6 +381,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.configure",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.copyKafkaClusterId",
           "when": "false"
         },
@@ -517,6 +526,11 @@
           "command": "confluent.topic.consume",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
           "group": "inline@1"
+        },
+        {
+          "command": "confluent.topics.configure",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "topics"
         },
         {
           "command": "confluent.topics.delete",

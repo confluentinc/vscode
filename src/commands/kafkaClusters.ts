@@ -1,4 +1,6 @@
+import { randomBytes } from "crypto";
 import * as vscode from "vscode";
+import { Uri } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   ResponseError,
@@ -13,8 +15,8 @@ import { kafkaClusterQuickPick } from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { getTopicViewProvider } from "../viewProviders/topics";
+import { WebviewPanelCache } from "../webview-cache";
 import topicConfigTemplate from "../webview/topic-config.html";
-import { WebviewPanelCache, getNonce, getStaticRoot, getUriPath } from "../webview/utils";
 
 const logger = new Logger("commands.kafkaClusters");
 
@@ -218,7 +220,7 @@ async function deleteTopicCommand(topic: KafkaTopic) {
 /** Cache of open "configure topic" webviews */
 const configTopicPanelCache = new WebviewPanelCache();
 
-async function configureTopicCommand(topic: KafkaTopic) {
+async function configureTopicCommand(topic: KafkaTopic, context: vscode.ExtensionContext) {
   const cluster = await getResourceManager().getClusterForTopic(topic);
   if (!cluster) {
     logger.error(`Failed to find cluster for topic "${topic.name}"`);
@@ -228,9 +230,17 @@ async function configureTopicCommand(topic: KafkaTopic) {
   logger.info(`Configuring topic "${topic.name}" in cluster "${cluster.name}"...`);
 
   const panel_id = topic.uniqueId;
-  const existingPanel = configTopicPanelCache.getWebviewPanel(panel_id);
-  if (existingPanel) {
-    // Panel exists already. Will have been revealed to the user.
+
+  const [panel, wasExisting] = configTopicPanelCache.findOrCreate(
+    panel_id,
+    "topic-config",
+    `Configure Topic ${topic.name}`,
+    vscode.ViewColumn.One,
+    { enableScripts: true },
+  );
+  if (wasExisting) {
+    // Panel exists already, show it and bail.
+    panel.reveal();
     return;
   }
 
@@ -255,26 +265,16 @@ async function configureTopicCommand(topic: KafkaTopic) {
     `Configurable topic configuration for "${topic.name}": ${JSON.stringify(topicConfigMap)}`,
   );
 
-  const staticRoot = getStaticRoot();
-  const panel = vscode.window.createWebviewPanel(
-    "topic-config",
-    `Configure Topic ${topic.name}`,
-    vscode.ViewColumn.One,
-    { enableScripts: true, localResourceRoots: [staticRoot] },
-  );
-
-  // track in cache.
-  configTopicPanelCache.addWebviewPanel(panel_id, panel);
-
+  const staticRoot = Uri.joinPath(context.extensionUri, "webview");
   const webview = panel.webview;
 
   // Set the webview's HTML content with the expansion of the templated HTML ...
   // (gulp creates this function from the HTML file)
   webview.html = topicConfigTemplate({
     cspSource: webview.cspSource,
-    nonce: getNonce(),
-    webviewUri: getUriPath(webview, staticRoot, "main.js"),
-    topicConfigUri: getUriPath(webview, staticRoot, "topic-config.js"),
+    nonce: randomBytes(16).toString("base64"),
+    webviewUri: webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
+    topicConfigUri: webview.asWebviewUri(Uri.joinPath(staticRoot, "topic-config.js")),
   });
 
   // Wire up event listeners to handle messages from the webview.
