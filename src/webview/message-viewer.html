@@ -286,13 +286,13 @@
                   <td
                     class="grid-cell cell-text-overflow"
                     tabindex="-1"
-                    data-text="this.message().key"
+                    data-children="this.formatMessageValue(this.message().key, this.search())"
                     data-prop-title="this.message().key"
                   ></td>
                   <td
                     class="grid-cell cell-text-overflow"
                     tabindex="-1"
-                    data-html="this.formatMessageValue(this.message(), this.search())"
+                    data-children="this.formatMessageValue(this.message().value, this.search())"
                     data-prop-title="this.formatMessageValueFull(this.message())"
                   ></td>
                 </tr>
@@ -315,6 +315,18 @@
             <span class="codicon codicon-arrow-left"></span>
           </vscode-button>
 
+          <template data-for="pageButton of this.pageButtons() by pageButton">
+            <vscode-button
+              appearance="icon"
+              data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+              data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+              data-on-click="this.page(this.pageButton())"
+              data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
+              data-attr-disabled="!this.isPageButton(this.pageButton())"
+              data-attr-active="this.page() === this.pageButton()"
+            ></vscode-button>
+          </template>
+
           <vscode-button
             appearance="icon"
             aria-label="Next page"
@@ -325,15 +337,19 @@
           >
             <span class="codicon codicon-arrow-right"></span>
           </vscode-button>
-
-          <vscode-button
-            appearance="icon"
-            aria-label="Message consumption stats"
-            title="Message consumption stats"
-            id="pageOutput"
-            data-text="this.pageStatLabel()"
-          ></vscode-button>
-
+        </div>
+        <template data-if="this.pageStatLabel() != null">
+          <div>
+            <vscode-button
+              appearance="icon"
+              aria-label="Message consumption stats"
+              title="Message consumption stats"
+              id="pageOutput"
+              data-text="this.pageStatLabel()"
+            ></vscode-button>
+          </div>
+        </template>
+        <div>
           <vscode-button
             appearance="icon"
             aria-label="Open consumed messages as JSON"
@@ -342,7 +358,6 @@
           >
             <span class="codicon codicon-json"></span>
           </vscode-button>
-
         </div>
       </footer>
     </main>
@@ -373,6 +388,16 @@
       }
       .message-viewer-pagination {
         padding: 6px 12px;
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+      }
+      .message-viewer-pagination vscode-button {
+        min-width: 22px;
+      }
+      .message-viewer-pagination [active="true"] {
+        background: var(--vscode-list-activeSelectionBackground, #094771);
+        color: var(--vscode-list-activeSelectionForeground, #ffffff);
       }
       .consume-settings {
         /*        background: var(--vscode-tab-inactiveBackground);*/
