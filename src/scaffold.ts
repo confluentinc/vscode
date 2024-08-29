@@ -7,7 +7,7 @@ import { Template, TemplateList, TemplatesApi } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
-import { ExtensionContext, Uri, ViewColumn, window } from "vscode";
+import { ExtensionContext, Uri, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { getTelemetryLogger } from "./telemetry";
 import { WebviewPanelCache } from "./webview-cache";
@@ -52,13 +52,8 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     return;
   }
 
-  if (scaffoldWebviewCache.getWebviewPanel(pickedTemplate.spec.name)) {
-    // If preexisting webview is found, it will have been revealed().
-    // No need to open a new one.
-    return;
-  }
-
-  const optionsForm = window.createWebviewPanel(
+  const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
+    pickedTemplate.spec.name,
     "template-options-form",
     `Generate ${pickedTemplate.spec.display_name} Template`,
     ViewColumn.One,
@@ -67,7 +62,10 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
     },
   );
 
-  scaffoldWebviewCache.addWebviewPanel(pickedTemplate.spec.name, optionsForm);
+  if (wasExisting) {
+    optionsForm.reveal();
+    return;
+  }
 
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
 
