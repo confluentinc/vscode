@@ -226,9 +226,9 @@ class MessageViewerViewModel extends ViewModel {
    */
   pageButtons = this.derive(() => {
     const { total, filter } = this.messageCount();
-    const max = Math.floor((filter ?? total) / this.pageSize());
+    const max = Math.ceil((filter ?? total) / this.pageSize()) - 1;
     const current = this.page();
-    if (max === 0) return [];
+    if (max <= 0) return [];
     const offset = 2;
     const lo = Math.max(0, current - offset);
     const hi = Math.min(current + offset, max);
@@ -369,6 +369,9 @@ class MessageViewerViewModel extends ViewModel {
   streamState = this.resolve(() => {
     return post("GetStreamState", { timestamp: this.timestamp() });
   }, "running");
+  streamError = this.resolve(() => {
+    return post("GetStreamError", { timestamp: this.timestamp() });
+  }, null);
   streamStateLabel = this.derive(() => {
     switch (this.streamState()) {
       case "running":
@@ -444,6 +447,7 @@ class MessageViewerViewModel extends ViewModel {
 }
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
+export function post(type: "GetStreamError", body: object): Promise<string[] | null>;
 export function post(
   type: "GetMessages",
   body: { page: number; pageSize: number; timestamp?: number },

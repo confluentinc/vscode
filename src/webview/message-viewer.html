@@ -112,7 +112,7 @@
               <!-- Empty label for aligned layout with the rest of controls -->
               <label for="stream-toggle"><span>&nbsp;</span></label>
               <vscode-button
-                appearance="secondary"
+                appearance="primary"
                 id="stream-toggle"
                 data-on-click="this.handleStreamToggle(this.streamState())"
                 data-text="this.streamStateLabel()"
@@ -120,6 +120,27 @@
               >
               </vscode-button>
             </div>
+
+            <template data-if="this.streamError() != null">
+              <div class="dropdown-container">
+                <!-- Empty label for aligned layout with the rest of controls -->
+                <label for="stream-toggle"><span>&nbsp;</span></label>
+                <vscode-button
+                  appearance="secondary"
+                  popovertarget="errorLog"
+                  data-on-click="window.errorLog.togglePopover()"
+                >
+                  <span class="codicon codicon-error"></span>
+                  <label>&nbsp;An error occurred</label>
+                </vscode-button>
+
+                <div popover id="errorLog" class="partition-control">
+                  <template data-for="error of this.streamError()">
+                    <p data-text="this.error()"></p>
+                  </template>
+                </div>
+              </div>
+            </template>
           </div>
         </section>
 
@@ -315,6 +336,17 @@
             <span class="codicon codicon-arrow-left"></span>
           </vscode-button>
 
+          <vscode-button
+            appearance="icon"
+            aria-label="Next page"
+            title="Next page"
+            id="nextPage"
+            data-on-click="this.page((v) => v + 1)"
+            data-attr-disabled="!this.nextPageAvailable()"
+          >
+            <span class="codicon codicon-arrow-right"></span>
+          </vscode-button>
+
           <template data-for="pageButton of this.pageButtons() by pageButton">
             <vscode-button
               appearance="icon"
@@ -326,17 +358,6 @@
               data-attr-active="this.page() === this.pageButton()"
             ></vscode-button>
           </template>
-
-          <vscode-button
-            appearance="icon"
-            aria-label="Next page"
-            title="Next page"
-            id="nextPage"
-            data-on-click="this.page((v) => v + 1)"
-            data-attr-disabled="!this.nextPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-right"></span>
-          </vscode-button>
         </div>
         <template data-if="this.pageStatLabel() != null">
           <div>
@@ -392,6 +413,7 @@
         flex-direction: row;
         gap: 1rem;
         background: var(--vscode-sideBarTitle-background);
+        border-top: 1px solid var(--vscode-sideBar-border);
       }
       .message-viewer-pagination vscode-button {
         min-width: 22px;
@@ -402,6 +424,7 @@
       }
       .consume-settings {
         background: var(--vscode-sideBarTitle-background);
+        border-bottom: 1px solid var(--vscode-sideBar-border);
       }
       .sticky-table-header {
         position: sticky;
