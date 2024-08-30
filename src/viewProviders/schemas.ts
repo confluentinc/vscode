@@ -36,6 +36,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistryCluster | null) => {
       if (!schemaRegistry) {
         vscode.commands.executeCommand("setContext", "confluent.schemaRegistrySelected", false);
+        this.schemaRegistry = null;
+        this.ccloudEnvironment = null;
         this.treeView.description = "";
       } else {
         vscode.commands.executeCommand("setContext", "confluentSchemaRegistrySelected", true);
