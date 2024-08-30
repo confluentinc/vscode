@@ -21,6 +21,7 @@ import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 
 import { Tail } from "tail";
+import { NoSidecarExecutableError, NoSidecarRunningError, WrongAuthSecretError } from "./errors";
 
 /**
  * Output channel for viewing sidecar logs.
@@ -415,38 +416,6 @@ export class SidecarManager {
   private async pause(): Promise<void> {
     // pause an iota
     await new Promise((timeout_resolve) => setTimeout(timeout_resolve, MOMENTARY_PAUSE_MS));
-  }
-}
-
-/*
-  Sidecar is not currently running (better start a new one!)
-*/
-class NoSidecarRunningError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
-
-/*
-   If the auth token we have on record for the sidecar is rejected, will need to
-   restart it. Fortunately it tells us its PID in the response headers, so we know
-   what to kill.
-*/
-class WrongAuthSecretError extends Error {
-  public sidecar_process_id: number;
-
-  constructor(message: string, sidecar_process_id: number) {
-    super(message);
-    this.sidecar_process_id = sidecar_process_id;
-  }
-}
-
-/*
-  Could not find the sidecar executable.
-*/
-class NoSidecarExecutableError extends Error {
-  constructor(message: string) {
-    super(message);
   }
 }
 
