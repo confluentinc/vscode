@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Project Generation form will remember values entered if user hides tab and comes back
+
 ### Added
 
 - Dedicated authentication provider to allow users to connect to Confluent Cloud the same way they
