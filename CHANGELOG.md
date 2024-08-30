@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.14.1
+
+### Fixed
+
+- Switching Confluent Cloud organizations now properly resets the Topics and Schemas views' focused clusters (Kafka and Schema Registry, respectively).
+- Selecting different Schema Registry clusters to update the Schemas view now correctly shows associated actions and empty state text/buttons.
+
 ## 0.14.0
 
 ### Added
