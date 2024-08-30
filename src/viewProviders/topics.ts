@@ -9,6 +9,7 @@ import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/s
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
+import { SidecarResponseError } from "../sidecar/middlewares";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -115,9 +116,19 @@ export function getTopicViewProvider() {
 export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  const topicsResp: TopicDataList = await client.listKafkaTopics({
-    cluster_id: cluster.id,
-  });
+
+  let topicsResp: TopicDataList;
+  try {
+    topicsResp = await client.listKafkaTopics({
+      cluster_id: cluster.id,
+    });
+  } catch (error) {
+    if (error instanceof SidecarResponseError) {
+      vscode.window.showErrorMessage(`Error listing topics: ${JSON.stringify(error.body)}`);
+      return [];
+    }
+    throw error;
+  }
 
   let environmentId: string | null = null;
   let schemas: Schema[] = [];

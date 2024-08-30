@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
+import { Middleware, RequestContext, ResponseContext, ResponseError } from "../clients/sidecar";
 
 import { Logger } from "../logging";
 const logger = new Logger("sidecar.middlewares");
@@ -30,7 +30,7 @@ async function contextToResponseLogString(context: ResponseContext): Promise<str
   try {
     const contentType = context.response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
-      body = JSON.stringify(await context.response.json());
+      body = JSON.stringify(await context.response.clone().json());
     } else {
       body = await context.response.text();
     }
@@ -86,6 +86,17 @@ export class DebugRequestResponseMiddleware implements Middleware {
   }
 }
 
+/** {@link ResponseError} with response body as `.body` included for easier access. */
+export class SidecarResponseError extends ResponseError {
+  constructor(
+    response: Response,
+    message: string,
+    public body: any,
+  ) {
+    super(response, message);
+  }
+}
+
 export class ErrorResponseMiddleware implements Middleware {
   async post(context: ResponseContext): Promise<void> {
     if (context.response.status >= 400) {
@@ -97,8 +108,20 @@ export class ErrorResponseMiddleware implements Middleware {
         request: requestLogString,
         response: responseLogString,
       });
-      // don't throw an error because our openapi-generator client code will throw ResponseError by
-      // default if status >= 400
+
+      let body: any;
+      try {
+        body = await context.response.clone().json();
+      } catch (e) {
+        body = await context.response.clone().text();
+      }
+
+      // re-throw and include the response body so the callers have easier access
+      throw new SidecarResponseError(
+        context.response,
+        `Response returned status ${context.response.status}`,
+        body,
+      );
     }
   }
 }
