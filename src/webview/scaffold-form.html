@@ -17,7 +17,7 @@
         Take the first steps in creating a fully functional application by providing the options
         below. You can always change them later in the project file.
       </p>
-      <hr />
+      <hr class="hr" />
       <form data-on-submit="this.handleSubmit(event)">
         <template data-if="this.noOptions()">
           <p class="info">
@@ -52,9 +52,10 @@
                   <label
                     data-text="this.field()[1].display_name"
                     data-attr-for="this.field()[0]"
-                    data-attr-class="this.field()[1].default_value == null ? 'required' : ''"
+                    data-attr-class="this.field()[1].default_value == null ? 'label required' : 'label'"
                   ></label>
                   <input
+                    class="input"
                     data-text="this.field()[1].display_name"
                     data-attr-id="this.field()[0]"
                     data-attr-name="this.field()[0]"
@@ -69,7 +70,7 @@
             </template>
           </div>
         </template>
-        <input type="submit" value="Generate & Save" />
+        <input class="button" type="submit" value="Generate & Save" />
       </form>
     </main>
 
@@ -119,7 +120,7 @@
           padding-bottom: 5px;
         }
       }
-      input,
+      input:not([type="submit"]),
       .dropdown > * {
         width: 250px;
       }
