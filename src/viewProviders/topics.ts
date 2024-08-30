@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged, currentKafkaClusterTopicsChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -9,7 +9,7 @@ import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/s
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { handleResponseError } from "../sidecar/errors";
+import { SidecarResponseError } from "../sidecar/middlewares";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -123,8 +123,8 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       cluster_id: cluster.id,
     });
   } catch (error) {
-    if (error instanceof ResponseError) {
-      await handleResponseError("Error listing topics", error, true);
+    if (error instanceof SidecarResponseError) {
+      vscode.window.showErrorMessage(`Error listing topics: ${JSON.stringify(error.body)}`);
       return [];
     }
     throw error;
