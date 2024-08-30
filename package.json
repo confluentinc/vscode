@@ -423,7 +423,7 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && confluent.SchemaRegistrySelected",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
           "group": "2_copy@1"
         },
         {
