@@ -43,6 +43,8 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
       if (!cluster) {
         vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
+        this.kafkaCluster = null;
+        this.ccloudEnvironment = null;
         this.treeView.description = "";
       } else {
         vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", true);
