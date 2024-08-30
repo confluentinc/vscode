@@ -1,6 +1,9 @@
 :root {
   --default-font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial,
     sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+  --cflt-input-height: 24px;
+  --cflt-input-min-width: 100px;
+  --cflt-base-font-size: 13px;
 }
 
 .grid {
@@ -107,4 +110,79 @@
   color: var(--vscode-foreground, #cccccc);
   padding-inline-start: 10px;
   margin-inline-end: 10px;
+}
+
+.label {
+  display: block;
+  color: var(--vscode-textPreformat-foreground);
+  cursor: pointer;
+  font-size: var(--cflt-base-font-size);
+  line-height: normal;
+  margin-bottom: 5px;
+}
+.label.required::after {
+  content: "*";
+  color: var(--vscode-inputValidation-errorBorder);
+}
+
+.hr {
+  height: 1px;
+  padding-top: 0.5rem;
+  padding-bottom: 0.75rem;
+  color: var(--vscode-icon-foreground);
+  font-size: 0;
+  border: 0;
+}
+
+.input {
+  box-sizing: border-box;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border-radius: 3px;
+  border: 2px solid var(--vscode-input-border);
+  height: var(--cflt-input-height);
+  min-width: var(--cflt-input-min-width);
+  padding: 2px 5px;
+}
+.input:focus {
+  outline: 1px solid var(--vscode-inputOption-activeBorder);
+  outline-offset: -1px;
+}
+.input.invalid {
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.input[type="submit"],
+.button {
+  display: inline-flex;
+  outline: none;
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+  padding: 5px 8px;
+  font-size: var(--cflt-base-font-size);
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border-radius: 3px;
+  fill: currentColor;
+  cursor: pointer;
+  white-space: wrap;
+  text-decoration: none;
+  border: 1px solid var(--vscode-input-border);
+}
+.input[type="submit"]:hover,
+.button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+.button.secondary {
+  color: var(--vscode-button-secondaryForeground);
+  background: var(--vscode-button-secondaryBackground);
+}
+.button.secondary:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.input + .hint {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8em;
 }
