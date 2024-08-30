@@ -2,6 +2,17 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 
+export enum KafkaTopicAuthorizedOperation {
+  ALTER = "ALTER",
+  CREATE = "CREATE",
+  DELETE = "DELETE",
+  DESCRIBE = "DESCRIBE",
+  READ = "READ",
+  WRITE = "WRITE",
+  ALTER_CONFIGS = "ALTER_CONFIGS",
+  DESCRIBE_CONFIGS = "DESCRIBE_CONFIGS",
+}
+
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data {
   name!: Enforced<string>;
@@ -19,6 +30,8 @@ export class KafkaTopic extends Data {
   /** CCloud env id. If null, implies a "local cluster" topic. */
   environmentId: string | null = null;
   hasSchema: boolean = false;
+
+  authorizedOperations: KafkaTopicAuthorizedOperation[] = [];
 
   /** Property producing a URL for the topic in the Confluent Cloud UI */
   get ccloudUrl(): string {
@@ -70,5 +83,15 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
       const warningColor = new vscode.ThemeColor("problemsWarningIcon.foreground");
       this.iconPath = new vscode.ThemeIcon(IconNames.TOPIC_WITHOUT_SCHEMA, warningColor);
     }
+
+    // RBAC: add suffixes to the contextValue based on available permissions
+    const ops: KafkaTopicAuthorizedOperation[] = resource.authorizedOperations;
+    for (const permission of Object.values(KafkaTopicAuthorizedOperation)) {
+      if (ops.includes(permission)) {
+        this.contextValue += `-${permission.toLowerCase()}`;
+      }
+    }
+
+    this.tooltip = `contextValue: ${this.contextValue}\n\n${this.tooltip}`;
   }
 }

@@ -206,7 +206,8 @@
       {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
-        "category": "Confluent: Topics"
+        "category": "Confluent: Topics",
+        "enablement": "viewItem =~ /.*-delete.*/"
       },
       {
         "command": "confluent.topics.refresh",
@@ -243,6 +244,11 @@
           "type": "boolean",
           "default": false,
           "description": "Alert on sidecar process exceptions"
+        },
+        "confluent.ccloud.kafkaTopics.permissions.showWarnings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show warnings when attempting to perform actions that require additional permissions"
         }
       }
     },

@@ -8,6 +8,7 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
+import { addPermissionsToTopic } from "../rbac/topics";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -144,12 +145,22 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       hasSchema: hasMatchingSchema,
     });
   });
+
+  // load topic RBAC permissions
+  logger.debug("loading topic permissions for", topics.length, "topic(s)");
+  const topicsWithPermissions: KafkaTopic[] = await Promise.all(
+    topics.map((topic) => {
+      return addPermissionsToTopic(topic);
+    }),
+  );
+  logger.debug("done getting permissions for", topicsWithPermissions.length, "topic(s)");
+
   if (cluster instanceof CCloudKafkaCluster) {
-    await getResourceManager().setCCloudTopics(topics);
+    await getResourceManager().setCCloudTopics(topicsWithPermissions);
   } else {
-    await getResourceManager().setLocalTopics(topics);
+    await getResourceManager().setLocalTopics(topicsWithPermissions);
   }
-  return topics;
+  return topicsWithPermissions;
 }
 
 /**
