@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Project Generation form will remember values entered if user hides tab and comes back
+
 ## 0.14.0
 
 ### Added
