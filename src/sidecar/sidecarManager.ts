@@ -159,8 +159,11 @@ export class SidecarManager {
             throw e;
           }
         } catch (e) {
+          // as thrown by startSidecar()
           if (e instanceof NoSidecarExecutableError) {
             logger.error(`${logPrefix}: sidecar executable not found`, e);
+          } else if (e instanceof SidecarFatalError) {
+            logger.error(`${logPrefix}: sidecar process failed to start`, e);
           }
           this.pendingHandlePromise = null;
           throw e;
@@ -266,66 +269,103 @@ export class SidecarManager {
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
    **/
   private async startSidecar(callnum: number): Promise<string> {
-    const logPrefix = `startSidecar(${callnum})`;
-    logger.info(`${logPrefix}: Starting new sidecar process`);
+    return new Promise<string>((resolve, reject) => {
+      (async () => {
+        const logPrefix = `startSidecar(${callnum})`;
+        logger.info(`${logPrefix}: Starting new sidecar process`);
 
-    this.sidecarContacted = false;
+        this.sidecarContacted = false;
 
-    // Start up the sidecar process, daemonized no stdio.
+        // Start up the sidecar process, daemonized no stdio.
 
-    // check to see if the sidecar file exists
-    logger.info(`exe path ${sidecarExecutablePath}, version ${currentSidecarVersion}`);
-    try {
-      fs.accessSync(sidecarExecutablePath);
-    } catch (e) {
-      logger.error(`${logPrefix}: sidecar file ${sidecarExecutablePath} does not exist`, e);
-      throw new NoSidecarRunningError(`${logPrefix}: sidecar file does not exist`);
-    }
-
-    // Set up the environment for the sidecar process.
-    const sidecar_env = constructSidecarEnv(process.env);
-
-    try {
-      const sidecarProcess = spawn(sidecarExecutablePath, [], {
-        detached: true,
-        stdio: "ignore",
-        env: sidecar_env,
-      });
-      logger.info(
-        `${logPrefix}: started sidecar process with pid ${sidecarProcess.pid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
-      );
-      sidecarProcess.unref();
-    } catch (e) {
-      logger.error(`${logPrefix}: sidecar spawn fatal error`, e);
-      throw e;
-    }
-
-    let accessToken = "";
-    // Pause, then try to hit the handshake endpoint. It may fail a few times while
-    // the sidecar process is coming online.
-    for (let i = 0; i < 10; i++) {
-      try {
-        await this.pause();
-        logger.info(`${logPrefix}(attempt ${i}): done pausing , on to hitting handshake endpoint`);
-
-        accessToken = await this.doHandshake();
-        logger.warn(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
-        break;
-      } catch (e) {
-        // We expect ECONNREFUSED while the sidecar is coming up, but log other unexpected errors.
-        if (!wasConnRefused(e)) {
-          logger.error(`${logPrefix}(attempt ${i}): handshake failed with unexpected error`, e);
+        // check to see if the sidecar file exists
+        logger.info(`exe path ${sidecarExecutablePath}, version ${currentSidecarVersion}`);
+        try {
+          fs.accessSync(sidecarExecutablePath);
+        } catch (e) {
+          logger.error(`${logPrefix}: sidecar file ${sidecarExecutablePath} does not exist`, e);
+          reject(new NoSidecarExecutableError(`${logPrefix}: sidecar file does not exist`));
         }
-        if (i < 9) {
-          logger.info(`${logPrefix}(attempt ${i}): pausing, retrying handshake`);
+
+        // Need to watch to see if the sidecar process exits early, as it may be the wrong architecture for the OS.
+        let isStillEarly = true;
+        let rejected = false;
+
+        // Set a timer for 5 seconds looking for quick unclean process exit
+        const earlyUncleanExitTimer = setTimeout(() => {
+          isStillEarly = false;
+        }, 5000);
+
+        // Set up the environment for the sidecar process.
+        const sidecar_env = constructSidecarEnv(process.env);
+
+        try {
+          const sidecarProcess = spawn(sidecarExecutablePath, [], {
+            detached: true,
+            stdio: "ignore",
+            env: sidecar_env,
+          });
+          logger.info(
+            `${logPrefix}: started sidecar process with pid ${sidecarProcess.pid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
+          );
+          sidecarProcess.unref();
+
+          // Notice if exits with an error. May well be wrong architecture for OSX. Only pertinent if it exits quickly,
+          // see up above in the earlyUncleanExitTimer block.
+          sidecarProcess.on("exit", (code: number, signal: string) => {
+            logger.warn(`${logPrefix}: sidecar process exited with code ${code}, signal ${signal}`);
+            if (code !== 0 && isStillEarly) {
+              clearTimeout(earlyUncleanExitTimer);
+              logger.warn(`${logPrefix}: rejecting promise.`);
+              reject(
+                new SidecarFatalError(`Cannot start the sidecar, exited quickly status ${code}`),
+              );
+              rejected = true;
+            }
+          });
+        } catch (e) {
+          logger.error(`${logPrefix}: sidecar spawn fatal error`, e);
+          reject(e);
+          return;
         }
-      }
-    }
 
-    await getStorageManager().setSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY, accessToken);
-    logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
+        let accessToken = "";
+        // Pause, then try to hit the handshake endpoint. It may fail a few times while
+        // the sidecar process is coming online.
+        for (let i = 0; i < 10 && !rejected; i++) {
+          try {
+            await this.pause();
+            if (rejected) {
+              return;
+            }
+            logger.info(
+              `${logPrefix}(attempt ${i}): done pausing, on to hitting handshake endpoint`,
+            );
 
-    return accessToken;
+            accessToken = await this.doHandshake();
+            logger.warn(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
+            break;
+          } catch (e) {
+            // We expect ECONNREFUSED while the sidecar is coming up, but log other unexpected errors.
+            if (!wasConnRefused(e)) {
+              logger.error(`${logPrefix}(attempt ${i}): handshake failed with unexpected error`, e);
+            }
+            if (i < 9) {
+              logger.info(`${logPrefix}(attempt ${i}): pausing, retrying handshake`);
+            }
+          }
+        }
+
+        if (rejected) {
+          return;
+        }
+
+        await getStorageManager().setSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY, accessToken);
+        logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
+
+        resolve(accessToken);
+      })();
+    });
   }
 
   /**
@@ -418,20 +458,25 @@ export class SidecarManager {
   }
 }
 
-/*
-  Sidecar is not currently running (better start a new one!)
-*/
+/** Sidecar is not currently running (better start a new one!) */
 class NoSidecarRunningError extends Error {
   constructor(message: string) {
     super(message);
   }
 }
 
-/*
-   If the auth token we have on record for the sidecar is rejected, will need to
-   restart it. Fortunately it tells us its PID in the response headers, so we know
-   what to kill.
-*/
+/** Sidecar could not start up successfully */
+class SidecarFatalError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ *  If the auth token we have on record for the sidecar is rejected, will need to
+ * restart it. Fortunately it tells us its PID in the response headers, so we know
+ * what to kill.
+ */
 class WrongAuthSecretError extends Error {
   public sidecar_process_id: number;
 
@@ -441,9 +486,7 @@ class WrongAuthSecretError extends Error {
   }
 }
 
-/*
-  Could not find the sidecar executable.
-*/
+/** Could not find the sidecar executable. */
 class NoSidecarExecutableError extends Error {
   constructor(message: string) {
     super(message);
