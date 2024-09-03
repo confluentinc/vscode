@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { getSidecar } from ".";
+import { getAuthProvider } from "../authProvider";
 import { AuthErrors, Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
 import {
@@ -76,6 +77,17 @@ export async function createCCloudConnection(): Promise<Connection> {
   }
 }
 
+/** Delete the existing Confluent Cloud {@link Connection} (if it exists). */
+export async function deleteCCloudConnection(): Promise<void> {
+  const client = (await getSidecar()).getConnectionsResourceApi();
+  try {
+    await client.gatewayV1ConnectionsIdDelete({ id: CCLOUD_CONNECTION_ID });
+    logger.debug("deleted existing CCloud connection");
+  } catch (e) {
+    logger.error("Error deleting connection", e);
+  }
+}
+
 export async function watchCCloudConnectionStatus(): Promise<void> {
   const connection: Connection | null = await getCCloudConnection();
   if (!connection) {
@@ -89,7 +101,7 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
 
   // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
   // warn the user to reauth
-  checkAuthExpiration(connection);
+  await checkAuthExpiration(connection);
 }
 
 /** Poller to ensure the current connection, if any, is in a
@@ -100,7 +112,7 @@ export const pollCCloudConnectionAuth = new IntervalPoller(
   watchCCloudConnectionStatus,
 );
 
-export function checkAuthExpiration(connection: Connection) {
+export async function checkAuthExpiration(connection: Connection) {
   const expiration: Date | undefined = connection.status.authentication.requires_authentication_at;
   if (!expiration) {
     // the user hasn't authenticated yet (or the auth status may be INVALID_TOKEN) and we may not
@@ -152,7 +164,11 @@ export function checkAuthExpiration(connection: Connection) {
   if (minutesUntilExpiration <= 0) {
     if (!AUTH_PROMPT_TRACKER.authExpiredPromptOpen) {
       logger.error("current CCloud connection expired, showing reauth error notification", logBody);
-      handleExpiredAuth(signInUri, expirationString);
+      // inform the auth provider that the session has expired
+      await getAuthProvider().removeSession(CCLOUD_CONNECTION_ID);
+      await deleteCCloudConnection();
+      const newConnection: Connection = await createCCloudConnection();
+      handleExpiredAuth(newConnection.metadata.sign_in_uri!, expirationString);
     }
   } else {
     if (!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen) {
