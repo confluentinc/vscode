@@ -101,7 +101,7 @@ function messageViewerStartPollingCommand(
   /** Filter by range of timestamps. `null` for all consumed messages. */
   const timestampFilter = os.signal<[number, number] | null>(null);
   /** Filter by substring text query. Persists bitset instead of computing it. */
-  const textFilter = os.signal<[BitSet, string] | null>(null);
+  const textFilter = os.signal<{ bitset: BitSet; regexp: RegExp } | null>(null);
   /** The stream instance that holds consumed messages and index them by timestamp and partition. */
   const stream = os.signal(new Stream(DEFAULT_RECORDS_CAPACITY));
   /**
@@ -174,9 +174,9 @@ function messageViewerStartPollingCommand(
     const search = textFilter();
     const index = latestInsert();
     if (search == null) return null;
-    const [bitset, query] = search;
+    const { bitset, regexp } = search;
     const value = messageStream.messages.values[index];
-    if (includesSubstring(value, query)) {
+    if (includesSubstring(value, regexp)) {
       bitset.set(index);
     } else {
       bitset.unset(index);
@@ -334,6 +334,10 @@ function messageViewerStartPollingCommand(
       case "GetStreamError": {
         return latestError() satisfies MessageResponse<"GetStreamError">;
       }
+      case "GetSearchSource": {
+        const search = textFilter();
+        return (search?.regexp.source ?? null) satisfies MessageResponse<"GetSearchSource">;
+      }
       case "PreviewMessageByIndex": {
         const { messages } = stream();
         workspace
@@ -384,12 +388,20 @@ function messageViewerStartPollingCommand(
           const { capacity, messages } = stream();
           const values = messages.values;
           const bitset = new BitSet(capacity);
+          const escaped = body.search
+            .trim()
+            // escape characters used by regexp itself
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+            // 1. make existing whitespaces in query optional
+            // 2. add optional whitespaces at word boundaries
+            .replace(/\s+|\b/g, "\\s*");
+          const regexp = new RegExp(escaped, "i");
           for (let i = 0; i < values.length; i++) {
-            if (includesSubstring(values[i], body.search)) {
+            if (includesSubstring(values[i], regexp)) {
               bitset.set(i);
             }
           }
-          textFilter([bitset, body.search]);
+          textFilter({ bitset, regexp });
         } else {
           textFilter(null);
         }
