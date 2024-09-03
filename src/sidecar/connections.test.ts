@@ -92,9 +92,9 @@ describe("CCloud auth expiration checks", () => {
     // just want to make sure the notification isn't trying to be opened again
   }
 
-  it("should not show any notifications if auth doesn't expire soon", () => {
+  it("should not show any notifications if auth doesn't expire soon", async () => {
     // check against a connection that expires in 120min
-    checkAuthExpiration(createFakeConnection(120));
+    await checkAuthExpiration(createFakeConnection(120));
     // warning notification should not show up
     assertReauthWarningPromptNotOpened();
     assert.ok(!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
@@ -103,9 +103,9 @@ describe("CCloud auth expiration checks", () => {
     assert.ok(!AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
   });
 
-  it("should show a warning notification if auth expires soon", () => {
+  it("should show a warning notification if auth expires soon", async () => {
     // check against a connection that expires "soon"
-    checkAuthExpiration(createFakeConnection(MINUTES_UNTIL_REAUTH_WARNING - 1));
+    await checkAuthExpiration(createFakeConnection(MINUTES_UNTIL_REAUTH_WARNING - 1));
     // warning notification should show up
     assertReauthWarningPromptOpened();
     // error notification should not show up
@@ -113,9 +113,9 @@ describe("CCloud auth expiration checks", () => {
     assert.ok(!AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
   });
 
-  it("should show an error notification if auth has expired", () => {
+  it("should show an error notification if auth has expired", async () => {
     // check against a connection that expired already (5min ago)
-    checkAuthExpiration(createFakeConnection(-5));
+    await checkAuthExpiration(createFakeConnection(-5));
     // warning notification should not show up
     assertReauthWarningPromptNotOpened();
     assert.ok(!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
@@ -146,10 +146,10 @@ describe("CCloud auth expiration checks", () => {
   //   assertAuthExpiredPromptOpened();
   // });
 
-  it("should handle undefined `requires_authentication_at`", () => {
+  it("should handle undefined `requires_authentication_at`", async () => {
     // no expiration time available, e.g. auth flow hasn't completed yet
     try {
-      checkAuthExpiration(createFakeConnection(undefined));
+      await checkAuthExpiration(createFakeConnection(undefined));
     } catch {
       assert.fail("checkAuthExpiration threw an error with undefined expiration");
     }
