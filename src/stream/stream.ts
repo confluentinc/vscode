@@ -339,20 +339,20 @@ export class SkipList<Value> {
   }
 }
 
-export function includesSubstring(value: PartitionConsumeRecord, query: string): boolean {
+export function includesSubstring(value: PartitionConsumeRecord, query: RegExp): boolean {
   let key = value.key;
 
   if (typeof key === "string") {
-    if ((key as string).indexOf(query) >= 0) return true;
+    if (query.test(key as string)) return true;
   } else {
-    if (JSON.stringify(key, null, " ").indexOf(query) >= 0) return true;
+    if (query.test(JSON.stringify(key, null, " "))) return true;
   }
   let val = value.value;
 
   if (typeof val === "string") {
-    if ((val as string).indexOf(query) >= 0) return true;
+    if (query.test(val as string)) return true;
   } else {
-    if (JSON.stringify(val, null, " ").indexOf(query) >= 0) return true;
+    if (query.test(JSON.stringify(val, null, " "))) return true;
   }
 
   return false;
