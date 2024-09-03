@@ -62,6 +62,7 @@ Confluent Cloud.
 - Windows OS is not yet supported. None of the VSIX files can be installed into VS Code on Windows.
 - Uncaught Errors and Exceptions are anonymously reported to Sentry ignoring VSCode's telemetry settings. The setting will be respected in the near future.
 - Message Viewer is not able to correctly show messages with schemas in a Confluent Local Kafka cluster. This works when the topics are in Confluent Cloud.
+- Preview links for non-default organizations work only after switching to the non-default organization in the Confluent Cloud UI in your browser.
 
 ## Features
 
