@@ -314,6 +314,11 @@ class MessageViewerViewModel extends ViewModel {
 
   /** The text search query string. */
   search = this.signal("");
+  searchRegexp = this.resolve(async () => {
+    const timestamp = this.timestamp();
+    const source = await post("GetSearchSource", { timestamp });
+    return source != null ? new RegExp(source, "gi") : null;
+  }, null);
   async handleKeydown(event: KeyboardEvent) {
     if (event.key === "Enter") {
       const value = (event.target as HTMLInputElement).value;
@@ -412,20 +417,23 @@ class MessageViewerViewModel extends ViewModel {
     }
   }
 
-  formatMessageValue(value: unknown, search: string) {
+  formatMessageValue(value: unknown, search: RegExp | null) {
     if (value == null) return "";
     const input = typeof value === "string" ? value : JSON.stringify(value, null, " ");
-    if (search.length === 0) return input;
-    let index = input.indexOf(search);
-    let fragment = document.createDocumentFragment();
+    if (search == null) return input;
+    // search regexp is global, reset its index state to avoid mismatches
+    search.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    const matches = input.matchAll(search);
     let cursor = 0;
-    while (index >= 0) {
+    for (const match of matches) {
+      const index = match.index;
+      const length = match[0].length;
       fragment.append(input.substring(cursor, index));
-      let mark = document.createElement("mark");
-      mark.append(input.substring(index, index + search.length));
+      const mark = document.createElement("mark");
+      mark.append(input.substring(index, index + length));
       fragment.append(mark);
-      cursor = index + search.length;
-      index = input.indexOf(search, cursor);
+      cursor = index + length;
     }
     fragment.append(input.substring(cursor));
     return fragment;
@@ -457,6 +465,7 @@ export function post(
   type: "GetTimestampExtent",
   body: { timestamp?: number },
 ): Promise<[number, number] | null>;
+export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
 export function post(
   type: "GetMaxSize",
