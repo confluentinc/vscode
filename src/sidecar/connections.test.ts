@@ -84,7 +84,6 @@ describe("CCloud auth expiration checks", () => {
 
   /** Reusable helper function to check that our "auth expired" notification was called as expected. */
   function assertAuthExpiredPromptOpened() {
-    // log the showErrorMessageStub properties to help debug
     assert.ok(
       showErrorMessageStub.calledOnceWith(
         sinon.match("Confluent Cloud authentication expired"),
