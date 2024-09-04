@@ -4,6 +4,9 @@ import { type PartitionConsumeRecord } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
+import { Histogram, type HistogramBin } from "./canvas/histogram";
+
+customElements.define("messages-histogram", Histogram);
 
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
@@ -68,6 +71,10 @@ class MessageViewerViewModel extends ViewModel {
       timestamp: this.timestamp(),
     });
   }, this.emptySnapshot);
+
+  histogram = this.resolve(() => {
+    return post("GetHistogram", { timestamp: this.timestamp() });
+  }, null);
 
   /** Information about the topic's partitions. */
   partitionStats = this.resolve(() => {
@@ -462,9 +469,9 @@ export function post(
 ): Promise<{ messages: PartitionConsumeRecord[]; indices: number[] }>;
 export function post(type: "GetPartitionStats", body: object): Promise<PartitionData[]>;
 export function post(
-  type: "GetTimestampExtent",
+  type: "GetHistogram",
   body: { timestamp?: number },
-): Promise<[number, number] | null>;
+): Promise<HistogramBin[] | null>;
 export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
 export function post(
