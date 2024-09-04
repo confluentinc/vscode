@@ -2,8 +2,6 @@
 
 import { spawn } from "child_process";
 import fs from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
 import * as vscode from "vscode";
@@ -11,8 +9,10 @@ import * as vscode from "vscode";
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { getStorageManager } from "../storage";
+import { checkSidecarOsAndArch } from "./checkArchitecture";
 import {
   SIDECAR_BASE_URL,
+  SIDECAR_LOGFILE_PATH,
   SIDECAR_PORT,
   SIDECAR_PROCESS_ID_HEADER,
   WORKSPACE_PROCESS_ID_HEADER,
@@ -30,10 +30,7 @@ export const sidecarOutputChannel: vscode.OutputChannel =
   vscode.window.createOutputChannel("Confluent (Sidecar)");
 
 const SIDECAR_AUTH_TOKEN_SECRET_KEY = "CONFLUENT_SIDECAR_AUTH_SECRET";
-const MOMENTARY_PAUSE_MS = 500;
-
-// OS-independent path to the log file for the sidecar process.
-export const SIDECAR_LOGFILE_PATH = join(tmpdir(), "vscode-confluent-sidecar.log");
+const MOMENTARY_PAUSE_MS = 500; // half a second.
 
 const logger = new Logger("sidecarManager");
 
@@ -265,6 +262,7 @@ export class SidecarManager {
     }
   }
 
+  sidecarArchitectureBlessed: boolean | null = null;
   /**
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
    **/
@@ -276,26 +274,33 @@ export class SidecarManager {
 
         this.sidecarContacted = false;
 
-        // Start up the sidecar process, daemonized no stdio.
+        if (this.sidecarArchitectureBlessed === null) {
+          // check to see if the sidecar file exists
+          logger.info(`exe path ${sidecarExecutablePath}, version ${currentSidecarVersion}`);
+          try {
+            fs.accessSync(sidecarExecutablePath);
+          } catch (e) {
+            logger.error(`${logPrefix}: sidecar file ${sidecarExecutablePath} does not exist`, e);
+            reject(new NoSidecarExecutableError(`${logPrefix}: sidecar file does not exist`));
+          }
 
-        // check to see if the sidecar file exists
-        logger.info(`exe path ${sidecarExecutablePath}, version ${currentSidecarVersion}`);
-        try {
-          fs.accessSync(sidecarExecutablePath);
-        } catch (e) {
-          logger.error(`${logPrefix}: sidecar file ${sidecarExecutablePath} does not exist`, e);
-          reject(new NoSidecarExecutableError(`${logPrefix}: sidecar file does not exist`));
+          // Now check to see if is cooked for the right OS + architecture
+          try {
+            checkSidecarOsAndArch(sidecarExecutablePath);
+            this.sidecarArchitectureBlessed = true;
+          } catch (e) {
+            this.sidecarArchitectureBlessed = false;
+            logger.error(`${logPrefix}: sidecar executable has wrong architecture`, e);
+            reject(new SidecarFatalError((e as Error).message));
+            return;
+          }
+        } else if (this.sidecarArchitectureBlessed === false) {
+          // We already know the sidecar architecture is wrong, so don't bother trying to start it.
+          reject(new SidecarFatalError(`${logPrefix}: sidecar executable has wrong architecture`));
+          return;
         }
 
-        // Need to watch to see if the sidecar process exits early, as it may be the wrong architecture for the OS.
-        let isStillEarly = true;
-        let rejected = false;
-
-        // Set a timer for 5 seconds looking for quick unclean process exit
-        const earlyUncleanExitTimer = setTimeout(() => {
-          isStillEarly = false;
-        }, 5000);
-
+        // Start up the sidecar process, daemonized no stdio.
         // Set up the environment for the sidecar process.
         const sidecar_env = constructSidecarEnv(process.env);
 
@@ -310,34 +315,29 @@ export class SidecarManager {
           );
           sidecarProcess.unref();
 
-          // Notice if exits with an error. May well be wrong architecture for OSX. Only pertinent if it exits quickly,
-          // see up above in the earlyUncleanExitTimer block.
-          sidecarProcess.on("exit", (code: number, signal: string) => {
-            logger.warn(`${logPrefix}: sidecar process exited with code ${code}, signal ${signal}`);
-            if (code !== 0 && isStillEarly) {
-              clearTimeout(earlyUncleanExitTimer);
-              logger.warn(`${logPrefix}: rejecting promise.`);
-              reject(
-                new SidecarFatalError(`Cannot start the sidecar, exited quickly status ${code}`),
-              );
-              rejected = true;
-            }
-          });
+          // May think about a  sidecarProcess.on("exit", (code: number) => { ... }) here to catch early exits,
+          // but the sidecar file architecture check above should catch most of those cases.
         } catch (e) {
+          // Failure to spawn the process. Reject and return (we're the main codepath here).
+          // (TODO -- test if OSX intel gets this codepath if / when trying an ARM sidecar)
+          // (ARM Mac that has Rosetta2 fails with early process death above due to Rosetta2 trying
+          // to run the intel binary, but Rosetta2 lacks certain CPU features that the binary expects and
+          // the process logs a specific error message to that effect and exits(1), but isn't a spawn error.)
           logger.error(`${logPrefix}: sidecar spawn fatal error`, e);
           reject(e);
           return;
         }
 
+        // The sidecar access token, as learned from the handshake endpoint.
         let accessToken = "";
-        // Pause, then try to hit the handshake endpoint. It may fail a few times while
+
+        // Pause after spawning (so as to let the sidecar initialize and bind to its port),
+        // then try to hit the handshake endpoint. It may fail a few times while
         // the sidecar process is coming online.
-        for (let i = 0; i < 10 && !rejected; i++) {
+        for (let i = 0; i < 10; i++) {
           try {
             await this.pause();
-            if (rejected) {
-              return;
-            }
+
             logger.info(
               `${logPrefix}(attempt ${i}): done pausing, on to hitting handshake endpoint`,
             );
@@ -355,11 +355,6 @@ export class SidecarManager {
             }
           }
         }
-
-        if (rejected) {
-          return;
-        }
-
         await getStorageManager().setSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY, accessToken);
         logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
 
