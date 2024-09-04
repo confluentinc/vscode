@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { getSidecar } from ".";
-import { getAuthSession } from "../authProvider";
 import { AuthErrors, Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
 import {
@@ -78,12 +77,6 @@ export async function createCCloudConnection(): Promise<Connection> {
 }
 
 export async function watchCCloudConnectionStatus(): Promise<void> {
-  const session: vscode.AuthenticationSession | undefined = await getAuthSession();
-  if (!session) {
-    // not logged in according to auth provider
-    return;
-  }
-
   const connection: Connection | null = await getCCloudConnection();
   if (!connection) {
     logger.warn("no connection found for current auth session");
