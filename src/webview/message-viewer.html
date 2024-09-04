@@ -200,6 +200,10 @@
         </section>
       </header>
 
+      <section class="histogram">
+        <messages-histogram data-prop-data="this.histogram()"></messages-histogram>
+      </section>
+
       <section class="content">
         <template data-if="this.waitingForMessages()">
           <div class="grid-banner">
@@ -435,6 +439,11 @@
       .wrapper {
         display: flex;
         flex-direction: column;
+      }
+      .histogram {
+        min-height: 65px;
+        padding: 6px 12px;
+        box-sizing: content-box;
       }
       .content {
         flex: 1;
