@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+- Detect and warn the user if the wrong os/architecture sidecar is installed (as from manual download of wrong vsix file).
+
 ## 0.14.1
 
 ### Fixed
