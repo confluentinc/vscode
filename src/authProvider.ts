@@ -4,9 +4,9 @@ import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context";
 import { ccloudConnected } from "./emitters";
 import { Logger } from "./logging";
-import { getSidecar } from "./sidecar";
 import {
   createCCloudConnection,
+  deleteCCloudConnection,
   getCCloudConnection,
   openExternal,
   pollCCloudConnectionAuth,
@@ -116,7 +116,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         await vscode.window.showErrorMessage(e.message);
         // TODO(shoup): remove this once we're managing a persistent connection and transitioning
         // between NO_TOKEN->VALID_TOKEN->NO_TOKEN instead of creating/deleting connections
-        await this.deleteCCloudConnection();
+        await deleteCCloudConnection();
       }
       // this won't re-notify the user of the error, so no issue with re-throwing while showing the
       // error notification above (if it exists)
@@ -236,7 +236,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       return;
     }
 
-    await this.deleteCCloudConnection();
+    await deleteCCloudConnection();
     await this.handleSessionRemoved(true);
     ccloudConnected.fire(false);
   }
@@ -283,7 +283,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       token.onCancellationRequested(async () => {
         // TODO(shoup): remove this once we're managing a persistent connection and transitioning
         // between NO_TOKEN->VALID_TOKEN->NO_TOKEN instead of creating/deleting connections
-        await this.deleteCCloudConnection();
+        await deleteCCloudConnection();
         reject();
       }),
     );
@@ -369,15 +369,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       // add a new auth session to the Accounts action, populate this instance's cached session state,
       // and start polling for auth status
       this.handleSessionCreated(session);
-    }
-  }
-
-  private async deleteCCloudConnection(): Promise<void> {
-    const client = (await getSidecar()).getConnectionsResourceApi();
-    try {
-      await client.gatewayV1ConnectionsIdDelete({ id: CCLOUD_CONNECTION_ID });
-    } catch (e) {
-      logger.error("Error deleting connection", e);
     }
   }
 }
