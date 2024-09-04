@@ -280,8 +280,10 @@ export class SidecarManager {
           try {
             fs.accessSync(sidecarExecutablePath);
           } catch (e) {
-            logger.error(`${logPrefix}: sidecar file ${sidecarExecutablePath} does not exist`, e);
-            reject(new NoSidecarExecutableError(`${logPrefix}: sidecar file does not exist`));
+            logger.error(`${logPrefix}: component ${sidecarExecutablePath} does not exist`, e);
+            reject(
+              new NoSidecarExecutableError(`Component ${sidecarExecutablePath} does not exist`),
+            );
           }
 
           // Now check to see if is cooked for the right OS + architecture
@@ -290,13 +292,13 @@ export class SidecarManager {
             this.sidecarArchitectureBlessed = true;
           } catch (e) {
             this.sidecarArchitectureBlessed = false;
-            logger.error(`${logPrefix}: sidecar executable has wrong architecture`, e);
+            logger.error(`${logPrefix}: component has wrong architecture`, e);
             reject(new SidecarFatalError((e as Error).message));
             return;
           }
         } else if (this.sidecarArchitectureBlessed === false) {
           // We already know the sidecar architecture is wrong, so don't bother trying to start it.
-          reject(new SidecarFatalError(`${logPrefix}: sidecar executable has wrong architecture`));
+          reject(new SidecarFatalError(`${logPrefix}: component has wrong architecture`));
           return;
         }
 
@@ -323,7 +325,7 @@ export class SidecarManager {
           // (ARM Mac that has Rosetta2 fails with early process death above due to Rosetta2 trying
           // to run the intel binary, but Rosetta2 lacks certain CPU features that the binary expects and
           // the process logs a specific error message to that effect and exits(1), but isn't a spawn error.)
-          logger.error(`${logPrefix}: sidecar spawn fatal error`, e);
+          logger.error(`${logPrefix}: sidecar component spawn fatal error`, e);
           reject(e);
           return;
         }

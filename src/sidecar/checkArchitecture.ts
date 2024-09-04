@@ -1,4 +1,4 @@
-// Diagnose sidecar errors (say, at startup time)
+// Determine the platform + archictecture of the sidecar binary and compare it to the current platform + architecture.
 
 import fs from "fs";
 import { Logger } from "../logging";
@@ -12,7 +12,7 @@ export function checkSidecarOsAndArch(sidecarPath: string): void {
 
   if (!ourBuild.equals(sidecarBuild)) {
     throw new Error(
-      `Sidecar is built for a different platform/architecture: ${sidecarBuild}, whereas you're on ${ourBuild}. Perhaps installed wrong extension build?`,
+      `This Confluent extension for VS Code component is built for a different platform (${sidecarBuild}), whereas your VS Code is on ${ourBuild}. Please uninstall the Confluent extension for VS Code and install the ${ourBuild} build.`,
     );
   }
 }
