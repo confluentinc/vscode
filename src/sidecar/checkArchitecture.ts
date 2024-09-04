@@ -17,7 +17,7 @@ export function checkSidecarOsAndArch(sidecarPath: string): void {
   }
 }
 
-class PlatformArch {
+export class PlatformArch {
   platform: string;
   arch: string;
 
@@ -49,7 +49,7 @@ class PlatformArch {
   }
 }
 
-function getSidecarPlatformArch(path: string): PlatformArch {
+export function getSidecarPlatformArch(path: string): PlatformArch {
   // read the first 4 bytes to get the magic number and determine (win/linux/mac)
   const platformMagicNumber = readBuffer(path, 4).toString("hex");
   const sidecarPlatform = getSidecarBuildPlatform(platformMagicNumber);
