@@ -4,6 +4,7 @@ import { utcFormat } from "d3-time-format";
 import { ObservableScope } from "inertial";
 
 import { stage, observeCustomProperty, observePointer } from "./canvas";
+import { brush } from "./brush";
 import { track } from "./track";
 
 export type HistogramBin = { x0: number; x1: number; total: number; filter: number | null };
@@ -12,7 +13,16 @@ export type HistogramBin = { x0: number; x1: number; total: number; filter: numb
 export class Histogram extends HTMLElement {
   private os = ObservableScope();
   private histogram = this.os.signal<HistogramBin[] | null>([]);
+  private selection = this.os.signal<[number, number] | null>(null, (a, b) => {
+    if (a == null || b == null) return a === b;
+    return a[0] === b[0] && a[1] === b[1];
+  });
   private dispose = () => {};
+
+  /** Update `select` property of an element to provide selected range of data. */
+  set select(value: [number, number] | null) {
+    this.selection(value);
+  }
 
   /** Update `data` property of an element to provide histogram data. */
   set data(value: HistogramBin[] | null) {
@@ -61,12 +71,10 @@ export class Histogram extends HTMLElement {
 
     // dynamically acquiring necessary colors from vscode webview environment
     // to make histogram consistent with the user's selected theme
-    const accentColor = observeCustomProperty(os, document.documentElement, "--vscode-charts-blue");
-    const foregroundColor = observeCustomProperty(
-      os,
-      document.documentElement,
-      "--vscode-foreground",
-    );
+    const root = document.documentElement;
+    const accentColor = observeCustomProperty(os, root, "--vscode-charts-blue");
+    const foregroundColor = observeCustomProperty(os, root, "--vscode-foreground");
+    const brushColor = observeCustomProperty(os, root, "--vscode-charts-foreground");
 
     const pointer = observePointer(os, interactivityStage.canvas);
 
@@ -172,15 +180,75 @@ export class Histogram extends HTMLElement {
       context.restore();
     });
 
+    const brushX = brush("x");
+
+    os.watch(() => {
+      const { width } = interactivityStage.size();
+      const ty = trackY();
+      const [h0, h1] = ty(0);
+      brushX.extent([
+        [0, h0],
+        [width, h1],
+      ]);
+      let selection = this.selection();
+      let sx = scaleX();
+      if (selection != null) {
+        let [a, b] = selection;
+        brushX.set([
+          [sx(a), h0],
+          [sx(b), h1],
+        ]);
+      }
+    });
+
+    let pointerMoved = false;
+    os.watch(() => {
+      const { down, x, y } = pointer();
+      const sx = scaleX();
+      if (brushX.idle() && down) {
+        brushX.down(x, y);
+        pointerMoved = false;
+      } else if (!brushX.idle() && down) {
+        pointerMoved = true;
+        brushX.move(x, y);
+        const currentRange = brushX.get()!;
+        this.selection([
+          sx.invert(currentRange[0][0]).valueOf(),
+          sx.invert(currentRange[1][0]).valueOf(),
+        ]);
+      } else if (!brushX.idle() && !down) {
+        brushX.up(x, y);
+        if (!pointerMoved) {
+          brushX.set(null);
+          this.selection(null);
+        }
+      }
+      // i may want to make default cursor if the pointer is outside of the actual histogram area
+      interactivityStage.canvas.style.cursor = brushX.cursor(x, y);
+    });
+
+    // dispatch an event, so the parent element can subscribe to selection change
+    // throttle events slightly, since a lot of selection changes are transient
+    let latest: [number, number] | null, timer: ReturnType<typeof setTimeout> | null;
+    os.watch(() => {
+      latest = this.selection();
+      timer ??= setTimeout(() => {
+        this.dispatchEvent(new CustomEvent("select", { detail: latest }));
+        timer = null;
+      }, 10);
+    });
+
     os.watch(() => {
       const context = interactivityStage.context();
       const { width, height } = interactivityStage.size();
       const { over, x, y } = pointer();
 
       const fcolor = foregroundColor();
+      const bcolor = brushColor();
       const sx = scaleX();
       const sy = scaleY();
       const bins = histogram();
+      const selection = this.selection();
 
       // using x scale, convert current pointer position to time
       // so we can find matching bin in that area of the canvas
@@ -206,8 +274,6 @@ export class Histogram extends HTMLElement {
         tooltip.style.display = "none";
       }
 
-      interactivityStage.canvas.style.cursor = "crosshair";
-
       context.clearRect(0, 0, width, height);
       context.save();
       // when hovering, also render a rect over the found one to highlight it
@@ -219,6 +285,19 @@ export class Histogram extends HTMLElement {
         context.globalAlpha = 0.75;
         context.fillStyle = fcolor;
         context.fillRect(x, y, w, h);
+      }
+
+      if (selection != null) {
+        const lo = sx(selection[0]);
+        const hi = sx(selection[1]);
+        const h = sy(sy.domain()[0]);
+        context.globalAlpha = over ? 0.25 : 0.35;
+        context.fillStyle = bcolor;
+        context.fillRect(lo, 0, hi - lo, h);
+        if (over) {
+          context.globalAlpha = 0.35;
+          context.strokeRect(lo, 0, hi - lo, h);
+        }
       }
       context.restore();
     });
