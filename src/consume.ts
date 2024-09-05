@@ -403,25 +403,13 @@ function messageViewerStartPollingCommand(
       }
       case "PreviewMessageByIndex": {
         const { messages, serialized } = stream();
-        let message = messages.at(body.index);
-        let key, value;
-
-        try {
-          key = serialized.key.includes(body.index) ? JSON.parse(message.key as any) : message.key;
-        } catch {
-          key = message.key;
-        }
-
-        try {
-          value = serialized.value.includes(body.index)
-            ? JSON.parse(message.value as any)
-            : message.value;
-        } catch {
-          value = message.value;
-        }
-
-        const { partition_id, offset, timestamp, headers } = message;
-        const payload = { partition_id, offset, timestamp, headers, key, value };
+        const index = body.index;
+        const message = messages.at(index);
+        const payload = prepare(
+          message,
+          serialized.key.includes(index),
+          serialized.value.includes(index),
+        );
 
         // i want to drop the comment in favor of filename and possibly do a preview tab
         workspace
@@ -442,6 +430,7 @@ function messageViewerStartPollingCommand(
         const {
           timestamp,
           messages: { values },
+          serialized,
         } = stream();
         const includes = bitset()?.predicate() ?? ((_: number) => true);
         const records: string[] = [];
@@ -451,7 +440,7 @@ function messageViewerStartPollingCommand(
           i++, p = timestamp.next[p]
         ) {
           if (includes(p)) {
-            payload = values[p];
+            payload = prepare(values[p], serialized.key.includes(p), serialized.value.includes(p));
             records.push("\t" + JSON.stringify(payload));
           }
         }
@@ -640,4 +629,27 @@ function truncate(value: any): any {
     return value.slice(0, 256) + " ... " + value.slice(-256);
   }
   return value;
+}
+
+function prepare(
+  message: PartitionConsumeRecord,
+  keySerialized: boolean,
+  valueSerialized: boolean,
+) {
+  let key, value;
+
+  try {
+    key = keySerialized ? JSON.parse(message.key as any) : message.key;
+  } catch {
+    key = message.key;
+  }
+
+  try {
+    value = valueSerialized ? JSON.parse(message.value as any) : message.value;
+  } catch {
+    value = message.value;
+  }
+  const { partition_id, offset, timestamp, headers } = message;
+
+  return { partition_id, offset, timestamp, headers, key, value };
 }
