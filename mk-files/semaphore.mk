@@ -34,7 +34,7 @@ endif
 # Therefore, we store the cache with a timestamp in the key to avoid collisions.
 #
 # But caching can be expensive, so we'll only recache an item if the previous item was cached a while ago,
-# we arbitrarily put three days ago for now, see the logic in _ci-bin-sem-cache-store
+# we arbitrarily put seven days ago for now, see the logic in _ci-bin-sem-cache-store
 .PHONY: _ci-bin-sem-cache-store
 _ci-bin-sem-cache-store:
 	@stored_timestamp=$$(cache list | grep $(SEM_CACHE_KEY)_ | awk '{print $$1}' | awk -F_ '{print $$NF}' | sort -r | awk 'NR==1'); \
