@@ -59,7 +59,6 @@ package-vsix:
 
 version_no_v = $(shell echo $(1) | sed 's,^v,,' )
 
-# https://confluentinc.atlassian.net/wiki/spaces/TOOLS/pages/3345089318/S3+FAQ
 VSCODE_EXTENSION_S3_PREFIX ?= vscode
 
 # TODO(oss): Remove this target we start publishing the extension to the marketplace
