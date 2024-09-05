@@ -180,16 +180,20 @@ export class Histogram extends HTMLElement {
       context.restore();
     });
 
+    // mutable state that handles all the math related to positioning the brushing rectangle
     const brushX = brush("x");
 
     os.watch(() => {
       const { width } = interactivityStage.size();
       const ty = trackY();
       const [h0, h1] = ty(0);
+      // setting the boundary in which the brushing is available
       brushX.extent([
         [0, h0],
         [width, h1],
       ]);
+      // either when selection is changed by other source or by the physical size change itself,
+      // the current brush state also need to be adjusted
       let selection = this.selection();
       let sx = scaleX();
       if (selection != null) {
@@ -201,14 +205,18 @@ export class Histogram extends HTMLElement {
       }
     });
 
+    // using mutable state to identify whether a sequence of event was just a tap or an actual brushing
     let pointerMoved = false;
     os.watch(() => {
       const { down, x, y } = pointer();
       const sx = scaleX();
       if (brushX.idle() && down) {
+        // initiate brushing gesture
         brushX.down(x, y);
         pointerMoved = false;
       } else if (!brushX.idle() && down) {
+        // if brushing was initiated and the pointer is still pressed,
+        // then we may assume it was a move event that updates selection
         pointerMoved = true;
         brushX.move(x, y);
         const currentRange = brushX.get()!;
@@ -218,12 +226,14 @@ export class Histogram extends HTMLElement {
         ]);
       } else if (!brushX.idle() && !down) {
         brushX.up(x, y);
+        // if the pointer is released but no moving was done, clear the selection
         if (!pointerMoved) {
           brushX.set(null);
           this.selection(null);
         }
       }
-      // i may want to make default cursor if the pointer is outside of the actual histogram area
+      // TODO make default cursor if the pointer is outside of the actual histogram area
+      // update cursor style based on current pointer position over a brushed area
       interactivityStage.canvas.style.cursor = brushX.cursor(x, y);
     });
 
@@ -241,7 +251,7 @@ export class Histogram extends HTMLElement {
     os.watch(() => {
       const context = interactivityStage.context();
       const { width, height } = interactivityStage.size();
-      const { over, x, y } = pointer();
+      const { down, over, x, y } = pointer();
 
       const fcolor = foregroundColor();
       const bcolor = brushColor();
@@ -277,7 +287,8 @@ export class Histogram extends HTMLElement {
       context.clearRect(0, 0, width, height);
       context.save();
       // when hovering, also render a rect over the found one to highlight it
-      if (over && bin != null) {
+      // but don't rendering while brushing
+      if (!down && over && bin != null) {
         const x = sx(bin.x0!);
         const y = sy(bin.total);
         const w = sx(bin.x1!) - sx(bin.x0!) - 1;
@@ -287,13 +298,17 @@ export class Histogram extends HTMLElement {
         context.fillRect(x, y, w, h);
       }
 
+      // render a rectangle that shows currently selected time frame
       if (selection != null) {
         const lo = sx(selection[0]);
         const hi = sx(selection[1]);
         const h = sy(sy.domain()[0]);
+        // if the cursor is currently over the histogram,
+        // make it a bit easier to hover over the bins
         context.globalAlpha = over ? 0.25 : 0.35;
         context.fillStyle = bcolor;
         context.fillRect(lo, 0, hi - lo, h);
+        // when hovering, add border to the brushing rect for contrast
         if (over) {
           context.globalAlpha = 0.35;
           context.strokeRect(lo, 0, hi - lo, h);
