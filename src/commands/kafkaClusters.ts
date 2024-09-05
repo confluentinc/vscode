@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { KafkaTopicAuthorizedOperation } from "../authz/constants";
+import { getTopicAuthorizedOperations } from "../authz/topics";
 import { TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
@@ -71,6 +73,15 @@ async function deleteTopicCommand(topic: KafkaTopic) {
       : await getResourceManager().getLocalKafkaCluster(topic.clusterId);
   if (!cluster) {
     throw new Error(`Failed to find Kafka cluster for topic "${topic.name}"`);
+  }
+
+  const topicAuthzOperations: KafkaTopicAuthorizedOperation[] =
+    await getTopicAuthorizedOperations(topic);
+  if (!topicAuthzOperations.includes("DELETE")) {
+    vscode.window.showErrorMessage(
+      `You do not have permission to delete the "${topic.name}" topic.`,
+    );
+    return;
   }
 
   logger.info(`Deleting topic "${topic.name}" from cluster ${cluster.name}...`);
