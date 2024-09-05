@@ -6,8 +6,6 @@ info:
   version: 3.0.0
   contact:
     name: Kafka REST Team
-    url: https://confluent.slack.com/app_redirect?channel=kafka-rest-eng
-    email: kafka-clients-proxy-team@confluent.io
   x-api-id: 499e3476-71e0-4d6f-b4f9-6776cec6df27
   x-api-group: v3
   x-audience: external-public
