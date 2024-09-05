@@ -201,7 +201,11 @@
       </header>
 
       <section class="histogram">
-        <messages-histogram data-prop-data="this.histogram()"></messages-histogram>
+        <messages-histogram
+          data-prop-data="this.histogram()"
+          data-prop-select="this.selection()"
+          data-on-select="this.updateHistogramFilter(event.detail)"
+        ></messages-histogram>
       </section>
 
       <section class="content">
