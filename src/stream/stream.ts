@@ -3,6 +3,7 @@ import { type PartitionConsumeRecord } from "../clients/sidecar";
 export class Stream {
   capacity: number;
   messages: CircularBuffer<PartitionConsumeRecord>;
+  serialized: { key: BitSet; value: BitSet };
   timestamp: SkipList<number | undefined>;
   partition: SkipList<number | undefined>;
   order: SkipList<PartitionConsumeRecord> | null;
@@ -16,6 +17,13 @@ export class Stream {
     more than 16m messages in unbounded stream". What a nice problem to have. */
     this.messages = new CircularBuffer(capacity);
     let values = this.messages.values;
+
+    /* Given existing API and currently implemented UI capabilities, for each
+    message consumed we attempt to serialize key and value to a primitive so it
+    will be easier to use in many hot path places, e.g. search, table rendering.
+    Following bitsets identify which messages had their key or value serialized,
+    so the UI would know if they can be parsed back to an object. */
+    this.serialized = { key: new BitSet(capacity), value: new BitSet(capacity) };
 
     /* Message timestamp is a number that grows continuously. We can't really 
     expect it to repeat often. */
@@ -41,6 +49,19 @@ export class Stream {
     }
     this.timestamp.insert(index);
     this.partition.insert(index);
+
+    /* TEMP the API can provide key/value as objects which we don't really
+    utilize as such right now. For faster search and table's rendering time
+    it is better to keep those as strings. */
+    if (message.key != null && typeof message.key === "object") {
+      message.key = JSON.stringify(message.key, null, " ") as any;
+      this.serialized.key.set(index);
+    } else this.serialized.key.unset(index);
+    if (message.value != null && typeof message.value === "object") {
+      message.value = JSON.stringify(message.value, null, " ") as any;
+      this.serialized.value.set(index);
+    } else this.serialized.value.unset(index);
+
     // TEMP (July 12th) disabling this since we don't have sorting feature yet
     // this.order?.insert(index);
     return index;
@@ -340,21 +361,10 @@ export class SkipList<Value> {
 }
 
 export function includesSubstring(value: PartitionConsumeRecord, query: RegExp): boolean {
-  let key = value.key;
-
-  if (typeof key === "string") {
-    if (query.test(key as string)) return true;
-  } else {
-    if (query.test(JSON.stringify(key, null, " "))) return true;
-  }
-  let val = value.value;
-
-  if (typeof val === "string") {
-    if (query.test(val as string)) return true;
-  } else {
-    if (query.test(JSON.stringify(val, null, " "))) return true;
-  }
-
+  let key = value.key as any;
+  if (key != null && query.test(key)) return true;
+  let val = value.value as any;
+  if (val != null && query.test(val)) return true;
   return false;
 }
 

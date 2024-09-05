@@ -355,12 +355,12 @@ function messageViewerStartPollingCommand(
         const limit = body.pageSize;
         const includes = bitset()?.predicate() ?? ((_: number) => true);
         const { results, indices } = stream().slice(offset, limit, includes);
-        return {
-          indices,
-          messages: results.map(({ partition_id, offset, timestamp, key, value }) => {
-            return { partition_id, offset, timestamp, key, value: truncate(value) };
-          }),
-        } satisfies MessageResponse<"GetMessages">;
+        const messages = results.map(({ partition_id, offset, timestamp, key, value }) => {
+          key = truncate(key);
+          value = truncate(value);
+          return { partition_id, offset, timestamp, key, value };
+        });
+        return { indices, messages } satisfies MessageResponse<"GetMessages">;
       }
       case "GetMessagesCount": {
         return {
@@ -399,12 +399,31 @@ function messageViewerStartPollingCommand(
         return (search?.regexp.source ?? null) satisfies MessageResponse<"GetSearchSource">;
       }
       case "PreviewMessageByIndex": {
-        const { messages } = stream();
+        const { messages, serialized } = stream();
+        let message = messages.at(body.index);
+        let key, value;
+
+        try {
+          key = serialized.key.includes(body.index) ? JSON.parse(message.key as any) : message.key;
+        } catch {
+          key = message.key;
+        }
+
+        try {
+          value = serialized.value.includes(body.index)
+            ? JSON.parse(message.value as any)
+            : message.value;
+        } catch {
+          value = message.value;
+        }
+
+        const { partition_id, offset, timestamp, headers } = message;
+        const payload = { partition_id, offset, timestamp, headers, key, value };
+
+        // i want to drop the comment in favor of filename and possibly do a preview tab
         workspace
           .openTextDocument({
-            content:
-              `// message ${messages.at(body.index).key} from ${topic.name}\n` +
-              JSON.stringify(messages.at(body.index), null, 2),
+            content: `// message ${message.key} from ${topic.name}\n${JSON.stringify(payload, null, 2)}`,
             language: "jsonc",
           })
           .then((preview) => {
@@ -605,44 +624,14 @@ function sleep(signal: AbortSignal) {
   });
 }
 
-/**
- * Compress any valid json value into smaller payload for preview purpose.
- * Following rules applied recursively:
- *
- * 1. Strings with length >1024 appear as 256 leading + "..." + 256 trailing symbols
- * 2. Arrays capped at 512 elements with "truncated array" string at the end
- *    2.1. Each array's item is truncated recursively
- * 3. Objects capped at 64 keys with extra empty key saying "truncated object"
- *    3.1. Each object property's value is truncated recursively
- *    3.2. Total number of object keys across the whole structure cannot exceed 1024
- * 4. If recursion depth exceeds 8 levels and the input is not a string, "truncated" is returned
- */
-function truncate(value: any, depth = 0, cap = 0): any {
-  if (typeof value === "string") {
-    return value.length > 1024 ? value.slice(0, 256) + " ... " + value.slice(-256) : value;
+/** Compress any valid json value into smaller payload for preview purpose. */
+function truncate(value: any): any {
+  if (value == null) return null;
+  if (typeof value === "object") {
+    value = JSON.stringify(value, null, " ");
   }
-  if (Array.isArray(value)) {
-    if (depth >= 8) return " truncated ";
-    depth++;
-    return value.length > 512
-      ? value
-          .slice(0, 512)
-          .map((item) => truncate(item, depth, cap))
-          .concat(" truncated ")
-      : value.map((item) => truncate(item, depth, cap));
-  }
-  if (typeof value === "object" && value !== null) {
-    if (depth >= 8) return " truncated ";
-    const truncated: Record<string, any> = {};
-    let count = 0;
-    for (const key in value) {
-      if (++cap >= 1024 || ++count >= 64) {
-        truncated[" "] = " truncated ";
-        break;
-      }
-      truncated[key] = truncate(value[key], depth + 1, cap);
-    }
-    return truncated;
+  if (typeof value === "string" && value.length > 1024) {
+    return value.slice(0, 256) + " ... " + value.slice(-256);
   }
   return value;
 }
