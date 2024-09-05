@@ -362,9 +362,11 @@ const ONE = 0b10000000000000000000000000000000;
 
 export class BitSet {
   bits: Uint32Array;
+  capacity: number;
 
-  constructor(size: number) {
-    this.bits = new Uint32Array(Math.ceil(size / 32));
+  constructor(capacity: number) {
+    this.capacity = capacity;
+    this.bits = new Uint32Array(Math.ceil(capacity / 32));
   }
 
   /** Set a bit to 1 at index. */
