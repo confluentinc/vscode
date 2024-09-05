@@ -391,6 +391,9 @@ function messageViewerStartPollingCommand(
       case "GetHistogram": {
         return histogram() satisfies MessageResponse<"GetHistogram">;
       }
+      case "GetSelection": {
+        return timestampFilter() satisfies MessageResponse<"GetSelection">;
+      }
       case "GetSearchSource": {
         const search = textFilter();
         return (search?.regexp.source ?? null) satisfies MessageResponse<"GetSearchSource">;
@@ -501,6 +504,11 @@ function messageViewerStartPollingCommand(
         partitionFilter(body.partitions);
         notifyUI();
         return null satisfies MessageResponse<"PartitionFilterChange">;
+      }
+      case "TimestampFilterChange": {
+        timestampFilter(body.timestamps);
+        notifyUI();
+        return null satisfies MessageResponse<"TimestampFilterChange">;
       }
       case "MessageLimitChange": {
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, body.limit);

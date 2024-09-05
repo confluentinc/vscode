@@ -75,6 +75,12 @@ class MessageViewerViewModel extends ViewModel {
   histogram = this.resolve(() => {
     return post("GetHistogram", { timestamp: this.timestamp() });
   }, null);
+  selection = this.resolve(() => {
+    return post("GetSelection", { timestamp: this.timestamp() });
+  }, null);
+  async updateHistogramFilter(timestamps: [number, number] | null) {
+    await post("TimestampFilterChange", { timestamps });
+  }
 
   /** Information about the topic's partitions. */
   partitionStats = this.resolve(() => {
@@ -472,6 +478,10 @@ export function post(
   type: "GetHistogram",
   body: { timestamp?: number },
 ): Promise<HistogramBin[] | null>;
+export function post(
+  type: "GetSelection",
+  body: { timestamp?: number },
+): Promise<[number, number] | null>;
 export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
 export function post(
@@ -487,6 +497,10 @@ export function post(
 export function post(
   type: "PartitionFilterChange",
   body: { partitions: number[] | null },
+): Promise<null>;
+export function post(
+  type: "TimestampFilterChange",
+  body: { timestamps: [number, number] | null },
 ): Promise<null>;
 export function post(
   type: "ConsumeModeChange",
