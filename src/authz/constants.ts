@@ -9,4 +9,5 @@ export const KafkaTopicAuthorizedOperations = [
   "ALTER_CONFIGS",
   "DESCRIBE_CONFIGS",
 ] as const;
+/** One of the {@link KafkaTopicAuthorizedOperations} string literals. */
 export type KafkaTopicAuthorizedOperation = (typeof KafkaTopicAuthorizedOperations)[number];
