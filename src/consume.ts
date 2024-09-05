@@ -8,6 +8,7 @@ import messageViewerTemplate from "./webview/message-viewer.html";
 
 import {
   ResponseError,
+  type PartitionConsumeRecord,
   type PartitionOffset,
   type SimpleConsumeMultiPartitionRequest,
   type SimpleConsumeMultiPartitionResponse,
@@ -111,8 +112,6 @@ function messageViewerStartPollingCommand(
    */
   const isStreamFull = os.signal(false);
 
-  /** Index of the latest inserted message in the stream. */
-  const latestInsert = os.signal<number>(-1);
   /** Most recent response payload from Consume API. */
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
   /** Most recent failure info */
@@ -168,22 +167,7 @@ function messageViewerStartPollingCommand(
 
   /** Used in derive below. Search bitset retains reference but internal value keeps changing */
   const alwaysNotEqual = () => false;
-  /** Unlike partition and timestamp filter, keeps updating previously created bitset with latest messages added. */
-  const searchBitset = os.derive<BitSet | null>(() => {
-    // can i catch up here? maybe if I can track the cursor in the search object and compare to the stream size?
-    const messageStream = stream();
-    const search = textFilter();
-    const index = latestInsert();
-    if (search == null) return null;
-    const { bitset, regexp } = search;
-    const value = messageStream.messages.values[index];
-    if (includesSubstring(value, regexp)) {
-      bitset.set(index);
-    } else {
-      bitset.unset(index);
-    }
-    return bitset;
-  }, alwaysNotEqual);
+  const searchBitset = os.derive<BitSet | null>(() => textFilter()?.bitset ?? null, alwaysNotEqual);
 
   /** Single bitset that represents the intersection of all currently applied filters. */
   const bitset = os.derive(() => {
@@ -251,6 +235,41 @@ function messageViewerStartPollingCommand(
     return bins;
   });
 
+  let queue: PartitionConsumeRecord[] = [];
+  function flushMessages(stream: Stream) {
+    const search = os.peek(textFilter);
+    while (queue.length > 0) {
+      /* Pick messages from the queue one by one since we may stop putting 
+      them into stream but we don't want to drop the rest. */
+      const message = queue.shift()!;
+
+      /* New messages inserted into the stream instance and its index is
+      stored for further processing by existing filters. */
+      const index = stream.insert(message);
+
+      if (search != null) {
+        if (includesSubstring(message, search.regexp)) {
+          search.bitset.set(index);
+        } else {
+          search.bitset.unset(index);
+        }
+        searchBitset(search.bitset);
+      }
+
+      /* For the first time when the stream reaches defined capacity, we pause 
+      consumption so the user can work with exact data they expected to consume.
+      They still can resume the stream back to get into "windowed" mode. */
+      if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {
+        isStreamFull(true);
+        state("paused");
+        break;
+      }
+    }
+  }
+  function dropQueue() {
+    queue = [];
+  }
+
   os.watch(() => {
     /* This is the main consumption cycle. Every time input parameters change,
     any in-flight requests should be aborted. See this controller's references,
@@ -278,36 +297,20 @@ function messageViewerStartPollingCommand(
         const result = await consume(params, ctl.signal);
 
         const datalist = result.partition_data_list ?? [];
-        outer: for (const partition of datalist) {
+        for (const partition of datalist) {
           /* The very first request always going to include messages from all
           partitions. If we consume a subset of partitions, some messages need
           to be dropped. */
           if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
-
+          /* The messages that we _do_ process, are pushed to the queue, which 
+          then processes messages and puts them to the stream on its own pace. */
           const records = partition.records ?? [];
-          for (const message of records) {
-            /* New messages inserted into the stream instance and its index is
-            stored for further processing by existing filters. */
-            const index = stream.insert(message);
-            latestInsert(index);
-            /* For the first time when the stream reaches defined capacity, we
-            pause consumption so the user can work exactly with the batch they
-            expected to consume.
-
-            They still can resume the stream back to get into "windowed" mode. */
-            if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {
-              os.batch(() => {
-                isStreamFull(true);
-                state("paused");
-              });
-              break outer;
-            }
-          }
+          for (const message of records) queue.push(message);
         }
 
-        /* After successful tracking of all new messages, store the payload and
-        notify UI side to start re-rendering necessary pieces. */
+        /* Update the state and notify the UI about another successful request processed. */
         os.batch(() => {
+          flushMessages(stream);
           latestResult(result);
           latestFetch(Date.now());
           notifyUI();
@@ -510,6 +513,7 @@ function messageViewerStartPollingCommand(
         state("running");
         latestResult(null);
         partitionFilter(null);
+        dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"ConsumeModeChange">;
       }
@@ -526,6 +530,7 @@ function messageViewerStartPollingCommand(
         state("running");
         latestResult(null);
         partitionFilter(null);
+        dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"PartitionConsumeChange">;
       }
@@ -548,6 +553,7 @@ function messageViewerStartPollingCommand(
         });
         state("running");
         latestResult(null);
+        dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"MessageLimitChange">;
       }
