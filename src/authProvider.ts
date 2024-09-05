@@ -301,6 +301,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     session: vscode.AuthenticationSession,
     updateSecret: boolean = false,
   ) {
+    // First some workspace-scoped actions ...
     logger.debug("handleSessionCreated()", { updateSecret });
     // the following three calls are all workspace-scoped
     this._session = session;
@@ -310,6 +311,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       changed: [],
     });
     pollCCloudConnectionAuth.start();
+
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
       await getStorageManager().setSecret(AUTH_SESSION_EXISTS_KEY, "true");
@@ -337,9 +339,10 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       });
       this._session = null;
     }
+
     // updating secrets is cross-workspace-scoped
-    const storageManager = getStorageManager();
     if (updateSecret) {
+      const storageManager = getStorageManager();
       await Promise.all([
         storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
         storageManager.deleteSecret(AUTH_COMPLETED_KEY),
@@ -399,6 +402,7 @@ function convertToAuthSession(connection: Connection): vscode.AuthenticationSess
 
 /** Convenience function to get the latest CCloud session via the Authentication API. */
 export async function getAuthSession(): Promise<vscode.AuthenticationSession | undefined> {
+  // Will immediately cascade call into ConfluentCloudAuthProvider.getSessions().
   return await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
     createIfNone: false,
   });
