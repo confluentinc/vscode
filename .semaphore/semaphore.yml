@@ -23,10 +23,12 @@ global_job_config:
   prologue:
     commands:
       - checkout
+      - make ci-bin-sem-cache-restore
       - . vault-setup
   epilogue:
     always:
       commands:
+        - make ci-bin-sem-cache-store
         - make store-test-results-to-semaphore
 
 blocks:
