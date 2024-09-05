@@ -567,8 +567,8 @@ function getOffsets(
   return params;
 }
 
-const MIN_POLLING_INTERVAL_MS = 2 * 1000;
-const THRESHOLD_POLLING_INTERVAL_MS = 1 * 1000;
+const MIN_POLLING_INTERVAL_MS = 0.5 * 1000;
+const THRESHOLD_POLLING_INTERVAL_MS = 0.5 * 1000;
 
 /**
  * Await for a variable time. A random threshold added to avoid syncing with
