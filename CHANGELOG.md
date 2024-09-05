@@ -19,6 +19,8 @@ All notable changes to this extension will be documented in this file.
   clusters (Kafka and Schema Registry, respectively).
 - Selecting different Schema Registry clusters to update the Schemas view now correctly shows
   associated actions and empty state text/buttons.
+- We are now checking authorized operations and providing a more informative notification if the
+  user is not authorized to delete a topic.
 
 ## 0.14.0
 
