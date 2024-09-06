@@ -103,7 +103,7 @@ function messageViewerStartPollingCommand(
   /** Filter by range of timestamps. `null` for all consumed messages. */
   const timestampFilter = os.signal<[number, number] | null>(null);
   /** Filter by substring text query. Persists bitset instead of computing it. */
-  const textFilter = os.signal<{ bitset: BitSet; regexp: RegExp } | null>(null);
+  const textFilter = os.signal<{ bitset: BitSet; regexp: RegExp; query: string } | null>(null);
   /** The stream instance that holds consumed messages and index them by timestamp and partition. */
   const stream = os.signal(new Stream(DEFAULT_RECORDS_CAPACITY));
   /**
@@ -401,6 +401,10 @@ function messageViewerStartPollingCommand(
         const search = textFilter();
         return (search?.regexp.source ?? null) satisfies MessageResponse<"GetSearchSource">;
       }
+      case "GetSearchQuery": {
+        const search = textFilter();
+        return (search?.query ?? "") satisfies MessageResponse<"GetSearchQuery">;
+      }
       case "PreviewMessageByIndex": {
         const { messages, serialized } = stream();
         const index = body.index;
@@ -472,7 +476,7 @@ function messageViewerStartPollingCommand(
               bitset.set(i);
             }
           }
-          textFilter({ bitset, regexp });
+          textFilter({ bitset, regexp, query: body.search });
         } else {
           textFilter(null);
         }
@@ -495,9 +499,7 @@ function messageViewerStartPollingCommand(
         params(getParams(body.mode, body.timestamp, maxPollRecords));
         stream((value) => new Stream(value.capacity));
         textFilter((value) => {
-          return value != null
-            ? { bitset: new BitSet(value.bitset.capacity), regexp: value.regexp }
-            : null;
+          return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
         });
         state("running");
         latestResult(null);
@@ -512,9 +514,7 @@ function messageViewerStartPollingCommand(
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream((value) => new Stream(value.capacity));
         textFilter((value) => {
-          return value != null
-            ? { bitset: new BitSet(value.bitset.capacity), regexp: value.regexp }
-            : null;
+          return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
         });
         state("running");
         latestResult(null);
@@ -538,7 +538,7 @@ function messageViewerStartPollingCommand(
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream(new Stream(body.limit));
         textFilter((value) => {
-          return value != null ? { bitset: new BitSet(body.limit), regexp: value.regexp } : null;
+          return value != null ? { ...value, bitset: new BitSet(body.limit) } : null;
         });
         state("running");
         latestResult(null);
