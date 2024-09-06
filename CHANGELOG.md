@@ -12,7 +12,8 @@ All notable changes to this extension will be documented in this file.
   views) will clear out as expected.
 - We are now checking authorized operations for Confluent Cloud resources and providing more
   informative notifications:
-  - Error notification if the user is not authorized to delete a topic
+  - Error notifications if the user is not authorized to delete a topic, or create topics for a
+    Kafka cluster
   - Warning notification if the user can't access schemas when opening Message Viewer from a topic
     (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
     setting)
