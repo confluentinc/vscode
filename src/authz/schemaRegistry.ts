@@ -72,29 +72,13 @@ export async function canAccessSchemaTypeForTopic(
 async function determineAccessFromResponseError(response: Response): Promise<boolean> {
   const body = await response.json();
   logger.error("error response looking up subject:", body);
-  switch (response.status) {
-    case 401:
-      // unauthorized
-      return false;
-    case 403:
-      // forbidden
-      return false;
-    case 404:
-      {
-        // not found
-        if (body.error_code === 40401) {
-          // "Subject '...' not found" = no schema(s) for the topic
-          return true;
-        } else if (body.error_code === 40403) {
-          // "Schema not found" = schema exists but this endpoint can't get it (???)
-          return true;
-        }
-      }
-      break;
-    default:
-      // unknown error
-      return false;
-  }
 
-  return false;
+  // "Schema not found" = schema exists but this endpoint can't get it (???)
+  const schema404 = body.error_code === 40403;
+  // "Subject '...' not found" = no schema(s) for the topic
+  const noSchema404 = body.error_code === 40401;
+
+  // any other error means the schema can't be accessed for some other reason (401, 403),
+  // likely "(40301) User is denied operation Read on Subject: _____"
+  return schema404 || noSchema404;
 }
