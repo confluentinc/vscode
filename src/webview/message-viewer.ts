@@ -3,10 +3,11 @@ import { type PartitionData } from "../clients/kafkaRest";
 import { type PartitionConsumeRecord } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
-import { sendWebviewMessage } from "./comms/comms";
+import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
 
 customElements.define("messages-histogram", Histogram);
+const storage = createWebviewStorage<{ colWidth: number[] }>();
 
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
@@ -285,7 +286,7 @@ class MessageViewerViewModel extends ViewModel {
    */
   colWidth = this.signal(
     // currently (Aug 13th), copy of old widths in rem (1rem = 16px)
-    [9 * 16, 6 * 16, 6 * 16, 6 * 16],
+    storage.get()?.colWidth ?? [9 * 16, 6 * 16, 6 * 16, 6 * 16],
     // skip extra re-renders if the user didn't move pointer too much
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
   );
@@ -315,6 +316,7 @@ class MessageViewerViewModel extends ViewModel {
     // clamp new width in meaningful range so the user doesn't break the whole layout
     widths[index] = Math.max(4 * 16, Math.min(newWidth, 14 * 16));
     this.colWidth(widths);
+    storage.set({ colWidth: widths });
   }
 
   /** Cleanup handler when the user stops resizing a column. */
