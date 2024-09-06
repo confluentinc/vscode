@@ -11,6 +11,7 @@ import {
 import {
   Configuration as SchemaRegistryRestConfiguration,
   SchemasV1Api,
+  SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
 import {
   Configuration,
@@ -147,6 +148,13 @@ export class SidecarHandle {
       headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
     });
     return new SchemasV1Api(config as SchemaRegistryRestConfiguration);
+  }
+
+  public getSubjectsV1Api(clusterId: string, connectionId: string): SubjectsV1Api {
+    const config: unknown = this.createClientConfig({
+      headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
+    });
+    return new SubjectsV1Api(config as SchemaRegistryRestConfiguration);
   }
 
   public getKafkaConsumeApi(connectionId: string) {
