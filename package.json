@@ -243,6 +243,11 @@
           "type": "boolean",
           "default": false,
           "description": "Alert on sidecar process exceptions"
+        },
+        "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry cluster."
         }
       }
     },
