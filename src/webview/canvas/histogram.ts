@@ -140,9 +140,10 @@ export class Histogram extends HTMLElement {
       context.fillStyle = acolor;
 
       // rendering background rects for each bin
-      context.globalAlpha = 0.1;
       for (let index = 0; index < bins.length; index++) {
         const bin = bins[index];
+        // adding a slight shade to the bins that got filter > 0 in case the value is too small to notice
+        context.globalAlpha = bin.filter == null || bin.filter === 0 ? 0.1 : 0.15;
         context.fillRect(
           sx(bin.x0),
           sy(sy.domain()[1]),
@@ -153,7 +154,7 @@ export class Histogram extends HTMLElement {
 
       // rendering `total` values of bins
       // if filtered values exist, this rect should have transparency
-      context.globalAlpha = bins.length > 0 && bins[0].filter == null ? 1 : 0.25;
+      context.globalAlpha = bins.length > 0 && bins[0].filter == null ? 1 : 0.3;
       for (let index = 0; index < bins.length; index++) {
         const bin = bins[index];
         context.fillRect(

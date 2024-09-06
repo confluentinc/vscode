@@ -326,7 +326,9 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  search = this.signal("");
+  search = this.resolve(() => {
+    return post("GetSearchQuery", { timestamp: this.timestamp() });
+  }, "");
   searchRegexp = this.resolve(async () => {
     const timestamp = this.timestamp();
     const source = await post("GetSearchSource", { timestamp });
@@ -483,6 +485,7 @@ export function post(
   body: { timestamp?: number },
 ): Promise<[number, number] | null>;
 export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
+export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
 export function post(
   type: "GetMaxSize",
