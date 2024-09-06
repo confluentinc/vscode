@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
-import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -125,6 +125,27 @@ export function getTopicViewProvider() {
 }
 
 export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
+  const sidecar = await getSidecar();
+  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
+
+  let topicsResp: TopicDataList;
+  try {
+    topicsResp = await client.listKafkaTopics({
+      cluster_id: cluster.id,
+    });
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      const body = await error.response.json();
+
+      vscode.window.showErrorMessage(
+        `Failed to list topics for cluster "${cluster.name}": ${JSON.stringify(body)}`,
+      );
+    } else {
+      logger.error("Failed to list Kafka topics: ", error);
+    }
+    return [];
+  }
+
   let environmentId: string | null = null;
   let schemas: Schema[] = [];
 
@@ -136,13 +157,6 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
     }
   }
-
-  const sidecar = await getSidecar();
-  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  const topicsResp: TopicDataList = await client.listKafkaTopics({
-    cluster_id: cluster.id,
-    includeAuthorizedOperations: true,
-  });
 
   // Promote each from-response-topic to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
