@@ -11,3 +11,10 @@ export const KafkaTopicAuthorizedOperations = [
 ] as const;
 /** One of the {@link KafkaTopicAuthorizedOperations} string literals. */
 export type KafkaTopicAuthorizedOperation = (typeof KafkaTopicAuthorizedOperations)[number];
+
+/**
+ * Whether or not warning notifications will appear when consuming messages without permission to
+ * access the associated Schema Registry cluster.
+ */
+export const SCHEMA_RBAC_WARNING_SETTING_NAME =
+  "cloud.messageViewer.showSchemaWarningNotifications";

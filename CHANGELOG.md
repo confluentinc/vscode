@@ -10,6 +10,12 @@ All notable changes to this extension will be documented in this file.
   download of wrong vsix file).
 - If the user's Confluent Cloud connection expires, the sidebar (Resources, Topics, and Schemas
   views) will clear out as expected.
+- We are now checking authorized operations for Confluent Cloud resources and providing more
+  informative notifications:
+  - Error notification if the user is not authorized to delete a topic
+  - Warning notification if the user can't access schemas when opening Message Viewer from a topic
+    (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
+    setting)
 
 ## 0.14.1
 
@@ -19,8 +25,6 @@ All notable changes to this extension will be documented in this file.
   clusters (Kafka and Schema Registry, respectively).
 - Selecting different Schema Registry clusters to update the Schemas view now correctly shows
   associated actions and empty state text/buttons.
-- We are now checking authorized operations and providing a more informative notification if the
-  user is not authorized to delete a topic.
 
 ## 0.14.0
 
