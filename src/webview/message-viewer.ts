@@ -77,7 +77,8 @@ class MessageViewerViewModel extends ViewModel {
     return post("GetHistogram", { timestamp: this.timestamp() });
   }, null);
   selection = this.resolve(() => {
-    return post("GetSelection", { timestamp: this.timestamp() });
+    // get selection from the host when webview gets restored, otherwise use local state
+    return post("GetSelection", {});
   }, null);
   async updateHistogramFilter(timestamps: [number, number] | null) {
     await post("TimestampFilterChange", { timestamps });
