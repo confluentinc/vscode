@@ -6,6 +6,7 @@ import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+import { SCHEMA_RBAC_WARNING_SETTING_NAME } from "./constants";
 
 const logger = new Logger("authz.schemaRegistry");
 
@@ -63,7 +64,9 @@ export async function canAccessSchemaTypeForTopic(
     return true;
   } catch (error) {
     if (error instanceof ResponseError) {
-      return await determineAccessFromResponseError(error.response);
+      const decision = await determineAccessFromResponseError(error.response);
+      logger.debug("determined access from response error:", { decision, type });
+      return decision;
     } else {
       logger.error("error making lookupSchemaUnderSubject request:", error);
     }
@@ -71,8 +74,16 @@ export async function canAccessSchemaTypeForTopic(
   }
 }
 
-async function determineAccessFromResponseError(response: Response): Promise<boolean> {
-  const body = await response.json();
+export async function determineAccessFromResponseError(response: Response): Promise<boolean> {
+  let body: any;
+  try {
+    body = await response.json();
+  } catch (error) {
+    // maybe some HTML error, treat as if we can't access
+    logger.error("error parsing response body from schema lookup:", error);
+    return false;
+  }
+
   logger.error("error response looking up subject:", body);
 
   // "Schema not found" = schema exists but this endpoint can't get it (???)
@@ -88,13 +99,12 @@ async function determineAccessFromResponseError(response: Response): Promise<boo
 /**
  * Show a warning notification if the user doesn't have `READ` access for the Schema Registry
  * cluster and the `confluent.cloud.messageViewer.showSchemaWarningNotifications` setting is enabled.
- * @remarks The notification will show a "Don't Show Again" button that will disable future warnings by updating the setting.
+ * @remarks The notification will show a "Don't Show Again" button that will disable future warnings
+ * by updating the setting.
  * */
 export function showNoSchemaAccessWarningNotification(): void {
   const configs: WorkspaceConfiguration = getConfigs();
-  const settingName = "cloud.messageViewer.showSchemaWarningNotifications";
-
-  const warningsEnabled: boolean = configs.get(settingName, true);
+  const warningsEnabled: boolean = configs.get(SCHEMA_RBAC_WARNING_SETTING_NAME, true);
   if (!warningsEnabled) {
     logger.warn("user is missing schema access, but warning notifications are disabled");
     return;
@@ -108,7 +118,7 @@ export function showNoSchemaAccessWarningNotification(): void {
     )
     .then((value: string | undefined) => {
       if (value === dismissButton) {
-        configs.update(settingName, false, true);
+        configs.update(SCHEMA_RBAC_WARNING_SETTING_NAME, false, true);
       }
     });
 }
