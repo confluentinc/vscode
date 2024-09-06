@@ -6,7 +6,10 @@ import { type KafkaTopic } from "./models/topic";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
-import { canAccessSchemaForTopic } from "./authz/schemaRegistry";
+import {
+  canAccessSchemaForTopic,
+  showNoSchemaAccessWarningNotification,
+} from "./authz/schemaRegistry";
 import {
   ResponseError,
   type PartitionOffset,
@@ -25,9 +28,7 @@ export function activateMessageViewer(context: ExtensionContext) {
     // the consume command is available in topic tree view's item actions
     registerCommandWithLogging("confluent.topic.consume", async (topic: KafkaTopic) => {
       if (!(await canAccessSchemaForTopic(topic))) {
-        window.showWarningMessage(
-          "You do not have permission to access schema(s) for this topic. Messages will still appear, but may not be deserializeable.",
-        );
+        showNoSchemaAccessWarningNotification();
       }
       const sidecar = await getSidecar();
       return messageViewerStartPollingCommand(context, topic, sidecar);
