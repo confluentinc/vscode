@@ -1,4 +1,6 @@
+import { window, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { getConfigs } from "../configs";
 import { Logger } from "../logging";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -81,4 +83,32 @@ async function determineAccessFromResponseError(response: Response): Promise<boo
   // any other error means the schema can't be accessed for some other reason (401, 403),
   // likely "(40301) User is denied operation Read on Subject: _____"
   return schema404 || noSchema404;
+}
+
+/**
+ * Show a warning notification if the user doesn't have `READ` access for the Schema Registry
+ * cluster and the `confluent.cloud.messageViewer.showSchemaWarningNotifications` setting is enabled.
+ * @remarks The notification will show a "Don't Show Again" button that will disable future warnings by updating the setting.
+ * */
+export function showNoSchemaAccessWarningNotification(): void {
+  const configs: WorkspaceConfiguration = getConfigs();
+  const settingName = "cloud.messageViewer.showSchemaWarningNotifications";
+
+  const warningsEnabled: boolean = configs.get(settingName, true);
+  if (!warningsEnabled) {
+    logger.warn("user is missing schema access, but warning notifications are disabled");
+    return;
+  }
+
+  const dismissButton = "Don't Show Again";
+  window
+    .showWarningMessage(
+      "You do not have permission to access schema(s) for this topic. Messages will still appear, but may not be deserializeable.",
+      dismissButton,
+    )
+    .then((value: string | undefined) => {
+      if (value === dismissButton) {
+        configs.update(settingName, false, true);
+      }
+    });
 }
