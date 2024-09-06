@@ -23,7 +23,7 @@ endif
 ci-bin-sem-cache-store:
 ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 	@echo "Storing semaphore caches"
-	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_node_modules SEM_CACHE_PATH=$(CURDIR)/node_modules
+	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
 # Cache packages installed by `npx playwright install`
 	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
 	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
@@ -54,5 +54,5 @@ _ci-bin-sem-cache-store:
 .PHONY: ci-bin-sem-cache-restore
 ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
-	cache restore $(os_name)_node_modules
+	cache restore $(os_name)_npm_cache
 	cache restore $(os_name)_playwright_cache || true
