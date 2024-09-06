@@ -23,17 +23,15 @@ export function handleWebviewMessage(
   });
 }
 
-let vscode: any;
 /**
  * Sends a payload that contains a message with special label to the host
  * environment and returns a Promise that contains the result from the host.
  *
+ * @link https://code.visualstudio.com/api/extension-guides/webview#passing-messages-from-a-webview-to-an-extension
  * @remark this function should be used in the webview environment.
  */
 export function sendWebviewMessage(type: any, body: any) {
-  // https://code.visualstudio.com/api/extension-guides/webview#passing-messages-from-a-webview-to-an-extension
-  // @ts-expect-error 2304 this thing is coming from vscode parent host
-  if (vscode == null) vscode = acquireVsCodeApi();
+  const vscode = api();
   return new Promise((resolve, reject) => {
     const requestId = Math.random().toString(16).slice(2);
     addEventListener("message", function handle(event) {
@@ -47,4 +45,28 @@ export function sendWebviewMessage(type: any, body: any) {
     });
     vscode.postMessage([requestId, type, body]);
   });
+}
+
+/**
+ * Provides get/set methods to store arbitrary serializable data in webview's
+ * persistent storage. The storage is sync and useful for things that need to
+ * be restored when the tab is focused after being hidden. When disposing the
+ * webview, storage gets cleaned up as well.
+ *
+ * @link https://code.visualstudio.com/api/extension-guides/webview#getstate-and-setstate
+ * @remark this function should be used in the webview environment.
+ */
+export function createWebviewStorage<T>() {
+  const vscode = api();
+  return {
+    get: (): T | undefined => vscode.getState(),
+    set: (state: T): void => vscode.setState(state),
+  };
+}
+
+let vscode: any;
+function api() {
+  // @ts-expect-error 2304 this thing is coming from vscode parent host
+  if (vscode == null) vscode = acquireVsCodeApi();
+  return vscode;
 }
