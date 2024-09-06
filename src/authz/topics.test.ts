@@ -36,7 +36,7 @@ function createTestTopicData(
   };
 }
 
-describe.only("authz.topics", function () {
+describe("authz.topics", function () {
   let sandbox: sinon.SinonSandbox;
   let mockClient: sinon.SinonStubbedInstance<TopicV3Api>;
 
