@@ -337,7 +337,9 @@ To run functional tests:
 
 ### Updating NOTICE files
 
-> [!NOTE] The LICENSE.txt file contains the full text of the Apache License, Version 2.0. This file
+<!-- prettier-ignore -->
+> [!NOTE]
+> The LICENSE.txt file contains the full text of the Apache License, Version 2.0. This file
 > will never need to be updated.
 
 A Semaphore CI/CD pipeline (See "Update third party notices PR" block in `.semaphore/semaphore.yml`)
