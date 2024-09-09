@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { KafkaTopicAuthorizedOperation } from "../authz/constants";
 import { getTopicAuthorizedOperations } from "../authz/topics";
-import { TopicV3Api } from "../clients/kafkaRest";
+import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -158,6 +158,8 @@ async function createTopicCommand(item?: KafkaCluster) {
     return;
   }
 
+  // TODO: add RBAC check here once we can get the user's permissions for the cluster
+
   // TODO: change all of these inputs to a webview (form), especially to support `config` input
   const title = `Create a new topic in "${cluster.name}"`;
   const topicName: string | undefined = await vscode.window.showInputBox({
@@ -209,13 +211,34 @@ async function createTopicCommand(item?: KafkaCluster) {
 
         // Refresh in the foreground after creating a topic, so that the new topic is visible
         // immediately after the progress window closes.
-
         getTopicViewProvider().refresh();
       } catch (error) {
-        const errorMessage = `Failed to create topic: ${error}`;
-        logger.error(errorMessage);
-        vscode.window.showErrorMessage(errorMessage);
-        return;
+        if (!(error instanceof ResponseError)) {
+          // generic error handling
+          const errorMessage = `Error creating topic in "${cluster.name}": ${error}`;
+          logger.error(errorMessage);
+          vscode.window.showErrorMessage(errorMessage);
+          return;
+        }
+
+        // try to parse the error response to provide a more specific error message to the user,
+        // whether it was a 403/permissions error, some flavor of network error, or something else
+        try {
+          const body = await error.response.json();
+          logger.error("error response while trying to create cluster:", body);
+          // {"error_code":40301,"message":"Authorization failed."}
+          if (body.error_code === 40301) {
+            vscode.window.showErrorMessage(
+              `You do not have permission to create topics in "${cluster.name}".`,
+            );
+          } else {
+            vscode.window.showErrorMessage(
+              `Error creating topic in "${cluster.name}": ${JSON.stringify(body)}`,
+            );
+          }
+        } catch (parseError) {
+          logger.error("error parsing response from createKafkaTopic():", { error, parseError });
+        }
       }
     },
   );
