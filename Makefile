@@ -26,7 +26,7 @@ remove-test-env:
 test: setup-test-env install-dependencies
 	[[ $$(uname -s) == "Linux" ]] && sudo apt-get update && sudo apt install -y libgbm1 libgtk-3-0 xvfb || true
 	npx gulp ci
-	[[ $$(uname -s) == "Linux" ]] && xvfb-run -a npx gulp test || npx gulp test
+	[[ $$(uname -s) == "Linux" ]] && xvfb-run -a npx gulp test || ELECTRON_RUN_AS_NODE=1 npx gulp test
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
