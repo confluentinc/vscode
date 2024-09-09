@@ -3,7 +3,7 @@ lang: node
 lang_version: 18.12.0
 git:
   enable: true
-  hook:
+  hooks:
     enable: true
 github:
   enable: true
