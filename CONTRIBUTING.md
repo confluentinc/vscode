@@ -337,20 +337,26 @@ To run functional tests:
 
 ### Updating NOTICE files
 
+<!-- prettier-ignore -->
 > [!NOTE]
-The LICENSE.txt file contains the full text of the Apache License, Version 2.0. This file will never need to be 
-updated.
+> The LICENSE.txt file contains the full text of the Apache License, Version 2.0. This file
+> will never need to be updated.
 
-A Semaphore CI/CD pipeline (See "Update third party notices PR" block in `.semaphore/semaphore.yml`) automatically raises a Pull Request to update the `THIRD_PARTY_NOTICES.txt` and `NOTICE-vsix.txt` files,
-on the following conditions (when a PR is merged into the `main` branch or a release branch, e.g., `v1.2.x`):
+A Semaphore CI/CD pipeline (See "Update third party notices PR" block in `.semaphore/semaphore.yml`)
+automatically raises a Pull Request to update the `THIRD_PARTY_NOTICES.txt` and `NOTICE-vsix.txt`
+files, on the following conditions (when a PR is merged into the `main` branch or a release branch,
+e.g., `v1.2.x`):
 
 - Any change to the `package.json` file (e.g., adding a new dependency, updating an existing one)
 - Any change to the `NOTICE.txt` file
 - Any change to the `scripts/notices/NOTICE-vsix_PREAMBLE.txt` file
 
-The pipeline calls the `make update-third-party-notices-pr` target, which in turn calls the following targets:
+The pipeline calls the `make update-third-party-notices-pr` target, which in turn calls the
+following targets:
 
 - `make generate-third-party-notices` to generate the `THIRD_PARTY_NOTICES.txt` file
-- `make collect-notices-vsix` to generate the `NOTICE-vsix.txt` file: Appends `NOTICE.txt`, `scripts/notices/NOTICE-vsix_PREAMBLE.txt`, and `NOTICE*` files from all dependency NPM packages.
+- `make collect-notices-vsix` to generate the `NOTICE-vsix.txt` file: Appends `NOTICE.txt`,
+  `scripts/notices/NOTICE-vsix_PREAMBLE.txt`, and `NOTICE*` files from all dependency NPM packages.
 
-The PR raised must be summarily reviewed and merged by a maintainer. The PR title will be suffixed with `[ci skip]` to avoid triggering the pipeline again.
+The PR raised must be summarily reviewed and merged by a maintainer. The PR title will be suffixed
+with `[ci skip]` to avoid triggering the pipeline again.
