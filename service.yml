@@ -3,10 +3,10 @@ lang: node
 lang_version: 18.12.0
 git:
   enable: true
-github:
-  enable: true
   hook:
     enable: true
+github:
+  enable: true
 codeowners:
   enable: true
 semaphore:
