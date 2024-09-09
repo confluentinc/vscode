@@ -1,5 +1,8 @@
-/** @see https://docs.confluent.io/platform/current/security/authorization/acls/overview.html#topic-resource-type-operations */
-export const KafkaTopicAuthorizedOperations = [
+/** Possible / allowed operations on CCLoud Kafka topics
+ * @see https://docs.confluent.io/platform/current/security/authorization/acls/overview.html#topic-resource-type-operations
+ **/
+
+export const KAFKA_TOPIC_OPERATIONS: readonly string[] = [
   "ALTER",
   "CREATE",
   "DELETE",
@@ -8,9 +11,7 @@ export const KafkaTopicAuthorizedOperations = [
   "WRITE",
   "ALTER_CONFIGS",
   "DESCRIBE_CONFIGS",
-] as const;
-/** One of the {@link KafkaTopicAuthorizedOperations} string literals. */
-export type KafkaTopicAuthorizedOperation = (typeof KafkaTopicAuthorizedOperations)[number];
+];
 
 /**
  * Whether or not warning notifications will appear when consuming messages without permission to

@@ -569,6 +569,8 @@ paths:
       security:
         - resource-api-key: []
         - external-access-token: []
+      parameters:
+        - $ref: "#/components/parameters/IncludeAuthorizedOperationsCamelCase"
       responses:
         "200":
           $ref: "#/components/responses/ListTopicsResponse"
@@ -1746,6 +1748,14 @@ components:
 
     IncludeAuthorizedOperations:
       name: include_authorized_operations
+      description: Specify if authorized operations should be included in the response.
+      in: query
+      required: false
+      schema:
+        type: boolean
+
+    IncludeAuthorizedOperationsCamelCase:
+      name: includeAuthorizedOperations
       description: Specify if authorized operations should be included in the response.
       in: query
       required: false

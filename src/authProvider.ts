@@ -222,6 +222,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * @remarks This is only called after a user chooses to "Sign out" from the Accounts menu and
    * continues past the confirmation dialog that appears.
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async removeSession(sessionId: string): Promise<void> {
     logger.debug("removeSession()");
     // make sure the sidecar says we have a connection first
