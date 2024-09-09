@@ -5,6 +5,8 @@ git:
   enable: true
 github:
   enable: true
+  hook:
+    enable: true
 codeowners:
   enable: true
 semaphore:
