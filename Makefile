@@ -26,8 +26,6 @@ remove-test-env:
 test: setup-test-env install-dependencies
 	[[ $$(uname -s) == "Linux" ]] && sudo apt-get update && sudo apt install -y libgbm1 libgtk-3-0 xvfb || true
 	npx gulp ci
-	export ELECTRON_ENABLE_LOGGING=true ;\
-  	export ELECTRON_ENABLE_STACK_DUMPING=true ;\
 	[[ $$(uname -s) == "Linux" ]] && xvfb-run -a npx gulp test || npx gulp test
 	npx gulp functional
 
