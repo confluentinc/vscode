@@ -20,14 +20,13 @@ remove-test-env:
 	@echo "Removing .env file"
 	@rm -f .env
 
-# Install additional dependencies to run VSCode testing in headless mode
+# Install additional test dependencies to run VSCode testing in headless mode (on Linux)
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
 test: setup-test-env install-dependencies
-	sudo apt-get update
-	sudo apt install -y libgbm1 libgtk-3-0 xvfb
+	[[ $$(uname -s) == "Linux"]] && sudo apt-get update && sudo apt install -y libgbm1 libgtk-3-0 xvfb
 	npx gulp ci
-	xvfb-run -a npx gulp test
+	[[ $$(uname -s) == "Linux"]] && xvfb-run -a npx gulp test || npx gulp test
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
