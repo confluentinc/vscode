@@ -24,7 +24,7 @@ remove-test-env:
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
 test: setup-test-env install-dependencies
-	[[ $$(uname -s) == "Linux" ]] && sudo apt-get update && sudo apt install -y libgbm1 libgtk-3-0 xvfb
+	[[ $$(uname -s) == "Linux" ]] && sudo apt-get update && sudo apt install -y libgbm1 libgtk-3-0 xvfb || true
 	npx gulp ci
 	[[ $$(uname -s) == "Linux" ]] && xvfb-run -a npx gulp test || npx gulp test
 	npx gulp functional
