@@ -56,7 +56,7 @@ export async function deleteCCloudConnection(): Promise<void> {
 }
 
 export async function clearCurrentCCloudResources() {
-  // if the current connection changes or is deleted, we need to unset any associated CCloud resources
+  // if the current connection changes or is deleted, we need to clear any associated CCloud resources
   // that may have depended on it:
   // - delete the extension state references to make sure they can't be used
   // - fire events to update things like the Topics view, Schemas view, etc.
