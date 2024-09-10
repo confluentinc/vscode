@@ -2,5 +2,6 @@
   padding: 0.5rem;
   margin-top: 1px;
   background: var(--background);
+  color: var(--vscode-foreground, #cccccc);
   border: 1px solid var(--vscode-dropdown-border, #3c3c3c);
 }

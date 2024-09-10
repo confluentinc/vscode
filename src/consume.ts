@@ -217,11 +217,11 @@ function messageViewerStartPollingCommand(
     // [ticks[ticks.length - 1], d1], which is the final bin of the result.
     // From there we go backwards over the ticks (because timestamp skiplist is
     // in descending order) counting records and filtered number if applicable.
-    for (let i = ticks.length - 1, hi = d1.valueOf(); i >= 0; i--) {
+    for (let i = ticks.length - 1, hi = d1.valueOf(), max = ts.size; i >= 0; i--) {
       let tick = ticks[i].valueOf();
       let totalB = 0;
       let filterB = 0;
-      while (ts.getValue(cursor)! >= tick) {
+      while (max-- > 0 && ts.getValue(cursor)! >= tick) {
         totalB++;
         totalCount++;
         if (includes(cursor)) {
