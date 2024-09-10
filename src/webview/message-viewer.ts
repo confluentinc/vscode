@@ -321,7 +321,6 @@ class MessageViewerViewModel extends ViewModel {
     // clamp new width in meaningful range so the user doesn't break the whole layout
     widths[index] = Math.max(4 * 16, Math.min(newWidth, 14 * 16));
     this.colWidth(widths);
-    storage.set({ colWidth: widths });
   }
 
   /** Cleanup handler when the user stops resizing a column. */
@@ -330,6 +329,8 @@ class MessageViewerViewModel extends ViewModel {
     target.releasePointerCapture(event.pointerId);
     // drop temporary state so the move event doesn't change anything after the pointer is released
     this.resizeColumnDelta(null);
+    // persist changes to local storage
+    storage.set({ ...storage.get()!, colWidth: this.colWidth() });
   }
 
   /** The text search query string. */
