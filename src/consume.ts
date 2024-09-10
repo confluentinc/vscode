@@ -42,7 +42,7 @@ type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
 
-const DEFAULT_MAX_POLL_RECORDS = 250;
+const DEFAULT_MAX_POLL_RECORDS = 500;
 const DEFAULT_RECORDS_CAPACITY = 100_000;
 
 const DEFAULT_CONSUME_PARAMS = {

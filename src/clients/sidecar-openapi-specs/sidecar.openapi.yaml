@@ -509,6 +509,13 @@ components:
           type: string
         source:
           $ref: "#/components/schemas/JsonNode"
+    ExceededFields:
+      type: object
+      properties:
+        key:
+          type: boolean
+        value:
+          type: boolean
     Failure:
       description:
         Provides overall information about problems encountered while performing an operation.
@@ -652,6 +659,12 @@ components:
           $ref: "#/components/schemas/JsonNode"
         value:
           $ref: "#/components/schemas/JsonNode"
+        key_decoding_error:
+          type: string
+        value_decoding_error:
+          type: string
+        exceeded_fields:
+          $ref: "#/components/schemas/ExceededFields"
     PartitionConsumeRecordHeader:
       type: object
       properties:
@@ -808,25 +821,25 @@ components:
     HealthResponse:
       type: object
       properties:
-        status:
-          enum:
-            - UP
-            - DOWN
-          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-    HealthCheck:
-      type: object
-      properties:
-        data:
-          type: object
-          nullable: true
-        name:
-          type: string
         status:
           enum:
             - UP
             - DOWN
           type: string
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          enum:
+            - UP
+            - DOWN
+          type: string
+        name:
+          type: string
+        data:
+          type: object
+          nullable: true
