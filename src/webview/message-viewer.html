@@ -135,9 +135,11 @@
                 </vscode-button>
 
                 <div popover id="errorLog" class="partition-control">
-                  <template data-for="error of this.streamError()">
-                    <p data-text="this.error()"></p>
-                  </template>
+                  <div class="flex-column">
+                    <template data-for="error of this.streamError()">
+                      <p data-text="this.error()"></p>
+                    </template>
+                  </div>
                 </div>
               </div>
             </template>
@@ -305,52 +307,55 @@
       </section>
 
       <footer class="message-viewer-pagination">
-        <div>
-          <vscode-button
-            appearance="icon"
-            aria-label="Previous page"
-            title="Previous page"
-            id="prevPage"
-            data-on-click="this.page((v) => v - 1)"
-            data-attr-disabled="!this.prevPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-left"></span>
-          </vscode-button>
-
-          <vscode-button
-            appearance="icon"
-            aria-label="Next page"
-            title="Next page"
-            id="nextPage"
-            data-on-click="this.page((v) => v + 1)"
-            data-attr-disabled="!this.nextPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-right"></span>
-          </vscode-button>
-
-          <template data-for="pageButton of this.pageButtons() by pageButton">
+        <div class="flex-row" style="flex-wrap: wrap">
+          <div class="no-shrink">
             <vscode-button
               appearance="icon"
-              data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-              data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-              data-on-click="this.page(this.pageButton())"
-              data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
-              data-attr-disabled="!this.isPageButton(this.pageButton())"
-              data-attr-active="this.page() === this.pageButton()"
-            ></vscode-button>
+              aria-label="Previous page"
+              title="Previous page"
+              id="prevPage"
+              data-on-click="this.page((v) => v - 1)"
+              data-attr-disabled="!this.prevPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-left"></span>
+            </vscode-button>
+
+            <vscode-button
+              appearance="icon"
+              aria-label="Next page"
+              title="Next page"
+              id="nextPage"
+              data-on-click="this.page((v) => v + 1)"
+              data-attr-disabled="!this.nextPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-right"></span>
+            </vscode-button>
+
+            <template data-for="pageButton of this.pageButtons() by pageButton">
+              <vscode-button
+                appearance="icon"
+                data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-on-click="this.page(this.pageButton())"
+                data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
+                data-attr-disabled="!this.isPageButton(this.pageButton())"
+                data-attr-active="this.page() === this.pageButton()"
+                style="white-space: nowrap"
+              ></vscode-button>
+            </template>
+          </div>
+          <template data-if="this.pageStatLabel() != null">
+            <div class="no-shrink">
+              <vscode-button
+                appearance="icon"
+                aria-label="Message consumption stats"
+                title="Message consumption stats"
+                id="pageOutput"
+                data-text="this.pageStatLabel()"
+              ></vscode-button>
+            </div>
           </template>
         </div>
-        <template data-if="this.pageStatLabel() != null">
-          <div>
-            <vscode-button
-              appearance="icon"
-              aria-label="Message consumption stats"
-              title="Message consumption stats"
-              id="pageOutput"
-              data-text="this.pageStatLabel()"
-            ></vscode-button>
-          </div>
-        </template>
         <div>
           <vscode-button
             appearance="icon"
@@ -379,6 +384,9 @@
 
         margin: 0 0 0.5rem 0;
         font-size: 95%;
+      }
+      p {
+        margin: 0;
       }
 
       .message-viewer-settings {
@@ -436,12 +444,15 @@
       .flex-row {
         display: flex;
         flex-direction: row;
-        gap: var(--gap, 1rem);
+        column-gap: var(--gap, 1rem);
       }
       .flex-column {
         display: flex;
         flex-direction: column;
-        gap: var(--gap, 1rem);
+        row-gap: var(--gap, 1rem);
+      }
+      .no-shrink {
+        flex-shrink: 0;
       }
 
       #pageStatControl {

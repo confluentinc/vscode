@@ -1,6 +1,5 @@
 import { scaleLinear, scaleUtc } from "d3-scale";
 import { max } from "d3-array";
-import { utcFormat } from "d3-time-format";
 import { ObservableScope } from "inertial";
 
 import { stage, observeCustomProperty, observePointer } from "./canvas";
