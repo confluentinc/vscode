@@ -1,4 +1,5 @@
 [popover] {
+  inset: unset;
   padding: 0.5rem;
   margin-top: 1px;
   background: var(--background);

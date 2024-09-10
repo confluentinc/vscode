@@ -242,8 +242,36 @@
                     ></div>
                   </th>
                 </template>
+
+                <th
+                  class="grid-cell grid-column-header cell-text-overflow"
+                  popovertarget="columnSettings"
+                  data-on-click="window.columnSettings.togglePopover()"
+                  data-position="bottom-end"
+                  tabindex="-1"
+                >
+                  <span class="codicon codicon-gear"></span>
+                </th>
               </tr>
             </thead>
+
+            <section popover id="columnSettings" class="partition-control">
+              <div class="flex-column" style="--gap: 0">
+                <label>Columns</label>
+                <template data-for="column of this.allColumns by column">
+                  <label class="checkbox">
+                    <input
+                      type="checkbox"
+                      data-prop-checked="this.isColumnVisible(this.columns[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns[this.column()].index)"
+                      data-prop-disabled="this.column() === 'value'"
+                    />
+                    <span data-text="this.columns[this.column()].title()"></span>
+                  </label>
+                </template>
+              </div>
+            </section>
+
             <tbody>
               <template data-for="message of this.snapshot().messages">
                 <tr class="grid-row" data-on-dblclick="this.preview(this.message())">
@@ -255,6 +283,10 @@
                       data-prop-title="this.columns[this.column()].description(this.message())"
                     ></td>
                   </template>
+
+                  <td class="grid-cell cell-text-overflow" tabindex="-1">
+                    <!-- TEMP an extra cell allocated for the warning icon -->
+                  </td>
                 </tr>
               </template>
             </tbody>
@@ -501,6 +533,11 @@
       .control-label {
         flex: 1;
         text-align: left;
+      }
+
+      .grid-row .codicon {
+        display: flex;
+        font-size: 14px;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
