@@ -652,7 +652,7 @@ export async function format() {
       "src/**/*.graphql",
       "*.md",
       "*.js",
-      "src/clients/sidecar-openapi-specs/*",
+      "src/clients/sidecar-openapi-specs/*.yaml",
     ]),
     transform,
     dest((file) => file.base),
