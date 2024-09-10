@@ -421,9 +421,11 @@ class MessageViewerViewModel extends ViewModel {
   async handleKeydown(event: KeyboardEvent) {
     const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
+      // when user hits Enter, search query submitted immediately
       const value = target.value.trim();
       this.submitSearch(value);
     } else {
+      // otherwise, we keep debouncing search submittion until the user stops typing
       if (this.searchTimer != null) clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(async () => {
         const value = target.value.trim();
