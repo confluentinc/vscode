@@ -7,7 +7,11 @@ import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
 
 customElements.define("messages-histogram", Histogram);
-const storage = createWebviewStorage<{ colWidth: number[] }>();
+const storage = createWebviewStorage<{
+  colWidth: number[];
+  columnVisibilityFlags: number;
+  timestamp: MessageTimestampFormat;
+}>();
 
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
@@ -18,6 +22,8 @@ addEventListener("DOMContentLoaded", () => {
 
 type MessageCount = { total: number; filter: number | null };
 type MessageLimitType = "1m" | "100k" | "10k" | "1k" | "100";
+type MessageGridColumn = "timestamp" | "partition" | "offset" | "key" | "value";
+type MessageTimestampFormat = "iso" | "unix";
 
 const messageLimitNumber: Record<MessageLimitType, number> = {
   "1m": 1_000_000,
@@ -281,20 +287,92 @@ class MessageViewerViewModel extends ViewModel {
     return this.page() * this.pageSize() + this.pageSize() < limit;
   });
 
+  /** List of all columns in the grid, with their content definition. */
+  columns: Record<MessageGridColumn, any> = {
+    timestamp: {
+      index: 0,
+      title: () => "Timestamp",
+      children: (message: PartitionConsumeRecord) => this.formatTimestamp()(message.timestamp!),
+      description: (message: PartitionConsumeRecord) => {
+        return this.messageTimestampFormat() === "iso"
+          ? `${this.formatTimestamp()(message.timestamp!)} (${message.timestamp})`
+          : message.timestamp;
+      },
+    },
+    partition: {
+      index: 1,
+      title: () => "Partition",
+      children: (message: PartitionConsumeRecord) => message.partition_id,
+      description: (message: PartitionConsumeRecord) => message.partition_id,
+    },
+    offset: {
+      index: 2,
+      title: () => "Offset",
+      children: (message: PartitionConsumeRecord) => message.offset,
+      description: (message: PartitionConsumeRecord) => message.offset,
+    },
+    key: {
+      index: 3,
+      title: () => "Key",
+      children: (message: PartitionConsumeRecord) =>
+        this.formatMessageValue(message.key, this.searchRegexp()),
+      description: (message: PartitionConsumeRecord) => message.key,
+    },
+    value: {
+      index: 4,
+      title: () => "Value",
+      children: (message: PartitionConsumeRecord) =>
+        this.formatMessageValue(message.value, this.searchRegexp()),
+      description: (message: PartitionConsumeRecord) => message.value,
+    },
+  };
+  /** Static list of all columns in order shown in the UI. */
+  allColumns = ["timestamp", "partition", "offset", "key", "value"];
+  /**
+   * A number which binary representation defines which columns are visible.
+   * This number assumes the order defined by `allColumns` array.
+   */
+  columnVisibilityFlags = this.derive(() => storage.get()?.columnVisibilityFlags ?? 0b11111);
+  /** List of currently visible column names. */
+  visibleColumns = this.derive<MessageGridColumn[]>(() => {
+    const flags = this.columnVisibilityFlags();
+    return this.allColumns.filter((_, index) => (0b10000 >> index) & flags) as MessageGridColumn[];
+  });
+  /** Testing if a column is currently visible. This is for the settings panel. */
+  isColumnVisible(index: number) {
+    return ((0b10000 >> index) & this.columnVisibilityFlags()) !== 0;
+  }
+  /**
+   * Toggling a checkbox on the settings panel should set or unset a bit in
+   * position `index`. This will trigger the UI to show or hide a column.
+   */
+  toggleColumnVisibility(index: number) {
+    const flags = this.columnVisibilityFlags();
+    // a bitset with 1 bit set specifically for the target column
+    const mask = 0b10000 >> index;
+    // if bit in `index` position is set, unset it, otherwise set it
+    const toggled = (mask & flags) !== 0 ? flags & ~mask : flags | mask;
+    // ...you must be thinking, wow that fella is so smart. I know right?
+    this.columnVisibilityFlags(toggled);
+    storage.set({ ...storage.get()!, columnVisibilityFlags: toggled });
+  }
   /**
    * List of columns width, in pixels. The final `value` column is not present,
    * because it always takes the rest of the space available.
    */
   colWidth = this.signal(
-    // currently (Aug 13th), copy of old widths in rem (1rem = 16px)
-    storage.get()?.colWidth ?? [9 * 16, 6 * 16, 6 * 16, 6 * 16],
+    // conveniently expressed in rems (1rem = 16px)
+    storage.get()?.colWidth ?? [13 * 16, 5.5 * 16, 6.5 * 16, 6 * 16],
     // skip extra re-renders if the user didn't move pointer too much
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
   );
   /** The value can be set to `style` prop to pass values to CSS. */
-  gridTemplateColumns = this.derive(
-    () => `--grid-template-columns: ${this.colWidth().reduce((s, w) => `${s} ${w}px`, "")} 1fr`,
-  );
+  gridTemplateColumns = this.derive(() => {
+    const columns = this.colWidth().reduce((string, width, index) => {
+      return this.isColumnVisible(index) ? `${string} ${width}px` : string;
+    }, "");
+    return `--grid-template-columns: ${columns} 1fr min-content`;
+  });
   /** Temporary state for resizing events. */
   resizeColumnDelta = this.signal<number | null>(null);
 
@@ -315,9 +393,8 @@ class MessageViewerViewModel extends ViewModel {
     const widths = this.colWidth().slice();
     const newWidth = Math.round(start + event.clientX);
     // clamp new width in meaningful range so the user doesn't break the whole layout
-    widths[index] = Math.max(4 * 16, Math.min(newWidth, 14 * 16));
+    widths[index] = Math.max(4 * 16, Math.min(newWidth, 16 * 16));
     this.colWidth(widths);
-    storage.set({ colWidth: widths });
   }
 
   /** Cleanup handler when the user stops resizing a column. */
@@ -326,6 +403,8 @@ class MessageViewerViewModel extends ViewModel {
     target.releasePointerCapture(event.pointerId);
     // drop temporary state so the move event doesn't change anything after the pointer is released
     this.resizeColumnDelta(null);
+    // persist changes to local storage
+    storage.set({ ...storage.get()!, colWidth: this.colWidth() });
   }
 
   /** The text search query string. */
@@ -421,19 +500,20 @@ class MessageViewerViewModel extends ViewModel {
     }
   }
 
-  timestampStyle = this.signal<"original" | "local" | "utc">("original");
-
-  formatTimestamp(timestamp: number, format: "original" | "local" | "utc") {
-    switch (format) {
-      case "local":
-        return new Date(timestamp).toISOString();
-      case "utc":
-        return new Date(timestamp).toUTCString();
-      case "original":
-      default:
-        return timestamp;
-    }
+  messageTimestampFormat = this.signal(storage.get()?.timestamp ?? "iso");
+  updateTimestampFormat(format: MessageTimestampFormat) {
+    this.messageTimestampFormat(format);
+    storage.set({ ...storage.get()!, timestamp: format });
   }
+  formatTimestamp = this.derive(() => {
+    const format = this.messageTimestampFormat();
+    switch (format) {
+      case "iso":
+        return (timestamp: number) => new Date(timestamp).toISOString();
+      case "unix":
+        return (timestamp: number) => String(timestamp);
+    }
+  });
 
   formatMessageValue(value: unknown, search: RegExp | null) {
     if (value == null) return "";

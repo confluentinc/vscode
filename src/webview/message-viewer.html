@@ -135,9 +135,11 @@
                 </vscode-button>
 
                 <div popover id="errorLog" class="partition-control">
-                  <template data-for="error of this.streamError()">
-                    <p data-text="this.error()"></p>
-                  </template>
+                  <div class="flex-column">
+                    <template data-for="error of this.streamError()">
+                      <p data-text="this.error()"></p>
+                    </template>
+                  </div>
                 </div>
               </div>
             </template>
@@ -230,100 +232,73 @@
           >
             <thead class="sticky-table-header">
               <tr class="grid-row">
+                <template data-for="column of this.visibleColumns() by column">
+                  <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
+                    <span data-text="this.columns[this.column()].title()"></span>
+                    <div
+                      class="resize-handler"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns[this.column()].index)"
+                      data-on-pointerup="this.handleStopResize(event)"
+                      data-prop-hidden="this.column() === 'value'"
+                    ></div>
+                  </th>
+                </template>
+
                 <th
                   class="grid-cell grid-column-header cell-text-overflow"
+                  popovertarget="columnSettings"
+                  data-on-click="window.columnSettings.togglePopover()"
+                  data-position="bottom-end"
                   tabindex="-1"
-                  title="Timestamp"
                 >
-                  <span>Timestamp</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 0)"
-                    data-on-pointermove="this.handleMoveResize(event, 0)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Partition"
-                >
-                  <span>Partition</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 1)"
-                    data-on-pointermove="this.handleMoveResize(event, 1)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Offset"
-                >
-                  <span>Offset</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 2)"
-                    data-on-pointermove="this.handleMoveResize(event, 2)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Key"
-                >
-                  <span>Key</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 3)"
-                    data-on-pointermove="this.handleMoveResize(event, 3)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Value"
-                >
-                  <span>Value</span>
+                  <span class="codicon codicon-gear"></span>
                 </th>
               </tr>
             </thead>
+
+            <section popover id="columnSettings" class="partition-control">
+              <div class="flex-column" style="--gap: 0">
+                <label>Columns</label>
+                <template data-for="column of this.allColumns by column">
+                  <label class="checkbox">
+                    <input
+                      type="checkbox"
+                      data-prop-checked="this.isColumnVisible(this.columns[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns[this.column()].index)"
+                      data-prop-disabled="this.column() === 'value'"
+                    />
+                    <span data-text="this.columns[this.column()].title()"></span>
+                  </label>
+                </template>
+              </div>
+              <hr />
+              <vscode-radio-group
+                orientation="vertical"
+                data-attr-value="this.messageTimestampFormat()"
+                data-on-change="this.updateTimestampFormat(event.target.value)"
+              >
+                <label slot="label">Timestamp format</label>
+                <vscode-radio value="iso">ISO</vscode-radio>
+                <vscode-radio value="unix">Unix epoch</vscode-radio>
+              </vscode-radio-group>
+            </section>
+
             <tbody>
               <template data-for="message of this.snapshot().messages">
                 <tr class="grid-row" data-on-dblclick="this.preview(this.message())">
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.formatTimestamp(this.message().timestamp, this.timestampStyle())"
-                    data-prop-title="this.message().timestamp"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.message().partition_id"
-                    data-prop-title="this.message().partition_id"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.message().offset"
-                    data-prop-title="this.message().offset"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().key, this.searchRegexp())"
-                    data-prop-title="this.message().key"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().value, this.searchRegexp())"
-                    data-prop-title="this.formatMessageValueFull(this.message())"
-                  ></td>
+                  <template data-for="column of this.visibleColumns() by column">
+                    <td
+                      class="grid-cell cell-text-overflow"
+                      tabindex="-1"
+                      data-children="this.columns[this.column()].children(this.message())"
+                      data-prop-title="this.columns[this.column()].description(this.message())"
+                    ></td>
+                  </template>
+
+                  <td class="grid-cell cell-text-overflow" tabindex="-1">
+                    <!-- TEMP an extra cell allocated for the warning icon -->
+                  </td>
                 </tr>
               </template>
             </tbody>
@@ -332,52 +307,55 @@
       </section>
 
       <footer class="message-viewer-pagination">
-        <div>
-          <vscode-button
-            appearance="icon"
-            aria-label="Previous page"
-            title="Previous page"
-            id="prevPage"
-            data-on-click="this.page((v) => v - 1)"
-            data-attr-disabled="!this.prevPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-left"></span>
-          </vscode-button>
-
-          <vscode-button
-            appearance="icon"
-            aria-label="Next page"
-            title="Next page"
-            id="nextPage"
-            data-on-click="this.page((v) => v + 1)"
-            data-attr-disabled="!this.nextPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-right"></span>
-          </vscode-button>
-
-          <template data-for="pageButton of this.pageButtons() by pageButton">
+        <div class="flex-row" style="flex-wrap: wrap">
+          <div class="no-shrink">
             <vscode-button
               appearance="icon"
-              data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-              data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-              data-on-click="this.page(this.pageButton())"
-              data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
-              data-attr-disabled="!this.isPageButton(this.pageButton())"
-              data-attr-active="this.page() === this.pageButton()"
-            ></vscode-button>
+              aria-label="Previous page"
+              title="Previous page"
+              id="prevPage"
+              data-on-click="this.page((v) => v - 1)"
+              data-attr-disabled="!this.prevPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-left"></span>
+            </vscode-button>
+
+            <vscode-button
+              appearance="icon"
+              aria-label="Next page"
+              title="Next page"
+              id="nextPage"
+              data-on-click="this.page((v) => v + 1)"
+              data-attr-disabled="!this.nextPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-right"></span>
+            </vscode-button>
+
+            <template data-for="pageButton of this.pageButtons() by pageButton">
+              <vscode-button
+                appearance="icon"
+                data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-on-click="this.page(this.pageButton())"
+                data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
+                data-attr-disabled="!this.isPageButton(this.pageButton())"
+                data-attr-active="this.page() === this.pageButton()"
+                style="white-space: nowrap"
+              ></vscode-button>
+            </template>
+          </div>
+          <template data-if="this.pageStatLabel() != null">
+            <div class="no-shrink">
+              <vscode-button
+                appearance="icon"
+                aria-label="Message consumption stats"
+                title="Message consumption stats"
+                id="pageOutput"
+                data-text="this.pageStatLabel()"
+              ></vscode-button>
+            </div>
           </template>
         </div>
-        <template data-if="this.pageStatLabel() != null">
-          <div>
-            <vscode-button
-              appearance="icon"
-              aria-label="Message consumption stats"
-              title="Message consumption stats"
-              id="pageOutput"
-              data-text="this.pageStatLabel()"
-            ></vscode-button>
-          </div>
-        </template>
         <div>
           <vscode-button
             appearance="icon"
@@ -406,6 +384,9 @@
 
         margin: 0 0 0.5rem 0;
         font-size: 95%;
+      }
+      p {
+        margin: 0;
       }
 
       .message-viewer-settings {
@@ -463,12 +444,15 @@
       .flex-row {
         display: flex;
         flex-direction: row;
-        gap: var(--gap, 1rem);
+        column-gap: var(--gap, 1rem);
       }
       .flex-column {
         display: flex;
         flex-direction: column;
-        gap: var(--gap, 1rem);
+        row-gap: var(--gap, 1rem);
+      }
+      .no-shrink {
+        flex-shrink: 0;
       }
 
       #pageStatControl {
@@ -570,6 +554,11 @@
       .control-label {
         flex: 1;
         text-align: left;
+      }
+
+      .grid-row .codicon {
+        display: flex;
+        font-size: 14px;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
