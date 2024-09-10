@@ -1,10 +1,12 @@
 import * as assert from "assert";
 import "mocha";
+import * as vscode from "vscode";
 import { MarkdownString } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources/topic";
+import { IconNames } from "../constants";
 import { KafkaTopic, KafkaTopicTreeItem } from "./topic";
 
 describe("Test KafkaTopic methods", () => {
@@ -120,5 +122,26 @@ describe("KafkaTopicTreeItem constructor", () => {
     assert.strictEqual(hasAuthorizationTooltipWarning(noPermissionsTopicTreeItem, "DELETE"), true);
     assert.strictEqual(hasOperationContextFlag(noPermissionsTopicTreeItem, "READ"), false);
     assert.strictEqual(hasOperationContextFlag(noPermissionsTopicTreeItem, "DELETE"), false);
+  });
+
+  it("has schema implications", () => {
+    const schemaTopicTreeItem = new KafkaTopicTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
+    const icon = schemaTopicTreeItem.iconPath;
+    assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
+    assert.strictEqual((icon as vscode.ThemeIcon).id, IconNames.TOPIC);
+    assert.strictEqual(schemaTopicTreeItem.contextValue!.includes("-with-schema"), true);
+  });
+
+  it("no schema implications", () => {
+    const noSchemaTopicTreeItem = new KafkaTopicTreeItem(TEST_LOCAL_KAFKA_TOPIC);
+    const icon = noSchemaTopicTreeItem.iconPath;
+    assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
+    assert.strictEqual((icon as vscode.ThemeIcon).id, IconNames.TOPIC_WITHOUT_SCHEMA);
+    assert.strictEqual((icon as vscode.ThemeIcon).color!.id, "problemsWarningIcon.foreground");
+    assert.strictEqual(noSchemaTopicTreeItem.contextValue!.includes("-with-schema"), false);
+    assert.strictEqual(
+      noSchemaTopicTreeItem.collapsibleState,
+      vscode.TreeItemCollapsibleState.None,
+    );
   });
 });

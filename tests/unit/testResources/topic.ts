@@ -11,6 +11,7 @@ export const TEST_LOCAL_KAFKA_TOPIC = KafkaTopic.create({
   configs: {},
   clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
   operations: [...KAFKA_TOPIC_OPERATIONS],
+  hasSchema: false,
 });
 
 export const TEST_CCLOUD_KAFKA_TOPIC = KafkaTopic.create({
@@ -23,4 +24,5 @@ export const TEST_CCLOUD_KAFKA_TOPIC = KafkaTopic.create({
   clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
   environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
   operations: [...KAFKA_TOPIC_OPERATIONS],
+  hasSchema: true,
 });
