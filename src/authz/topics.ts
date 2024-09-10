@@ -2,53 +2,32 @@ import { TopicV3Api } from "../clients/kafkaRest";
 import { Logger } from "../logging";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { KafkaTopicAuthorizedOperation, KafkaTopicAuthorizedOperations } from "./constants";
+import { KafkaTopicOperation, toKafkaTopicOperations } from "./types";
 
 const logger = new Logger("authz.topics");
 
-/** Fetch all available {@link KafkaTopicAuthorizedOperation}s for a given topic. */
-export async function getTopicAuthorizedOperations(
+/** Deep fetch all authorized {@link KafkaTopicOperation}s for a given topic.
+ *  We will have cached info about the topic's authorized operations, as of the time
+ *  we called the list topics route as topic.operations, but authz may have changed
+ *  in the mean time, so fetch the latest before actually trying a privileged operation.
+ */
+export async function fetchTopicAuthorizedOperations(
   topic: KafkaTopic,
-): Promise<KafkaTopicAuthorizedOperation[]> {
-  if (topic.isLocalTopic()) {
-    return [...KafkaTopicAuthorizedOperations] as KafkaTopicAuthorizedOperation[];
-  }
-
+): Promise<KafkaTopicOperation[]> {
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(topic.clusterId, topic.connectionId);
   try {
+    // fetch the single topic to get the latest authorized operations
     const topicResp = await client.getKafkaTopic({
       cluster_id: topic.clusterId,
       topic_name: topic.name,
       include_authorized_operations: true,
     });
-    const operations = validateKafkaTopicOperations(topicResp.authorized_operations ?? []);
-    logger.debug(`authorized operations for topic "${topic.name}":`, operations);
-    return operations;
+
+    // authorized_operations may be undeclared if not Confluent kafka rest ...
+    return toKafkaTopicOperations(topicResp.authorized_operations ?? []);
   } catch (error) {
     logger.error(`Failed to get topic authorized operations for topic ${topic.name}: ${error}`);
     return [];
   }
-}
-
-/** Filter authorized operation strings to the expected {@link KafkaTopicAuthorizedOperation}s. */
-export function validateKafkaTopicOperations(
-  operations: string[],
-): KafkaTopicAuthorizedOperation[] {
-  if (operations.length === 0) {
-    return [];
-  }
-  const trackedOperations: KafkaTopicAuthorizedOperation[] = [];
-  const untrackedOperations: string[] = [];
-  for (const operation of operations) {
-    if (KafkaTopicAuthorizedOperations.includes(operation as KafkaTopicAuthorizedOperation)) {
-      trackedOperations.push(operation as KafkaTopicAuthorizedOperation);
-    } else {
-      untrackedOperations.push(operation);
-    }
-  }
-  if (untrackedOperations.length > 0) {
-    logger.warn("untracked operation(s) returned in response:", untrackedOperations);
-  }
-  return trackedOperations;
 }

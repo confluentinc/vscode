@@ -48,6 +48,7 @@ export interface GetKafkaTopicRequest {
 
 export interface ListKafkaTopicsRequest {
   cluster_id: string;
+  includeAuthorizedOperations?: boolean;
 }
 
 export interface UpdatePartitionCountKafkaTopicRequest {
@@ -287,6 +288,11 @@ export class TopicV3Api extends runtime.BaseAPI {
     }
 
     const queryParameters: any = {};
+
+    if (requestParameters["includeAuthorizedOperations"] != null) {
+      queryParameters["includeAuthorizedOperations"] =
+        requestParameters["includeAuthorizedOperations"];
+    }
 
     const headerParameters: runtime.HTTPHeaders = {};
 

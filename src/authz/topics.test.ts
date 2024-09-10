@@ -3,15 +3,16 @@ import sinon from "sinon";
 import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
 import { TopicData, TopicV3Api } from "../clients/kafkaRest";
 import * as sidecar from "../sidecar";
-import { KafkaTopicAuthorizedOperation, KafkaTopicAuthorizedOperations } from "./constants";
-import { getTopicAuthorizedOperations, validateKafkaTopicOperations } from "./topics";
+import { KAFKA_TOPIC_OPERATIONS } from "./constants";
+import { fetchTopicAuthorizedOperations } from "./topics";
+import { KafkaTopicOperation } from "./types";
 
 // TODO: make this a more generic function (or `TEST_TOPIC_DATA` constant) that can be used in other
 // tests if we need to start using it more
 function createTestTopicData(
   clusterId: string,
   topicName: string,
-  authorizedOperations: KafkaTopicAuthorizedOperation[],
+  authorizedOperations: KafkaTopicOperation[],
 ): TopicData {
   return {
     kind: "KafkaTopic",
@@ -55,12 +56,23 @@ describe("authz.topics", function () {
     sandbox.restore();
   });
 
-  it("getTopicAuthorizedOperations() should return all authorized operations for local topic", async function () {
-    const operations = await getTopicAuthorizedOperations(TEST_LOCAL_KAFKA_TOPIC);
-    assert.deepEqual(operations, KafkaTopicAuthorizedOperations);
+  it("fetchTopicAuthorizedOperations() should return authorized operations for a local topic", async function () {
+    // local kafka rest api responds to the 'include_authorized_operations' query param just fine, returns
+    // all operations. This and next test basically just test that the mock route is called and demonstrate
+    // what we expect to return.
+    const topicResp: TopicData = createTestTopicData(
+      TEST_LOCAL_KAFKA_TOPIC.clusterId,
+      TEST_LOCAL_KAFKA_TOPIC.name,
+      [...KAFKA_TOPIC_OPERATIONS], // needs to not be typed 'readonly'
+    );
+
+    mockClient.getKafkaTopic.resolves(topicResp);
+
+    const operations = await fetchTopicAuthorizedOperations(TEST_LOCAL_KAFKA_TOPIC);
+    assert.deepEqual(operations, KAFKA_TOPIC_OPERATIONS);
   });
 
-  it("getTopicAuthorizedOperations() should return authorized operations for a CCloud topic", async function () {
+  it("fetchTopicAuthorizedOperations() should return authorized operations for a CCloud topic", async function () {
     const topicResp: TopicData = createTestTopicData(
       TEST_CCLOUD_KAFKA_TOPIC.clusterId,
       TEST_CCLOUD_KAFKA_TOPIC.name,
@@ -68,11 +80,12 @@ describe("authz.topics", function () {
     );
     mockClient.getKafkaTopic.resolves(topicResp);
 
-    const operations = await getTopicAuthorizedOperations(TEST_CCLOUD_KAFKA_TOPIC);
+    const operations = await fetchTopicAuthorizedOperations(TEST_CCLOUD_KAFKA_TOPIC);
 
     assert.deepStrictEqual(operations, ["READ", "WRITE"]);
   });
 
+  /*
   it("validateKafkaTopicOperations() should return empty array if operations array is empty", function () {
     const operations = validateKafkaTopicOperations([]);
     assert.deepStrictEqual(operations, []);
@@ -87,4 +100,5 @@ describe("authz.topics", function () {
     const operations = validateKafkaTopicOperations(["READ", "INVALID_OP"]);
     assert.deepStrictEqual(operations, ["READ"]);
   });
+*/
 });
