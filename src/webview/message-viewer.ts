@@ -7,7 +7,10 @@ import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
 
 customElements.define("messages-histogram", Histogram);
-const storage = createWebviewStorage<{ colWidth: number[] }>();
+const storage = createWebviewStorage<{
+  colWidth: number[];
+  timestamp: MessageTimestampFormat;
+}>();
 
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
@@ -18,6 +21,7 @@ addEventListener("DOMContentLoaded", () => {
 
 type MessageCount = { total: number; filter: number | null };
 type MessageLimitType = "1m" | "100k" | "10k" | "1k" | "100";
+type MessageTimestampFormat = "iso" | "unix";
 
 const messageLimitNumber: Record<MessageLimitType, number> = {
   "1m": 1_000_000,
@@ -421,19 +425,20 @@ class MessageViewerViewModel extends ViewModel {
     }
   }
 
-  timestampStyle = this.signal<"original" | "local" | "utc">("original");
-
-  formatTimestamp(timestamp: number, format: "original" | "local" | "utc") {
-    switch (format) {
-      case "local":
-        return new Date(timestamp).toISOString();
-      case "utc":
-        return new Date(timestamp).toUTCString();
-      case "original":
-      default:
-        return timestamp;
-    }
+  messageTimestampFormat = this.signal(storage.get()?.timestamp ?? "iso");
+  updateTimestampFormat(format: MessageTimestampFormat) {
+    this.messageTimestampFormat(format);
+    storage.set({ ...storage.get()!, timestamp: format });
   }
+  formatTimestamp = this.derive(() => {
+    const format = this.messageTimestampFormat();
+    switch (format) {
+      case "iso":
+        return (timestamp: number) => new Date(timestamp).toISOString();
+      case "unix":
+        return (timestamp: number) => String(timestamp);
+    }
+  });
 
   formatMessageValue(value: unknown, search: RegExp | null) {
     if (value == null) return "";
