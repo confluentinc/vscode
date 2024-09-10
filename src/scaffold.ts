@@ -70,8 +70,10 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
 
   optionsForm.webview.html = scaffoldFormTemplate({
+    cspSource: optionsForm.webview.cspSource,
     webviewUri: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
     submitScriptUri: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "scaffold-form.js")),
+    webviewStylesheet: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.css")),
     nonce: randomBytes(16).toString("base64"),
   });
 
