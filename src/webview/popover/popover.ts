@@ -17,14 +17,14 @@ export function handlePopoverPosition() {
 function handlePopoverToggleEvent(event: Event) {
   const popover = event.target as HTMLElement;
   const invoker = document.querySelector(`[popovertarget="${popover.id}"]`);
-  if (invoker != null && event instanceof ToggleEvent && event.newState === "open") {
-    const { x, y } = computePosition(
-      invoker.getBoundingClientRect(),
-      popover.getBoundingClientRect(),
-      popover.dataset.position ?? "bottom-start",
-      document.dir === "rtl",
-    );
-    popover.style.cssText = `position: absolute; margin: 0; left: ${x}px; top: ${y}px`;
+  if (invoker instanceof HTMLElement && event instanceof ToggleEvent && event.newState === "open") {
+    const invrect = invoker.getBoundingClientRect();
+    const poprect = popover.getBoundingClientRect();
+    const placement = invoker.dataset.position ?? "bottom-start";
+    const { x, y } = computePosition(invrect, poprect, placement, document.dir === "rtl");
+    const offsetWidth = document.body.offsetWidth;
+    const horizontal = x + 50 < offsetWidth ? `left: ${x}px` : `right: ${offsetWidth - x}px`;
+    popover.style.cssText = `position: absolute; margin: 0; ${horizontal}; top: ${y}px`;
   }
 }
 
