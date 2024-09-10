@@ -17,6 +17,7 @@ All notable changes to this extension will be documented in this file.
   - Warning notification if the user can't access schemas when opening Message Viewer from a topic
     (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
     setting)
+- Project Generation form will remember values entered if user hides tab and comes back
 
 ## 0.14.1
 

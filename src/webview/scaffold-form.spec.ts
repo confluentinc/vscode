@@ -5,7 +5,7 @@ import esbuild from "rollup-plugin-esbuild";
 import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
 import { SinonStub } from "sinon";
-import { TemplateManifest } from "../clients/sidecar";
+import { OptionProperties, TemplateManifest } from "../clients/sidecar";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
 
@@ -43,7 +43,7 @@ test.use({
   ],
 });
 
-test("dummy form submission", async ({ execute, page }) => {
+test.only("dummy form submission", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -67,7 +67,7 @@ test("dummy form submission", async ({ execute, page }) => {
             "One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.",
           pattern:
             "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))(,([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))*$",
-          default_value: "confluent.cloud:9092",
+          default_value: "",
         },
         api_key: {
           display_name: "Kafka Cluster API Key",
@@ -100,8 +100,17 @@ test("dummy form submission", async ({ execute, page }) => {
         },
       },
     };
-
-    stub.withArgs("GetOptionValues").resolves(dummy.options);
+    const transformedOptions =
+      dummy.options !== undefined
+        ? Object.entries(dummy.options).reduce(
+            (acc, [key, value]) => {
+              acc[key] = value.default_value;
+              return acc;
+            },
+            {} as Record<string, string>,
+          )
+        : {};
+    stub.withArgs("GetOptionValues").resolves(transformedOptions);
     stub.withArgs("SetOptionValue").resolves(null);
     stub.withArgs("GetTemplateSpec").resolves(dummy satisfies TemplateManifest);
     stub.withArgs("Submit").resolves(null);
