@@ -8,6 +8,8 @@ import { SchemaRegistryCluster } from "./models/schemaRegistry";
 
 /** Indicate whether or not we have a CCloud connection (controlled by our auth provider). */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
+/** Signal to the auth provider that we no longer have a valid auth status for the current CCloud connection. */
+export const ccloudAuthSessionInvalidated = new vscode.EventEmitter<void>();
 export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 
 export const currentCCloudEnvironmentChanged = new vscode.EventEmitter<CCloudEnvironment | null>();
