@@ -4,12 +4,11 @@ import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context";
 import { ccloudConnected } from "./emitters";
 import { Logger } from "./logging";
+import { openExternal, pollCCloudConnectionAuth } from "./sidecar/authStatusPolling";
 import {
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
-  openExternal,
-  pollCCloudConnectionAuth,
 } from "./sidecar/connections";
 import { getStorageManager } from "./storage";
 import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "./storage/constants";
