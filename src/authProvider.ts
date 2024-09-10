@@ -80,7 +80,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // if any other part of the extension notices that our current CCloud connection transitions from
     // VALID_TOKEN to INVALID_TOKEN/NO_TOKEN, we need to remove the session and stop polling
     ccloudAuthSessionInvalidated.event(async () => {
-      logger.debug("authSessionInvalidated event fired");
+      logger.debug("ccloudAuthSessionInvalidated event fired");
       await this.removeSession(CCLOUD_CONNECTION_ID);
     });
   }
