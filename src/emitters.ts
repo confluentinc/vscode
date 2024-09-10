@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { CCloudEnvironment } from "./models/environment";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { SchemaRegistryCluster } from "./models/schemaRegistry";
 
@@ -11,8 +10,6 @@ export const ccloudConnected = new vscode.EventEmitter<boolean>();
 /** Signal to the auth provider that we no longer have a valid auth status for the current CCloud connection. */
 export const ccloudAuthSessionInvalidated = new vscode.EventEmitter<void>();
 export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
-
-export const currentCCloudEnvironmentChanged = new vscode.EventEmitter<CCloudEnvironment | null>();
 
 export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster | null>();
 /**
