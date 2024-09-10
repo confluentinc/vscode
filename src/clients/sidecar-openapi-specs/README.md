@@ -23,4 +23,4 @@ said behavior. We carry the patches so that when we update the base document, we
 
 | OpenAPI Spec | Patch | Reason |
 | ------------ | ----- | ------ |
-| [ce-kafka-rest.openapi.yaml](./ce-kafka-rest.openapi.yaml) | [add_included_operations_to_list_topics_route.patch]](./add_included_operations_to_list_topics_route.patch) | Expose the `includeAuthorizedOperations` parameter for the list topics route |
+| [ce-kafka-rest.openapi.yaml](./ce-kafka-rest.openapi.yaml) | [add_included_operations_to_list_topics_route.patch](./add_included_operations_to_list_topics_route.patch) | Expose the `includeAuthorizedOperations` parameter for the list topics route |
