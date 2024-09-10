@@ -85,6 +85,10 @@ export const pollCCloudConnectionAuth = new IntervalPoller(
   watchCCloudConnectionStatus,
 );
 
+/**
+ * Checks if the existing CCloud {@link Connection} auth status is expiring soon (or has already
+ * expired) and prompts the user to reauthenticate if necessary.
+ */
 export async function checkAuthExpiration(connection: Connection) {
   const expiration: Date | undefined = connection.status.authentication.requires_authentication_at;
   if (!expiration) {
@@ -225,6 +229,10 @@ async function handleExpiredAuth(expirationString: string) {
     });
 }
 
+/**
+ * Check the {@link Connection} for any auth-related errors and prompt the user to reauthenticate if
+ * necessary.
+ */
 export function checkAuthErrors(connection: Connection) {
   const errors: AuthErrors | undefined = connection.status.authentication.errors;
   if (!errors) {
@@ -248,13 +256,17 @@ export function checkAuthErrors(connection: Connection) {
   AUTH_PROMPT_TRACKER.authErrorPromptOpen = true;
   vscode.window
     .showErrorMessage("Error authenticating with Confluent Cloud. Please try again.", authButton)
-    .then((response: string | undefined) => {
+    .then(async (response: string | undefined) => {
       // always reset the prompt tracker after the user interacts with the notification in any way,
       // since they will either dismiss it (and we re-prompt at the next iteration) or they re-
       // authenticate and we get a new status back (or another auth error at the next iteration)
       AUTH_PROMPT_TRACKER.authErrorPromptOpen = false;
       if (response === authButton) {
-        openExternal(vscode.Uri.parse(connection.metadata.sign_in_uri!));
+        // if we got to this point, we likely cleared out the existing connection via the
+        // `ccloudAuthSessionInvalidated` emitter, so we need to create a new session to re-auth
+        await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
+          createIfNone: true,
+        });
       }
     });
 }
