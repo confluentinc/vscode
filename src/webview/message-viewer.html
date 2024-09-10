@@ -270,6 +270,16 @@
                   </label>
                 </template>
               </div>
+              <hr />
+              <vscode-radio-group
+                orientation="vertical"
+                data-attr-value="this.messageTimestampFormat()"
+                data-on-change="this.updateTimestampFormat(event.target.value)"
+              >
+                <label slot="label">Timestamp format</label>
+                <vscode-radio value="iso">ISO</vscode-radio>
+                <vscode-radio value="unix">Unix epoch</vscode-radio>
+              </vscode-radio-group>
             </section>
 
             <tbody>
