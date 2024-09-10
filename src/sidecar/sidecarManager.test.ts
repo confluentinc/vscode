@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import "mocha";
-import { SIDECAR_LOGFILE_PATH, constructSidecarEnv, wasConnRefused } from "./sidecarManager";
+import { SIDECAR_LOGFILE_PATH } from "./constants";
+import { constructSidecarEnv, wasConnRefused } from "./sidecarManager";
 
 describe("Test wasConnRefused", () => {
   it("wasConnRefused() should return true for various spellings of a connection refused error", () => {

@@ -2,8 +2,6 @@
 
 Not to be confused with [MTA](https://en.wikipedia.org/wiki/Metropolitan_Transportation_Authority).
 
-For more information please read [the design doc](https://confluentinc.atlassian.net/wiki/x/hoCF0w).
-
 ## Problem
 
 Apache Kafka is not a database. One cannot simply query messages from a topic by providing multiple

@@ -200,6 +200,14 @@
         </section>
       </header>
 
+      <section class="histogram">
+        <messages-histogram
+          data-prop-data="this.histogram()"
+          data-prop-select="this.selection()"
+          data-on-select="this.updateHistogramFilter(event.detail)"
+        ></messages-histogram>
+      </section>
+
       <section class="content">
         <template data-if="this.waitingForMessages()">
           <div class="grid-banner">
@@ -307,13 +315,13 @@
                   <td
                     class="grid-cell cell-text-overflow"
                     tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().key, this.search())"
+                    data-children="this.formatMessageValue(this.message().key, this.searchRegexp())"
                     data-prop-title="this.message().key"
                   ></td>
                   <td
                     class="grid-cell cell-text-overflow"
                     tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().value, this.search())"
+                    data-children="this.formatMessageValue(this.message().value, this.searchRegexp())"
                     data-prop-title="this.formatMessageValueFull(this.message())"
                   ></td>
                 </tr>
@@ -435,6 +443,11 @@
       .wrapper {
         display: flex;
         flex-direction: column;
+      }
+      .histogram {
+        min-height: 65px;
+        padding: 6px 12px;
+        box-sizing: content-box;
       }
       .content {
         flex: 1;

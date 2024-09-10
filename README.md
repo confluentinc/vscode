@@ -71,3 +71,8 @@ and what actions will and will not be tolerated.
 
 This project is licensed under the Apache License, Version 2.0. See [LICENSE.txt](/LICENSE.txt) for
 the full license text.
+
+The LICENSE.txt and NOTICE.txt covers the source code distributions of this project. The LICENSE.txt
+and NOTICE-vsix.txt covers the VSIX archive distribution of this project (the VS Code Extension).
+The THIRD_PARTY_NOTICES.txt file contains the list of third-party software that is included in the
+VSIX archive distribution of this project, along with the full text of applicable licenses.

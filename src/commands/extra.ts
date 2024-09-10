@@ -7,7 +7,7 @@ const logger = new Logger("commands.extra");
 async function openCCloudLink(item: any) {
   logger.debug("Opening Confluent Cloud link", item);
   // make sure the item has the "ccloudUrl" property
-  if (!item.ccloudUrl) {
+  if (!item?.ccloudUrl) {
     return;
   }
   await vscode.env.openExternal(vscode.Uri.parse(item.ccloudUrl));
@@ -16,7 +16,7 @@ async function openCCloudLink(item: any) {
 async function copyResourceId(item: any) {
   logger.debug("Copying resource ID", item);
   // make sure the item has the "id" property
-  if (!item.id) {
+  if (!item?.id) {
     return;
   }
   await vscode.env.clipboard.writeText(item.id);
@@ -26,7 +26,7 @@ async function copyResourceId(item: any) {
 async function copyResourceName(item: any) {
   logger.debug("Copying resource name", item);
   // make sure the item has the "name" property
-  if (!item.name) {
+  if (!item?.name) {
     return;
   }
   await vscode.env.clipboard.writeText(item.name);

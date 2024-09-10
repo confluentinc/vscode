@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { utcTicks } from "d3-time";
 import { ObservableScope } from "inertial";
 import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import { type KafkaTopic } from "./models/topic";
@@ -6,14 +7,19 @@ import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
 
 import {
+  canAccessSchemaForTopic,
+  showNoSchemaAccessWarningNotification,
+} from "./authz/schemaRegistry";
+import {
   ResponseError,
+  type PartitionConsumeRecord,
   type PartitionOffset,
   type SimpleConsumeMultiPartitionRequest,
   type SimpleConsumeMultiPartitionResponse,
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { Logger } from "./logging";
-import { type SidecarHandle, getSidecar } from "./sidecar";
+import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
 
@@ -22,6 +28,9 @@ export function activateMessageViewer(context: ExtensionContext) {
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
     registerCommandWithLogging("confluent.topic.consume", async (topic: KafkaTopic) => {
+      if (!(await canAccessSchemaForTopic(topic))) {
+        showNoSchemaAccessWarningNotification();
+      }
       const sidecar = await getSidecar();
       return messageViewerStartPollingCommand(context, topic, sidecar);
     }),
@@ -33,7 +42,7 @@ type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
 
-const DEFAULT_MAX_POLL_RECORDS = 250;
+const DEFAULT_MAX_POLL_RECORDS = 500;
 const DEFAULT_RECORDS_CAPACITY = 100_000;
 
 const DEFAULT_CONSUME_PARAMS = {
@@ -101,7 +110,7 @@ function messageViewerStartPollingCommand(
   /** Filter by range of timestamps. `null` for all consumed messages. */
   const timestampFilter = os.signal<[number, number] | null>(null);
   /** Filter by substring text query. Persists bitset instead of computing it. */
-  const textFilter = os.signal<[BitSet, string] | null>(null);
+  const textFilter = os.signal<{ bitset: BitSet; regexp: RegExp; query: string } | null>(null);
   /** The stream instance that holds consumed messages and index them by timestamp and partition. */
   const stream = os.signal(new Stream(DEFAULT_RECORDS_CAPACITY));
   /**
@@ -110,8 +119,6 @@ function messageViewerStartPollingCommand(
    */
   const isStreamFull = os.signal(false);
 
-  /** Index of the latest inserted message in the stream. */
-  const latestInsert = os.signal<number>(-1);
   /** Most recent response payload from Consume API. */
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
   /** Most recent failure info */
@@ -167,22 +174,7 @@ function messageViewerStartPollingCommand(
 
   /** Used in derive below. Search bitset retains reference but internal value keeps changing */
   const alwaysNotEqual = () => false;
-  /** Unlike partition and timestamp filter, keeps updating previously created bitset with latest messages added. */
-  const searchBitset = os.derive<BitSet | null>(() => {
-    // can i catch up here? maybe if I can track the cursor in the search object and compare to the stream size?
-    const messageStream = stream();
-    const search = textFilter();
-    const index = latestInsert();
-    if (search == null) return null;
-    const [bitset, query] = search;
-    const value = messageStream.messages.values[index];
-    if (includesSubstring(value, query)) {
-      bitset.set(index);
-    } else {
-      bitset.unset(index);
-    }
-    return bitset;
-  }, alwaysNotEqual);
+  const searchBitset = os.derive<BitSet | null>(() => textFilter()?.bitset ?? null, alwaysNotEqual);
 
   /** Single bitset that represents the intersection of all currently applied filters. */
   const bitset = os.derive(() => {
@@ -196,6 +188,94 @@ function messageViewerStartPollingCommand(
     }
     return result;
   });
+
+  const histogram = os.derive(() => {
+    // update this derivative after new batch of messages is consumed
+    latestResult();
+    const ts = stream().timestamp;
+    const bits = bitset();
+    if (ts.size === 0) return null;
+
+    // domain is defined by earliest and latest dates that are conveniently accessible via skiplist
+    const d0 = new Date(ts.getValue(ts.tail)!);
+    const d1 = new Date(ts.getValue(ts.head)!);
+    // following generates uniform ticks that are always between the domain extent
+    const uniformTicks = utcTicks(d0, d1, 70);
+    let left = 0;
+    let right = uniformTicks.length;
+    while (uniformTicks.length > 0 && uniformTicks.at(left)! <= d0) left++;
+    while (uniformTicks.length > 0 && uniformTicks.at(right - 1)! > d1) right--;
+    let ticks = left < right ? uniformTicks.slice(left, right) : uniformTicks;
+
+    let includes = bits != null ? bits.predicate() : () => false;
+    let cursor = ts.head;
+    let bins = [];
+    let totalCount = 0;
+    let filterCount = 0;
+    // in the following cycle we count number of records in the skiplist which
+    // timestamp is within the threshold. The threshold we target starts from
+    // [ticks[ticks.length - 1], d1], which is the final bin of the result.
+    // From there we go backwards over the ticks (because timestamp skiplist is
+    // in descending order) counting records and filtered number if applicable.
+    for (let i = ticks.length - 1, hi = d1.valueOf(), max = ts.size; i >= 0; i--) {
+      let tick = ticks[i].valueOf();
+      let totalB = 0;
+      let filterB = 0;
+      while (max-- > 0 && ts.getValue(cursor)! >= tick) {
+        totalB++;
+        totalCount++;
+        if (includes(cursor)) {
+          filterB++;
+          filterCount++;
+        }
+        cursor = ts.next[cursor];
+      }
+      bins.unshift({ x0: tick, x1: hi, total: totalB, filter: bits != null ? filterB : null });
+      hi = tick;
+    }
+    // the final bin (which is the first one in the result) can be calculated
+    // by subtracting total values we counted from the collection size.
+    const total0 = ts.size - totalCount;
+    const filter0 = bits != null ? bits.count() - filterCount : null;
+    bins.unshift({ x0: d0.valueOf(), x1: ticks[0].valueOf(), total: total0, filter: filter0 });
+
+    return bins;
+  });
+
+  let queue: PartitionConsumeRecord[] = [];
+  function flushMessages(stream: Stream) {
+    const search = os.peek(textFilter);
+    while (queue.length > 0) {
+      /* Pick messages from the queue one by one since we may stop putting 
+      them into stream but we don't want to drop the rest. */
+      const message = queue.shift()!;
+
+      /* New messages inserted into the stream instance and its index is
+      stored for further processing by existing filters. */
+      const index = stream.insert(message);
+
+      if (search != null) {
+        if (includesSubstring(message, search.regexp)) {
+          search.bitset.set(index);
+        } else {
+          search.bitset.unset(index);
+        }
+        searchBitset(search.bitset);
+      }
+
+      /* For the first time when the stream reaches defined capacity, we pause 
+      consumption so the user can work with exact data they expected to consume.
+      They still can resume the stream back to get into "windowed" mode. */
+      if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {
+        isStreamFull(true);
+        state("paused");
+        break;
+      }
+    }
+  }
+  function dropQueue() {
+    queue = [];
+  }
 
   os.watch(() => {
     /* This is the main consumption cycle. Every time input parameters change,
@@ -224,36 +304,20 @@ function messageViewerStartPollingCommand(
         const result = await consume(params, ctl.signal);
 
         const datalist = result.partition_data_list ?? [];
-        outer: for (const partition of datalist) {
+        for (const partition of datalist) {
           /* The very first request always going to include messages from all
           partitions. If we consume a subset of partitions, some messages need
           to be dropped. */
           if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
-
+          /* The messages that we _do_ process, are pushed to the queue, which 
+          then processes messages and puts them to the stream on its own pace. */
           const records = partition.records ?? [];
-          for (const message of records) {
-            /* New messages inserted into the stream instance and its index is
-            stored for further processing by existing filters. */
-            const index = stream.insert(message);
-            latestInsert(index);
-            /* For the first time when the stream reaches defined capacity, we
-            pause consumption so the user can work exactly with the batch they
-            expected to consume.
-
-            They still can resume the stream back to get into "windowed" mode. */
-            if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {
-              os.batch(() => {
-                isStreamFull(true);
-                state("paused");
-              });
-              break outer;
-            }
-          }
+          for (const message of records) queue.push(message);
         }
 
-        /* After successful tracking of all new messages, store the payload and
-        notify UI side to start re-rendering necessary pieces. */
+        /* Update the state and notify the UI about another successful request processed. */
         os.batch(() => {
+          flushMessages(stream);
           latestResult(result);
           latestFetch(Date.now());
           notifyUI();
@@ -301,12 +365,12 @@ function messageViewerStartPollingCommand(
         const limit = body.pageSize;
         const includes = bitset()?.predicate() ?? ((_: number) => true);
         const { results, indices } = stream().slice(offset, limit, includes);
-        return {
-          indices,
-          messages: results.map(({ partition_id, offset, timestamp, key, value }) => {
-            return { partition_id, offset, timestamp, key, value: truncate(value) };
-          }),
-        } satisfies MessageResponse<"GetMessages">;
+        const messages = results.map(({ partition_id, offset, timestamp, key, value }) => {
+          key = truncate(key);
+          value = truncate(value);
+          return { partition_id, offset, timestamp, key, value };
+        });
+        return { indices, messages } satisfies MessageResponse<"GetMessages">;
       }
       case "GetMessagesCount": {
         return {
@@ -334,13 +398,34 @@ function messageViewerStartPollingCommand(
       case "GetStreamError": {
         return latestError() satisfies MessageResponse<"GetStreamError">;
       }
+      case "GetHistogram": {
+        return histogram() satisfies MessageResponse<"GetHistogram">;
+      }
+      case "GetSelection": {
+        return timestampFilter() satisfies MessageResponse<"GetSelection">;
+      }
+      case "GetSearchSource": {
+        const search = textFilter();
+        return (search?.regexp.source ?? null) satisfies MessageResponse<"GetSearchSource">;
+      }
+      case "GetSearchQuery": {
+        const search = textFilter();
+        return (search?.query ?? "") satisfies MessageResponse<"GetSearchQuery">;
+      }
       case "PreviewMessageByIndex": {
-        const { messages } = stream();
+        const { messages, serialized } = stream();
+        const index = body.index;
+        const message = messages.at(index);
+        const payload = prepare(
+          message,
+          serialized.key.includes(index),
+          serialized.value.includes(index),
+        );
+
+        // i want to drop the comment in favor of filename and possibly do a preview tab
         workspace
           .openTextDocument({
-            content:
-              `// message ${messages.at(body.index).key} from ${topic.name}\n` +
-              JSON.stringify(messages.at(body.index), null, 2),
+            content: `// message ${message.key} from ${topic.name}\n${JSON.stringify(payload, null, 2)}`,
             language: "jsonc",
           })
           .then((preview) => {
@@ -356,6 +441,7 @@ function messageViewerStartPollingCommand(
         const {
           timestamp,
           messages: { values },
+          serialized,
         } = stream();
         const includes = bitset()?.predicate() ?? ((_: number) => true);
         const records: string[] = [];
@@ -365,7 +451,7 @@ function messageViewerStartPollingCommand(
           i++, p = timestamp.next[p]
         ) {
           if (includes(p)) {
-            payload = values[p];
+            payload = prepare(values[p], serialized.key.includes(p), serialized.value.includes(p));
             records.push("\t" + JSON.stringify(payload));
           }
         }
@@ -384,12 +470,20 @@ function messageViewerStartPollingCommand(
           const { capacity, messages } = stream();
           const values = messages.values;
           const bitset = new BitSet(capacity);
+          const escaped = body.search
+            .trim()
+            // escape characters used by regexp itself
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+            // 1. make existing whitespaces in query optional
+            // 2. add optional whitespaces at word boundaries
+            .replace(/\s+|\b/g, "\\s*");
+          const regexp = new RegExp(escaped, "i");
           for (let i = 0; i < values.length; i++) {
-            if (includesSubstring(values[i], body.search)) {
+            if (includesSubstring(values[i], regexp)) {
               bitset.set(i);
             }
           }
-          textFilter([bitset, body.search]);
+          textFilter({ bitset, regexp, query: body.search });
         } else {
           textFilter(null);
         }
@@ -411,9 +505,13 @@ function messageViewerStartPollingCommand(
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params(getParams(body.mode, body.timestamp, maxPollRecords));
         stream((value) => new Stream(value.capacity));
+        textFilter((value) => {
+          return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
+        });
         state("running");
         latestResult(null);
         partitionFilter(null);
+        dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"ConsumeModeChange">;
       }
@@ -422,9 +520,13 @@ function messageViewerStartPollingCommand(
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream((value) => new Stream(value.capacity));
+        textFilter((value) => {
+          return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
+        });
         state("running");
         latestResult(null);
         partitionFilter(null);
+        dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"PartitionConsumeChange">;
       }
@@ -433,12 +535,21 @@ function messageViewerStartPollingCommand(
         notifyUI();
         return null satisfies MessageResponse<"PartitionFilterChange">;
       }
+      case "TimestampFilterChange": {
+        timestampFilter(body.timestamps);
+        notifyUI();
+        return null satisfies MessageResponse<"TimestampFilterChange">;
+      }
       case "MessageLimitChange": {
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, body.limit);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream(new Stream(body.limit));
+        textFilter((value) => {
+          return value != null ? { ...value, bitset: new BitSet(body.limit) } : null;
+        });
         state("running");
         latestResult(null);
+        dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"MessageLimitChange">;
       }
@@ -490,8 +601,8 @@ function getOffsets(
   return params;
 }
 
-const MIN_POLLING_INTERVAL_MS = 2 * 1000;
-const THRESHOLD_POLLING_INTERVAL_MS = 1 * 1000;
+const MIN_POLLING_INTERVAL_MS = 0.5 * 1000;
+const THRESHOLD_POLLING_INTERVAL_MS = 0.5 * 1000;
 
 /**
  * Await for a variable time. A random threshold added to avoid syncing with
@@ -515,44 +626,37 @@ function sleep(signal: AbortSignal) {
   });
 }
 
-/**
- * Compress any valid json value into smaller payload for preview purpose.
- * Following rules applied recursively:
- *
- * 1. Strings with length >1024 appear as 256 leading + "..." + 256 trailing symbols
- * 2. Arrays capped at 512 elements with "truncated array" string at the end
- *    2.1. Each array's item is truncated recursively
- * 3. Objects capped at 64 keys with extra empty key saying "truncated object"
- *    3.1. Each object property's value is truncated recursively
- *    3.2. Total number of object keys across the whole structure cannot exceed 1024
- * 4. If recursion depth exceeds 8 levels and the input is not a string, "truncated" is returned
- */
-function truncate(value: any, depth = 0, cap = 0): any {
-  if (typeof value === "string") {
-    return value.length > 1024 ? value.slice(0, 256) + " ... " + value.slice(-256) : value;
+/** Compress any valid json value into smaller payload for preview purpose. */
+function truncate(value: any): any {
+  if (value == null) return null;
+  if (typeof value === "object") {
+    value = JSON.stringify(value, null, " ");
   }
-  if (Array.isArray(value)) {
-    if (depth >= 8) return " truncated ";
-    depth++;
-    return value.length > 512
-      ? value
-          .slice(0, 512)
-          .map((item) => truncate(item, depth, cap))
-          .concat(" truncated ")
-      : value.map((item) => truncate(item, depth, cap));
-  }
-  if (typeof value === "object" && value !== null) {
-    if (depth >= 8) return " truncated ";
-    const truncated: Record<string, any> = {};
-    let count = 0;
-    for (const key in value) {
-      if (++cap >= 1024 || ++count >= 64) {
-        truncated[" "] = " truncated ";
-        break;
-      }
-      truncated[key] = truncate(value[key], depth + 1, cap);
-    }
-    return truncated;
+  if (typeof value === "string" && value.length > 1024) {
+    return value.slice(0, 256) + " ... " + value.slice(-256);
   }
   return value;
+}
+
+function prepare(
+  message: PartitionConsumeRecord,
+  keySerialized: boolean,
+  valueSerialized: boolean,
+) {
+  let key, value;
+
+  try {
+    key = keySerialized ? JSON.parse(message.key as any) : message.key;
+  } catch {
+    key = message.key;
+  }
+
+  try {
+    value = valueSerialized ? JSON.parse(message.value as any) : message.value;
+  } catch {
+    value = message.value;
+  }
+  const { partition_id, offset, timestamp, headers } = message;
+
+  return { partition_id, offset, timestamp, headers, key, value };
 }

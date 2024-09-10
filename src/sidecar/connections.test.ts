@@ -5,7 +5,7 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { getSidecar } from ".";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
-import { getTestStorageManager } from "../../tests/unit/testUtils";
+import { getExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import { Connection } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { StorageManager } from "../storage";
@@ -16,6 +16,7 @@ import {
   REMIND_BUTTON_TEXT,
   checkAuthExpiration,
   createCCloudConnection,
+  deleteCCloudConnection,
 } from "./connections";
 
 configDotenv();
@@ -36,10 +37,21 @@ describe("CCloud auth expiration checks", () => {
   let showErrorMessageStub: sinon.SinonStub;
 
   beforeEach(() => {
-    // needed for any `.then()` calls in the notification functions to be handled
-    const thenable = Promise.resolve({ title: "testResponse" });
-    showWarningMessageStub = sinon.stub(vscode.window, "showWarningMessage").returns(thenable);
-    showErrorMessageStub = sinon.stub(vscode.window, "showErrorMessage").returns(thenable);
+    // REAUTH_BUTTON_TEXT is the only option that doesn't adjust the AuthPromptTracker's
+    // `reauthWarningPromptOpen`, so if we don't use that, we'll see weird state changes
+    const warningMessageThenable = Promise.resolve(REAUTH_BUTTON_TEXT);
+    showWarningMessageStub = sinon.stub(vscode.window, "showWarningMessage");
+    showWarningMessageStub.returns(warningMessageThenable);
+
+    // we don't need to handle any specific return value for this stub
+    const errorMessageThenable = Promise.resolve("test");
+    showErrorMessageStub = sinon.stub(vscode.window, "showErrorMessage");
+    showErrorMessageStub.returns(errorMessageThenable);
+
+    // reset the auth prompt tracker state
+    AUTH_PROMPT_TRACKER.authErrorPromptOpen = false;
+    AUTH_PROMPT_TRACKER.reauthWarningPromptOpen = false;
+    AUTH_PROMPT_TRACKER.earliestReauthWarning = new Date(0);
   });
 
   afterEach(() => {
@@ -79,7 +91,6 @@ describe("CCloud auth expiration checks", () => {
       ),
       `showErrorMessage called ${showErrorMessageStub.callCount}/1 time(s) with args [${showErrorMessageStub.args}]`,
     );
-    assert.ok(AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
   }
 
   /** Reusable helper function to check that our "auth expired" notification was NOT called. */
@@ -88,34 +99,34 @@ describe("CCloud auth expiration checks", () => {
       showErrorMessageStub.notCalled,
       `showErrorMessage called ${showErrorMessageStub.callCount}/0 time(s) with args [${showErrorMessageStub.args}]`,
     );
-    // not checking .authExpiredPromptOpen here because it may be opened from a previous call
-    // just want to make sure the notification isn't trying to be opened again
   }
 
-  it("should not show any notifications if auth doesn't expire soon", () => {
+  it("should not show any notifications if auth doesn't expire soon", async () => {
     // check against a connection that expires in 120min
-    checkAuthExpiration(createFakeConnection(120));
+    await checkAuthExpiration(createFakeConnection(120));
     // warning notification should not show up
     assertReauthWarningPromptNotOpened();
     assert.ok(!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
     // error notification should not show up
     assertAuthExpiredPromptNotOpened();
-    assert.ok(!AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
   });
 
-  it("should show a warning notification if auth expires soon", () => {
+  it("should show a warning notification if auth expires soon", async () => {
     // check against a connection that expires "soon"
-    checkAuthExpiration(createFakeConnection(MINUTES_UNTIL_REAUTH_WARNING - 1));
+    await checkAuthExpiration(createFakeConnection(MINUTES_UNTIL_REAUTH_WARNING - 1));
     // warning notification should show up
     assertReauthWarningPromptOpened();
     // error notification should not show up
     assertAuthExpiredPromptNotOpened();
-    assert.ok(!AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
   });
 
-  it("should show an error notification if auth has expired", () => {
+  it("should show an error notification if auth has expired", async () => {
+    // expired auth will cycle the CCloud connection, which requires the auth provider to be set up,
+    // which requires the extension context to be available
+    await getExtensionContext();
+
     // check against a connection that expired already (5min ago)
-    checkAuthExpiration(createFakeConnection(-5));
+    await checkAuthExpiration(createFakeConnection(-5));
     // warning notification should not show up
     assertReauthWarningPromptNotOpened();
     assert.ok(!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
@@ -123,33 +134,36 @@ describe("CCloud auth expiration checks", () => {
     assertAuthExpiredPromptOpened();
   });
 
-  // FIXME: this test is failing locally but click-testing works as intended, need to investigate
-  // it("should show a warning notification and then an error notification if auth expiration is ignored long enough", () => {
-  //   // PART 1) check against a connection that expires "soon"
-  //   checkAuthExpiration(createFakeConnection(MINUTES_UNTIL_REAUTH_WARNING - 1));
-  //   // warning notification should show up
-  //   assertReauthWarningPromptOpened();
-  //   // error notification should not show up
-  //   assertAuthExpiredPromptNotOpened();
-  //   assert.ok(!AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
+  it("should show a warning notification and then an error notification if auth expiration is ignored long enough", async () => {
+    // expired auth will cycle the CCloud connection, which requires the auth provider to be set up,
+    // which requires the extension context to be available
+    await getExtensionContext();
 
-  //   // reset the stubs so we can check the next notification
-  //   showWarningMessageStub.reset();
-  //   showErrorMessageStub.reset();
+    // PART 1) check against a connection that expires "soon"
+    await checkAuthExpiration(createFakeConnection(MINUTES_UNTIL_REAUTH_WARNING - 1));
+    // warning notification should show up
+    assertReauthWarningPromptOpened();
+    // error notification should not show up
+    assertAuthExpiredPromptNotOpened();
 
-  //   // PART 2) check again once we're past the auth expiration time
-  //   checkAuthExpiration(createFakeConnection(-5));
-  //   // warning notification should not show up again, but should still be open
-  //   assertReauthWarningPromptNotOpened();
-  //   assert.ok(AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
-  //   // error notification should show up
-  //   assertAuthExpiredPromptOpened();
-  // });
+    // reset the stubs so we can check the next notification
+    showWarningMessageStub.resetHistory();
+    showErrorMessageStub.resetHistory();
 
-  it("should handle undefined `requires_authentication_at`", () => {
+    // PART 2) check again once we're past the auth expiration time
+    await checkAuthExpiration(createFakeConnection(-5));
+    // warning notification should not show up again, but should still be open
+    assertReauthWarningPromptNotOpened();
+    assert.ok(AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
+    // error notification should show up
+    console.error("part 2: error notification");
+    assertAuthExpiredPromptOpened();
+  });
+
+  it("should handle undefined `requires_authentication_at`", async () => {
     // no expiration time available, e.g. auth flow hasn't completed yet
     try {
-      checkAuthExpiration(createFakeConnection(undefined));
+      await checkAuthExpiration(createFakeConnection(undefined));
     } catch {
       assert.fail("checkAuthExpiration threw an error with undefined expiration");
     }
@@ -158,7 +172,6 @@ describe("CCloud auth expiration checks", () => {
     assert.ok(!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
     // error notification should not show up
     assertAuthExpiredPromptNotOpened();
-    assert.ok(!AUTH_PROMPT_TRACKER.authExpiredPromptOpen);
   });
 });
 
@@ -171,6 +184,8 @@ describe("CCloud auth flow", () => {
 
   beforeEach(async () => {
     await storageManager.clearWorkspaceState();
+    // make sure we don't have a lingering CCloud connection from other tests
+    await deleteCCloudConnection();
   });
 
   it("should successfully authenticate via CCloud with the sign_in_uri", async function () {
@@ -193,8 +208,8 @@ describe("CCloud auth flow", () => {
       "No connections found; make sure to manually log in with the test username/password, because the 'Authorize App: Confluent VS Code Extension is requesting access to your Confluent account' (https://login.confluent.io/u/consent?...) page may be blocking the auth flow for this test. If that doesn't work, try running the test with `{ headless: false }` (in testAuthFlow()) to see what's happening.",
     );
     assert.ok(connection);
-    assert.ok(connection.status.authentication.status !== "NO_TOKEN");
-    assert.ok(connection.status.authentication.user?.username === process.env.E2E_USERNAME);
+    assert.notEqual(connection.status.authentication.status, "NO_TOKEN");
+    assert.equal(connection.status.authentication.user?.username, process.env.E2E_USERNAME);
   });
 });
 

@@ -3,7 +3,11 @@ import { type PartitionData } from "../clients/kafkaRest";
 import { type PartitionConsumeRecord } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
-import { sendWebviewMessage } from "./comms/comms";
+import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
+import { Histogram, type HistogramBin } from "./canvas/histogram";
+
+customElements.define("messages-histogram", Histogram);
+const storage = createWebviewStorage<{ colWidth: number[] }>();
 
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
@@ -68,6 +72,17 @@ class MessageViewerViewModel extends ViewModel {
       timestamp: this.timestamp(),
     });
   }, this.emptySnapshot);
+
+  histogram = this.resolve(() => {
+    return post("GetHistogram", { timestamp: this.timestamp() });
+  }, null);
+  selection = this.resolve(() => {
+    // get selection from the host when webview gets restored, otherwise use local state
+    return post("GetSelection", {});
+  }, null);
+  async updateHistogramFilter(timestamps: [number, number] | null) {
+    await post("TimestampFilterChange", { timestamps });
+  }
 
   /** Information about the topic's partitions. */
   partitionStats = this.resolve(() => {
@@ -255,9 +270,9 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     if (total === 0) return null;
     if (filter != null) {
-      return `Showing ${offset.toLocaleString()}..${Math.min(offset + this.pageSize(), filter).toLocaleString()} of ${filter.toLocaleString()} messages (total: ${total.toLocaleString()}).`;
+      return `Showing ${Math.min(offset + 1, filter).toLocaleString()}..${Math.min(offset + this.pageSize(), filter).toLocaleString()} of ${filter.toLocaleString()} messages (total: ${total.toLocaleString()}).`;
     }
-    return `Showing ${offset.toLocaleString()}..${Math.min(offset + this.pageSize(), total).toLocaleString()} of ${total.toLocaleString()} messages.`;
+    return `Showing ${Math.min(offset + 1, total).toLocaleString()}..${Math.min(offset + this.pageSize(), total).toLocaleString()} of ${total.toLocaleString()} messages.`;
   });
   prevPageAvailable = this.derive(() => this.page() > 0);
   nextPageAvailable = this.derive(() => {
@@ -272,7 +287,7 @@ class MessageViewerViewModel extends ViewModel {
    */
   colWidth = this.signal(
     // currently (Aug 13th), copy of old widths in rem (1rem = 16px)
-    [9 * 16, 6 * 16, 6 * 16, 6 * 16],
+    storage.get()?.colWidth ?? [9 * 16, 6 * 16, 6 * 16, 6 * 16],
     // skip extra re-renders if the user didn't move pointer too much
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
   );
@@ -302,6 +317,7 @@ class MessageViewerViewModel extends ViewModel {
     // clamp new width in meaningful range so the user doesn't break the whole layout
     widths[index] = Math.max(4 * 16, Math.min(newWidth, 14 * 16));
     this.colWidth(widths);
+    storage.set({ colWidth: widths });
   }
 
   /** Cleanup handler when the user stops resizing a column. */
@@ -313,7 +329,14 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   /** The text search query string. */
-  search = this.signal("");
+  search = this.resolve(() => {
+    return post("GetSearchQuery", { timestamp: this.timestamp() });
+  }, "");
+  searchRegexp = this.resolve(async () => {
+    const timestamp = this.timestamp();
+    const source = await post("GetSearchSource", { timestamp });
+    return source != null ? new RegExp(source, "gi") : null;
+  }, null);
   async handleKeydown(event: KeyboardEvent) {
     if (event.key === "Enter") {
       const value = (event.target as HTMLInputElement).value;
@@ -412,27 +435,30 @@ class MessageViewerViewModel extends ViewModel {
     }
   }
 
-  formatMessageValue(value: unknown, search: string) {
+  formatMessageValue(value: unknown, search: RegExp | null) {
     if (value == null) return "";
     const input = typeof value === "string" ? value : JSON.stringify(value, null, " ");
-    if (search.length === 0) return input;
-    let index = input.indexOf(search);
-    let fragment = document.createDocumentFragment();
+    if (search == null) return input;
+    // search regexp is global, reset its index state to avoid mismatches
+    search.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    const matches = input.matchAll(search);
     let cursor = 0;
-    while (index >= 0) {
+    for (const match of matches) {
+      const index = match.index;
+      const length = match[0].length;
       fragment.append(input.substring(cursor, index));
-      let mark = document.createElement("mark");
-      mark.append(input.substring(index, index + search.length));
+      const mark = document.createElement("mark");
+      mark.append(input.substring(index, index + length));
       fragment.append(mark);
-      cursor = index + search.length;
-      index = input.indexOf(search, cursor);
+      cursor = index + length;
     }
     fragment.append(input.substring(cursor));
     return fragment;
   }
 
   formatMessageValueFull(message: PartitionConsumeRecord) {
-    return JSON.stringify(message.value, null, 2);
+    return message.value;
   }
 
   preview(message: PartitionConsumeRecord) {
@@ -454,9 +480,15 @@ export function post(
 ): Promise<{ messages: PartitionConsumeRecord[]; indices: number[] }>;
 export function post(type: "GetPartitionStats", body: object): Promise<PartitionData[]>;
 export function post(
-  type: "GetTimestampExtent",
+  type: "GetHistogram",
+  body: { timestamp?: number },
+): Promise<HistogramBin[] | null>;
+export function post(
+  type: "GetSelection",
   body: { timestamp?: number },
 ): Promise<[number, number] | null>;
+export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
+export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
 export function post(
   type: "GetMaxSize",
@@ -471,6 +503,10 @@ export function post(
 export function post(
   type: "PartitionFilterChange",
   body: { partitions: number[] | null },
+): Promise<null>;
+export function post(
+  type: "TimestampFilterChange",
+  body: { timestamps: [number, number] | null },
 ): Promise<null>;
 export function post(
   type: "ConsumeModeChange",

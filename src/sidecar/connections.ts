@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { getSidecar } from ".";
-import { getAuthSession } from "../authProvider";
+import { getAuthProvider } from "../authProvider";
 import { AuthErrors, Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
+import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
 import {
   currentCCloudEnvironmentChanged,
   currentKafkaClusterChanged,
@@ -12,8 +12,53 @@ import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
 
-const logger = new Logger("sidecarManager.connections");
+const logger = new Logger("sidecar.connections");
 
+/** Get the Confluent Cloud {@link Connection} (if it exists). */
+export async function getCCloudConnection(): Promise<Connection | null> {
+  let connection: Connection | null = null;
+  const client = (await getSidecar()).getConnectionsResourceApi();
+  try {
+    connection = await client.gatewayV1ConnectionsIdGet({ id: CCLOUD_CONNECTION_ID });
+  } catch (e) {
+    if (!(e instanceof ResponseError && e.response.status === 404)) {
+      // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
+      logger.error("Error getting existing connection", e);
+    }
+  }
+  return connection;
+}
+
+/** Create the Confluent Cloud {@link Connection} and return it. */
+export async function createCCloudConnection(): Promise<Connection> {
+  // create the initial Connection object, which will be kept in sidecar memory as well as
+  // in the extension's global state
+  let connection: Connection;
+  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+  try {
+    connection = await client.gatewayV1ConnectionsPost({
+      ConnectionSpec: CCLOUD_CONNECTION_SPEC,
+    });
+    logger.debug("created new CCloud connection");
+    return connection;
+  } catch (error) {
+    logger.error("create connection error", error);
+    throw new Error("Error while trying to create new connection. Please try again.");
+  }
+}
+
+/** Delete the existing Confluent Cloud {@link Connection} (if it exists). */
+export async function deleteCCloudConnection(): Promise<void> {
+  const client = (await getSidecar()).getConnectionsResourceApi();
+  try {
+    await client.gatewayV1ConnectionsIdDelete({ id: CCLOUD_CONNECTION_ID });
+    logger.debug("deleted existing CCloud connection");
+  } catch (e) {
+    logger.error("Error deleting connection", e);
+  }
+}
+
+// TODO(shoup): the majority of this auth prompting logic below needs to move into the auth provider
 /*
  * Module-level constants regarding reauthentication and auth expiration warnings.
  * (Maybe also collect into singleton class for organization and data hiding?)
@@ -31,9 +76,7 @@ const REAUTH_WARNING_DELAY_MINUTES = 15;
 export const REAUTH_BUTTON_TEXT = "Reauthenticate";
 export const REMIND_BUTTON_TEXT = "Remind Me Later";
 
-/**
- * Singleton class to track the state of the various auth prompts that can be shown to the user.
- */
+/** Singleton class to track the state of the various auth prompts that can be shown to the user. */
 class AuthPromptTracker {
   private static instance: AuthPromptTracker;
   /** Keeps track of whether or not the user has been prompted to attempt logging in again after an
@@ -41,8 +84,6 @@ class AuthPromptTracker {
   public authErrorPromptOpen: boolean = false;
   /** Have we already shown a warning notification that the user's auth status is about to expire? */
   public reauthWarningPromptOpen: boolean = false;
-  /** Have we already shown an error notification that the user's auth status has expired? */
-  public authExpiredPromptOpen: boolean = false;
   /** The earliest time we can show a reauth warning notification to the user */
   public earliestReauthWarning: Date = new Date(0);
 
@@ -57,33 +98,7 @@ class AuthPromptTracker {
 }
 export const AUTH_PROMPT_TRACKER = AuthPromptTracker.getInstance();
 
-/**
- * Create a new Confluent Cloud connection in the sidecar and return the connection object.
- */
-export async function createCCloudConnection(): Promise<Connection> {
-  // create the initial Connection object, which will be kept in sidecar memory as well as
-  // in the extension's global state
-  let connection: Connection;
-  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
-  try {
-    connection = await client.gatewayV1ConnectionsPost({
-      ConnectionSpec: CCLOUD_CONNECTION_SPEC,
-    });
-    logger.info("created new connection", connection);
-    return connection;
-  } catch (error) {
-    logger.error("create connection error", error);
-    throw new Error("Error while trying to create new connection. Please try again.");
-  }
-}
-
 export async function watchCCloudConnectionStatus(): Promise<void> {
-  const session: vscode.AuthenticationSession | undefined = await getAuthSession();
-  if (!session) {
-    // not logged in according to auth provider
-    return;
-  }
-
   const connection: Connection | null = await getCCloudConnection();
   if (!connection) {
     logger.warn("no connection found for current auth session");
@@ -96,7 +111,7 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
 
   // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
   // warn the user to reauth
-  checkAuthExpiration(connection);
+  await checkAuthExpiration(connection);
 }
 
 /** Poller to ensure the current connection, if any, is in a
@@ -107,13 +122,12 @@ export const pollCCloudConnectionAuth = new IntervalPoller(
   watchCCloudConnectionStatus,
 );
 
-export function checkAuthExpiration(connection: Connection) {
+export async function checkAuthExpiration(connection: Connection) {
   const expiration: Date | undefined = connection.status.authentication.requires_authentication_at;
   if (!expiration) {
     // the user hasn't authenticated yet (or the auth status may be INVALID_TOKEN) and we may not
     // have an expiration date yet, so we can't check if it's about to expire
     AUTH_PROMPT_TRACKER.reauthWarningPromptOpen = false;
-    AUTH_PROMPT_TRACKER.authExpiredPromptOpen = false;
     return;
   }
 
@@ -135,17 +149,17 @@ export function checkAuthExpiration(connection: Connection) {
     // Reset our reauth warning prompt state so we can re-prompt if we fall into another
     // reauth warning window later
     AUTH_PROMPT_TRACKER.reauthWarningPromptOpen = false;
-    AUTH_PROMPT_TRACKER.authExpiredPromptOpen = false;
     return;
   }
 
-  // if we haven't prompted the user to authenticate, earliestReauthWarning will be 0 / Jan 1 1970,
+  // If we haven't prompted the user to authenticate, earliestReauthWarning will be 0 / Jan 1 1970,
   // so it's safe to prompt the user. if they dismissed the prompt, we'll have set earliestReauthWarning
   // to {REAUTH_WARNING_DELAY_MINUTES}min after that point, so we need to check if we're past that
-  // time to prompt them again
+  // time to prompt them again. If the auth expired, we'll prompt them immediately.
   const canWarnAboutReauthentication =
     AUTH_PROMPT_TRACKER.earliestReauthWarning.getTime() < Date.now();
-  if (!canWarnAboutReauthentication) {
+  const authExpired = minutesUntilExpiration <= 0;
+  if (!canWarnAboutReauthentication && !authExpired) {
     logger.debug(
       "user dismissed reauth warning, waiting until next check to prompt again",
       logBody,
@@ -156,11 +170,12 @@ export function checkAuthExpiration(connection: Connection) {
   // if we go this far, the user either hasn't been warned yet or they dismissed the warning and it's
   // time to re-prompt them
   const expirationString = expiration.toLocaleString();
-  if (minutesUntilExpiration <= 0) {
-    if (!AUTH_PROMPT_TRACKER.authExpiredPromptOpen) {
-      logger.error("current CCloud connection expired, showing reauth error notification", logBody);
-      handleExpiredAuth(signInUri, expirationString);
-    }
+  if (authExpired) {
+    logger.error(
+      "current CCloud connection expired, resetting CCloud connection and showing reauth error notification",
+      logBody,
+    );
+    await handleExpiredAuth(expirationString);
   } else {
     if (!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen) {
       logger.warn(
@@ -225,25 +240,24 @@ function handleUpcomingAuthExpiration(
  * @param signInUri The URL to open in the user's browser to reauthenticate
  * @param expirationString The date and time when the user's authentication will expire
  */
-function handleExpiredAuth(signInUri: string, expirationString: string) {
-  // set this to prevent the user from being spammed with reauth warnings
-  AUTH_PROMPT_TRACKER.authExpiredPromptOpen = true;
+async function handleExpiredAuth(expirationString: string) {
+  // inform the auth provider that the session has expired (which will also delete the CCloud
+  // connection via the sidecar and clear out sidebar resources)
+  await getAuthProvider().removeSession(CCLOUD_CONNECTION_ID);
+
   vscode.window
     .showErrorMessage(
       `Confluent Cloud authentication expired at ${expirationString}.`,
       REAUTH_BUTTON_TEXT,
     )
-    .then((response) => {
+    .then(async (response) => {
       if (response === REAUTH_BUTTON_TEXT) {
-        // allow ~5min buffer after the user opens the link to reauthenticate before we prompt again
-        openExternal(vscode.Uri.parse(signInUri));
-        AUTH_PROMPT_TRACKER.earliestReauthWarning = new Date(
-          Date.now() + REAUTH_BUFFER_MINUTES * 60 * 1000,
-        );
-        // `authExpiredPromptOpen` is reset to `false` once we get an updated status back
-      } else {
-        // if they dismiss altogether, there isn't much we can do until they decide to re-auth, so
-        // we leave `authExpiredPromptOpen` set to `true` and don't prompt them again
+        // go through the auth provider's `createSession()` instead of trying to create a new CCloud
+        // connection via the sidecar and hooking it back up to the auth provider state. this will
+        // create the new CCloud connection and trigger the browser-based login with new sign-in URI
+        await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
+          createIfNone: true,
+        });
       }
     });
 }
@@ -306,19 +320,4 @@ export function openExternal(uri: vscode.Uri) {
     return Promise.resolve(true);
   }
   return vscode.env.openExternal(uri);
-}
-
-/** Convenience function to get the CCloud {@link Connection} from the sidecar, if it exists. */
-export async function getCCloudConnection(): Promise<Connection | null> {
-  let connection: Connection | null = null;
-  const client = (await getSidecar()).getConnectionsResourceApi();
-  try {
-    connection = await client.gatewayV1ConnectionsIdGet({ id: CCLOUD_CONNECTION_ID });
-  } catch (e) {
-    if (!(e instanceof ResponseError && e.response.status === 404)) {
-      // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
-      logger.error("Error getting existing connection", e);
-    }
-  }
-  return connection;
 }

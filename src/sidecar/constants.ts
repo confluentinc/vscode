@@ -1,4 +1,6 @@
-// constants needed in multiple modules for use within sidecar comms / management
+/** Constants needed in multiple modules for use within sidecar comms / management */
+import { tmpdir } from "os";
+import { join } from "path";
 
 export const SIDECAR_PORT: number = 26636;
 
@@ -13,3 +15,6 @@ export const ENABLE_REQUEST_RESPONSE_LOGGING: boolean =
 
 // Header name for the sidecar's PID in the response headers.
 export const SIDECAR_PROCESS_ID_HEADER = "x-sidecar-pid";
+
+// OS-independent path to the log file for the sidecar process.
+export const SIDECAR_LOGFILE_PATH = join(tmpdir(), "vscode-confluent-sidecar.log");

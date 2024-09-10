@@ -4,6 +4,19 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Detect and warn the user if the wrong os/architecture sidecar is installed (as from manual
+  download of wrong vsix file).
+- If the user's Confluent Cloud connection expires, the sidebar (Resources, Topics, and Schemas
+  views) will clear out as expected.
+- We are now checking authorized operations for Confluent Cloud resources and providing more
+  informative notifications:
+  - Error notifications if the user is not authorized to delete a topic, or create topics for a
+    Kafka cluster
+  - Warning notification if the user can't access schemas when opening Message Viewer from a topic
+    (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
+    setting)
 - Project Generation form will remember values entered if user hides tab and comes back
 
 ## 0.14.1

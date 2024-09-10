@@ -5,8 +5,6 @@ info:
   description: REST API for the Schema Registry
   contact:
     name: Data Governance Team
-    url: https://confluent.slack.com/app_redirect?channel=data-governance-eng
-    email: data-governance@confluent.io
   version: 1.0.0
   x-api-id: cbdaa8a3-56f3-4de9-95a5-b4b61172ea3a
   x-api-group: v1

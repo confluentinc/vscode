@@ -20,6 +20,7 @@ models/ConnectionSpec.ts
 models/ConnectionStatus.ts
 models/ConnectionType.ts
 models/ConnectionsList.ts
+models/ExceededFields.ts
 models/Failure.ts
 models/HealthCheck.ts
 models/HealthResponse.ts
