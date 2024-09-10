@@ -282,6 +282,7 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const supportViewProvider = new SupportViewProvider();
     logger.info("Support view provider created");
   } catch (e) {
