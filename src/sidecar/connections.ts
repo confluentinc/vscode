@@ -1,11 +1,7 @@
 import { getSidecar } from ".";
 import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
-import {
-  currentCCloudEnvironmentChanged,
-  currentKafkaClusterChanged,
-  currentSchemaRegistryChanged,
-} from "../emitters";
+import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -62,7 +58,6 @@ export async function clearCurrentCCloudResources() {
   // - fire events to update things like the Topics view, Schemas view, etc.
   logger.warn("clearing current CCloud resources from extension state");
   await getResourceManager().deleteCCloudResources();
-  currentCCloudEnvironmentChanged.fire(null);
   currentKafkaClusterChanged.fire(null);
   currentSchemaRegistryChanged.fire(null);
 }
