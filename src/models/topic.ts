@@ -95,9 +95,6 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
       tooltipBuf.push("");
     }
 
-    // TODO: update based on product+design feedback
-    // tooltipBuf.push("\n" + JSON.stringify(resource, null, 2));
-
     this.tooltip = tooltipBuf.join("\n");
   }
 }
