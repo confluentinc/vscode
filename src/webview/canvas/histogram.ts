@@ -267,7 +267,6 @@ export class Histogram extends HTMLElement {
 
       // if the pointer is over the canvas and bin is found, render the details tooltip
       if (over && bin != null) {
-        const viewTimeFormat = utcFormat("%Y-%m-%d %H-%M-%S");
         tooltip.style.display = "block";
         tooltip.style.top = y + 5 + "px";
         if (x / width > 0.75) {
@@ -279,7 +278,7 @@ export class Histogram extends HTMLElement {
         }
         const count =
           bin.filter != null ? `Count: ${bin.total}, filter: ${bin.filter}` : `Count: ${bin.total}`;
-        tooltip.textContent = `From: ${viewTimeFormat(new Date(bin.x0!))}\nTo: ${viewTimeFormat(new Date(bin.x1!))}\n${count}`;
+        tooltip.textContent = `From: ${new Date(bin.x0!).toISOString()}\nTo: ${new Date(bin.x1!).toISOString()}\n${count}`;
       } else {
         tooltip.style.display = "none";
       }
