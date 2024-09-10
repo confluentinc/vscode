@@ -705,7 +705,7 @@
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollwright": "^0.0.6",
-    "sinon": "^18.0.0",
+    "sinon": "^18.0.1",
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.0.0-alpha.28"
   },
