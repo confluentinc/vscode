@@ -409,28 +409,50 @@ class MessageViewerViewModel extends ViewModel {
 
   /** The text search query string. */
   search = this.resolve(() => {
-    return post("GetSearchQuery", { timestamp: this.timestamp() });
+    return post("GetSearchQuery", {});
   }, "");
   searchRegexp = this.resolve(async () => {
     const timestamp = this.timestamp();
     const source = await post("GetSearchSource", { timestamp });
     return source != null ? new RegExp(source, "gi") : null;
   }, null);
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
+  searchDebounceTime = 500;
   async handleKeydown(event: KeyboardEvent) {
+    const target = event.target as HTMLInputElement;
     if (event.key === "Enter") {
-      const value = (event.target as HTMLInputElement).value;
-      if (value.length > 0) {
-        await post("SearchMessages", { search: value });
-      } else {
-        await post("SearchMessages", { search: null });
-      }
-      this.page(0);
+      // when user hits Enter, search query submitted immediately
+      const value = target.value.trim();
+      this.submitSearch(value);
+    } else {
+      // otherwise, we keep debouncing search submittion until the user stops typing
+      if (this.searchTimer != null) clearTimeout(this.searchTimer);
+      this.searchTimer = setTimeout(async () => {
+        const value = target.value.trim();
+        this.submitSearch(value);
+      }, this.searchDebounceTime);
     }
   }
   async handleInput(event: Event | InputEvent) {
     if (event.type === "input" && !(event instanceof InputEvent)) {
+      if (this.searchTimer != null) {
+        clearTimeout(this.searchTimer);
+        this.searchTimer = null;
+      }
       await post("SearchMessages", { search: null });
     }
+  }
+  async submitSearch(value: string) {
+    if (this.searchTimer != null) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    if (value.length > 0) {
+      await post("SearchMessages", { search: value });
+    } else {
+      await post("SearchMessages", { search: null });
+    }
+    this.page(0);
   }
 
   /** Consume mode affects parameters used for consuming messages. */
