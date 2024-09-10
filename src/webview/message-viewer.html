@@ -230,100 +230,31 @@
           >
             <thead class="sticky-table-header">
               <tr class="grid-row">
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Timestamp"
-                >
-                  <span>Timestamp</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 0)"
-                    data-on-pointermove="this.handleMoveResize(event, 0)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Partition"
-                >
-                  <span>Partition</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 1)"
-                    data-on-pointermove="this.handleMoveResize(event, 1)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Offset"
-                >
-                  <span>Offset</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 2)"
-                    data-on-pointermove="this.handleMoveResize(event, 2)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Key"
-                >
-                  <span>Key</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 3)"
-                    data-on-pointermove="this.handleMoveResize(event, 3)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Value"
-                >
-                  <span>Value</span>
-                </th>
+                <template data-for="column of this.visibleColumns() by column">
+                  <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
+                    <span data-text="this.columns[this.column()].title()"></span>
+                    <div
+                      class="resize-handler"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns[this.column()].index)"
+                      data-on-pointerup="this.handleStopResize(event)"
+                      data-prop-hidden="this.column() === 'value'"
+                    ></div>
+                  </th>
+                </template>
               </tr>
             </thead>
             <tbody>
               <template data-for="message of this.snapshot().messages">
                 <tr class="grid-row" data-on-dblclick="this.preview(this.message())">
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.formatTimestamp(this.message().timestamp, this.timestampStyle())"
-                    data-prop-title="this.message().timestamp"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.message().partition_id"
-                    data-prop-title="this.message().partition_id"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.message().offset"
-                    data-prop-title="this.message().offset"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().key, this.searchRegexp())"
-                    data-prop-title="this.message().key"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().value, this.searchRegexp())"
-                    data-prop-title="this.formatMessageValueFull(this.message())"
-                  ></td>
+                  <template data-for="column of this.visibleColumns() by column">
+                    <td
+                      class="grid-cell cell-text-overflow"
+                      tabindex="-1"
+                      data-children="this.columns[this.column()].children(this.message())"
+                      data-prop-title="this.columns[this.column()].description(this.message())"
+                    ></td>
+                  </template>
                 </tr>
               </template>
             </tbody>
