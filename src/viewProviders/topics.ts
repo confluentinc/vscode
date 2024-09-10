@@ -1,11 +1,7 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import {
-  ccloudConnected,
-  currentKafkaClusterChanged,
-  currentKafkaClusterTopicsChanged,
-} from "../emitters";
+import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -74,10 +70,6 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         }
         this.refresh();
       }
-    });
-    currentKafkaClusterTopicsChanged.event(() => {
-      // refresh if a topic is added, removed, or updated
-      this.refresh();
     });
   }
 
