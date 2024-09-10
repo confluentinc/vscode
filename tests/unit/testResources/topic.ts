@@ -1,3 +1,4 @@
+import { KAFKA_TOPIC_OPERATIONS } from "../../../src/authz/constants";
 import { KafkaTopic } from "../../../src/models/topic";
 import { TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER } from "./kafkaCluster";
 
@@ -9,6 +10,7 @@ export const TEST_LOCAL_KAFKA_TOPIC = KafkaTopic.create({
   partitions: {},
   configs: {},
   clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
+  operations: [...KAFKA_TOPIC_OPERATIONS],
 });
 
 export const TEST_CCLOUD_KAFKA_TOPIC = KafkaTopic.create({
@@ -20,4 +22,5 @@ export const TEST_CCLOUD_KAFKA_TOPIC = KafkaTopic.create({
   configs: {},
   clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
   environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
+  operations: [...KAFKA_TOPIC_OPERATIONS],
 });

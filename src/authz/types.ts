@@ -15,7 +15,3 @@ export function toKafkaTopicOperations(operations: string[]): KafkaTopicOperatio
 
   return operations as KafkaTopicOperation[];
 }
-
-/** All possible operations as  KafkaTopicOperation[] */
-export const ALL_KAFKA_TOPIC_OPERATIONS: KafkaTopicOperation[] =
-  KAFKA_TOPIC_OPERATIONS as KafkaTopicOperation[];
