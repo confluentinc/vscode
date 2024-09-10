@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Connection } from "./clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context";
-import { ccloudConnected } from "./emitters";
+import { ccloudAuthSessionInvalidated, ccloudConnected } from "./emitters";
 import { Logger } from "./logging";
 import { openExternal, pollCCloudConnectionAuth } from "./sidecar/authStatusPolling";
 import {
@@ -76,6 +76,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         });
         await resourceManager.setAuthFlowCompleted(success);
       }
+    });
+    // if any other part of the extension notices that our current CCloud connection transitions from
+    // VALID_TOKEN to INVALID_TOKEN/NO_TOKEN, we need to remove the session and stop polling
+    ccloudAuthSessionInvalidated.event(async () => {
+      logger.debug("ccloudAuthSessionInvalidated event fired");
+      await this.removeSession(CCLOUD_CONNECTION_ID);
     });
   }
 

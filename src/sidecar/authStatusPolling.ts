@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { getAuthProvider } from "../authProvider";
 import { AuthErrors, Connection } from "../clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
 import { getCCloudConnection } from "./connections";
@@ -193,7 +193,7 @@ function handleUpcomingAuthExpiration(
 async function handleExpiredAuth(expirationString: string) {
   // inform the auth provider that the session has expired (which will also delete the CCloud
   // connection via the sidecar and clear out sidebar resources)
-  await getAuthProvider().removeSession(CCLOUD_CONNECTION_ID);
+  ccloudAuthSessionInvalidated.fire();
 
   vscode.window
     .showErrorMessage(
