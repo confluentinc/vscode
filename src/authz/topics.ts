@@ -24,13 +24,8 @@ export async function fetchTopicAuthorizedOperations(
       include_authorized_operations: true,
     });
 
-    try {
-      const operations = toKafkaTopicOperations(topicResp.authorized_operations ?? []);
-      return operations;
-    } catch (error) {
-      logger.error(`Failed to parse topic authorized operations for topic ${topic.name}: ${error}`);
-      return [];
-    }
+    // authorized_operations may be undeclared if not Confluent kafka rest ...
+    return toKafkaTopicOperations(topicResp.authorized_operations ?? []);
   } catch (error) {
     logger.error(`Failed to get topic authorized operations for topic ${topic.name}: ${error}`);
     return [];

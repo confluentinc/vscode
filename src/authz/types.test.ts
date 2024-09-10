@@ -10,11 +10,10 @@ describe("toKafkaTopicOperations", () => {
     assert.deepStrictEqual(output, input);
   });
 
-  it("throws with unexpected input", () => {
-    // 'bad' not in KAFKA_TOPIC_OPERATIONS
-    const input = ["READ", "WRITE", "BAD"];
-    // catch error, expect 'BAD' to be the bad input
-    assert.throws(() => toKafkaTopicOperations(input), "BAD");
+  it("omits unexpected input", () => {
+    const input = ["READ", "WRITE", "UNEXPECTED"];
+    const output = toKafkaTopicOperations(input);
+    assert.deepStrictEqual(output, ["READ", "WRITE"]);
   });
 
   it("empty yields empty", () => {
