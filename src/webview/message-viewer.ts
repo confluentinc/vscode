@@ -458,7 +458,7 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   formatMessageValueFull(message: PartitionConsumeRecord) {
-    return JSON.stringify(message.value, null, 2);
+    return message.value;
   }
 
   preview(message: PartitionConsumeRecord) {
