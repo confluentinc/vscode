@@ -18,7 +18,9 @@ All notable changes to this extension will be documented in this file.
     (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
     setting)
 - Project Generation form will remember values entered if user hides tab and comes back
-
+- Fetch authz on existing topics in a cluster up front, offer the consume or delete
+    operations conditionally based on those permitted operations.
+    
 ## 0.14.1
 
 ### Fixed
