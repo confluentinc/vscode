@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 const logger = new Logger("sidecar.middlewares");
 
@@ -99,6 +100,11 @@ export class ErrorResponseMiddleware implements Middleware {
       });
       // don't throw an error because our openapi-generator client code will throw ResponseError by
       // default if status >= 400
+
+      if (context.response.status === 401) {
+        // inform the auth provider that the auth session is no longer valid
+        ccloudAuthSessionInvalidated.fire();
+      }
     }
   }
 }
