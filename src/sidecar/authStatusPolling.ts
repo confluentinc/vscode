@@ -55,6 +55,19 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     return;
   }
 
+  logger.debug("checking auth status for CCloud connection", {
+    status: connection.status.authentication.status,
+    expiration: connection.status.authentication.requires_authentication_at,
+    errors: connection.status.authentication.errors,
+  });
+  if (connection.status.authentication.status !== "VALID_TOKEN") {
+    // INVALID_TOKEN or NO_TOKEN
+    logger.error("current CCloud connection has invalid or no token; invalidating auth session", {
+      status: connection.status.authentication.status,
+    });
+    ccloudAuthSessionInvalidated.fire();
+  }
+
   // if we get any kind of `.status.authentication.errors`, throw an error notification so the user
   // can try to reauthenticate
   checkAuthErrors(connection);
@@ -218,7 +231,7 @@ export function checkAuthErrors(connection: Connection) {
     return;
   }
 
-  logger.error("errors returned during auth flow", {
+  logger.error("errors returned while checking auth status", {
     connectionId: connection.spec.id,
     errors,
     promptingUser: !AUTH_PROMPT_TRACKER.authErrorPromptOpen,
