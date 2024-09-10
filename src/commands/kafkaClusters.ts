@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { KafkaTopicAuthorizedOperation } from "../authz/constants";
-import { getTopicAuthorizedOperations } from "../authz/topics";
+import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
@@ -14,6 +13,7 @@ import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) {
   // TEMPORARY: remove this info message and un-comment the lines below once the sidecar supports
   // mutations via GraphQL to update the KafkaCluster name
@@ -75,12 +75,13 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     throw new Error(`Failed to find Kafka cluster for topic "${topic.name}"`);
   }
 
-  const topicAuthzOperations: KafkaTopicAuthorizedOperation[] =
-    await getTopicAuthorizedOperations(topic);
-  if (!topicAuthzOperations.includes("DELETE")) {
-    vscode.window.showErrorMessage(
-      `You do not have permission to delete the "${topic.name}" topic.`,
-    );
+  // We won't have even gotten here if we didn't think the user has DELETE permissions on the topic.
+  // BUT that was at the time we fetched the topic list, so we should check again before proceeding.
+  const authorizedOperations = await fetchTopicAuthorizedOperations(topic);
+  if (!authorizedOperations.includes("DELETE")) {
+    const errorMessage = `You do not have permission to delete the topic "${topic.name}"`;
+    logger.error(errorMessage);
+    vscode.window.showErrorMessage(errorMessage);
     return;
   }
 
@@ -291,6 +292,7 @@ async function waitForTopicToBeDeleted(
         topic_name: topicName,
       });
       logger.warn(`${topicKind} topic "${topicName}" still exists`);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       // topic is no longer found, yay, deletion complete.
       const elapsedMs = Date.now() - startTime;

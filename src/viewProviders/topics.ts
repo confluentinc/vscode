@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { toKafkaTopicOperations } from "../authz/types";
 import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged, currentKafkaClusterTopicsChanged } from "../emitters";
 import { Logger } from "../logging";
@@ -113,14 +114,9 @@ export function getTopicViewProvider() {
 }
 
 export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
-  const sidecar = await getSidecar();
-  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  const topicsResp: TopicDataList = await client.listKafkaTopics({
-    cluster_id: cluster.id,
-  });
-
   let environmentId: string | null = null;
   let schemas: Schema[] = [];
+
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
     const resourceManager = getResourceManager();
@@ -130,10 +126,27 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
     }
   }
 
+  const sidecar = await getSidecar();
+  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
+  const topicsResp: TopicDataList = await client.listKafkaTopics({
+    cluster_id: cluster.id,
+    includeAuthorizedOperations: true,
+  });
+
+  // Promote each from-response-topic to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
     const hasMatchingSchema: boolean = schemas.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
+
+    // Promote from string[] to KafkaTopicOperation[]
+    const operations = toKafkaTopicOperations(topic.authorized_operations!);
+
+    logger.debug(
+      `Topic authz operations for ${topic.topic_name} (ccloud topic: ${cluster instanceof CCloudKafkaCluster}):`,
+      operations,
+    );
+
     return KafkaTopic.create({
       name: topic.topic_name,
       is_internal: topic.is_internal,
@@ -144,6 +157,7 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       clusterId: cluster.id,
       environmentId: environmentId,
       hasSchema: hasMatchingSchema,
+      operations: operations,
     });
   });
   if (cluster instanceof CCloudKafkaCluster) {

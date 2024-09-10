@@ -520,12 +520,12 @@
         },
         {
           "command": "confluent.topic.consume",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzRead.*/",
           "group": "inline@1"
         },
         {
           "command": "confluent.topics.delete",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
           "group": "topics"
         },
         {
