@@ -5,9 +5,9 @@ export type KafkaTopicOperation = (typeof KAFKA_TOPIC_OPERATIONS)[number];
 
 /** Promote known strings as from list or get topics result into list of KafkaTopicOperation */
 export function toKafkaTopicOperations(operations: string[]): KafkaTopicOperation[] {
-  const invalidOperations = operations.filter(
-    (op) => !KAFKA_TOPIC_OPERATIONS.includes(op as KafkaTopicOperation),
+  const validOperations = operations.filter((op) =>
+    KAFKA_TOPIC_OPERATIONS.includes(op as KafkaTopicOperation),
   );
 
-  return operations as KafkaTopicOperation[];
+  return validOperations as KafkaTopicOperation[];
 }
