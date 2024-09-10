@@ -290,8 +290,8 @@ class MessageViewerViewModel extends ViewModel {
    * because it always takes the rest of the space available.
    */
   colWidth = this.signal(
-    // currently (Aug 13th), copy of old widths in rem (1rem = 16px)
-    storage.get()?.colWidth ?? [9 * 16, 6 * 16, 6 * 16, 6 * 16],
+    // conveniently expressed in rems (1rem = 16px)
+    storage.get()?.colWidth ?? [13 * 16, 5.5 * 16, 6.5 * 16, 6 * 16],
     // skip extra re-renders if the user didn't move pointer too much
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
   );
