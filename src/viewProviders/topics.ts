@@ -142,7 +142,7 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
     // Promote from string[] to KafkaTopicOperation[]
     const operations = toKafkaTopicOperations(topic.authorized_operations!);
 
-    logger.warn(
+    logger.debug(
       `Topic authz operations for ${topic.topic_name} (ccloud topic: ${cluster instanceof CCloudKafkaCluster}):`,
       operations,
     );
