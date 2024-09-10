@@ -1,7 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
+import { KafkaTopicOperation } from "../authz/types";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data {
   name!: Enforced<string>;
@@ -19,6 +19,9 @@ export class KafkaTopic extends Data {
   /** CCloud env id. If null, implies a "local cluster" topic. */
   environmentId: string | null = null;
   hasSchema: boolean = false;
+
+  /** Operations the user is authzd to perform on the topic */
+  operations!: Enforced<KafkaTopicOperation[]>;
 
   /** Property producing a URL for the topic in the Confluent Cloud UI */
   get ccloudUrl(): string {
@@ -50,25 +53,51 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
   resource: KafkaTopic;
 
   constructor(resource: KafkaTopic) {
-    const label = resource.name;
     // these will always have at least Configurations to expand
-    super(label, vscode.TreeItemCollapsibleState.Collapsed);
+    super(resource.name, vscode.TreeItemCollapsibleState.Collapsed);
+
+    const tooltipBuf: string[] = [];
 
     this.resource = resource;
 
     this.contextValue = resource.isLocalTopic() ? "local-kafka-topic" : "ccloud-kafka-topic";
 
-    // TODO: update based on product+design feedback
-    this.tooltip = JSON.stringify(resource, null, 2);
+    // Convert 'read' and 'delete' operations to context flags to hang context-sensitive commands off of.
+    // (these are interesting because we invite specific actions based on their presence)
+    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE"];
+    const missingAuthz: KafkaTopicOperation[] = [];
+    for (const op of interestingAuthz) {
+      if (resource.operations.includes(op)) {
+        // Convert to "authzRead", "authzDelete", etc. for context flags to hang context-sensitive commands off of (see package.json)
+        const operationTitleCase = op.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+        this.contextValue += `-authz${operationTitleCase}`;
+      } else {
+        missingAuthz.push(op);
+      }
+    }
+
+    if (missingAuthz.length > 0) {
+      tooltipBuf.push("⚠️ Missing authorization for the following actions:");
+      missingAuthz.forEach((op) => tooltipBuf.push(` * ${op}`));
+      tooltipBuf.push("");
+    }
 
     if (resource.hasSchema) {
       this.iconPath = new vscode.ThemeIcon(IconNames.TOPIC);
       this.contextValue = `${this.contextValue}-with-schema`;
     } else {
       this.collapsibleState = vscode.TreeItemCollapsibleState.None;
-      this.tooltip = `No schema(s) found for topic "${resource.name}".\n\n${this.tooltip}`;
-      const warningColor = new vscode.ThemeColor("problemsWarningIcon.foreground");
-      this.iconPath = new vscode.ThemeIcon(IconNames.TOPIC_WITHOUT_SCHEMA, warningColor);
+      this.iconPath = new vscode.ThemeIcon(
+        IconNames.TOPIC_WITHOUT_SCHEMA,
+        new vscode.ThemeColor("problemsWarningIcon.foreground"),
+      );
+      tooltipBuf.push("⚠️ No schema(s) found for topic.");
+      tooltipBuf.push("");
     }
+
+    // TODO: update based on product+design feedback
+    // tooltipBuf.push("\n" + JSON.stringify(resource, null, 2));
+
+    this.tooltip = tooltipBuf.join("\n");
   }
 }

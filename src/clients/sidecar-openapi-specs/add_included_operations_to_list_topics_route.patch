@@ -1,0 +1,28 @@
+diff --git a/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml b/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml
+index 1425e51..94333ec 100644
+--- a/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml
++++ b/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml
+@@ -569,6 +569,8 @@ paths:
+       security:
+         - resource-api-key: []
+         - external-access-token: []
++      parameters:
++        - $ref: "#/components/parameters/IncludeAuthorizedOperationsCamelCase"
+       responses:
+         "200":
+           $ref: "#/components/responses/ListTopicsResponse"
+@@ -1752,6 +1754,14 @@ components:
+       schema:
+         type: boolean
+ 
++    IncludeAuthorizedOperationsCamelCase:
++      name: includeAuthorizedOperations
++      description: Specify if authorized operations should be included in the response.
++      in: query
++      required: false
++      schema:
++        type: boolean
++
+     PartitionId:
+       name: partition_id
+       description: The partition ID.
