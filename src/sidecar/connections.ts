@@ -60,13 +60,8 @@ export async function clearCurrentCCloudResources() {
   // that may have depended on it:
   // - delete the extension state references to make sure they can't be used
   // - fire events to update things like the Topics view, Schemas view, etc.
-  const resourceManager = getResourceManager();
   logger.warn("clearing current CCloud resources from extension state");
-  await Promise.all([
-    resourceManager.deleteCCloudEnvironments(),
-    resourceManager.deleteCCloudKafkaClusters(),
-    resourceManager.deleteCCloudSchemaRegistryClusters(),
-  ]);
+  await getResourceManager().deleteCCloudResources();
   currentCCloudEnvironmentChanged.fire(null);
   currentKafkaClusterChanged.fire(null);
   currentSchemaRegistryChanged.fire(null);
