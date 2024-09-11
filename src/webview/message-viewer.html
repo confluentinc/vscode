@@ -143,6 +143,18 @@
                 </div>
               </div>
             </template>
+
+            <template data-if="this.timer() != null">
+              <div class="dropdown-container">
+                <label>Time elapsed</label>
+                <consume-timer
+                  class="timer"
+                  data-attr-class="'timer ' + this.streamState()"
+                  data-prop-time="this.timer()"
+                  data-prop-state="this.streamState()"
+                ></consume-timer>
+              </div>
+            </template>
           </div>
         </section>
 
@@ -585,6 +597,20 @@
       .grid-row .codicon {
         display: flex;
         font-size: 14px;
+      }
+
+      .timer {
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 2px 0;
+        line-height: 1;
+        flex: 1;
+        align-items: center;
+        display: flex;
+        color: var(--vscode-editor-foreground);
+      }
+      .timer.paused {
+        opacity: 0.5;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>

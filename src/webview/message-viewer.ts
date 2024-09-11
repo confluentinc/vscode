@@ -5,8 +5,11 @@ import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
+import { Timer } from "./timer/timer";
 
 customElements.define("messages-histogram", Histogram);
+customElements.define("consume-timer", Timer);
+
 const storage = createWebviewStorage<{
   colWidth: number[];
   columnVisibilityFlags: number;
@@ -490,6 +493,9 @@ class MessageViewerViewModel extends ViewModel {
     this.snapshot(this.emptySnapshot);
   }
 
+  timer = this.resolve(() => {
+    return post("GetStreamTimer", { timestamp: this.timestamp() });
+  }, null);
   /** State of stream provided by the host: either running or paused. */
   streamState = this.resolve(() => {
     return post("GetStreamState", { timestamp: this.timestamp() });
@@ -577,6 +583,10 @@ class MessageViewerViewModel extends ViewModel {
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
 export function post(type: "GetStreamError", body: object): Promise<string[] | null>;
+export function post(
+  type: "GetStreamTimer",
+  body: { timestamp?: number },
+): Promise<{ start: number; offset: number }>;
 export function post(
   type: "GetMessages",
   body: { page: number; pageSize: number; timestamp?: number },

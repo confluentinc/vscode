@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { utcTicks } from "d3-time";
+import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
 import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import { type KafkaTopic } from "./models/topic";
@@ -96,6 +97,7 @@ function messageViewerStartPollingCommand(
 
   /** Is stream currently running or being paused?  */
   const state = os.signal<"running" | "paused">("running");
+  const timer = os.signal(Timer.create());
   /** Consume mode: are we consuming from the beginning, expecting the newest messages, or targeting a timestamp. */
   const mode = os.signal<"beginning" | "latest" | "timestamp">("beginning");
   /** Parameters used by Consume API. */
@@ -269,6 +271,7 @@ function messageViewerStartPollingCommand(
       if (!os.peek(isStreamFull) && stream.size >= stream.capacity) {
         isStreamFull(true);
         state("paused");
+        timer((timer) => timer.pause());
         break;
       }
     }
@@ -348,7 +351,10 @@ function messageViewerStartPollingCommand(
         os.batch(() => {
           latestFetch(Date.now());
           // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
-          if (shouldPause) state("paused");
+          if (shouldPause) {
+            state("paused");
+            timer((timer) => timer.pause());
+          }
           if (reportable != null) {
             latestError((errors) => {
               return errors == null ? [reportable] : [reportable].concat(errors).slice(0, 10);
@@ -409,6 +415,9 @@ function messageViewerStartPollingCommand(
       }
       case "GetStreamError": {
         return latestError() satisfies MessageResponse<"GetStreamError">;
+      }
+      case "GetStreamTimer": {
+        return timer() satisfies MessageResponse<"GetStreamTimer">;
       }
       case "GetHistogram": {
         return histogram() satisfies MessageResponse<"GetHistogram">;
@@ -504,11 +513,13 @@ function messageViewerStartPollingCommand(
       }
       case "StreamPause": {
         state("paused");
+        timer((timer) => timer.pause());
         notifyUI();
         return null satisfies MessageResponse<"StreamPause">;
       }
       case "StreamResume": {
         state("running");
+        timer((timer) => timer.resume());
         notifyUI();
         return null satisfies MessageResponse<"StreamResume">;
       }
@@ -521,6 +532,7 @@ function messageViewerStartPollingCommand(
           return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
         });
         state("running");
+        timer((timer) => timer.reset());
         latestResult(null);
         partitionFilter(null);
         timestampFilter(null);
@@ -537,6 +549,7 @@ function messageViewerStartPollingCommand(
           return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
         });
         state("running");
+        timer((timer) => timer.reset());
         latestResult(null);
         partitionFilter(null);
         timestampFilter(null);
@@ -562,6 +575,7 @@ function messageViewerStartPollingCommand(
           return value != null ? { ...value, bitset: new BitSet(body.limit) } : null;
         });
         state("running");
+        timer((timer) => timer.reset());
         latestResult(null);
         partitionFilter(null);
         timestampFilter(null);
@@ -675,4 +689,23 @@ function prepare(
   const { partition_id, offset, timestamp, headers } = message;
 
   return { partition_id, offset, timestamp, headers, key, value };
+}
+
+/**
+ * Basic timer structure with pause/resume functionality.
+ * Uses `Date.now()` for time tracking.
+ */
+class Timer extends Data {
+  start = Date.now();
+  offset = 0;
+  pause(this: Timer) {
+    const now = Date.now();
+    return this.copy({ start: now, offset: now - this.start + this.offset });
+  }
+  resume(this: Timer) {
+    return this.copy({ start: Date.now() });
+  }
+  reset(this: Timer) {
+    return this.copy({ start: Date.now(), offset: 0 });
+  }
 }
