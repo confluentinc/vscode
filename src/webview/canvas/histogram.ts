@@ -249,10 +249,13 @@ export class Histogram extends HTMLElement {
     // dispatch an event, so the parent element can subscribe to selection change
     // throttle events slightly, since a lot of selection changes are transient
     let latest: [number, number] | null, timer: ReturnType<typeof setTimeout> | null;
+    let first = true;
     os.watch(() => {
       latest = this.selection();
       timer ??= setTimeout(() => {
-        this.dispatchEvent(new CustomEvent("select", { detail: latest }));
+        // prevent unnecessary dispatch on the very first render
+        if (!first) this.dispatchEvent(new CustomEvent("select", { detail: latest }));
+        first = false;
         timer = null;
       }, 10);
     });

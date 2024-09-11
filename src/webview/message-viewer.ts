@@ -88,13 +88,8 @@ class MessageViewerViewModel extends ViewModel {
     return post("GetSelection", {});
   }, null);
   async updateHistogramFilter(timestamps: [number, number] | null) {
-    const a = timestamps;
-    const b = this.selection();
-    const equals = a == null || b == null ? a === b : a[0] === b[0] && a[1] === b[1];
-    if (!equals) {
-      await post("TimestampFilterChange", { timestamps });
-      this.page(0);
-    }
+    await post("TimestampFilterChange", { timestamps });
+    this.page(0);
   }
 
   /** Information about the topic's partitions. */
