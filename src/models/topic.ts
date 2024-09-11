@@ -97,7 +97,7 @@ function createKafkaTopicTooltip(
   missingAuthz: KafkaTopicOperation[],
 ): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString();
-  const iconName = resource.hasSchema ? "confluent-topic" : "confluent-topic-without-schema";
+  const iconName = resource.hasSchema ? IconNames.TOPIC : IconNames.TOPIC_WITHOUT_SCHEMA;
   tooltip
     .appendMarkdown(`#### $(${iconName}) Kafka Topic`)
     .appendMarkdown("\n\n---\n\n")
@@ -122,7 +122,9 @@ function createKafkaTopicTooltip(
 
   if (!resource.isLocalTopic()) {
     tooltip.appendMarkdown("---\n\n");
-    tooltip.appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${resource.ccloudUrl})`);
+    tooltip.appendMarkdown(
+      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+    );
   }
 
   return tooltip;

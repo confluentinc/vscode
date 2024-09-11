@@ -51,13 +51,15 @@ function createSchemaRegistryClusterTooltip(
 ): vscode.MarkdownString {
   // TODO(shoup) update for local SR once available
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown("#### $(confluent-schema-registry) Confluent Cloud Schema Registry Cluster")
+    .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry Cluster`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Provider: \`${resource.provider}\`\n\n`)
     .appendMarkdown(`Region: \`${resource.region}\`\n\n`)
     .appendMarkdown(`URI: \`${resource.uri}\``)
     .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${resource.ccloudUrl})`);
+    .appendMarkdown(
+      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+    );
   return tooltip;
 }

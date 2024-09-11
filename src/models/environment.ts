@@ -37,12 +37,14 @@ export class CCloudEnvironmentTreeItem extends vscode.TreeItem {
 
 function createEnvironmentTooltip(resource: CCloudEnvironment): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown("#### $(confluent-environment) Confluent Cloud Environment")
+    .appendMarkdown(`#### $(${IconNames.CCLOUD_ENVIRONMENT}) Confluent Cloud Environment`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Name: \`${resource.name}\`\n\n`)
     .appendMarkdown(`Stream Governance Package: \`${resource.stream_governance_package}\``)
     .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${resource.ccloudUrl})`);
+    .appendMarkdown(
+      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+    );
   return tooltip;
 }

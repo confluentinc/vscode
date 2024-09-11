@@ -73,7 +73,7 @@ function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownStrin
   if (resource.isCCloud) {
     const ccloudCluster = resource as CCloudKafkaCluster;
     tooltip
-      .appendMarkdown("#### $(confluent-kafka-cluster) Confluent Cloud Kafka Cluster")
+      .appendMarkdown(`#### $(${IconNames.CCLOUD_KAFKA}) Confluent Cloud Kafka Cluster`)
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(`ID: \`${ccloudCluster.id}\`\n\n`)
       .appendMarkdown(`Name: \`${ccloudCluster.name}\`\n\n`)
@@ -81,11 +81,13 @@ function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownStrin
       .appendMarkdown(`Region: \`${ccloudCluster.region}\`\n\n`)
       .appendMarkdown(`Bootstrap Servers: \`${ccloudCluster.bootstrapServers}\``)
       .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`);
+      .appendMarkdown(
+        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
+      );
   } else {
     const localCluster = resource as LocalKafkaCluster;
     tooltip
-      .appendMarkdown("#### $(confluent-kafka-cluster) Local Kafka Cluster")
+      .appendMarkdown(`#### $(${IconNames.LOCAL_KAFKA}) Local Kafka Cluster`)
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(`ID: \`${localCluster.id}\`\n\n`)
       .appendMarkdown(`Bootstrap Servers: \`${localCluster.bootstrapServers}\`\n\n`)

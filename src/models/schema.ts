@@ -78,7 +78,9 @@ function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
     .appendMarkdown(`Version: \`${resource.version}\`\n\n`)
     .appendMarkdown(`Type: \`${resource.type}\``)
     .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${resource.ccloudUrl})`);
+    .appendMarkdown(
+      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+    );
   return tooltip;
 }
 
