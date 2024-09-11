@@ -273,6 +273,7 @@ export class Histogram extends HTMLElement {
       const time = sx.invert(x);
       const binIndex = bisectBin.left(bins, time.valueOf());
       const bin = binIndex >= 0 ? bins[binIndex] : null;
+      const rightInclusive = binIndex === bins.length - 1;
 
       // if the pointer is over the canvas and bin is found, render the details tooltip
       if (over && bin != null) {
@@ -285,9 +286,22 @@ export class Histogram extends HTMLElement {
           tooltip.style.right = "unset";
           tooltip.style.left = x + 5 + "px";
         }
-        const count =
-          bin.filter != null ? `Count: ${bin.total}, filter: ${bin.filter}` : `Count: ${bin.total}`;
-        tooltip.textContent = `From: ${new Date(bin.x0!).toISOString()}\nTo: ${new Date(bin.x1!).toISOString()}\n${count}`;
+        if (down && selection != null) {
+          tooltip.innerHTML = `<label>Selected range</label><br><code>${new Date(selection[0]).toISOString()}</code><br><code>${new Date(selection[1]).toISOString()}</code>`;
+        } else {
+          const count =
+            bin.filter != null
+              ? `Total: <strong>${bin.total}</strong> Filter: <strong>${bin.filter}</strong>`
+              : `Total: <strong>${bin.total}</strong>`;
+          const content = [
+            `<div style="display: flex; flex-direction: column; gap: 0.5rem">`,
+            `<label>From (inclusive)<br><code>${new Date(bin.x0!).toISOString()}</code></label>`,
+            `<label>To (${rightInclusive ? "inclusive" : "exclusive"}) <br><code>${new Date(bin.x1!).toISOString()}</code></label>`,
+            `<span>${count}</span>`,
+            `</div>`,
+          ];
+          tooltip.innerHTML = content.join("");
+        }
       } else {
         tooltip.style.display = "none";
       }
