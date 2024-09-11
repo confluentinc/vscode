@@ -60,8 +60,9 @@ export function observeCustomProperty(os: Scope, target: HTMLElement, property: 
  * presses down.
  */
 export function observePointer(os: Scope, target: HTMLElement) {
-  let state = { down: false, over: false, x: 0, y: 0 };
+  let state = { down: false, over: false, x: 0, y: 0, shiftKey: false };
   function handleEvent(event: PointerEvent) {
+    state.shiftKey = event.shiftKey;
     switch (event.type) {
       case "pointerdown":
         state.down = true;
