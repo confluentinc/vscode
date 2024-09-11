@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { currentKafkaClusterChanged, currentKafkaClusterTopicsChanged } from "../emitters";
+import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -41,12 +41,18 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
+    ccloudConnected.event((connected: boolean) => {
+      logger.debug("ccloudConnected event fired, resetting", connected);
+      if (this.ccloudEnvironment && this.kafkaCluster?.isCCloud) {
+        // any transition of CCloud connection state should reset the tree view if we're focused on
+        // a CCloud Kafka Cluster
+        this.reset();
+      }
+    });
     currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
       if (!cluster) {
         vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
-        this.kafkaCluster = null;
-        this.ccloudEnvironment = null;
-        this.treeView.description = "";
+        this.reset();
       } else {
         vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", true);
         this.kafkaCluster = cluster;
@@ -62,13 +68,18 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
           this.ccloudEnvironment = parentEnvironment;
           this.treeView.description = `${this.ccloudEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
         }
+        this.refresh();
       }
-      this.refresh();
     });
-    currentKafkaClusterTopicsChanged.event(() => {
-      // refresh if a topic is added, removed, or updated
-      this.refresh();
-    });
+  }
+
+  /** Convenience method to revert this view to its original state. */
+  reset(): void {
+    vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
+    this.kafkaCluster = null;
+    this.ccloudEnvironment = null;
+    this.treeView.description = "";
+    this.refresh();
   }
 
   getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {

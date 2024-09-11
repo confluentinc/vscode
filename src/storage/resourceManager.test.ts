@@ -941,3 +941,76 @@ describe("ResourceManager schema tests", function () {
     assert.strictEqual(missingSchemas.get(ccloudSchemas[0].schemaRegistryId), undefined);
   });
 });
+
+describe("ResourceManager general utility methods", function () {
+  let storageManager: StorageManager;
+
+  let ccloudTopics: KafkaTopic[];
+  let localTopics: KafkaTopic[];
+
+  let ccloudSchemas: Schema[];
+
+  before(async () => {
+    // extension needs to be activated before storage manager can be used
+    storageManager = await getTestStorageManager();
+
+    ccloudTopics = [
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-1" }),
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
+    ];
+    localTopics = [KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, name: "test-local-topic-1" })];
+
+    ccloudSchemas = [
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+      { ...TEST_SCHEMA, id: "100001", subject: "test-ccloud-topic-xyz-value", version: 1 },
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+      { ...TEST_SCHEMA, id: "100055", subject: "test-ccloud-topic-xyz-value", version: 2 },
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+      { ...TEST_SCHEMA, id: "100055", subject: "test-ccloud-topic-abc-value", version: 1 },
+    ];
+  });
+
+  beforeEach(async () => {
+    // fresh slate for each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    // clean up after each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  it("CCLOUD: deleteCCloudResources() should correctly delete all CCloud resources", async () => {
+    // set the CCloud resources before deleting them
+    const resourceManager = getResourceManager();
+    await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await resourceManager.setCCloudTopics(ccloudTopics);
+    await resourceManager.setCCloudSchemas(ccloudSchemas);
+    // also set some local resources to make sure they aren't deleted
+    await resourceManager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+    await resourceManager.setLocalTopics(localTopics);
+
+    await resourceManager.deleteCCloudResources();
+
+    // verify the resources were deleted correctly
+    const missingClusters = await resourceManager.getCCloudKafkaClusters();
+    assert.deepStrictEqual(missingClusters, new Map());
+    const missingSchemaRegistries = await resourceManager.getCCloudSchemaRegistryClusters();
+    assert.deepStrictEqual(missingSchemaRegistries, new Map());
+    const missingTopics = await resourceManager.getCCloudTopics();
+    assert.deepStrictEqual(missingTopics, new Map());
+    const missingSchemas = await resourceManager.getCCloudSchemas();
+    assert.deepStrictEqual(missingSchemas, new Map());
+
+    // local resources should still be there
+    const existinglocalClusters: LocalKafkaCluster[] =
+      await resourceManager.getLocalKafkaClusters();
+    assert.ok(existinglocalClusters);
+    assert.equal(existinglocalClusters.length, 1);
+
+    const existingLocalTopics = await resourceManager.getLocalTopics();
+    assert.ok(existingLocalTopics);
+    assert.equal(existingLocalTopics.size, 1);
+  });
+});
