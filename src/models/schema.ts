@@ -1,7 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { ContainerTreeItem } from "./main";
+import { ContainerTreeItem, CustomMarkdownString } from "./main";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -57,16 +57,29 @@ export class SchemaTreeItem extends vscode.TreeItem {
     const label = resource.id.toString();
     super(label, vscode.TreeItemCollapsibleState.None);
 
+    // internal properties
     this.resource = resource;
-    this.description = `v${resource.version}`;
-
-    // TODO: update based on product+design feedback
-    this.tooltip = JSON.stringify(this.resource, null, 2);
-
     this.contextValue = "ccloud-schema";
 
+    // user-facing properties
+    this.description = `v${resource.version}`;
     this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA);
+    this.tooltip = createSchemaTooltip(this.resource);
   }
+}
+
+function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
+  // TODO(shoup) update for local SR once available
+  const tooltip = new CustomMarkdownString()
+    .appendMarkdown("#### $(primitive-square) Schema")
+    .appendMarkdown("\n\n---\n\n")
+    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
+    .appendMarkdown(`Subject: \`${resource.subject}\`\n\n`)
+    .appendMarkdown(`Version: \`${resource.version}\`\n\n`)
+    .appendMarkdown(`Type: \`${resource.type}\``)
+    .appendMarkdown("\n\n---\n\n")
+    .appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${resource.ccloudUrl})`);
+  return tooltip;
 }
 
 export enum SchemaKind {

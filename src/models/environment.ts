@@ -24,20 +24,25 @@ export class CCloudEnvironmentTreeItem extends vscode.TreeItem {
   constructor(resource: CCloudEnvironment) {
     super(resource.name, vscode.TreeItemCollapsibleState.Collapsed);
 
+    // internal properties
     this.resource = resource;
-
     this.contextValue = "ccloud-environment";
+
+    // user-facing properties
     this.description = this.resource.id;
-
     this.iconPath = new vscode.ThemeIcon(IconNames.CCLOUD_ENVIRONMENT);
-
-    this.tooltip = new CustomMarkdownString()
-      .appendMarkdown(`Name: \`${this.resource.name}\`\n\n`)
-      .appendMarkdown(`ID: \`${this.resource.id}\`\n\n`)
-      .appendMarkdown(
-        `Stream Governance Package: \`${this.resource.stream_governance_package}\`\n\n`,
-      )
-      .appendMarkdown("---\n\n")
-      .appendMarkdown(`[Open in Confluent Cloud](${this.resource.ccloudUrl})`);
+    this.tooltip = createEnvironmentTooltip(this.resource);
   }
+}
+
+function createEnvironmentTooltip(resource: CCloudEnvironment): vscode.MarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .appendMarkdown("#### $(confluent-environment) Confluent Cloud Environment")
+    .appendMarkdown("\n\n---\n\n")
+    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
+    .appendMarkdown(`Name: \`${resource.name}\`\n\n`)
+    .appendMarkdown(`Stream Governance Package: \`${resource.stream_governance_package}\``)
+    .appendMarkdown("\n\n---\n\n")
+    .appendMarkdown(`[$(confluent-logo) Open in Confluent Cloud](${resource.ccloudUrl})`);
+  return tooltip;
 }
