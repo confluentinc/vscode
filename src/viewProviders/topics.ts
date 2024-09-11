@@ -150,14 +150,6 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       schema.matchesTopicName(topic.topic_name),
     );
 
-    // Promote from string[] to KafkaTopicOperation[]
-    const operations = toKafkaTopicOperations(topic.authorized_operations!);
-
-    logger.debug(
-      `Topic authz operations for ${topic.topic_name} (ccloud topic: ${cluster instanceof CCloudKafkaCluster}):`,
-      operations,
-    );
-
     return KafkaTopic.create({
       name: topic.topic_name,
       is_internal: topic.is_internal,
@@ -168,7 +160,7 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       clusterId: cluster.id,
       environmentId: environmentId,
       hasSchema: hasMatchingSchema,
-      operations: operations,
+      operations: toKafkaTopicOperations(topic.authorized_operations!),
     });
   });
   if (cluster instanceof CCloudKafkaCluster) {
