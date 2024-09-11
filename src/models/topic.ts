@@ -60,6 +60,9 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
     // internal properties
     this.resource = resource;
     this.contextValue = resource.isLocalTopic() ? "local-kafka-topic" : "ccloud-kafka-topic";
+    if (this.resource.hasSchema) {
+      this.contextValue += "-with-schema";
+    }
 
     // user-facing properties
     // this.description = "";  // TBD
