@@ -19,12 +19,12 @@ export class ContainerTreeItem<T> extends vscode.TreeItem {
 /**
  * This is a custom tooltip class that extends `vscode.MarkdownString` to add constructor arguments
  * for additional properties that are not available in the base class.
- * @param value — Optional, initial value.
- * @param isTrusted Whether the markdown content is trusted or not. (e.g. to support embedding
- *   command-markdown syntax)
- * @param supportHtml Whether the tooltip supports HTML content.
+ * @param value Optional, initial value.
+ * @param isTrusted Whether the markdown content is trusted or not (e.g. to support embedding
+ *   command-markdown syntax). (Default is `true`.)
+ * @param supportHtml Whether the tooltip supports HTML content. (Default is `false`.)
  * @param supportThemeIcons Whether the tooltip supports the extension's custom contributed icons in
- *   the markdown string (e.g. `$(confluent-environment)`).
+ *   the markdown string (e.g. `$(confluent-environment)`). (Default is `true`.)
  */
 export class CustomMarkdownString extends vscode.MarkdownString {
   constructor(
