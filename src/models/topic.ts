@@ -2,7 +2,6 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../authz/types";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { Logger } from "../logging";
 import { CustomMarkdownString } from "./main";
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data {
@@ -74,9 +73,6 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
         );
 
     const missingAuthz: KafkaTopicOperation[] = this.checkMissingAuthorizedOperations(resource);
-    const logger = new Logger("KafkaTopicTreeItem");
-    logger.warn(`missingAuthz: ${missingAuthz}`);
-
     this.tooltip = createKafkaTopicTooltip(this.resource, missingAuthz);
   }
 
@@ -101,8 +97,9 @@ function createKafkaTopicTooltip(
   missingAuthz: KafkaTopicOperation[],
 ): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString();
+  const iconName = resource.hasSchema ? "confluent-topic" : "confluent-topic-without-schema";
   tooltip
-    .appendMarkdown("#### $(confluent-topic) Kafka Topic")
+    .appendMarkdown(`#### $(${iconName}) Kafka Topic`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`Name: \`${resource.name}\`\n\n`)
     .appendMarkdown(`Replication Factor: \`${resource.replication_factor}\`\n\n`)
