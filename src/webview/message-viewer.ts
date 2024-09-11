@@ -14,6 +14,7 @@ const storage = createWebviewStorage<{
   colWidth: number[];
   columnVisibilityFlags: number;
   timestamp: MessageTimestampFormat;
+  page: number;
 }>();
 
 addEventListener("DOMContentLoaded", () => {
@@ -58,8 +59,12 @@ class MessageViewerViewModel extends ViewModel {
     },
   );
 
-  page = this.signal(0);
+  page = this.signal(storage.get()?.page ?? 0);
   pageSize = this.signal(100);
+
+  pagePersistWatcher = this.watch(() => {
+    storage.set({ ...storage.get()!, page: this.page() });
+  });
 
   /** Initial state of messages collection. Stored separately so we can use to reset state. */
   emptySnapshot = { messages: [] as PartitionConsumeRecord[], indices: [] as number[] };
@@ -83,8 +88,13 @@ class MessageViewerViewModel extends ViewModel {
     return post("GetSelection", {});
   }, null);
   async updateHistogramFilter(timestamps: [number, number] | null) {
-    await post("TimestampFilterChange", { timestamps });
-    this.page(0);
+    const a = timestamps;
+    const b = this.selection();
+    const equals = a == null || b == null ? a === b : a[0] === b[0] && a[1] === b[1];
+    if (!equals) {
+      await post("TimestampFilterChange", { timestamps });
+      this.page(0);
+    }
   }
 
   /** Information about the topic's partitions. */
