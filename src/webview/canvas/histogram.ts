@@ -64,6 +64,7 @@ export class Histogram extends HTMLElement {
       padding: 0.5rem 0.75rem;
       pointer-events: none;
       border: 1px solid var(--focus-border);
+      font-size: var(--vscode-font-size);
       z-index: 10;
     `;
     container.append(tooltip);

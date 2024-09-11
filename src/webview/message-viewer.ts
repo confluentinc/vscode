@@ -379,7 +379,7 @@ class MessageViewerViewModel extends ViewModel {
     const columns = this.colWidth().reduce((string, width, index) => {
       return this.isColumnVisible(index) ? `${string} ${width}px` : string;
     }, "");
-    return `--grid-template-columns: ${columns} 1fr min-content`;
+    return `--grid-template-columns: ${columns} 1fr`;
   });
   /** Temporary state for resizing events. */
   resizeColumnDelta = this.signal<number | null>(null);
