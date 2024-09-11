@@ -1,0 +1,34 @@
+version: v1.0
+name: windows-packaging
+agent:
+  machine:
+    type: s1-prod-windows
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+global_job_config:
+  env_vars:
+    - name: WINDOWS
+      value: "true"
+  prologue:
+    commands:
+      - checkout
+
+blocks:
+  - name: "Package VSIX (Windows AMD64)"
+    dependencies: []
+    task:
+      jobs:
+        - name: "Package VSIX (Windows AMD64)"
+          commands:
+            - make package-vsix
+            # - make upload-windows-vsix-to-gh-releases

@@ -4,9 +4,10 @@
 CURL ?= curl
 FIND ?= find
 TAR ?= tar
+WINDOWS ?= false
 
 # Set shell to bash
-SHELL := /bin/bash
+SHELL ?= /bin/bash
 
 # Use this variable to specify a different make utility (e.g. remake --profile)
 MAKE ?= make
