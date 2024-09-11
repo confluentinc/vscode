@@ -6,6 +6,7 @@ import { ccloudAuthSessionInvalidated, ccloudConnected } from "./emitters";
 import { Logger } from "./logging";
 import { openExternal, pollCCloudConnectionAuth } from "./sidecar/authStatusPolling";
 import {
+  clearCurrentCCloudResources,
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
@@ -333,6 +334,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private async handleSessionRemoved(updateSecret: boolean = false) {
     // the following three calls are all workspace-scoped
     logger.debug("handleSessionRemoved()", { updateSecret });
+    await clearCurrentCCloudResources();
     pollCCloudConnectionAuth.stop();
     if (!this._session) {
       logger.error("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
