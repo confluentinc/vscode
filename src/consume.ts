@@ -378,6 +378,14 @@ function messageViewerStartPollingCommand(
           filter: bitset()?.count() ?? null,
         } satisfies MessageResponse<"GetMessagesCount">;
       }
+      case "GetMessagesExtent": {
+        const { timestamp } = stream();
+        return (
+          timestamp.size > 0
+            ? [timestamp.getValue(timestamp.tail)!, timestamp.getValue(timestamp.head)!]
+            : null
+        ) satisfies MessageResponse<"GetMessagesExtent">;
+      }
       case "GetPartitionStats": {
         return partitionApi
           .listKafkaPartitions({ cluster_id: topic.clusterId, topic_name: topic.name })

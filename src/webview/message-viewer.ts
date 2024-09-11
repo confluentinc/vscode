@@ -236,6 +236,14 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     return filter != null ? filter > 0 : total > 0;
   });
+  timestampExtent = this.resolve(() => {
+    return post("GetMessagesExtent", { timestamp: this.timestamp() });
+  }, null);
+  shouldShowMessagesStat = this.derive(() => {
+    const count = this.messageCount();
+    const extent = this.timestampExtent();
+    return count.total > 0 && extent != null;
+  });
   /**
    * Short list of pages generated based on current messages count and current
    * page. Always shows first and last page, current page with two siblings.
@@ -592,6 +600,10 @@ export function post(
 export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
 export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
+export function post(
+  type: "GetMessagesExtent",
+  body: { timestamp?: number },
+): Promise<[number, number] | null>;
 export function post(
   type: "GetMaxSize",
   body: { timestamp?: number },

@@ -202,12 +202,23 @@
         </section>
       </header>
 
-      <section class="histogram">
-        <messages-histogram
-          data-prop-data="this.histogram()"
-          data-prop-select="this.selection()"
-          data-on-select="this.updateHistogramFilter(event.detail)"
-        ></messages-histogram>
+      <section class="flex-column" style="--gap: 0">
+        <template data-if="this.shouldShowMessagesStat()">
+          <label class="histogram-label"
+            ><span data-text="this.messageCount().total"></span> Messages streamed since
+            <span data-text="this.formatTimestamp()(this.timestampExtent()[0])"></span> (UTC)</label
+          >
+        </template>
+        <template data-if="!this.shouldShowMessagesStat()">
+          <label class="histogram-label">&nbsp;</label>
+        </template>
+        <div class="histogram">
+          <messages-histogram
+            data-prop-data="this.histogram()"
+            data-prop-select="this.selection()"
+            data-on-select="this.updateHistogramFilter(event.detail)"
+          ></messages-histogram>
+        </div>
       </section>
 
       <section class="content">
@@ -429,6 +440,15 @@
         min-height: 65px;
         padding: 6px 12px;
         box-sizing: content-box;
+      }
+      .histogram-label {
+        padding: 0 12px;
+        color: var(--vscode-editor-foreground);
+        font-size: var(--vscode-font-size);
+        line-height: normal;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
       }
       .content {
         flex: 1;
