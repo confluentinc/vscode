@@ -942,7 +942,7 @@ describe("ResourceManager schema tests", function () {
   });
 });
 
-describe.only("ResourceManager general utility methods", function () {
+describe("ResourceManager general utility methods", function () {
   let storageManager: StorageManager;
 
   let ccloudTopics: KafkaTopic[];
