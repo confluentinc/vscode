@@ -17,7 +17,7 @@
 
           <div class="flex-row">
             <div class="dropdown-container fixed-min-width">
-              <label for="partition-control-toggle">Partitions:</label>
+              <label for="partition-control-toggle">Partitions</label>
               <button class="control" popovertarget="partitionConsumeControl">
                 <span class="control-label" data-text="this.partitionsConsumedDescription()"></span>
                 <span class="codicon codicon-chevron-down"></span>
@@ -67,7 +67,7 @@
             </div>
 
             <div class="dropdown-container fixed-min-width">
-              <label for="consume-mode">Consume mode:</label>
+              <label for="consume-mode">Consume mode</label>
               <vscode-dropdown
                 id="consume-mode"
                 value="beginning"
@@ -82,7 +82,7 @@
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container">
-                <label for="consume-mode-timestamp">Timestamp:</label>
+                <label for="consume-mode-timestamp">Timestamp</label>
                 <vscode-text-field
                   id="consume-mode-timestamp"
                   data-prop-value="this.consumeModeTimestamp()"
@@ -94,7 +94,7 @@
             </template>
 
             <div class="dropdown-container">
-              <label for="messages-limit">Max results:</label>
+              <label for="messages-limit">Max results</label>
               <vscode-dropdown
                 id="messages-limit"
                 data-prop-value="this.messageLimit()"
@@ -143,6 +143,18 @@
                 </div>
               </div>
             </template>
+
+            <template data-if="this.timer() != null">
+              <div class="dropdown-container">
+                <label>Time elapsed</label>
+                <consume-timer
+                  class="timer"
+                  data-attr-class="'timer ' + this.streamState()"
+                  data-prop-time="this.timer()"
+                  data-prop-state="this.streamState()"
+                ></consume-timer>
+              </div>
+            </template>
           </div>
         </section>
 
@@ -162,7 +174,7 @@
             >
 
             <div class="dropdown-container fixed-min-width">
-              <label for="partition-control-toggle">Partitions filter:</label>
+              <label for="partition-control-toggle">Partitions filter</label>
               <button
                 class="control"
                 popovertarget="partitionFilterControl"
@@ -202,12 +214,23 @@
         </section>
       </header>
 
-      <section class="histogram">
-        <messages-histogram
-          data-prop-data="this.histogram()"
-          data-prop-select="this.selection()"
-          data-on-select="this.updateHistogramFilter(event.detail)"
-        ></messages-histogram>
+      <section class="flex-column" style="--gap: 0">
+        <template data-if="this.shouldShowMessagesStat()">
+          <label class="histogram-label"
+            ><span data-text="this.messageCount().total"></span> Messages streamed since
+            <span data-text="this.formatTimestamp()(this.timestampExtent()[0])"></span> (UTC)</label
+          >
+        </template>
+        <template data-if="!this.shouldShowMessagesStat()">
+          <label class="histogram-label">&nbsp;</label>
+        </template>
+        <div class="histogram">
+          <messages-histogram
+            data-prop-data="this.histogram()"
+            data-prop-select="this.selection()"
+            data-on-select="this.updateHistogramFilter(event.detail)"
+          ></messages-histogram>
+        </div>
       </section>
 
       <section class="content">
@@ -246,7 +269,7 @@
                 </template>
 
                 <th
-                  class="grid-cell grid-column-header cell-text-overflow"
+                  class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
                   popovertarget="columnSettings"
                   data-on-click="window.columnSettings.togglePopover()"
                   data-position="bottom-end"
@@ -295,10 +318,6 @@
                       data-prop-title="this.columns[this.column()].description(this.message())"
                     ></td>
                   </template>
-
-                  <td class="grid-cell cell-text-overflow" tabindex="-1">
-                    <!-- TEMP an extra cell allocated for the warning icon -->
-                  </td>
                 </tr>
               </template>
             </tbody>
@@ -430,6 +449,15 @@
         padding: 6px 12px;
         box-sizing: content-box;
       }
+      .histogram-label {
+        padding: 0 12px;
+        color: var(--vscode-editor-foreground);
+        font-size: var(--vscode-font-size);
+        line-height: normal;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
       .content {
         flex: 1;
         overflow: auto;
@@ -501,7 +529,7 @@
 
       .dropdown-container > label {
         display: block;
-        color: var(--vscode-foreground);
+        color: var(--vscode-editor-foreground);
         cursor: pointer;
         font-size: var(--vscode-font-size);
         line-height: normal;
@@ -513,6 +541,16 @@
         align-items: center;
         justify-content: center;
         min-height: 10rem;
+      }
+      .grid-settings-control {
+        grid-column: -1;
+        grid-row: 1;
+        justify-self: end;
+        cursor: pointer;
+      }
+      .grid-settings-control:hover {
+        background: var(--dropdown-background);
+        border-color: var(--dropdown-border);
       }
 
       .resize-handler {
@@ -531,7 +569,7 @@
         background: var(--dropdown-background);
         border: 1px solid var(--dropdown-border);
         border-radius: calc(var(--corner-radius-round) * 1px);
-        color: var(--foreground);
+        color: var(--vscode-editor-foreground);
         cursor: pointer;
         font-family: var(--font-family);
         font-size: var(--type-ramp-base-font-size);
@@ -559,6 +597,20 @@
       .grid-row .codicon {
         display: flex;
         font-size: 14px;
+      }
+
+      .timer {
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 2px 0;
+        line-height: 1;
+        flex: 1;
+        align-items: center;
+        display: flex;
+        color: var(--vscode-editor-foreground);
+      }
+      .timer.paused {
+        opacity: 0.5;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
