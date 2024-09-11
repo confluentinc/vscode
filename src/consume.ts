@@ -511,6 +511,7 @@ function messageViewerStartPollingCommand(
         state("running");
         latestResult(null);
         partitionFilter(null);
+        timestampFilter(null);
         dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"ConsumeModeChange">;
@@ -526,6 +527,7 @@ function messageViewerStartPollingCommand(
         state("running");
         latestResult(null);
         partitionFilter(null);
+        timestampFilter(null);
         dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"PartitionConsumeChange">;
@@ -549,6 +551,8 @@ function messageViewerStartPollingCommand(
         });
         state("running");
         latestResult(null);
+        partitionFilter(null);
+        timestampFilter(null);
         dropQueue();
         notifyUI();
         return null satisfies MessageResponse<"MessageLimitChange">;
