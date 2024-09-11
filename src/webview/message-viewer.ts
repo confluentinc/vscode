@@ -25,21 +25,14 @@ type MessageLimitType = "1m" | "100k" | "10k" | "1k" | "100";
 type MessageGridColumn = "timestamp" | "partition" | "offset" | "key" | "value";
 type MessageTimestampFormat = "iso" | "unix";
 
-const messageLimitNumber: Record<MessageLimitType, number> = {
-  "1m": 1_000_000,
-  "100k": 100_000,
-  "10k": 10_000,
-  "1k": 1_000,
-  "100": 100,
-};
-
-const messageLimitLabel: Record<string, MessageLimitType> = {
-  1_000_000: "1m",
-  100_000: "100k",
-  10_000: "10k",
-  1_000: "1k",
-  100: "100",
-};
+const labels = ["1m", "100k", "10k", "1k", "100"];
+const numbers = [1_000_000, 100_000, 10_000, 1_000, 100];
+const messageLimitNumber = Object.fromEntries(
+  labels.map((label, index) => [label, numbers[index]]),
+) as Record<MessageLimitType, number>;
+const messageLimitLabel = Object.fromEntries(
+  labels.map((label, index) => [numbers[index], label]),
+) as Record<string, MessageLimitType>;
 
 type StreamState = "running" | "paused" | "errored";
 type ConsumeMode = "latest" | "beginning" | "timestamp";
