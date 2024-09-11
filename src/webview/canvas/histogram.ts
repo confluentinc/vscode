@@ -292,8 +292,8 @@ export class Histogram extends HTMLElement {
         } else {
           const count =
             bin.filter != null
-              ? `Total: <strong>${bin.total}</strong> Filter: <strong>${bin.filter}</strong>`
-              : `Total: <strong>${bin.total}</strong>`;
+              ? `Total: <strong>${bin.total.toLocaleString()}</strong> Filter: <strong>${bin.filter.toLocaleString()}</strong>`
+              : `Total: <strong>${bin.total.toLocaleString()}</strong>`;
           const content = [
             `<div style="display: flex; flex-direction: column; gap: 0.5rem">`,
             `<label>From (inclusive)<br><code>${new Date(bin.x0!).toISOString()}</code></label>`,
