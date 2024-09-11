@@ -324,6 +324,7 @@ function messageViewerStartPollingCommand(
         });
       } catch (error) {
         let reportable: any = null;
+        let shouldPause = false;
         /* Async operations can be aborted by provided AbortController that is
         controlled by the watcher. Nothing to log in this case. */
         if (error instanceof Error && error.name === "AbortError") return;
@@ -333,6 +334,7 @@ function messageViewerStartPollingCommand(
           const payload = await error.response.json();
           // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
           if (!payload?.aborted) {
+            shouldPause = error.response.status >= 400 && error.response.status < 500;
             reportable = JSON.stringify(payload);
             logger.error(
               `An error occurred during messages consumption. Status ${error.response.status}`,
@@ -345,6 +347,8 @@ function messageViewerStartPollingCommand(
 
         os.batch(() => {
           latestFetch(Date.now());
+          // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
+          if (shouldPause) state("paused");
           if (reportable != null) {
             latestError((errors) => {
               return errors == null ? [reportable] : [reportable].concat(errors).slice(0, 10);
