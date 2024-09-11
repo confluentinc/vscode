@@ -64,6 +64,7 @@ export class Histogram extends HTMLElement {
       padding: 0.5rem 0.75rem;
       pointer-events: none;
       border: 1px solid var(--focus-border);
+      font-size: var(--vscode-font-size);
       z-index: 10;
     `;
     container.append(tooltip);
@@ -248,10 +249,13 @@ export class Histogram extends HTMLElement {
     // dispatch an event, so the parent element can subscribe to selection change
     // throttle events slightly, since a lot of selection changes are transient
     let latest: [number, number] | null, timer: ReturnType<typeof setTimeout> | null;
+    let first = true;
     os.watch(() => {
       latest = this.selection();
       timer ??= setTimeout(() => {
-        this.dispatchEvent(new CustomEvent("select", { detail: latest }));
+        // prevent unnecessary dispatch on the very first render
+        if (!first) this.dispatchEvent(new CustomEvent("select", { detail: latest }));
+        first = false;
         timer = null;
       }, 10);
     });
@@ -273,6 +277,7 @@ export class Histogram extends HTMLElement {
       const time = sx.invert(x);
       const binIndex = bisectBin.left(bins, time.valueOf());
       const bin = binIndex >= 0 ? bins[binIndex] : null;
+      const rightInclusive = binIndex === bins.length - 1;
 
       // if the pointer is over the canvas and bin is found, render the details tooltip
       if (over && bin != null) {
@@ -285,9 +290,22 @@ export class Histogram extends HTMLElement {
           tooltip.style.right = "unset";
           tooltip.style.left = x + 5 + "px";
         }
-        const count =
-          bin.filter != null ? `Count: ${bin.total}, filter: ${bin.filter}` : `Count: ${bin.total}`;
-        tooltip.textContent = `From: ${new Date(bin.x0!).toISOString()}\nTo: ${new Date(bin.x1!).toISOString()}\n${count}`;
+        if (down && selection != null) {
+          tooltip.innerHTML = `<label>Selected range</label><br><code>${new Date(selection[0]).toISOString()}</code><br><code>${new Date(selection[1]).toISOString()}</code>`;
+        } else {
+          const count =
+            bin.filter != null
+              ? `Total: <strong>${bin.total.toLocaleString()}</strong> Filter: <strong>${bin.filter.toLocaleString()}</strong>`
+              : `Total: <strong>${bin.total.toLocaleString()}</strong>`;
+          const content = [
+            `<div style="display: flex; flex-direction: column; gap: 0.5rem">`,
+            `<label>From (inclusive)<br><code>${new Date(bin.x0!).toISOString()}</code></label>`,
+            `<label>To (${rightInclusive ? "inclusive" : "exclusive"}) <br><code>${new Date(bin.x1!).toISOString()}</code></label>`,
+            `<span>${count}</span>`,
+            `</div>`,
+          ];
+          tooltip.innerHTML = content.join("");
+        }
       } else {
         tooltip.style.display = "none";
       }
