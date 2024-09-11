@@ -84,6 +84,7 @@ class MessageViewerViewModel extends ViewModel {
   }, null);
   async updateHistogramFilter(timestamps: [number, number] | null) {
     await post("TimestampFilterChange", { timestamps });
+    this.page(0);
   }
 
   /** Information about the topic's partitions. */
