@@ -6,6 +6,7 @@ import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constan
 export class LocalKafkaCluster extends Data {
   readonly connectionId: string = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
+  readonly isCCloud: boolean = false;
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
@@ -20,6 +21,7 @@ export class LocalKafkaCluster extends Data {
 export class CCloudKafkaCluster extends Data {
   readonly connectionId: string = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
+  readonly isCCloud: boolean = true;
 
   id!: Enforced<string>;
   name!: Enforced<string>;

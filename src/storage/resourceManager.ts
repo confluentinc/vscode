@@ -49,6 +49,24 @@ export class ResourceManager {
     return ResourceManager.instance;
   }
 
+  /**
+   * Delete all Confluent Cloud-related resources from extension state.
+   * @remarks This is primarily used during any CCloud connection changes where we need to "reset".
+   * As the scope of stored CCloud resources grows, this method may need to be updated to handle
+   * new resource types / storage keys.
+   */
+  async deleteCCloudResources(): Promise<void> {
+    await Promise.all([
+      this.deleteCCloudEnvironments(),
+      this.deleteCCloudKafkaClusters(),
+      this.deleteCCloudSchemaRegistryClusters(),
+      this.deleteCCloudSchemas(),
+      this.deleteCCloudTopics(),
+    ]);
+  }
+
+  // TODO(shoup): Add method for deleting all local resources once connection tracking is implemented.
+
   // ENVIRONMENTS
 
   /**
