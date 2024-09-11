@@ -17,7 +17,7 @@
 
           <div class="flex-row">
             <div class="dropdown-container fixed-min-width">
-              <label for="partition-control-toggle">Partitions:</label>
+              <label for="partition-control-toggle">Partitions</label>
               <button class="control" popovertarget="partitionConsumeControl">
                 <span class="control-label" data-text="this.partitionsConsumedDescription()"></span>
                 <span class="codicon codicon-chevron-down"></span>
@@ -67,7 +67,7 @@
             </div>
 
             <div class="dropdown-container fixed-min-width">
-              <label for="consume-mode">Consume mode:</label>
+              <label for="consume-mode">Consume mode</label>
               <vscode-dropdown
                 id="consume-mode"
                 value="beginning"
@@ -82,7 +82,7 @@
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container">
-                <label for="consume-mode-timestamp">Timestamp:</label>
+                <label for="consume-mode-timestamp">Timestamp</label>
                 <vscode-text-field
                   id="consume-mode-timestamp"
                   data-prop-value="this.consumeModeTimestamp()"
@@ -94,7 +94,7 @@
             </template>
 
             <div class="dropdown-container">
-              <label for="messages-limit">Max results:</label>
+              <label for="messages-limit">Max results</label>
               <vscode-dropdown
                 id="messages-limit"
                 data-prop-value="this.messageLimit()"
@@ -162,7 +162,7 @@
             >
 
             <div class="dropdown-container fixed-min-width">
-              <label for="partition-control-toggle">Partitions filter:</label>
+              <label for="partition-control-toggle">Partitions filter</label>
               <button
                 class="control"
                 popovertarget="partitionFilterControl"
