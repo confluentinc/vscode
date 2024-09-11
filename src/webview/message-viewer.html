@@ -257,7 +257,7 @@
                 </template>
 
                 <th
-                  class="grid-cell grid-column-header cell-text-overflow"
+                  class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
                   popovertarget="columnSettings"
                   data-on-click="window.columnSettings.togglePopover()"
                   data-position="bottom-end"
@@ -306,10 +306,6 @@
                       data-prop-title="this.columns[this.column()].description(this.message())"
                     ></td>
                   </template>
-
-                  <td class="grid-cell cell-text-overflow" tabindex="-1">
-                    <!-- TEMP an extra cell allocated for the warning icon -->
-                  </td>
                 </tr>
               </template>
             </tbody>
@@ -533,6 +529,16 @@
         align-items: center;
         justify-content: center;
         min-height: 10rem;
+      }
+      .grid-settings-control {
+        grid-column: -1;
+        grid-row: 1;
+        justify-self: end;
+        cursor: pointer;
+      }
+      .grid-settings-control:hover {
+        background: var(--dropdown-background);
+        border-color: var(--dropdown-border);
       }
 
       .resize-handler {
