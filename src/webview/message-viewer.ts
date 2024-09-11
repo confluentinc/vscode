@@ -5,12 +5,16 @@ import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage, createWebviewStorage } from "./comms/comms";
 import { Histogram, type HistogramBin } from "./canvas/histogram";
+import { Timer } from "./timer/timer";
 
 customElements.define("messages-histogram", Histogram);
+customElements.define("consume-timer", Timer);
+
 const storage = createWebviewStorage<{
   colWidth: number[];
   columnVisibilityFlags: number;
   timestamp: MessageTimestampFormat;
+  page: number;
 }>();
 
 addEventListener("DOMContentLoaded", () => {
@@ -25,21 +29,14 @@ type MessageLimitType = "1m" | "100k" | "10k" | "1k" | "100";
 type MessageGridColumn = "timestamp" | "partition" | "offset" | "key" | "value";
 type MessageTimestampFormat = "iso" | "unix";
 
-const messageLimitNumber: Record<MessageLimitType, number> = {
-  "1m": 1_000_000,
-  "100k": 100_000,
-  "10k": 10_000,
-  "1k": 1_000,
-  "100": 100,
-};
-
-const messageLimitLabel: Record<string, MessageLimitType> = {
-  1_000_000: "1m",
-  100_000: "100k",
-  10_000: "10k",
-  1_000: "1k",
-  100: "100",
-};
+const labels = ["1m", "100k", "10k", "1k", "100"];
+const numbers = [1_000_000, 100_000, 10_000, 1_000, 100];
+const messageLimitNumber = Object.fromEntries(
+  labels.map((label, index) => [label, numbers[index]]),
+) as Record<MessageLimitType, number>;
+const messageLimitLabel = Object.fromEntries(
+  labels.map((label, index) => [numbers[index], label]),
+) as Record<string, MessageLimitType>;
 
 type StreamState = "running" | "paused" | "errored";
 type ConsumeMode = "latest" | "beginning" | "timestamp";
@@ -62,8 +59,12 @@ class MessageViewerViewModel extends ViewModel {
     },
   );
 
-  page = this.signal(0);
+  page = this.signal(storage.get()?.page ?? 0);
   pageSize = this.signal(100);
+
+  pagePersistWatcher = this.watch(() => {
+    storage.set({ ...storage.get()!, page: this.page() });
+  });
 
   /** Initial state of messages collection. Stored separately so we can use to reset state. */
   emptySnapshot = { messages: [] as PartitionConsumeRecord[], indices: [] as number[] };
@@ -88,6 +89,7 @@ class MessageViewerViewModel extends ViewModel {
   }, null);
   async updateHistogramFilter(timestamps: [number, number] | null) {
     await post("TimestampFilterChange", { timestamps });
+    this.page(0);
   }
 
   /** Information about the topic's partitions. */
@@ -236,6 +238,14 @@ class MessageViewerViewModel extends ViewModel {
     const { total, filter } = this.messageCount();
     return filter != null ? filter > 0 : total > 0;
   });
+  timestampExtent = this.resolve(() => {
+    return post("GetMessagesExtent", { timestamp: this.timestamp() });
+  }, null);
+  shouldShowMessagesStat = this.derive(() => {
+    const count = this.messageCount();
+    const extent = this.timestampExtent();
+    return count.total > 0 && extent != null;
+  });
   /**
    * Short list of pages generated based on current messages count and current
    * page. Always shows first and last page, current page with two siblings.
@@ -371,7 +381,7 @@ class MessageViewerViewModel extends ViewModel {
     const columns = this.colWidth().reduce((string, width, index) => {
       return this.isColumnVisible(index) ? `${string} ${width}px` : string;
     }, "");
-    return `--grid-template-columns: ${columns} 1fr min-content`;
+    return `--grid-template-columns: ${columns} 1fr`;
   });
   /** Temporary state for resizing events. */
   resizeColumnDelta = this.signal<number | null>(null);
@@ -489,6 +499,9 @@ class MessageViewerViewModel extends ViewModel {
     this.snapshot(this.emptySnapshot);
   }
 
+  timer = this.resolve(() => {
+    return post("GetStreamTimer", { timestamp: this.timestamp() });
+  }, null);
   /** State of stream provided by the host: either running or paused. */
   streamState = this.resolve(() => {
     return post("GetStreamState", { timestamp: this.timestamp() });
@@ -577,6 +590,10 @@ class MessageViewerViewModel extends ViewModel {
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
 export function post(type: "GetStreamError", body: object): Promise<string[] | null>;
 export function post(
+  type: "GetStreamTimer",
+  body: { timestamp?: number },
+): Promise<{ start: number; offset: number }>;
+export function post(
   type: "GetMessages",
   body: { page: number; pageSize: number; timestamp?: number },
 ): Promise<{ messages: PartitionConsumeRecord[]; indices: number[] }>;
@@ -592,6 +609,10 @@ export function post(
 export function post(type: "GetSearchSource", body: { timestamp?: number }): Promise<string | null>;
 export function post(type: "GetSearchQuery", body: { timestamp?: number }): Promise<string>;
 export function post(type: "GetMessagesCount", body: { timestamp?: number }): Promise<MessageCount>;
+export function post(
+  type: "GetMessagesExtent",
+  body: { timestamp?: number },
+): Promise<[number, number] | null>;
 export function post(
   type: "GetMaxSize",
   body: { timestamp?: number },

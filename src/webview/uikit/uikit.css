@@ -25,7 +25,7 @@
 }
 .grid .grid-cell {
   padding: 4px 12px;
-  color: var(--vscode-foreground, #cccccc);
+  color: var(--vscode-editor-foreground, #cccccc);
   font-family: var(--vscode-font-family, var(--default-font-family));
   font-size: var(--vscode-font-size, 13px);
   line-height: normal;
@@ -76,7 +76,7 @@
   border: 1px solid var(--vscode-checkbox-border, #3c3c3c);
   background: var(--vscode-checkbox-background, #3c3c3c);
   font: 16px / 1 codicon;
-  color: var(--vscode-foreground, #cccccc);
+  color: var(--vscode-editor-foreground, #cccccc);
   text-rendering: auto;
   text-align: center;
   -webkit-font-smoothing: antialiased;
