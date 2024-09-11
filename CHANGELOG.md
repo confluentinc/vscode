@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Hold `Shift` key while selecting time range on histogram to make the range snap to histogram bins
+
 ### Fixed
 
 - Detect and warn the user if the wrong os/architecture sidecar is installed (as from manual

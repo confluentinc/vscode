@@ -1,5 +1,5 @@
 import { scaleLinear, scaleUtc } from "d3-scale";
-import { max } from "d3-array";
+import { max, bisector } from "d3-array";
 import { ObservableScope } from "inertial";
 
 import { stage, observeCustomProperty, observePointer } from "./canvas";
@@ -205,11 +205,14 @@ export class Histogram extends HTMLElement {
       }
     });
 
+    const bisectBin = bisector((bin: HistogramBin) => bin.x1);
+
     // using mutable state to identify whether a sequence of event was just a tap or an actual brushing
     let pointerMoved = false;
     os.watch(() => {
-      const { down, x, y } = pointer();
+      const { down, x, y, shiftKey } = pointer();
       const sx = scaleX();
+      const bins = histogram();
       if (brushX.idle() && down) {
         // initiate brushing gesture
         brushX.down(x, y);
@@ -220,10 +223,15 @@ export class Histogram extends HTMLElement {
         pointerMoved = true;
         brushX.move(x, y);
         const currentRange = brushX.get()!;
-        this.selection([
-          sx.invert(currentRange[0][0]).valueOf(),
-          sx.invert(currentRange[1][0]).valueOf(),
-        ]);
+        let lo = sx.invert(currentRange[0][0]).valueOf();
+        let hi = sx.invert(currentRange[1][0]).valueOf();
+        if (shiftKey && bins.length > 0) {
+          const loi = Math.max(0, bisectBin.left(bins, lo));
+          const hii = Math.min(bisectBin.right(bins, hi), bins.length - 1);
+          lo = bins[loi].x0;
+          hi = bins[hii].x1;
+        }
+        this.selection([lo, hi]);
       } else if (!brushX.idle() && !down) {
         brushX.up(x, y);
         // if the pointer is released but no moving was done, clear the selection
@@ -263,7 +271,8 @@ export class Histogram extends HTMLElement {
       // using x scale, convert current pointer position to time
       // so we can find matching bin in that area of the canvas
       const time = sx.invert(x);
-      const bin = bins.find((bin) => time.valueOf() >= bin.x0! && time.valueOf() <= bin.x1!);
+      const binIndex = bisectBin.left(bins, time.valueOf());
+      const bin = binIndex >= 0 ? bins[binIndex] : null;
 
       // if the pointer is over the canvas and bin is found, render the details tooltip
       if (over && bin != null) {
