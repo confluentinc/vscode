@@ -30,7 +30,7 @@ In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudi
 ### From a `.vsix` file
 
 _Note: This doc refers to the extension version as `x.x.x`. Ensure you
-replace this with the actual version number you want to use._
+replace this with the actual version number you want to use, without the `v` prefix._
 
 Confluent provides these VSIX files:
 
