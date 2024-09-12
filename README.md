@@ -1,8 +1,8 @@
-# Confluent Extension for VSCode
+# Confluent Extension for VS Code
 
 The [Confluent extension for VS Code](https://github.com/confluentinc/vscode) makes it easy
 for developers to build stream processing applications using Confluent technology. This extension
-provides a robust, delightful experience for Confluent Cloud products from within the
+provides a robust, delightful experience for [Confluent Cloud](https://confluent.cloud/) products from within the
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
 ![](resources/readme-screenshot-dark.png)
@@ -47,7 +47,7 @@ Currently, Windows is not supported, but you can use Windows Subsystem for Linux
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with one of the above Linux .vsix
 files.
 
-> The Confluent VS Code extension is available for Early Access, and some Confluent features may not
+> The Confluent extension for VS Code is available for Early Access, and some Confluent features may not
 > be available. Consider installing the
 > [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) to access all
 > features of Confluent Cloud.
