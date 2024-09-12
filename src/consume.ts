@@ -125,7 +125,7 @@ function messageViewerStartPollingCommand(
   /** Most recent response payload from Consume API. */
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
   /** Most recent failure info */
-  const latestError = os.signal<string[] | null>(null);
+  const latestError = os.signal<{ message: string } | null>(null);
   /** Timestamp of the most recent successful consumption request. */
   const latestFetch = os.signal<number>(0);
 
@@ -324,10 +324,11 @@ function messageViewerStartPollingCommand(
           flushMessages(stream);
           latestResult(result);
           latestFetch(Date.now());
+          latestError(null);
           notifyUI();
         });
       } catch (error) {
-        let reportable: any = null;
+        let reportable: { message: string } | null = null;
         let shouldPause = false;
         /* Async operations can be aborted by provided AbortController that is
         controlled by the watcher. Nothing to log in this case. */
@@ -338,15 +339,42 @@ function messageViewerStartPollingCommand(
           const payload = await error.response.json();
           // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
           if (!payload?.aborted) {
-            shouldPause = error.response.status >= 400 && error.response.status < 500;
-            reportable = JSON.stringify(payload);
+            const status = error.response.status;
+            shouldPause = status >= 400;
+            switch (status) {
+              case 401: {
+                reportable = { message: "Authentication required." };
+                break;
+              }
+              case 403: {
+                reportable = { message: "Insufficient permissions to read from topic." };
+                break;
+              }
+              case 404: {
+                if (String(payload?.title).startsWith("Error fetching the messages")) {
+                  reportable = { message: "Topic not found." };
+                } else {
+                  reportable = { message: "Unable to connect to the server." };
+                }
+                break;
+              }
+              case 429: {
+                reportable = { message: "Too many requests. Try again later." };
+                break;
+              }
+              default: {
+                reportable = { message: "Something went wrong." };
+                break;
+              }
+            }
             logger.error(
               `An error occurred during messages consumption. Status ${error.response.status}`,
             );
           }
         } else if (error instanceof Error) {
           logger.error(error.message);
-          reportable = error.message;
+          reportable = { message: "An internal error occurred." };
+          shouldPause = true;
         }
 
         os.batch(() => {
@@ -357,9 +385,7 @@ function messageViewerStartPollingCommand(
             timer((timer) => timer.pause());
           }
           if (reportable != null) {
-            latestError((errors) => {
-              return errors == null ? [reportable] : [reportable].concat(errors).slice(0, 10);
-            });
+            latestError(reportable);
           }
           notifyUI();
         });
