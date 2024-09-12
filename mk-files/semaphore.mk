@@ -54,5 +54,5 @@ _ci-bin-sem-cache-store:
 .PHONY: ci-bin-sem-cache-restore
 ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
-	cache restore $(os_name_and_arch)_npm_cache
-	cache restore $(os_name_and_arch)_playwright_cache || true
+	cache restore $(os_name)_npm_cache
+	cache restore $(os_name)_playwright_cache || true
