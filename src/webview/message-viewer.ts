@@ -87,8 +87,13 @@ class MessageViewerViewModel extends ViewModel {
     // get selection from the host when webview gets restored, otherwise use local state
     return post("GetSelection", {});
   }, null);
+  histogramTimer: ReturnType<typeof setTimeout> | null = null;
   async updateHistogramFilter(timestamps: [number, number] | null) {
-    await post("TimestampFilterChange", { timestamps });
+    // throttle events slightly, since a lot of selection changes are transient
+    this.histogramTimer ??= setTimeout(() => {
+      post("TimestampFilterChange", { timestamps: this.peek(this.selection) });
+      this.histogramTimer = null;
+    }, 10);
     this.selection(timestamps);
     this.page(0);
   }
