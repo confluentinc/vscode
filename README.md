@@ -1,8 +1,8 @@
 # Confluent for VS Code
 
-The [Confluent extension for VS Code](https://github.com/confluentinc/vscode) makes it easy
-for developers to build stream processing applications using Confluent technology. This extension
-provides a robust, delightful experience for [Confluent Cloud](https://confluent.cloud/) products from within the
+The Confluent extension makes it easy for developers to build stream processing applications using
+Confluent technology. This extension provides a robust, delightful experience for
+[Confluent Cloud](https://confluent.cloud/) products from within the
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
 ![](resources/readme-screenshot-dark.png)
@@ -14,8 +14,10 @@ Confluent, and read the docs at the [Confluent documentation](docs.confluent.io)
 
 ### From the Visual Studio Code Extension Marketplace
 
-In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudio.com/) to view, download, and install the
-[Confluent for VS Code](https://marketplace.visualstudio.com/items?itemName=confluentinc.vscode-confluent) extension.
+In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudio.com/) to view,
+download, and install the
+[Confluent for VS Code](https://marketplace.visualstudio.com/items?itemName=confluentinc.vscode-confluent)
+extension.
 
 ### From within VS Code
 
@@ -29,8 +31,8 @@ In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudi
 
 ### From a `.vsix` file
 
-_Note: This doc refers to the extension version as `x.x.x`. Ensure you
-replace this with the actual version number you want to use, without the `v` prefix._
+_Note: This doc refers to the extension version as `x.x.x`. Ensure you replace this with the actual
+version number you want to use, without the `v` prefix._
 
 Confluent provides these VSIX files:
 
@@ -43,8 +45,8 @@ Currently, Windows is not supported, but you can use Windows Subsystem for Linux
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with one of the above Linux .vsix
 files.
 
-> The Confluent extension for VS Code is available for Early Access, and some Confluent features may not
-> be available. Consider installing the
+> The Confluent extension for VS Code is available for Early Access, and some Confluent features may
+> not be available. Consider installing the
 > [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) to access all
 > features of Confluent Cloud.
 
@@ -70,8 +72,8 @@ To install by using the UI, follow these steps.
 
 ## Features
 
-The Confluent extension for VS Code provides a number of features for working with your Kafka clusters,
-topics and schemas.
+The Confluent extension for VS Code provides a number of features for working with your Kafka
+clusters, topics and schemas.
 
 ### Command Palette
 
@@ -99,7 +101,7 @@ Confluent Cloud.
 - If you're working on Confluent Cloud, open the Confluent extension and click **Connect to
   Confluent Cloud** or go to the VS Code Accounts menu and click "Sign in with Confluent Cloud to
   use Confluent".
-  
+
   <img src="resources/walkthrough/connect.png" width="400px" />
 
 #### Resources
@@ -150,23 +152,23 @@ Channels:
 
 ## Telemetry
 
-Gathering usage and error data helps Confluent develop a more resilient and user friendly application.
-Confluent enables telemetry only in official production releases. Confluent respect users' preferences
-for sending telemetry data -- if you have turned off telemetry in your VS Code settings, the extension
-doesn't send any events or data.
+Gathering usage and error data helps Confluent develop a more resilient and user friendly
+application. Confluent enables telemetry only in official production releases. Confluent respect
+users' preferences for sending telemetry data -- if you have turned off telemetry in your VS Code
+settings, the extension doesn't send any events or data.
 
 ### Segment for user actions
 
 The extension uses [Segment](https://segment.com/) to log extension usage. See `telemetry.ts` for
 implementation and how it is used in the codebase. The extension sends events when you perform major
 actions in the extension, such as using any of the registerd commands. This helps Confluent see what
-commands are popular and helps to answer other questions about how the extension is used, so Confluent
-can make it even more useful.
+commands are popular and helps to answer other questions about how the extension is used, so
+Confluent can make it even more useful.
 
 ### Sentry for error tracing
 
-The extension uses [Sentry](https://sentry.io) to capture and analyze errors, which enables more robust
-and friendly error debugging. It is the first item initialized in `extension.ts`, so that it
+The extension uses [Sentry](https://sentry.io) to capture and analyze errors, which enables more
+robust and friendly error debugging. It is the first item initialized in `extension.ts`, so that it
 can send any uncaught exceptions globally, and it's invoked in certain catch blocks to send specific
 errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 
