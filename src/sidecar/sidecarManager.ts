@@ -396,7 +396,7 @@ export class SidecarManager {
     this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
 
     sidecarOutputChannel.appendLine(
-      `Tailing Confluent VS Code extension sidecar logs from "${SIDECAR_LOGFILE_PATH}" ...`,
+      `Tailing the extension's sidecar logs from "${SIDECAR_LOGFILE_PATH}" ...`,
     );
 
     // Take note of the start of exception lines in the log file, show as toast (if user has allowed via config)
