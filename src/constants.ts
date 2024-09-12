@@ -36,6 +36,7 @@ export enum IconNames {
   CURRENT_RESOURCE = "check",
   CONNECTION = "plug",
   ORGANIZATION = "account",
+  CONFLUENT_LOGO = "confluent-logo",
   CCLOUD_ENVIRONMENT = "confluent-environment",
   CCLOUD_KAFKA = "confluent-kafka-cluster",
   LOCAL_KAFKA = "device-desktop",
@@ -52,6 +53,8 @@ export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
 
 // must match the `contributes.authentication` ID in package.json
 export const AUTH_PROVIDER_ID = "confluent-cloud-auth-provider";
+/** This is what appears in "Sign in with <label> to use Confluent" from the Accounts action. */
+export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
 
 /** Single CCloud connection spec to be used with the sidecar Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {

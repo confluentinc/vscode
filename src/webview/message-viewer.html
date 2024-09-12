@@ -17,7 +17,7 @@
 
           <div class="flex-row">
             <div class="dropdown-container fixed-min-width">
-              <label for="partition-control-toggle">Partitions:</label>
+              <label for="partition-control-toggle">Partitions</label>
               <button class="control" popovertarget="partitionConsumeControl">
                 <span class="control-label" data-text="this.partitionsConsumedDescription()"></span>
                 <span class="codicon codicon-chevron-down"></span>
@@ -67,7 +67,7 @@
             </div>
 
             <div class="dropdown-container fixed-min-width">
-              <label for="consume-mode">Consume mode:</label>
+              <label for="consume-mode">Consume mode</label>
               <vscode-dropdown
                 id="consume-mode"
                 value="beginning"
@@ -82,7 +82,7 @@
 
             <template data-if="this.consumeMode() === 'timestamp'">
               <div class="dropdown-container">
-                <label for="consume-mode-timestamp">Timestamp:</label>
+                <label for="consume-mode-timestamp">Timestamp</label>
                 <vscode-text-field
                   id="consume-mode-timestamp"
                   data-prop-value="this.consumeModeTimestamp()"
@@ -94,7 +94,7 @@
             </template>
 
             <div class="dropdown-container">
-              <label for="messages-limit">Max results:</label>
+              <label for="messages-limit">Max results</label>
               <vscode-dropdown
                 id="messages-limit"
                 data-prop-value="this.messageLimit()"
@@ -112,7 +112,7 @@
               <!-- Empty label for aligned layout with the rest of controls -->
               <label for="stream-toggle"><span>&nbsp;</span></label>
               <vscode-button
-                appearance="secondary"
+                appearance="primary"
                 id="stream-toggle"
                 data-on-click="this.handleStreamToggle(this.streamState())"
                 data-text="this.streamStateLabel()"
@@ -120,6 +120,41 @@
               >
               </vscode-button>
             </div>
+
+            <template data-if="this.streamError() != null">
+              <div class="dropdown-container">
+                <!-- Empty label for aligned layout with the rest of controls -->
+                <label for="stream-toggle"><span>&nbsp;</span></label>
+                <vscode-button
+                  appearance="secondary"
+                  popovertarget="errorLog"
+                  data-on-click="window.errorLog.togglePopover()"
+                >
+                  <span class="codicon codicon-error"></span>
+                  <label>&nbsp;An error occurred</label>
+                </vscode-button>
+
+                <div popover id="errorLog" class="partition-control">
+                  <div class="flex-column">
+                    <template data-for="error of this.streamError()">
+                      <p data-text="this.error()"></p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template data-if="this.timer() != null">
+              <div class="dropdown-container">
+                <label>Time elapsed</label>
+                <consume-timer
+                  class="timer"
+                  data-attr-class="'timer ' + this.streamState()"
+                  data-prop-time="this.timer()"
+                  data-prop-state="this.streamState()"
+                ></consume-timer>
+              </div>
+            </template>
           </div>
         </section>
 
@@ -139,7 +174,7 @@
             >
 
             <div class="dropdown-container fixed-min-width">
-              <label for="partition-control-toggle">Partitions filter:</label>
+              <label for="partition-control-toggle">Partitions filter</label>
               <button
                 class="control"
                 popovertarget="partitionFilterControl"
@@ -179,6 +214,26 @@
         </section>
       </header>
 
+      <section class="flex-column" style="--gap: 0">
+        <template data-if="this.shouldShowMessagesStat()">
+          <label class="histogram-label"
+            ><span data-text="this.messageCount().total.toLocaleString()"></span> messages streamed
+            since
+            <span data-text="this.formatTimestamp()(this.timestampExtent()[0])"></span> (UTC)</label
+          >
+        </template>
+        <template data-if="!this.shouldShowMessagesStat()">
+          <label class="histogram-label">&nbsp;</label>
+        </template>
+        <div class="histogram">
+          <messages-histogram
+            data-prop-data="this.histogram()"
+            data-prop-select="this.selection()"
+            data-on-select="this.updateHistogramFilter(event.detail)"
+          ></messages-histogram>
+        </div>
+      </section>
+
       <section class="content">
         <template data-if="this.waitingForMessages()">
           <div class="grid-banner">
@@ -201,100 +256,69 @@
           >
             <thead class="sticky-table-header">
               <tr class="grid-row">
+                <template data-for="column of this.visibleColumns() by column">
+                  <th class="grid-cell grid-column-header cell-text-overflow" tabindex="-1">
+                    <span data-text="this.columns[this.column()].title()"></span>
+                    <div
+                      class="resize-handler"
+                      data-on-pointerdown="this.handleStartResize(event, this.columns[this.column()].index)"
+                      data-on-pointermove="this.handleMoveResize(event, this.columns[this.column()].index)"
+                      data-on-pointerup="this.handleStopResize(event)"
+                      data-prop-hidden="this.column() === 'value'"
+                    ></div>
+                  </th>
+                </template>
+
                 <th
-                  class="grid-cell grid-column-header cell-text-overflow"
+                  class="grid-cell grid-column-header cell-text-overflow grid-settings-control"
+                  popovertarget="columnSettings"
+                  data-on-click="window.columnSettings.togglePopover()"
+                  data-position="bottom-end"
                   tabindex="-1"
-                  title="Timestamp"
                 >
-                  <span>Timestamp</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 0)"
-                    data-on-pointermove="this.handleMoveResize(event, 0)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Partition"
-                >
-                  <span>Partition</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 1)"
-                    data-on-pointermove="this.handleMoveResize(event, 1)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Offset"
-                >
-                  <span>Offset</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 2)"
-                    data-on-pointermove="this.handleMoveResize(event, 2)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Key"
-                >
-                  <span>Key</span>
-                  <div
-                    class="resize-handler"
-                    data-on-pointerdown="this.handleStartResize(event, 3)"
-                    data-on-pointermove="this.handleMoveResize(event, 3)"
-                    data-on-pointerup="this.handleStopResize(event)"
-                  ></div>
-                </th>
-                <th
-                  class="grid-cell grid-column-header cell-text-overflow"
-                  tabindex="-1"
-                  title="Value"
-                >
-                  <span>Value</span>
+                  <span class="codicon codicon-gear"></span>
                 </th>
               </tr>
             </thead>
+
+            <section popover id="columnSettings" class="partition-control">
+              <div class="flex-column" style="--gap: 0">
+                <label>Columns</label>
+                <template data-for="column of this.allColumns by column">
+                  <label class="checkbox">
+                    <input
+                      type="checkbox"
+                      data-prop-checked="this.isColumnVisible(this.columns[this.column()].index)"
+                      data-on-change="event.preventDefault(); this.toggleColumnVisibility(this.columns[this.column()].index)"
+                      data-prop-disabled="this.column() === 'value'"
+                    />
+                    <span data-text="this.columns[this.column()].title()"></span>
+                  </label>
+                </template>
+              </div>
+              <hr />
+              <vscode-radio-group
+                orientation="vertical"
+                data-attr-value="this.messageTimestampFormat()"
+                data-on-change="this.updateTimestampFormat(event.target.value)"
+              >
+                <label slot="label">Timestamp format</label>
+                <vscode-radio value="iso">ISO</vscode-radio>
+                <vscode-radio value="unix">Unix epoch</vscode-radio>
+              </vscode-radio-group>
+            </section>
+
             <tbody>
               <template data-for="message of this.snapshot().messages">
                 <tr class="grid-row" data-on-dblclick="this.preview(this.message())">
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.formatTimestamp(this.message().timestamp, this.timestampStyle())"
-                    data-prop-title="this.message().timestamp"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.message().partition_id"
-                    data-prop-title="this.message().partition_id"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-text="this.message().offset"
-                    data-prop-title="this.message().offset"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().key, this.search())"
-                    data-prop-title="this.message().key"
-                  ></td>
-                  <td
-                    class="grid-cell cell-text-overflow"
-                    tabindex="-1"
-                    data-children="this.formatMessageValue(this.message().value, this.search())"
-                    data-prop-title="this.formatMessageValueFull(this.message())"
-                  ></td>
+                  <template data-for="column of this.visibleColumns() by column">
+                    <td
+                      class="grid-cell cell-text-overflow"
+                      tabindex="-1"
+                      data-children="this.columns[this.column()].children(this.message())"
+                      data-prop-title="this.columns[this.column()].description(this.message())"
+                    ></td>
+                  </template>
                 </tr>
               </template>
             </tbody>
@@ -303,52 +327,55 @@
       </section>
 
       <footer class="message-viewer-pagination">
-        <div>
-          <vscode-button
-            appearance="icon"
-            aria-label="Previous page"
-            title="Previous page"
-            id="prevPage"
-            data-on-click="this.page((v) => v - 1)"
-            data-attr-disabled="!this.prevPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-left"></span>
-          </vscode-button>
-
-          <template data-for="pageButton of this.pageButtons() by pageButton">
+        <div class="flex-row" style="flex-wrap: wrap">
+          <div class="no-shrink">
             <vscode-button
               appearance="icon"
-              data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-              data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
-              data-on-click="this.page(this.pageButton())"
-              data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
-              data-attr-disabled="!this.isPageButton(this.pageButton())"
-              data-attr-active="this.page() === this.pageButton()"
-            ></vscode-button>
-          </template>
+              aria-label="Previous page"
+              title="Previous page"
+              id="prevPage"
+              data-on-click="this.page((v) => v - 1)"
+              data-attr-disabled="!this.prevPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-left"></span>
+            </vscode-button>
 
-          <vscode-button
-            appearance="icon"
-            aria-label="Next page"
-            title="Next page"
-            id="nextPage"
-            data-on-click="this.page((v) => v + 1)"
-            data-attr-disabled="!this.nextPageAvailable()"
-          >
-            <span class="codicon codicon-arrow-right"></span>
-          </vscode-button>
-        </div>
-        <template data-if="this.pageStatLabel() != null">
-          <div>
             <vscode-button
               appearance="icon"
-              aria-label="Message consumption stats"
-              title="Message consumption stats"
-              id="pageOutput"
-              data-text="this.pageStatLabel()"
-            ></vscode-button>
+              aria-label="Next page"
+              title="Next page"
+              id="nextPage"
+              data-on-click="this.page((v) => v + 1)"
+              data-attr-disabled="!this.nextPageAvailable()"
+            >
+              <span class="codicon codicon-arrow-right"></span>
+            </vscode-button>
+
+            <template data-for="pageButton of this.pageButtons() by pageButton">
+              <vscode-button
+                appearance="icon"
+                data-attr-aria-label="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-attr-title="this.isPageButton(this.pageButton()) ? 'Page ' + (this.pageButton() + 1) : undefined"
+                data-on-click="this.page(this.pageButton())"
+                data-text="this.isPageButton(this.pageButton()) ? this.pageButton() + 1 : '…'"
+                data-attr-disabled="!this.isPageButton(this.pageButton())"
+                data-attr-active="this.page() === this.pageButton()"
+                style="white-space: nowrap"
+              ></vscode-button>
+            </template>
           </div>
-        </template>
+          <template data-if="this.pageStatLabel() != null">
+            <div class="no-shrink">
+              <vscode-button
+                appearance="icon"
+                aria-label="Message consumption stats"
+                title="Message consumption stats"
+                id="pageOutput"
+                data-text="this.pageStatLabel()"
+              ></vscode-button>
+            </div>
+          </template>
+        </div>
         <div>
           <vscode-button
             appearance="icon"
@@ -378,6 +405,9 @@
         margin: 0 0 0.5rem 0;
         font-size: 95%;
       }
+      p {
+        margin: 0;
+      }
 
       .message-viewer-settings {
         display: flex;
@@ -392,6 +422,7 @@
         flex-direction: row;
         gap: 1rem;
         background: var(--vscode-sideBarTitle-background);
+        border-top: 1px solid var(--vscode-sideBar-border);
       }
       .message-viewer-pagination vscode-button {
         min-width: 22px;
@@ -402,6 +433,7 @@
       }
       .consume-settings {
         background: var(--vscode-sideBarTitle-background);
+        border-bottom: 1px solid var(--vscode-sideBar-border);
       }
       .sticky-table-header {
         position: sticky;
@@ -412,6 +444,20 @@
       .wrapper {
         display: flex;
         flex-direction: column;
+      }
+      .histogram {
+        min-height: 65px;
+        padding: 6px 12px;
+        box-sizing: content-box;
+      }
+      .histogram-label {
+        padding: 0 12px;
+        color: var(--vscode-editor-foreground);
+        font-size: var(--vscode-font-size);
+        line-height: normal;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
       }
       .content {
         flex: 1;
@@ -427,12 +473,15 @@
       .flex-row {
         display: flex;
         flex-direction: row;
-        gap: var(--gap, 1rem);
+        column-gap: var(--gap, 1rem);
       }
       .flex-column {
         display: flex;
         flex-direction: column;
-        gap: var(--gap, 1rem);
+        row-gap: var(--gap, 1rem);
+      }
+      .no-shrink {
+        flex-shrink: 0;
       }
 
       #pageStatControl {
@@ -481,7 +530,7 @@
 
       .dropdown-container > label {
         display: block;
-        color: var(--vscode-foreground);
+        color: var(--vscode-editor-foreground);
         cursor: pointer;
         font-size: var(--vscode-font-size);
         line-height: normal;
@@ -493,6 +542,16 @@
         align-items: center;
         justify-content: center;
         min-height: 10rem;
+      }
+      .grid-settings-control {
+        grid-column: -1;
+        grid-row: 1;
+        justify-self: end;
+        cursor: pointer;
+      }
+      .grid-settings-control:hover {
+        background: var(--dropdown-background);
+        border-color: var(--dropdown-border);
       }
 
       .resize-handler {
@@ -511,7 +570,7 @@
         background: var(--dropdown-background);
         border: 1px solid var(--dropdown-border);
         border-radius: calc(var(--corner-radius-round) * 1px);
-        color: var(--foreground);
+        color: var(--vscode-editor-foreground);
         cursor: pointer;
         font-family: var(--font-family);
         font-size: var(--type-ramp-base-font-size);
@@ -534,6 +593,25 @@
       .control-label {
         flex: 1;
         text-align: left;
+      }
+
+      .grid-row .codicon {
+        display: flex;
+        font-size: 14px;
+      }
+
+      .timer {
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 2px 0;
+        line-height: 1;
+        flex: 1;
+        align-items: center;
+        display: flex;
+        color: var(--vscode-editor-foreground);
+      }
+      .timer.paused {
+        opacity: 0.5;
       }
     </style>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>

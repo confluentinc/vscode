@@ -19,7 +19,12 @@ global_job_config:
   prologue:
     commands:
       - checkout
+      - make ci-bin-sem-cache-restore
       - . vault-setup
+  epilogue:
+    always:
+      commands:
+        - make ci-bin-sem-cache-store
 
 blocks:
   - name: "Package VSIX (MacOS AMD64)"

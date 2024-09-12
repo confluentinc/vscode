@@ -12,6 +12,7 @@ export * from "./ConnectionSpec";
 export * from "./ConnectionStatus";
 export * from "./ConnectionType";
 export * from "./ConnectionsList";
+export * from "./ExceededFields";
 export * from "./Failure";
 export * from "./HealthCheck";
 export * from "./HealthResponse";

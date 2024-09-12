@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { IconNames } from "../constants";
 import { ccloudConnected, ccloudOrganizationChanged } from "../emitters";
 import {
   CCloudEnvironmentGroup,
@@ -20,7 +21,7 @@ import { getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSchemas } from "./schemas";
 
-const CONFLUENT_ICON = new vscode.ThemeIcon("confluent-logo");
+const CONFLUENT_ICON = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
 /**
  * The types managed by the {@link ResourceViewProvider}, which are converted to their appropriate tree item

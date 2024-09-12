@@ -4,6 +4,50 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Errors listing topics in the Topics view after selecting a Kafka cluster will now be more
+  informative
+
+## 0.15.0
+
+### Added
+
+- Hold `Shift` key while selecting time range on histogram to make the range snap to histogram bins
+
+### Changed
+
+- Tooltips over items in the Resources, Topics, and Schemas views have been overhauled for a cleaner
+  look and more informative content
+
+### Fixed
+
+- Detect and warn the user if the wrong os/architecture sidecar is installed (as from manual
+  download of wrong vsix file).
+- If the user's Confluent Cloud connection expires, the sidebar (Resources, Topics, and Schemas
+  views) will clear out as expected.
+- We are now checking authorized operations for Confluent Cloud resources and providing more
+  informative notifications:
+  - Error notifications if the user is not authorized to delete a topic, or create topics for a
+    Kafka cluster
+  - Warning notification if the user can't access schemas when opening Message Viewer from a topic
+    (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
+    setting)
+- Project Generation form will remember values entered if user hides tab and comes back
+- Fetch authz on existing topics in a cluster up front, offer the consume or delete operations
+  conditionally based on those permitted operations.
+
+## 0.14.1
+
+### Fixed
+
+- Switching Confluent Cloud organizations now properly resets the Topics and Schemas views' focused
+  clusters (Kafka and Schema Registry, respectively).
+- Selecting different Schema Registry clusters to update the Schemas view now correctly shows
+  associated actions and empty state text/buttons.
+
+## 0.14.0
+
 ### Added
 
 - Dedicated authentication provider to allow users to connect to Confluent Cloud the same way they
@@ -20,6 +64,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
+- Multi-workspace operation improved. Having three or more workspaces with the extension activated
+  may encounter 429 responses from CCLoud via sidecar, which will be mitigated in the near future.
 - If we notice are running inside of WSL, then hint sidecar to bind to 0.0.0.0 instead of 127.0.0.1
   so as to make it possible for Windows-side browsers to complete the OAuth flow. It is expected
   that the port will still be protected by the Windows firewall.

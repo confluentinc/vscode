@@ -57,7 +57,6 @@ describe("Schema model methods", () => {
 });
 
 // TODO: update the `as Schema[]` sections below once ContainerTreeItem<T> is implemented
-// ref: https://confluentinc.atlassian.net/browse/DTX-551
 describe("Schema helper functions", () => {
   const valueSubject = "test-topic-value";
   const keySubject = "test-topic-key";

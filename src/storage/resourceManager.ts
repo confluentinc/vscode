@@ -12,6 +12,7 @@ import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/k
 import { Schema } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { AUTH_COMPLETED_KEY } from "./constants";
 
 const logger = new Logger("storage.resourceManager");
 
@@ -47,6 +48,24 @@ export class ResourceManager {
     }
     return ResourceManager.instance;
   }
+
+  /**
+   * Delete all Confluent Cloud-related resources from extension state.
+   * @remarks This is primarily used during any CCloud connection changes where we need to "reset".
+   * As the scope of stored CCloud resources grows, this method may need to be updated to handle
+   * new resource types / storage keys.
+   */
+  async deleteCCloudResources(): Promise<void> {
+    await Promise.all([
+      this.deleteCCloudEnvironments(),
+      this.deleteCCloudKafkaClusters(),
+      this.deleteCCloudSchemaRegistryClusters(),
+      this.deleteCCloudSchemas(),
+      this.deleteCCloudTopics(),
+    ]);
+  }
+
+  // TODO(shoup): Add method for deleting all local resources once connection tracking is implemented.
 
   // ENVIRONMENTS
 
@@ -554,6 +573,24 @@ export class ResourceManager {
     const schemas = await this.getCCloudSchemas();
     schemas.delete(cluster);
     await this.storage.setWorkspaceState(StateSchemas.CCLOUD, schemas);
+  }
+
+  // AUTH PROVIDER
+
+  /**
+   * Set the secret key to indicate that the CCloud auth flow has completed successfully.
+   */
+  async setAuthFlowCompleted(success: boolean): Promise<void> {
+    await this.storage.setSecret(AUTH_COMPLETED_KEY, String(success));
+  }
+
+  /**
+   * Get the secret key that indicates whether the CCloud auth flow has completed successfully.
+   * @returns `true` if the auth flow completed successfully; `false` otherwise
+   */
+  async getAuthFlowCompleted(): Promise<boolean> {
+    const success: string | undefined = await this.storage.getSecret(AUTH_COMPLETED_KEY);
+    return success === "true";
   }
 }
 

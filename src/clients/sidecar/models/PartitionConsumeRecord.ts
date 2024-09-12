@@ -13,6 +13,12 @@
  */
 
 import { mapValues } from "../runtime";
+import type { ExceededFields } from "./ExceededFields";
+import {
+  ExceededFieldsFromJSON,
+  ExceededFieldsFromJSONTyped,
+  ExceededFieldsToJSON,
+} from "./ExceededFields";
 import type { TimestampType } from "./TimestampType";
 import {
   TimestampTypeFromJSON,
@@ -76,6 +82,24 @@ export interface PartitionConsumeRecord {
    * @memberof PartitionConsumeRecord
    */
   value?: JsonNode;
+  /**
+   *
+   * @type {string}
+   * @memberof PartitionConsumeRecord
+   */
+  key_decoding_error?: string;
+  /**
+   *
+   * @type {string}
+   * @memberof PartitionConsumeRecord
+   */
+  value_decoding_error?: string;
+  /**
+   *
+   * @type {ExceededFields}
+   * @memberof PartitionConsumeRecord
+   */
+  exceeded_fields?: ExceededFields;
 }
 
 /**
@@ -108,6 +132,11 @@ export function PartitionConsumeRecordFromJSONTyped(
         : (json["headers"] as Array<any>).map(PartitionConsumeRecordHeaderFromJSON),
     key: json["key"] == null ? undefined : JsonNodeFromJSON(json["key"]),
     value: json["value"] == null ? undefined : JsonNodeFromJSON(json["value"]),
+    key_decoding_error: json["key_decoding_error"] == null ? undefined : json["key_decoding_error"],
+    value_decoding_error:
+      json["value_decoding_error"] == null ? undefined : json["value_decoding_error"],
+    exceeded_fields:
+      json["exceeded_fields"] == null ? undefined : ExceededFieldsFromJSON(json["exceeded_fields"]),
   };
 }
 
@@ -126,5 +155,8 @@ export function PartitionConsumeRecordToJSON(value?: PartitionConsumeRecord | nu
         : (value["headers"] as Array<any>).map(PartitionConsumeRecordHeaderToJSON),
     key: JsonNodeToJSON(value["key"]),
     value: JsonNodeToJSON(value["value"]),
+    key_decoding_error: value["key_decoding_error"],
+    value_decoding_error: value["value_decoding_error"],
+    exceeded_fields: ExceededFieldsToJSON(value["exceeded_fields"]),
   };
 }

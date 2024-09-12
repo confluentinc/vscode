@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "A tool for interacting with Confluent resources for easier development against Confluent Cloud and Apache Kafka®.",
-  "version": "0.15.0-14",
+  "version": "0.16.0-6",
   "preview": true,
   "publisher": "confluentinc",
   "author": {
@@ -248,6 +248,11 @@
           "type": "boolean",
           "default": false,
           "description": "Alert on sidecar process exceptions"
+        },
+        "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry cluster."
         }
       }
     },
@@ -304,7 +309,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr [click here](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html) to learn more about running Kafka locally.",
+        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr [learn more](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html) about running Kafka locally.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable)"
       },
       {
@@ -432,7 +437,7 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && confluentSchemaRegistrySelected",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
           "group": "2_copy@1"
         },
         {
@@ -524,7 +529,7 @@
         },
         {
           "command": "confluent.topic.consume",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzRead.*/",
           "group": "inline@1"
         },
         {
@@ -534,7 +539,7 @@
         },
         {
           "command": "confluent.topics.delete",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
           "group": "topics"
         },
         {
@@ -666,7 +671,7 @@
           {
             "id": "give-feedback",
             "title": "Provide Feedback",
-            "description": "The Confluent VS Code Extension is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
+            "description": "The Confluent extension for VS Code is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
             "media": {
               "markdown": "resources/walkthrough/feedback.md"
             },
@@ -688,6 +693,7 @@
     "@rollup/plugin-replace": "^5.0.7",
     "@rollup/plugin-virtual": "^3.0.2",
     "@twbs/fantasticon": "3.0.0",
+    "@types/d3": "^7.4.3",
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
@@ -713,7 +719,7 @@
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollwright": "^0.0.6",
-    "sinon": "^18.0.0",
+    "sinon": "^18.0.1",
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.0.0-alpha.28"
   },
@@ -724,6 +730,7 @@
     "@sentry/rollup-plugin": "^2.21.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "d3": "^7.9.0",
     "dataclass": "^3.0.0-beta.1",
     "gql.tada": "^1.8.3",
     "graphql": "^16.8.2",

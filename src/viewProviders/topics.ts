@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
-import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { currentKafkaClusterChanged, currentKafkaClusterTopicsChanged } from "../emitters";
+import { toKafkaTopicOperations } from "../authz/types";
+import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -40,10 +41,18 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
+    ccloudConnected.event((connected: boolean) => {
+      logger.debug("ccloudConnected event fired, resetting", connected);
+      if (this.ccloudEnvironment && this.kafkaCluster?.isCCloud) {
+        // any transition of CCloud connection state should reset the tree view if we're focused on
+        // a CCloud Kafka Cluster
+        this.reset();
+      }
+    });
     currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
       if (!cluster) {
         vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
-        this.treeView.description = "";
+        this.reset();
       } else {
         vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", true);
         this.kafkaCluster = cluster;
@@ -59,13 +68,18 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
           this.ccloudEnvironment = parentEnvironment;
           this.treeView.description = `${this.ccloudEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
         }
+        this.refresh();
       }
-      this.refresh();
     });
-    currentKafkaClusterTopicsChanged.event(() => {
-      // refresh if a topic is added, removed, or updated
-      this.refresh();
-    });
+  }
+
+  /** Convenience method to revert this view to its original state. */
+  reset(): void {
+    vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
+    this.kafkaCluster = null;
+    this.ccloudEnvironment = null;
+    this.treeView.description = "";
+    this.refresh();
   }
 
   getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -113,12 +127,28 @@ export function getTopicViewProvider() {
 export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  const topicsResp: TopicDataList = await client.listKafkaTopics({
-    cluster_id: cluster.id,
-  });
+
+  let topicsResp: TopicDataList;
+  try {
+    topicsResp = await client.listKafkaTopics({
+      cluster_id: cluster.id,
+    });
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      const body = await error.response.json();
+
+      vscode.window.showErrorMessage(
+        `Failed to list topics for cluster "${cluster.name}": ${JSON.stringify(body)}`,
+      );
+    } else {
+      logger.error("Failed to list Kafka topics: ", error);
+    }
+    return [];
+  }
 
   let environmentId: string | null = null;
   let schemas: Schema[] = [];
+
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
     const resourceManager = getResourceManager();
@@ -128,10 +158,12 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
     }
   }
 
+  // Promote each from-response-topic to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
     const hasMatchingSchema: boolean = schemas.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
+
     return KafkaTopic.create({
       name: topic.topic_name,
       is_internal: topic.is_internal,
@@ -142,6 +174,7 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       clusterId: cluster.id,
       environmentId: environmentId,
       hasSchema: hasMatchingSchema,
+      operations: toKafkaTopicOperations(topic.authorized_operations!),
     });
   });
   if (cluster instanceof CCloudKafkaCluster) {

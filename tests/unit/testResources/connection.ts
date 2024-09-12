@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 import { Connection, UserInfo } from "../../../src/clients/sidecar";
-import { CCLOUD_CONNECTION_SPEC, LOCAL_CONNECTION_SPEC } from "../../../src/constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  CCLOUD_CONNECTION_SPEC,
+  LOCAL_CONNECTION_SPEC,
+} from "../../../src/constants";
 import { SIDECAR_PORT } from "../../../src/sidecar/constants";
 import { TEST_CCLOUD_ORGANIZATION } from "./organization";
 
@@ -14,13 +18,12 @@ const TEST_CCLOUD_USER: UserInfo = {
 };
 const TEST_AUTH_EXPIRATION = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
-const TEST_CCLOUD_CONNECTION_ID = randomUUID();
 export const TEST_CCLOUD_CONNECTION: Connection = {
   api_version: "gateway/v1",
   kind: "Connection",
-  id: TEST_CCLOUD_CONNECTION_ID,
+  id: CCLOUD_CONNECTION_ID,
   metadata: {
-    self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${TEST_CCLOUD_CONNECTION_ID}`,
+    self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${CCLOUD_CONNECTION_ID}`,
   },
   spec: {
     ...CCLOUD_CONNECTION_SPEC,

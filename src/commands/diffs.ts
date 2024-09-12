@@ -9,6 +9,9 @@ import { getStorageManager } from "../storage";
 const logger = new Logger("commands.diffs");
 
 async function selectForCompareCommand(item: any) {
+  if (!item) {
+    return;
+  }
   const uri: vscode.Uri = convertItemToUri(item);
   logger.info("Selected item for compare", uri);
   await getStorageManager().setWorkspaceState(StateDiffs.SELECTED_RESOURCE, uri);
@@ -17,6 +20,9 @@ async function selectForCompareCommand(item: any) {
 }
 
 async function compareWithSelectedCommand(item: any) {
+  if (!item) {
+    return;
+  }
   const uri2: vscode.Uri = convertItemToUri(item);
   logger.info("Comparing with selected item", uri2);
 
