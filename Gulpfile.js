@@ -17,7 +17,7 @@ import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -26,7 +26,7 @@ import external from "rollup-plugin-auto-external";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
-import { rimraf } from "rimraf";
+import { rimrafSync } from "rimraf";
 
 configDotenv();
 const DESTINATION = "out";
@@ -40,11 +40,14 @@ export const clicktest = series(bundle, install);
 
 clean.description = "Clean up static assets.";
 export function clean(done) {
-  rimraf(DESTINATION).then(() => done());
+  rimrafSync(DESTINATION);
+  done();
 }
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
 export function pack(done) {
+  // Check for DESTINATION directory
+  readdirSync(DESTINATION);
   var vsceCommandArgs = ["vsce", "package"];
   // Check if TARGET is set, if so, add it to the command
   if (process.env.TARGET) {
@@ -52,6 +55,7 @@ export function pack(done) {
     vsceCommandArgs.push(process.env.TARGET);
   }
   const result = spawnSync("npx", vsceCommandArgs, { stdio: "inherit", cwd: DESTINATION });
+  if (result.error) throw result.error;
   return done(result.status);
 }
 

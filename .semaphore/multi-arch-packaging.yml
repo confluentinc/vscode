@@ -16,6 +16,9 @@ queue:
     processing: parallel
 
 global_job_config:
+  env_vars:
+    - name: NODE_ENV
+      value: "production"
   prologue:
     commands:
       - checkout
