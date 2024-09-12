@@ -1,4 +1,4 @@
-# Confluent Extension for VS Code
+# Confluent for VS Code
 
 The [Confluent extension for VS Code](https://github.com/confluentinc/vscode) makes it easy
 for developers to build stream processing applications using Confluent technology. This extension
