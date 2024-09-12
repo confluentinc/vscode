@@ -250,66 +250,6 @@ async function createTopicCommand(item?: KafkaCluster) {
   );
 }
 
-async function deleteTopicCommand(topic: KafkaTopic) {
-  const cluster = await getResourceManager().getClusterForTopic(topic);
-  if (!cluster) {
-    logger.error(`Failed to find cluster for topic "${topic.name}"`);
-    vscode.window.showErrorMessage(`Failed to find cluster for topic "${topic.name}"`);
-    return;
-  }
-  logger.info(`Deleting topic "${topic.name}" from cluster ${cluster.name}...`);
-
-  const confirmMessage = `Are you sure you want to delete the topic "${topic.name}"?`;
-
-  const topicName: string | undefined = await vscode.window.showInputBox({
-    title: confirmMessage,
-    prompt: "Enter the name of the topic to confirm",
-    ignoreFocusOut: true,
-  });
-  if (!topicName) {
-    return;
-  }
-
-  if (topicName !== topic.name) {
-    const errorMessage = `Topic name "${topicName}" does not match "${topic.name}"`;
-    logger.error(errorMessage);
-    vscode.window.showErrorMessage(errorMessage);
-    return;
-  }
-
-  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
-
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Deleting topic "${topic.name}"...`,
-    },
-    async (progress) => {
-      try {
-        await client.deleteKafkaTopic({
-          cluster_id: cluster.id,
-          topic_name: topic.name,
-        });
-        // indicate progress done 33 % now.
-        progress.report({ increment: 33 });
-
-        await waitForTopicToBeDeleted(client, cluster.id, topic.name, cluster.isLocal);
-        // Another 1/3 way done now.
-        progress.report({ increment: 33 });
-
-        // explicitly refresh the topics view after deleting a topic, so that repainting
-        // ommitting the newly deleted topic is a foreground task we block on before
-        // closing the progress window.
-        getTopicViewProvider().refresh();
-      } catch (error) {
-        const errorMessage = `Failed to delete topic: ${error}`;
-        logger.error(errorMessage);
-        vscode.window.showErrorMessage(errorMessage);
-      }
-    },
-  );
-}
-
 async function waitForTopicToExist(
   client: TopicV3Api,
   clusterId: string,
