@@ -1,31 +1,48 @@
 {
   "name": "vscode-confluent",
   "type": "module",
-  "displayName": "Confluent",
-  "description": "A tool for interacting with Confluent resources for easier development against Confluent Cloud and Apache Kafka®.",
+  "displayName": "Confluent Extension for VS Code",
+  "description": "The Confluent Extension for VS Code streamlines workflows, accelerates development cycles, and enhances real-time data processing, all within your unified IDE environment by adding tooling and commands that assist common streaming application patterns.",
   "version": "0.15.0-61",
+  "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
   "author": {
     "name": "Confluent, Inc."
   },
-  "license": "https://www.confluent.io/software-evaluation-license/",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "repository": {
     "type": "git",
     "url": "https://github.com/confluentinc/vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/confluentinc/vscode/issues",
+    "email": "vscode-extension@confluent.io"
   },
   "icon": "resources/confluent_logo-mark-meadow.png",
   "engines": {
     "vscode": "^1.87.0"
   },
   "categories": [
+    "Programming Languages",
     "Other"
   ],
   "keywords": [
-    "confluent",
+    "Confluent",
+    "Confluent Cloud",
+    "Confluent Platform",
+    "Schema Registry",
+    "Apache Kafka",
+    "Apache Flink",
     "kafka",
+    "kafka consumer",
+    "kafka producer",
+    "flink",
+    "kstreams",
     "message",
-    "schema"
+    "schema",
+    "scripts",
+    "templates"
   ],
   "activationEvents": [
     "workspaceContains:**/*.confluent.*"
