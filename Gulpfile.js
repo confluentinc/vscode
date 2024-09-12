@@ -31,6 +31,7 @@ import { rimrafSync } from "rimraf";
 configDotenv();
 const DESTINATION = "out";
 const IS_CI = process.env.CI != null;
+const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
 
@@ -314,7 +315,7 @@ function pkgjson() {
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
+  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
   return [
     virtual({
       "ide-sidecar": `export const version = "${sidecarVersion}"; export default new URL("./${sidecarFilename}", import.meta.url).pathname;`,
@@ -759,7 +760,7 @@ export function install(done) {
 downloadSidecar.description = "Download the confluentinc/ide-sidecar executable.";
 function downloadSidecar(done) {
   let result;
-  if (process.platform === "win32") {
+  if (IS_WINDOWS) {
     result = spawnSync(
       "powershell.exe",
       // Add "-ExecutionPolicy", "Bypass" if necessary

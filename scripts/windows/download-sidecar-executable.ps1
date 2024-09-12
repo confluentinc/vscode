@@ -3,7 +3,7 @@
 $IDE_SIDECAR_REPO = "ide-sidecar"
 $IDE_SIDECAR_VERSION = Get-Content .versions/ide-sidecar.txt
 $IDE_SIDECAR_VERSION_NO_V = $IDE_SIDECAR_VERSION -replace '^v', ''
-$EXECUTABLE_DOWNLOAD_PATH = "bin/ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner"
+$EXECUTABLE_DOWNLOAD_PATH = "bin/ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner.exe"
 
 # Hardcoding the OS and architecture for Windows
 # TODO: Change this to "windows-amd64" once we actually have a Windows build in GH
@@ -19,7 +19,7 @@ if ($SKIP_DOWNLOAD_EXECUTABLE) {
     New-Item -Path "bin" -ItemType Directory -Force
 
     # Set up the executable path
-    $EXECUTABLE_PATH = "ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner-$SIDECAR_OS_ARCH"
+    $EXECUTABLE_PATH = "ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner-$SIDECAR_OS_ARCH.exe"
 
     # Download the executable using GitHub CLI (gh)
     gh release download $IDE_SIDECAR_VERSION --repo $IDE_SIDECAR_REPO --pattern=$EXECUTABLE_PATH --output $EXECUTABLE_DOWNLOAD_PATH --clobber
