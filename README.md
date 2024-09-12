@@ -14,8 +14,7 @@ Confluent, and read the docs at the [Confluent documentation](docs.confluent.io)
 
 ### From the Visual Studio Code Extension Marketplace
 
-Within VS Code: search for "Confluent" in the Extensions sidebar and install the extension in your
-editor from there. Or visit the VS Code Marketplace to view, download, and install the
+In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudio.com/) to view, download, and install the
 [Confluent for VS Code](https://marketplace.visualstudio.com/items?itemName=confluentinc.vscode-confluent) extension.
 
 ### From within VS Code
