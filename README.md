@@ -21,7 +21,7 @@ In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudi
 
 1. Open VS Code.
 
-1. In the VS Code sidebar, click **Extensions**.
+1. In the VS Code sidebar, click **Extensions** (⇧⌘X).
 
 1. In the **Extensions** view, search for "Confluent".
 
