@@ -203,7 +203,7 @@ export class Histogram extends HTMLElement {
           [sx(a), h0],
           [sx(b), h1],
         ]);
-      }
+      } else brushX.set(null);
     });
 
     const bisectBin = bisector((bin: HistogramBin) => bin.x1);
