@@ -26,6 +26,7 @@ import external from "rollup-plugin-auto-external";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
+import { rimraf } from "rimraf";
 
 configDotenv();
 const DESTINATION = "out";
@@ -39,8 +40,7 @@ export const clicktest = series(bundle, install);
 
 clean.description = "Clean up static assets.";
 export function clean(done) {
-  const result = spawnSync("rm", ["-rf", DESTINATION], { stdio: "inherit" });
-  return done(result.status);
+  rimraf(DESTINATION).then(() => done());
 }
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
@@ -60,9 +60,7 @@ export function build(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
-  // Download the sidecar executable from GitHub Releases
-  const result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
-  if (result.error) throw result.error;
+  downloadSidecar(done);
 
   if (production) {
     setupSegment();
@@ -751,5 +749,27 @@ export function install(done) {
   // argument to update to latest version. To install a specific version provide '@${version}'.
   // For example: 'vscode.csharp@1.2.3'."
   const result = spawnSync("code", ["--install-extension", extensionVsix], { stdio: "inherit" });
+  return done(result.status);
+}
+
+downloadSidecar.description = "Download the confluentinc/ide-sidecar executable.";
+function downloadSidecar(done) {
+  let result;
+  if (process.platform === "win32") {
+    result = spawnSync(
+      "powershell.exe",
+      // Add "-ExecutionPolicy", "Bypass" if necessary
+      ["-File", "./scripts/windows/download-sidecar-executable.ps1"],
+      { stdio: "inherit" },
+    );
+  } else {
+    // Use the make target to download the sidecar executable
+    result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
+  }
+
+  if (result.error) {
+    console.error(result.error);
+    return done(result.error);
+  }
   return done(result.status);
 }
