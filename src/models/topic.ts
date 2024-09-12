@@ -54,13 +54,16 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
   resource: KafkaTopic;
 
   constructor(resource: KafkaTopic) {
-    super(resource.name, vscode.TreeItemCollapsibleState.Collapsed);
+    super(resource.name);
 
     // internal properties
     this.resource = resource;
     this.contextValue = resource.isLocalTopic() ? "local-kafka-topic" : "ccloud-kafka-topic";
     if (this.resource.hasSchema) {
       this.contextValue += "-with-schema";
+      this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+    } else {
+      this.collapsibleState = vscode.TreeItemCollapsibleState.None;
     }
 
     // user-facing properties
