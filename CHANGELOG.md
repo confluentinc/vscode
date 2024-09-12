@@ -4,10 +4,19 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.15.1
+
+### Added
+
+- Status labels and icons in the main Message Viewer area to indicate any error scenarios (e.g.
+  connection issues, rate limiting, etc.)
+
 ### Changed
 
 - Errors listing topics in the Topics view after selecting a Kafka cluster will now be more
   informative
+- Repo-level README and Marketplace README have been consolidated into a single README
+- Minor updates to the `package.json` description/keywords
 
 ## 0.15.0
 
