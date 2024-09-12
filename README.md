@@ -124,13 +124,7 @@ files.
 You can install the Confluent extension by using the VS Code UI or by using the
 `code --install-extension` command in the terminal.
 
-To install in the terminal, run the following command.
-
-```
-code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
-```
-
-To install by using the UI, follow these steps.
+To install by using the UI, follow these steps:
 
 1. Download the VSIX file appropriate for your machine.
 
@@ -140,6 +134,12 @@ To install by using the UI, follow these steps.
    from VSIX…**
 
 1. Navigate to your downloaded `vscode-confluent-vX.X.X.vsix` file and click **Install**.
+
+To install in the terminal, run the following command:
+
+```
+code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
+```
 
 ## Outputs
 
