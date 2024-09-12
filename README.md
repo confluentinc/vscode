@@ -1,15 +1,14 @@
 # Confluent Extension for VSCode
 
-Our goal for the [Confluent extension for VS Code](https://github.com/confluentinc/vscode) is to
-help make it easy for developers to build stream processing applications using Confluent and Apache
-Kafka® by creating a robust, delightful experience for [Confluent Cloud](https://confluent.cloud/)
-products accessible to developers from within the
+The [Confluent extension for VS Code](https://github.com/confluentinc/vscode) makes it easy
+for developers to build stream processing applications using Confluent technology. This extension
+provides a robust, delightful experience for Confluent Cloud products from within the
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
 ![](resources/readme-screenshot-dark.png)
 
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
-Confluent.
+Confluent, and read the docs at the [Confluent documentation](docs.confluent.io) site.
 
 ## Installation
 
@@ -23,7 +22,7 @@ editor from there. Or visit the VS Code Marketplace to view, download, and insta
 
 1. Open VS Code.
 
-1. Click [here](vscode://confluentinc.vscode-confluent) to automatically install the extension, or
+1. Click [here](vscode://confluentinc.vscode-confluent) to install the extension automatically, or
    follow these steps:
 
 1. In the VS Code sidebar, click **Extensions**.
@@ -34,7 +33,7 @@ editor from there. Or visit the VS Code Marketplace to view, download, and insta
 
 ### From a `.vsix` file
 
-_As a note: throughout this doc we'll refer to the version of the extension as `x.x.x`. Ensure you
+_Note: This doc refers to the extension version as `x.x.x`. Ensure you
 replace this with the actual version number you want to use._
 
 Confluent provides these VSIX files:
@@ -75,7 +74,7 @@ To install by using the UI, follow these steps.
 
 ## Features
 
-The Confluent VS Code Extension provides a number of features for working with your Kafka clusters,
+The Confluent extension for VS Code provides a number of features for working with your Kafka clusters,
 topics and schemas.
 
 ### Command Palette
@@ -153,24 +152,24 @@ Channels:
 
 ## Telemetry
 
-Gathering usage and error data helps us develop a more resilient and user friendly application. We
-only enable telemetry in official production releases. We respect users' preferences for sending
-telemetry data -- if a user has turned off telemetry in their VS Code settings, we skip sending any
-events or data.
+Gathering usage and error data helps Confluent develop a more resilient and user friendly application.
+Confluent enables telemetry only in official production releases. Confluent respect users' preferences
+for sending telemetry data -- if you have turned off telemetry in your VS Code settings, the extension
+doesn't send any events or data.
 
 ### Segment for user actions
 
-We're using [Segment](https://segment.com/) to log extension usage. See `telemetry.ts` for
-implementation & how it is used in the codebase. We send events when a user performs major actions
-in the extention, such as using any of the registerd commands. This will help us see what commands
-are popular, as well as answer other questions about how the extention is used so that we can make
-it even more useful.
+The extension uses [Segment](https://segment.com/) to log extension usage. See `telemetry.ts` for
+implementation and how it is used in the codebase. The extension sends events when you perform major
+actions in the extension, such as using any of the registerd commands. This helps Confluent see what
+commands are popular and helps to answer other questions about how the extension is used, so Confluent
+can make it even more useful.
 
 ### Sentry for error tracing
 
-We use [Sentry](https://sentry.io) to capture and analyze errors, in order to enable more robust and
-developer friendly error debugging. It is the first item initialized in `extension.ts` so that it
-can send any uncaught exceptions globally, and is invoked in certain catch blocks to send specific
+The extension uses [Sentry](https://sentry.io) to capture and analyze errors, which enables more robust
+and friendly error debugging. It is the first item initialized in `extension.ts`, so that it
+can send any uncaught exceptions globally, and it's invoked in certain catch blocks to send specific
 errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 
 ## Additional References
@@ -180,20 +179,19 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 
 ## Support
 
-If you have any questions, comments, and/or run into any issues, feel free to post a message in a
+If you have any questions, comments, or you run into any issues, feel free to post a message in a
 GitHub [discussion](https://github.com/confluentinc/vscode/discussions) or create an
 [issue](https://github.com/confluentinc/vscode/issues).
 
-For general feedback, please fill out and submit our
-[survey](https://www.surveymonkey.com/r/NYVKQD6).
+For general feedback, fill out and submit the [survey](https://www.surveymonkey.com/r/NYVKQD6).
 
 ## Contributing
 
-Follow [CONTRIBUTING.md](/CONTRIBUTING.md) to for information on setting up your development
-environment, how to propose bugfixes and improvements, and how to build and test your changes.
+Follow [CONTRIBUTING.md](/CONTRIBUTING.md) for information on setting up your development
+environment, proposing bugfixes and improvements, and building and testing your changes.
 
-See our [Code of Conduct](/CODE_OF_CONDUCT.md) for guidelines on what we expect from participants,
-and what actions will and will not be tolerated.
+See the [Code of Conduct](/CODE_OF_CONDUCT.md) for guidelines on what Confluent expects from
+participants, and what actions will and will not be tolerated.
 
 ## License
 
