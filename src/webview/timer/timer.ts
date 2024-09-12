@@ -39,7 +39,9 @@ export class Timer extends HTMLElement {
       this.shadowRoot.innerHTML =
         hours > 0
           ? `${format(hours)}:${format(minutes)}:${format(seconds)}`
-          : `${format(minutes)}:${format(seconds)}`;
+          : minutes >= 0 && seconds >= 0
+            ? `${format(minutes)}:${format(seconds)}`
+            : "00:00";
     });
   }
 
