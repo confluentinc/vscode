@@ -10,66 +10,6 @@ Confluent technology. This extension provides a robust, delightful experience fo
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
 Confluent, and read the docs at the [Confluent documentation](docs.confluent.io) site.
 
-## Installation
-
-### From the Visual Studio Code Extension Marketplace
-
-In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudio.com/) to view,
-download, and install the
-[Confluent for VS Code](https://marketplace.visualstudio.com/items?itemName=confluentinc.vscode-confluent)
-extension.
-
-### From within VS Code
-
-1. Open VS Code.
-
-1. In the VS Code sidebar, click **Extensions** (⇧⌘X).
-
-1. In the **Extensions** view, search for "Confluent".
-
-1. Click **Install**.
-
-### From a `.vsix` file
-
-_Note: This doc refers to the extension version as `x.x.x`. Ensure you replace this with the actual
-version number you want to use, without the `v` prefix._
-
-Confluent provides these VSIX files:
-
-- MacOS with Apple Silicon: `vscode-confluent-darwin-arm64-x.x.x.vsix`
-- MacOS with Intel processors: `vscode-confluent-darwin-x64-x.x.x.vsix`
-- Linux on ARM-64 processors: `vscode-confluent-linux-arm64-x.x.x.vsix`
-- Linux on x86 processors: `vscode-confluent-linux-x64-x.x.x.vsix`
-
-Currently, Windows is not supported, but you can use Windows Subsystem for Linux
-[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with one of the above Linux .vsix
-files.
-
-> The Confluent extension for VS Code is available for Early Access, and some Confluent features may
-> not be available. Consider installing the
-> [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) to access all
-> features of Confluent Cloud.
-
-You can install the Confluent extension by using the VS Code UI or by using the
-`code --install-extension` command in the terminal.
-
-To install in the terminal, run the following command.
-
-```
-code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
-```
-
-To install by using the UI, follow these steps.
-
-1. Download the VSIX file appropriate for your machine.
-
-1. Open VS Code, and in the Sidebar, click **Extensions**.
-
-1. At the top of the **Extensions** view, click **...**, and in the context menu, click **Install
-   from VSIX…**
-
-1. Navigate to your downloaded `vscode-confluent-vX.X.X.vsix` file and click **Install**.
-
 ## Features
 
 The Confluent extension for VS Code provides a number of features for working with your Kafka
@@ -140,6 +80,66 @@ then clicking the **View Schema** icon.
 
 The **Support** panel provides links to the extension walkthrough, issue reporting, general
 feedback, and options to generate Kafka projects using a template.
+
+## Installation
+
+### From the Visual Studio Code Extension Marketplace
+
+In your browser, go to the [VS Code Marketplace](https://marketplace.visualstudio.com/) to view,
+download, and install the
+[Confluent for VS Code](https://marketplace.visualstudio.com/items?itemName=confluentinc.vscode-confluent)
+extension.
+
+### From within VS Code
+
+1. Open VS Code.
+
+1. In the VS Code sidebar, click **Extensions** (⇧⌘X).
+
+1. In the **Extensions** view, search for "Confluent".
+
+1. Click **Install**.
+
+### From a `.vsix` file
+
+_Note: This doc refers to the extension version as `x.x.x`. Ensure you replace this with the actual
+version number you want to use, without the `v` prefix._
+
+Confluent provides these VSIX files:
+
+- MacOS with Apple Silicon: `vscode-confluent-darwin-arm64-x.x.x.vsix`
+- MacOS with Intel processors: `vscode-confluent-darwin-x64-x.x.x.vsix`
+- Linux on ARM-64 processors: `vscode-confluent-linux-arm64-x.x.x.vsix`
+- Linux on x86 processors: `vscode-confluent-linux-x64-x.x.x.vsix`
+
+Currently, Windows is not supported, but you can use Windows Subsystem for Linux
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with one of the above Linux .vsix
+files.
+
+> The Confluent extension for VS Code is available for Early Access, and some Confluent features may
+> not be available. Consider installing the
+> [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) to access all
+> features of Confluent Cloud.
+
+You can install the Confluent extension by using the VS Code UI or by using the
+`code --install-extension` command in the terminal.
+
+To install in the terminal, run the following command.
+
+```
+code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
+```
+
+To install by using the UI, follow these steps.
+
+1. Download the VSIX file appropriate for your machine.
+
+1. Open VS Code, and in the Sidebar, click **Extensions**.
+
+1. At the top of the **Extensions** view, click **...**, and in the context menu, click **Install
+   from VSIX…**
+
+1. Navigate to your downloaded `vscode-confluent-vX.X.X.vsix` file and click **Install**.
 
 ## Outputs
 
