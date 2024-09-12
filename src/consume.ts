@@ -20,6 +20,7 @@ import {
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { Logger } from "./logging";
+import { getTelemetryLogger } from "./telemetry";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -434,6 +435,7 @@ function messageViewerStartPollingCommand(
         return (search?.query ?? "") satisfies MessageResponse<"GetSearchQuery">;
       }
       case "PreviewMessageByIndex": {
+        track({ action: "preview-message" });
         const { messages, serialized } = stream();
         const index = body.index;
         const message = messages.at(index);
@@ -459,6 +461,7 @@ function messageViewerStartPollingCommand(
         return null;
       }
       case "PreviewJSON": {
+        track({ action: "preview-snapshot" });
         const {
           timestamp,
           messages: { values },
@@ -487,6 +490,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"PreviewJSON">;
       }
       case "SearchMessages": {
+        track({ action: "search" });
         if (body.search != null) {
           const { capacity, messages } = stream();
           const values = messages.values;
@@ -524,6 +528,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"StreamResume">;
       }
       case "ConsumeModeChange": {
+        track({ action: "consume-mode-change" });
         mode(body.mode);
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params(getParams(body.mode, body.timestamp, maxPollRecords));
@@ -542,6 +547,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"ConsumeModeChange">;
       }
       case "PartitionConsumeChange": {
+        track({ action: "consume-partition-change" });
         partitionConsumed(body.partitions);
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
@@ -560,16 +566,19 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"PartitionConsumeChange">;
       }
       case "PartitionFilterChange": {
+        track({ action: "filter-partition-change" });
         partitionFilter(body.partitions);
         notifyUI();
         return null satisfies MessageResponse<"PartitionFilterChange">;
       }
       case "TimestampFilterChange": {
+        track({ action: "filter-timestamp-change" });
         timestampFilter(body.timestamps);
         notifyUI();
         return null satisfies MessageResponse<"TimestampFilterChange">;
       }
       case "MessageLimitChange": {
+        track({ action: "consume-message-limit-change" });
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, body.limit);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream(new Stream(body.limit));
@@ -711,4 +720,8 @@ class Timer extends Data {
   reset(this: Timer) {
     return this.copy({ start: Date.now(), offset: 0 });
   }
+}
+
+function track(details: object) {
+  getTelemetryLogger().logUsage("Message Viewer Action", details);
 }
