@@ -1,6 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { CustomMarkdownString } from "./main";
 
 /** Main class representing a local Kafka cluster */
 export class LocalKafkaCluster extends Data {
@@ -44,26 +45,53 @@ export class KafkaClusterTreeItem extends vscode.TreeItem {
   resource: KafkaCluster;
 
   constructor(resource: KafkaCluster) {
-    const label = resource.name;
-    super(label, vscode.TreeItemCollapsibleState.None);
+    super(resource.name, vscode.TreeItemCollapsibleState.None);
 
+    // internal properties
     this.resource = resource;
-    this.description = `${this.resource.id}`;
-
     // currently only used to determine whether or not we can show the rename command
     this.contextValue = this.resource.isLocal ? "local-kafka-cluster" : "ccloud-kafka-cluster";
 
-    // TODO: update based on product+design feedback
-    this.tooltip = JSON.stringify(resource, null, 2);
+    // user-facing properties
+    this.description = `${this.resource.id}`;
+    this.iconPath = new vscode.ThemeIcon(
+      this.resource.isLocal ? IconNames.LOCAL_KAFKA : IconNames.CCLOUD_KAFKA,
+    );
+    this.tooltip = createKafkaClusterTooltip(this.resource);
 
-    // set icon based on whether this is a CCloud or local cluster
-    const iconName = this.resource.isLocal ? IconNames.LOCAL_KAFKA : IconNames.CCLOUD_KAFKA;
-    this.iconPath = new vscode.ThemeIcon(iconName);
-
+    // set primary click action to select this cluster as the current one, focusing it in the Topics view
     this.command = {
       command: "confluent.resources.kafka-cluster.select",
       title: "Set Current Kafka Cluster",
       arguments: [this.resource],
     };
   }
+}
+
+function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownString {
+  const tooltip = new CustomMarkdownString();
+  if (resource.isCCloud) {
+    const ccloudCluster = resource as CCloudKafkaCluster;
+    tooltip
+      .appendMarkdown(`#### $(${IconNames.CCLOUD_KAFKA}) Confluent Cloud Kafka Cluster`)
+      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`ID: \`${ccloudCluster.id}\`\n\n`)
+      .appendMarkdown(`Name: \`${ccloudCluster.name}\`\n\n`)
+      .appendMarkdown(`Provider: \`${ccloudCluster.provider}\`\n\n`)
+      .appendMarkdown(`Region: \`${ccloudCluster.region}\`\n\n`)
+      .appendMarkdown(`Bootstrap Servers: \`${ccloudCluster.bootstrapServers}\``)
+      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(
+        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
+      );
+  } else {
+    const localCluster = resource as LocalKafkaCluster;
+    tooltip
+      .appendMarkdown(`#### $(${IconNames.LOCAL_KAFKA}) Local Kafka Cluster`)
+      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`ID: \`${localCluster.id}\`\n\n`)
+      .appendMarkdown(`Bootstrap Servers: \`${localCluster.bootstrapServers}\`\n\n`)
+      .appendMarkdown(`URI: \`${localCluster.uri}\``);
+  }
+  return tooltip;
 }

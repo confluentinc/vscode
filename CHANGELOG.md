@@ -15,6 +15,11 @@ All notable changes to this extension will be documented in this file.
 
 - Hold `Shift` key while selecting time range on histogram to make the range snap to histogram bins
 
+### Changed
+
+- Tooltips over items in the Resources, Topics, and Schemas views have been overhauled for a cleaner
+  look and more informative content
+
 ### Fixed
 
 - Detect and warn the user if the wrong os/architecture sidecar is installed (as from manual

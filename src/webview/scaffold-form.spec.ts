@@ -50,7 +50,6 @@ test.only("dummy form submission", async ({ execute, page }) => {
   });
 
   await execute(async (stub) => {
-    // prettier-ignore
     const dummy: TemplateManifest = {
       template_api_version: "0.0.1",
       name: "go-consumer",

@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "A tool for interacting with Confluent resources for easier development against Confluent Cloud and Apache Kafka®.",
-  "version": "0.15.0-56",
+  "version": "0.16.0-5",
   "preview": true,
   "publisher": "confluentinc",
   "author": {
@@ -657,7 +657,7 @@
           {
             "id": "give-feedback",
             "title": "Provide Feedback",
-            "description": "The Confluent VS Code Extension is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
+            "description": "The Confluent extension for VS Code is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
             "media": {
               "markdown": "resources/walkthrough/feedback.md"
             },
