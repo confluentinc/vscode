@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
-import { TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -167,12 +167,28 @@ export async function getTopicsForCluster(
 
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  const topicsResp: TopicDataList = await client.listKafkaTopics({
-    cluster_id: cluster.id,
-    includeAuthorizedOperations: true,
-  });
+  let topicsResp: TopicDataList;
 
-  // Promote each from-response TopicData representation to an internal KafkaTopic object
+  try {
+    topicsResp = await client.listKafkaTopics({
+      cluster_id: cluster.id,
+      includeAuthorizedOperations: true,
+    });
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      const body = await error.response.json();
+
+      vscode.window.showErrorMessage(
+        `Failed to list topics for cluster "${cluster.name}": ${JSON.stringify(body)}`,
+      );
+    } else {
+      logger.error("Failed to list Kafka topics: ", error);
+    }
+    // short circuit return, do NOT cache result on error. Ensure we try again on next refresh.
+    return [];
+  }
+
+  // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
     const hasMatchingSchema: boolean = schemas.some((schema) =>
       schema.matchesTopicName(topic.topic_name),

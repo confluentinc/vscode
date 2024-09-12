@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Errors listing topics in the Topics view after selecting a Kafka cluster will now be more
+  informative
+
+## 0.15.0
+
 ### Added
 
 - Hold `Shift` key while selecting time range on histogram to make the range snap to histogram bins
