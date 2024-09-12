@@ -177,6 +177,13 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 - [Confluent Documentation](https://docs.confluent.io/index.html)
 - [VS Code Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
 
+## Known Limitations
+
+- Confluent Cloud connections require reauthenticating after four hours, and you will be prompted to
+  reauthenticate.
+- Preview links for non-default organizations work only after switching to the non-default
+  organization in the Confluent Cloud UI in your browser.
+
 ## Support
 
 If you have any questions, comments, or you run into any issues, feel free to post a message in a
