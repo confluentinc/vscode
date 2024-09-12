@@ -22,9 +22,6 @@ editor from there. Or visit the VS Code Marketplace to view, download, and insta
 
 1. Open VS Code.
 
-1. Click [here](vscode://confluentinc.vscode-confluent) to install the extension automatically, or
-   follow these steps:
-
 1. In the VS Code sidebar, click **Extensions**.
 
 1. In the **Extensions** view, search for "Confluent".
