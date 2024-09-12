@@ -79,57 +79,18 @@ topics and schemas.
 ### Command Palette
 
 Most of the Confluent extension features are available in the VS Code Command Palette. Press
-`Cmd+Shift+P` and type "confluent" to show the Confluent extension commands.
+`Cmd+Shift+P`/`Ctrl+Shift+P` and type "confluent" to show the Confluent extension commands.
 
 Some commands are associated with view actions, which are the simple buttons (usually icons) next to
-items in the Sidebar. For example, **play** (open message viewer), **sync** (refresh), and
-**ellipsis** (extra actions) are all view actions associated with commands available in the command
-palette.
+items in the Sidebar. For example, **play** (open Message Viewer and start consuming messages),
+**sync** (refresh), and **ellipsis** (extra actions) are all view actions associated with commands
+available in the command palette.
 
 ### Sidebar
 
 In the Sidebar, click the Confluent logo to open the extension and show the following sections.
 
-#### Resources
-
-The **Resources** tab lists Confluent Cloud environments and associated Kafka and Schema Registry
-clusters, as well as local Kafka clusters.
-
-- Click a cluster name to load the topics created in that cluster in the Topics panel.
-- Click the Schema Registry cluster name to load the associated schemas for that registry in the
-  Schemas panel.
-
-#### Topics
-
-Click the **play** icon next to the topic name to open the **Message Viewer**, which enables
-searching and exploring messages in a topic. You can page through and search for specific values
-within the list of all the messages. Double-click a single message to explore its entire payload
-encoded into JSON. The message stream is pausable and can be resumed at any time.
-
-#### Schemas
-
-The **Schemas** panel displays all the schemas available for the current Confluent Cloud
-environment's Schema Registry. Schemas are also shown in the **Topics** panel if they match the
-`TopicNameStrategy`. Double-click a schema to open it in VS Code and explore it.
-
-> Currently, any changes you make to the schema are not saved.
-
-#### Support
-
-The **Support** panel provides links to the extension walkthrough and options to generate Kafka
-projects using a template.
-
-## Outputs
-
-Once the Confluent extension is activated, you can view extension outputs in three separate Output
-Channels:
-
-- **Confluent**: logs for the VS Code extension itself
-- **Confluent Extension->Sidecar Request/Response**: logs of the communication between the extension
-  and the Sidecar
-- **Confluent (Sidecar)**: logs from the Sidecar
-
-## Connect to your streams
+#### Connect to your streams
 
 The Confluent extension for VS Code supports accessing your Apache Kafka® clusters locally or on
 Confluent Cloud.
@@ -142,11 +103,57 @@ Confluent Cloud.
   Confluent Cloud** or go to the VS Code Accounts menu and click "Sign in with Confluent Cloud to
   use Confluent". ![](resources/walkthrough/connect.png)
 
+#### Resources
+
+The **Resources** view lists Confluent Cloud environments and associated Kafka and Schema Registry
+clusters, as well as local Kafka clusters.
+
+- Click a Kafka cluster to load the topics created in that cluster in the Topics view.
+- Click a Schema Registry cluster to load the associated schemas for that registry in the Schemas
+  view.
+
+#### Topics
+
+Click the **play** icon next to the topic name to open the **Message Viewer**, which enables
+searching and exploring messages in a topic. Within Message Viewer, you can:
+
+- page through and search for specific values within the list of all the messages
+- double-click a single message to explore its entire payload encoded into JSON
+- pause and resume consuming at any time
+- see aggregate counts of messages over time from the histogram view and brush to filter messages by
+  timestamp
+- toggle partitions on/off to show/hide messages from specific partitions
+
+#### Schemas
+
+The **Schemas** view displays all the schemas available for the current Confluent Cloud
+environment's Schema Registry. Schemas are also shown in the **Topics** view by expanding a topic
+item if they match the
+[`TopicNameStrategy`](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview)
+and the user has the appropriate permissions.
+
+Schema definitions can be viewed by expanding the schema subject to see a specific schema version,
+then clicking the **View Schema** icon.
+
+#### Support
+
+The **Support** panel provides links to the extension walkthrough, issue reporting, general
+feedback, and options to generate Kafka projects using a template.
+
+## Outputs
+
+Once the Confluent extension is activated, you can view extension logs in two separate Output
+Channels:
+
+- **Confluent**: logs for the VS Code extension itself
+- **Confluent (Sidecar)**: logs from the
+  [Sidecar process](https://github.com/confluentinc/ide-sidecar)
+
 ## Telemetry
 
 Gathering usage and error data helps us develop a more resilient and user friendly application. We
 only enable telemetry in official production releases. We respect users' preferences for sending
-telemetry data -- if a user has turned off telemetry in their VSCode settings, we skip sending any
+telemetry data -- if a user has turned off telemetry in their VS Code settings, we skip sending any
 events or data.
 
 ### Segment for user actions
