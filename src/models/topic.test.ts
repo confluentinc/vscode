@@ -130,6 +130,10 @@ describe("KafkaTopicTreeItem constructor", () => {
     assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
     assert.strictEqual((icon as vscode.ThemeIcon).id, IconNames.TOPIC);
     assert.strictEqual(schemaTopicTreeItem.contextValue!.includes("-with-schema"), true);
+    assert.strictEqual(
+      schemaTopicTreeItem.collapsibleState,
+      vscode.TreeItemCollapsibleState.Collapsed,
+    );
   });
 
   it("no schema implications", () => {
