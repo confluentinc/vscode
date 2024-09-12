@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.15.0
+
 ### Added
 
 - Hold `Shift` key while selecting time range on histogram to make the range snap to histogram bins
