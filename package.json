@@ -2,7 +2,7 @@
   "name": "vscode-confluent",
   "type": "module",
   "displayName": "Confluent Extension for VS Code",
-  "description": "The Confluent Extension for VS Code streamlines workflows, accelerates development cycles, and enhances real-time data processing, all within your unified IDE environment by adding tooling and commands that assist common streaming application patterns.",
+  "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
   "version": "0.15.0-61",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
