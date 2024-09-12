@@ -6,6 +6,8 @@ Kafka® by creating a robust, delightful experience for [Confluent Cloud](https:
 products accessible to developers from within the
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
+![](resources/readme-screenshot-dark.png)
+
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
 Confluent.
 
