@@ -99,7 +99,9 @@ Confluent Cloud.
   [`confluent local kafka start` command](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html).
 - If you're working on Confluent Cloud, open the Confluent extension and click **Connect to
   Confluent Cloud** or go to the VS Code Accounts menu and click "Sign in with Confluent Cloud to
-  use Confluent". ![](resources/walkthrough/connect.png)
+  use Confluent".
+  
+  <img src="resources/walkthrough/connect.png" width="400px" />
 
 #### Resources
 
