@@ -598,7 +598,7 @@ class MessageViewerViewModel extends ViewModel {
 }
 
 export function post(type: "GetStreamState", body: { timestamp?: number }): Promise<StreamState>;
-export function post(type: "GetStreamError", body: object): Promise<string[] | null>;
+export function post(type: "GetStreamError", body: object): Promise<{ message: string } | null>;
 export function post(
   type: "GetStreamTimer",
   body: { timestamp?: number },
