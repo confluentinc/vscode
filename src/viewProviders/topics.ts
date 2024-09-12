@@ -132,6 +132,7 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
   try {
     topicsResp = await client.listKafkaTopics({
       cluster_id: cluster.id,
+      includeAuthorizedOperations: true,
     });
   } catch (error) {
     if (error instanceof ResponseError) {
