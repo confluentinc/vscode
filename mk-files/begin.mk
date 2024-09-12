@@ -7,7 +7,12 @@ TAR ?= tar
 WINDOWS ?= false
 
 # Set shell to bash
-SHELL ?= /bin/bash
+ifeq ($(WINDOWS), true)
+SHELL := powershell.exe
+.SHELLFLAGS := -NoProfile -Command
+else
+SHELL := /bin/bash
+endif
 
 # Use this variable to specify a different make utility (e.g. remake --profile)
 MAKE ?= make

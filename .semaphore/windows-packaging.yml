@@ -22,13 +22,31 @@ global_job_config:
   prologue:
     commands:
       - checkout
+      - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+      - $Env:PATH += ";C:\Program Files\Git\bin"
+      - $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+      - vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+      - choco install nodejs-lts --version="20.17.0" -y
+      - choco install gh -y
 
 blocks:
-  - name: "Package VSIX (Windows AMD64)"
+  - name: "Package VSIX (Windows x64)"
     dependencies: []
+    env_vars:
+      - name: TARGET
+        value: win32-x64
+    prologue:
+      commands:
+        - npm ci
+
     task:
       jobs:
-        - name: "Package VSIX (Windows AMD64)"
+        - name: "Package VSIX (Windows x64)"
           commands:
-            - make package-vsix
-            # - make upload-windows-vsix-to-gh-releases
+            - make download-third-party-notices-sidecar
+            - npx gulp bundle
+            - |
+              $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
+              $version = $packageJson.version;
+              $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+            - gh release upload $version $vsix --clobber

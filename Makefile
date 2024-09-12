@@ -51,12 +51,6 @@ release-current-version:
 	export CI_SKIP= ;\
 	$(MAKE) release-ci
 
-.PHONY: package-vsix
-package-vsix:
-	export TARGET=$(TARGET) ;\
-	export NODE_ENV=production ;\
-	npx gulp bundle
-
 version_no_v = $(shell echo $(1) | sed 's,^v,,' )
 
 VSCODE_EXTENSION_S3_PREFIX ?= vscode
@@ -99,25 +93,10 @@ SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 
 
 IDE_SIDECAR_REPO := confluentinc/ide-sidecar
 
+# This target is meant for non-Windows platforms to download the sidecar executable
+# For Windows, we use scripts/windows/download-sidecar-executable.ps1
 .PHONY: download-sidecar-executable
 download-sidecar-executable:
-ifeq ($(WINDOWS), true)
-	$$IDE_SIDECAR_REPO = "ide-sidecar"; \\
-    $$IDE_SIDECAR_VERSION = Get-Content .versions/ide-sidecar.txt; \\
-    $$IDE_SIDECAR_VERSION_NO_V = $IDE_SIDECAR_VERSION -replace '^v', ''; \\
-    $$EXECUTABLE_DOWNLOAD_PATH = \"bin/ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner\"; \
-    $$SIDECAR_OS_ARCH = "linux-amd64"; \
-    $$SKIP_DOWNLOAD_EXECUTABLE = Test-Path $EXECUTABLE_DOWNLOAD_PATH -PathType Leaf; \
-    if ($$SKIP_DOWNLOAD_EXECUTABLE) { \
-        Write-Host "Skipping download of sidecar executable since it already exists at $EXECUTABLE_DOWNLOAD_PATH" \
-    } else { \
-        New-Item -Path "bin" -ItemType Directory -Force | Out-Null \
-        $$EXECUTABLE_PATH = "ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner-$SIDECAR_OS_ARCH" \
-        gh release download $IDE_SIDECAR_VERSION --repo $$IDE_SIDECAR_REPO --pattern=$$EXECUTABLE_PATH --output $$EXECUTABLE_DOWNLOAD_PATH --clobber \
-        icacls $$EXECUTABLE_DOWNLOAD_PATH /grant Everyone:"(X)" | Out-Null \
-        Write-Host "Downloaded sidecar executable to $EXECUTABLE_DOWNLOAD_PATH" \
-    }
-else
 ifeq ($(SKIP_DOWNLOAD_EXECUTABLE),true)
 	@echo "Skipping download of sidecar executable since it already exists at $(EXECUTABLE_DOWNLOAD_PATH)"
 else
@@ -126,7 +105,6 @@ else
     gh release download $(IDE_SIDECAR_VERSION) --repo $(IDE_SIDECAR_REPO) --pattern=$${EXECUTABLE_PATH} --output $(EXECUTABLE_DOWNLOAD_PATH) --clobber && \
     chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
     echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"
-endif
 endif
 
 VSIX_MULTIARCH_ARCHIVE_FILENAME := confluent-vscode-extension-multiarch-$(LATEST_VERSION_NO_V).zip

@@ -29,9 +29,6 @@ global_job_config:
 blocks:
   - name: "Package VSIX (MacOS AMD64)"
     dependencies: []
-    # TODO: Remove me
-    skip:
-      when: true
     task:
       agent:
         machine:
@@ -49,16 +46,13 @@ blocks:
       jobs:
         - name: "Package VSIX (MacOS AMD64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
 
   - name: "Package VSIX (MacOS ARM64)"
     dependencies: []
-    # TODO: Remove me
-    skip:
-      when: true
     task:
       agent:
         machine:
@@ -73,16 +67,13 @@ blocks:
       jobs:
         - name: "Package VSIX (MacOS ARM64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
 
   - name: "Package VSIX (Linux AMD64)"
     dependencies: []
-    # TODO: Remove me
-    skip:
-      when: true
     task:
       agent:
         machine:
@@ -97,16 +88,13 @@ blocks:
       jobs:
         - name: "Package VSIX (Linux AMD64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
 
   - name: "Package VSIX (Linux ARM64)"
     dependencies: []
-    # TODO: Remove me
-    skip:
-      when: true
     task:
       agent:
         machine:
@@ -121,7 +109,7 @@ blocks:
       jobs:
         - name: "Package VSIX (Linux ARM64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
