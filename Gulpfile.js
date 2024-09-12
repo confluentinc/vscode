@@ -112,7 +112,7 @@ export function build(done) {
             ],
             dest: DESTINATION,
           },
-          { src: ["public/README.md"], dest: DESTINATION, rename: "README.md" },
+          { src: ["README.md"], dest: DESTINATION },
           { src: ["CHANGELOG.md"], dest: DESTINATION },
         ],
       }),
