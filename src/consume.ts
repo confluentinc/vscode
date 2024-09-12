@@ -528,6 +528,7 @@ function messageViewerStartPollingCommand(
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params(getParams(body.mode, body.timestamp, maxPollRecords));
         stream((value) => new Stream(value.capacity));
+        isStreamFull(false);
         textFilter((value) => {
           return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
         });
@@ -545,6 +546,7 @@ function messageViewerStartPollingCommand(
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream((value) => new Stream(value.capacity));
+        isStreamFull(false);
         textFilter((value) => {
           return value != null ? { ...value, bitset: new BitSet(value.bitset.capacity) } : null;
         });
@@ -571,6 +573,7 @@ function messageViewerStartPollingCommand(
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, body.limit);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream(new Stream(body.limit));
+        isStreamFull(false);
         textFilter((value) => {
           return value != null ? { ...value, bitset: new BitSet(body.limit) } : null;
         });
