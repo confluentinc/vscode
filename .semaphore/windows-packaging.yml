@@ -41,7 +41,6 @@ blocks:
     prologue:
       commands:
         - npm ci
-
     task:
       jobs:
         - name: "Package VSIX (Windows x64)"
@@ -52,4 +51,6 @@ blocks:
               $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
               $version = $packageJson.version;
               $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+            - artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
+            # Will fail on non-main and non-release branches
             - gh release upload $version $vsix --clobber
