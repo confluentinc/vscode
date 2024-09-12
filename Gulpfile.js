@@ -17,7 +17,7 @@ import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -26,10 +26,12 @@ import external from "rollup-plugin-auto-external";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
+import { rimrafSync } from "rimraf";
 
 configDotenv();
 const DESTINATION = "out";
 const IS_CI = process.env.CI != null;
+const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
 
@@ -39,12 +41,14 @@ export const clicktest = series(bundle, install);
 
 clean.description = "Clean up static assets.";
 export function clean(done) {
-  const result = spawnSync("rm", ["-rf", DESTINATION], { stdio: "inherit" });
-  return done(result.status);
+  rimrafSync(DESTINATION);
+  done();
 }
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
 export function pack(done) {
+  // Check for DESTINATION directory
+  readdirSync(DESTINATION);
   var vsceCommandArgs = ["vsce", "package"];
   // Check if TARGET is set, if so, add it to the command
   if (process.env.TARGET) {
@@ -52,6 +56,7 @@ export function pack(done) {
     vsceCommandArgs.push(process.env.TARGET);
   }
   const result = spawnSync("npx", vsceCommandArgs, { stdio: "inherit", cwd: DESTINATION });
+  if (result.error) throw result.error;
   return done(result.status);
 }
 
@@ -60,9 +65,7 @@ export function build(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
-  // Download the sidecar executable from GitHub Releases
-  const result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
-  if (result.error) throw result.error;
+  downloadSidecar(done);
 
   if (production) {
     setupSegment();
@@ -312,7 +315,7 @@ function pkgjson() {
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
+  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
   return [
     virtual({
       "ide-sidecar": `export const version = "${sidecarVersion}"; export default new URL("./${sidecarFilename}", import.meta.url).pathname;`,
@@ -751,5 +754,27 @@ export function install(done) {
   // argument to update to latest version. To install a specific version provide '@${version}'.
   // For example: 'vscode.csharp@1.2.3'."
   const result = spawnSync("code", ["--install-extension", extensionVsix], { stdio: "inherit" });
+  return done(result.status);
+}
+
+downloadSidecar.description = "Download the confluentinc/ide-sidecar executable.";
+function downloadSidecar(done) {
+  let result;
+  if (IS_WINDOWS) {
+    result = spawnSync(
+      "powershell.exe",
+      // Add "-ExecutionPolicy", "Bypass" if necessary
+      ["-File", "./scripts/windows/download-sidecar-executable.ps1"],
+      { stdio: "inherit" },
+    );
+  } else {
+    // Use the make target to download the sidecar executable
+    result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
+  }
+
+  if (result.error) {
+    console.error(result.error);
+    return done(result.error);
+  }
   return done(result.status);
 }
