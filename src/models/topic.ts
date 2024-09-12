@@ -54,7 +54,7 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
   resource: KafkaTopic;
 
   constructor(resource: KafkaTopic) {
-    super(resource.name, vscode.TreeItemCollapsibleState.None);
+    super(resource.name, vscode.TreeItemCollapsibleState.Collapsed);
 
     // internal properties
     this.resource = resource;
