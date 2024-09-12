@@ -598,7 +598,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"PartitionFilterChange">;
       }
       case "TimestampFilterChange": {
-        track({ action: "filter-timestamp-change" });
+        debouncedTrack({ action: "filter-timestamp-change" });
         timestampFilter(body.timestamps);
         notifyUI();
         return null satisfies MessageResponse<"TimestampFilterChange">;
@@ -750,4 +750,10 @@ class Timer extends Data {
 
 function track(details: object) {
   getTelemetryLogger().logUsage("Message Viewer Action", details);
+}
+
+let timer: ReturnType<typeof setTimeout>;
+function debouncedTrack(details: object) {
+  clearTimeout(timer);
+  timer = setTimeout(track, 200, details);
 }
