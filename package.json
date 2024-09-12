@@ -1,7 +1,7 @@
 {
   "name": "vscode-confluent",
   "type": "module",
-  "displayName": "Confluent Extension for VS Code",
+  "displayName": "Confluent",
   "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
   "version": "0.15.1-1",
   "homepage": "https://github.com/confluentinc/vscode",
@@ -35,11 +35,8 @@
     "Apache Kafka",
     "Apache Flink",
     "kafka",
-    "kafka consumer",
-    "kafka producer",
     "flink",
     "kstreams",
-    "message",
     "schema",
     "scripts",
     "templates"
