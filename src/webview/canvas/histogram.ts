@@ -203,7 +203,7 @@ export class Histogram extends HTMLElement {
           [sx(a), h0],
           [sx(b), h1],
         ]);
-      }
+      } else brushX.set(null);
     });
 
     const bisectBin = bisector((bin: HistogramBin) => bin.x1);
@@ -247,17 +247,12 @@ export class Histogram extends HTMLElement {
     });
 
     // dispatch an event, so the parent element can subscribe to selection change
-    // throttle events slightly, since a lot of selection changes are transient
-    let latest: [number, number] | null, timer: ReturnType<typeof setTimeout> | null;
     let first = true;
     os.watch(() => {
-      latest = this.selection();
-      timer ??= setTimeout(() => {
-        // prevent unnecessary dispatch on the very first render
-        if (!first) this.dispatchEvent(new CustomEvent("select", { detail: latest }));
-        first = false;
-        timer = null;
-      }, 10);
+      const detail = this.selection();
+      // the flag prevents unnecessary dispatch on the very first render
+      if (!first) this.dispatchEvent(new CustomEvent("select", { detail }));
+      first = false;
     });
 
     os.watch(() => {
