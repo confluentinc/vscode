@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { CCloudEnvironment } from "./models/environment";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { SchemaRegistryCluster } from "./models/schemaRegistry";
 
@@ -12,13 +11,15 @@ export const ccloudConnected = new vscode.EventEmitter<boolean>();
 export const ccloudAuthSessionInvalidated = new vscode.EventEmitter<void>();
 export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 
-export const currentCCloudEnvironmentChanged = new vscode.EventEmitter<CCloudEnvironment | null>();
-
+/**
+ * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
+ * Cluster" action from the Topics view, or cleared out from a connection (or CCloud organization)
+ * change.
+ */
 export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster | null>();
 /**
- * Fires an event when the list of topics for the focused Kafka cluster changes (i.e. a topic is
- * added, removed, or updated).
+ * Fired whenever a Schema Registry cluster is selected from the Resources view, chosen from the
+ * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
+ * (or CCloud organization) change.
  */
-export const currentKafkaClusterTopicsChanged = new vscode.EventEmitter<void>();
-
 export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistryCluster | null>();

@@ -1,12 +1,15 @@
 import * as vscode from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
-import { currentSchemaRegistryChanged } from "../emitters";
+import { ccloudConnected, currentSchemaRegistryChanged } from "../emitters";
+import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, SchemaType, generateSchemaSubjectGroups } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+
+const logger = new Logger("viewProviders.schemas");
 
 /**
  * The types managed by the {@link SchemasViewProvider}, which are converted to their appropriate tree item
@@ -33,12 +36,17 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   constructor() {
     this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
 
+    ccloudConnected.event((connected: boolean) => {
+      // TODO(shoup): check this for CCloud vs local once we start supporting local SR; check the
+      // TopicViewProvider for a similar check
+      logger.debug("ccloudConnected event fired, resetting", connected);
+      // any transition of CCloud connection state should reset the tree view
+      this.reset();
+    });
+
     currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistryCluster | null) => {
       if (!schemaRegistry) {
-        vscode.commands.executeCommand("setContext", "confluent.schemaRegistrySelected", false);
-        this.schemaRegistry = null;
-        this.ccloudEnvironment = null;
-        this.treeView.description = "";
+        this.reset();
       } else {
         vscode.commands.executeCommand("setContext", "confluent.schemaRegistrySelected", true);
         this.schemaRegistry = schemaRegistry;
@@ -46,9 +54,18 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
           await getResourceManager().getCCloudEnvironment(this.schemaRegistry.environmentId);
         this.ccloudEnvironment = environment;
         this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
+        this.refresh();
       }
-      this.refresh();
     });
+  }
+
+  /** Convenience method to revert this view to its original state. */
+  reset(): void {
+    vscode.commands.executeCommand("setContext", "confluent.schemaRegistrySelected", false);
+    this.schemaRegistry = null;
+    this.ccloudEnvironment = null;
+    this.treeView.description = "";
+    this.refresh();
   }
 
   // we're not handling just `Schema` here since we may be expanding a container tree item

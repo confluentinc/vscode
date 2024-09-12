@@ -1,5 +1,5 @@
 import { scaleLinear, scaleUtc } from "d3-scale";
-import { max } from "d3-array";
+import { max, bisector } from "d3-array";
 import { ObservableScope } from "inertial";
 
 import { stage, observeCustomProperty, observePointer } from "./canvas";
@@ -64,6 +64,7 @@ export class Histogram extends HTMLElement {
       padding: 0.5rem 0.75rem;
       pointer-events: none;
       border: 1px solid var(--focus-border);
+      font-size: var(--vscode-font-size);
       z-index: 10;
     `;
     container.append(tooltip);
@@ -202,14 +203,17 @@ export class Histogram extends HTMLElement {
           [sx(a), h0],
           [sx(b), h1],
         ]);
-      }
+      } else brushX.set(null);
     });
+
+    const bisectBin = bisector((bin: HistogramBin) => bin.x1);
 
     // using mutable state to identify whether a sequence of event was just a tap or an actual brushing
     let pointerMoved = false;
     os.watch(() => {
-      const { down, x, y } = pointer();
+      const { down, x, y, shiftKey } = pointer();
       const sx = scaleX();
+      const bins = histogram();
       if (brushX.idle() && down) {
         // initiate brushing gesture
         brushX.down(x, y);
@@ -220,10 +224,15 @@ export class Histogram extends HTMLElement {
         pointerMoved = true;
         brushX.move(x, y);
         const currentRange = brushX.get()!;
-        this.selection([
-          sx.invert(currentRange[0][0]).valueOf(),
-          sx.invert(currentRange[1][0]).valueOf(),
-        ]);
+        let lo = sx.invert(currentRange[0][0]).valueOf();
+        let hi = sx.invert(currentRange[1][0]).valueOf();
+        if (shiftKey && bins.length > 0) {
+          const loi = Math.max(0, bisectBin.left(bins, lo));
+          const hii = Math.min(bisectBin.right(bins, hi), bins.length - 1);
+          lo = bins[loi].x0;
+          hi = bins[hii].x1;
+        }
+        this.selection([lo, hi]);
       } else if (!brushX.idle() && !down) {
         brushX.up(x, y);
         // if the pointer is released but no moving was done, clear the selection
@@ -238,14 +247,12 @@ export class Histogram extends HTMLElement {
     });
 
     // dispatch an event, so the parent element can subscribe to selection change
-    // throttle events slightly, since a lot of selection changes are transient
-    let latest: [number, number] | null, timer: ReturnType<typeof setTimeout> | null;
+    let first = true;
     os.watch(() => {
-      latest = this.selection();
-      timer ??= setTimeout(() => {
-        this.dispatchEvent(new CustomEvent("select", { detail: latest }));
-        timer = null;
-      }, 10);
+      const detail = this.selection();
+      // the flag prevents unnecessary dispatch on the very first render
+      if (!first) this.dispatchEvent(new CustomEvent("select", { detail }));
+      first = false;
     });
 
     os.watch(() => {
@@ -263,7 +270,9 @@ export class Histogram extends HTMLElement {
       // using x scale, convert current pointer position to time
       // so we can find matching bin in that area of the canvas
       const time = sx.invert(x);
-      const bin = bins.find((bin) => time.valueOf() >= bin.x0! && time.valueOf() <= bin.x1!);
+      const binIndex = bisectBin.left(bins, time.valueOf());
+      const bin = binIndex >= 0 ? bins[binIndex] : null;
+      const rightInclusive = binIndex === bins.length - 1;
 
       // if the pointer is over the canvas and bin is found, render the details tooltip
       if (over && bin != null) {
@@ -276,9 +285,22 @@ export class Histogram extends HTMLElement {
           tooltip.style.right = "unset";
           tooltip.style.left = x + 5 + "px";
         }
-        const count =
-          bin.filter != null ? `Count: ${bin.total}, filter: ${bin.filter}` : `Count: ${bin.total}`;
-        tooltip.textContent = `From: ${new Date(bin.x0!).toISOString()}\nTo: ${new Date(bin.x1!).toISOString()}\n${count}`;
+        if (down && selection != null) {
+          tooltip.innerHTML = `<label>Selected range</label><br><code>${new Date(selection[0]).toISOString()}</code><br><code>${new Date(selection[1]).toISOString()}</code>`;
+        } else {
+          const count =
+            bin.filter != null
+              ? `Total: <strong>${bin.total.toLocaleString()}</strong> Filter: <strong>${bin.filter.toLocaleString()}</strong>`
+              : `Total: <strong>${bin.total.toLocaleString()}</strong>`;
+          const content = [
+            `<div style="display: flex; flex-direction: column; gap: 0.5rem">`,
+            `<label>From (inclusive)<br><code>${new Date(bin.x0!).toISOString()}</code></label>`,
+            `<label>To (${rightInclusive ? "inclusive" : "exclusive"}) <br><code>${new Date(bin.x1!).toISOString()}</code></label>`,
+            `<span>${count}</span>`,
+            `</div>`,
+          ];
+          tooltip.innerHTML = content.join("");
+        }
       } else {
         tooltip.style.display = "none";
       }

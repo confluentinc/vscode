@@ -4,6 +4,22 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Errors listing topics in the Topics view after selecting a Kafka cluster will now be more
+  informative
+
+## 0.15.0
+
+### Added
+
+- Hold `Shift` key while selecting time range on histogram to make the range snap to histogram bins
+
+### Changed
+
+- Tooltips over items in the Resources, Topics, and Schemas views have been overhauled for a cleaner
+  look and more informative content
+
 ### Fixed
 
 - Detect and warn the user if the wrong os/architecture sidecar is installed (as from manual
@@ -18,9 +34,9 @@ All notable changes to this extension will be documented in this file.
     (which can be disabled via the `confluent.cloud.messageViewer.showSchemaWarningNotifications`
     setting)
 - Project Generation form will remember values entered if user hides tab and comes back
-- Fetch authz on existing topics in a cluster up front, offer the consume or delete
-    operations conditionally based on those permitted operations.
-    
+- Fetch authz on existing topics in a cluster up front, offer the consume or delete operations
+  conditionally based on those permitted operations.
+
 ## 0.14.1
 
 ### Fixed
