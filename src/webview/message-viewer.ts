@@ -89,6 +89,7 @@ class MessageViewerViewModel extends ViewModel {
   }, null);
   async updateHistogramFilter(timestamps: [number, number] | null) {
     await post("TimestampFilterChange", { timestamps });
+    this.selection(timestamps);
     this.page(0);
   }
 
@@ -191,6 +192,7 @@ class MessageViewerViewModel extends ViewModel {
     const partitions = this.partitionsConsumedTemp();
     await post("PartitionConsumeChange", { partitions });
     this.page(0);
+    this.selection(null);
   }
   /**
    * Unlike partition consumed, filtering is about client side filter application
@@ -476,6 +478,7 @@ class MessageViewerViewModel extends ViewModel {
     this.consumeMode(value);
     this.page(0);
     this.snapshot(this.emptySnapshot);
+    this.selection(null);
   }
 
   async handleConsumeModeTimestampChange(timestamp: number) {
@@ -484,6 +487,7 @@ class MessageViewerViewModel extends ViewModel {
     this.consumeMode("timestamp");
     this.page(0);
     this.snapshot(this.emptySnapshot);
+    this.selection(null);
   }
 
   /** Numeric limit of messages that need to be consumed. */
@@ -497,6 +501,7 @@ class MessageViewerViewModel extends ViewModel {
     this.messageLimit(value);
     this.page(0);
     this.snapshot(this.emptySnapshot);
+    this.selection(null);
   }
 
   timer = this.resolve(() => {
