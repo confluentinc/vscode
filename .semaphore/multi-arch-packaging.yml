@@ -16,6 +16,9 @@ queue:
     processing: parallel
 
 global_job_config:
+  env_vars:
+    - name: NODE_ENV
+      value: "production"
   prologue:
     commands:
       - checkout
@@ -46,7 +49,7 @@ blocks:
       jobs:
         - name: "Package VSIX (MacOS AMD64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
@@ -67,7 +70,7 @@ blocks:
       jobs:
         - name: "Package VSIX (MacOS ARM64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
@@ -88,7 +91,7 @@ blocks:
       jobs:
         - name: "Package VSIX (Linux AMD64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
@@ -109,7 +112,7 @@ blocks:
       jobs:
         - name: "Package VSIX (Linux ARM64)"
           commands:
-            - make package-vsix
+            - npx gulp bundle
       epilogue:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
@@ -137,3 +140,9 @@ blocks:
             - make push-multiarch-archive || true
             - make upload-multiarch-archive-to-s3 || true
             - make upload-multiarch-archive-to-gh-releases
+
+promotions:
+  - name: Windows Packaging and Upload
+    pipeline_file: windows-packaging.yml
+    auto_promote:
+      when: "result = 'passed' and branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
