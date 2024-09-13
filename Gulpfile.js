@@ -63,7 +63,8 @@ export function build(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
-  downloadSidecar(done);
+  const result = downloadSidecar();
+  if (result.error) throw result.error;
 
   if (production) {
     setupSegment();
@@ -755,8 +756,7 @@ export function install(done) {
   return done(result.status);
 }
 
-downloadSidecar.description = "Download the confluentinc/ide-sidecar executable.";
-function downloadSidecar(done) {
+export async function downloadSidecar() {
   let result;
   if (IS_WINDOWS) {
     result = spawnSync(
@@ -770,9 +770,5 @@ function downloadSidecar(done) {
     result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
   }
 
-  if (result.error) {
-    console.error(result.error);
-    return done(result.error);
-  }
-  return done(result.status);
+  return result;
 }
