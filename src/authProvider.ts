@@ -373,7 +373,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       if (this._session) {
         this.handleSessionRemoved();
       } else {
-        logger.warn("No cached session found to remove; should we still fire the event?");
+        logger.debug(
+          "No auth session, and no cached _session (for this extension instance) found to remove; not taking any action",
+        );
       }
     } else {
       // SCENARIO 2: user logged in / auth session was added
