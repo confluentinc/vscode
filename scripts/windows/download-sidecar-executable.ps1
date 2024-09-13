@@ -1,5 +1,3 @@
-@echo off
-
 $IDE_SIDECAR_REPO = "ide-sidecar"
 $IDE_SIDECAR_VERSION = Get-Content .versions/ide-sidecar.txt
 $IDE_SIDECAR_VERSION_NO_V = $IDE_SIDECAR_VERSION -replace '^v', ''
