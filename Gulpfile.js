@@ -17,7 +17,7 @@ import libReport from "istanbul-lib-report";
 import libSourceMaps from "istanbul-lib-source-maps";
 import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -47,8 +47,6 @@ export function clean(done) {
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
 export function pack(done) {
-  // Check for DESTINATION directory
-  readdirSync(DESTINATION);
   var vsceCommandArgs = ["vsce", "package"];
   // Check if TARGET is set, if so, add it to the command
   if (process.env.TARGET) {

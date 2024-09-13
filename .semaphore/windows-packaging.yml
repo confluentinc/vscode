@@ -28,7 +28,7 @@ global_job_config:
       - $Env:PATH += ";C:\Program Files\Git\bin"
       - $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
       - vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
-      - choco install nodejs-lts --version="20.17.0" -y
+      - choco install nodejs-lts --version="18.12.0" -y
       - choco install gh -y
       - $Env:PATH += ";C:\Program Files\GitHub CLI\"
 
