@@ -8,7 +8,7 @@ Confluent technology. This extension provides a robust, delightful experience fo
 ![](resources/readme-screenshot-dark.png)
 
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
-Confluent, and read the docs at the [Confluent documentation](docs.confluent.io) site.
+Confluent, and read the docs at the [Confluent documentation](https://docs.confluent.io/) site.
 
 ## Features
 
