@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
+import { getExtensionContext } from "../context";
 import { ccloudConnected, currentSchemaRegistryChanged } from "../emitters";
+import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
@@ -33,7 +35,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** The focused Schema Registry cluster; set by clicking a Schema Registry item in the Resources view. */
   public schemaRegistry: SchemaRegistryCluster | null = null;
 
-  constructor() {
+  private static instance: SchemasViewProvider | null = null;
+  private constructor() {
+    if (!getExtensionContext()) {
+      // getChildren() will fail without the extension context
+      throw new ExtensionContextNotSetError("SchemasViewProvider");
+    }
+
     this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
@@ -57,6 +65,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         this.refresh();
       }
     });
+  }
+
+  static getInstance(): SchemasViewProvider {
+    if (!SchemasViewProvider.instance) {
+      SchemasViewProvider.instance = new SchemasViewProvider();
+    }
+    return SchemasViewProvider.instance;
   }
 
   /** Convenience method to revert this view to its original state. */
@@ -106,10 +121,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 }
 
-var schemasViewProvider = new SchemasViewProvider();
 /** Get the singleton instance of the {@link SchemasViewProvider} */
 export function getSchemasViewProvider() {
-  return schemasViewProvider;
+  return SchemasViewProvider.getInstance();
 }
 
 export async function getSchemas(
