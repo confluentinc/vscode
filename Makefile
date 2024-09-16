@@ -51,12 +51,6 @@ release-current-version:
 	export CI_SKIP= ;\
 	$(MAKE) release-ci
 
-.PHONY: package-vsix
-package-vsix:
-	export TARGET=$(TARGET) ;\
-	export NODE_ENV=production ;\
-	npx gulp bundle
-
 version_no_v = $(shell echo $(1) | sed 's,^v,,' )
 
 VSCODE_EXTENSION_S3_PREFIX ?= vscode
@@ -99,6 +93,8 @@ SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 
 
 IDE_SIDECAR_REPO := confluentinc/ide-sidecar
 
+# This target is meant for non-Windows platforms to download the sidecar executable
+# For Windows, we use scripts/windows/download-sidecar-executable.ps1
 .PHONY: download-sidecar-executable
 download-sidecar-executable:
 ifeq ($(SKIP_DOWNLOAD_EXECUTABLE),true)
