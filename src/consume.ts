@@ -391,7 +391,7 @@ function messageViewerStartPollingCommand(
       case "GetMessages": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const includes = bitset()?.predicate() ?? ((_: number) => true);
+        const includes = bitset()?.predicate() ?? (() => true);
         const { results, indices } = stream().slice(offset, limit, includes);
         const messages = results.map(({ partition_id, offset, timestamp, key, value }) => {
           key = truncate(key);
@@ -484,7 +484,7 @@ function messageViewerStartPollingCommand(
           messages: { values },
           serialized,
         } = stream();
-        const includes = bitset()?.predicate() ?? ((_: number) => true);
+        const includes = bitset()?.predicate() ?? (() => true);
         const records: string[] = [];
         for (
           let i = 0, p = timestamp.head, payload;
