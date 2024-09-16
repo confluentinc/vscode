@@ -20,6 +20,7 @@ import {
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 
+import { normalize } from "path";
 import { Tail } from "tail";
 
 /**
@@ -272,23 +273,27 @@ export class SidecarManager {
         const logPrefix = `startSidecar(${callnum})`;
         logger.info(`${logPrefix}: Starting new sidecar process`);
 
+        let executablePath = sidecarExecutablePath;
+        // check platform and adjust the path, so we don't end up with paths like:
+        // "C:/c:/Users/.../ide-sidecar-0.26.0-runner.exe"
+        if (process.platform === "win32") {
+          executablePath = normalize(executablePath.replace(/^[/\\]+/, ""));
+        }
         this.sidecarContacted = false;
 
         if (this.sidecarArchitectureBlessed === null) {
           // check to see if the sidecar file exists
-          logger.info(`exe path ${sidecarExecutablePath}, version ${currentSidecarVersion}`);
+          logger.info(`exe path ${executablePath}, version ${currentSidecarVersion}`);
           try {
-            fs.accessSync(sidecarExecutablePath);
+            fs.accessSync(executablePath);
           } catch (e) {
-            logger.error(`${logPrefix}: component ${sidecarExecutablePath} does not exist`, e);
-            reject(
-              new NoSidecarExecutableError(`Component ${sidecarExecutablePath} does not exist`),
-            );
+            logger.error(`${logPrefix}: component ${executablePath} does not exist`, e);
+            reject(new NoSidecarExecutableError(`Component ${executablePath} does not exist`));
           }
 
           // Now check to see if is cooked for the right OS + architecture
           try {
-            checkSidecarOsAndArch(sidecarExecutablePath);
+            checkSidecarOsAndArch(executablePath);
             this.sidecarArchitectureBlessed = true;
           } catch (e) {
             this.sidecarArchitectureBlessed = false;
@@ -307,7 +312,7 @@ export class SidecarManager {
         const sidecar_env = constructSidecarEnv(process.env);
 
         try {
-          const sidecarProcess = spawn(sidecarExecutablePath, [], {
+          const sidecarProcess = spawn(executablePath, [], {
             detached: true,
             stdio: "ignore",
             env: sidecar_env,
