@@ -48,16 +48,12 @@ type ConsumeMode = "latest" | "beginning" | "timestamp";
  */
 class MessageViewerViewModel extends ViewModel {
   /** This timestamp updates everytime the host environment wants UI to update. */
-  timestamp = this.observe(
-    () => Date.now(),
-    (cb) => {
-      function handle(event: MessageEvent<any[]>) {
-        if (event.data[0] === "Timestamp") cb();
-      }
-      addEventListener("message", handle);
-      return () => removeEventListener("message", handle);
-    },
-  );
+  timestamp = this.produce(Date.now(), (ts, signal) => {
+    function handle(event: MessageEvent<any[]>) {
+      if (event.data[0] === "Timestamp") ts(Date.now());
+    }
+    addEventListener("message", handle, { signal });
+  });
 
   page = this.signal(storage.get()?.page ?? 0);
   pageSize = this.signal(100);
