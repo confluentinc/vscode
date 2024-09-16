@@ -735,6 +735,10 @@ similar script in the Apache Flink project, which is licensed under the
 Apache License 2.0. The original script can be found at the following URL:
 https://github.com/apache/flink/blob/9e6bcee710b13b8f64a73c99c3164f7551e1e829/tools/releasing/collect_license_files.sh
 
+The script to generate CHANGELOG.md was adapted and modified
+from this StackOverflow answer: https://stackoverflow.com/a/46033999, provided under
+the Creative Commons License (CC BY-SA 3.0) - https://creativecommons.org/licenses/by-sa/3.0/.
+
 ============ com.fasterxml.classmate-1.7.0 ============
 
 Java ClassMate library was originally written by Tatu Saloranta (tatu.saloranta@iki.fi)
