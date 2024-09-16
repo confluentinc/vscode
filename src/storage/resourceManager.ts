@@ -38,13 +38,13 @@ export type CCloudSchemaBySchemaRegistryCluster = Map<string, Schema[]>;
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
-  private static instance: ResourceManager;
-
+  static instance: ResourceManager | null = null;
   private constructor(private storage: StorageManager) {}
 
-  static getInstance(storageManager: StorageManager): ResourceManager {
+  static getInstance(): ResourceManager {
     if (!ResourceManager.instance) {
-      ResourceManager.instance = new ResourceManager(storageManager);
+      // will throw an ExtensionContextNotSetError if the context isn't available for StorageManager
+      ResourceManager.instance = new ResourceManager(getStorageManager());
     }
     return ResourceManager.instance;
   }
@@ -599,9 +599,5 @@ export class ResourceManager {
  * @returns The ResourceManager singleton instance
  */
 export function getResourceManager(): ResourceManager {
-  const manager = getStorageManager();
-  if (!manager) {
-    throw new Error("Can't get ResourceManager until StorageManager is initialized");
-  }
-  return ResourceManager.getInstance(manager);
+  return ResourceManager.getInstance();
 }
