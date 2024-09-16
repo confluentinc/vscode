@@ -41,13 +41,13 @@ global_job_config:
 blocks:
   - name: "Package VSIX (Windows x64)"
     dependencies: []
-    env_vars:
-      - name: TARGET
-        value: win32-x64
-    prologue:
-      commands:
-        - npm ci
     task:
+      prologue:
+        commands:
+          - npm ci
+      env_vars:
+        - name: TARGET
+          value: win32-x64
       jobs:
         - name: "Package VSIX (Windows x64)"
           commands:
@@ -57,5 +57,6 @@ blocks:
               $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
               $version = $packageJson.version;
               $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
-              artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
+              try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
+              $Env:GH_TOKEN = $Env:GITHUB_TOKEN
               gh release upload $version $vsix --clobber
