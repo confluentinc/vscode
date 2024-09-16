@@ -28,7 +28,11 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   readonly onDidChangeTreeData: vscode.Event<TopicViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  refresh(): void {
+  private forceDeepRefresh: boolean = false;
+
+  /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
+  refresh(forceDeepRefresh: boolean = false): void {
+    this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
   }
 
@@ -125,8 +129,15 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         return topicItems;
       }
 
-      const topics: KafkaTopic[] = await getTopicsForCluster(this.kafkaCluster);
+      const topics: KafkaTopic[] = await getTopicsForCluster(
+        this.kafkaCluster,
+        this.forceDeepRefresh,
+      );
       topicItems.push(...topics);
+
+      // clear any prior request to deep refresh, allow any subsequent repaint
+      // to draw from workspace storage cache.
+      this.forceDeepRefresh = false;
     }
     return topicItems;
   }
@@ -137,11 +148,40 @@ export function getTopicViewProvider() {
   return TopicViewProvider.getInstance();
 }
 
-export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
+/** Determine the topics offered from this cluster. If topics are already known
+ * from a prior sidecar fetch, return those, otherwise deep fetch from sidecar.
+ */
+export async function getTopicsForCluster(
+  cluster: KafkaCluster,
+  forceRefresh: boolean = false,
+): Promise<KafkaTopic[]> {
+  const resourceManager = getResourceManager();
+
+  let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
+  if (cachedTopics !== undefined && !forceRefresh) {
+    // Cache hit.
+    logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
+    return cachedTopics;
+  }
+
+  // Otherwise make a deep fetch, cache in resource manager, and return.
+
+  let environmentId: string | null = null;
+  let schemas: Schema[] = [];
+
+  if (cluster instanceof CCloudKafkaCluster) {
+    environmentId = cluster.environmentId;
+    const resourceManager = getResourceManager();
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
+    if (schemaRegistry) {
+      schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
+    }
+  }
+
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-
   let topicsResp: TopicDataList;
+
   try {
     topicsResp = await client.listKafkaTopics({
       cluster_id: cluster.id,
@@ -157,22 +197,11 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
     } else {
       logger.error("Failed to list Kafka topics: ", error);
     }
+    // short circuit return, do NOT cache result on error. Ensure we try again on next refresh.
     return [];
   }
 
-  let environmentId: string | null = null;
-  let schemas: Schema[] = [];
-
-  if (cluster instanceof CCloudKafkaCluster) {
-    environmentId = cluster.environmentId;
-    const resourceManager = getResourceManager();
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
-    if (schemaRegistry) {
-      schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
-    }
-  }
-
-  // Promote each from-response-topic to an internal KafkaTopic object
+  // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
     const hasMatchingSchema: boolean = schemas.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
@@ -191,11 +220,10 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       operations: toKafkaTopicOperations(topic.authorized_operations!),
     });
   });
-  if (cluster instanceof CCloudKafkaCluster) {
-    await getResourceManager().setCCloudTopics(topics);
-  } else {
-    await getResourceManager().setLocalTopics(topics);
-  }
+
+  logger.debug(`Deep fetched ${topics.length} topics for cluster ${cluster.id}`);
+  await getResourceManager().setTopicsForCluster(cluster, topics);
+
   return topics;
 }
 
