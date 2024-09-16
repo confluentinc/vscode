@@ -43,7 +43,7 @@ test.use({
   ],
 });
 
-test.only("dummy form submission", async ({ execute, page }) => {
+test("dummy form submission", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;

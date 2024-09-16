@@ -22,15 +22,16 @@ export function stage(os: Scope, container: HTMLElement) {
 
 /** Observes element size using ResizeObserver. */
 export function observeElementSize(os: Scope, target: HTMLElement) {
-  return os.observe(
-    () => {
-      let rect = target.getBoundingClientRect();
-      return { width: rect.width, height: rect.height };
-    },
-    (cb) => {
-      let observer = new ResizeObserver(cb);
+  const getRect = () => {
+    let rect = target.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  };
+  return os.produce(
+    getRect(),
+    (value, signal) => {
+      let observer = new ResizeObserver(() => value(getRect()));
       observer.observe(target);
-      return () => observer.disconnect();
+      signal.onabort = () => observer.disconnect();
     },
     (a, b) => a.width === b.width && a.height === b.height,
   );
@@ -38,20 +39,18 @@ export function observeElementSize(os: Scope, target: HTMLElement) {
 
 /** Observes value of CSS custom properties dynamically updated via attributes.  */
 export function observeCustomProperty(os: Scope, target: HTMLElement, property: string) {
-  return os.observe(
-    () => getComputedStyle(target).getPropertyValue(property),
-    (cb) => {
-      const observer = new MutationObserver((mutations) => {
-        for (let mutation of mutations) {
-          if (mutation.type === "attributes" && mutation.attributeName === "style") {
-            return cb();
-          }
+  const getProp = () => getComputedStyle(target).getPropertyValue(property);
+  return os.produce(getProp(), (value, signal) => {
+    const observer = new MutationObserver((mutations) => {
+      for (let mutation of mutations) {
+        if (mutation.type === "attributes" && mutation.attributeName === "style") {
+          return value(getProp());
         }
-      });
-      observer.observe(target, { attributes: true });
-      return () => observer.disconnect();
-    },
-  );
+      }
+    });
+    observer.observe(target, { attributes: true });
+    signal.onabort = () => observer.disconnect();
+  });
 }
 
 /**
@@ -82,9 +81,10 @@ export function observePointer(os: Scope, target: HTMLElement) {
         break;
     }
   }
-  return os.observe(
-    () => state,
-    (cb) => {
+  return os.produce(
+    state,
+    (value, signal) => {
+      const options = { signal };
       function handle(event: PointerEvent) {
         if (event.type === "pointerdown") {
           target.setPointerCapture(event.pointerId);
@@ -92,21 +92,14 @@ export function observePointer(os: Scope, target: HTMLElement) {
           target.releasePointerCapture(event.pointerId);
         }
         handleEvent(event);
-        cb();
+        value(state);
       }
 
-      target.addEventListener("pointermove", handle);
-      target.addEventListener("pointerdown", handle);
-      target.addEventListener("pointerup", handle);
-      target.addEventListener("pointerenter", handle);
-      target.addEventListener("pointerleave", handle);
-      return () => {
-        target.removeEventListener("pointermove", handle);
-        target.removeEventListener("pointerdown", handle);
-        target.removeEventListener("pointerup", handle);
-        target.removeEventListener("pointerover", handle);
-        target.removeEventListener("pointerleave", handle);
-      };
+      target.addEventListener("pointermove", handle, options);
+      target.addEventListener("pointerdown", handle, options);
+      target.addEventListener("pointerup", handle, options);
+      target.addEventListener("pointerenter", handle, options);
+      target.addEventListener("pointerleave", handle, options);
     },
     () => false,
   );
@@ -117,11 +110,9 @@ export function observePointer(os: Scope, target: HTMLElement) {
  * resolution or moves a browser window from one monitor to another.
  */
 function observeDevicePixelRatio(os: Scope) {
-  let getDPR = () => window.devicePixelRatio;
-  return os.observe(getDPR, (cb) => {
+  return os.produce(window.devicePixelRatio, (value, signal) => {
     let media = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
-    media.addEventListener("change", cb);
-    return () => media.addEventListener("change", cb);
+    media.addEventListener("change", () => value(window.devicePixelRatio), { signal });
   });
 }
 

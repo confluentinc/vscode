@@ -281,118 +281,109 @@ function messageViewerStartPollingCommand(
     queue = [];
   }
 
-  os.watch(() => {
-    /* This is the main consumption cycle. Every time input parameters change,
-    any in-flight requests should be aborted. See this controller's references,
-    it has to be passed to any async calls happening below. */
-    const ctl = new AbortController();
+  os.watch(async (signal) => {
+    /* Cannot proceed any further if state got paused by the user or other
+    events. If the state changes, this watcher is notified once again. */
+    if (state() !== "running") return;
 
-    /* This functions is IIFE because os.watch() needs a sync function. Input
-    parameters are all read in the same place to make sure no branches affect
-    this watchers dependency list. */
-    (async (streamParams, streamState, stream, partitions, prevResult, _timestamp) => {
-      /* Cannot proceed any further if state got paused by the user or other
-      events. If the state changes, this watcher is notified once again. */
-      if (streamState !== "running") return;
-      try {
-        const now = Date.now();
-        const old = os.peek(latestFetch);
-        /* Ensure to wait at least some time before following polling request
-        if at least one was already made. The condition below should allow for
-        faster requests when the stream was resumed. */
-        if (now - old < MIN_POLLING_INTERVAL_MS) await sleep(ctl.signal);
+    try {
+      const now = Date.now();
+      const old = latestFetch();
+      const currentStream = stream();
+      const partitions = partitionConsumed();
+      /* If current parameters were already used for successful request, the
+      following request should consider offsets provided in previous results. */
+      const requestParams = getOffsets(params(), latestResult(), partitions);
 
-        /* If current parameters were already used for successful request, the
-        following request should consider offsets provided in previous results. */
-        const params = getOffsets(streamParams, prevResult, partitions);
-        const result = await consume(params, ctl.signal);
+      /* Ensure to wait at least some time before following polling request
+      if at least one was already made. The condition below should allow for
+      faster requests when the stream was resumed. */
+      if (now - old < MIN_POLLING_INTERVAL_MS) await sleep(signal);
+      const result = await consume(requestParams, signal);
 
-        const datalist = result.partition_data_list ?? [];
-        for (const partition of datalist) {
-          /* The very first request always going to include messages from all
-          partitions. If we consume a subset of partitions, some messages need
-          to be dropped. */
-          if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
-          /* The messages that we _do_ process, are pushed to the queue, which 
-          then processes messages and puts them to the stream on its own pace. */
-          const records = partition.records ?? [];
-          for (const message of records) queue.push(message);
-        }
-
-        /* Update the state and notify the UI about another successful request processed. */
-        os.batch(() => {
-          flushMessages(stream);
-          latestResult(result);
-          latestFetch(Date.now());
-          latestError(null);
-          notifyUI();
-        });
-      } catch (error) {
-        let reportable: { message: string } | null = null;
-        let shouldPause = false;
-        /* Async operations can be aborted by provided AbortController that is
-        controlled by the watcher. Nothing to log in this case. */
-        if (error instanceof Error && error.name === "AbortError") return;
-        /* In case of network issue, the current assumption is that the user is
-        going to see auth related error alerts. Logging and error displays is WIP. */
-        if (error instanceof ResponseError) {
-          const payload = await error.response.json();
-          // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
-          if (!payload?.aborted) {
-            const status = error.response.status;
-            shouldPause = status >= 400;
-            switch (status) {
-              case 401: {
-                reportable = { message: "Authentication required." };
-                break;
-              }
-              case 403: {
-                reportable = { message: "Insufficient permissions to read from topic." };
-                break;
-              }
-              case 404: {
-                if (String(payload?.title).startsWith("Error fetching the messages")) {
-                  reportable = { message: "Topic not found." };
-                } else {
-                  reportable = { message: "Unable to connect to the server." };
-                }
-                break;
-              }
-              case 429: {
-                reportable = { message: "Too many requests. Try again later." };
-                break;
-              }
-              default: {
-                reportable = { message: "Something went wrong." };
-                break;
-              }
-            }
-            logger.error(
-              `An error occurred during messages consumption. Status ${error.response.status}`,
-            );
-          }
-        } else if (error instanceof Error) {
-          logger.error(error.message);
-          reportable = { message: "An internal error occurred." };
-          shouldPause = true;
-        }
-
-        os.batch(() => {
-          latestFetch(Date.now());
-          // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
-          if (shouldPause) {
-            state("paused");
-            timer((timer) => timer.pause());
-          }
-          if (reportable != null) {
-            latestError(reportable);
-          }
-          notifyUI();
-        });
+      const datalist = result.partition_data_list ?? [];
+      for (const partition of datalist) {
+        /* The very first request always going to include messages from all
+        partitions. If we consume a subset of partitions, some messages need
+        to be dropped. */
+        if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
+        /* The messages that we _do_ process, are pushed to the queue, which
+        then processes messages and puts them to the stream on its own pace. */
+        const records = partition.records ?? [];
+        for (const message of records) queue.push(message);
       }
-    })(params(), state(), stream(), partitionConsumed(), latestResult(), latestFetch());
 
-    return () => ctl.abort();
+      /* Update the state and notify the UI about another successful request processed. */
+      os.batch(() => {
+        flushMessages(currentStream);
+        latestResult(result);
+        latestFetch(Date.now());
+        latestError(null);
+        notifyUI();
+      });
+    } catch (error) {
+      let reportable: { message: string } | null = null;
+      let shouldPause = false;
+      /* Async operations can be aborted by provided AbortController that is
+      controlled by the watcher. Nothing to log in this case. */
+      if (error instanceof Error && error.name === "AbortError") return;
+      /* In case of network issue, the current assumption is that the user is
+      going to see auth related error alerts. Logging and error displays is WIP. */
+      if (error instanceof ResponseError) {
+        const payload = await error.response.json();
+        // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
+        if (!payload?.aborted) {
+          const status = error.response.status;
+          shouldPause = status >= 400;
+          switch (status) {
+            case 401: {
+              reportable = { message: "Authentication required." };
+              break;
+            }
+            case 403: {
+              reportable = { message: "Insufficient permissions to read from topic." };
+              break;
+            }
+            case 404: {
+              if (String(payload?.title).startsWith("Error fetching the messages")) {
+                reportable = { message: "Topic not found." };
+              } else {
+                reportable = { message: "Unable to connect to the server." };
+              }
+              break;
+            }
+            case 429: {
+              reportable = { message: "Too many requests. Try again later." };
+              break;
+            }
+            default: {
+              reportable = { message: "Something went wrong." };
+              break;
+            }
+          }
+          logger.error(
+            `An error occurred during messages consumption. Status ${error.response.status}`,
+          );
+        }
+      } else if (error instanceof Error) {
+        logger.error(error.message);
+        reportable = { message: "An internal error occurred." };
+        shouldPause = true;
+      }
+
+      os.batch(() => {
+        latestFetch(Date.now());
+        // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
+        if (shouldPause) {
+          state("paused");
+          timer((timer) => timer.pause());
+        }
+        if (reportable != null) {
+          latestError(reportable);
+        }
+        notifyUI();
+      });
+    }
   });
 
   function processMessage(...[type, body]: Parameters<MessageSender>) {

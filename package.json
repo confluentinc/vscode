@@ -733,7 +733,7 @@
     "dataclass": "^3.0.0-beta.1",
     "gql.tada": "^1.8.3",
     "graphql": "^16.8.2",
-    "inertial": "^0.2.2",
+    "inertial": "^0.4.1",
     "tail": "^2.2.6",
     "unzipit": "^1.4.3"
   }
