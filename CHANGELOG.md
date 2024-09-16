@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.15.3
+
+### Fixed
+
+- Updated sidecar version to include a fix for the Flink Table API (Java) project template
+
 ## 0.15.2
 
 ### Fixed
