@@ -299,172 +299,83 @@ export class ResourceManager {
   // TOPICS
 
   /**
-   * Convert an array of available (CCloud) Kafka topics and store as a {@link TopicsByKafkaCluster}
-   * in extension state.
-   * @param topics The list of {@link KafkaTopic}s to set
+   *  Store this (possibly empty) list of topics for a cluster, be it local or ccloud, in workspace state.
+   *  If is known that a given cluster has no topics, then should call with empty topic array.
+   *
+   *  Raises an error if the cluster ID of any topic does not match the given cluster's ID.
    */
-  async setCCloudTopics(topics: KafkaTopic[]): Promise<void> {
-    // get any existing map of <clusterId, KafkaTopic[]>
-    const existingTopicsByCluster: TopicsByKafkaCluster = await this.getCCloudTopics();
-    // create a map of <clusterId, KafkaTopic[]> for the new topics
-    const newTopicsByCluster: TopicsByKafkaCluster = new Map();
-    topics.forEach((topic) => {
-      if (!newTopicsByCluster.has(topic.clusterId)) {
-        newTopicsByCluster.set(topic.clusterId, []);
-      }
-      newTopicsByCluster.get(topic.clusterId)?.push(topic);
-    });
-    // merge the new topics into the existing map
-    for (const [clusterId, newTopics] of newTopicsByCluster) {
-      // replace any existing topics for the cluster with the new topics
-      existingTopicsByCluster.set(clusterId, newTopics);
+  async setTopicsForCluster(cluster: KafkaCluster, topics: KafkaTopic[]): Promise<void> {
+    // Ensure that all topics have the correct cluster ID.
+    if (topics.some((topic) => topic.clusterId !== cluster.id)) {
+      logger.warn("Cluster ID mismatch in topics", cluster, topics);
+      throw new Error("Cluster ID mismatch in topics");
     }
-    await this.storage.setWorkspaceState(StateKafkaTopics.CCLOUD, existingTopicsByCluster);
+
+    const key = this.topicKeyForCluster(cluster);
+
+    // Fetch the proper map from storage, or create a new one if none exists.
+    const topicsByCluster =
+      (await this.storage.getWorkspaceState<TopicsByKafkaCluster>(key)) ||
+      new Map<string, KafkaTopic[]>();
+
+    // Set the new topics for the cluster
+    topicsByCluster.set(cluster.id, topics);
+
+    // Now save the updated cluster topics into the proper key'd storage.
+    await this.storage.setWorkspaceState(key, topicsByCluster);
   }
 
   /**
-   * Get the available {@link KafkaTopic}s from extension state.
-   * @returns The map of <clusterId (string), {@link KafkaTopic}[]>
+   * Get topics given a cluster, be it local or ccloud.
+   *
+   * @returns KafkaTopic[] (possibly empty) if known, else undefined
+   * indicating nothing at all known about this cluster (and should be deep probed).
    */
-  async getCCloudTopics(): Promise<TopicsByKafkaCluster> {
-    const topicsByClusterPlainJSON: TopicsByKafkaCluster | undefined =
-      await this.storage.getWorkspaceState(StateKafkaTopics.CCLOUD);
+  async getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[] | undefined> {
+    const key = this.topicKeyForCluster(cluster);
 
-    if (topicsByClusterPlainJSON) {
-      // Promote each member to be an instance of KafkaTopic
-      return new Map(
-        Array.from(topicsByClusterPlainJSON).map(([clusterId, topics]) => [
-          clusterId,
-          topics.map((topic) => KafkaTopic.create(topic)),
-        ]),
-      );
+    // Fetch the proper map from storage.
+    const topicsByCluster: TopicsByKafkaCluster | undefined =
+      await this.storage.getWorkspaceState<TopicsByKafkaCluster>(key);
+
+    if (topicsByCluster === undefined) {
+      return undefined;
+    }
+
+    // Will either be undefined or an array of plain json objects since
+    // just deserialized from storage.
+    const vanillaJSONTopics = topicsByCluster.get(cluster.id);
+
+    if (vanillaJSONTopics === undefined) {
+      return undefined;
+    }
+
+    // Promote each member to be an instance of KafkaTopic, return.
+    // (Empty list will be returned as is, indicating that we know there are
+    //  no topics in this cluster.)
+    return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic));
+  }
+
+  /**
+   * Delete all ccloud topics from workspace state, such as when user logs out from ccloud.
+   */
+  async deleteCCloudTopics(): Promise<void> {
+    return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
+  }
+
+  /** Return the use-with-storage StateKafkaTopics key for this type of cluster.
+   *
+   * (not private only for testing)
+   */
+  topicKeyForCluster(cluster: KafkaCluster): StateKafkaTopics {
+    if (cluster instanceof CCloudKafkaCluster) {
+      return StateKafkaTopics.CCLOUD;
+    } else if (cluster instanceof LocalKafkaCluster) {
+      return StateKafkaTopics.LOCAL;
     } else {
-      return new Map<string, KafkaTopic[]>();
+      logger.warn("Unknown cluster type", cluster);
+      throw new Error("Unknown cluster type");
     }
-  }
-
-  /**
-   * Get the available {@link KafkaTopic}s for a specific Kafka cluster from extension state.
-   * @param clusterId The ID of the Kafka cluster for which to get topics
-   * @returns The list of {@link KafkaTopic}s for the specified cluster
-   */
-  async getCCloudTopicsForCluster(clusterId: string): Promise<KafkaTopic[]> {
-    const topicsByCluster = await this.getCCloudTopics();
-    return topicsByCluster.get(clusterId) ?? [];
-  }
-
-  /**
-   * Get a specific Kafka topic from extension state.
-   * @param clusterId The ID of the {@link KafkaCluster} to which the topic belongs
-   * @param topicName The name of the topic to get
-   * @returns The {@link KafkaTopic}, or `null` (if the cluster or topic are not found)
-   */
-  async getCCloudTopic(clusterId: string, topicName: string): Promise<KafkaTopic | null> {
-    const topics: KafkaTopic[] = await this.getCCloudTopicsForCluster(clusterId);
-    if (topics.length === 0) {
-      logger.warn(`No topics found for cluster ${clusterId}`);
-      return null;
-    }
-    return topics.find((topic) => topic.name === topicName) ?? null;
-  }
-
-  /**
-   * Delete the list of available Kafka topics from extension state.
-   * @param cluster Optional: the ID of the cluster for which to delete topics;
-   * if not provided, all <clusterId, {@link KafkaTopic}> pairs will be deleted
-   */
-  async deleteCCloudTopics(cluster?: string): Promise<void> {
-    if (!cluster) {
-      return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
-    }
-    const topics = await this.getCCloudTopics();
-    topics.delete(cluster);
-    await this.storage.setWorkspaceState(StateKafkaTopics.CCLOUD, topics);
-  }
-
-  /**
-   * Convert an array of available (local) Kafka topics and store as a {@link TopicsByKafkaCluster}
-   * in extension state.
-   * @param topics The list of {@link KafkaTopic}s to set
-   */
-  async setLocalTopics(topics: KafkaTopic[]): Promise<void> {
-    // get any existing map of <clusterId, KafkaTopic[]>
-    const existingTopicsByCluster: TopicsByKafkaCluster = await this.getLocalTopics();
-    // create a map of <clusterId, KafkaTopic[]> for the new topics
-    const newTopicsByCluster: TopicsByKafkaCluster = new Map();
-    topics.forEach((topic) => {
-      if (!newTopicsByCluster.has(topic.clusterId)) {
-        newTopicsByCluster.set(topic.clusterId, []);
-      }
-      newTopicsByCluster.get(topic.clusterId)?.push(topic);
-    });
-    // merge the new topics into the existing map
-    for (const [clusterId, newTopics] of newTopicsByCluster) {
-      // replace any existing topics for the cluster with the new topics
-      existingTopicsByCluster.set(clusterId, newTopics);
-    }
-    await this.storage.setWorkspaceState(StateKafkaTopics.LOCAL, existingTopicsByCluster);
-  }
-
-  /**
-   * Get the available local {@link KafkaTopic}s from extension state.
-   * @returns The {@link TopicsByKafkaCluster} map
-   */
-  async getLocalTopics(): Promise<TopicsByKafkaCluster> {
-    const topicsByClusterPlainJSON: TopicsByKafkaCluster | undefined =
-      await this.storage.getWorkspaceState(StateKafkaTopics.LOCAL);
-
-    if (topicsByClusterPlainJSON) {
-      // Promote each member to be an instance of KafkaTopic
-      return new Map(
-        Array.from(topicsByClusterPlainJSON).map(([clusterId, topics]) => [
-          clusterId,
-          topics.map((topic) => KafkaTopic.create(topic)),
-        ]),
-      );
-    } else {
-      return new Map<string, KafkaTopic[]>();
-    }
-  }
-
-  /**
-   * Get the available {@link KafkaTopic}s for a specific {@link LocalKafkaCluster} from extension
-   * state.
-   * @param clusterId The ID of the Kafka cluster for which to get topics
-   * @returns The list of {@link KafkaTopic}s for the specified cluster
-   */
-  async getLocalTopicsForCluster(clusterId: string): Promise<KafkaTopic[]> {
-    const topicsByCluster = await this.getLocalTopics();
-    return topicsByCluster.get(clusterId) ?? [];
-  }
-
-  /**
-   * Get a specific local Kafka topic from extension state.
-   * @param clusterId The ID of the {@link LocalKafkaCluster} to which the topic belongs
-   * @param topicName The name of the topic to get
-   * @returns The {@link KafkaTopic}, or `null` (if the cluster or topic are not found)
-   */
-  async getLocalTopic(clusterId: string, topicName: string): Promise<KafkaTopic | null> {
-    const topics: KafkaTopic[] = await this.getLocalTopicsForCluster(clusterId);
-    if (topics.length === 0) {
-      logger.warn(`No topics found for cluster ${clusterId}`);
-      return null;
-    }
-    return topics.find((topic) => topic.name === topicName) ?? null;
-  }
-
-  /**
-   * Delete local Kafka topics from extension state.
-   * @param cluster Optional: the ID of the cluster for which to delete topics;
-   * if not provided, all <clusterId, {@link KafkaTopic}> pairs will be deleted
-   */
-  async deleteLocalTopics(cluster?: string): Promise<void> {
-    if (!cluster) {
-      return await this.storage.deleteWorkspaceState(StateKafkaTopics.LOCAL);
-    }
-    const topics = await this.getLocalTopics();
-    topics.delete(cluster);
-    await this.storage.setWorkspaceState(StateKafkaTopics.LOCAL, topics);
   }
 
   // SCHEMAS

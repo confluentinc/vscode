@@ -26,7 +26,6 @@ import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaBySchemaRegistryCluster,
   CCloudSchemaRegistryByEnv,
-  TopicsByKafkaCluster,
   getResourceManager,
 } from "./resourceManager";
 
@@ -394,6 +393,8 @@ describe("ResourceManager Kafka topic methods", function () {
   let storageManager: StorageManager;
   let ccloudTopics: KafkaTopic[];
   let localTopics: KafkaTopic[];
+  let otherCcloudCluster: CCloudKafkaCluster;
+  let otherCcloudClusterTopics: KafkaTopic[];
 
   before(async () => {
     // extension needs to be activated before storage manager can be used
@@ -403,6 +404,19 @@ describe("ResourceManager Kafka topic methods", function () {
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
     ];
     localTopics = [KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, name: "test-local-topic-1" })];
+
+    otherCcloudCluster = CCloudKafkaCluster.create({
+      ...TEST_CCLOUD_KAFKA_CLUSTER,
+      id: "other-cluster-id",
+    });
+
+    otherCcloudClusterTopics = [
+      KafkaTopic.create({
+        ...TEST_CCLOUD_KAFKA_TOPIC,
+        name: "test-ccloud-topic-3",
+        clusterId: otherCcloudCluster.id,
+      }),
+    ];
   });
 
   beforeEach(async () => {
@@ -415,15 +429,105 @@ describe("ResourceManager Kafka topic methods", function () {
     await storageManager.clearWorkspaceState();
   });
 
+  it("getTopicsForCluster() should return undefined if no cached topics for this cluster", async () => {
+    // Set up the cloud topics, local topics.
+    const manager = getResourceManager();
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
+      const topics = await manager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(topics, undefined);
+    }
+  });
+
+  it("getTopicsForCluster() should return empty array of topics if empty array is set", async () => {
+    const manager = getResourceManager();
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
+      await manager.setTopicsForCluster(cluster, []);
+      const topics = await manager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(topics, []);
+    }
+  });
+
+  it("getTopicsForCluster() should return the correct cloud or local topics accordingly", async () => {
+    // Set up the cloud topics, local topics.
+    const manager = getResourceManager();
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]);
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+
+    // Learn first batch of topics from main cloud cluster
+    await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+
+    const ccloudTopicsForMainCluster = await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepEqual(
+      ccloudTopicsForMainCluster,
+      ccloudTopics,
+      "Expected cloud topics to be returned for the cloud cluster",
+    );
+
+    // Now learn another batch of topics for a different cloud cluster
+    await manager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
+
+    const ccloudTopicsForOtherCluster = await manager.getTopicsForCluster(otherCcloudCluster);
+    assert.deepEqual(
+      ccloudTopicsForOtherCluster,
+      otherCcloudClusterTopics,
+      "Expected cloud topics to be returned for the other cloud cluster",
+    );
+
+    // and meanwhile the main cloud cluster should still have its topics
+    const ccloudTopicsForMainClusterAfter =
+      await manager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepEqual(
+      ccloudTopicsForMainClusterAfter,
+      ccloudTopics,
+      "Expected cloud topics to still be returned for the main cloud cluster",
+    );
+
+    //Populate non-empty array for local cluster, should get it back.
+    await manager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
+
+    const localTopicsForCluster = await manager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+    assert.deepEqual(
+      localTopicsForCluster,
+      localTopics,
+      "Expected local topics to be returned for the local cluster",
+    );
+
+    // And meanwhile the cloud clusters should still have their topics. No
+    // No cross-contamination.
+    const clustersAndExpectedTopics: [KafkaCluster, KafkaTopic[]][] = [
+      [TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics],
+      [otherCcloudCluster, otherCcloudClusterTopics],
+    ];
+    for (const [cluster, topics] of clustersAndExpectedTopics) {
+      const topicsForCluster = await manager.getTopicsForCluster(cluster);
+      assert.deepEqual(
+        topicsForCluster,
+        topics,
+        "Expected right topics to still be returned for each cloud cluster",
+      );
+    }
+  });
+
   it("getClusterForTopic() should return the correct cloud or local cluster accordingly", async () => {
+    // (Is really a cluster-related test, not topic, but this suite has topic sample data)
+
     // Set up the cloud cluster and topics, local topics.
     const manager = getResourceManager();
 
     await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-    await manager.setCCloudTopics(ccloudTopics);
+    await manager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
 
     await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
-    await manager.setLocalTopics(localTopics);
+    await manager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
 
     const ccloudTopic = ccloudTopics[0];
     const ccloudCluster = await manager.getClusterForTopic(ccloudTopic);
@@ -444,285 +548,41 @@ describe("ResourceManager Kafka topic methods", function () {
     );
   });
 
-  it("CCLOUD: setCCloudTopics() should correctly store Kafka topics", async () => {
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // verify the topics were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedTopicsByCluster: Map<string, KafkaTopic[]> | undefined =
-      await storageManager.getWorkspaceState(StateKafkaTopics.CCLOUD);
-    assert.ok(storedTopicsByCluster);
-    assert.ok(storedTopicsByCluster instanceof Map);
-    assert.ok(storedTopicsByCluster.has(ccloudTopics[0].clusterId));
-    assert.deepStrictEqual(storedTopicsByCluster.get(ccloudTopics[0].clusterId), ccloudTopics);
-  });
-
-  it("CCLOUD: setCCloudTopics() should add new cluster keys if they don't exist", async () => {
-    // set the first batch of topics from the first cluster
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // create and set the second batch of topics for the new cluster
-    const newClusterId = "new-cluster-id";
-    const newTopics: KafkaTopic[] = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_CCLOUD_KAFKA_TOPIC, name: "new-topic-1", clusterId: newClusterId },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_CCLOUD_KAFKA_TOPIC, name: "new-topic-2", clusterId: newClusterId },
-    ];
-    await getResourceManager().setCCloudTopics(newTopics);
-    // verify the topics were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedTopicsByCluster: TopicsByKafkaCluster | undefined =
-      await storageManager.getWorkspaceState(StateKafkaTopics.CCLOUD);
-    assert.ok(storedTopicsByCluster);
-    // make sure both clusters exist and the first wasn't overwritten
-    assert.deepStrictEqual(storedTopicsByCluster.get(newClusterId), newTopics);
-    assert.deepStrictEqual(storedTopicsByCluster.get(ccloudTopics[0].clusterId), ccloudTopics);
-  });
-
-  it("CCLOUD: setCCloudTopics() shouldn't duplicate topics when setting topics that already exist", async () => {
-    // set the topics in the StorageManager before setting them again
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // set the topics again
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // verify the topics were not duplicated
-    let storedTopicsByCluster: TopicsByKafkaCluster | undefined =
-      await storageManager.getWorkspaceState(StateKafkaTopics.CCLOUD);
-    assert.ok(storedTopicsByCluster);
-    assert.ok(storedTopicsByCluster instanceof Map);
-    assert.ok(storedTopicsByCluster.has(ccloudTopics[0].clusterId));
-    assert.deepStrictEqual(storedTopicsByCluster.get(ccloudTopics[0].clusterId), ccloudTopics);
-  });
-
-  it("CCLOUD: getCCloudTopics() should correctly retrieve Kafka topics", async () => {
-    const resourceManager = getResourceManager();
-    // preload some topics before retrieving them
-    await resourceManager.setCCloudTopics(ccloudTopics);
-    // verify the topics were stored correctly
-    const topicsByCluster: TopicsByKafkaCluster = await resourceManager.getCCloudTopics();
-    const retrievedTopics = topicsByCluster.get(ccloudTopics[0].clusterId);
-    assert.deepStrictEqual(retrievedTopics, ccloudTopics);
-  });
-
-  it("CCLOUD: getCCloudTopic() should return an empty array if no topics are found", async () => {
-    // verify no topics are found
-    const topicsByCluster: TopicsByKafkaCluster = await getResourceManager().getCCloudTopics();
-    assert.deepStrictEqual(topicsByCluster, new Map());
-  });
-
-  it("CCLOUD: getCCloudTopic() should correctly retrieve a Kafka topic", async () => {
-    // set the topics
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // verify the topic was retrieved correctly
-    const topic: KafkaTopic | null = await getResourceManager().getCCloudTopic(
-      ccloudTopics[0].clusterId,
-      ccloudTopics[0].name,
-    );
-    assert.deepStrictEqual(topic, ccloudTopics[0]);
-  });
-
-  it("CCLOUD: getCCloudTopic() should return null if the parent cluster ID is not found", async () => {
-    // set the topics
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // verify the topic was not found because the cluster ID is incorrect
-    const missingTopic: KafkaTopic | null = await getResourceManager().getCCloudTopic(
-      "nonexistent-cluster-id",
-      ccloudTopics[0].name,
-    );
-    assert.strictEqual(missingTopic, null);
-  });
-
-  it("CCLOUD: getCCloudTopic() should return null if the topic is not found", async () => {
-    // set the topics
-    await getResourceManager().setCCloudTopics(ccloudTopics);
-    // verify the topic was not found
-    const missingTopic: KafkaTopic | null = await getResourceManager().getCCloudTopic(
-      ccloudTopics[0].clusterId,
-      "nonexistent-topic-name",
-    );
-    assert.strictEqual(missingTopic, null);
-  });
-
-  it("CCLOUD: deleteCCloudTopics() should correctly delete Kafka topics", async () => {
+  it("deleteCCloudTopics() should correctly delete only ccloud Kafka topics", async () => {
     // set the topics in the StorageManager before deleting them
     const resourceManager = getResourceManager();
-    await resourceManager.setCCloudTopics(ccloudTopics);
+    await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+    await resourceManager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
+    await resourceManager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
+
+    // only the cloud topics should be deleted
     await resourceManager.deleteCCloudTopics();
-    // verify the topics were deleted correctly
-    const missingTopics = await storageManager.getWorkspaceState(StateKafkaTopics.CCLOUD);
-    assert.deepStrictEqual(missingTopics, undefined);
+
+    // verify the ccloud topics were deleted correctly.
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]) {
+      const shouldBeUndefined = await resourceManager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(shouldBeUndefined, undefined);
+    }
+
+    // verify the local topics were not deleted.
+    const localTopicsAfter = await resourceManager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+    assert.deepStrictEqual(localTopicsAfter, localTopics);
   });
 
-  it("CCLOUD: deleteCCloudTopics() should delete all topics for a specific cluster", async () => {
-    // set the topics in the StorageManager before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudTopics(ccloudTopics);
+  it("topicKeyForCluster() tests", () => {
+    const manager = getResourceManager();
 
-    // add some more topics for a different cluster
-    const newClusterId = "new-cluster-id";
-    const newTopics: KafkaTopic[] = [
-      KafkaTopic.create({
-        ...TEST_CCLOUD_KAFKA_TOPIC,
-        name: "new-topic-1",
-        clusterId: newClusterId,
-      }),
-      KafkaTopic.create({
-        ...TEST_CCLOUD_KAFKA_TOPIC,
-        name: "new-topic-2",
-        clusterId: newClusterId,
-      }),
-    ];
-    await resourceManager.setCCloudTopics(newTopics);
+    assert.equal(
+      manager.topicKeyForCluster(TEST_CCLOUD_KAFKA_CLUSTER),
+      StateKafkaTopics.CCLOUD,
+      "Expected cloud cluster to map to StateKafkaTopics.CCLOUD",
+    );
 
-    // delete the first batch
-    await resourceManager.deleteCCloudTopics(ccloudTopics[0].clusterId);
-
-    // verify the topics were deleted correctly
-    const missingTopics = await storageManager.getWorkspaceState(StateKafkaTopics.CCLOUD);
-    assert.ok(missingTopics instanceof Map);
-    assert.strictEqual(missingTopics.get(ccloudTopics[0].clusterId), undefined);
-
-    // ...but the second batch of topics should still be there
-    assert.ok(missingTopics.has(newClusterId));
-    assert.deepStrictEqual(missingTopics.get(newClusterId), newTopics);
-  });
-
-  it("LOCAL: setLocalTopics() should correctly store Kafka topics", async () => {
-    await getResourceManager().setLocalTopics(localTopics);
-    // verify the topics were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedTopics: KafkaTopic[] | undefined = await storageManager.getWorkspaceState(
+    assert.equal(
+      manager.topicKeyForCluster(TEST_LOCAL_KAFKA_CLUSTER),
       StateKafkaTopics.LOCAL,
+      "Expected local cluster to map to StateKafkaTopics.LOCAL",
     );
-    assert.ok(storedTopics);
-    assert.ok(storedTopics instanceof Map);
-    assert.ok(storedTopics.has(localTopics[0].clusterId));
-    assert.deepStrictEqual(storedTopics.get(localTopics[0].clusterId), localTopics);
-  });
-
-  it("LOCAL: setLocalTopics() should add new cluster keys if they don't exist", async () => {
-    // set the first batch of topics from the first cluster
-    await getResourceManager().setLocalTopics(localTopics);
-    // create and set the second batch of topics for the new cluster
-    const newClusterId = "new-cluster-id";
-    const newTopics: KafkaTopic[] = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_LOCAL_KAFKA_TOPIC, name: "new-topic-1", clusterId: newClusterId },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_LOCAL_KAFKA_TOPIC, name: "new-topic-2", clusterId: newClusterId },
-    ];
-    await getResourceManager().setLocalTopics(newTopics);
-    // verify the topics were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedTopics: TopicsByKafkaCluster | undefined = await storageManager.getWorkspaceState(
-      StateKafkaTopics.LOCAL,
-    );
-    assert.ok(storedTopics);
-    // make sure both clusters exist and the first wasn't overwritten
-    assert.deepStrictEqual(storedTopics.get(newClusterId), newTopics);
-    assert.deepStrictEqual(storedTopics.get(localTopics[0].clusterId), localTopics);
-  });
-
-  it("LOCAL: setLocalTopics() shouldn't duplicate topics when setting topics that already exist", async () => {
-    // set the topics in the StorageManager before setting them again
-    await getResourceManager().setLocalTopics(localTopics);
-    // set the topics again
-    await getResourceManager().setLocalTopics(localTopics);
-    // verify the topics were not duplicated
-    let storedTopics: TopicsByKafkaCluster | undefined = await storageManager.getWorkspaceState(
-      StateKafkaTopics.LOCAL,
-    );
-    assert.ok(storedTopics);
-    assert.ok(storedTopics instanceof Map);
-    assert.ok(storedTopics.has(localTopics[0].clusterId));
-    assert.deepStrictEqual(storedTopics.get(localTopics[0].clusterId), localTopics);
-  });
-
-  it("LOCAL: getLocalTopics() should correctly retrieve Kafka topics", async () => {
-    const resourceManager = getResourceManager();
-    // set the topics in the StorageManager before retrieving them
-    await resourceManager.setLocalTopics(localTopics);
-    // verify the topics were retrieved correctly
-    const retrievedTopics: TopicsByKafkaCluster = await resourceManager.getLocalTopics();
-    assert.deepStrictEqual(retrievedTopics.get(localTopics[0].clusterId), localTopics);
-  });
-
-  it("LOCAL: getLocalTopics() should return an empty map if no topics are found", async () => {
-    const resourceManager = getResourceManager();
-    // verify no topics are found
-    const topics: TopicsByKafkaCluster = await resourceManager.getLocalTopics();
-    assert.deepStrictEqual(topics, new Map());
-  });
-
-  it("LOCAL: getLocalTopic() should correctly retrieve a Kafka topic", async () => {
-    // set the topics
-    await getResourceManager().setLocalTopics(localTopics);
-    // verify the topic was retrieved correctly
-    const topic: KafkaTopic | null = await getResourceManager().getLocalTopic(
-      localTopics[0].clusterId,
-      localTopics[0].name,
-    );
-    assert.deepStrictEqual(topic, localTopics[0]);
-  });
-
-  it("LOCAL: getLocalTopic() should return null if the parent cluster ID is not found", async () => {
-    // set the topics
-    await getResourceManager().setLocalTopics(localTopics);
-    // verify the topic was not found because the cluster ID is incorrect
-    const missingTopic: KafkaTopic | null = await getResourceManager().getLocalTopic(
-      "nonexistent-cluster-id",
-      localTopics[0].name,
-    );
-    assert.strictEqual(missingTopic, null);
-  });
-
-  it("LOCAL: getLocalTopic() should return null if the topic is not found", async () => {
-    // set the topics
-    await getResourceManager().setLocalTopics(localTopics);
-    // verify the topic was not found
-    const missingTopic: KafkaTopic | null = await getResourceManager().getLocalTopic(
-      localTopics[0].clusterId,
-      "nonexistent-topic-name",
-    );
-    assert.strictEqual(missingTopic, null);
-  });
-
-  it("LOCAL: deleteLocalTopics() should correctly delete Kafka topics", async () => {
-    // set the topics in the StorageManager before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setLocalTopics(localTopics);
-    await resourceManager.deleteLocalTopics();
-    // verify the topics were deleted correctly
-    const missingTopics = await storageManager.getWorkspaceState(StateKafkaTopics.LOCAL);
-    assert.deepStrictEqual(missingTopics, undefined);
-  });
-
-  it("LOCAL: deleteLocalTopics() should delete all topics for a specific cluster", async () => {
-    // set the topics in the StorageManager before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setLocalTopics(localTopics);
-
-    // add some more topics for a different cluster
-    const newClusterId = "new-cluster-id";
-    const newTopics: KafkaTopic[] = [
-      KafkaTopic.create({
-        ...TEST_LOCAL_KAFKA_TOPIC,
-        name: "new-topic-1",
-        clusterId: newClusterId,
-      }),
-      KafkaTopic.create({
-        ...TEST_LOCAL_KAFKA_TOPIC,
-        name: "new-topic-2",
-        clusterId: newClusterId,
-      }),
-    ];
-    await resourceManager.setLocalTopics(newTopics);
-
-    // delete the first batch
-    await resourceManager.deleteLocalTopics(localTopics[0].clusterId);
-
-    // verify the topics were deleted correctly
-    const missingTopics = await storageManager.getWorkspaceState(StateKafkaTopics.LOCAL);
-    assert.ok(missingTopics instanceof Map);
-    assert.strictEqual(missingTopics.get(localTopics[0].clusterId), undefined);
-
-    // ...but the second batch of topics should still be there
-    assert.ok(missingTopics.has(newClusterId));
-    assert.deepStrictEqual(missingTopics.get(newClusterId), newTopics);
   });
 });
 
@@ -985,11 +845,11 @@ describe("ResourceManager general utility methods", function () {
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
     await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
-    await resourceManager.setCCloudTopics(ccloudTopics);
+    await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
     await resourceManager.setCCloudSchemas(ccloudSchemas);
     // also set some local resources to make sure they aren't deleted
     await resourceManager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
-    await resourceManager.setLocalTopics(localTopics);
+    await resourceManager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
 
     await resourceManager.deleteCCloudResources();
 
@@ -998,8 +858,8 @@ describe("ResourceManager general utility methods", function () {
     assert.deepStrictEqual(missingClusters, new Map());
     const missingSchemaRegistries = await resourceManager.getCCloudSchemaRegistryClusters();
     assert.deepStrictEqual(missingSchemaRegistries, new Map());
-    const missingTopics = await resourceManager.getCCloudTopics();
-    assert.deepStrictEqual(missingTopics, new Map());
+    const missingTopics = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
+    assert.deepStrictEqual(missingTopics, undefined);
     const missingSchemas = await resourceManager.getCCloudSchemas();
     assert.deepStrictEqual(missingSchemas, new Map());
 
@@ -1009,8 +869,8 @@ describe("ResourceManager general utility methods", function () {
     assert.ok(existinglocalClusters);
     assert.equal(existinglocalClusters.length, 1);
 
-    const existingLocalTopics = await resourceManager.getLocalTopics();
+    const existingLocalTopics = await resourceManager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
     assert.ok(existingLocalTopics);
-    assert.equal(existingLocalTopics.size, 1);
+    assert.equal(existingLocalTopics.length, 1);
   });
 });
