@@ -261,7 +261,8 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
     const topicViewProvider = TopicViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.topics.refresh", () => {
-        topicViewProvider.refresh();
+        // Force a deep refresh from sidecar.
+        topicViewProvider.refresh(true);
       }),
     );
     logger.info("Topics view provider created");
