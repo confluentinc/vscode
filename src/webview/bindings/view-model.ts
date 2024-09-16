@@ -25,6 +25,7 @@ import { type Scope } from "inertial";
  *  */
 export class ViewModel implements Scope {
   observe!: Scope["observe"];
+  produce!: Scope["produce"];
   signal!: Scope["signal"];
   derive!: Scope["derive"];
   watch!: Scope["watch"];
@@ -63,16 +64,10 @@ export class ViewModel implements Scope {
    */
   resolve<Result>(fn: () => Promise<Result>, init: Result) {
     const result = this.signal<Result>(init);
-    // XXX this function should remain synchronous, per `watch()` requirement
-    this.watch(() => {
-      // local abort controller prevents race conditions:
+    this.watch(async (signal) => {
+      const value = await fn();
       // if an older async request takes longer to resolve, its result should be dismissed
-      const ctl = new AbortController();
-      fn().then((value) => {
-        if (!ctl.signal.aborted) result(value);
-      });
-      // if the watcher needs to rerun: abort currently pending update
-      return () => ctl.abort();
+      if (!signal.aborted) result(value);
     });
     return result;
   }
