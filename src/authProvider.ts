@@ -3,6 +3,7 @@ import { Connection } from "./clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "./emitters";
+import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { openExternal, pollCCloudConnectionAuth } from "./sidecar/authStatusPolling";
 import {
@@ -38,7 +39,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private constructor() {
     const context: vscode.ExtensionContext = getExtensionContext();
     if (!context) {
-      throw new Error("ExtensionContext not set yet");
+      // extension context required for keeping up with secrets changes
+      throw new ExtensionContextNotSetError("ConfluentCloudAuthProvider");
     }
 
     const resourceManager = getResourceManager();
