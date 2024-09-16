@@ -322,7 +322,6 @@ function pkgjson() {
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
   const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
-  const sidecarPath = join(DESTINATION, sidecarFilename);
 
   return [
     virtual({
@@ -330,7 +329,7 @@ function sidecar() {
     }),
     copy({
       copyOnce: true,
-      targets: [{ src: join("bin", sidecarFilename), dest: sidecarPath }],
+      targets: [{ src: `bin/${sidecarFilename}`, dest: DESTINATION }],
     }),
   ];
 }
