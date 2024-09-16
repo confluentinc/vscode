@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.15.2
+
+### Fixed
+
+- "ExtensionContext not set yet" error during extension activation
+- "View in Confluent Cloud" action appears on CCloud topics in the Topics view as expected
+
 ## 0.15.1
 
 ### Added
