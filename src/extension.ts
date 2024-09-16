@@ -54,7 +54,7 @@ import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
-import { getTopicViewProvider } from "./viewProviders/topics";
+import { TopicViewProvider } from "./viewProviders/topics";
 
 const logger = new Logger("extension");
 
@@ -203,7 +203,7 @@ async function setupContextValues() {
 async function setupStorage(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
   // initialize singleton storage manager instance so other parts of the extension can access the
   // globalState, workspaceState, and secrets without needing to pass the extension context around
-  const manager = StorageManager.getOrCreateInstance();
+  const manager = StorageManager.getInstance();
   // Handle any storage migrations that need to happen before the extension can proceed.
   await migrateStorageIfNeeded(manager);
   logger.info("Storage manager initialized and migrations completed");
@@ -246,7 +246,7 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   logger.info("Creating view providers...");
 
   try {
-    const resourceViewProvider = new ResourceViewProvider();
+    const resourceViewProvider = ResourceViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.resources.refresh", () => {
         resourceViewProvider.refresh();
@@ -258,7 +258,7 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   }
 
   try {
-    const topicViewProvider = getTopicViewProvider();
+    const topicViewProvider = TopicViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.topics.refresh", () => {
         // Force a deep refresh from sidecar.
@@ -271,7 +271,7 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   }
 
   try {
-    const schemasViewProvider = new SchemasViewProvider();
+    const schemasViewProvider = SchemasViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.schemas.refresh", () => {
         schemasViewProvider.refresh();

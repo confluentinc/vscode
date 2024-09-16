@@ -6,8 +6,28 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
+- Rely on the resource manager / workspace storage cache for topics within a cluster. Selecting a kafka cluster will consult this cache before opting to deep-fetch from sidecar (and then it cascading through to CCloud or local kafka rest). The 'refresh' button in the topics view title bar can be used to force a deep fetch. Creating or deleting a topic will also result in a deep fetch.
+
+## 0.15.2
+
+### Fixed
+
+- "ExtensionContext not set yet" error during extension activation
+- "View in Confluent Cloud" action appears on CCloud topics in the Topics view as expected
+
+## 0.15.1
+
+### Added
+
+- Status labels and icons in the main Message Viewer area to indicate any error scenarios (e.g.
+  connection issues, rate limiting, etc.)
+
+### Changed
+
 - Errors listing topics in the Topics view after selecting a Kafka cluster will now be more
   informative
+- Repo-level README and Marketplace README have been consolidated into a single README
+- Minor updates to the `package.json` description/keywords
 
 ## 0.15.0
 

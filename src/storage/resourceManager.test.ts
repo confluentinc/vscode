@@ -13,6 +13,7 @@ import { getTestStorageManager } from "../../tests/unit/testUtils";
 import {
   StateEnvironments,
   StateKafkaClusters,
+  StateKafkaTopics,
   StateSchemaRegistry,
   StateSchemas,
 } from "../constants";
@@ -428,6 +429,32 @@ describe("ResourceManager Kafka topic methods", function () {
     await storageManager.clearWorkspaceState();
   });
 
+  it("getTopicsForCluster() should return undefined if no cached topics for this cluster", async () => {
+    // Set up the cloud topics, local topics.
+    const manager = getResourceManager();
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
+      const topics = await manager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(topics, undefined);
+    }
+  });
+
+  it("getTopicsForCluster() should return empty array of topics if empty array is set", async () => {
+    const manager = getResourceManager();
+
+    await manager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
+    await manager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
+
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, TEST_LOCAL_KAFKA_CLUSTER]) {
+      await manager.setTopicsForCluster(cluster, []);
+      const topics = await manager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(topics, []);
+    }
+  });
+
   it("getTopicsForCluster() should return the correct cloud or local topics accordingly", async () => {
     // Set up the cloud topics, local topics.
     const manager = getResourceManager();
@@ -445,15 +472,7 @@ describe("ResourceManager Kafka topic methods", function () {
       "Expected cloud topics to be returned for the cloud cluster",
     );
 
-    // before we populate the other cloud cluster, we should get null, NOT an empty array.
-    const otherCcloudTopicsShouldBeNull = await manager.getTopicsForCluster(otherCcloudCluster);
-    assert.equal(
-      otherCcloudTopicsShouldBeNull,
-      null,
-      "Expected null to be returned for the other cloud cluster indicating not populated (yet)",
-    );
-
-    // Now learn second batch of topics from another cloud cluster
+    // Now learn another batch of topics for a different cloud cluster
     await manager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
 
     const ccloudTopicsForOtherCluster = await manager.getTopicsForCluster(otherCcloudCluster);
@@ -472,25 +491,7 @@ describe("ResourceManager Kafka topic methods", function () {
       "Expected cloud topics to still be returned for the main cloud cluster",
     );
 
-    const localTopicsForClusterInitallyNull =
-      await manager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
-    assert.equal(
-      localTopicsForClusterInitallyNull,
-      null,
-      "Expected null to be returned for the local cluster indicating not populated (yet)",
-    );
-
-    // Store empty array for local cluster, should get it back.
-    await manager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, []);
-    const localTopicsForClusterEmptyArray =
-      await manager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
-    assert.deepEqual(
-      localTopicsForClusterEmptyArray,
-      [],
-      "Expected empty array to be returned for the local cluster",
-    );
-
-    // Now repopulate with non-empty array for local cluster, should get it back.
+    //Populate non-empty array for local cluster, should get it back.
     await manager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
 
     const localTopicsForCluster = await manager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
@@ -499,9 +500,26 @@ describe("ResourceManager Kafka topic methods", function () {
       localTopics,
       "Expected local topics to be returned for the local cluster",
     );
+
+    // And meanwhile the cloud clusters should still have their topics. No
+    // No cross-contamination.
+    const clustersAndExpectedTopics: [KafkaCluster, KafkaTopic[]][] = [
+      [TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics],
+      [otherCcloudCluster, otherCcloudClusterTopics],
+    ];
+    for (const [cluster, topics] of clustersAndExpectedTopics) {
+      const topicsForCluster = await manager.getTopicsForCluster(cluster);
+      assert.deepEqual(
+        topicsForCluster,
+        topics,
+        "Expected right topics to still be returned for each cloud cluster",
+      );
+    }
   });
 
   it("getClusterForTopic() should return the correct cloud or local cluster accordingly", async () => {
+    // (Is really a cluster-related test, not topic, but this suite has topic sample data)
+
     // Set up the cloud cluster and topics, local topics.
     const manager = getResourceManager();
 
@@ -530,15 +548,41 @@ describe("ResourceManager Kafka topic methods", function () {
     );
   });
 
-  it("CCLOUD: deleteCCloudTopics() should correctly delete Kafka topics", async () => {
+  it("deleteCCloudTopics() should correctly delete only ccloud Kafka topics", async () => {
     // set the topics in the StorageManager before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
+    await resourceManager.setTopicsForCluster(otherCcloudCluster, otherCcloudClusterTopics);
+    await resourceManager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
+
+    // only the cloud topics should be deleted
     await resourceManager.deleteCCloudTopics();
-    // verify the topics were deleted correctly.
-    // getTopicsForCluster() should now return undefined for the ccloud cluster.
-    const shouldBeEmpty = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
-    assert.deepStrictEqual(shouldBeEmpty, undefined);
+
+    // verify the ccloud topics were deleted correctly.
+    for (const cluster of [TEST_CCLOUD_KAFKA_CLUSTER, otherCcloudCluster]) {
+      const shouldBeUndefined = await resourceManager.getTopicsForCluster(cluster);
+      assert.deepStrictEqual(shouldBeUndefined, undefined);
+    }
+
+    // verify the local topics were not deleted.
+    const localTopicsAfter = await resourceManager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+    assert.deepStrictEqual(localTopicsAfter, localTopics);
+  });
+
+  it("topicKeyForCluster() tests", () => {
+    const manager = getResourceManager();
+
+    assert.equal(
+      manager.topicKeyForCluster(TEST_CCLOUD_KAFKA_CLUSTER),
+      StateKafkaTopics.CCLOUD,
+      "Expected cloud cluster to map to StateKafkaTopics.CCLOUD",
+    );
+
+    assert.equal(
+      manager.topicKeyForCluster(TEST_LOCAL_KAFKA_CLUSTER),
+      StateKafkaTopics.LOCAL,
+      "Expected local cluster to map to StateKafkaTopics.LOCAL",
+    );
   });
 });
 

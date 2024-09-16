@@ -38,13 +38,13 @@ export type CCloudSchemaBySchemaRegistryCluster = Map<string, Schema[]>;
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
-  private static instance: ResourceManager;
-
+  static instance: ResourceManager | null = null;
   private constructor(private storage: StorageManager) {}
 
-  static getInstance(storageManager: StorageManager): ResourceManager {
+  static getInstance(): ResourceManager {
     if (!ResourceManager.instance) {
-      ResourceManager.instance = new ResourceManager(storageManager);
+      // will throw an ExtensionContextNotSetError if the context isn't available for StorageManager
+      ResourceManager.instance = new ResourceManager(getStorageManager());
     }
     return ResourceManager.instance;
   }
@@ -298,17 +298,6 @@ export class ResourceManager {
 
   // TOPICS
 
-  private topicKeyForCluster(cluster: KafkaCluster): StateKafkaTopics {
-    if (cluster instanceof CCloudKafkaCluster) {
-      return StateKafkaTopics.CCLOUD;
-    } else if (cluster instanceof LocalKafkaCluster) {
-      return StateKafkaTopics.LOCAL;
-    } else {
-      logger.warn("Unknown cluster type", cluster);
-      throw new Error("Unknown cluster type");
-    }
-  }
-
   /**
    *  Store this (possibly empty) list of topics for a cluster, be it local or ccloud, in workspace state.
    *  If is known that a given cluster has no topics, then should call with empty topic array.
@@ -372,6 +361,21 @@ export class ResourceManager {
    */
   async deleteCCloudTopics(): Promise<void> {
     return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
+  }
+
+  /** Return the use-with-storage StateKafkaTopics key for this type of cluster.
+   *
+   * (not private only for testing)
+   */
+  topicKeyForCluster(cluster: KafkaCluster): StateKafkaTopics {
+    if (cluster instanceof CCloudKafkaCluster) {
+      return StateKafkaTopics.CCLOUD;
+    } else if (cluster instanceof LocalKafkaCluster) {
+      return StateKafkaTopics.LOCAL;
+    } else {
+      logger.warn("Unknown cluster type", cluster);
+      throw new Error("Unknown cluster type");
+    }
   }
 
   // SCHEMAS
@@ -506,9 +510,5 @@ export class ResourceManager {
  * @returns The ResourceManager singleton instance
  */
 export function getResourceManager(): ResourceManager {
-  const manager = getStorageManager();
-  if (!manager) {
-    throw new Error("Can't get ResourceManager until StorageManager is initialized");
-  }
-  return ResourceManager.getInstance(manager);
+  return ResourceManager.getInstance();
 }

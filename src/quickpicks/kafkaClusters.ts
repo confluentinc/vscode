@@ -91,7 +91,7 @@ async function generateKafkaClusterQuickPick(
   cloudEnvironments.forEach((env: CCloudEnvironment) => {
     environmentMap.set(env.id, env);
   });
-  logger.info(`Found ${cloudEnvironments.length} environments`);
+  logger.debug(`Found ${cloudEnvironments.length} environments`);
 
   let lastEnvName: string = "";
   cloudKafkaClusters.forEach((kafkaCluster: CCloudKafkaCluster) => {

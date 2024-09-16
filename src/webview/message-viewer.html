@@ -136,9 +136,7 @@
 
                 <div popover id="errorLog" class="partition-control">
                   <div class="flex-column">
-                    <template data-for="error of this.streamError()">
-                      <p data-text="this.error()"></p>
-                    </template>
+                    <p data-text="this.streamError().message"></p>
                   </div>
                 </div>
               </div>
@@ -235,9 +233,18 @@
       </section>
 
       <section class="content">
-        <template data-if="this.waitingForMessages()">
+        <template data-if="this.waitingForMessages() && this.streamError() == null">
           <div class="grid-banner">
             <vscode-progress-ring></vscode-progress-ring>
+            <label>Waiting for messages…</label>
+          </div>
+        </template>
+
+        <template data-if="this.waitingForMessages() && this.streamError() != null">
+          <div class="grid-banner">
+            <span class="codicon codicon-error banner-error"></span>
+            <label>Failed to load messages.</label>
+            <label data-text="this.streamError().message"></label>
           </div>
         </template>
 
@@ -539,9 +546,15 @@
 
       .grid-banner {
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         min-height: 10rem;
+        gap: 1rem;
+      }
+      .codicon.banner-error {
+        font-size: 28px;
+        color: var(--vscode-editorError-foreground);
       }
       .grid-settings-control {
         grid-column: -1;

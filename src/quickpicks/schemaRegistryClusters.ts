@@ -50,7 +50,7 @@ async function generateSchemaRegistryClusterQuickPick(): Promise<
   environments.forEach((env: CCloudEnvironment) => {
     environmentMap.set(env.id, env);
   });
-  logger.info(`Found ${environments.length} environments`);
+  logger.debug(`Found ${environments.length} environments`);
 
   const clusterItems: vscode.QuickPickItem[] = [
     {
