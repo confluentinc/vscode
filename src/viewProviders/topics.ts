@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { getExtensionContext } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
+import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -36,7 +38,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
   public kafkaCluster: KafkaCluster | null = null;
 
-  constructor() {
+  private static instance: TopicViewProvider | null = null;
+  private constructor() {
+    if (!getExtensionContext()) {
+      // getChildren() will fail without the extension context
+      throw new ExtensionContextNotSetError("TopicViewProvider");
+    }
     // instead of calling `.registerTreeDataProvider`, we're creating a TreeView to dynamically
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
@@ -71,6 +78,13 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         this.refresh();
       }
     });
+  }
+
+  static getInstance(): TopicViewProvider {
+    if (!TopicViewProvider.instance) {
+      TopicViewProvider.instance = new TopicViewProvider();
+    }
+    return TopicViewProvider.instance;
   }
 
   /** Convenience method to revert this view to its original state. */
@@ -118,10 +132,9 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   }
 }
 
-var topicViewProvider = new TopicViewProvider();
 /** Get the singleton instance of the {@link TopicViewProvider} */
 export function getTopicViewProvider() {
-  return topicViewProvider;
+  return TopicViewProvider.getInstance();
 }
 
 export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
