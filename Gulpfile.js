@@ -19,7 +19,7 @@ import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
@@ -205,9 +205,8 @@ function getSentryReleaseVersion() {
   let revision = "noRevision";
   try {
     // add "dirty" to the revision instead of sha if there are uncommmited changes
-    // eslint-disable-next-line eqeqeq
     const isDirty =
-      spawnSync("git", ["diff", "--quiet"], { stdio: "pipe", shell: IS_WINDOWS }).status != 0;
+      spawnSync("git", ["diff", "--quiet"], { stdio: "pipe", shell: IS_WINDOWS }).status !== 0;
     if (isDirty) revision = "dirty";
     else {
       revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], {

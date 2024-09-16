@@ -78,7 +78,7 @@ export function getSidecarPlatformArch(path: string): PlatformArch {
 
 function getSidecarBuildPlatform(magicNumber: string): string {
   // For Windows, we check the first 2 bytes, hence 4 hex chars
-  if (magicNumber.substring(0, 4) == PLATFORM_MAGIC_NUMBERS.windows) {
+  if (magicNumber.substring(0, 4) === PLATFORM_MAGIC_NUMBERS.windows) {
     return "windows";
   }
 

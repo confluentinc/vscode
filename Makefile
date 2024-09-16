@@ -6,7 +6,7 @@ include ./mk-files/semaphore.mk
 # Install node_modules from package-lock.json
 .PHONY: install-dependencies
 install-dependencies:
-	npm ci --prefer-offline
+	npm ci --prefer-offline --include=dev
 	npx playwright install
 
 .PHONY: setup-test-env
