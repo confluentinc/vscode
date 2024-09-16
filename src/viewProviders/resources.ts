@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
+import { getExtensionContext } from "../context";
 import { ccloudConnected, ccloudOrganizationChanged } from "../emitters";
+import { ExtensionContextNotSetError } from "../errors";
 import {
   CCloudEnvironmentGroup,
   getClustersByCCloudEnvironment,
@@ -49,7 +51,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   /** The {@link CCloudEnvironment} and any associated clusters available from this view provider. */
   public ccloudEnvGroups: CCloudEnvironmentGroup[] = [];
 
-  constructor() {
+  private static instance: ResourceViewProvider | null = null;
+  private constructor() {
+    if (!getExtensionContext()) {
+      // getChildren() will fail without the extension context
+      throw new ExtensionContextNotSetError("ResourceViewProvider");
+    }
+
     // instead of calling `.registerTreeDataProvider`, we're creating a TreeView to dynamically
     // update the tree view as needed (e.g. displaying the current connection label in the title)
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
@@ -66,6 +74,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     ccloudOrganizationChanged.event(() => {
       this.refresh();
     });
+  }
+
+  static getInstance(): ResourceViewProvider {
+    if (!ResourceViewProvider.instance) {
+      ResourceViewProvider.instance = new ResourceViewProvider();
+    }
+    return ResourceViewProvider.instance;
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
@@ -102,10 +117,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 }
 
-var resourceViewProvider = new ResourceViewProvider();
 /** Get the singleton instance of the {@link ResourceViewProvider} */
 export function getResourceViewProvider() {
-  return resourceViewProvider;
+  return ResourceViewProvider.getInstance();
 }
 
 async function loadResources(): Promise<ResourceViewProviderData[]> {
@@ -174,7 +188,7 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
 async function preloadEnvironmentResources(): Promise<CCloudEnvironment[]> {
   const envGroups = await getEnvironments();
   // also attach it to the tree view provider for later use
-  resourceViewProvider.ccloudEnvGroups = envGroups;
+  getResourceViewProvider().ccloudEnvGroups = envGroups;
 
   const resourceManager = getResourceManager();
   const environments = envGroups.map((envGroup) => envGroup.environment);
