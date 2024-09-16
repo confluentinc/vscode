@@ -6,9 +6,9 @@ const SECOND = 1000;
 
 export class Timer extends HTMLElement {
   os = ObservableScope();
-  now = this.os.observe(Date.now, (cb) => {
-    let timer = setInterval(cb, SECOND / TIMER_REFRESH_RATE);
-    return () => clearInterval(timer);
+  now = this.os.produce(Date.now(), (ts, signal) => {
+    let timer = setInterval(() => ts(Date.now()), SECOND / TIMER_REFRESH_RATE);
+    signal.onabort = () => clearInterval(timer);
   });
   timer = this.os.signal<{ start: number; offset: number } | null>(null, (a, b) => {
     return a == null || b == null ? a === b : a.start === b.start && a.offset === b.offset;
