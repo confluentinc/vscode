@@ -84,7 +84,7 @@ export function brush(dimensions: "x" | "y" | "xy") {
     }
   }
 
-  function up(_x: number, _y: number) {
+  function up() {
     state = "idle";
   }
 
