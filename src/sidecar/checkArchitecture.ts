@@ -64,7 +64,7 @@ export function getSidecarPlatformArch(path: string): PlatformArch {
     case "darwin":
       sidecarArch = getSidecarMacOSArch(path);
       break;
-    case "windows":
+    case "win32":
       // We only support AMD64 for now.
       sidecarArch = "x64";
       break;

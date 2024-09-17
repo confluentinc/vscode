@@ -42,7 +42,7 @@ describe("getSidecarPlatformArch", () => {
   it("should return the correct platform and architecture for a Windows+x64 sidecar", () => {
     const path = platformArchToBinaryName.get("windows-x64");
     const platformArch = getSidecarPlatformArch(path!);
-    assert.deepStrictEqual(platformArch, new PlatformArch("windows", "x64"));
+    assert.deepStrictEqual(platformArch, new PlatformArch("win32", "x64"));
   });
 });
 
