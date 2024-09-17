@@ -32,12 +32,13 @@ global_job_config:
       - npm --version
       - npx --version
       - choco install gh -y
-      - $Env:GH_TOKEN = $Env:GITHUB_TOKEN
       - $Env:PATH += ";C:\Program Files\GitHub CLI\"
       - gh --version
-      - gh config set prompt disabled
-      - gh auth login
-      - gh auth status
+      - |
+        $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
+        gh config set prompt disabled
+        gh auth login
+        gh auth status
 
 blocks:
   - name: "Package VSIX (Windows x64)"
@@ -59,7 +60,7 @@ blocks:
               $version = $packageJson.version;
               $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
               try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
-              $Env:GH_TOKEN = $Env:GITHUB_TOKEN
+              $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
               gh config set prompt disabled
               gh auth login
               gh auth status
