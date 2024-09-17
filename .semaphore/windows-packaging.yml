@@ -35,6 +35,9 @@ global_job_config:
       - $Env:GH_TOKEN = $Env:GITHUB_TOKEN
       - $Env:PATH += ";C:\Program Files\GitHub CLI\"
       - gh --version
+      - gh config set prompt disabled
+      - gh auth login
+      - gh auth status
 
 blocks:
   - name: "Package VSIX (Windows x64)"
@@ -57,4 +60,7 @@ blocks:
               $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
               try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
               $Env:GH_TOKEN = $Env:GITHUB_TOKEN
+              gh config set prompt disabled
+              gh auth login
+              gh auth status
               gh release upload $version $vsix --clobber
