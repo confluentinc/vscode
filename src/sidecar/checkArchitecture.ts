@@ -64,7 +64,10 @@ export function getSidecarPlatformArch(path: string): PlatformArch {
     case "darwin":
       sidecarArch = getSidecarMacOSArch(path);
       break;
-    // TODO: add windows eventually, maybe just throw error automatically now
+    case "win32":
+      // We only support AMD64 for now.
+      sidecarArch = "x64";
+      break;
     default:
       sidecarArch = "Unknown";
   }
@@ -74,9 +77,14 @@ export function getSidecarPlatformArch(path: string): PlatformArch {
 }
 
 function getSidecarBuildPlatform(magicNumber: string): string {
+  // For Windows, we check the first 2 bytes, hence 4 hex chars
+  if (magicNumber.substring(0, 4) === PLATFORM_MAGIC_NUMBERS.windows) {
+    // See https://nodejs.org/api/process.html#processplatform
+    // It's always "win32" for Windows, regardless of the architecture.
+    return "win32";
+  }
+
   switch (magicNumber) {
-    case PLATFORM_MAGIC_NUMBERS.windows:
-      return "windows";
     case PLATFORM_MAGIC_NUMBERS.linux:
       return "linux";
     case PLATFORM_MAGIC_NUMBERS.mach_o:
