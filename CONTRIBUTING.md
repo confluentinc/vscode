@@ -1,7 +1,7 @@
-# Welcome to the Confluent extension for VS Code contributing guide
+# Welcome to the Confluent for VS Code contributing guide
 
 Thanks for your interest in contributing to this project! Our goal for the
-[Confluent extension for VS Code project](https://github.com/confluentinc/vscode) is to help make it
+[Confluent for VS Code project](https://github.com/confluentinc/vscode) is to help make it
 very easy for developers to build stream processing applications using Confluent.
 
 Anyone can contribute, and here are some ways to do so:
