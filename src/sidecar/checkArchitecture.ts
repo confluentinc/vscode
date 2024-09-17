@@ -12,7 +12,7 @@ export function checkSidecarOsAndArch(sidecarPath: string): void {
 
   if (!ourBuild.equals(sidecarBuild)) {
     throw new Error(
-      `This Confluent extension for VS Code component is built for a different platform (${sidecarBuild}), whereas your VS Code is on ${ourBuild}. Please uninstall the Confluent extension for VS Code and install the ${ourBuild} build.`,
+      `This Confluent for VS Code component is built for a different platform (${sidecarBuild}), whereas your VS Code is on ${ourBuild}. Please uninstall the Confluent extension for VS Code and install the ${ourBuild} build.`,
     );
   }
 }
