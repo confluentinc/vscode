@@ -4,13 +4,17 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.16.0
+
 ### Added
 
 - Add Windows x64 support
 
 ### Changed
 
-- Rely on the resource manager / workspace storage cache for topics within a cluster. Selecting a kafka cluster will consult this cache before opting to deep-fetch from sidecar (and then it cascading through to CCloud or local kafka rest). The 'refresh' button in the topics view title bar can be used to force a deep fetch. Creating or deleting a topic will also result in a deep fetch.
+- Implemented caching when loading topics into the Topics view for the first time to improve
+  performance. Manually refreshing the view or creating/deleting a topic will re-fetch topics
+  and not rely on the cache.
 
 ## 0.15.2
 
