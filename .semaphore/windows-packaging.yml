@@ -1,0 +1,66 @@
+version: v1.0
+name: windows-packaging
+agent:
+  machine:
+    type: s1-prod-windows
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+global_job_config:
+  env_vars:
+    - name: WINDOWS
+      value: "true"
+    - name: NODE_ENV
+      value: "production"
+  prologue:
+    commands:
+      - checkout
+      - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+      - $Env:PATH += ";C:\Program Files\Git\bin"
+      - $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+      - vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+      # Ensure npm and npx are available
+      - npm --version
+      - npx --version
+      - choco install gh -y
+      - $Env:GH_TOKEN = $Env:GITHUB_TOKEN
+      - $Env:PATH += ";C:\Program Files\GitHub CLI\"
+      - gh --version
+      - gh config set prompt disabled
+      - gh auth login
+      - gh auth status
+
+blocks:
+  - name: "Package VSIX (Windows x64)"
+    dependencies: []
+    task:
+      prologue:
+        commands:
+          - npm ci
+      env_vars:
+        - name: TARGET
+          value: win32-x64
+      jobs:
+        - name: "Package VSIX (Windows x64)"
+          commands:
+            - make download-third-party-notices-sidecar
+            - npx gulp bundle
+            - |
+              $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
+              $version = $packageJson.version;
+              $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+              try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
+              $Env:GH_TOKEN = $Env:GITHUB_TOKEN
+              gh config set prompt disabled
+              gh auth login
+              gh auth status
+              gh release upload $version $vsix --clobber
