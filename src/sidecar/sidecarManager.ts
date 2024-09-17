@@ -133,7 +133,6 @@ export class SidecarManager {
             logger.info(`${logPrefix}:  Wrong access token, restarting sidecar`);
             // Kill the process, pause an iota, restart it, then try again.
             try {
-              // TODO: How to do this on Windows also?
               this.killSidecar(e.sidecar_process_id);
             } catch (e: any) {
               logger.error(
