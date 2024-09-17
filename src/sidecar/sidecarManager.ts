@@ -133,7 +133,6 @@ export class SidecarManager {
             logger.info(`${logPrefix}:  Wrong access token, restarting sidecar`);
             // Kill the process, pause an iota, restart it, then try again.
             try {
-              // TODO: How to do this on Windows also?
               this.killSidecar(e.sidecar_process_id);
             } catch (e: any) {
               logger.error(
@@ -236,10 +235,20 @@ export class SidecarManager {
         const sidecar_pid = response.headers.get(SIDECAR_PROCESS_ID_HEADER);
         if (sidecar_pid) {
           const sidecar_pid_int = parseInt(sidecar_pid);
-          throw new WrongAuthSecretError(
-            `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401.`,
-            sidecar_pid_int,
-          );
+          if (sidecar_pid_int > 0) {
+            // Have enough trustworthy info to throw a specific error that will cause
+            // us to kill the sidecar process and start a new one.
+            throw new WrongAuthSecretError(
+              `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401.`,
+              sidecar_pid_int,
+            );
+          } else {
+            // sidecar quarkus dev mode may skip initialization and still return 401 and this header, but
+            // with PID 0, which we will never want to try to kill -- kills whole process group!
+            throw new Error(
+              `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401, but claimed PID ${sidecar_pid_int} in the response headers!`,
+            );
+          }
         } else {
           throw new Error(
             `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401, but without a PID in the response headers!`,
