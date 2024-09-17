@@ -12,7 +12,7 @@ Confluent, and read the docs at the [Confluent documentation](https://docs.confl
 
 ## Features
 
-The Confluent extension for VS Code provides a number of features for working with your Kafka
+Confluent for VS Code provides a number of features for working with your Kafka
 clusters, topics and schemas.
 
 ### Command Palette
@@ -31,7 +31,7 @@ In the Sidebar, click the Confluent logo to open the extension and show the foll
 
 #### Connect to your streams
 
-The Confluent extension for VS Code supports accessing your Apache Kafka® clusters locally or on
+Confluent for VS Code supports accessing your Apache Kafka® clusters locally or on
 Confluent Cloud.
 
 - To start a local Kafka cluster,
@@ -116,7 +116,7 @@ Currently, Windows is not supported, but you can use Windows Subsystem for Linux
 [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with one of the above Linux .vsix
 files.
 
-> The Confluent extension for VS Code is available for Early Access, and some Confluent features may
+> Confluent for VS Code is available for Early Access, and some Confluent features may
 > not be available. Consider installing the
 > [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) to access all
 > features of Confluent Cloud.

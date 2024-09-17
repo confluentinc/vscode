@@ -1,12 +1,12 @@
 name: 'Report a bug'
-description: Report a bug with the Confluent extension for VS Code.
+description: Report a bug with Confluent for VS Code.
 labels:
   - 'bug'
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to tell us about your issue using the Confluent extension for VS Code!
+        Thanks for taking the time to tell us about your issue using Confluent for VS Code!
 
         Requests for features and improvements to the extension or documentation should be opened in [discussions](https://github.com/confluentinc/vscode/discussions/new?category=ideas). For more information about opening a feature request, [read more](https://github.com/confluentinc/vscode/blob/main/CONTRIBUTING.md).
 
@@ -42,7 +42,7 @@ body:
     id: contact
     attributes:
       label: Version of Confluent extension
-      description: What version of Confluent extension for VS Code did you use?
+      description: What version of Confluent for VS Code did you use?
       placeholder: ex. v0.10.0
     validations:
       required: false
