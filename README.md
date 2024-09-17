@@ -110,11 +110,12 @@ Confluent provides these VSIX files:
 - MacOS with Apple Silicon: `vscode-confluent-darwin-arm64-x.x.x.vsix`
 - MacOS with Intel processors: `vscode-confluent-darwin-x64-x.x.x.vsix`
 - Linux on ARM-64 processors: `vscode-confluent-linux-arm64-x.x.x.vsix`
-- Linux on x86 processors: `vscode-confluent-linux-x64-x.x.x.vsix`
+- Linux on x64 processors: `vscode-confluent-linux-x64-x.x.x.vsix`
+- Windows on x64 processors: `vscode-confluent-windows-x64-x.x.x.vsix`
 
-Currently, Windows is not supported, but you can use Windows Subsystem for Linux
-[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with one of the above Linux .vsix
-files.
+Additionally, for Windows ARM-64, you may use Windows Subsystem for Linux
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with the Linux ARM-64 .vsix
+file.
 
 > Confluent for VS Code is available for Early Access, and some Confluent features may
 > not be available. Consider installing the
