@@ -46,7 +46,7 @@ blocks:
     task:
       prologue:
         commands:
-          - npm ci
+          - npm ci --include=dev
       env_vars:
         - name: TARGET
           value: win32-x64
