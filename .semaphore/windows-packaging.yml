@@ -53,15 +53,21 @@ blocks:
       jobs:
         - name: "Package VSIX (Windows x64)"
           commands:
-            - make download-third-party-notices-sidecar
+            # Download ide-sidecar third party notices to include in the VSIX
+            - |
+              $IDE_SIDECAR_VERSION = Get-Content .versions/ide-sidecar.txt
+              gh release download $IDE_SIDECAR_VERSION --repo confluentinc/ide-sidecar --pattern=THIRD_PARTY_NOTICES.txt --output THIRD_PARTY_NOTICES_IDE_SIDECAR.txt --clobber
+            # Build the VSIX
             - npx gulp bundle
+            # Upload the VSIX to the GitHub release
             - |
               $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
-              $version = $packageJson.version;
+              $version = "v$($packageJson.version)";
               $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
               try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
               $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
               gh config set prompt disabled
               gh auth login
               gh auth status
+              Write-Host "Uploading $vsix to the release $version"
               gh release upload $version $vsix --clobber
