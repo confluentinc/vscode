@@ -4,22 +4,29 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Hardened improper sidecar process id handling edge case when currently running sidecar is the
+  wrong version and is also configured to be in development mode, lacking access token filtering.
+
+## 0.16.1
+
+### Fixed
+
+- Opening a new window/workspace after connecting to CCloud will now show the correct states in the
+  Topics & Schemas views instead of the "Connect to Confluent Cloud" button
+
+## 0.16.0
+
 ### Added
 
 - Add Windows x64 support
 
 ### Changed
 
-- Rely on the resource manager / workspace storage cache for topics within a cluster. Selecting a
-  kafka cluster will consult this cache before opting to deep-fetch from sidecar (and then it
-  cascading through to CCloud or local kafka rest). The 'refresh' button in the topics view title
-  bar can be used to force a deep fetch. Creating or deleting a topic will also result in a deep
-  fetch.
-
-### Fixed
-
-- Hardened improper sidecar process id handling edge case when currently running sidecar is the
-  wrong version and is also configured to be in development mode, lacking access token filtering.
+- Implemented caching when loading topics into the Topics view for the first time to improve
+  performance. Manually refreshing the view or creating/deleting a topic will re-fetch topics and
+  not rely on the cache.
 
 ## 0.15.2
 

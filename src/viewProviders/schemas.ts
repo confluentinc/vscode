@@ -47,7 +47,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     ccloudConnected.event((connected: boolean) => {
       // TODO(shoup): check this for CCloud vs local once we start supporting local SR; check the
       // TopicViewProvider for a similar check
-      logger.debug("ccloudConnected event fired, resetting", connected);
+      logger.debug("ccloudConnected event fired, resetting", { connected });
       // any transition of CCloud connection state should reset the tree view
       this.reset();
     });
