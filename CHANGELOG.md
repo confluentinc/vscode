@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Hardened improper sidecar process id handling edge case when currently running sidecar is the
+  wrong version and is also configured to be in internal development mode.
+
 ## 0.16.2
 
 ### Fixed
