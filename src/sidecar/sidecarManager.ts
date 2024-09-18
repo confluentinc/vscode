@@ -35,7 +35,7 @@ const MOMENTARY_PAUSE_MS = 500; // half a second.
 
 const logger = new Logger("sidecarManager");
 
-// Internal singleton class manageing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
+// Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
 // which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
 // we won't be in position to restart / rehandshake with the sidecar if needed.
 export class SidecarManager {
@@ -134,7 +134,7 @@ export class SidecarManager {
             logger.info(`${logPrefix}:  Wrong access token, restarting sidecar`);
             // Kill the process, pause an iota, restart it, then try again.
             try {
-              this.killSidecar(e.sidecar_process_id);
+              killSidecar(e.sidecar_process_id);
             } catch (e: any) {
               logger.error(
                 `${logPrefix}: failed to kill sidecar process ${e.sidecar_process_id}: ${e}`,
@@ -193,16 +193,51 @@ export class SidecarManager {
     }
 
     if (version_result.version !== currentSidecarVersion) {
-      logger.warn("Shutting down existing sidecar process due to version mismatch...");
-      this.killSidecar(await handle.getSidecarPid());
+      const wantedMessage = `${version_result.version}, need ${currentSidecarVersion}`;
+
+      logger.warn(
+        "Trying to shut down existing sidecar process due to version mismatch (${wantedMessage})",
+      );
+
+      let sidecarPid: number;
+      try {
+        // May raise exception if any issue with getting the PID from the sidecar.
+        sidecarPid = await handle.getSidecarPid();
+      } catch (e) {
+        logger.error(
+          `Failed to get sidecar PID when needing to kill sidecar due to bad version (${wantedMessage}): ${e}`,
+          e,
+        );
+        vscode.window.showErrorMessage(
+          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
+        );
+        throw e;
+      }
+
+      try {
+        // Kill the sidecar process. May possible raise permission errors if, say, the sidecar is running as a different user.
+        killSidecar(sidecarPid);
+      } catch (e) {
+        logger.error(
+          `Failed to kill sidecar process ${sidecarPid} due to bad version (${wantedMessage}): ${e}`,
+          e,
+        );
+        vscode.window.showErrorMessage(
+          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
+        );
+        throw e;
+      }
+
       // Allow the old one a little bit of time to die off.
       await this.pause();
+
       if (this.pendingHandlePromise != null) {
         // clear out the old promise and start fresh
         this.pendingHandlePromise = null;
       }
       // Ask to get a new handle, which will start a new sidecar process,
-      // which will end up calling firstSidecarContactActions() again (eventually).
+      // and will eventually end up calling firstSidecarContactActions() here again
+      // (and hopefully not conflict about the sidecar version the next time).
       logger.info("Restarting sidecar after shutting down old version...");
       await this.getHandle();
     }
@@ -448,18 +483,6 @@ export class SidecarManager {
     }
     return "";
   }
-
-  /**
-   * Kill the sidecar process by PID.
-   * @todo: Currently only works on Unix-like systems. Needs Windows support.
-   * @param process_id The sidecar's process id.
-   */
-  private killSidecar(process_id: number) {
-    // TODO: How to do this on Windows also?
-    process.kill(process_id, "SIGTERM");
-    logger.debug(`Killed old sidecar process ${process_id}`);
-  }
-
   /**
    * Pause for a moment.
    */
@@ -546,4 +569,18 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   }
 
   return sidecar_env;
+}
+
+/**
+ * Kill the sidecar process by its PID. Will raise an exception if the PID does not seem like a concrete process id. See kill(2).
+ * @param process_id The sidecar's process id.
+ */
+export function killSidecar(process_id: number) {
+  if (process_id <= 1) {
+    logger.warn("Refusing to kill process with PID <= 1");
+    throw new Error(`Refusing to kill process with PID <= 1`);
+  } else {
+    process.kill(process_id, "SIGTERM");
+    logger.debug(`Killed old sidecar process ${process_id}`);
+  }
 }
