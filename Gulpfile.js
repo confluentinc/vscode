@@ -51,7 +51,7 @@ export function clean(done) {
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
 export function pack(done) {
-  var vsceCommandArgs = ["@vscode/vsce", "package"];
+  var vsceCommandArgs = ["vsce", "package"];
   // Check if TARGET is set, if so, add it to the command
   if (process.env.TARGET) {
     vsceCommandArgs.push("--target");
@@ -134,6 +134,7 @@ export function build(done) {
         project: "vscode-extension",
         release: { name: process.env.SENTRY_RELEASE },
         disable: !process.env.SENTRY_AUTH_TOKEN,
+        applicationKey: "confluent-vscode-extension-sentry-do-not-use",
       }),
     ],
     onLog: handleBuildLog,
