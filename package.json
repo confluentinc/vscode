@@ -702,6 +702,7 @@
     "@types/vscode": "^1.87.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^3.1.0",
     "dotenv": "^16.4.5",
     "esbuild": "^0.21.4",
     "eslint": "^9.4.0",
