@@ -232,11 +232,10 @@ export class SidecarHandle {
 
   /** Return the PID of the sidecar process by provoking it to raise a 401 Unauthorized error.
    * with the PID in the response header.
-  * */
+   * */
   public async getSidecarPid(): Promise<number> {
     // coax the sidecar to yield its pid by sending a bad auth token request to the
     // healthcheck route.
-
     const config = this.createClientConfig({
       headers: { Authorization: "Bearer bad-token" },
       // Need to prevent the default ErrorResponseMiddleware from catching the error we expect.
