@@ -229,7 +229,7 @@ export async function getTopicsForCluster(
   });
 
   logger.debug(`Deep fetched ${topics.length} topics for cluster ${cluster.id}`);
-  await getResourceManager().setTopicsForCluster(cluster, topics);
+  await resourceManager.setTopicsForCluster(cluster, topics);
 
   return topics;
 }
