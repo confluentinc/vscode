@@ -160,9 +160,7 @@ export async function getTopicsForCluster(
     const preloader = CCLoudResourcePreloader.getInstance();
     // Ensure all of the ccloud preloading is complete before referencing resource manager ccloud resources,
     // most importantly the schema registry and its schemas.
-    logger.warn("getTopicsForCluster ccloud preloading starting");
     await preloader.preloadEnvironmentResources();
-    logger.warn("getTopicsForCluster ccloud preloading complete");
   }
 
   const resourceManager = getResourceManager();
@@ -175,13 +173,12 @@ export async function getTopicsForCluster(
   }
 
   // Otherwise make a deep fetch, cache in resource manager, and return.
-
   let environmentId: string | null = null;
   let schemas: Schema[] = [];
 
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
-    const resourceManager = getResourceManager();
+
     const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
     if (schemaRegistry) {
       schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
