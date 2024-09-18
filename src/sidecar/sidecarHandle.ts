@@ -230,18 +230,25 @@ export class SidecarHandle {
     return payload.data;
   }
 
+  public getMicroProfileHealthApi(config: Configuration): MicroProfileHealthApi {
+    // Factored out of getSidecarPid() to allow for test mocking.
+    return new MicroProfileHealthApi(config);
+  }
+
   /** Return the PID of the sidecar process by provoking it to raise a 401 Unauthorized error.
    * with the PID in the response header.
    * */
   public async getSidecarPid(): Promise<number> {
     // coax the sidecar to yield its pid by sending a bad auth token request to the
     // healthcheck route.
+
     const config = this.createClientConfig({
       headers: { Authorization: "Bearer bad-token" },
       // Need to prevent the default ErrorResponseMiddleware from catching the error we expect.
       middleware: [],
     });
-    const health_api = new MicroProfileHealthApi(config);
+
+    const health_api = this.getMicroProfileHealthApi(config);
 
     // hit the healthcheck route with a bad token to get the sidecar to reveal its pid
     // as a header when it raises 401 Unauthorized.
