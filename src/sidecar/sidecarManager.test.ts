@@ -67,6 +67,8 @@ describe("killSidecar() tests", () => {
   beforeEach(() => {
     // mock out process.kill
     kill = process.kill;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     process.kill = (pid: number, signal: string | number) => {
       return true;
     };
