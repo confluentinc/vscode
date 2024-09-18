@@ -10,7 +10,16 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- Rely on the resource manager / workspace storage cache for topics within a cluster. Selecting a kafka cluster will consult this cache before opting to deep-fetch from sidecar (and then it cascading through to CCloud or local kafka rest). The 'refresh' button in the topics view title bar can be used to force a deep fetch. Creating or deleting a topic will also result in a deep fetch.
+- Rely on the resource manager / workspace storage cache for topics within a cluster. Selecting a
+  kafka cluster will consult this cache before opting to deep-fetch from sidecar (and then it
+  cascading through to CCloud or local kafka rest). The 'refresh' button in the topics view title
+  bar can be used to force a deep fetch. Creating or deleting a topic will also result in a deep
+  fetch.
+
+### Fixed
+
+- Hardened improper sidecar process id handling edge case when currently running sidecar is the
+  wrong version and is also configured to be in development mode, lacking access token filtering.
 
 ## 0.15.2
 

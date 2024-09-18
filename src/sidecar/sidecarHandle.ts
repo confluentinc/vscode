@@ -230,7 +230,9 @@ export class SidecarHandle {
     return payload.data;
   }
 
-  // Return the PID of the sidecar process.
+  /** Return the PID of the sidecar process by provoking it to raise a 401 Unauthorized error.
+   * with the PID in the response header.
+  * */
   public async getSidecarPid(): Promise<number> {
     // coax the sidecar to yield its pid by sending a bad auth token request to the
     // healthcheck route.
@@ -242,24 +244,37 @@ export class SidecarHandle {
     });
     const health_api = new MicroProfileHealthApi(config);
 
-    var pid: number = -1;
-
     // hit the healthcheck route with a bad token to get the sidecar to reveal its pid
     // as a header when it raises 401 Unauthorized.
     try {
       await health_api.microprofileHealthLiveness();
+      // If ths didn't raise, then the sidecar is in a very strange state, not enabled its
+      // auth token filter!
+      logger.error(
+        "getSidecarPid(): Failed to get sidecar PID: healthcheck did not raise 401 Unauthorized",
+      );
+      throw new Error("Failed to get sidecar PID: healthcheck did not raise 401 Unauthorized");
     } catch (e) {
       if (e instanceof ResponseError && e.response.status === 401) {
         const pid_str = e.response.headers.get(SIDECAR_PROCESS_ID_HEADER);
         if (pid_str) {
-          pid = parseInt(pid_str);
+          const pid = parseInt(pid_str);
+          if (isNaN(pid) || pid <= 0) {
+            logger.error(
+              `getSidecarPid(): Failed to parse valid sidecar PID from response header: ${pid_str}`,
+            );
+            throw new Error(`Failed to parse sidecar PID from header: ${pid_str}`);
+          }
+          // Our expected return path.
+          return pid!;
         }
       } else {
-        logger.error("Failed to get sidecar PID", e);
+        logger.error("getSidecarPid(): Failed to get sidecar PID", e);
         throw e;
       }
     }
 
-    return pid;
+    logger.error("getSidecarPid(): Failed to get sidecar PID: unexpected error");
+    throw new Error("Failed to get sidecar PID: unexpected error");
   }
 }

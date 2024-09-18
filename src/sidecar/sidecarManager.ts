@@ -193,16 +193,37 @@ export class SidecarManager {
     }
 
     if (version_result.version !== currentSidecarVersion) {
-      logger.warn("Shutting down existing sidecar process due to version mismatch...");
-      this.killSidecar(await handle.getSidecarPid());
+      const wantedMessage = `${version_result.version}, need ${currentSidecarVersion}`;
+
+      logger.warn(
+        "Trying to shut down existing sidecar process due to version mismatch (${wantedMessage})",
+      );
+
+      try {
+        // May raise exception if any issue with getting the PID from the sidecar.
+        this.killSidecar(await handle.getSidecarPid());
+        logger.warn("Killed mismatching sidecar process.");
+      } catch (e) {
+        logger.error(
+          `Failed to get sidecar PID when needing to kill sidecar due to bad version (${wantedMessage}): ${e}`,
+          e,
+        );
+        vscode.window.showErrorMessage(
+          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
+        );
+        throw e;
+      }
+
       // Allow the old one a little bit of time to die off.
       await this.pause();
+
       if (this.pendingHandlePromise != null) {
         // clear out the old promise and start fresh
         this.pendingHandlePromise = null;
       }
       // Ask to get a new handle, which will start a new sidecar process,
-      // which will end up calling firstSidecarContactActions() again (eventually).
+      // and will eventually end up calling firstSidecarContactActions() here again
+      // (and hopefully not conflict about the sidecar version the next time).
       logger.info("Restarting sidecar after shutting down old version...");
       await this.getHandle();
     }
@@ -450,14 +471,17 @@ export class SidecarManager {
   }
 
   /**
-   * Kill the sidecar process by PID.
-   * @todo: Currently only works on Unix-like systems. Needs Windows support.
+   * Kill the sidecar process by its PID. Will raise an exception if the PID does not seem like a concrete process id. See kill(2).
    * @param process_id The sidecar's process id.
    */
   private killSidecar(process_id: number) {
-    // TODO: How to do this on Windows also?
-    process.kill(process_id, "SIGTERM");
-    logger.debug(`Killed old sidecar process ${process_id}`);
+    if (process_id <= 1) {
+      logger.warn("Refusing to kill process with PID <= 1");
+      throw new Error(`Refusing to kill process with PID <= 1`);
+    } else {
+      process.kill(process_id, "SIGTERM");
+      logger.debug(`Killed old sidecar process ${process_id}`);
+    }
   }
 
   /**
