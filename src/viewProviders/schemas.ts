@@ -126,10 +126,12 @@ export function getSchemasViewProvider() {
   return SchemasViewProvider.getInstance();
 }
 
+// XXX Move this out of viewProviders/schemas.ts into ... elsewhere.
 export async function getSchemas(
   environment: CCloudEnvironment,
   schemaRegistryClusterId: string,
 ): Promise<Schema[]> {
+
   const client: SchemasV1Api = (await getSidecar()).getSchemasV1Api(
     schemaRegistryClusterId,
     environment.connectionId,

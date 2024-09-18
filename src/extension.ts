@@ -58,7 +58,7 @@ import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { getTelemetryLogger } from "./telemetry";
 import { getUriHandler } from "./uriHandler";
-import { ResourceViewProvider } from "./viewProviders/resources";
+import { ResourceViewProvider, CCLoudResourcePreloader } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
