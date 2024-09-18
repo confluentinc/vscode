@@ -1,5 +1,6 @@
 // Import this first!
 import * as Sentry from "@sentry/node";
+import * as SentryCore from "@sentry/core";
 /**
  * Initialize Sentry for error tracking (and future performance monitoring?).
  * Sentry.init needs to be run first before any other code so that Sentry can capture all errors.
@@ -14,7 +15,13 @@ if (process.env.SENTRY_DSN) {
     release: process.env.SENTRY_RELEASE,
     tracesSampleRate: 1.0, //  Capture 100% of the transactions
     profilesSampleRate: 1.0,
-    integrations: [Sentry.rewriteFramesIntegration()],
+    integrations: [
+      SentryCore.thirdPartyErrorFilterIntegration({
+        filterKeys: ["confluent-vscode-extension-sentry-do-not-use"],
+        behaviour: "drop-error-if-exclusively-contains-third-party-frames",
+      }),
+      Sentry.rewriteFramesIntegration(),
+    ],
     ignoreErrors: [
       "The request failed and the interceptors did not return an alternative response",
     ],

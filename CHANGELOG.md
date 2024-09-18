@@ -7,7 +7,13 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Hardened improper sidecar process id handling edge case when currently running sidecar is the
-  wrong version and is also configured to be in development mode, lacking access token filtering.
+  wrong version and is also configured to be in internal development mode.
+
+## 0.16.2
+
+### Fixed
+
+- Updated sidecar version to include a fix for the Flink Table API (Java) project template
 
 ## 0.16.1
 
@@ -27,6 +33,12 @@ All notable changes to this extension will be documented in this file.
 - Implemented caching when loading topics into the Topics view for the first time to improve
   performance. Manually refreshing the view or creating/deleting a topic will re-fetch topics and
   not rely on the cache.
+
+## 0.15.3
+
+### Fixed
+
+- Updated sidecar version to include a fix for the Flink Table API (Java) project template
 
 ## 0.15.2
 
