@@ -1,5 +1,6 @@
 // Import this first!
 import * as Sentry from "@sentry/node";
+import * as SentryCore from "@sentry/core";
 /**
  * Initialize Sentry for error tracking (and future performance monitoring?).
  * Sentry.init needs to be run first before any other code so that Sentry can capture all errors.
