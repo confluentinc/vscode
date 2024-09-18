@@ -195,7 +195,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       cachedSessionExists,
       changedToConnected,
       changedToDisconnected,
+      sessionSecretExists,
     };
+    logger.debug("getSessions() local auth state change check", logBody);
     if (changedToConnected || changedToDisconnected) {
       logger.debug("getSessions() auth state changed, firing ccloudConnected event", logBody);
       // inform any listeners whether or not we have a CCloud connection (auth session)
