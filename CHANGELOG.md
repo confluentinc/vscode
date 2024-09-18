@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Opening a new window/workspace after connecting to CCloud will now show the correct states in the
+  Topics & Schemas views instead of the "Connect to Confluent Cloud" button
+
 ## 0.16.0
 
 ### Added
@@ -13,8 +18,8 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Implemented caching when loading topics into the Topics view for the first time to improve
-  performance. Manually refreshing the view or creating/deleting a topic will re-fetch topics
-  and not rely on the cache.
+  performance. Manually refreshing the view or creating/deleting a topic will re-fetch topics and
+  not rely on the cache.
 
 ## 0.15.2
 

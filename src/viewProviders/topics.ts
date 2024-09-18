@@ -53,7 +53,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
-      logger.debug("ccloudConnected event fired, resetting", connected);
+      logger.debug("ccloudConnected event fired, resetting", { connected });
       if (this.ccloudEnvironment && this.kafkaCluster?.isCCloud) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
         // a CCloud Kafka Cluster
