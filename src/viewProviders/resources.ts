@@ -66,13 +66,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         "confluent.ccloudConnectionAvailable",
         connected,
       );
-
-      if (connected) {
-        // preload the CCloud environments and their children (Kafka clusters, Schema Registry)
-        // so that ResourceManager has them cached for general use (say, for fulfilling a schema request
-        // when browsing topics)
-        await CCLoudResourcePreloader.getInstance().preloadEnvironmentResources();
-      }
     });
 
     ccloudOrganizationChanged.event(() => {
@@ -133,8 +126,15 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   // - an unexpandable item with a "No connection" description where the user can connect to CCloud
   // - a "connected" expandable item with a description of the current connection name and the ability
   //   to add a new connection or switch connections
-  if (await getCCloudConnection()) {
+
+  const preloader = CCLoudResourcePreloader.getInstance();
+
+  if (preloader.hasCCloudConnection()) {
+    // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
+    await preloader.preloadEnvironmentResources();
+
     const resourceManager = getResourceManager();
+
     const ccloudEnvironments: CCloudEnvironment[] = await resourceManager.getCCloudEnvironments();
 
     const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
@@ -145,6 +145,8 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
     cloudContainerItem.id = "ccloud-container-connected";
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
+
+    // TODO: have this cached in the resource manager  via the preloader
     const currentOrg = await getCurrentOrganization();
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.iconPath = CONFLUENT_ICON;

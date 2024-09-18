@@ -11,6 +11,7 @@ export class CCLoudResourcePreloader {
   private static instance: CCLoudResourcePreloader | null = null;
   private loadingComplete: boolean = false;
   private currentlyLoadingPromise: Promise<void> | null = null;
+  private _hasCCloudConnection: boolean = false;
 
   public static getInstance(): CCLoudResourcePreloader {
     if (!CCLoudResourcePreloader.instance) {
@@ -22,13 +23,18 @@ export class CCLoudResourcePreloader {
   private constructor() {
     // Register to listen for ccloud connection events.
     ccloudConnected.event(async (connected: boolean) => {
+      this.reset();
+      this._hasCCloudConnection = connected;
       if (connected) {
-        this.reset();
+        // Start the preloading process if we think we have a ccloud connection.
         await this.preloadEnvironmentResources();
-      } else {
-        this.reset();
-      } 
+      }
     });
+  }
+
+  /** Do we currently think there's a ccloud connection? */
+  public hasCCloudConnection(): boolean {
+    return this._hasCCloudConnection;
   }
 
   /** Reset the preloader to its initial state: not currently fetching, have not fetched,
@@ -58,10 +64,6 @@ export class CCLoudResourcePreloader {
     // but also store the promise so that any other concurrent callers can await it.
     this.currentlyLoadingPromise = this.doPreloadEnvironmentResources();
     await this.currentlyLoadingPromise;
-
-    // All done, clear the promise and mark the loading as complete.
-    this.currentlyLoadingPromise = null;
-    this.loadingComplete = true;
   }
 
   /**
@@ -99,9 +101,12 @@ export class CCLoudResourcePreloader {
     }
     await Promise.all(promises);
 
-    // Mark the loading as complete
-    this.loadingComplete = true;
-
     // TODO: add flink compute pools here?
+
+    // All done, clear the promise and mark the loading as complete.
+    this.currentlyLoadingPromise = null;
+
+    // In case the user logged out _while_ we were loading, err on setting loadingComplete to false.
+    this.loadingComplete = this._hasCCloudConnection;
   }
 }

@@ -58,7 +58,8 @@ import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { getTelemetryLogger } from "./telemetry";
 import { getUriHandler } from "./uriHandler";
-import { ResourceViewProvider, CCLoudResourcePreloader } from "./viewProviders/resources";
+import { CCLoudResourcePreloader } from "./storage/ccloudPreloader";
+import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -110,6 +111,9 @@ async function _activateExtension(
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
   registerProjectGenerationCommand(context);
+
+  // Construct the singleton, let it register its event listener.
+  CCLoudResourcePreloader.getInstance();
 
   return context;
 }

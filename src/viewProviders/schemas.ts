@@ -131,7 +131,6 @@ export async function getSchemas(
   environment: CCloudEnvironment,
   schemaRegistryClusterId: string,
 ): Promise<Schema[]> {
-
   const client: SchemasV1Api = (await getSidecar()).getSchemasV1Api(
     schemaRegistryClusterId,
     environment.connectionId,
