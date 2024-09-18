@@ -10,6 +10,7 @@ import {
 } from "../graphql/environments";
 import { getLocalKafkaClusters } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
+import { Logger } from "../logging";
 import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
 import {
   CCloudKafkaCluster,
@@ -22,6 +23,8 @@ import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/
 import { getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSchemas } from "./schemas";
+
+const logger = new Logger("viewProviders.resources");
 
 const CONFLUENT_ICON = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
@@ -63,13 +66,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
+      logger.debug("ccloudConnected event fired", { connected });
       this.refresh();
-      // toggle Topics/Schemas views' visibility based on connection status
-      vscode.commands.executeCommand(
-        "setContext",
-        "confluent.ccloudConnectionAvailable",
-        connected,
-      );
     });
     ccloudOrganizationChanged.event(() => {
       this.refresh();
@@ -129,7 +127,14 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   // - an unexpandable item with a "No connection" description where the user can connect to CCloud
   // - a "connected" expandable item with a description of the current connection name and the ability
   //   to add a new connection or switch connections
-  if (await getCCloudConnection()) {
+  const ccloudConnection = await getCCloudConnection();
+  // toggle Topics/Schemas views' visibility based on connection status
+  vscode.commands.executeCommand(
+    "setContext",
+    "confluent.ccloudConnectionAvailable",
+    !!ccloudConnection,
+  );
+  if (ccloudConnection) {
     const ccloudEnvironments: CCloudEnvironment[] = await preloadEnvironmentResources();
     const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
       "Confluent Cloud",
