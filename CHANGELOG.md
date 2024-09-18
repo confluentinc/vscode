@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.16.1
+
 ### Fixed
 
 - Opening a new window/workspace after connecting to CCloud will now show the correct states in the
