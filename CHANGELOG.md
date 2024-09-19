@@ -7,7 +7,10 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Hardened improper sidecar process id handling edge case when currently running sidecar is the
-  wrong version and is also configured to be in internal development mode.
+  wrong version and is also configured to be in internal development mode,
+  [issue #216](https://github.com/confluentinc/vscode/issues/216).
+- Unified the loading of common CCloud resources backing the Resources and Topics panels, improving
+  performance and consistency, [issue #147](https://github.com/confluentinc/vscode/issues/147).
 
 ## 0.16.2
 
