@@ -11,8 +11,8 @@ All notable changes to this extension will be documented in this file.
   [issue #216](https://github.com/confluentinc/vscode/issues/216).
 - Unified the loading of common CCloud resources backing the Resources and Topics panels, improving
   performance and consistency, [issue #147](https://github.com/confluentinc/vscode/issues/147).
-- Remove toggle from empty CCloud clusters in Resources view, [issue #208](https://github.com/confluentinc/vscode/issues/208).
-
+- Remove toggle from empty CCloud clusters in Resources view,
+  [issue #208](https://github.com/confluentinc/vscode/issues/208).
 
 ## 0.16.2
 
