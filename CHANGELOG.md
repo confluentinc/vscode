@@ -7,7 +7,10 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Hardened improper sidecar process id handling edge case when currently running sidecar is the
-  wrong version and is also configured to be in internal development mode.
+  wrong version and is also configured to be in internal development mode,
+  [issue #216](https://github.com/confluentinc/vscode/issues/216).
+- Unified the loading of common CCloud resources backing the Resources and Topics panels, improving
+  performance and consistency, [issue #147](https://github.com/confluentinc/vscode/issues/147).
 
 ## 0.16.2
 
@@ -118,7 +121,7 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Multi-workspace operation improved. Having three or more workspaces with the extension activated
-  may encounter 429 responses from CCLoud via sidecar, which will be mitigated in the near future.
+  may encounter 429 responses from CCloud via sidecar, which will be mitigated in the near future.
 - If we notice are running inside of WSL, then hint sidecar to bind to 0.0.0.0 instead of 127.0.0.1
   so as to make it possible for Windows-side browsers to complete the OAuth flow. It is expected
   that the port will still be protected by the Windows firewall.

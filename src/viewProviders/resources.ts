@@ -3,11 +3,7 @@ import { IconNames } from "../constants";
 import { getExtensionContext } from "../context";
 import { ccloudConnected, ccloudOrganizationChanged } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
-import {
-  CCloudEnvironmentGroup,
-  getClustersByCCloudEnvironment,
-  getEnvironments,
-} from "../graphql/environments";
+import { CCloudEnvironmentGroup, getClustersByCCloudEnvironment } from "../graphql/environments";
 import { getLocalKafkaClusters } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -18,11 +14,9 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { Schema } from "../models/schema";
 import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
-import { getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
-import { getSchemas } from "./schemas";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -51,8 +45,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
-  /** The {@link CCloudEnvironment} and any associated clusters available from this view provider. */
-  public ccloudEnvGroups: CCloudEnvironmentGroup[] = [];
 
   private static instance: ResourceViewProvider | null = null;
   private constructor() {
@@ -65,10 +57,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     // update the tree view as needed (e.g. displaying the current connection label in the title)
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
 
-    ccloudConnected.event((connected: boolean) => {
+    ccloudConnected.event(async (connected: boolean) => {
       logger.debug("ccloudConnected event fired", { connected });
       this.refresh();
     });
+
     ccloudOrganizationChanged.event(() => {
       this.refresh();
     });
@@ -127,15 +120,17 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   // - an unexpandable item with a "No connection" description where the user can connect to CCloud
   // - a "connected" expandable item with a description of the current connection name and the ability
   //   to add a new connection or switch connections
-  const ccloudConnection = await getCCloudConnection();
-  // toggle Topics/Schemas views' visibility based on connection status
-  vscode.commands.executeCommand(
-    "setContext",
-    "confluent.ccloudConnectionAvailable",
-    !!ccloudConnection,
-  );
-  if (ccloudConnection) {
-    const ccloudEnvironments: CCloudEnvironment[] = await preloadEnvironmentResources();
+
+  const preloader = CCloudResourcePreloader.getInstance();
+
+  if (preloader.hasCCloudConnection()) {
+    // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
+    await preloader.ensureResourcesLoaded();
+
+    const resourceManager = getResourceManager();
+
+    const ccloudEnvironments: CCloudEnvironment[] = await resourceManager.getCCloudEnvironments();
+
     const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
       "Confluent Cloud",
       vscode.TreeItemCollapsibleState.Expanded,
@@ -144,6 +139,8 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
     cloudContainerItem.id = "ccloud-container-connected";
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
+
+    // TODO: have this cached in the resource manager  via the preloader
     const currentOrg = await getCurrentOrganization();
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.iconPath = CONFLUENT_ICON;
@@ -182,39 +179,6 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   }
 
   return resources;
-}
-
-/**
- * Preload the {@link CCloudEnvironment}s and their children (Kafka clusters, Schema Registry) into
- * the extension state for general use.
- * @remarks this is called after a successful connection to Confluent Cloud, and is done in order to
- * avoid having to fetch each environment's resources on-demand and speed up topic/schema browsing.
- */
-async function preloadEnvironmentResources(): Promise<CCloudEnvironment[]> {
-  const envGroups = await getEnvironments();
-  // also attach it to the tree view provider for later use
-  getResourceViewProvider().ccloudEnvGroups = envGroups;
-
-  const resourceManager = getResourceManager();
-  const environments = envGroups.map((envGroup) => envGroup.environment);
-  resourceManager.setCCloudEnvironments(environments);
-
-  const kafkaClusters = envGroups.flatMap((envGroup) => envGroup.kafkaClusters);
-  resourceManager.setCCloudKafkaClusters(kafkaClusters);
-
-  const promises: Promise<Schema[] | void>[] = [];
-  for (const envGroup of envGroups) {
-    const schemaRegistry = envGroup.schemaRegistry;
-    if (schemaRegistry !== undefined) {
-      await resourceManager.setCCloudSchemaRegistryCluster(schemaRegistry);
-      promises.push(getSchemas(envGroup.environment, schemaRegistry.id));
-    }
-  }
-  await Promise.all(promises);
-
-  // TODO: add flink compute pools here
-
-  return environments;
 }
 
 async function loadCCloudEnvironmentChildren(environment: CCloudEnvironment) {

@@ -1,4 +1,4 @@
-/** Possible / allowed operations on CCLoud Kafka topics
+/** Possible / allowed operations on CCloud Kafka topics
  * @see https://docs.confluent.io/platform/current/security/authorization/acls/overview.html#topic-resource-type-operations
  **/
 

@@ -13,6 +13,7 @@ import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -155,6 +156,13 @@ export async function getTopicsForCluster(
   cluster: KafkaCluster,
   forceRefresh: boolean = false,
 ): Promise<KafkaTopic[]> {
+  if (cluster instanceof CCloudKafkaCluster) {
+    const preloader = CCloudResourcePreloader.getInstance();
+    // Ensure all of the ccloud preloading is complete before referencing resource manager ccloud resources,
+    // most importantly the schema registry and its schemas.
+    await preloader.ensureResourcesLoaded();
+  }
+
   const resourceManager = getResourceManager();
 
   let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
@@ -165,13 +173,12 @@ export async function getTopicsForCluster(
   }
 
   // Otherwise make a deep fetch, cache in resource manager, and return.
-
   let environmentId: string | null = null;
   let schemas: Schema[] = [];
 
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
-    const resourceManager = getResourceManager();
+
     const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
     if (schemaRegistry) {
       schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
@@ -222,7 +229,7 @@ export async function getTopicsForCluster(
   });
 
   logger.debug(`Deep fetched ${topics.length} topics for cluster ${cluster.id}`);
-  await getResourceManager().setTopicsForCluster(cluster, topics);
+  await resourceManager.setTopicsForCluster(cluster, topics);
 
   return topics;
 }

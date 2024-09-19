@@ -126,6 +126,7 @@ export function getSchemasViewProvider() {
   return SchemasViewProvider.getInstance();
 }
 
+// XXX Move this out of viewProviders/schemas.ts into ... elsewhere.
 export async function getSchemas(
   environment: CCloudEnvironment,
   schemaRegistryClusterId: string,
