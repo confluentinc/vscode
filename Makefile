@@ -100,19 +100,21 @@ download-sidecar-executable:
 ifeq ($(SKIP_DOWNLOAD_EXECUTABLE),true)
 	@echo "Skipping download of sidecar executable since it already exists at $(EXECUTABLE_DOWNLOAD_PATH)"
 else
-ifeq ($(CI),true)
-	mkdir -p bin && \
-	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
-		gh release download $(IDE_SIDECAR_VERSION) --repo $(IDE_SIDECAR_REPO) --pattern=$${EXECUTABLE_PATH} --output $(EXECUTABLE_DOWNLOAD_PATH) --clobber && \
-		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"
-else
-	mkdir -p bin && \
-	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
-		curl -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
-		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"
-endif
+	@if ! [ "$$CI" = "true" ] || [[ "$$SEMAPHORE_ORGANIZATION_URL" == *".semaphoreci.com" ]]; then \
+		mkdir -p bin && \
+		echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
+		export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
+			curl -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
+			chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
+			echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"; \
+	else \
+		mkdir -p bin && \
+		echo "Using gh to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
+		export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
+			gh release download $(IDE_SIDECAR_VERSION) --repo $(IDE_SIDECAR_REPO) --pattern=$${EXECUTABLE_PATH} --output $(EXECUTABLE_DOWNLOAD_PATH) --clobber && \
+			chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
+			echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"; \
+	fi
 endif
 
 VSIX_MULTIARCH_ARCHIVE_FILENAME := confluent-vscode-extension-multiarch-$(LATEST_VERSION_NO_V).zip
