@@ -1,3 +1,4 @@
+import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { StateDiffs } from "../constants";
@@ -35,8 +36,8 @@ async function compareWithSelectedCommand(item: any) {
   }
 
   // replace fsPaths with ~ if they contain $HOME
-  const uri1Path = uri1.fsPath.replace(process.env["HOME"]!, "~");
-  const uri2Path = uri2.fsPath.replace(process.env["HOME"]!, "~");
+  const uri1Path = uri1.fsPath.replace(homedir(), "~");
+  const uri2Path = uri2.fsPath.replace(homedir(), "~");
   const title = `${uri1Path} ↔ ${uri2Path}`;
   logger.info("Comparing resources", uri1, uri2, title);
   vscode.commands.executeCommand("vscode.diff", uri1, uri2, title);

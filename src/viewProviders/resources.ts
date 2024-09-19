@@ -15,8 +15,8 @@ import {
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
-import { getResourceManager } from "../storage/resourceManager";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -57,7 +57,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     // update the tree view as needed (e.g. displaying the current connection label in the title)
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
 
-    ccloudConnected.event(async (connected: boolean) => {
+    ccloudConnected.event((connected: boolean) => {
       logger.debug("ccloudConnected event fired", { connected });
       this.refresh();
     });

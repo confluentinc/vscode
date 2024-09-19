@@ -14,6 +14,12 @@ All notable changes to this extension will be documented in this file.
 - Remove toggle from empty CCloud clusters in Resources view,
   [issue #208](https://github.com/confluentinc/vscode/issues/208).
 
+## 0.16.3
+
+### Fixed
+
+- [Windows] Schema definitions and diff views will now appear as expected in the editor area.
+
 ## 0.16.2
 
 ### Fixed
