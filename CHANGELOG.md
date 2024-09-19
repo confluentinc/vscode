@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.16.3
+
 ### Fixed
 
 - [Windows] Schema definitions and diff views will now appear as expected in the editor area.
