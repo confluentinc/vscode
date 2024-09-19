@@ -10,7 +10,7 @@ Confluent technology. This extension provides a robust, delightful experience fo
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
 Confluent, and read the docs at the [Confluent documentation](https://docs.confluent.io/) site.
 
-## Features
+## Features - test external contribution!
 
 Confluent for VS Code provides a number of features for working with your Kafka clusters, topics and
 schemas.
