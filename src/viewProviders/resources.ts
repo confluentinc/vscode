@@ -18,7 +18,6 @@ import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/
 import { getResourceManager } from "../storage/resourceManager";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const logger = new Logger("viewProviders.resources");
 
 const CONFLUENT_ICON = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);

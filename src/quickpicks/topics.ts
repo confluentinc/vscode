@@ -11,7 +11,7 @@ export async function topicQuickPick(cluster: KafkaCluster): Promise<KafkaTopic 
   };
   return window.withProgress(options, async () => {
     const topics: KafkaTopic[] = await getTopicsForCluster(cluster, true);
-    if (topics.length == 0) {
+    if (topics.length === 0) {
       window.showInformationMessage("No topics found in the cluster " + cluster.name);
       return;
     }
