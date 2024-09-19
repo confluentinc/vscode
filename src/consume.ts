@@ -24,12 +24,21 @@ import { getTelemetryLogger } from "./telemetry";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
+import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
+import { topicQuickPick } from "./quickpicks/topics";
 
 export function activateMessageViewer(context: ExtensionContext) {
   // commands
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
-    registerCommandWithLogging("confluent.topic.consume", async (topic: KafkaTopic) => {
+    registerCommandWithLogging("confluent.topic.consume", async (topic?: KafkaTopic) => {
+      if (topic == null) {
+        const cluster = await kafkaClusterQuickPick(true, true);
+        if (cluster == null) return;
+        topic = await topicQuickPick(cluster);
+        if (topic == null) return;
+      }
+
       if (!(await canAccessSchemaForTopic(topic))) {
         showNoSchemaAccessWarningNotification();
       }
