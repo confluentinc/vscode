@@ -28,7 +28,6 @@ import {
   CCloudSchemaRegistryByEnv,
   getResourceManager,
 } from "./resourceManager";
-import { get } from "http";
 
 describe("ResourceManager (CCloud) environment methods", function () {
   let storageManager: StorageManager;
