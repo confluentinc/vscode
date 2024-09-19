@@ -1,6 +1,7 @@
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { Schema } from "../models/schema";
+import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { getSchemas } from "../viewProviders/schemas";
 import { getResourceManager } from "./resourceManager";
 
@@ -94,13 +95,22 @@ export class CCloudResourcePreloader {
     const kafkaClusters = envGroups.flatMap((envGroup) => envGroup.kafkaClusters);
     await resourceManager.setCCloudKafkaClusters(kafkaClusters);
 
+    // Likewise the schema registries, but filter out any undefineds for environments that don't have one.
+    const schemaRegistries: SchemaRegistryCluster[] = envGroups
+      .map((envGroup) => envGroup.schemaRegistry)
+      .filter(
+        (schemaRegistry): schemaRegistry is SchemaRegistryCluster => schemaRegistry !== undefined,
+      );
+
+    await resourceManager.setCCloudSchemaRegistryClusters(schemaRegistries);
+
     // For each environment, if there's a schema registry, queue up fetching (and caching) its schemas.
     // Is safe to fetch + cache each environment's schemas in parallel.
     const promises: Promise<Schema[]>[] = [];
+
     for (const envGroup of envGroups) {
       const schemaRegistry = envGroup.schemaRegistry;
       if (schemaRegistry !== undefined) {
-        await resourceManager.setCCloudSchemaRegistryCluster(schemaRegistry);
         // queue up to fetch all the schemas plus mainly tickle the side effect of
         // storing those schemas into the resource manager.
         promises.push(getSchemas(envGroup.environment, schemaRegistry.id));

@@ -23,7 +23,7 @@ describe("authz.schemaRegistry", function () {
     // preload the schema registry in extension state
     await getExtensionContext();
     resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await resourceManager.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
 
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
