@@ -59,13 +59,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
 
     ccloudConnected.event(async (connected: boolean) => {
+      logger.debug("ccloudConnected event fired", { connected });
       this.refresh();
-      // toggle Topics/Schemas views' visibility based on connection status
-      vscode.commands.executeCommand(
-        "setContext",
-        "confluent.ccloudConnectionAvailable",
-        connected,
-      );
     });
 
     ccloudOrganizationChanged.event(() => {

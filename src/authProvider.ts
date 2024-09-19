@@ -204,6 +204,14 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       ccloudConnected.fire(!!connection);
     }
 
+    // Inform the UI as to if the user is signed in or not.
+    // (Currently only controls topics / schema view empty states.)
+    vscode.commands.executeCommand(
+      "setContext",
+      "confluent.ccloudConnectionAvailable",
+      !!connection,
+    );
+
     if (!connection) {
       if (changedToDisconnected) {
         // NOTE: this will mainly happen if something goes wrong with the connection or the sidecar
