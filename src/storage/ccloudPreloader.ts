@@ -10,17 +10,17 @@ import { getResourceManager } from "./resourceManager";
  * call {@link ensureResourcesLoaded} to ensure that the resources are cached before attempting to
  * access them from the resource manager.
  */
-export class CCLoudResourcePreloader {
-  private static instance: CCLoudResourcePreloader | null = null;
+export class CCloudResourcePreloader {
+  private static instance: CCloudResourcePreloader | null = null;
   private loadingComplete: boolean = false;
   private currentlyLoadingPromise: Promise<void> | null = null;
   private _hasCCloudConnection: boolean = false;
 
-  public static getInstance(): CCLoudResourcePreloader {
-    if (!CCLoudResourcePreloader.instance) {
-      CCLoudResourcePreloader.instance = new CCLoudResourcePreloader();
+  public static getInstance(): CCloudResourcePreloader {
+    if (!CCloudResourcePreloader.instance) {
+      CCloudResourcePreloader.instance = new CCloudResourcePreloader();
     }
-    return CCLoudResourcePreloader.instance;
+    return CCloudResourcePreloader.instance;
   }
 
   private constructor() {
@@ -49,7 +49,7 @@ export class CCLoudResourcePreloader {
    * are being fetched will await the same promise. Subsequent calls after completion will return
    * immediately.
    *
-   * Currently, when the CCLoud connection / authentication session is closed/ended, the resources
+   * Currently, when the CCloud connection / authentication session is closed/ended, the resources
    * are left in the resource manager, however the preloader will reset its state to not having fetched
    * the resources, so that the next call to ensureResourcesLoaded() will re-fetch the resources.
    *

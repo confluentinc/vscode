@@ -14,7 +14,7 @@ describe("Test KafkaTopic methods", () => {
     assert.strictEqual(true, TEST_LOCAL_KAFKA_TOPIC.isLocalTopic());
   });
 
-  it("CCLoud topics should not smell local", () => {
+  it("CCloud topics should not smell local", () => {
     assert.strictEqual(false, TEST_CCLOUD_KAFKA_TOPIC.isLocalTopic());
   });
 });

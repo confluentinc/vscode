@@ -16,7 +16,7 @@ import {
 import { ContainerTreeItem } from "../models/main";
 import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
 import { getResourceManager } from "../storage/resourceManager";
-import { CCLoudResourcePreloader } from "../storage/ccloudPreloader";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const logger = new Logger("viewProviders.resources");
@@ -122,7 +122,7 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   // - a "connected" expandable item with a description of the current connection name and the ability
   //   to add a new connection or switch connections
 
-  const preloader = CCLoudResourcePreloader.getInstance();
+  const preloader = CCloudResourcePreloader.getInstance();
 
   if (preloader.hasCCloudConnection()) {
     // Ensure all of the preloading is complete before referencing resource manager ccloud resources.

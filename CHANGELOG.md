@@ -120,7 +120,7 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 
 - Multi-workspace operation improved. Having three or more workspaces with the extension activated
-  may encounter 429 responses from CCLoud via sidecar, which will be mitigated in the near future.
+  may encounter 429 responses from CCloud via sidecar, which will be mitigated in the near future.
 - If we notice are running inside of WSL, then hint sidecar to bind to 0.0.0.0 instead of 127.0.0.1
   so as to make it possible for Windows-side browsers to complete the OAuth flow. It is expected
   that the port will still be protected by the Windows firewall.
