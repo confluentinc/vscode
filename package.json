@@ -206,9 +206,8 @@
       {
         "command": "confluent.topic.consume",
         "icon": "$(debug-start)",
-        "title": "Open message viewer",
-        "category": "Confluent: Topic",
-        "enablement": "view == confluent-topics"
+        "title": "Browse Messages",
+        "category": "Confluent: Topic"
       },
       {
         "command": "confluent.topics.create",

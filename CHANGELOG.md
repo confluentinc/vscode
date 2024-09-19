@@ -30,6 +30,7 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - Add Windows x64 support
+- Message Viewer can be opened directly through the command palette.
 
 ### Changed
 
