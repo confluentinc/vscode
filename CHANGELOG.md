@@ -12,6 +12,12 @@ All notable changes to this extension will be documented in this file.
 - Unified the loading of common CCloud resources backing the Resources and Topics panels, improving
   performance and consistency, [issue #147](https://github.com/confluentinc/vscode/issues/147).
 
+## 0.16.3
+
+### Fixed
+
+- [Windows] Schema definitions and diff views will now appear as expected in the editor area.
+
 ## 0.16.2
 
 ### Fixed
