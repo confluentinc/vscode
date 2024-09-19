@@ -155,15 +155,25 @@ async function applyTemplate(
     templateName: pickedTemplate.spec.display_name,
   });
   // Notify the user that the project was generated successfully
+  const newWindowButton = "Open New Window for Project";
   const selection = await vscode.window.showInformationMessage(
     `🎉 Generated "${pickedTemplate.spec.display_name}" in ${destination.path}`,
-    "Open Folder",
+    newWindowButton,
+    "Switch to Project",
   );
-  if (selection === "Open Folder") {
+  if (selection !== undefined) {
     getTelemetryLogger().logUsage("Scaffold Folder Opened", {
       templateName: pickedTemplate.spec.display_name,
+      newWindow: selection === newWindowButton,
     });
-    vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(destination.path));
+    // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
+    // reusing the current one
+    const keepsExistingWindow = selection === newWindowButton;
+    vscode.commands.executeCommand(
+      "vscode.openFolder",
+      vscode.Uri.file(destination.path),
+      keepsExistingWindow,
+    );
   }
 }
 
