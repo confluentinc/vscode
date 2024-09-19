@@ -15,10 +15,10 @@ import {
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
-import { getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
 import { CCLoudResourcePreloader } from "../storage/ccloudPreloader";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const logger = new Logger("viewProviders.resources");
 
 const CONFLUENT_ICON = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
@@ -131,7 +131,7 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
 
   if (preloader.hasCCloudConnection()) {
     // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
-    await preloader.preloadEnvironmentResources();
+    await preloader.ensureResourcesLoaded();
 
     const resourceManager = getResourceManager();
 

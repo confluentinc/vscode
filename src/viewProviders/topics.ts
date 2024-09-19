@@ -160,7 +160,7 @@ export async function getTopicsForCluster(
     const preloader = CCLoudResourcePreloader.getInstance();
     // Ensure all of the ccloud preloading is complete before referencing resource manager ccloud resources,
     // most importantly the schema registry and its schemas.
-    await preloader.preloadEnvironmentResources();
+    await preloader.ensureResourcesLoaded();
   }
 
   const resourceManager = getResourceManager();

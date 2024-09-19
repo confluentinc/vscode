@@ -5,7 +5,10 @@ import { getSchemas } from "../viewProviders/schemas";
 import { getResourceManager } from "./resourceManager";
 
 /**
- * Singleton class responsible for preloading Confluent Cloud resources into the extension state.
+ * Singleton class responsible for preloading Confluent Cloud resources into the resource manager.
+ * View providers and/or other consumers of CCloud resources stored in the resource manager should
+ * call {@link ensureResourcesLoaded} to ensure that the resources are cached before attempting to
+ * access them from the resource manager.
  */
 export class CCLoudResourcePreloader {
   private static instance: CCLoudResourcePreloader | null = null;
@@ -27,7 +30,7 @@ export class CCLoudResourcePreloader {
       this._hasCCloudConnection = connected;
       if (connected) {
         // Start the preloading process if we think we have a ccloud connection.
-        await this.preloadEnvironmentResources();
+        await this.ensureResourcesLoaded();
       }
     });
   }
@@ -37,42 +40,46 @@ export class CCLoudResourcePreloader {
     return this._hasCCloudConnection;
   }
 
-  /** Reset the preloader to its initial state: not currently fetching, have not fetched,
-   * so that the next call to preloadEnvironmentResources() will start from scratch.
-   */
-  reset(): void {
-    this.loadingComplete = false;
-    this.currentlyLoadingPromise = null;
-  }
-
   /**
-   * Fired off when ccloud edges to connected., and/or when a view controller needs to get at the
-   * resources stored in ResourceManager and needs to ensure they are all preloaded.
+   * Promise ensuring that all the ccloud resources are cached into the resource manager.
+   *
+   * Fired off when CCloud edges to connected, and/or when any view controller needs to get at
+   * any of the following CCloud resources stored in ResourceManager. Is safe to call multiple times
+   * in a ccloud session, as it will only fetch the resources once. Concurrent calls while the resources
+   * are being fetched will await the same promise. Subsequent calls after completion will return
+   * immediately.
+   *
+   * Currently, when the CCLoud connection / authentication session is closed/ended, the resources
+   * are left in the resource manager, however the preloader will reset its state to not having fetched
+   * the resources, so that the next call to ensureResourcesLoaded() will re-fetch the resources.
+   *
+   *   - CCloud Environments (ResourceManager.getCCloudEnvironments())
+   *   - CCloud Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
+   *   - CCloud Schema Registries (ResourceManager.getCCloudSchemaRegistryClusters())
+   *   - CCloud Schemas (ResourceManager.getCCloudSchemas())
    */
-  public async preloadEnvironmentResources(): Promise<void> {
+  public async ensureResourcesLoaded(): Promise<void> {
     // If the resources are already loaded, nothing to wait on.
     if (this.loadingComplete) {
       return;
     }
 
-    // If in progress of loading, await the promise that is currently loading the resources.
+    // If in progress of loading, have the caller await the promise that is currently loading the resources.
     if (this.currentlyLoadingPromise) {
       return this.currentlyLoadingPromise;
     }
 
     // This caller is the first to request the preload, so do the work in the foreground,
     // but also store the promise so that any other concurrent callers can await it.
-    this.currentlyLoadingPromise = this.doPreloadEnvironmentResources();
+    this.currentlyLoadingPromise = this.doLoadResources();
     await this.currentlyLoadingPromise;
   }
 
   /**
-   * Preload the {@link CCloudEnvironment}s and their children (Kafka clusters, Schema Registry) into
-   * the extension state for general use.
-   * @remarks this is called after a successful connection to Confluent Cloud, and is done in order to
-   * avoid having to fetch each environment's resources on-demand and speed up topic/schema browsing.
+   * Load the {@link CCloudEnvironment}s and their children (Kafka clusters, schema registry, schemas) into
+   * the resource manager  for general use.
    */
-  private async doPreloadEnvironmentResources(): Promise<void> {
+  private async doLoadResources(): Promise<void> {
     const resourceManager = getResourceManager();
 
     // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
@@ -106,7 +113,15 @@ export class CCLoudResourcePreloader {
     // All done, clear the promise and mark the loading as complete.
     this.currentlyLoadingPromise = null;
 
-    // In case the user logged out _while_ we were loading, err on setting loadingComplete to false.
+    // In case the user logged out _while_ we were busy loading, err on setting loadingComplete to false.
     this.loadingComplete = this._hasCCloudConnection;
+  }
+
+  /** Reset the preloader to its initial state: not currently fetching, have not fetched,
+   * so that the next call to {@link ensureResourcesLoaded} will start from scratch.
+   */
+  reset(): void {
+    this.loadingComplete = false;
+    this.currentlyLoadingPromise = null;
   }
 }
