@@ -29,6 +29,7 @@ body:
         - macOS (Apple/arm64)
         - Linux (x64)
         - Linux (arm64)
+        - Windows (x64)
         - Other
   - type: textarea
     id: vscode_version
