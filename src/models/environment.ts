@@ -10,7 +10,9 @@ export class CCloudEnvironment extends Data {
 
   id!: Enforced<string>;
   name!: Enforced<string>;
-  stream_governance_package!: Enforced<string>;
+  streamGovernancePackage!: Enforced<string>;
+  /** Has at least one Kafka or Schema Registry Cluster */
+  hasClusters!: Enforced<boolean>;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
@@ -22,7 +24,12 @@ export class CCloudEnvironmentTreeItem extends vscode.TreeItem {
   resource: CCloudEnvironment;
 
   constructor(resource: CCloudEnvironment) {
-    super(resource.name, vscode.TreeItemCollapsibleState.Collapsed);
+    // If has interior clusters, is collapsed and can be expanded.
+    const collapseState = resource.hasClusters
+      ? vscode.TreeItemCollapsibleState.Collapsed
+      : vscode.TreeItemCollapsibleState.None;
+
+    super(resource.name, collapseState);
 
     // internal properties
     this.resource = resource;
@@ -41,7 +48,7 @@ function createEnvironmentTooltip(resource: CCloudEnvironment): vscode.MarkdownS
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Name: \`${resource.name}\`\n\n`)
-    .appendMarkdown(`Stream Governance Package: \`${resource.stream_governance_package}\``)
+    .appendMarkdown(`Stream Governance Package: \`${resource.streamGovernancePackage}\``)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(
       `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,

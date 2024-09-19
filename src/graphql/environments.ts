@@ -57,7 +57,8 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
       environment: CCloudEnvironment.create({
         id: env.id,
         name: env.name,
-        stream_governance_package: env.governancePackage,
+        streamGovernancePackage: env.governancePackage,
+        hasClusters: env.kafkaClusters.length > 0 || env.schemaRegistry !== null,
       }),
       kafkaClusters: [],
       schemaRegistry: undefined,

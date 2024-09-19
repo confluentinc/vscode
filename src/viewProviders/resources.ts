@@ -187,6 +187,7 @@ async function loadCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   // load Kafka clusters and Schema Registry for the given environment, if they exist
   const envGroup: CCloudEnvironmentGroup | null = await getClustersByCCloudEnvironment(environment);
   if (!envGroup) {
+    // Return the empty array.
     return subItems;
   }
 
