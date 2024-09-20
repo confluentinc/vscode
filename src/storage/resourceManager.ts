@@ -232,17 +232,13 @@ export class ResourceManager {
 
   // SCHEMA REGISTRY
 
-  /**
-   * Set the list of available Schema Registry clusters in extension state.
-   * @param clusters The list of {@link SchemaRegistryCluster}s to set
-   */
-  async setCCloudSchemaRegistryCluster(cluster: SchemaRegistryCluster): Promise<void> {
-    // get any existing map of <environmentId, SchemaRegistryCluster>
-    const envClusters: Map<string, SchemaRegistryCluster> =
-      (await this.getCCloudSchemaRegistryClusters()) ?? new Map();
-    const envId: string = cluster.environmentId;
-    envClusters.set(envId, cluster);
-    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, envClusters);
+  /** Cache all of the CCloud schema registries at once. */
+  async setCCloudSchemaRegistryClusters(clusters: SchemaRegistryCluster[]): Promise<void> {
+    const clustersByEnv: CCloudSchemaRegistryByEnv = new Map();
+    clusters.forEach((cluster) => {
+      clustersByEnv.set(cluster.environmentId, cluster);
+    });
+    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, clustersByEnv);
   }
 
   /**

@@ -82,7 +82,7 @@ describe("TopicViewProvider helper functions", () => {
   it("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
     // preload SR cluster + schemas (usually done when loading environments)
     const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await resourceManager.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     await resourceManager.setCCloudSchemas(preloadedSchemas);
     // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
     const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });

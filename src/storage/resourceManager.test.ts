@@ -309,43 +309,45 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     await storageManager.clearWorkspaceState();
   });
 
-  it("CCLOUD: setCCloudSchemaRegistryCluster() should correctly store Schema Registry clusters", async () => {
-    await getResourceManager().setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+  it("CCLOUD: setCCloudSchemaRegistryClusters() should correctly store Schema Registry clusters", async () => {
+    const secondCloudEnvironment = { ...TEST_CCLOUD_ENVIRONMENT, id: "second-cloud-env-id" };
+    const secondSchemaRegistry = SchemaRegistryCluster.create({
+      ...TEST_SCHEMA_REGISTRY,
+      environmentId: secondCloudEnvironment.id,
+      id: "second-schema-registry-id",
+    });
+    const testClusters: SchemaRegistryCluster[] = [TEST_SCHEMA_REGISTRY, secondSchemaRegistry];
+
+    const rm = getResourceManager();
+    await rm.setCCloudSchemaRegistryClusters(testClusters);
     // verify the cluster was stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClusters: CCloudSchemaRegistryByEnv | undefined =
-      await storageManager.getWorkspaceState(StateSchemaRegistry.CCLOUD);
+    let storedClusters: CCloudSchemaRegistryByEnv = await rm.getCCloudSchemaRegistryClusters();
     assert.ok(storedClusters);
     assert.ok(storedClusters instanceof Map);
     assert.ok(storedClusters.has(TEST_CCLOUD_ENVIRONMENT.id));
+    assert.ok(storedClusters.has(secondCloudEnvironment.id));
     assert.deepStrictEqual(storedClusters.get(TEST_CCLOUD_ENVIRONMENT.id), TEST_SCHEMA_REGISTRY);
   });
 
-  it("CCLOUD: setCCloudSchemaRegistryCluster() should add new environment keys if they don't exist", async () => {
-    // set the first cluster from the first environment
-    await getResourceManager().setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
-    // create and set the second cluster for the new environment
-    const newEnvironmentId = "new-environment-id";
-    const newCluster: SchemaRegistryCluster = {
-      ...TEST_SCHEMA_REGISTRY,
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      id: "new-sr-cluster-id-1",
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      environmentId: newEnvironmentId,
-    };
-    await getResourceManager().setCCloudSchemaRegistryCluster(newCluster);
-    // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClusters: CCloudSchemaRegistryByEnv | undefined =
-      await storageManager.getWorkspaceState(StateSchemaRegistry.CCLOUD);
-    assert.ok(storedClusters);
-    // make sure both environments exist and the first wasn't overwritten
-    assert.deepStrictEqual(storedClusters.get(newEnvironmentId), newCluster);
-    assert.deepStrictEqual(storedClusters.get(TEST_CCLOUD_ENVIRONMENT.id), TEST_SCHEMA_REGISTRY);
+  it("CCLOUD: setCCloudSchemaRegistryClusters() setting with empty array should overwrite existing clusters", async () => {
+    // set the clusters in the StorageManager before setting them again
+    const rm = getResourceManager();
+    await rm.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
+    // fetching now should return the stored cluster
+    let storedClusters: CCloudSchemaRegistryByEnv = await rm.getCCloudSchemaRegistryClusters();
+    assert.ok(storedClusters.get(TEST_CCLOUD_ENVIRONMENT.id));
+
+    // set the clusters again with an empty array
+    await rm.setCCloudSchemaRegistryClusters([]);
+    // verify the clusters were overwritten correctly
+    storedClusters = await rm.getCCloudSchemaRegistryClusters();
+    assert.deepStrictEqual(storedClusters, new Map());
   });
 
   it("CCLOUD: getCCloudSchemaRegistryClusters() should correctly retrieve Schema Registry clusters", async () => {
     const resourceManager = getResourceManager();
     // preload a cluster before retrieving it
-    await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await resourceManager.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     // verify the clusters were stored correctly
     const envClusters: CCloudSchemaRegistryByEnv =
       await resourceManager.getCCloudSchemaRegistryClusters();
@@ -360,18 +362,9 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     assert.deepStrictEqual(envClusters, new Map());
   });
 
-  it("CCLOUD: getCCloudSchemaRegistryCluster() should correctly retrieve a Schema Registry cluster", async () => {
-    // set the cluster
-    await getResourceManager().setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
-    // verify the cluster was retrieved correctly
-    const cluster: SchemaRegistryCluster | null =
-      await getResourceManager().getCCloudSchemaRegistryCluster(TEST_CCLOUD_ENVIRONMENT.id);
-    assert.deepStrictEqual(cluster, TEST_SCHEMA_REGISTRY);
-  });
-
   it("CCLOUD: getCCloudSchemaRegistryCluster() should return null if the parent environment ID is not found", async () => {
     // set the clusters
-    await getResourceManager().setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await getResourceManager().setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     // verify the cluster was not found because the environment ID is incorrect
     const missingCluster: SchemaRegistryCluster | null =
       await getResourceManager().getCCloudSchemaRegistryCluster("nonexistent-env-id");
@@ -381,7 +374,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   it("CCLOUD: deleteCCloudSchemaRegistryClusters() should correctly delete Schema Registry clusters", async () => {
     // set the clusters in the StorageManager before deleting them
     const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await resourceManager.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     await resourceManager.deleteCCloudSchemaRegistryClusters();
     // verify the clusters were deleted correctly
     const missingClusters = await storageManager.getWorkspaceState(StateSchemaRegistry.CCLOUD);
@@ -844,7 +837,7 @@ describe("ResourceManager general utility methods", function () {
     // set the CCloud resources before deleting them
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
-    await resourceManager.setCCloudSchemaRegistryCluster(TEST_SCHEMA_REGISTRY);
+    await resourceManager.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
     await resourceManager.setCCloudSchemas(ccloudSchemas);
     // also set some local resources to make sure they aren't deleted
