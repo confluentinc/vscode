@@ -260,7 +260,8 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
     const resourceViewProvider = ResourceViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.resources.refresh", () => {
-        resourceViewProvider.refresh();
+        // Force a deep refresh (of ccloud resouces) from sidecar.
+        resourceViewProvider.refresh(true);
       }),
     );
     logger.info("Resource view provider created");
@@ -272,7 +273,7 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
     const topicViewProvider = TopicViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.topics.refresh", () => {
-        // Force a deep refresh from sidecar.
+        // Force a deep refresh of the topic data for this cluster from sidecar.
         topicViewProvider.refresh(true);
       }),
     );

@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Use cached information to populate the Resources view Confluent Cloud single environment children,
+  [issue #254](https://github.com/confluentinc/vscode/issues/254).
+
 ### Fixed
 
 - Hardened improper sidecar process id handling edge case when currently running sidecar is the

@@ -130,7 +130,7 @@ export class CCloudResourcePreloader {
   /** Reset the preloader to its initial state: not currently fetching, have not fetched,
    * so that the next call to {@link ensureResourcesLoaded} will start from scratch.
    */
-  reset(): void {
+  public reset(): void {
     this.loadingComplete = false;
     this.currentlyLoadingPromise = null;
   }

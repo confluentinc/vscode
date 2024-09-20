@@ -171,6 +171,16 @@ export class ResourceManager {
   }
 
   /**
+   * Get the list of available CCloud Kafka clusters for a specific environment from extension state.
+   * @param environmentId The ID of the {@link CCloudEnvironment} for which to get Kafka clusters
+   * @returns The list of {@link CCloudKafkaCluster}s for the specified environment. If no clusters are found, an empty array is returned.
+   */
+  async getCCloudKafkaClustersForEnvironment(environmentId: string): Promise<CCloudKafkaCluster[]> {
+    const clusters: CCloudKafkaClustersByEnv = await this.getCCloudKafkaClusters();
+    return clusters.get(environmentId) ?? [];
+  }
+
+  /**
    * Delete the list of available Kafka clusters from extension state.
    * @param environment Optional: the ID of the environment for which to delete Kafka clusters;
    * if not provided, all <environmentId, {@link CCloudKafkaCluster}> pairs will be deleted
@@ -265,7 +275,7 @@ export class ResourceManager {
   /**
    * Get a specific Schema Registry cluster from extension state.
    * @param environmentId The ID of the {@link CCloudEnvironment} from which to get the Schema Registry cluster
-   * @returns The associated {@link SchemaRegistryCluster}, or `null` (if the environment is not found)
+   * @returns The associated {@link SchemaRegistryCluster}, or `null` (if the environment is not found or has no Schema Registry)
    */
   async getCCloudSchemaRegistryCluster(
     environmentId: string,
