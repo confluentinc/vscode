@@ -225,6 +225,26 @@ describe("ResourceManager Kafka cluster methods", function () {
     assert.strictEqual(missingCluster, null);
   });
 
+  it("CCLOUD: getCCloudKafkaClustersForEnvironment should return the correct clusters for an environment", async () => {
+    const rm = getResourceManager();
+    // set the kafka clusters for TEST_CCLOUD_ENVIRONMENT.
+    await rm.setCCloudKafkaClusters(ccloudClusters);
+    // verify the clusters were retrieved correctly.
+    const clusters: CCloudKafkaCluster[] = await rm.getCCloudKafkaClustersForEnvironment(
+      TEST_CCLOUD_ENVIRONMENT.id,
+    );
+    assert.deepStrictEqual(clusters, ccloudClusters);
+  });
+
+  it("CCLOUD: getCCloudKafkaClustersForEnvironment should return an empty array if no clusters are found", async () => {
+    const rm = getResourceManager();
+    // verify no clusters are found for TEST_CCLOUD_ENVIRONMENT.
+    const clusters: CCloudKafkaCluster[] = await rm.getCCloudKafkaClustersForEnvironment(
+      TEST_CCLOUD_ENVIRONMENT.id,
+    );
+    assert.deepStrictEqual(clusters, []);
+  });
+
   it("CCLOUD: deleteCCloudKafkaClusters() should correctly delete Kafka clusters", async () => {
     // set the clusters in the StorageManager before deleting them
     const resourceManager = getResourceManager();
