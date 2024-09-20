@@ -108,9 +108,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const forceDeepRefresh = this.forceDeepRefresh;
-      this.forceDeepRefresh = false;
-      return await loadResources(forceDeepRefresh);
+      return await loadResources(this.forceDeepRefresh);
     }
 
     return resourceItems;
