@@ -53,21 +53,6 @@ release-current-version:
 
 version_no_v = $(shell echo $(1) | sed 's,^v,,' )
 
-VSCODE_EXTENSION_S3_PREFIX ?= vscode
-
-# TODO(oss): Remove this target we start publishing the extension to the marketplace
-.PHONY: upload-vsix-files-to-s3
-upload-vsix-files-to-s3:
-ifeq ($(LATEST_VERSION_NO_V), $(CURRENT_VERSION))
-	for target in darwin-x64 darwin-arm64 linux-x64 linux-arm64; do \
-		vsix_file=$$(find packaged-vsix-files -name "*$$target*.vsix"); \
-		aws s3api put-object --bucket $(S3_BUCKET) --key $(VSCODE_EXTENSION_S3_PREFIX)/$(LATEST_VERSION)/$$(basename $$vsix_file) --body $$vsix_file; \
-	done;
-else
-	@echo "Skipping upload of VSIX files to S3 since the version checked out is not the latest version. Latest version is $(LATEST_VERSION_NO_V) and the version checked out is $(CURRENT_VERSION)"
-	exit 1;
-endif
-
 .PHONY: upload-vsix-files-to-gh-releases
 upload-vsix-files-to-gh-releases:
 ifeq ($(LATEST_VERSION_NO_V), $(CURRENT_VERSION))
@@ -80,7 +65,6 @@ else
 	exit 1;
 endif
 
-S3_BUCKET ?= devprod-prod-blob-store-internal-519856050701
 IDE_SIDECAR_VERSION = $(shell cat .versions/ide-sidecar.txt)
 IDE_SIDECAR_VERSION_NO_V := $(call version_no_v,$(IDE_SIDECAR_VERSION))
 EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
@@ -100,65 +84,19 @@ download-sidecar-executable:
 ifeq ($(SKIP_DOWNLOAD_EXECUTABLE),true)
 	@echo "Skipping download of sidecar executable since it already exists at $(EXECUTABLE_DOWNLOAD_PATH)"
 else
-	@if ! [ "$$CI" = "true" ] || [[ "$$SEMAPHORE_ORGANIZATION_URL" == *".semaphoreci.com" ]]; then \
-		mkdir -p bin && \
-		echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
-		export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
-			curl -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
-			chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-			echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"; \
-	else \
-		mkdir -p bin && \
-		echo "Using gh to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
-		export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
-			gh release download $(IDE_SIDECAR_VERSION) --repo $(IDE_SIDECAR_REPO) --pattern=$${EXECUTABLE_PATH} --output $(EXECUTABLE_DOWNLOAD_PATH) --clobber && \
-			chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-			echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)"; \
-	fi
+	mkdir -p bin && \
+	echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
+	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
+		curl -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
+		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
+		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)";
 endif
-
-VSIX_MULTIARCH_ARCHIVE_FILENAME := confluent-vscode-extension-multiarch-$(LATEST_VERSION_NO_V).zip
 
 # Downloads the THIRD_PARTY_NOTICES.txt file from the latest release of ide-sidecar as THIRD_PARTY_NOTICES_IDE_SIDECAR.txt
 .PHONY: download-third-party-notices-sidecar
 download-third-party-notices-sidecar:
 ifeq ($(CI),true)
 	gh release download $(IDE_SIDECAR_VERSION) --repo $(IDE_SIDECAR_REPO) --pattern=THIRD_PARTY_NOTICES.txt --output THIRD_PARTY_NOTICES_IDE_SIDECAR.txt --clobber
-endif
-
-.PHONY: package-multiarch-archive
-package-multiarch-archive: download-third-party-notices-sidecar
-ifeq ($(CI),true)
-	zip -j $(VSIX_MULTIARCH_ARCHIVE_FILENAME) packaged-vsix-files/*.vsix LICENSE.txt NOTICE-vsix.txt THIRD_PARTY_NOTICES* public/CHANGELOG.md public/README.md
-endif
-
-.PHONY: push-multiarch-archive
-push-multiarch-archive:
-ifeq ($(CI),true)
-	artifact push workflow $(VSIX_MULTIARCH_ARCHIVE_FILENAME) --destination $(VSIX_MULTIARCH_ARCHIVE_FILENAME)
-endif
-
-# TODO(oss): Remove this target we start publishing the extension to the marketplace
-.PHONY: upload-multiarch-archive-to-s3
-upload-multiarch-archive-to-s3:
-ifeq ($(LATEST_VERSION_NO_V), $(CURRENT_VERSION))
-ifneq ($(wildcard $(VSIX_MULTIARCH_ARCHIVE_FILENAME)),)
-	aws s3api put-object --bucket $(S3_BUCKET) --key $(VSCODE_EXTENSION_S3_PREFIX)/$(LATEST_VERSION)/$(VSIX_MULTIARCH_ARCHIVE_FILENAME) --body $(VSIX_MULTIARCH_ARCHIVE_FILENAME);
-endif
-else
-	@echo "Skipping upload of VSIX multiarch archive to S3 $(LATEST_VERSION_NO_V) and the version checked out is $(CURRENT_VERSION)"
-	exit 1;
-endif
-
-.PHONY: upload-multiarch-archive-to-gh-releases
-upload-multiarch-archive-to-gh-releases:
-ifeq ($(LATEST_VERSION_NO_V), $(CURRENT_VERSION))
-ifneq ($(wildcard $(VSIX_MULTIARCH_ARCHIVE_FILENAME)),)
-	gh release upload $(LATEST_VERSION) $(VSIX_MULTIARCH_ARCHIVE_FILENAME) --clobber
-endif
-else
-	@echo "Skipping upload of VSIX multiarch archive to GitHub release $(LATEST_VERSION_NO_V) and the version checked out is $(CURRENT_VERSION)"
-	exit 1;
 endif
 
 .PHONY: generate-third-party-notices

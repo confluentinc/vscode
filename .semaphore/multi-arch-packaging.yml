@@ -117,7 +117,7 @@ blocks:
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
 
-  - name: "Upload VSIX and ZIP files to S3"
+  - name: "Upload VSIX files to GitHub"
     run:
       when: "branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     dependencies:
@@ -130,16 +130,9 @@ blocks:
         commands:
           - artifact pull workflow packaged-vsix-files/
       jobs:
-        - name: "Upload VSIX files to S3"
+        - name: "Upload VSIX files to GitHub"
           commands:
-            - make upload-vsix-files-to-s3 || true
             - make upload-vsix-files-to-gh-releases
-        - name: "Package and upload ZIP file to S3"
-          commands:
-            - make package-multiarch-archive
-            - make push-multiarch-archive || true
-            - make upload-multiarch-archive-to-s3 || true
-            - make upload-multiarch-archive-to-gh-releases
 
 promotions:
   - name: Windows Packaging and Upload
