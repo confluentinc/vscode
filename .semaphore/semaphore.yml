@@ -24,7 +24,12 @@ global_job_config:
     commands:
       - checkout
       - make ci-bin-sem-cache-restore
-      - . vault-setup
+      - |
+        if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+          echo "Skipping Vault setup for Semaphore CI"
+        else
+          . vault-setup
+        fi
   epilogue:
     always:
       commands:
