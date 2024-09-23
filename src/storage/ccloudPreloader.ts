@@ -1,10 +1,12 @@
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { Logger } from "../logging";
 import { Schema } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { getSchemas } from "../viewProviders/schemas";
 import { getResourceManager } from "./resourceManager";
 
+const logger = new Logger("storage.ccloudPreloader");
 /**
  * Singleton class responsible for preloading Confluent Cloud resources into the resource manager.
  * View providers and/or other consumers of CCloud resources stored in the resource manager should
@@ -15,7 +17,6 @@ export class CCloudResourcePreloader {
   private static instance: CCloudResourcePreloader | null = null;
   private loadingComplete: boolean = false;
   private currentlyLoadingPromise: Promise<void> | null = null;
-  private _hasCCloudConnection: boolean = false;
 
   public static getInstance(): CCloudResourcePreloader {
     if (!CCloudResourcePreloader.instance) {
@@ -28,17 +29,11 @@ export class CCloudResourcePreloader {
     // Register to listen for ccloud connection events.
     ccloudConnected.event(async (connected: boolean) => {
       this.reset();
-      this._hasCCloudConnection = connected;
       if (connected) {
         // Start the preloading process if we think we have a ccloud connection.
         await this.ensureResourcesLoaded();
       }
     });
-  }
-
-  /** Do we currently think there's a ccloud connection? */
-  public hasCCloudConnection(): boolean {
-    return this._hasCCloudConnection;
   }
 
   /**
@@ -81,50 +76,60 @@ export class CCloudResourcePreloader {
    * the resource manager  for general use.
    */
   private async doLoadResources(): Promise<void> {
-    const resourceManager = getResourceManager();
+    // Start loading the ccloud-related resources from sidecar API into the resource manager for local caching.
+    // If the loading fails at any time (including, say, the user logs out of CCloud while in progress), then
+    // an exception will be thrown and the loadingComplete flag will remain false.
+    try {
+      const resourceManager = getResourceManager();
 
-    // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
-    const envGroups = await getEnvironments();
+      // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
+      const envGroups = await getEnvironments();
 
-    // Queue up to store the environments in the resource manager
-    const environments = envGroups.map((envGroup) => envGroup.environment);
-    await resourceManager.setCCloudEnvironments(environments);
+      // Queue up to store the environments in the resource manager
+      const environments = envGroups.map((envGroup) => envGroup.environment);
+      await resourceManager.setCCloudEnvironments(environments);
 
-    // Collect all of the Kafka clusters into a single array and queue up to store them in the resource manager.
-    // (Each environment may have many clusters.)
-    const kafkaClusters = envGroups.flatMap((envGroup) => envGroup.kafkaClusters);
-    await resourceManager.setCCloudKafkaClusters(kafkaClusters);
+      // Collect all of the Kafka clusters into a single array and queue up to store them in the resource manager.
+      // (Each environment may have many clusters.)
+      const kafkaClusters = envGroups.flatMap((envGroup) => envGroup.kafkaClusters);
+      await resourceManager.setCCloudKafkaClusters(kafkaClusters);
 
-    // Likewise the schema registries, but filter out any undefineds for environments that don't have one.
-    const schemaRegistries: SchemaRegistryCluster[] = envGroups
-      .map((envGroup) => envGroup.schemaRegistry)
-      .filter(
-        (schemaRegistry): schemaRegistry is SchemaRegistryCluster => schemaRegistry !== undefined,
-      );
+      // Likewise the schema registries, but filter out any undefineds for environments that don't have one.
+      const schemaRegistries: SchemaRegistryCluster[] = envGroups
+        .map((envGroup) => envGroup.schemaRegistry)
+        .filter(
+          (schemaRegistry): schemaRegistry is SchemaRegistryCluster => schemaRegistry !== undefined,
+        );
 
-    await resourceManager.setCCloudSchemaRegistryClusters(schemaRegistries);
+      await resourceManager.setCCloudSchemaRegistryClusters(schemaRegistries);
 
-    // For each environment, if there's a schema registry, queue up fetching (and caching) its schemas.
-    // Is safe to fetch + cache each environment's schemas in parallel.
-    const promises: Promise<Schema[]>[] = [];
+      // For each environment, if there's a schema registry, queue up fetching (and caching) its schemas.
+      // Is safe to fetch + cache each environment's schemas in parallel.
+      const promises: Promise<Schema[]>[] = [];
 
-    for (const envGroup of envGroups) {
-      const schemaRegistry = envGroup.schemaRegistry;
-      if (schemaRegistry !== undefined) {
-        // queue up to fetch all the schemas plus mainly tickle the side effect of
-        // storing those schemas into the resource manager.
-        promises.push(getSchemas(envGroup.environment, schemaRegistry.id));
+      for (const envGroup of envGroups) {
+        const schemaRegistry = envGroup.schemaRegistry;
+        if (schemaRegistry !== undefined) {
+          // queue up to fetch all the schemas plus mainly tickle the side effect of
+          // storing those schemas into the resource manager.
+          promises.push(getSchemas(envGroup.environment, schemaRegistry.id));
+        }
       }
+      await Promise.all(promises);
+
+      // TODO: add flink compute pools here?
+
+      // If made it to this point, all the resources have been fetched and cached and can be trusted.
+      this.loadingComplete = true;
+    } catch (error) {
+      // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
+      logger.error("Error while preloading CCloud resources", { error });
+      throw error;
+    } finally {
+      // Regardless of success or failure, clear the currently loading promise so that the next call to
+      // ensureResourcesLoaded() can start again from scratch if needed.
+      this.currentlyLoadingPromise = null;
     }
-    await Promise.all(promises);
-
-    // TODO: add flink compute pools here?
-
-    // All done, clear the promise and mark the loading as complete.
-    this.currentlyLoadingPromise = null;
-
-    // In case the user logged out _while_ we were busy loading, err on setting loadingComplete to false.
-    this.loadingComplete = this._hasCCloudConnection;
   }
 
   /** Reset the preloader to its initial state: not currently fetching, have not fetched,
