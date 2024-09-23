@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
-import { getExtensionContext } from "../context";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentSchemaRegistryChanged } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
@@ -56,7 +56,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       if (!schemaRegistry) {
         this.reset();
       } else {
-        vscode.commands.executeCommand("setContext", "confluent.schemaRegistrySelected", true);
+        setContextValue(ContextValues.schemaRegistrySelected, true);
         this.schemaRegistry = schemaRegistry;
         const environment: CCloudEnvironment | null =
           await getResourceManager().getCCloudEnvironment(this.schemaRegistry.environmentId);
@@ -76,7 +76,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** Convenience method to revert this view to its original state. */
   reset(): void {
-    vscode.commands.executeCommand("setContext", "confluent.schemaRegistrySelected", false);
+    setContextValue(ContextValues.schemaRegistrySelected, false);
     this.schemaRegistry = null;
     this.ccloudEnvironment = null;
     this.treeView.description = "";

@@ -99,7 +99,7 @@
         "icon": "$(diff)",
         "title": "Compare with Selected",
         "category": "Confluent: Compare Resources",
-        "enablement": "resourceSelectedForCompare"
+        "enablement": "confluent.resourceSelectedForCompare"
       },
       {
         "command": "confluent.organizations.use",
@@ -492,7 +492,7 @@
         },
         {
           "command": "confluent.diff.compareWithSelected",
-          "when": "resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
+          "when": "confluent.resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
           "group": "3_compare"
         },
         {

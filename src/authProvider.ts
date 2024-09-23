@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Connection } from "./clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
-import { getExtensionContext } from "./context";
+import { ContextValues, getExtensionContext, setContextValue } from "./context";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
@@ -204,13 +204,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       ccloudConnected.fire(!!connection);
     }
 
-    // Inform the UI as to if the user is signed in or not.
-    // (Currently only controls topics / schema view empty states.)
-    vscode.commands.executeCommand(
-      "setContext",
-      "confluent.ccloudConnectionAvailable",
-      !!connection,
-    );
+    this.updateContextValue(connectionExists);
 
     if (!connection) {
       if (changedToDisconnected) {
@@ -322,7 +316,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   ) {
     // First some workspace-scoped actions ...
     logger.debug("handleSessionCreated()", { updateSecret });
-    // the following three calls are all workspace-scoped
+    // the following calls are all workspace-scoped
     this._session = session;
     this._onDidChangeSessions.fire({
       added: [session],
@@ -330,6 +324,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       changed: [],
     });
     pollCCloudConnectionAuth.start();
+    this.updateContextValue(true);
 
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
@@ -345,8 +340,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * will trigger the `secrets.onDidChange` listener, including in other workspaces.)
    */
   private async handleSessionRemoved(updateSecret: boolean = false) {
-    // the following three calls are all workspace-scoped
+    // the following calls are all workspace-scoped
     logger.debug("handleSessionRemoved()", { updateSecret });
+    this.updateContextValue(false);
     await clearCurrentCCloudResources();
     pollCCloudConnectionAuth.stop();
     if (!this._session) {
@@ -395,6 +391,18 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       // and start polling for auth status
       this.handleSessionCreated(session);
     }
+  }
+
+  /**
+   * Inform the UI whether or not the user is connected to CCloud.
+   *
+   * NOTE: We debated handling this elsewhere in the code, but being that the auth provider is the
+   * source of truth for connection status, it makes sense to handle it here despite the fact that
+   * it's mainly a UI concern.
+   */
+  private updateContextValue(connected: boolean) {
+    // async, but we can fire-and-forget since we don't need to wait for this to complete
+    setContextValue(ContextValues.ccloudConnectionAvailable, connected);
   }
 }
 
