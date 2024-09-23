@@ -195,7 +195,7 @@ async function loadResources(
 }
 
 /**
- * Return the children of a CCloud environmen (the Kafka clusters and Schema Registry).
+ * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
  * Called when expanding a CCloud environment tree item.
  *
  * Fetches from the cached resources in the resource manager.
