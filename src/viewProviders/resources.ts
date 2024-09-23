@@ -16,6 +16,7 @@ import { ContainerTreeItem } from "../models/main";
 import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -132,7 +133,7 @@ async function loadResources(
 
   const preloader = CCloudResourcePreloader.getInstance();
 
-  if (preloader.hasCCloudConnection()) {
+  if (await hasCCloudAuthSession()) {
     if (forceDeepRefresh) {
       // force a deep refresh of the resources next call to ensureResourcesLoaded()
       preloader.reset();
