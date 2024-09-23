@@ -1,9 +1,11 @@
+import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
-import { Schema } from "../models/schema";
+import { CCloudEnvironment } from "../models/environment";
+import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
-import { getSchemas } from "../viewProviders/schemas";
+import { getSidecar, SidecarHandle } from "../sidecar";
 import { getResourceManager } from "./resourceManager";
 
 const logger = new Logger("storage.ccloudPreloader");
@@ -81,6 +83,7 @@ export class CCloudResourcePreloader {
     // an exception will be thrown and the loadingComplete flag will remain false.
     try {
       const resourceManager = getResourceManager();
+      const sidecar = await getSidecar();
 
       // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
       const envGroups = await getEnvironments();
@@ -110,12 +113,17 @@ export class CCloudResourcePreloader {
       for (const envGroup of envGroups) {
         const schemaRegistry = envGroup.schemaRegistry;
         if (schemaRegistry !== undefined) {
-          // queue up to fetch all the schemas plus mainly tickle the side effect of
-          // storing those schemas into the resource manager.
-          promises.push(getSchemas(envGroup.environment, schemaRegistry.id));
+          // queue up to fetch all the schemas. Returns a promise that resolves to the array of schemas
+          // within that cluster.
+          promises.push(fetchSchemas(envGroup.environment, schemaRegistry.id, sidecar));
         }
       }
-      await Promise.all(promises);
+      // Fetch all the schemas in each registry concurrently.
+      const schemas_per_cluster = await Promise.all(promises);
+      const schemas = schemas_per_cluster.flat();
+
+      // Put into resource manager all at once.
+      await resourceManager.setCCloudSchemas(schemas);
 
       // TODO: add flink compute pools here?
 
@@ -139,4 +147,42 @@ export class CCloudResourcePreloader {
     this.loadingComplete = false;
     this.currentlyLoadingPromise = null;
   }
+}
+
+/**
+ * Deep read and return of all schemas in a ccloud environment + schema registry cluster. Does not store into the resource manager.
+ * @param sidecar Sidecar handle to use for the fetch.
+ * @param environment The CCloud environment to fetch schemas from.
+ * @param schemaRegistryClusterId The schema registry cluster ID to fetch schemas from (within the environment).
+ * @returns An array of all the schemas in the environment's schema registry cluster.
+ */
+export async function fetchSchemas(
+  environment: CCloudEnvironment,
+  schemaRegistryClusterId: string,
+  sidecar: SidecarHandle | null = null,
+): Promise<Schema[]> {
+  if (!sidecar) {
+    sidecar = await getSidecar();
+  }
+
+  const client: SchemasV1Api = sidecar.getSchemasV1Api(
+    schemaRegistryClusterId,
+    environment.connectionId,
+  );
+  const schemaListRespData: ResponseSchema[] = await client.getSchemas();
+  const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
+    // AVRO doesn't show up in `schemaType`
+    // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
+    const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
+    // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
+    return Schema.create({
+      id: schema.id!.toString(),
+      subject: schema.subject!,
+      version: schema.version!,
+      type: schemaType,
+      schemaRegistryId: schemaRegistryClusterId,
+      environmentId: environment.id,
+    });
+  });
+  return schemas;
 }

@@ -437,11 +437,24 @@ export class ResourceManager {
   /**
    * Get the available {@link Schema}s for a specific {@link SchemaRegistryCluster} from extension state.
    * @param clusterId The ID of the Schema Registry cluster for which to get schemas
-   * @returns The list of {@link Schema}s for the specified cluster
+   * @returns The list of {@link Schema}s for the specified cluster, or undefined if we do not have this schema registry cluster currently cached.
    */
-  async getCCloudSchemasForCluster(clusterId: string): Promise<Schema[]> {
+  async getCCloudSchemasForCluster(clusterId: string): Promise<Schema[] | undefined> {
     const schemasByCluster = await this.getCCloudSchemas();
-    return schemasByCluster.get(clusterId) ?? [];
+    const maybeJsonSchemas = schemasByCluster.get(clusterId);
+    if (maybeJsonSchemas === undefined) {
+      // no schemas found for this cluster. Should really only be happening if we haven't
+      // fetched any schemas for this cluster yet (or explicitly purged them from the resource manager cache
+      // prior to a deep refresh).
+      return undefined;
+    }
+
+    const schemas: Schema[] = [];
+    maybeJsonSchemas.forEach((fromJsonSchema) => {
+      schemas.push(Schema.create(fromJsonSchema));
+    });
+
+    return schemas;
   }
 
   /**
@@ -451,10 +464,10 @@ export class ResourceManager {
    * @returns The array of {@link Schema}s, sorted in subject-ascending order
    */
   async getCCloudSchemasById(clusterId: string, schemaId: string): Promise<Schema[]> {
-    const schemas: Schema[] = await this.getCCloudSchemasForCluster(clusterId);
-    if (schemas.length === 0) {
+    const schemas = await this.getCCloudSchemasForCluster(clusterId);
+    if (schemas === undefined || schemas.length === 0) {
       logger.warn(`No schemas found for cluster ${clusterId}`);
-      return schemas;
+      return [];
     }
     const schemasForId = schemas.filter((schema) => schema.id === schemaId);
     schemasForId.sort((a, b) => a.subject.localeCompare(b.subject));
@@ -468,10 +481,10 @@ export class ResourceManager {
    * @returns The array of {@link Schema}s, sorted in version-descending order
    */
   async getCCloudSchemasBySubject(clusterId: string, subject: string): Promise<Schema[]> {
-    const schemas: Schema[] = await this.getCCloudSchemasForCluster(clusterId);
-    if (schemas.length === 0) {
+    const schemas = await this.getCCloudSchemasForCluster(clusterId);
+    if (schemas === undefined || schemas.length === 0) {
       logger.warn(`No schemas found for cluster ${clusterId}`);
-      return schemas;
+      return [];
     }
     const schemasForSubject = schemas.filter((schema) => schema.subject === subject);
     schemasForSubject.sort((a, b) => b.version - a.version);

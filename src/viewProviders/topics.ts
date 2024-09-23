@@ -173,7 +173,7 @@ export async function getTopicsForCluster(
 
   // Otherwise make a deep fetch, cache in resource manager, and return.
   let environmentId: string | null = null;
-  let schemas: Schema[] = [];
+  let schemas: Schema[] | undefined = [];
 
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
@@ -181,6 +181,12 @@ export async function getTopicsForCluster(
     const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
     if (schemaRegistry) {
       schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
+      if (schemas === undefined) {
+        logger.error("WIP schemas === undefined. Handle this case here, James. Fail this review!", {
+          cluster,
+        });
+        schemas = [];
+      }
     }
   }
 
@@ -209,7 +215,7 @@ export async function getTopicsForCluster(
 
   // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
+    const hasMatchingSchema: boolean = schemas!.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
 
