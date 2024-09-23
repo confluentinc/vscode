@@ -4,7 +4,7 @@ import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
-import { getCCloudConnection } from "../sidecar/connections";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("quickpicks.schemaRegistryClusters");
@@ -30,7 +30,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistryCluster |
 async function generateSchemaRegistryClusterQuickPick(): Promise<
   SchemaRegistryCluster | undefined
 > {
-  if (!(await getCCloudConnection())) {
+  if (!(await hasCCloudAuthSession())) {
     return undefined;
   }
   // list all Schema Registry clusters for all CCloud environments for the given connection; to be

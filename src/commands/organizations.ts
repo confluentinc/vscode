@@ -7,10 +7,10 @@ import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudOrganization } from "../models/organization";
 import { organizationQuickPick } from "../quickpicks/organizations";
 import { getSidecar } from "../sidecar";
-import { clearCurrentCCloudResources, getCCloudConnection } from "../sidecar/connections";
+import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections";
 
 async function useOrganizationCommand() {
-  if (!(await getCCloudConnection())) {
+  if (!(await hasCCloudAuthSession())) {
     return;
   }
   const organization: CCloudOrganization | undefined = await organizationQuickPick();

@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import { AuthErrors, Connection } from "../clients/sidecar";
-import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
-import { getCCloudConnection } from "./connections";
+import { getCCloudAuthSession, getCCloudConnection } from "./connections";
 
 const logger = new Logger("sidecar.authStatusPolling");
 
@@ -222,9 +222,7 @@ async function handleExpiredAuth(expirationString: string) {
         // go through the auth provider's `createSession()` instead of trying to create a new CCloud
         // connection via the sidecar and hooking it back up to the auth provider state. this will
         // create the new CCloud connection and trigger the browser-based login with new sign-in URI
-        await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
-          createIfNone: true,
-        });
+        await getCCloudAuthSession(true);
       }
     });
 }
@@ -264,9 +262,7 @@ export function checkAuthErrors(connection: Connection) {
       if (response === authButton) {
         // if we got to this point, we likely cleared out the existing connection via the
         // `ccloudAuthSessionInvalidated` emitter, so we need to create a new session to re-auth
-        await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
-          createIfNone: true,
-        });
+        await getCCloudAuthSession(true);
       }
     });
 }
