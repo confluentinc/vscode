@@ -3,7 +3,6 @@ import { IconNames } from "../constants";
 import { getExtensionContext } from "../context";
 import { ccloudConnected, ccloudOrganizationChanged } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
-import { CCloudEnvironmentGroup, getClustersByCCloudEnvironment } from "../graphql/environments";
 import { getLocalKafkaClusters } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -40,8 +39,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  refresh(): void {
+  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
+  private forceDeepRefresh: boolean = false;
+
+  refresh(forceDeepRefresh: boolean = false): void {
+    this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
+    this.forceDeepRefresh = false;
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -59,11 +63,14 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     ccloudConnected.event((connected: boolean) => {
       logger.debug("ccloudConnected event fired", { connected });
+      // No need to force a deep refresh when the connection status changes because the
+      // preloader will have already begun loading resources due to also observing this event.
       this.refresh();
     });
 
     ccloudOrganizationChanged.event(() => {
-      this.refresh();
+      // Force a deep refresh of ccloud resources when the organization changes.
+      this.refresh(true);
     });
   }
 
@@ -96,12 +103,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await loadCCloudEnvironmentChildren(element);
+        return await getCCloudEnvironmentChildren(element);
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      return await loadResources();
+      return await loadResources(this.forceDeepRefresh);
     }
 
     return resourceItems;
@@ -113,7 +120,9 @@ export function getResourceViewProvider() {
   return ResourceViewProvider.getInstance();
 }
 
-async function loadResources(): Promise<ResourceViewProviderData[]> {
+async function loadResources(
+  forceDeepRefresh: boolean = false,
+): Promise<ResourceViewProviderData[]> {
   const resources: ResourceViewProviderData[] = [];
 
   // the section below will create a "Confluent Cloud" container item that will be either:
@@ -124,6 +133,10 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   const preloader = CCloudResourcePreloader.getInstance();
 
   if (preloader.hasCCloudConnection()) {
+    if (forceDeepRefresh) {
+      // force a deep refresh of the resources next call to ensureResourcesLoaded()
+      preloader.reset();
+    }
     // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
     await preloader.ensureResourcesLoaded();
 
@@ -181,22 +194,34 @@ async function loadResources(): Promise<ResourceViewProviderData[]> {
   return resources;
 }
 
-async function loadCCloudEnvironmentChildren(environment: CCloudEnvironment) {
+/**
+ * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
+ * Called when expanding a CCloud environment tree item.
+ *
+ * Fetches from the cached resources in the resource manager.
+ *
+ * @param environment: The CCloud environment to get children for
+ * @returns
+ */
+async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | SchemaRegistryCluster)[] = [];
 
-  // load Kafka clusters and Schema Registry for the given environment, if they exist
-  const envGroup: CCloudEnvironmentGroup | null = await getClustersByCCloudEnvironment(environment);
-  if (!envGroup) {
-    // Return the empty array.
-    return subItems;
+  // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
+  await CCloudResourcePreloader.getInstance().ensureResourcesLoaded();
+
+  const rm = getResourceManager();
+  // Get the Kafka clusters for this environment. Will at worst be an empty array.
+  const kafkaClusters = await rm.getCCloudKafkaClustersForEnvironment(environment.id);
+  subItems.push(...kafkaClusters);
+
+  // Schema registry?
+  const schemaRegistry: SchemaRegistryCluster | null = await rm.getCCloudSchemaRegistryCluster(
+    environment.id,
+  );
+  if (schemaRegistry) {
+    subItems.push(schemaRegistry);
   }
 
-  subItems.push(...envGroup.kafkaClusters);
-  if (envGroup.schemaRegistry) {
-    subItems.push(envGroup.schemaRegistry);
-  }
-
-  // TODO: add flink compute pools here
-
+  // TODO: add flink compute pools here ?
   return subItems;
 }
