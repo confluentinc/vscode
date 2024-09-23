@@ -34,13 +34,13 @@ type ResourceViewProviderData =
   | LocalKafkaCluster;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
-  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
-  private forceDeepRefresh: boolean = false;
-
   private _onDidChangeTreeData = new vscode.EventEmitter<
     ResourceViewProviderData | undefined | void
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
+  private forceDeepRefresh: boolean = false;
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
