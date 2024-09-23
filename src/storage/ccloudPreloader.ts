@@ -1,10 +1,12 @@
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { Logger } from "../logging";
 import { Schema } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { getSchemas } from "../viewProviders/schemas";
 import { getResourceManager } from "./resourceManager";
 
+const logger = new Logger("storage.ccloudPreloader");
 /**
  * Singleton class responsible for preloading Confluent Cloud resources into the resource manager.
  * View providers and/or other consumers of CCloud resources stored in the resource manager should
@@ -119,6 +121,10 @@ export class CCloudResourcePreloader {
 
       // If made it to this point, all the resources have been fetched and cached and can be trusted.
       this.loadingComplete = true;
+    } catch (error) {
+      // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
+      logger.error("Error while preloading CCloud resources", error);
+      throw error;
     } finally {
       // Regardless of success or failure, clear the currently loading promise so that the next call to
       // ensureResourcesLoaded() can start again from scratch if needed.
