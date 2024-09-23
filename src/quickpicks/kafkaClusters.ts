@@ -5,7 +5,7 @@ import { getLocalKafkaClusters } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { getCCloudConnection } from "../sidecar/connections";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
@@ -44,7 +44,7 @@ async function generateKafkaClusterQuickPick(
   if (includeCCloud) {
     // list all Kafka clusters for all CCloud environments for the given connection; to be separated
     // further by environment in the quickpick menu below
-    if (await getCCloudConnection()) {
+    if (await hasCCloudAuthSession()) {
       const envGroups = await getEnvironments();
       cloudEnvironments = envGroups.map((group) => group.environment);
       cloudKafkaClusters = envGroups.map((group) => group.kafkaClusters).flat();

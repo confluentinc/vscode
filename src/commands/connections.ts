@@ -1,16 +1,13 @@
-import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { AUTH_PROVIDER_ID } from "../constants";
 import { Logger } from "../logging";
+import { getCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("commands.connections");
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
 async function createConnectionCommand() {
   try {
-    await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
-      createIfNone: true,
-    });
+    await getCCloudAuthSession(true);
   } catch (error) {
     logger.error("error creating CCloud connection", { error });
     if (error instanceof Error) {
