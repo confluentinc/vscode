@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { getExtensionContext } from "../context";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
@@ -12,8 +12,8 @@ import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/s
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { getResourceManager } from "../storage/resourceManager";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -63,10 +63,9 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     });
     currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
       if (!cluster) {
-        vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
         this.reset();
       } else {
-        vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", true);
+        setContextValue(ContextValues.kafkaClusterSelected, true);
         this.kafkaCluster = cluster;
         // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
         if (cluster.isLocal) {
@@ -94,7 +93,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
   /** Convenience method to revert this view to its original state. */
   reset(): void {
-    vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
+    setContextValue(ContextValues.kafkaClusterSelected, false);
     this.kafkaCluster = null;
     this.ccloudEnvironment = null;
     this.treeView.description = "";
