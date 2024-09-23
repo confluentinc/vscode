@@ -210,15 +210,16 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   await CCloudResourcePreloader.getInstance().ensureResourcesLoaded();
 
   const rm = getResourceManager();
-  // Get the Kafka clusters for this environment
+  // Get the Kafka clusters for this environment. Will at worst be an empty array.
   const kafkaClusters = await rm.getCCloudKafkaClustersForEnvironment(environment.id);
   subItems.push(...kafkaClusters);
 
   // Schema registry?
-  const maybe_schema_registry: SchemaRegistryCluster | null =
-    await rm.getCCloudSchemaRegistryCluster(environment.id);
-  if (maybe_schema_registry) {
-    subItems.push(maybe_schema_registry);
+  const schemaRegistry: SchemaRegistryCluster | null = await rm.getCCloudSchemaRegistryCluster(
+    environment.id,
+  );
+  if (schemaRegistry) {
+    subItems.push(schemaRegistry);
   }
 
   // TODO: add flink compute pools here ?
