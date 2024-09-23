@@ -34,7 +34,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
 }
 
-import { ConfluentCloudAuthProvider, getAuthProvider, getAuthSession } from "./authProvider";
+import { ConfluentCloudAuthProvider, getAuthProvider } from "./authProvider";
 import { registerCommandWithLogging } from "./commands";
 import { commands as connectionCommands } from "./commands/connections";
 import { commands as debugCommands } from "./commands/debugtools";
@@ -54,6 +54,7 @@ import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
+import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
@@ -224,7 +225,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
-  await getAuthSession();
+  await getCCloudAuthSession();
 
   return disposables;
 }

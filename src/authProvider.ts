@@ -373,7 +373,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    */
   private async handleSessionSecretChange() {
     logger.debug("handleSessionSecretChange()");
-    const session = await getAuthSession();
+    const session = await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
+      createIfNone: false,
+    });
     if (!session) {
       // SCENARIO 1: user logged out / auth session was removed
       // if we had a session before, we need to remove it and stop polling for auth status, as well
@@ -419,14 +421,6 @@ function convertToAuthSession(connection: Connection): vscode.AuthenticationSess
     scopes: [],
   };
   return session;
-}
-
-/** Convenience function to get the latest CCloud session via the Authentication API. */
-export async function getAuthSession(): Promise<vscode.AuthenticationSession | undefined> {
-  // Will immediately cascade call into ConfluentCloudAuthProvider.getSessions().
-  return await vscode.authentication.getSession(AUTH_PROVIDER_ID, [], {
-    createIfNone: false,
-  });
 }
 
 export function getAuthProvider(): ConfluentCloudAuthProvider {
