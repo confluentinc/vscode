@@ -123,7 +123,7 @@ export class CCloudResourcePreloader {
       this.loadingComplete = true;
     } catch (error) {
       // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
-      logger.error("Error while preloading CCloud resources", error);
+      logger.error("Error while preloading CCloud resources", { error });
       throw error;
     } finally {
       // Regardless of success or failure, clear the currently loading promise so that the next call to
