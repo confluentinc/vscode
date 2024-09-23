@@ -48,6 +48,17 @@ async function useOrganizationCommand() {
   );
 }
 
+async function copyOrganizationId() {
+  const currentOrg = await getCurrentOrganization();
+  if (!currentOrg) {
+    return;
+  }
+
+  await vscode.env.clipboard.writeText(currentOrg.id);
+  vscode.window.showInformationMessage(`Copied "${currentOrg.id}" to clipboard.`);
+}
+
 export const commands = [
   registerCommandWithLogging("confluent.organizations.use", useOrganizationCommand),
+  registerCommandWithLogging("confluent.copyOrganizationId", copyOrganizationId),
 ];

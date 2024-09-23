@@ -108,6 +108,11 @@
         "category": "Confluent: Organizations"
       },
       {
+        "command": "confluent.copyOrganizationId",
+        "title": "Copy Organization ID",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.resources.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -337,6 +342,10 @@
           "when": "!confluent.ccloudConnectionAvailable"
         },
         {
+          "command": "confluent.copyOrganizationId",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyResourceId",
           "when": "false"
         },
@@ -509,6 +518,11 @@
           "command": "confluent.organizations.use",
           "when": "viewItem == resources-ccloud-container-connected",
           "group": "inline@2"
+        },
+        {
+          "command" : "confluent.copyOrganizationId",
+          "when" : "viewItem == resources-ccloud-container-connected",
+          "group" : "2_copy@1"
         },
         {
           "command": "confluent.resources.item.rename",

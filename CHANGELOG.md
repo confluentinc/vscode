@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- New context menu item "Copy Organization ID" for the logged-in "Confluent Cloud" resource,
+  [issue #213](https://github.com/confluentinc/vscode/issues/213).
+
 ### Changed
 
 - Use cached information to populate the Resources view Confluent Cloud single environment children,
