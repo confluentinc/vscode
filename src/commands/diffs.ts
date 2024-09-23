@@ -2,6 +2,7 @@ import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { StateDiffs } from "../constants";
+import { ContextValues, setContextValue } from "../context";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
@@ -17,7 +18,7 @@ async function selectForCompareCommand(item: any) {
   logger.info("Selected item for compare", uri);
   await getStorageManager().setWorkspaceState(StateDiffs.SELECTED_RESOURCE, uri);
   // allows the "Compare with Selected" command to be used
-  await vscode.commands.executeCommand("setContext", "resourceSelectedForCompare", true);
+  await setContextValue(ContextValues.resourceSelectedForCompare, true);
 }
 
 async function compareWithSelectedCommand(item: any) {

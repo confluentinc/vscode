@@ -1,7 +1,7 @@
 import { graphql } from "gql.tada";
-import { commands } from "vscode";
 import { Connection, ConnectionsResourceApi } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../constants";
+import { ContextValues, setContextValue } from "../context";
 import { Logger } from "../logging";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { getSidecar } from "../sidecar";
@@ -56,11 +56,7 @@ export async function getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
     });
   }
   // indicate to the UI that we have at least one local Kafka cluster available
-  await commands.executeCommand(
-    "setContext",
-    "confluent.localKafkaClusterAvailable",
-    localKafkaClusters.length > 0,
-  );
+  await setContextValue(ContextValues.localKafkaClusterAvailable, localKafkaClusters.length > 0);
   return localKafkaClusters;
 }
 

@@ -1,6 +1,6 @@
 // Import this first!
-import * as Sentry from "@sentry/node";
 import * as SentryCore from "@sentry/core";
+import * as Sentry from "@sentry/node";
 /**
  * Initialize Sentry for error tracking (and future performance monitoring?).
  * Sentry.init needs to be run first before any other code so that Sentry can capture all errors.
@@ -49,16 +49,16 @@ import { commands as supportCommands } from "./commands/support";
 import { commands as topicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
-import { setExtensionContext } from "./context";
+import { ContextValues, setContextValue, setExtensionContext } from "./context";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
 import { StorageManager } from "./storage";
+import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { getTelemetryLogger } from "./telemetry";
 import { getUriHandler } from "./uriHandler";
-import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
@@ -139,67 +139,43 @@ async function setupDebugHelpers(
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
-  const kafkaClusterSelected = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.kafkaClusterSelected",
-    false,
-  );
-  const schemaRegistrySelected = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.schemaRegistrySelected",
-    false,
-  );
-  // enables the "Select for Compare" / "Compare with Selected" commands
-  const diffResources = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.readOnlyDiffableResources",
-    ["ccloud-schema"],
-  );
-  // enables the "View in Confluent Cloud" command; these resources must have the "ccloudUrl" property
-  // and the `contextValue` in their *TreeItem classes must match the `contextValue` listed below
-  const openInCCloudResources = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.ccloudResources",
-    [
-      "ccloud-environment",
-      "ccloud-kafka-cluster",
-      "ccloud-kafka-topic",
-      "ccloud-kafka-topic-with-schema",
-      "ccloud-schema-registry-cluster",
-      "ccloud-schema",
-    ],
-  );
+  const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
+  const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
+  // constants for easier `when` clause matching in package.json; not updated dynamically
+  const diffResources = setContextValue(ContextValues.READONLY_DIFFABLE_RESOURCES, [
+    "ccloud-schema",
+  ]);
+  const openInCCloudResources = setContextValue(ContextValues.CCLOUD_RESOURCES, [
+    "ccloud-environment",
+    "ccloud-kafka-cluster",
+    "ccloud-kafka-topic",
+    "ccloud-kafka-topic-with-schema",
+    "ccloud-schema-registry-cluster",
+    "ccloud-schema",
+  ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
-  const viewsWithResources = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.viewsWithResources",
-    ["confluent-resources", "confluent-topics", "confluent-schemas"],
-  );
+  const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
+    "confluent-resources",
+    "confluent-topics",
+    "confluent-schemas",
+  ]);
   // enables the "Copy ID" command; these resources must have the "id" property
-  const resourcesWithIds = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.resourcesWithIDs",
-    [
-      "ccloud-environment",
-      "ccloud-kafka-cluster",
-      "ccloud-schema-registry-cluster", // only ID, no name
-      "ccloud-schema",
-      "local-kafka-cluster",
-    ],
-  );
-  const resourcesWithNames = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.resourcesWithNames",
-    [
-      "ccloud-environment",
-      "ccloud-kafka-cluster",
-      "ccloud-kafka-topic", // only name, no ID
-      "ccloud-kafka-topic-with-schema", // only name, no ID
-      "local-kafka-cluster",
-      "local-kafka-topic", // only name, no ID
-      "local-kafka-topic-with-schema", // only name, no ID
-    ],
-  );
+  const resourcesWithIds = setContextValue(ContextValues.RESOURCES_WITH_ID, [
+    "ccloud-environment",
+    "ccloud-kafka-cluster",
+    "ccloud-schema-registry-cluster", // only ID, no name
+    "ccloud-schema",
+    "local-kafka-cluster",
+  ]);
+  const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
+    "ccloud-environment",
+    "ccloud-kafka-cluster",
+    "ccloud-kafka-topic", // only name, no ID
+    "ccloud-kafka-topic-with-schema", // only name, no ID
+    "local-kafka-cluster",
+    "local-kafka-topic", // only name, no ID
+    "local-kafka-topic-with-schema", // only name, no ID
+  ]);
   await Promise.all([
     kafkaClusterSelected,
     schemaRegistrySelected,
@@ -243,8 +219,8 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   //   local Kafka cluster (and CCloud connection changes will refresh the Resources view via the
   //   `ccloudConnected` event emitter)
   await Promise.all([
-    vscode.commands.executeCommand("setContext", "confluent.ccloudConnectionAvailable", false),
-    vscode.commands.executeCommand("setContext", "confluent.localKafkaClusterAvailable", false),
+    setContextValue(ContextValues.ccloudConnectionAvailable, false),
+    setContextValue(ContextValues.localKafkaClusterAvailable, false),
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
