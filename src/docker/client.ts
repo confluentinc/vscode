@@ -5,20 +5,10 @@ import { Logger } from "../logging";
 
 const logger = new Logger("docker.client");
 
+/** Singleton class to handle fetch requests against the Docker API using extension/user settings. */
 export class DockerClient {
-  private protocol: string = "http";
-  private host: string = "localhost";
-  private port: number | null = null;
-  private socketPath: string;
-
-  private abortController: AbortController = new AbortController();
-
   private static instance: DockerClient;
-  private constructor() {
-    this.socketPath = this.setSocketPath();
-    this.host = this.setHost();
-    this.port = this.setPort();
-  }
+  private constructor() {}
 
   static getInstance() {
     if (!DockerClient.instance) {
@@ -27,22 +17,30 @@ export class DockerClient {
     return DockerClient.instance;
   }
 
-  private setSocketPath(): string {
-    let socketPath: string = getConfigs().get("localDocker.socketPath", "").trim();
-    if (!socketPath || socketPath !== "") {
+  private get socketPath(): string {
+    let path: string = getConfigs().get("localDocker.socketPath", "").trim();
+    if (!path || path !== "") {
       // no socketPath config set by user, try to guess the default based on platform
       if (process.platform === "win32") {
-        socketPath = normalize("//./pipe/docker_engine");
+        path = normalize("//./pipe/docker_engine");
       } else {
-        socketPath = "/var/run/docker.sock";
+        path = "/var/run/docker.sock";
       }
     } else {
-      logger.debug("using docker socket path from extension settings", { socketPath });
+      logger.debug("using docker socket path from extension settings", { socketPath: path });
     }
-    return socketPath;
+    return path;
   }
 
-  private setHost(): string {
+  private get protocol(): string {
+    let protocol = getConfigs().get("localDocker.protocol", "").trim();
+    if (!protocol || protocol === "") {
+      protocol = "http";
+    }
+    return protocol;
+  }
+
+  private get host(): string {
     let host: string = getConfigs().get("localDocker.host", "").trim();
     if (!host || host === "") {
       host = "localhost";
@@ -50,13 +48,13 @@ export class DockerClient {
     return host;
   }
 
-  private setPort(): number | null {
+  private get port(): number | null {
     return getConfigs().get<number | null>("localDocker.port") ?? null;
   }
 
   private get baseUrl(): string {
     let url = `${this.protocol}://${this.host}`;
-    if (this.port) {
+    if (this.port !== null) {
       url = `${url}:${this.port}`;
     }
     return url;
@@ -69,16 +67,19 @@ export class DockerClient {
           socketPath: this.socketPath ? this.socketPath : undefined,
         },
       }),
-      signal: this.abortController.signal,
     };
   }
 
-  cancel() {
-    this.abortController.abort();
-    logger.info("Docker event listening cancelled");
-  }
-
-  async get(endpoint: string, options?: RequestInit): Promise<any> {
+  /**
+   * Send an HTTP request to the Docker API with the configured protocol, host, port, and socket path.
+   *
+   * Uses `GET` unless otherwise specified in the options.
+   *
+   * @param endpoint The API endpoint to send the request to.
+   * @param options Additional options to pass to the fetch request.
+   * @returns A Promise that resolves with the response from the Docker API.
+   */
+  async request(endpoint: string, options?: RequestInit): Promise<any> {
     // remove any leading slashes
     const trimmedEndpoint = endpoint.replace(/^\/+/, "");
     const url = `${this.baseUrl}/${trimmedEndpoint}`;
@@ -89,9 +90,7 @@ export class DockerClient {
         ...options,
       });
       if (!response.ok) {
-        throw new Error(
-          `GET ${url} failed with status ${response.status}: "${response.statusText}"`,
-        );
+        throw new Error(`Error response with status ${response.status}: "${response.statusText}"`);
       }
       // callers should handle reading the response body (JSON, ReadableStream, etc.)
       return response;
