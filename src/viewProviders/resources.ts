@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getExtensionContext } from "../context";
-import { ccloudConnected, ccloudOrganizationChanged } from "../emitters";
+import { ccloudConnected, ccloudOrganizationChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { getLocalKafkaClusters } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -71,6 +71,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     ccloudOrganizationChanged.event(() => {
       // Force a deep refresh of ccloud resources when the organization changes.
       this.refresh(true);
+    });
+
+    localKafkaConnected.event((connected: boolean) => {
+      logger.debug("localKafkaConnected event fired", { connected });
+      this.refresh();
     });
   }
 
