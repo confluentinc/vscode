@@ -55,7 +55,11 @@ async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) 
 }
 
 async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
-  const kafkaCluster: KafkaCluster | undefined = cluster || (await kafkaClusterQuickPick());
+  // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
+  const kafkaCluster: KafkaCluster | undefined =
+    cluster instanceof CCloudKafkaCluster || cluster instanceof LocalKafkaCluster
+      ? cluster
+      : await kafkaClusterQuickPick();
   if (!kafkaCluster) {
     return;
   }

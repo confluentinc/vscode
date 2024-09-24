@@ -5,7 +5,9 @@ import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistryClusters";
 
 async function selectSchemaRegistryCommand(cluster?: SchemaRegistryCluster) {
-  const schemaRegistry = cluster || (await schemaRegistryQuickPick());
+  // ensure whatever was passed in is a SchemaRegistryCluster; if not, prompt the user to pick one
+  const schemaRegistry =
+    cluster instanceof SchemaRegistryCluster ? cluster : await schemaRegistryQuickPick();
   if (!schemaRegistry) {
     return;
   }
