@@ -8,6 +8,7 @@ const logger = new Logger("docker.listener");
 const EVENT_QUERY_PARAMS = {
   type: ["container"],
   event: ["start", "die"],
+  images: ["confluentinc/confluent-local"],
 };
 
 export async function getEvents(): Promise<void> {
@@ -16,6 +17,8 @@ export async function getEvents(): Promise<void> {
   const queryParams = JSON.stringify(EVENT_QUERY_PARAMS);
   const endpoint = "/events?filters=" + encodeURIComponent(queryParams);
 
+  // keep a top-level loop running in case we lose connection to docker or the stream ends
+  // or something else goes wrong
   while (true) {
     // make sure docker is available first
     try {
@@ -25,16 +28,17 @@ export async function getEvents(): Promise<void> {
         logger.warn("can't ping docker; not listening for events: ", error.message);
       }
       await new Promise((resolve) => {
-        setTimeout(resolve, 5000);
+        setTimeout(resolve, 15_000);
       });
       continue;
     }
 
-    // listen for docker events
-
     const response = await client.get(endpoint);
     if (!response.ok) {
-      logger.warn("stream failed", response);
+      logger.warn("error response trying to get events: ", {
+        status: response.status,
+        statusText: response.statusText,
+      });
       await new Promise((resolve) => {
         setTimeout(resolve, 5000);
       });
@@ -43,7 +47,7 @@ export async function getEvents(): Promise<void> {
 
     const body: ReadableStream = response.body;
     const reader: ReadableStreamDefaultReader<any> = body.getReader();
-    logger.debug("reading event stream...");
+    logger.debug("listening for events...", { locked: body.locked });
     while (true) {
       try {
         const { done, value } = await reader.read();
@@ -70,17 +74,12 @@ export async function handleEvent(event: any) {
     return;
   }
 
-  if (!event.Type) {
-    return;
-  }
-
-  if (event.Type === "container") {
+  if (event?.Type === "container") {
     await handleContainerEvent(event);
   }
 }
 
 async function handleContainerEvent(event: any) {
-  logger.debug("container event", event);
   if (!event.status) {
     logger.warn("container event missing status", event);
     return;
@@ -103,9 +102,8 @@ async function waitForContainerReady(event: any) {
     try {
       const response = await DockerClient.getInstance().get(`/containers/${containerId}/json`);
       const containerInfo = await response.json();
-      logger.debug(`container "${containerName}" state`, {
+      logger.debug(`container "${containerName}" state: `, {
         state: containerInfo?.State,
-        id: containerId,
         image: event.from,
       });
       if (containerInfo?.State.Running) {
