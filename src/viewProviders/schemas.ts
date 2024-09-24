@@ -24,7 +24,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   readonly onDidChangeTreeData: vscode.Event<SchemasViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  refresh(): void {
+  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
+  private forceDeepRefresh: boolean = false;
+
+  refresh(forceDeepRefresh: boolean = false): void {
+    this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
   }
 
@@ -112,11 +116,15 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       if (this.ccloudEnvironment != null && this.schemaRegistry != null) {
         const preloader = CCloudResourcePreloader.getInstance();
         // ensure that the resources are loaded before trying to access them
-        await preloader.ensureResourcesLoaded();
+        await preloader.ensureCoarseResourcesLoaded();
+        await preloader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
 
-        const schemas = await getResourceManager().getCCloudSchemasForCluster(
-          this.schemaRegistry.id,
-        );
+        if (this.forceDeepRefresh) {
+          // Just honored the user's request for a deep refresh.
+          this.forceDeepRefresh = false;
+        }
+
+        const schemas = await getResourceManager().getSchemasForRegistry(this.schemaRegistry.id);
 
         // will be undefined if the schema registry's schemas aren't in the cache (deep refresh of this one TODO?)
         // if (schemas === undefined) {
@@ -139,5 +147,3 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 export function getSchemasViewProvider() {
   return SchemasViewProvider.getInstance();
 }
-
-// XXX Move this out of viewProviders/schemas.ts into ... elsewhere.
