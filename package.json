@@ -299,6 +299,24 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
+        },
+        "confluent.localDocker.socketPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Docker socket file."
+        },
+        "confluent.localDocker.host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Local Docker host."
+        },
+        "confluent.localDocker.port": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null,
+          "description": "Local Docker port."
         }
       }
     },
