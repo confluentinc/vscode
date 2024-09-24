@@ -22,7 +22,7 @@ export async function getEvents(): Promise<void> {
   while (true) {
     // make sure docker is available first
     try {
-      await client.get("/_ping");
+      await client.request("/_ping");
     } catch (error) {
       if (error instanceof Error) {
         logger.warn("can't ping docker; not listening for events: ", error.message);
@@ -33,7 +33,7 @@ export async function getEvents(): Promise<void> {
       continue;
     }
 
-    const response = await client.get(endpoint);
+    const response = await client.request(endpoint);
     if (!response.ok) {
       logger.warn("error response trying to get events: ", {
         status: response.status,
@@ -45,6 +45,8 @@ export async function getEvents(): Promise<void> {
       continue;
     }
 
+    // this section will block until the stream ends or an error occurs, so we don't have to keep
+    // making requests against /events for each event we want to capture
     const body: ReadableStream = response.body;
     const reader: ReadableStreamDefaultReader<any> = body.getReader();
     logger.debug("listening for events...", { locked: body.locked });
@@ -87,20 +89,29 @@ async function handleContainerEvent(event: any) {
 
   // NOTE: if we start adding more images to the `images` filter, we'll need to check those here
   if (event.status === "start") {
-    await waitForContainerReady(event);
+    await waitForContainerRunning(event);
+
+    // wait a bit longer for the container to be fully ready and discoverable by the sidecar
+    // TODO: try getting container logs to see when it's ready
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    await setContextValue(ContextValues.localKafkaClusterAvailable, true);
+    localKafkaConnected.fire(true);
   } else if (event.status === "die") {
     await setContextValue(ContextValues.localKafkaClusterAvailable, false);
     localKafkaConnected.fire(false);
   }
 }
 
-async function waitForContainerReady(event: any) {
+/** Wait for the container to be in a "Running" state. */
+async function waitForContainerRunning(event: any) {
   const containerId = event.id;
   const containerName = event.Actor.Attributes.name;
+  const client = DockerClient.getInstance();
 
   while (true) {
     try {
-      const response = await DockerClient.getInstance().get(`/containers/${containerId}/json`);
+      const response = await client.request(`/containers/${containerId}/json`);
       const containerInfo = await response.json();
       logger.debug(`container "${containerName}" state: `, {
         state: containerInfo?.State,
@@ -114,10 +125,4 @@ async function waitForContainerReady(event: any) {
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-
-  // wait a bit longer for the container to be fully ready and discoverable by the sidecar
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-
-  await setContextValue(ContextValues.localKafkaClusterAvailable, true);
-  localKafkaConnected.fire(true);
 }
