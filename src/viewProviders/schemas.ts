@@ -1,15 +1,14 @@
 import * as vscode from "vscode";
-import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentSchemaRegistryChanged } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem, SchemaType, generateSchemaSubjectGroups } from "../models/schema";
+import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
-import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 
 const logger = new Logger("viewProviders.schemas");
 
@@ -25,7 +24,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   readonly onDidChangeTreeData: vscode.Event<SchemasViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  refresh(): void {
+  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
+  private forceDeepRefresh: boolean = false;
+
+  refresh(forceDeepRefresh: boolean = false): void {
+    this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
   }
 
@@ -111,7 +114,26 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       // Schema items are leaf nodes, so we don't need to handle them here
     } else {
       if (this.ccloudEnvironment != null && this.schemaRegistry != null) {
-        const schemas = await getSchemas(this.ccloudEnvironment, this.schemaRegistry.id);
+        const preloader = CCloudResourcePreloader.getInstance();
+        // ensure that the resources are loaded before trying to access them
+        await preloader.ensureCoarseResourcesLoaded();
+        await preloader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
+
+        if (this.forceDeepRefresh) {
+          // Just honored the user's request for a deep refresh.
+          this.forceDeepRefresh = false;
+        }
+
+        const schemas = await getResourceManager().getSchemasForRegistry(this.schemaRegistry.id);
+
+        // will be undefined if the schema registry's schemas aren't in the cache (deep refresh of this one TODO?)
+        // if (schemas === undefined) {
+        // deep-read the schemas, put into resource manager.
+
+        if (!schemas || schemas.length === 0) {
+          // no schemas to display
+          return [];
+        }
         // create the hierarchy of "Key/Value Schemas -> Subject -> Version" items
         return generateSchemaSubjectGroups(schemas);
       }
@@ -124,32 +146,4 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 /** Get the singleton instance of the {@link SchemasViewProvider} */
 export function getSchemasViewProvider() {
   return SchemasViewProvider.getInstance();
-}
-
-// XXX Move this out of viewProviders/schemas.ts into ... elsewhere.
-export async function getSchemas(
-  environment: CCloudEnvironment,
-  schemaRegistryClusterId: string,
-): Promise<Schema[]> {
-  const client: SchemasV1Api = (await getSidecar()).getSchemasV1Api(
-    schemaRegistryClusterId,
-    environment.connectionId,
-  );
-  const schemaListRespData: ResponseSchema[] = await client.getSchemas();
-  const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
-    // AVRO doesn't show up in `schemaType`
-    // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
-    const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
-    // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
-    return Schema.create({
-      id: schema.id!.toString(),
-      subject: schema.subject!,
-      version: schema.version!,
-      type: schemaType,
-      schemaRegistryId: schemaRegistryClusterId,
-      environmentId: environment.id,
-    });
-  });
-  await getResourceManager().setCCloudSchemas(schemas);
-  return schemas;
 }

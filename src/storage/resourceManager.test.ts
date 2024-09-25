@@ -15,7 +15,6 @@ import {
   StateKafkaClusters,
   StateKafkaTopics,
   StateSchemaRegistry,
-  StateSchemas,
 } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -24,7 +23,6 @@ import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CCloudKafkaClustersByEnv,
-  CCloudSchemaBySchemaRegistryCluster,
   CCloudSchemaRegistryByEnv,
   getResourceManager,
 } from "./resourceManager";
@@ -391,6 +389,25 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     assert.strictEqual(missingCluster, null);
   });
 
+  it("CCLOUD: getCCloudSchemaRegistryClusterById() should correctly retrieve a Schema Registry cluster by its ID", async () => {
+    // set the clusters
+    await getResourceManager().setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
+    // verify the cluster was retrieved correctly
+    const cluster: SchemaRegistryCluster | null =
+      await getResourceManager().getCCloudSchemaRegistryClusterById(TEST_SCHEMA_REGISTRY.id);
+
+    assert.deepStrictEqual(cluster, TEST_SCHEMA_REGISTRY);
+  });
+
+  it("CCLOUD: getCCloudSchemaRegistryClusterById() should return null if the cluster is not found", async () => {
+    // set the clusters
+    await getResourceManager().setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
+    // verify the cluster was not found
+    const missingCluster: SchemaRegistryCluster | null =
+      await getResourceManager().getCCloudSchemaRegistryClusterById("nonexistent-cluster-id");
+    assert.strictEqual(missingCluster, null);
+  });
+
   it("CCLOUD: deleteCCloudSchemaRegistryClusters() should correctly delete Schema Registry clusters", async () => {
     // set the clusters in the StorageManager before deleting them
     const resourceManager = getResourceManager();
@@ -607,12 +624,24 @@ describe("ResourceManager schema tests", function () {
     // extension needs to be activated before storage manager can be used
     storageManager = await getTestStorageManager();
     ccloudSchemas = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, id: "100001", subject: "test-ccloud-topic-xyz-value", version: 1 },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, id: "100055", subject: "test-ccloud-topic-xyz-value", version: 2 },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, id: "100055", subject: "test-ccloud-topic-abc-value", version: 1 },
+      Schema.create({
+        ...TEST_SCHEMA,
+        id: "100001",
+        subject: "test-ccloud-topic-xyz-value",
+        version: 1,
+      }),
+      Schema.create({
+        ...TEST_SCHEMA,
+        id: "100055",
+        subject: "test-ccloud-topic-xyz-value",
+        version: 2,
+      }),
+      Schema.create({
+        ...TEST_SCHEMA,
+        id: "100055",
+        subject: "test-ccloud-topic-abc-value",
+        version: 1,
+      }),
     ];
   });
 
@@ -626,192 +655,28 @@ describe("ResourceManager schema tests", function () {
     await storageManager.clearWorkspaceState();
   });
 
-  it("CCLOUD: setCCloudSchemas() should correctly store schemas", async () => {
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schemas were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedSchemasByCluster: CCloudSchemaBySchemaRegistryCluster | undefined =
-      await storageManager.getWorkspaceState(StateSchemas.CCLOUD);
-    assert.ok(storedSchemasByCluster);
-    assert.ok(storedSchemasByCluster instanceof Map);
-    assert.ok(storedSchemasByCluster.has(ccloudSchemas[0].schemaRegistryId));
-    assert.deepStrictEqual(
-      storedSchemasByCluster.get(ccloudSchemas[0].schemaRegistryId),
-      ccloudSchemas,
-    );
+  it("CCLOUD: setSchemasForRegistry() should correctly store schemas", async () => {
+    const rm = getResourceManager();
+    await rm.setSchemasForRegistry(TEST_SCHEMA_REGISTRY.id, ccloudSchemas);
+
+    // fetch back from resource manager
+    const storedSchemas = await rm.getSchemasForRegistry(TEST_SCHEMA_REGISTRY.id);
+    assert.ok(storedSchemas);
+    assert.deepStrictEqual(storedSchemas, ccloudSchemas);
   });
 
-  it("CCLOUD: setCCloudSchemas() should add new Schema Registry cluster keys if they don't exist", async () => {
-    // set the first batch of schemas from the first cluster
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // create and set the second batch of schemas for the new cluster
-    const newSchemaRegistryId = "new-schema-registry-id";
-    const newSchemas: Schema[] = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, subject: "new-schema-1", schemaRegistryId: newSchemaRegistryId },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, subject: "new-schema-2", schemaRegistryId: newSchemaRegistryId },
-    ];
-    await getResourceManager().setCCloudSchemas(newSchemas);
+  it("CCLOUD: setSchemasForRegistry() should complain if not all schemas share expected registry id", async () => {
+    const rm = getResourceManager();
+    await assert.rejects(async () => {
+      await rm.setSchemasForRegistry("wrong-registry-id", ccloudSchemas);
+    }, /Schema registry ID mismatch in schemas/);
   });
 
-  it("CCLOUD: setCCloudSchemas() shouldn't duplicate schemas if the same schema ID+version already exists", async () => {
-    // set the first batch of schemas from the first cluster
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // create and set the second batch of schemas for the same cluster
-    const duplicateSchemas: Schema[] = [...ccloudSchemas];
-    await getResourceManager().setCCloudSchemas(duplicateSchemas);
-    // verify the schemas were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedSchemasByCluster: CCloudSchemaBySchemaRegistryCluster | undefined =
-      await storageManager.getWorkspaceState(StateSchemas.CCLOUD);
-    assert.ok(storedSchemasByCluster);
-    assert.ok(storedSchemasByCluster instanceof Map);
-    assert.ok(storedSchemasByCluster.has(ccloudSchemas[0].schemaRegistryId));
-    assert.deepStrictEqual(
-      storedSchemasByCluster.get(ccloudSchemas[0].schemaRegistryId),
-      ccloudSchemas,
-    );
-  });
-
-  it("CCLOUD: getCCloudSchemas() should correctly retrieve schemas", async () => {
-    const resourceManager = getResourceManager();
-    // preload some schemas before retrieving them
-    await resourceManager.setCCloudSchemas(ccloudSchemas);
-    // verify the schemas were stored correctly
-    const schemasByCluster: CCloudSchemaBySchemaRegistryCluster =
-      await resourceManager.getCCloudSchemas();
-    const retrievedSchemas = schemasByCluster.get(ccloudSchemas[0].schemaRegistryId);
-    // casting to JSON strings so we don't have to `.equals()` compare each array element
-    assert.equal(JSON.stringify(retrievedSchemas), JSON.stringify(ccloudSchemas));
-  });
-
-  it("CCLOUD: getCCloudSchemas() should return an empty map if no schemas are found", async () => {
-    // verify no schemas are found
-    const schemasByCluster: CCloudSchemaBySchemaRegistryCluster =
-      await getResourceManager().getCCloudSchemas();
-    assert.deepStrictEqual(schemasByCluster, new Map());
-  });
-
-  it("CCLOUD: getCCloudSchemas() should return Schema (dataclass) instances instead of plain objects", async () => {
-    const resourceManager = getResourceManager();
-    // preload some schemas before retrieving them
-    await resourceManager.setCCloudSchemas(ccloudSchemas);
-    // verify the schemas were stored correctly
-    const schemasByCluster: CCloudSchemaBySchemaRegistryCluster =
-      await resourceManager.getCCloudSchemas();
-    const retrievedSchemas = schemasByCluster.get(ccloudSchemas[0].schemaRegistryId);
-    assert.ok(retrievedSchemas);
-    const sampleSchema: Schema = retrievedSchemas[0];
-    // if this fails, we didn't properly convert the object to the dataclass Schema instance
-    assert.ok(typeof sampleSchema.fileName() === "string");
-  });
-
-  it("CCLOUD: getCCloudSchemasById() should correctly retrieve schemas by their ID", async () => {
-    // set the schemas
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schema was retrieved correctly
-    const schemas: Schema[] = await getResourceManager().getCCloudSchemasById(
-      ccloudSchemas[0].schemaRegistryId,
-      ccloudSchemas[1].id,
-    );
-    assert.ok(schemas);
-    console.error("getCCloudSchemasById schemas:", JSON.stringify(schemas));
-    // two schemas matching this schema ID, with two different subjects and versions
-    assert.ok(schemas.length === 2);
-    assert.ok(schemas[0]?.equals(ccloudSchemas[2])); // "test-ccloud-topic-abc-value" v1
-    assert.ok(schemas[1]?.equals(ccloudSchemas[1])); // "test-ccloud-topic-xyz-value" v2
-  });
-
-  it("CCLOUD: getCCloudSchemasById() should return an empty array if the parent Schema Registry ID is not found", async () => {
-    // set the schemas
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schema was not found because the cluster ID is incorrect
-    const missingSchemas: Schema[] = await getResourceManager().getCCloudSchemasById(
-      "nonexistent-cluster-id",
-      ccloudSchemas[0].id,
-    );
-    assert.deepStrictEqual(missingSchemas, []);
-  });
-
-  it("CCLOUD: getCCloudSchemasById() should return an empty array if the schema ID is not found", async () => {
-    // set the schemas
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schema was not found
-    const missingSchemas: Schema[] = await getResourceManager().getCCloudSchemasById(
-      ccloudSchemas[0].schemaRegistryId,
-      "99999999",
-    );
-    assert.deepStrictEqual(missingSchemas, []);
-  });
-
-  it("CCLOUD: getCCloudSchemasBySubject() should correctly retrieve schemas by their subject", async () => {
-    // set the schemas
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schema was retrieved correctly
-    const schemas: Schema[] = await getResourceManager().getCCloudSchemasBySubject(
-      ccloudSchemas[0].schemaRegistryId,
-      ccloudSchemas[0].subject,
-    );
-    assert.ok(schemas);
-    // two versions for this schema subject
-    assert.ok(schemas.length === 2);
-    assert.ok(schemas[0]?.equals(ccloudSchemas[1])); // "test-ccloud-topic-xyz-value" v2
-    assert.ok(schemas[1]?.equals(ccloudSchemas[0])); // "test-ccloud-topic-xyz-value" v1
-  });
-
-  it("CCLOUD: getCCloudSchemasBySubject() should return an empty array if the parent Schema Registry ID is not found", async () => {
-    // set the schemas
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schema was not found because the cluster ID is incorrect
-    const missingSchemas: Schema[] = await getResourceManager().getCCloudSchemasBySubject(
-      "nonexistent-cluster-id",
-      ccloudSchemas[0].subject,
-    );
-    assert.deepStrictEqual(missingSchemas, []);
-  });
-
-  it("CCLOUD: getCCloudSchemasBySubject() should return an empty array if the schema subject is not found", async () => {
-    // set the schemas
-    await getResourceManager().setCCloudSchemas(ccloudSchemas);
-    // verify the schema was not found
-    const missingSchemas: Schema[] = await getResourceManager().getCCloudSchemasBySubject(
-      ccloudSchemas[0].schemaRegistryId,
-      "nonexistent-subject-value",
-    );
-    assert.deepStrictEqual(missingSchemas, []);
-  });
-
-  it("CCLOUD: deleteCCloudSchemas() should correctly delete schemas", async () => {
-    // set the schemas in the StorageManager before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemas(ccloudSchemas);
-    await resourceManager.deleteCCloudSchemas();
-    // verify the schemas were deleted correctly
-    const missingSchemas = await storageManager.getWorkspaceState(StateSchemas.CCLOUD);
-    assert.deepStrictEqual(missingSchemas, undefined);
-  });
-
-  it("CCLOUD: deleteCCloudSchemas() should delete all schemas for a specific Schema Registry cluster", async () => {
-    // set the schemas in the StorageManager before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemas(ccloudSchemas);
-
-    // add some more schemas for a different cluster
-    const newSchemaRegistryId = "new-schema-registry-id";
-    const newSchemas: Schema[] = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, subject: "new-schema-1", schemaRegistryId: newSchemaRegistryId },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_SCHEMA, subject: "new-schema-2", schemaRegistryId: newSchemaRegistryId },
-    ];
-    await resourceManager.setCCloudSchemas(newSchemas);
-
-    // delete the first batch
-    await resourceManager.deleteCCloudSchemas(ccloudSchemas[0].schemaRegistryId);
-
-    // verify the schemas were deleted correctly
-    const missingSchemas = await storageManager.getWorkspaceState(StateSchemas.CCLOUD);
-    assert.ok(missingSchemas instanceof Map);
-    assert.strictEqual(missingSchemas.get(ccloudSchemas[0].schemaRegistryId), undefined);
+  it("CCLOUD: setSchemasForRegistry() can store empty array of schemas", async () => {
+    const rm = getResourceManager();
+    await rm.setSchemasForRegistry(TEST_SCHEMA_REGISTRY.id, []);
+    const storedSchemas = await rm.getSchemasForRegistry(TEST_SCHEMA_REGISTRY.id);
+    assert.deepStrictEqual(storedSchemas, []);
   });
 });
 
@@ -859,7 +724,7 @@ describe("ResourceManager general utility methods", function () {
     await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
     await resourceManager.setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
-    await resourceManager.setCCloudSchemas(ccloudSchemas);
+    await resourceManager.setSchemasForRegistry(TEST_SCHEMA_REGISTRY.id, ccloudSchemas);
     // also set some local resources to make sure they aren't deleted
     await resourceManager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
     await resourceManager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
@@ -873,8 +738,8 @@ describe("ResourceManager general utility methods", function () {
     assert.deepStrictEqual(missingSchemaRegistries, new Map());
     const missingTopics = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
     assert.deepStrictEqual(missingTopics, undefined);
-    const missingSchemas = await resourceManager.getCCloudSchemas();
-    assert.deepStrictEqual(missingSchemas, new Map());
+    const missingSchemas = await resourceManager.getSchemasForRegistry(TEST_SCHEMA_REGISTRY.id);
+    assert.deepStrictEqual(missingSchemas, undefined);
 
     // local resources should still be there
     const existinglocalClusters: LocalKafkaCluster[] =

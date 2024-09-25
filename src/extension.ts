@@ -263,7 +263,8 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
     const schemasViewProvider = SchemasViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.schemas.refresh", () => {
-        schemasViewProvider.refresh();
+        // ask for a deep refresh of the schemas for the selected schema registry
+        schemasViewProvider.refresh(true);
       }),
     );
     logger.info("Schemas view provider created");

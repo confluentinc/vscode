@@ -155,14 +155,27 @@ export async function getTopicsForCluster(
   cluster: KafkaCluster,
   forceRefresh: boolean = false,
 ): Promise<KafkaTopic[]> {
-  if (cluster instanceof CCloudKafkaCluster) {
-    const preloader = CCloudResourcePreloader.getInstance();
-    // Ensure all of the ccloud preloading is complete before referencing resource manager ccloud resources,
-    // most importantly the schema registry and its schemas.
-    await preloader.ensureResourcesLoaded();
-  }
-
   const resourceManager = getResourceManager();
+
+  if (cluster instanceof CCloudKafkaCluster) {
+    // Ensure all of the needed ccloud preloading is complete before referencing
+    // resource manager ccloud resources, namely the schema registry and its schemas.
+
+    const preloader = CCloudResourcePreloader.getInstance();
+
+    // Honor forceRefresh, in case they, say, _just_ created the schema registry.
+    await preloader.ensureCoarseResourcesLoaded(forceRefresh);
+
+    // Get the schema registry id for the cluster's environment
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(
+      cluster.environmentId,
+    );
+
+    if (schemaRegistry) {
+      // Ensure the schemas are loaded for the schema registry, honoring the forceRefresh flag.
+      await preloader.ensureSchemasLoaded(schemaRegistry.id, forceRefresh);
+    }
+  }
 
   let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
   if (cachedTopics !== undefined && !forceRefresh) {
@@ -173,14 +186,21 @@ export async function getTopicsForCluster(
 
   // Otherwise make a deep fetch, cache in resource manager, and return.
   let environmentId: string | null = null;
-  let schemas: Schema[] = [];
+  let schemas: Schema[] | undefined = [];
 
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
 
     const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
     if (schemaRegistry) {
-      schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
+      schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
+      if (schemas === undefined) {
+        logger.error("Wacky: schema registry known, but unknown schemas (should be empty array)", {
+          schemaRegistry,
+        });
+        // promote unknown to empty array as work around to what should never happen.
+        schemas = [];
+      }
     }
   }
 
@@ -209,7 +229,7 @@ export async function getTopicsForCluster(
 
   // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
+    const hasMatchingSchema: boolean = schemas!.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
 
@@ -268,7 +288,7 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
   }
 
   const schemas: Schema[] =
-    (await getResourceManager().getCCloudSchemasForCluster(schemaRegistry.id)) || [];
+    (await getResourceManager().getSchemasForRegistry(schemaRegistry.id)) || [];
   if (schemas.length === 0) {
     logger.warn("No schemas found for topic", topic);
     return [];

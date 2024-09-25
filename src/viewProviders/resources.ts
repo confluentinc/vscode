@@ -46,7 +46,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
-    this.forceDeepRefresh = false;
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -109,7 +108,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      return await loadResources(this.forceDeepRefresh);
+      const toplevelItems = await loadResources(this.forceDeepRefresh);
+      if (this.forceDeepRefresh) {
+        // Clear this, we've just fulfilled its intent.
+        this.forceDeepRefresh = false;
+      }
+      return toplevelItems;
     }
 
     return resourceItems;
@@ -134,12 +138,8 @@ async function loadResources(
   const preloader = CCloudResourcePreloader.getInstance();
 
   if (await hasCCloudAuthSession()) {
-    if (forceDeepRefresh) {
-      // force a deep refresh of the resources next call to ensureResourcesLoaded()
-      preloader.reset();
-    }
     // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
-    await preloader.ensureResourcesLoaded();
+    await preloader.ensureCoarseResourcesLoaded(forceDeepRefresh);
 
     const resourceManager = getResourceManager();
 
@@ -208,7 +208,7 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | SchemaRegistryCluster)[] = [];
 
   // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
-  await CCloudResourcePreloader.getInstance().ensureResourcesLoaded();
+  await CCloudResourcePreloader.getInstance().ensureCoarseResourcesLoaded();
 
   const rm = getResourceManager();
   // Get the Kafka clusters for this environment. Will at worst be an empty array.
