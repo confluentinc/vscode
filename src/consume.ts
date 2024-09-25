@@ -205,51 +205,47 @@ function messageViewerStartPollingCommand(
     // update this derivative after new batch of messages is consumed
     latestResult();
     const ts = stream().timestamp;
-    const bits = bitset();
     if (ts.size === 0) return null;
 
     // domain is defined by earliest and latest dates that are conveniently accessible via skiplist
-    const d0 = new Date(ts.getValue(ts.tail)!);
-    const d1 = new Date(ts.getValue(ts.head)!);
+    const d0 = ts.getValue(ts.tail)!;
+    const d1 = ts.getValue(ts.head)!;
     // following generates uniform ticks that are always between the domain extent
-    const uniformTicks = utcTicks(d0, d1, 70);
+    const uniformTicks = utcTicks(new Date(d0), new Date(d1), 70).map((v) => v.valueOf());
     let left = 0;
     let right = uniformTicks.length;
     while (uniformTicks.length > 0 && uniformTicks.at(left)! <= d0) left++;
     while (uniformTicks.length > 0 && uniformTicks.at(right - 1)! > d1) right--;
     let ticks = left < right ? uniformTicks.slice(left, right) : uniformTicks;
+    if (ticks.length === 0) return null;
 
-    let includes = bits != null ? bits.predicate() : () => false;
-    let cursor = ts.head;
-    let bins = [];
-    let totalCount = 0;
-    let filterCount = 0;
-    // in the following cycle we count number of records in the skiplist which
-    // timestamp is within the threshold. The threshold we target starts from
-    // [ticks[ticks.length - 1], d1], which is the final bin of the result.
-    // From there we go backwards over the ticks (because timestamp skiplist is
-    // in descending order) counting records and filtered number if applicable.
-    for (let i = ticks.length - 1, hi = d1.valueOf(), max = ts.size; i >= 0; i--) {
-      let tick = ticks[i].valueOf();
-      let totalB = 0;
-      let filterB = 0;
-      while (max-- > 0 && ts.getValue(cursor)! >= tick) {
-        totalB++;
-        totalCount++;
-        if (includes(cursor)) {
-          filterB++;
-          filterCount++;
-        }
-        cursor = ts.next[cursor];
+    const bits = bitset();
+    const includes = bits != null ? bits.predicate() : () => false;
+    const bins: { x0: number; x1: number; total: number; filter: number | null }[] = [];
+    const limit = ticks.length;
+    let ahead = ts.head;
+    for (let i = limit; i >= 0; i--) {
+      const tick = i === 0 ? 0 : ticks[i - 1];
+      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick)!;
+      let next = ahead;
+      let total = 0;
+      let filter = 0;
+      let max = ts.size; // avoid any chance this can be an infinite loop
+      while (max-- > 0 && curr !== next) {
+        total++;
+        // do not count item if it's right bin boundary, unless it's right most bin
+        if (includes(next) && (next === ts.head || next !== ahead)) filter++;
+        next = ts.next[next];
       }
-      bins.unshift({ x0: tick, x1: hi, total: totalB, filter: bits != null ? filterB : null });
-      hi = tick;
+      ahead = curr;
+      // last bin is inclusive
+      if (curr === next && i === limit) total++;
+      // remaining inclusive filtered item
+      if (includes(curr)) filter++;
+      const x0 = i === 0 ? ts.getValue(ts.tail)! : ticks[i - 1];
+      const x1 = i === limit ? ts.getValue(ts.head)! : ticks[i];
+      bins.unshift({ x0, x1, total, filter: bits != null ? filter : null });
     }
-    // the final bin (which is the first one in the result) can be calculated
-    // by subtracting total values we counted from the collection size.
-    const total0 = ts.size - totalCount;
-    const filter0 = bits != null ? bits.count() - filterCount : null;
-    bins.unshift({ x0: d0.valueOf(), x1: ticks[0].valueOf(), total: total0, filter: filter0 });
 
     return bins;
   });
