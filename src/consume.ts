@@ -219,6 +219,17 @@ function messageViewerStartPollingCommand(
     let ticks = left < right ? uniformTicks.slice(left, right) : uniformTicks;
     if (ticks.length === 0) return null;
 
+    /* Following algorithm counts number of records per each bin (aka histogram).
+    Bins are formed by uniformly distributed ticks which are timestamps between
+    oldest and newest timestamps:
+        lo • tick • • • tick • • • tick • • • tick • • hi
+    Bins have inclusive left boundary and right exclusive boundary. The last bin has
+    right inclusive. For each bin we need to count total number of records along
+    with number of records that satisfy currently applied filter.
+    Timestamp skiplist has descending order, so `head` means newest and `tail` means
+    oldest. Iterating from `head`, for each tick we find the insertion point (like
+    bisect left) in the skiplist and count number of records between the point and
+    the one we used in previous iteration. */
     const bits = bitset();
     const includes = bits != null ? bits.predicate() : () => false;
     const bins: { x0: number; x1: number; total: number; filter: number | null }[] = [];
@@ -238,9 +249,9 @@ function messageViewerStartPollingCommand(
         next = ts.next[next];
       }
       ahead = curr;
-      // last bin is inclusive
+      // last bin has inclusive right boundary
       if (curr === next && i === limit) total++;
-      // remaining inclusive filtered item
+      // make sure to count remaining inclusive filtered item on the left
       if (includes(curr)) filter++;
       const x0 = i === 0 ? d0 : ticks[i - 1];
       const x1 = i === limit ? d1 : ticks[i];
