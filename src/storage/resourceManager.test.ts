@@ -15,7 +15,6 @@ import {
   StateKafkaClusters,
   StateKafkaTopics,
   StateSchemaRegistry,
-  StateSchemas,
 } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -24,7 +23,6 @@ import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CCloudKafkaClustersByEnv,
-  CCloudSchemaBySchemaRegistryCluster,
   CCloudSchemaRegistryByEnv,
   getResourceManager,
 } from "./resourceManager";
