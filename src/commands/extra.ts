@@ -33,8 +33,10 @@ async function copyResourceName(item: any) {
   vscode.window.showInformationMessage(`Copied "${item.name}" to clipboard.`);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
-  registerCommandWithLogging("confluent.copyResourceId", copyResourceId),
-  registerCommandWithLogging("confluent.copyResourceName", copyResourceName),
-];
+export function registerExtraCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
+    registerCommandWithLogging("confluent.copyResourceId", copyResourceId),
+    registerCommandWithLogging("confluent.copyResourceName", copyResourceName),
+  ];
+}
