@@ -44,10 +44,12 @@ async function compareWithSelectedCommand(item: any) {
   vscode.commands.executeCommand("vscode.diff", uri1, uri2, title);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.diff.selectForCompare", selectForCompareCommand),
-  registerCommandWithLogging("confluent.diff.compareWithSelected", compareWithSelectedCommand),
-];
+export function registerDiffCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.diff.selectForCompare", selectForCompareCommand),
+    registerCommandWithLogging("confluent.diff.compareWithSelected", compareWithSelectedCommand),
+  ];
+}
 
 /**
  * Converts a resource item to a URI for comparison.

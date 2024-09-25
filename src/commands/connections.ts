@@ -1,4 +1,4 @@
-import { Uri, window, WorkspaceConfiguration } from "vscode";
+import { Disposable, Uri, window, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getConfigs } from "../configs";
 import { Logger } from "../logging";
@@ -55,10 +55,12 @@ export async function addSSLPemPath() {
   }
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.connections.create", createConnectionCommand),
-  registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
-];
+export function registerConnectionCommands(): Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.connections.create", createConnectionCommand),
+    registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
+  ];
+}
 
 /** Get the path(s) of the SSL/TLS PEM file(s) based on the user's configuration. */
 export function getSSLPemPaths(): string[] {
