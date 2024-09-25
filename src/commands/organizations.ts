@@ -58,7 +58,9 @@ async function copyOrganizationId() {
   vscode.window.showInformationMessage(`Copied "${currentOrg.id}" to clipboard.`);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.organizations.use", useOrganizationCommand),
-  registerCommandWithLogging("confluent.copyOrganizationId", copyOrganizationId),
-];
+export function registerOrganizationCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.organizations.use", useOrganizationCommand),
+    registerCommandWithLogging("confluent.copyOrganizationId", copyOrganizationId),
+  ];
+}

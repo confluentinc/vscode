@@ -17,9 +17,11 @@ async function selectSchemaRegistryCommand(cluster?: SchemaRegistryCluster) {
   vscode.commands.executeCommand("confluent-schemas.focus");
 }
 
-export const commands = [
-  registerCommandWithLogging(
-    "confluent.resources.schema-registry.select",
-    selectSchemaRegistryCommand,
-  ),
-];
+export function registerSchemaRegistryCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging(
+      "confluent.resources.schema-registry.select",
+      selectSchemaRegistryCommand,
+    ),
+  ];
+}
