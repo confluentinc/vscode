@@ -242,8 +242,8 @@ function messageViewerStartPollingCommand(
       if (curr === next && i === limit) total++;
       // remaining inclusive filtered item
       if (includes(curr)) filter++;
-      const x0 = i === 0 ? ts.getValue(ts.tail)! : ticks[i - 1];
-      const x1 = i === limit ? ts.getValue(ts.head)! : ticks[i];
+      const x0 = i === 0 ? d0 : ticks[i - 1];
+      const x1 = i === limit ? d1 : ticks[i];
       bins.unshift({ x0, x1, total, filter: bits != null ? filter : null });
     }
 
