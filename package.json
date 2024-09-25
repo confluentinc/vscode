@@ -59,6 +59,12 @@
         "category": "Confluent: Connections"
       },
       {
+        "command": "confluent.connections.addSSLPemPath",
+        "icon": "$(key)",
+        "title": "Add SSL/TLS PEM Path",
+        "category": "Confluent: Connections"
+      },
+      {
         "command": "confluent.copyResourceId",
         "title": "Copy ID",
         "category": "Confluent: Resources"
@@ -265,6 +271,19 @@
           "type": "boolean",
           "default": true,
           "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry cluster."
+        },
+        "confluent.ssl.pemPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent/Kafka resources. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)"
+        },
+        "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
         }
       }
     },
