@@ -131,7 +131,7 @@ async function deleteTopicCommand(topic: KafkaTopic) {
         // explicitly deep refresh the topics view after deleting a topic, so that repainting
         // ommitting the newly deleted topic is a foreground task we block on before
         // closing the progress window.
-        getTopicViewProvider().refresh(true);
+        getTopicViewProvider().refresh(true, cluster.id);
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
@@ -215,10 +215,9 @@ async function createTopicCommand(item?: KafkaCluster) {
         progress.report({ increment: 33 });
 
         // Refresh in the foreground after creating a topic, so that the new topic is visible
-        // immediately after the progress window closes.
+        // immediately after the progress window closes (assuming topics view is showing this cluster).
 
-        // @param true to force a deep fetch of the topics list, observing the newly created
-        getTopicViewProvider().refresh(true);
+        getTopicViewProvider().refresh(true, cluster.id);
       } catch (error) {
         if (!(error instanceof ResponseError)) {
           // generic error handling

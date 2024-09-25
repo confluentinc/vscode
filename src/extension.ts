@@ -250,7 +250,7 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
     const topicViewProvider = TopicViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.topics.refresh", () => {
-        // Force a deep refresh of the topic data for this cluster from sidecar.
+        // Force a deep refresh of the topic data for its current cluster from sidecar.
         topicViewProvider.refresh(true);
       }),
     );

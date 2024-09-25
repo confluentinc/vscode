@@ -32,14 +32,21 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   private forceDeepRefresh: boolean = false;
 
   /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
-  refresh(forceDeepRefresh: boolean = false): void {
+  refresh(forceDeepRefresh: boolean = false, onlyIfViewingClusterId: string | null = null): void {
+    if (
+      onlyIfViewingClusterId &&
+      this.kafkaCluster &&
+      this.kafkaCluster.id !== onlyIfViewingClusterId
+    ) {
+      // If the view is currently focused on a different cluster, no need to refresh
+      return;
+    }
+
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
   }
 
   private treeView: vscode.TreeView<TopicViewProviderData>;
-  /** The parent of the focused Kafka cluster, if it came from CCloud.  */
-  public ccloudEnvironment: CCloudEnvironment | null = null;
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
   public kafkaCluster: KafkaCluster | null = null;
 
@@ -54,15 +61,19 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
-      logger.debug("ccloudConnected event fired, resetting", { connected });
-      if (this.ccloudEnvironment && this.kafkaCluster?.isCCloud) {
+      if (this.kafkaCluster?.isCCloud) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
         // a CCloud Kafka Cluster
+        logger.debug(
+          "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
+          { connected },
+        );
         this.reset();
       }
     });
     currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
       if (!cluster) {
+        logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting.");
         this.reset();
       } else {
         setContextValue(ContextValues.kafkaClusterSelected, true);
@@ -76,8 +87,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
             await getResourceManager().getCCloudEnvironment(
               (this.kafkaCluster as CCloudKafkaCluster).environmentId,
             );
-          this.ccloudEnvironment = parentEnvironment;
-          this.treeView.description = `${this.ccloudEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
+          this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
         }
         this.refresh();
       }
@@ -95,7 +105,6 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   reset(): void {
     setContextValue(ContextValues.kafkaClusterSelected, false);
     this.kafkaCluster = null;
-    this.ccloudEnvironment = null;
     this.treeView.description = "";
     this.refresh();
   }
