@@ -320,13 +320,18 @@ async function copyBootstrapServers(item: KafkaCluster) {
   vscode.window.showInformationMessage(`Copied "${bootstrapServers}" to clipboard.`);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),
-  registerCommandWithLogging("confluent.resources.kafka-cluster.select", selectKafkaClusterCommand),
-  registerCommandWithLogging("confluent.topics.create", createTopicCommand),
-  registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
-  registerCommandWithLogging(
-    "confluent.resources.kafka-cluster.copyBootstrapServers",
-    copyBootstrapServers,
-  ),
-];
+export function registerKafkaClusterCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),
+    registerCommandWithLogging(
+      "confluent.resources.kafka-cluster.select",
+      selectKafkaClusterCommand,
+    ),
+    registerCommandWithLogging("confluent.topics.create", createTopicCommand),
+    registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
+    registerCommandWithLogging(
+      "confluent.resources.kafka-cluster.copyBootstrapServers",
+      copyBootstrapServers,
+    ),
+  ];
+}

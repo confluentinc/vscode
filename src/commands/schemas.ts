@@ -55,13 +55,15 @@ function uploadVersionCommand(item: any) {
   );
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
-  registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
-  registerCommandWithLogging("confluent.schemaViewer.uploadVersion", uploadVersionCommand),
-  registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
-  registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
-];
+export function registerSchemaCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
+    registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
+    registerCommandWithLogging("confluent.schemaViewer.uploadVersion", uploadVersionCommand),
+    registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
+    registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
+  ];
+}
 
 /**
  * Convert a {@link Schema} to a URI and render via the {@link SchemaDocumentProvider} as a read-

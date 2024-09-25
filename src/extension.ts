@@ -36,17 +36,17 @@ if (process.env.SENTRY_DSN) {
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authProvider";
 import { registerCommandWithLogging } from "./commands";
-import { commands as connectionCommands } from "./commands/connections";
-import { commands as debugCommands } from "./commands/debugtools";
-import { commands as diffCommands } from "./commands/diffs";
-import { commands as environmentCommands } from "./commands/environments";
-import { commands as extraCommands } from "./commands/extra";
-import { commands as kafkaClusterCommands } from "./commands/kafkaClusters";
-import { commands as organizationCommands } from "./commands/organizations";
-import { commands as schemaRegistryCommands } from "./commands/schemaRegistry";
-import { commands as schemaCommands } from "./commands/schemas";
-import { commands as supportCommands } from "./commands/support";
-import { commands as topicCommands } from "./commands/topics";
+import { registerConnectionCommands } from "./commands/connections";
+import { registerDebugCommands } from "./commands/debugtools";
+import { registerDiffCommands } from "./commands/diffs";
+import { registerEnvironmentCommands } from "./commands/environments";
+import { registerExtraCommands } from "./commands/extra";
+import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
+import { registerOrganizationCommands } from "./commands/organizations";
+import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
+import { registerSchemaCommands } from "./commands/schemas";
+import { registerSupportCommands } from "./commands/support";
+import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { ContextValues, setContextValue, setExtensionContext } from "./context";
@@ -132,7 +132,7 @@ async function setupDebugHelpers(
   logger.info("Output channel disposables added");
   // set up debugging commands before anything else, in case we need to reset global/workspace state
   // or there's a problem further down with extension activation
-  context.subscriptions.push(...debugCommands);
+  context.subscriptions.push(...registerDebugCommands());
   logger.info("Debug command disposables added");
   return context;
 }
@@ -290,16 +290,16 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
 function setupCommands(context: vscode.ExtensionContext): vscode.ExtensionContext {
   logger.info("Storing main command disposables...");
   context.subscriptions.push(
-    ...connectionCommands,
-    ...organizationCommands,
-    ...kafkaClusterCommands,
-    ...environmentCommands,
-    ...schemaRegistryCommands,
-    ...schemaCommands,
-    ...supportCommands,
-    ...topicCommands,
-    ...diffCommands,
-    ...extraCommands,
+    ...registerConnectionCommands(),
+    ...registerOrganizationCommands(),
+    ...registerKafkaClusterCommands(),
+    ...registerEnvironmentCommands(),
+    ...registerSchemaRegistryCommands(),
+    ...registerSchemaCommands(),
+    ...registerSupportCommands(),
+    ...registerTopicCommands(),
+    ...registerDiffCommands(),
+    ...registerExtraCommands(),
   );
   logger.info("Main command disposables stored");
   return context;

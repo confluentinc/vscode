@@ -16,6 +16,6 @@ async function renameEnvironmentCommand(item?: CCloudEnvironment | undefined) {
   vscode.window.showInformationMessage("COMING SOON: Renaming environments is not yet supported.");
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.resources.item.rename", renameEnvironmentCommand),
-];
+export function registerEnvironmentCommands(): vscode.Disposable[] {
+  return [registerCommandWithLogging("confluent.resources.item.rename", renameEnvironmentCommand)];
+}

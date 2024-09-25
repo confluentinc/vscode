@@ -1,3 +1,4 @@
+import { Disposable } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { Logger } from "../logging";
 import { getCCloudAuthSession } from "../sidecar/connections";
@@ -22,6 +23,6 @@ async function createConnectionCommand() {
   }
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.connections.create", createConnectionCommand),
-];
+export function registerConnectionCommands(): Disposable[] {
+  return [registerCommandWithLogging("confluent.connections.create", createConnectionCommand)];
+}
