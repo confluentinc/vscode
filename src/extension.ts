@@ -122,18 +122,18 @@ async function _activateExtension(
 async function setupDebugHelpers(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
-  // automatically display and focus the Confluent extension output channel in development mode
-  // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
-  // host window during debugging
-  if (process.env.LOGGING_MODE === "development") {
-    await vscode.commands.executeCommand("confluent.showOutputChannel");
-  }
   context.subscriptions.push(outputChannel, sidecarOutputChannel);
   logger.info("Output channel disposables added");
   // set up debugging commands before anything else, in case we need to reset global/workspace state
   // or there's a problem further down with extension activation
   context.subscriptions.push(...registerDebugCommands());
   logger.info("Debug command disposables added");
+  // automatically display and focus the Confluent extension output channel in development mode
+  // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
+  // host window during debugging
+  if (process.env.LOGGING_MODE === "development") {
+    await vscode.commands.executeCommand("confluent.showOutputChannel");
+  }
   return context;
 }
 
