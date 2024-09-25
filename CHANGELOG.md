@@ -8,7 +8,7 @@ All notable changes to this extension will be documented in this file.
 
 - Use cached information to populate the Resources view Confluent Cloud single environment children,
   [issue #254](https://github.com/confluentinc/vscode/issues/254).
-- Integrate and synchronize use of cached schemas information between Topics and Schemas panels,
+- Integrate and synchronize use of cached schemas information between Topics and Schemas views,
   [issue #214](https://github.com/confluentinc/vscode/issues/214).
 
 ### Fixed
