@@ -5,6 +5,8 @@ import { Logger } from "../logging";
 import { Schema } from "../models/schema";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { KafkaTopic } from "../models/topic";
+import { ResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("commands.schemas");
 
@@ -55,6 +57,32 @@ function uploadVersionCommand(item: any) {
   );
 }
 
+async function openLatestSchemasCommand(topic: KafkaTopic) {
+  logger.info("open latest schemas topic", { topic });
+
+  // get the schemas for the topic from resource manager.
+
+  const rm = ResourceManager.getInstance();
+  const highestVersionedSchemas = await rm.getSchemasForTopic(topic);
+  for (const schema of highestVersionedSchemas) {
+    logger.info(`Schema subject ${schema.subject} version ${schema.version}`);
+  }
+
+  // make string of subject name + version paren pairs)
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Loading schema(s) ...",
+    },
+    async () => {
+      const promises = highestVersionedSchemas.map((schema) => {
+        loadOrCreateSchemaViewer(schema);
+      });
+      await Promise.all(promises);
+    },
+  );
+}
+
 export function registerSchemaCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
@@ -62,6 +90,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.uploadVersion", uploadVersionCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
+    registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
   ];
 }
 
