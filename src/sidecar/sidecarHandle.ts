@@ -20,6 +20,7 @@ import {
   KafkaConsumeResourceApi,
   MicroProfileHealthApi,
   Middleware,
+  PreferencesResourceApi,
   ResponseError,
   TemplatesApi,
   VersionResourceApi,
@@ -184,6 +185,10 @@ export class SidecarHandle {
       ],
     });
     return new KafkaConsumeResourceApi(configuration);
+  }
+
+  public getPreferencesApi() {
+    return new PreferencesResourceApi(this.createClientConfig());
   }
 
   // Make a GraphQL request to the sidecar.

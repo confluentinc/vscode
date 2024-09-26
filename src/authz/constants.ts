@@ -12,10 +12,3 @@ export const KAFKA_TOPIC_OPERATIONS: readonly string[] = [
   "ALTER_CONFIGS",
   "DESCRIBE_CONFIGS",
 ];
-
-/**
- * Whether or not warning notifications will appear when consuming messages without permission to
- * access the associated Schema Registry cluster.
- */
-export const SCHEMA_RBAC_WARNING_SETTING_NAME =
-  "cloud.messageViewer.showSchemaWarningNotifications";

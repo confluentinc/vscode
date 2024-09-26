@@ -1,12 +1,10 @@
-import { Disposable, Uri, window, WorkspaceConfiguration } from "vscode";
+import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { getConfigs } from "../configs";
 import { Logger } from "../logging";
+import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("commands.connections");
-
-export const SSL_PEM_PATHS_SETTING_NAME = "ssl.pemPaths";
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
 async function createConnectionCommand() {
@@ -38,13 +36,13 @@ export async function addSSLPemPath() {
     },
   });
 
-  const config: WorkspaceConfiguration = getConfigs();
-  const paths: string[] = config.get(SSL_PEM_PATHS_SETTING_NAME, []);
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  const paths: string[] = configs.get(SSL_PEM_PATHS, []);
   if (newPemUris && newPemUris.length > 0) {
     const newPemPath: string = newPemUris[0].fsPath;
     if (newPemPath.endsWith(".pem")) {
       paths.push(newPemPath);
-      config.update(SSL_PEM_PATHS_SETTING_NAME, paths, true);
+      configs.update(SSL_PEM_PATHS, paths, true);
       // no notification here since the setting will update in real-time when an item is added
     } else {
       // shouldn't be possible to get here since we restrict the file types in the dialog, but we
@@ -64,7 +62,8 @@ export function registerConnectionCommands(): Disposable[] {
 
 /** Get the path(s) of the SSL/TLS PEM file(s) based on the user's configuration. */
 export function getSSLPemPaths(): string[] {
-  const paths: string[] = getConfigs().get(SSL_PEM_PATHS_SETTING_NAME, []);
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  const paths: string[] = configs.get(SSL_PEM_PATHS, []);
   // filter out paths that are empty strings or don't end with .pem since the user can manually edit
   // the setting if they don't go through the `addSSLPEMPath` command
   return paths.filter((path) => path && path.endsWith(".pem"));

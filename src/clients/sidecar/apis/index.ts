@@ -6,5 +6,6 @@ export * from "./KafkaConsumeResourceApi";
 export * from "./LoginRealmResourceApi";
 export * from "./MicroProfileHealthApi";
 export * from "./OAuthCallbackResourceApi";
+export * from "./PreferencesResourceApi";
 export * from "./TemplatesApi";
 export * from "./VersionResourceApi";

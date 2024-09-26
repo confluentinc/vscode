@@ -5,6 +5,7 @@ import { ContextValues, getExtensionContext, setContextValue } from "./context";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
+import { fetchPreferences } from "./preferences/updates";
 import { openExternal, pollCCloudConnectionAuth } from "./sidecar/authStatusPolling";
 import {
   clearCurrentCCloudResources,
@@ -62,6 +63,20 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
           // completed to resolve any promises that may still be waiting
           const success: boolean = await resourceManager.getAuthFlowCompleted();
           this._onAuthFlowCompletedSuccessfully.fire(success);
+
+          if (!success) {
+            // fetch+log current sidecar preferences to help debug any auth issues
+            try {
+              const preferences = await fetchPreferences();
+              logger.debug(
+                `authProvider: ${AUTH_COMPLETED_KEY} changed due to unsuccessful auth; current sidecar preferences: `,
+                { preferences },
+              );
+            } catch {
+              // fetchPreferences() will log the error before re-throwing; no need to do anything here
+            }
+          }
+
           break;
         }
         default:

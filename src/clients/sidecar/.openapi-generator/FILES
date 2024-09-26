@@ -4,6 +4,7 @@ apis/KafkaConsumeResourceApi.ts
 apis/LoginRealmResourceApi.ts
 apis/MicroProfileHealthApi.ts
 apis/OAuthCallbackResourceApi.ts
+apis/PreferencesResourceApi.ts
 apis/TemplatesApi.ts
 apis/VersionResourceApi.ts
 apis/index.ts
@@ -26,6 +27,7 @@ models/HealthCheck.ts
 models/HealthResponse.ts
 models/JsonNode.ts
 models/JsonNodeType.ts
+models/LocalConfig.ts
 models/ModelError.ts
 models/ObjectMetadata.ts
 models/OptionProperties.ts
@@ -33,6 +35,9 @@ models/PartitionConsumeData.ts
 models/PartitionConsumeRecord.ts
 models/PartitionConsumeRecordHeader.ts
 models/PartitionOffset.ts
+models/Preferences.ts
+models/PreferencesMetadata.ts
+models/PreferencesSpec.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts
