@@ -26,8 +26,16 @@ import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
+import { scheduler } from "./scheduler";
 
 export function activateMessageViewer(context: ExtensionContext) {
+  /* All active message viewer instances share the same scheduler to perform API
+  requests. The scheduler defines number of concurrent requests at a time and a
+  minimum time interval for a single task to unblock a "thread". This all allows
+  faster consumption of retained messages for a single message viewer and prevents
+  rate limiting for multiple active message viewers. */
+  const schedule = scheduler(4, 500);
+
   // commands
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
@@ -43,7 +51,7 @@ export function activateMessageViewer(context: ExtensionContext) {
         showNoSchemaAccessWarningNotification();
       }
       const sidecar = await getSidecar();
-      return messageViewerStartPollingCommand(context, topic, sidecar);
+      return messageViewerStartPollingCommand(context, topic, sidecar, schedule);
     }),
   );
 }
@@ -66,6 +74,7 @@ function messageViewerStartPollingCommand(
   context: ExtensionContext,
   topic: KafkaTopic,
   sidecar: SidecarHandle,
+  schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
 ) {
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
   const panel = window.createWebviewPanel(
@@ -135,8 +144,6 @@ function messageViewerStartPollingCommand(
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
   /** Most recent failure info */
   const latestError = os.signal<{ message: string } | null>(null);
-  /** Timestamp of the most recent successful consumption request. */
-  const latestFetch = os.signal<number>(0);
 
   /** Notify the webview only after flushing the rest of updates. */
   const notifyUI = () => {
@@ -303,19 +310,13 @@ function messageViewerStartPollingCommand(
     if (state() !== "running") return;
 
     try {
-      const now = Date.now();
-      const old = latestFetch();
       const currentStream = stream();
       const partitions = partitionConsumed();
       /* If current parameters were already used for successful request, the
       following request should consider offsets provided in previous results. */
       const requestParams = getOffsets(params(), latestResult(), partitions);
-
-      /* Ensure to wait at least some time before following polling request
-      if at least one was already made. The condition below should allow for
-      faster requests when the stream was resumed. */
-      if (now - old < MIN_POLLING_INTERVAL_MS) await sleep(signal);
-      const result = await consume(requestParams, signal);
+      /* Delegate an API call to shared scheduler. */
+      const result = await schedule(() => consume(requestParams, signal), signal);
 
       const datalist = result.partition_data_list ?? [];
       for (const partition of datalist) {
@@ -333,7 +334,6 @@ function messageViewerStartPollingCommand(
       os.batch(() => {
         flushMessages(currentStream);
         latestResult(result);
-        latestFetch(Date.now());
         latestError(null);
         notifyUI();
       });
@@ -388,7 +388,6 @@ function messageViewerStartPollingCommand(
       }
 
       os.batch(() => {
-        latestFetch(Date.now());
         // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
         if (shouldPause) {
           state("paused");
@@ -674,31 +673,6 @@ function getOffsets(
     return { max_poll_records, message_max_bytes, fetch_max_bytes, offsets };
   }
   return params;
-}
-
-const MIN_POLLING_INTERVAL_MS = 0.5 * 1000;
-const THRESHOLD_POLLING_INTERVAL_MS = 0.5 * 1000;
-
-/**
- * Await for a variable time. A random threshold added to avoid syncing with
- * other consumers running in parallel. AbortSignal can be provided to abort
- * the timer, in case the following procedure should not be executed anyway.
- */
-function sleep(signal: AbortSignal) {
-  const delay = MIN_POLLING_INTERVAL_MS + THRESHOLD_POLLING_INTERVAL_MS * Math.random();
-  return new Promise((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout>;
-    const abort = () => {
-      clearTimeout(timer);
-      const error = Object.assign(new Error(signal.reason), { name: "AbortError" });
-      reject(error);
-    };
-    signal.addEventListener("abort", abort, { once: true });
-    timer = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve(null);
-    }, delay);
-  });
 }
 
 /** Compress any valid json value into smaller payload for preview purpose. */
