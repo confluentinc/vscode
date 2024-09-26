@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { SSL_PEM_PATHS } from "../preferences/constants";
 import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {
@@ -34,13 +35,7 @@ describe("commands/connections.ts", function () {
 
     assert.ok(showOpenDialogStub.calledOnce);
     assert.ok(getConfigurationStub().update.calledOnce);
-    assert.ok(
-      getConfigurationStub().update.calledOnceWith(
-        connections.SSL_PEM_PATHS_SETTING_NAME,
-        [uri.fsPath],
-        true,
-      ),
-    );
+    assert.ok(getConfigurationStub().update.calledOnceWith(SSL_PEM_PATHS, [uri.fsPath], true));
   });
 
   it("addSSLPemPath() should not update config if no file is selected", async function () {
@@ -84,7 +79,7 @@ describe("commands/connections.ts", function () {
     assert.ok(getConfigurationStub().update.calledOnce);
     assert.ok(
       getConfigurationStub().update.calledOnceWith(
-        connections.SSL_PEM_PATHS_SETTING_NAME,
+        SSL_PEM_PATHS,
         ["existing/path.pem", uri.fsPath],
         true,
       ),
@@ -94,7 +89,7 @@ describe("commands/connections.ts", function () {
   it("getSSLPemPaths() should return paths if they exists in the config", function () {
     const mockConfig = {
       get: sandbox.stub().callsFake((key: string) => {
-        if (key === connections.SSL_PEM_PATHS_SETTING_NAME) return ["path/to/file.pem"];
+        if (key === SSL_PEM_PATHS) return ["path/to/file.pem"];
       }),
     };
     getConfigurationStub.returns(mockConfig);
@@ -107,7 +102,7 @@ describe("commands/connections.ts", function () {
   it("getSSLPemPaths() should return an empty array if the path is an empty array", function () {
     const emptyStringConfig = {
       get: sandbox.stub().callsFake((key: string) => {
-        if (key === connections.SSL_PEM_PATHS_SETTING_NAME) return [];
+        if (key === SSL_PEM_PATHS) return [];
       }),
     };
     getConfigurationStub.returns(emptyStringConfig);
@@ -120,7 +115,7 @@ describe("commands/connections.ts", function () {
   it("getSSLPemPaths() should return an empty array if the path is not set", function () {
     const nullConfig = {
       get: sandbox.stub().callsFake((key: string, defaultValue?: unknown) => {
-        if (key === connections.SSL_PEM_PATHS_SETTING_NAME) return defaultValue;
+        if (key === SSL_PEM_PATHS) return defaultValue;
       }),
     };
     getConfigurationStub.returns(nullConfig);
@@ -133,8 +128,7 @@ describe("commands/connections.ts", function () {
   it("getSSLPemPaths() should only return valid .pem paths and not other string values", function () {
     const mixedConfig = {
       get: sandbox.stub().callsFake((key: string) => {
-        if (key === connections.SSL_PEM_PATHS_SETTING_NAME)
-          return ["path/to/file.pem", "invalid/path", ""];
+        if (key === SSL_PEM_PATHS) return ["path/to/file.pem", "invalid/path", ""];
       }),
     };
     getConfigurationStub.returns(mixedConfig);

@@ -52,6 +52,9 @@ import { activateMessageViewer } from "./consume";
 import { ContextValues, setContextValue, setExtensionContext } from "./context";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
+import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
+import { createConfigChangeListener } from "./preferences/listener";
+import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
@@ -99,6 +102,9 @@ async function _activateExtension(
 
   context = await setupDebugHelpers(context);
   await setupContextValues();
+
+  const configListener: vscode.Disposable = await setupPreferences();
+  context.subscriptions.push(configListener);
 
   // these two need to be in order because they depend on each other
   context = await setupStorage(context);
@@ -196,6 +202,21 @@ async function setupStorage(context: vscode.ExtensionContext): Promise<vscode.Ex
   await migrateStorageIfNeeded(manager);
   logger.info("Storage manager initialized and migrations completed");
   return context;
+}
+
+/**
+ * Pass initial {@link vscode.WorkspaceConfiguration} settings to the sidecar's Preferences API on
+ * startup to ensure the sidecar is in sync with the extension's settings before other requests are made.
+ */
+async function setupPreferences(): Promise<vscode.Disposable> {
+  // pass initial configs to the sidecar on startup
+  const configs: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  const pemPaths: string[] = configs.get(SSL_PEM_PATHS, []);
+  const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
+  await updatePreferences({ tls_pem_paths: pemPaths, trust_all_certificates: trustAllCerts });
+
+  const listener: vscode.Disposable = createConfigChangeListener();
+  return listener;
 }
 
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {

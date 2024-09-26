@@ -8,9 +8,9 @@ import {
 } from "../../tests/unit/testResources";
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
+import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
-import { SCHEMA_RBAC_WARNING_SETTING_NAME } from "./constants";
 import * as schemaRegistry from "./schemaRegistry";
 
 describe("authz.schemaRegistry", function () {
@@ -132,7 +132,7 @@ describe("authz.schemaRegistry", function () {
   it("showNoSchemaAccessWarningNotification() should show warning if warnings are enabled", function () {
     const mockConfig = {
       get: sinon.stub().callsFake((key: string) => {
-        if (key === SCHEMA_RBAC_WARNING_SETTING_NAME) return true;
+        if (key === SCHEMA_RBAC_WARNINGS_ENABLED) return true;
       }),
     };
     getConfigurationStub.returns(mockConfig);
@@ -145,7 +145,7 @@ describe("authz.schemaRegistry", function () {
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
     const mockConfig = {
       get: sinon.stub().callsFake((key: string) => {
-        if (key === SCHEMA_RBAC_WARNING_SETTING_NAME) return false;
+        if (key === SCHEMA_RBAC_WARNINGS_ENABLED) return false;
       }),
     };
     getConfigurationStub.returns(mockConfig);

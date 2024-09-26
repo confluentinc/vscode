@@ -2,11 +2,10 @@
 openapi: 3.0.3
 info:
   title: Confluent ide-sidecar API
-  description: "API for the Confluent ide-sidecar, part of the Confluent extension\
-    \ for VS Code"
+  description: "API for the Confluent ide-sidecar, part of Confluent for VS Code"
   termsOfService: Your terms here
   contact:
-    name: Confluent extension for VS Code Support
+    name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
   version: 1.0.1
@@ -184,6 +183,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SidecarAccessToken"
+  /gateway/v1/preferences:
+    get:
+      tags:
+        - Preferences Resource
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
+    put:
+      tags:
+        - Preferences Resource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Preferences"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Preferences"
   /gateway/v1/templates:
     get:
       tags:
@@ -462,6 +487,8 @@ components:
           $ref: "#/components/schemas/ConnectionType"
         ccloud_config:
           $ref: "#/components/schemas/CCloudConfig"
+        local_config:
+          $ref: "#/components/schemas/LocalConfig"
     ConnectionStatus:
       required:
         - authentication
@@ -596,6 +623,12 @@ components:
         - POJO
         - STRING
       type: string
+    LocalConfig:
+      description: Configuration for local cluster
+      type: object
+      properties:
+        schema-registry-uri:
+          type: string
     ObjectMetadata:
       type: object
       properties:
@@ -681,6 +714,37 @@ components:
         offset:
           format: int64
           type: integer
+    Preferences:
+      required:
+        - api_version
+        - kind
+        - spec
+      type: object
+      properties:
+        api_version:
+          type: string
+        kind:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/PreferencesMetadata"
+        spec:
+          $ref: "#/components/schemas/PreferencesSpec"
+    PreferencesMetadata:
+      required:
+        - self
+      type: object
+      properties:
+        self:
+          type: string
+    PreferencesSpec:
+      type: object
+      properties:
+        tls_pem_paths:
+          type: array
+          items:
+            type: string
+        trust_all_certificates:
+          type: boolean
     SidecarAccessToken:
       type: object
       properties:
