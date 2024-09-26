@@ -6,7 +6,6 @@ import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import { type KafkaTopic } from "./models/topic";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
-
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -145,9 +144,17 @@ function messageViewerStartPollingCommand(
   /** Most recent failure info */
   const latestError = os.signal<{ message: string } | null>(null);
 
-  /** Notify the webview only after flushing the rest of updates. */
+  /** Notify an active webview only after flushing the rest of updates. */
   const notifyUI = () => {
-    queueMicrotask(() => panel.webview.postMessage(["Timestamp", "Success", Date.now()]));
+    queueMicrotask(() => {
+      try {
+        if (panel.visible) {
+          panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+        }
+      } catch {
+        // panel might be disposed which cases `panel.visible` getter to throw
+      }
+    });
   };
 
   /** Provides partition filter bitset based on the most recent consumed result. */
