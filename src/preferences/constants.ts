@@ -17,3 +17,8 @@ export const SSL_PEM_PATHS = prefix + "ssl.pemPaths";
  */
 export const SSL_VERIFY_SERVER_CERT_DISABLED =
   prefix + "debugging.sslTls.serverCertificateVerificationDisabled";
+
+export const LOCAL_DOCKER_SOCKET_PATH = prefix + "localDocker.socketPath";
+export const LOCAL_DOCKER_PROTOCOL = prefix + "localDocker.protocol";
+export const LOCAL_DOCKER_HOST = prefix + "localDocker.host";
+export const LOCAL_DOCKER_PORT = prefix + "localDocker.port";
