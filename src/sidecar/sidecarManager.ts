@@ -560,12 +560,15 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   sidecar_env["QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT"] = "false";
   sidecar_env["QUARKUS_LOG_FILE_PATH"] = SIDECAR_LOGFILE_PATH;
 
-  // If we are running within WSL, then need to have sidecar
-  // bind to 0.0.0.0 instead of its default localhost so that
-  // browsers running on Windows can connect to it during oauth
-  // flow. The server port will still be guarded by the firewall.
+  // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
+  // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
+  // port will still be guarded by the firewall.
+  // We also need to use the IPv6 loopback address for the OAuth redirect URI instead of the IPv4
+  // (127.0.0.1) address, as the latter is not reachable from WSL2.
   if (env.WSL_DISTRO_NAME) {
     sidecar_env["QUARKUS_HTTP_HOST"] = "0.0.0.0";
+    sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_OAUTH_REDIRECT_URI"] =
+      "http://[::1]:26636/gateway/v1/callback-vscode-docs";
   }
 
   return sidecar_env;
