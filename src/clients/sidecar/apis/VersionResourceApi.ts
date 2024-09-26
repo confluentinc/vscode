@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Confluent ide-sidecar API
- * API for the Confluent ide-sidecar, part of the Confluent extension for VS Code
+ * API for the Confluent ide-sidecar, part of Confluent for VS Code
  *
  * The version of the OpenAPI document: 1.0.1
  * Contact: vscode@confluent.io

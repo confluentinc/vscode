@@ -1,12 +1,11 @@
-import { window, WorkspaceConfiguration } from "vscode";
+import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
-import { getConfigs } from "../configs";
 import { Logger } from "../logging";
 import { SchemaRegistryCluster } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
-import { SCHEMA_RBAC_WARNING_SETTING_NAME } from "./constants";
 
 const logger = new Logger("authz.schemaRegistry");
 
@@ -103,8 +102,8 @@ export async function determineAccessFromResponseError(response: Response): Prom
  * by updating the setting.
  * */
 export function showNoSchemaAccessWarningNotification(): void {
-  const configs: WorkspaceConfiguration = getConfigs();
-  const warningsEnabled: boolean = configs.get(SCHEMA_RBAC_WARNING_SETTING_NAME, true);
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  const warningsEnabled: boolean = configs.get(SCHEMA_RBAC_WARNINGS_ENABLED, true);
   if (!warningsEnabled) {
     logger.warn("user is missing schema access, but warning notifications are disabled");
     return;
@@ -118,7 +117,7 @@ export function showNoSchemaAccessWarningNotification(): void {
     )
     .then((value: string | undefined) => {
       if (value === dismissButton) {
-        configs.update(SCHEMA_RBAC_WARNING_SETTING_NAME, false, true);
+        configs.update(SCHEMA_RBAC_WARNINGS_ENABLED, false, true);
       }
     });
 }
