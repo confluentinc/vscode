@@ -10,7 +10,6 @@ describe("scheduler", () => {
     const promise = sinon.promise();
     const setTimeout = sinon.stub(global, "setTimeout");
     setTimeout.callsFake((fn: () => void) => (promise.then(fn), 0 as any));
-    // const delay = sinon.fake((fn: () => void, delay: number) => promise.then(fn));
     const schedule = scheduler(1, 100);
 
     const taskA = sinon.promise();
