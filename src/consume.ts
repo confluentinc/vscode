@@ -152,7 +152,7 @@ function messageViewerStartPollingCommand(
           panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
         }
       } catch {
-        // panel might be disposed which cases `panel.visible` getter to throw
+        // panel might be disposed which causes `panel.visible` getter to throw
       }
     });
   };
