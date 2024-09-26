@@ -1,7 +1,13 @@
 import { normalize } from "path";
 import { Agent, fetch, RequestInit } from "undici";
-import { getConfigs } from "../configs";
+import { workspace, WorkspaceConfiguration } from "vscode";
 import { Logger } from "../logging";
+import {
+  LOCAL_DOCKER_HOST,
+  LOCAL_DOCKER_PORT,
+  LOCAL_DOCKER_PROTOCOL,
+  LOCAL_DOCKER_SOCKET_PATH,
+} from "../preferences/constants";
 
 const logger = new Logger("docker.client");
 
@@ -17,8 +23,12 @@ export class DockerClient {
     return DockerClient.instance;
   }
 
+  private get configs(): WorkspaceConfiguration {
+    return workspace.getConfiguration();
+  }
+
   private get socketPath(): string {
-    let path: string = getConfigs().get("localDocker.socketPath", "").trim();
+    let path: string = this.configs.get(LOCAL_DOCKER_SOCKET_PATH, "").trim();
     if (!path || path !== "") {
       // no socketPath config set by user, try to guess the default based on platform
       if (process.platform === "win32") {
@@ -33,7 +43,7 @@ export class DockerClient {
   }
 
   private get protocol(): string {
-    let protocol = getConfigs().get("localDocker.protocol", "").trim();
+    let protocol = this.configs.get(LOCAL_DOCKER_PROTOCOL, "").trim();
     if (!protocol || protocol === "") {
       protocol = "http";
     }
@@ -41,7 +51,7 @@ export class DockerClient {
   }
 
   private get host(): string {
-    let host: string = getConfigs().get("localDocker.host", "").trim();
+    let host: string = this.configs.get(LOCAL_DOCKER_HOST, "").trim();
     if (!host || host === "") {
       host = "localhost";
     }
@@ -49,7 +59,7 @@ export class DockerClient {
   }
 
   private get port(): number | null {
-    return getConfigs().get<number | null>("localDocker.port") ?? null;
+    return this.configs.get(LOCAL_DOCKER_PORT, null);
   }
 
   private get baseUrl(): string {
@@ -83,19 +93,24 @@ export class DockerClient {
     // remove any leading slashes
     const trimmedEndpoint = endpoint.replace(/^\/+/, "");
     const url = `${this.baseUrl}/${trimmedEndpoint}`;
-
+    const requestOptions: RequestInit = { ...this.defaultOptions, ...options };
     try {
-      const response = await fetch(url, {
-        ...this.defaultOptions,
-        ...options,
-      });
+      const response = await fetch(url, requestOptions);
       if (!response.ok) {
+        const body = await response.text();
+        logger.error("error response from docker API:", {
+          body,
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          options: requestOptions,
+        });
         throw new Error(`Error response with status ${response.status}: "${response.statusText}"`);
       }
       // callers should handle reading the response body (JSON, ReadableStream, etc.)
       return response;
     } catch (error) {
-      logger.error(`GET ${url} failed`, error);
+      logger.error(`${requestOptions.method?.toUpperCase()} ${url} failed:`, error);
       throw error;
     }
   }
