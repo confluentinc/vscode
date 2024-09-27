@@ -252,21 +252,28 @@ function messageViewerStartPollingCommand(
     for (let i = limit; i >= 0; i--) {
       const tick = i === 0 ? 0 : ticks[i - 1];
       const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick)!;
-      let next = ahead;
+      const notEmptyBin = ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
       let total = 0;
       let filter = 0;
-      let max = ts.size; // avoid any chance this can be an infinite loop
-      while (max-- > 0 && curr !== next) {
-        total++;
-        // do not count item if it's right bin boundary, unless it's right most bin
-        if (includes(next) && (next === ts.head || next !== ahead)) filter++;
-        next = ts.next[next];
+      if (notEmptyBin) {
+        let next = ahead;
+        // account for inclusive final bin
+        if (i === limit) {
+          total++;
+          if (includes(next)) filter++;
+        }
+        if (next !== curr) {
+          do {
+            total++;
+            // avoid counting the right bin boundary, it is covered by the next bin
+            if (next !== ahead && includes(next)) filter++;
+            next = ts.next[next];
+          } while (next !== curr);
+          // make sure to count the left bin boundary
+          if (includes(curr)) filter++;
+        }
       }
       ahead = curr;
-      // last bin has inclusive right boundary
-      if (curr === next && i === limit) total++;
-      // make sure to count remaining inclusive filtered item on the left
-      if (includes(curr)) filter++;
       const x0 = i === 0 ? d0 : ticks[i - 1];
       const x1 = i === limit ? d1 : ticks[i];
       bins.unshift({ x0, x1, total, filter: bits != null ? filter : null });
