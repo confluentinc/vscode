@@ -263,12 +263,13 @@ function messageViewerStartPollingCommand(
           if (includes(next)) filter++;
         }
         if (next !== curr) {
+          let max = ts.size;
           do {
             total++;
             // avoid counting the right bin boundary, it is covered by the next bin
             if (next !== ahead && includes(next)) filter++;
             next = ts.next[next];
-          } while (next !== curr);
+          } while (max-- > 0 && next !== curr);
           // make sure to count the left bin boundary
           if (includes(curr)) filter++;
         }
