@@ -83,7 +83,7 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
   let optionValues: { [key: string]: string | boolean } = {};
   let options = (pickedTemplate.spec.options as TemplateManifest["options"]) || {};
   Object.entries(options).map(([option, properties]) => {
-    optionValues[option] = properties.default_value ?? "";
+    optionValues[option] = properties.initial_value ?? "";
   });
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
