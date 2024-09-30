@@ -1,5 +1,3 @@
-import { performance } from "perf_hooks";
-
 /**
  * Create a function that schedules async functions by given parameters:
  * 1. No more than `concurrency` functions being invoked at one moment
@@ -17,14 +15,8 @@ export function scheduler(concurrency: number, interval: number) {
       release();
       throw new Error(signal.reason);
     }
-    const start = performance.now();
-    try {
-      return await cb();
-    } finally {
-      const delta = performance.now() - start;
-      if (delta < interval) setTimeout(release, interval - delta);
-      else release();
-    }
+    setTimeout(release, interval);
+    return cb();
   };
 }
 
