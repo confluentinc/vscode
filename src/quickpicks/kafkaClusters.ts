@@ -57,7 +57,17 @@ async function generateKafkaClusterQuickPick(
   let availableKafkaClusters: KafkaCluster[] = [];
   availableKafkaClusters.push(...localKafkaClusters, ...cloudKafkaClusters);
   if (availableKafkaClusters.length === 0) {
-    vscode.window.showInformationMessage("No Kafka clusters available.");
+    vscode.window.showInformationMessage("No local Apache Kafka clusters available.");
+    if (includeCCloud && !(await hasCCloudAuthSession())) {
+      const login = "Log in to Confluent Cloud";
+      vscode.window
+        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
+        .then((selected) => {
+          if (selected === login) {
+            vscode.commands.executeCommand("confluent.connections.create");
+          }
+        });
+    }
     return undefined;
   }
 
