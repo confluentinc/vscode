@@ -57,10 +57,16 @@ export interface OptionProperties {
   _enum?: Array<string>;
   /**
    *
-   * @type {any}
+   * @type {string}
    * @memberof OptionProperties
    */
-  default_value?: any | null;
+  initial_value?: string;
+  /**
+   *
+   * @type {number}
+   * @memberof OptionProperties
+   */
+  min_length?: number;
 }
 
 /**
@@ -90,7 +96,8 @@ export function OptionPropertiesFromJSONTyped(
     format: json["format"] == null ? undefined : json["format"],
     pattern: json["pattern"] == null ? undefined : json["pattern"],
     _enum: json["enum"] == null ? undefined : json["enum"],
-    default_value: json["default_value"] == null ? undefined : json["default_value"],
+    initial_value: json["initial_value"] == null ? undefined : json["initial_value"],
+    min_length: json["min_length"] == null ? undefined : json["min_length"],
   };
 }
 
@@ -105,6 +112,7 @@ export function OptionPropertiesToJSON(value?: OptionProperties | null): any {
     format: value["format"],
     pattern: value["pattern"],
     enum: value["_enum"],
-    default_value: value["default_value"],
+    initial_value: value["initial_value"],
+    min_length: value["min_length"],
   };
 }
