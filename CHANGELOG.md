@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.17.0
+
 ### Added
 
 - New context menu item "Copy Organization ID" for the logged-in "Confluent Cloud" resource,
