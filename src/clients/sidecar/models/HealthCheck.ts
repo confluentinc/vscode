@@ -27,16 +27,16 @@ export interface HealthCheck {
   status?: HealthCheckStatusEnum;
   /**
    *
-   * @type {string}
-   * @memberof HealthCheck
-   */
-  name?: string;
-  /**
-   *
    * @type {object}
    * @memberof HealthCheck
    */
   data?: object | null;
+  /**
+   *
+   * @type {string}
+   * @memberof HealthCheck
+   */
+  name?: string;
 }
 
 /**
@@ -66,8 +66,8 @@ export function HealthCheckFromJSONTyped(json: any, ignoreDiscriminator: boolean
   }
   return {
     status: json["status"] == null ? undefined : json["status"],
-    name: json["name"] == null ? undefined : json["name"],
     data: json["data"] == null ? undefined : json["data"],
+    name: json["name"] == null ? undefined : json["name"],
   };
 }
 
@@ -77,7 +77,7 @@ export function HealthCheckToJSON(value?: HealthCheck | null): any {
   }
   return {
     status: value["status"],
-    name: value["name"],
     data: value["data"],
+    name: value["name"],
   };
 }

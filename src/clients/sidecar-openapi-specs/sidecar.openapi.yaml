@@ -209,6 +209,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Preferences"
+        "400":
+          description: Provided preferences are not valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
   /gateway/v1/templates:
     get:
       tags:
@@ -656,7 +662,11 @@ components:
           type: array
           items:
             type: string
-        default_value: {}
+        initial_value:
+          type: string
+        min_length:
+          format: int32
+          type: integer
     PartitionConsumeData:
       type: object
       properties:
@@ -902,8 +912,8 @@ components:
             - UP
             - DOWN
           type: string
-        name:
-          type: string
         data:
           type: object
           nullable: true
+        name:
+          type: string

@@ -13,8 +13,13 @@
  */
 
 import * as runtime from "../runtime";
-import type { Preferences } from "../models/index";
-import { PreferencesFromJSON, PreferencesToJSON } from "../models/index";
+import type { Failure, Preferences } from "../models/index";
+import {
+  FailureFromJSON,
+  FailureToJSON,
+  PreferencesFromJSON,
+  PreferencesToJSON,
+} from "../models/index";
 
 export interface GatewayV1PreferencesPutRequest {
   Preferences?: Preferences;
