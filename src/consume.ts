@@ -251,8 +251,8 @@ function messageViewerStartPollingCommand(
     let ahead = ts.head;
     for (let i = limit; i >= 0; i--) {
       const tick = i === 0 ? 0 : ticks[i - 1];
-      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick)!;
-      const notEmptyBin = ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
+      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick);
+      const notEmptyBin = curr != null && ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
       let total = 0;
       let filter = 0;
       if (notEmptyBin) {
