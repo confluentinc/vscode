@@ -251,8 +251,8 @@ function messageViewerStartPollingCommand(
     let ahead = ts.head;
     for (let i = limit; i >= 0; i--) {
       const tick = i === 0 ? 0 : ticks[i - 1];
-      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick)!;
-      const notEmptyBin = ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
+      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick);
+      const notEmptyBin = curr != null && ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
       let total = 0;
       let filter = 0;
       if (notEmptyBin) {
@@ -274,7 +274,7 @@ function messageViewerStartPollingCommand(
           if (includes(curr)) filter++;
         }
       }
-      ahead = curr;
+      if (curr != null) ahead = curr;
       const x0 = i === 0 ? d0 : ticks[i - 1];
       const x1 = i === limit ? d1 : ticks[i];
       bins.unshift({ x0, x1, total, filter: bits != null ? filter : null });
