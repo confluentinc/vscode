@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.17.1
+
+### Fixed
+
+- Hardened handling of empty bins in the histogram of the message viewer
+
 ## 0.17.0
 
 ### Added
