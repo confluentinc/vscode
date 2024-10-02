@@ -65,7 +65,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
     }
     analytics = new Analytics({ writeKey, disable: false });
   }
-  // We extract the vscode session ID from the event data, but this random id be sent if it is undefined (unlikely but not guranteed by the type def)
+  // We extract the vscode session ID from the event data, but this random id will be sent if it is undefined (unlikely but not guranteed by the type def)
   segmentAnonId = randomUUID();
   telemetryLogger = vscode.env.createTelemetryLogger({
     sendEventData: (eventName, data) => {

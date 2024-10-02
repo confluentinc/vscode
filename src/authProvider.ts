@@ -152,7 +152,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("Failed to find created connection");
     }
 
-    // User logged in successful so we can send an identify event to Segment
+    // User logged in successfully so we send an identify event to Segment
     if (authenticatedConnection) {
       getTelemetryLogger().logUsage("Signed In", {
         identify: true,
