@@ -248,7 +248,8 @@ function setupSentry() {
     if (IS_CI) throw sentryToken.error;
     else console.error(sentryToken.error);
   } else if (sentryToken.status !== 0) {
-    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${sentryToken.stderr}`);
+    if (IS_CI)
+      throw new Error(`Failed to fetch SENTRY_AUTH_TOKEN from Vault: ${sentryToken.stderr}`);
     else console.error(sentryToken.stderr.toString());
   } else {
     process.env.SENTRY_AUTH_TOKEN = sentryToken.stdout.toString().trim();
@@ -263,7 +264,7 @@ function setupSentry() {
     if (IS_CI) throw sentryDsn.error;
     else console.error(sentryDsn.error);
   } else if (sentryDsn.status !== 0) {
-    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${sentryDsn.stderr}`);
+    if (IS_CI) throw new Error(`Failed to fetch SENTRY_DSN from Vault: ${sentryDsn.stderr}`);
     else console.error(sentryDsn.stderr.toString());
   } else {
     process.env.SENTRY_DSN = sentryDsn.stdout.toString().trim();
@@ -282,7 +283,8 @@ function setupSegment() {
     if (IS_CI) throw segmentKey.error;
     else console.error(segmentKey.error);
   } else if (segmentKey.status !== 0) {
-    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${segmentKey.stderr}`);
+    if (IS_CI)
+      throw new Error(`Failed to fetch SEGMENT_WRITE_KEY from Vault: ${segmentKey.stderr}`);
     else console.error(segmentKey.stderr.toString());
   } else {
     process.env.SEGMENT_WRITE_KEY = segmentKey.stdout.toString().trim();
