@@ -17,6 +17,7 @@ import { getStorageManager } from "./storage";
 import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "./storage/constants";
 import { getResourceManager } from "./storage/resourceManager";
 import { getUriHandler } from "./uriHandler";
+import { getTelemetryLogger } from "./telemetry";
 
 const logger = new Logger("authProvider");
 
@@ -151,6 +152,13 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("Failed to find created connection");
     }
 
+    // User logged in successful so we can send an identify event to Segment
+    if (authenticatedConnection) {
+      getTelemetryLogger().logUsage("Signed In", {
+        identify: true,
+        user: authenticatedConnection.status.authentication.user,
+      });
+    }
     // we want to continue regardless of whether or not the user dismisses the notification,
     // so we aren't awaiting this:
     vscode.window.showInformationMessage(
