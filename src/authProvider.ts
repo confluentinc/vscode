@@ -153,7 +153,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     }
 
     // User logged in successfully so we send an identify event to Segment
-    if (authenticatedConnection) {
+    if (authenticatedConnection.status.authentication.user) {
       getTelemetryLogger().logUsage("Signed In", {
         identify: true,
         user: authenticatedConnection.status.authentication.user,
