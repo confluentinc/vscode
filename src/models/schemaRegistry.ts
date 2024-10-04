@@ -5,8 +5,10 @@ import { CustomMarkdownString } from "./main";
 
 // Main class representing CCloud Schema Registry clusters, matching key/value pairs returned
 // by the `confluent schema-registry cluster describe` command.
-export class SchemaRegistryCluster extends Data {
+export class CCloudSchemaRegistry extends Data {
   readonly connectionId = CCLOUD_CONNECTION_ID;
+  readonly isLocal: boolean = false;
+  readonly isCCloud: boolean = true;
 
   id!: Enforced<string>;
   provider!: Enforced<string>;
@@ -20,16 +22,20 @@ export class SchemaRegistryCluster extends Data {
   }
 }
 
-// Tree item representing a CCloud Schema Registry cluster
-export class SchemaRegistryClusterTreeItem extends vscode.TreeItem {
-  resource: SchemaRegistryCluster;
+// TODO(shoup): add LocalSchemaRegistry once available
+export type SchemaRegistry = CCloudSchemaRegistry;
 
-  constructor(resource: SchemaRegistryCluster) {
+// Tree item representing a CCloud Schema Registry cluster
+export class SchemaRegistryTreeItem extends vscode.TreeItem {
+  resource: SchemaRegistry;
+
+  constructor(resource: SchemaRegistry) {
     const label = "Schema Registry";
     super(label, vscode.TreeItemCollapsibleState.None);
 
     // internal properties
     this.resource = resource;
+    // TODO(shoup): update context value once local SR is available
     this.contextValue = "ccloud-schema-registry-cluster";
 
     // user-facing properties
@@ -46,9 +52,7 @@ export class SchemaRegistryClusterTreeItem extends vscode.TreeItem {
   }
 }
 
-function createSchemaRegistryClusterTooltip(
-  resource: SchemaRegistryCluster,
-): vscode.MarkdownString {
+function createSchemaRegistryClusterTooltip(resource: CCloudSchemaRegistry): vscode.MarkdownString {
   // TODO(shoup) update for local SR once available
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry Cluster`)
