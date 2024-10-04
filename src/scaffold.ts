@@ -155,16 +155,17 @@ async function applyTemplate(
     templateName: pickedTemplate.spec.display_name,
   });
   // Notify the user that the project was generated successfully
-  const newWindowButton = "Open Project in New Window";
   const selection = await vscode.window.showInformationMessage(
-    `🎉 Generated "${pickedTemplate.spec.display_name}" in ${destination.path}`,
-    newWindowButton,
-    "Switch to Project",
+    `🎉 Project Generated`,
+    { modal: true, detail: `Location: ${destination.path}` },
+    { title: "Open in New Window" },
+    { title: "Open in Current Window" },
+    { title: "Dismiss", isCloseAffordance: true },
   );
   if (selection !== undefined) {
     // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
     // reusing the current one
-    const keepsExistingWindow = selection === newWindowButton;
+    const keepsExistingWindow = selection.title === "Open in New Window";
     getTelemetryLogger().logUsage("Scaffold Folder Opened", {
       templateName: pickedTemplate.spec.display_name,
       keepsExistingWindow,
@@ -183,7 +184,7 @@ async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) 
     // TODO: report progress here while writing files
     for (const [name, entry] of Object.entries(entries)) {
       const entryBuffer = await entry.arrayBuffer();
-      vscode.workspace.fs.writeFile(
+      await vscode.workspace.fs.writeFile(
         vscode.Uri.file(posix.join(destination.path, name)),
         new Uint8Array(entryBuffer),
       );
