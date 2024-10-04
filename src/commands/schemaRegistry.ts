@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
-import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistryClusters";
+import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 
 async function selectSchemaRegistryCommand(cluster?: SchemaRegistry) {
   // ensure whatever was passed in is a SchemaRegistry instance; if not, prompt the user to pick one

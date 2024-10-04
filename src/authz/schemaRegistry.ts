@@ -32,7 +32,7 @@ export async function canAccessSchemaTypeForTopic(
 
   const environmentId: string = topic.environmentId;
   const schemaRegistry: CCloudSchemaRegistry | null =
-    await getResourceManager().getCCloudSchemaRegistryCluster(environmentId);
+    await getResourceManager().getCCloudSchemaRegistry(environmentId);
   if (!schemaRegistry) {
     logger.debug(
       "no Schema Registry cluster in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",

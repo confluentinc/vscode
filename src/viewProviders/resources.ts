@@ -217,7 +217,7 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   subItems.push(...kafkaClusters);
 
   // Schema registry?
-  const schemaRegistry: CCloudSchemaRegistry | null = await rm.getCCloudSchemaRegistryCluster(
+  const schemaRegistry: CCloudSchemaRegistry | null = await rm.getCCloudSchemaRegistry(
     environment.id,
   );
   if (schemaRegistry) {

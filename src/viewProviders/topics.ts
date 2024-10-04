@@ -176,9 +176,7 @@ export async function getTopicsForCluster(
     await preloader.ensureCoarseResourcesLoaded(forceRefresh);
 
     // Get the schema registry id for the cluster's environment
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(
-      cluster.environmentId,
-    );
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
 
     if (schemaRegistry) {
       // Ensure the schemas are loaded for the schema registry, honoring the forceRefresh flag.
@@ -200,7 +198,7 @@ export async function getTopicsForCluster(
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
 
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(environmentId);
     if (schemaRegistry) {
       schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
       if (schemas === undefined) {
@@ -289,8 +287,9 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
   // look up the associated SR cluster based on the topic's environment, then pull the schemas
   const resourceManager = getResourceManager();
 
-  const schemaRegistry: CCloudSchemaRegistry | null =
-    await resourceManager.getCCloudSchemaRegistryCluster(topic.environmentId!);
+  const schemaRegistry: CCloudSchemaRegistry | null = await resourceManager.getCCloudSchemaRegistry(
+    topic.environmentId!,
+  );
   if (!schemaRegistry) {
     logger.warn("No Schema Registry cluster found for topic", topic);
     return [];

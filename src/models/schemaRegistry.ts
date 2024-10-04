@@ -41,7 +41,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
     // user-facing properties
     this.description = this.resource.id;
     this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY);
-    this.tooltip = createSchemaRegistryClusterTooltip(this.resource);
+    this.tooltip = createSchemaRegistryTooltip(this.resource);
 
     // set primary click action to select this cluster as the current one, focusing it in the Schemas view
     this.command = {
@@ -52,7 +52,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
   }
 }
 
-function createSchemaRegistryClusterTooltip(resource: CCloudSchemaRegistry): vscode.MarkdownString {
+function createSchemaRegistryTooltip(resource: CCloudSchemaRegistry): vscode.MarkdownString {
   // TODO(shoup) update for local SR once available
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry Cluster`)
