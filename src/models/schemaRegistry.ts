@@ -3,8 +3,6 @@ import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
 
-// Main class representing CCloud Schema Registry clusters, matching key/value pairs returned
-// by the `confluent schema-registry cluster describe` command.
 export class CCloudSchemaRegistry extends Data {
   readonly connectionId = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
@@ -25,7 +23,7 @@ export class CCloudSchemaRegistry extends Data {
 // TODO(shoup): add LocalSchemaRegistry once available
 export type SchemaRegistry = CCloudSchemaRegistry;
 
-// Tree item representing a CCloud Schema Registry cluster
+// Tree item representing a Schema Registry in the Resources view
 export class SchemaRegistryTreeItem extends vscode.TreeItem {
   resource: SchemaRegistry;
 
@@ -36,7 +34,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
     // internal properties
     this.resource = resource;
     // TODO(shoup): update context value once local SR is available
-    this.contextValue = "ccloud-schema-registry-cluster";
+    this.contextValue = "ccloud-schema-registry";
 
     // user-facing properties
     this.description = this.resource.id;
@@ -46,7 +44,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
     // set primary click action to select this cluster as the current one, focusing it in the Schemas view
     this.command = {
       command: "confluent.resources.schema-registry.select",
-      title: "Set Current Schema Registry Cluster",
+      title: "Set Current Schema Registry",
       arguments: [this.resource],
     };
   }
@@ -55,7 +53,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
 function createSchemaRegistryTooltip(resource: CCloudSchemaRegistry): vscode.MarkdownString {
   // TODO(shoup) update for local SR once available
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry Cluster`)
+    .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Provider: \`${resource.provider}\`\n\n`)

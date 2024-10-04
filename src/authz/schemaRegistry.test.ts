@@ -40,7 +40,7 @@ describe("authz.schemaRegistry", function () {
 
   afterEach(async function () {
     sandbox.restore();
-    // clear out the existing Schema Registry cluster after each test
+    // clear out the existing Schema Registry after each test
     await resourceManager.deleteCCloudSchemaRegistries(TEST_SCHEMA_REGISTRY.environmentId);
     // restore `getConfiguration()` to its original implementation
     getConfigurationStub.restore();
@@ -82,7 +82,7 @@ describe("authz.schemaRegistry", function () {
   });
 
   it("canAccessSchemaTypeForTopic() should return true if schemaRegistry is not found", async function () {
-    // clear out the existing Schema Registry cluster before checking schema access
+    // clear out the existing Schema Registry before checking schema access
     await resourceManager.deleteCCloudSchemaRegistries(TEST_SCHEMA_REGISTRY.environmentId);
 
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");

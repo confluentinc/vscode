@@ -26,7 +26,7 @@ async function viewLocallyCommand(schema: Schema) {
   );
 }
 
-/** Copy the Schema Registry cluster ID from the Schemas tree provider nav action. */
+/** Copy the Schema Registry ID from the Schemas tree provider nav action. */
 async function copySchemaRegistryId() {
   const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   if (!schemaRegistry) {

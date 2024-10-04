@@ -284,14 +284,14 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
     // TODO: update this once we're able to associate schemas with local topics
     return [];
   }
-  // look up the associated SR cluster based on the topic's environment, then pull the schemas
+  // look up the associated Schema Registry based on the topic's environment, then pull the schemas
   const resourceManager = getResourceManager();
 
   const schemaRegistry: CCloudSchemaRegistry | null = await resourceManager.getCCloudSchemaRegistry(
     topic.environmentId!,
   );
   if (!schemaRegistry) {
-    logger.warn("No Schema Registry cluster found for topic", topic);
+    logger.warn("No Schema Registry found for topic", topic);
     return [];
   }
 

@@ -18,7 +18,7 @@ export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
  */
 export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster | null>();
 /**
- * Fired whenever a Schema Registry cluster is selected from the Resources view, chosen from the
+ * Fired whenever a Schema Registry is selected from the Resources view, chosen from the
  * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
  * (or CCloud organization) change.
  */

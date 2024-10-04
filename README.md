@@ -54,8 +54,7 @@ The **Resources** view lists Confluent Cloud environments and associated Kafka a
 clusters, as well as local Kafka clusters.
 
 - Click a Kafka cluster to load the topics created in that cluster in the Topics view.
-- Click a Schema Registry cluster to load the associated schemas for that registry in the Schemas
-  view.
+- Click a Schema Registry to load the associated schemas for that registry in the Schemas view.
 
 #### Topics
 

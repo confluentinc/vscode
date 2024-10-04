@@ -33,9 +33,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
-  /** The parent of the focused Schema Registry cluster, if it came from CCloud.  */
+  /** The parent of the focused Schema Registry, if it came from CCloud.  */
   public ccloudEnvironment: CCloudEnvironment | null = null;
-  /** The focused Schema Registry cluster; set by clicking a Schema Registry item in the Resources view. */
+  /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
   public schemaRegistry: SchemaRegistry | null = null;
 
   private static instance: SchemasViewProvider | null = null;

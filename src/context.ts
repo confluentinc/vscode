@@ -57,7 +57,7 @@ export enum ContextValues {
   resourceSelectedForCompare = "confluent.resourceSelectedForCompare",
   /** The user clicked a Kafka cluster tree item. */
   kafkaClusterSelected = "confluent.kafkaClusterSelected",
-  /** The user clicked a Schema Registry cluster tree item. */
+  /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
 }
 

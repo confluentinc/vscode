@@ -11,7 +11,7 @@ export class CCloudEnvironment extends Data {
   id!: Enforced<string>;
   name!: Enforced<string>;
   streamGovernancePackage!: Enforced<string>;
-  /** Has at least one Kafka or Schema Registry Cluster */
+  /** Has at least one Kafka cluster or Schema Registry */
   hasClusters!: Enforced<boolean>;
 
   get ccloudUrl(): string {
