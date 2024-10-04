@@ -5,7 +5,7 @@ import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistryClusters";
 
 async function selectSchemaRegistryCommand(cluster?: SchemaRegistry) {
-  // ensure whatever was passed in is a SchemaRegistryCluster; if not, prompt the user to pick one
+  // ensure whatever was passed in is a SchemaRegistry instance; if not, prompt the user to pick one
   // TODO(shoup): update to support LocalSchemaRegistry
   const schemaRegistry =
     cluster instanceof CCloudSchemaRegistry ? cluster : await schemaRegistryQuickPick();
