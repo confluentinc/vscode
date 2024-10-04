@@ -15,7 +15,7 @@ async function selectForCompareCommand(item: any) {
     return;
   }
   const uri: vscode.Uri = convertItemToUri(item);
-  logger.info("Selected item for compare", uri);
+  logger.debug("Selected item for compare", uri);
   await getStorageManager().setWorkspaceState(StateDiffs.SELECTED_RESOURCE, uri);
   // allows the "Compare with Selected" command to be used
   await setContextValue(ContextValues.resourceSelectedForCompare, true);
@@ -26,7 +26,7 @@ async function compareWithSelectedCommand(item: any) {
     return;
   }
   const uri2: vscode.Uri = convertItemToUri(item);
-  logger.info("Comparing with selected item", uri2);
+  logger.debug("Comparing with selected item", uri2);
 
   const uri1: vscode.Uri | undefined = await getStorageManager().getWorkspaceState(
     StateDiffs.SELECTED_RESOURCE,
@@ -40,7 +40,7 @@ async function compareWithSelectedCommand(item: any) {
   const uri1Path = uri1.fsPath.replace(homedir(), "~");
   const uri2Path = uri2.fsPath.replace(homedir(), "~");
   const title = `${uri1Path} ↔ ${uri2Path}`;
-  logger.info("Comparing resources", uri1, uri2, title);
+  logger.debug("Comparing resources", uri1, uri2, title);
   vscode.commands.executeCommand("vscode.diff", uri1, uri2, title);
 }
 
