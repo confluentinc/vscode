@@ -18,7 +18,7 @@ if (process.env.SENTRY_DSN) {
     integrations: [
       SentryCore.thirdPartyErrorFilterIntegration({
         filterKeys: ["confluent-vscode-extension-sentry-do-not-use"],
-        behaviour: "drop-error-if-exclusively-contains-third-party-frames",
+        behaviour: "drop-error-if-contains-third-party-frames",
       }),
       Sentry.rewriteFramesIntegration(),
     ],
