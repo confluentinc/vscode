@@ -10,7 +10,7 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { AUTH_COMPLETED_KEY } from "./constants";
 
@@ -23,15 +23,15 @@ export type CCloudKafkaClustersByEnv = Map<string, CCloudKafkaCluster[]>;
 export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
 
 /**
- * Type for storing {@link SchemaRegistryCluster}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
+ * Type for storing {@link CCloudSchemaRegistry}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
  * @remarks If we ever have to deal with situations where multiple Schema Registry clusters are
  * available under a single parent resource, this type will either need to be updated or a new type
  * will need to be created. For now, we're leaning into the fact that CCloud environments only have
  * one Schema Registry cluster apiece.
  */
-export type CCloudSchemaRegistryByEnv = Map<string, SchemaRegistryCluster>;
+export type CCloudSchemaRegistryByEnv = Map<string, CCloudSchemaRegistry>;
 
-/** Type for storing {@link Schema}s in extension state, where the parent {@link SchemaRegistryCluster} ID is the key. */
+/** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
 export type CCloudSchemaBySchemaRegistryCluster = Map<string, Schema[]>;
 
 /**
@@ -243,7 +243,7 @@ export class ResourceManager {
   // SCHEMA REGISTRY
 
   /** Cache all of the CCloud schema registries at once. */
-  async setCCloudSchemaRegistryClusters(clusters: SchemaRegistryCluster[]): Promise<void> {
+  async setCCloudSchemaRegistryClusters(clusters: CCloudSchemaRegistry[]): Promise<void> {
     const clustersByEnv: CCloudSchemaRegistryByEnv = new Map();
     clusters.forEach((cluster) => {
       clustersByEnv.set(cluster.environmentId, cluster);
@@ -252,8 +252,8 @@ export class ResourceManager {
   }
 
   /**
-   * Get the available {@link SchemaRegistryCluster}s from extension state.
-   * @returns The map of <environmentId (string), {@link SchemaRegistryCluster}>
+   * Get the available {@link CCloudSchemaRegistry}s from extension state.
+   * @returns The map of <environmentId (string), {@link CCloudSchemaRegistry}>
    */
   async getCCloudSchemaRegistryClusters(): Promise<CCloudSchemaRegistryByEnv> {
     const clustersByEnvPlainJSON: CCloudSchemaRegistryByEnv | undefined =
@@ -264,24 +264,24 @@ export class ResourceManager {
       return new Map(
         Array.from(clustersByEnvPlainJSON).map(([envId, cluster]) => [
           envId,
-          SchemaRegistryCluster.create(cluster),
+          CCloudSchemaRegistry.create(cluster),
         ]),
       );
     } else {
-      return new Map<string, SchemaRegistryCluster>();
+      return new Map<string, CCloudSchemaRegistry>();
     }
   }
 
   /**
    * Get a specific Schema Registry cluster from extension state.
    * @param environmentId The ID of the {@link CCloudEnvironment} from which to get the Schema Registry cluster
-   * @returns The associated {@link SchemaRegistryCluster}, or `null` (if the environment is not found or has no Schema Registry)
+   * @returns The associated {@link CCloudSchemaRegistry}, or `null` (if the environment is not found or has no Schema Registry)
    */
   async getCCloudSchemaRegistryCluster(
     environmentId: string,
-  ): Promise<SchemaRegistryCluster | null> {
+  ): Promise<CCloudSchemaRegistry | null> {
     const clusters: CCloudSchemaRegistryByEnv = await this.getCCloudSchemaRegistryClusters();
-    const clusterForEnv: SchemaRegistryCluster | null = clusters.get(environmentId) ?? null;
+    const clusterForEnv: CCloudSchemaRegistry | null = clusters.get(environmentId) ?? null;
     if (!clusterForEnv) {
       logger.warn(`No Schema Registry cluster found for environment ${environmentId}`);
     }
@@ -291,7 +291,7 @@ export class ResourceManager {
   /** Get a specific Schema Registry by its cluster id */
   async getCCloudSchemaRegistryClusterById(
     clusterId: string,
-  ): Promise<SchemaRegistryCluster | null> {
+  ): Promise<CCloudSchemaRegistry | null> {
     const clusters = await this.getCCloudSchemaRegistryClusters();
     for (const cluster of clusters.values()) {
       if (cluster.id === clusterId) {
@@ -304,7 +304,7 @@ export class ResourceManager {
   /**
    * Delete the list of available Schema Registry clusters from extension state.
    * @param environment Optional: the ID of the environment for which to delete Schema Registry clusters;
-   * if not provided, all <environmentId, {@link SchemaRegistryCluster}> pairs will be deleted
+   * if not provided, all <environmentId, {@link CCloudSchemaRegistry}> pairs will be deleted
    */
   async deleteCCloudSchemaRegistryClusters(environment?: string): Promise<void> {
     if (!environment) {
@@ -419,7 +419,7 @@ export class ResourceManager {
   }
 
   /**
-   * Get the available {@link Schema}s for a specific {@link SchemaRegistryCluster} from extension state.
+   * Get the available {@link Schema}s for a specific {@link CCloudSchemaRegistry} from extension state.
    * @param schemaRegistryClusterId The ID of the Schema Registry cluster for which to get schemas
    * @returns The list of {@link Schema}s for the specified cluster, or undefined if we do not have this schema registry cluster currently cached.
    */

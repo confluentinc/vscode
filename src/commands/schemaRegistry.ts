@@ -1,13 +1,14 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentSchemaRegistryChanged } from "../emitters";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistryClusters";
 
-async function selectSchemaRegistryCommand(cluster?: SchemaRegistryCluster) {
+async function selectSchemaRegistryCommand(cluster?: SchemaRegistry) {
   // ensure whatever was passed in is a SchemaRegistryCluster; if not, prompt the user to pick one
+  // TODO(shoup): update to support LocalSchemaRegistry
   const schemaRegistry =
-    cluster instanceof SchemaRegistryCluster ? cluster : await schemaRegistryQuickPick();
+    cluster instanceof CCloudSchemaRegistry ? cluster : await schemaRegistryQuickPick();
   if (!schemaRegistry) {
     return;
   }

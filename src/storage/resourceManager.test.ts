@@ -19,7 +19,7 @@ import {
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CCloudKafkaClustersByEnv,
@@ -329,12 +329,12 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
 
   it("CCLOUD: setCCloudSchemaRegistryClusters() should correctly store Schema Registry clusters", async () => {
     const secondCloudEnvironment = { ...TEST_CCLOUD_ENVIRONMENT, id: "second-cloud-env-id" };
-    const secondSchemaRegistry = SchemaRegistryCluster.create({
+    const secondSchemaRegistry = CCloudSchemaRegistry.create({
       ...TEST_SCHEMA_REGISTRY,
       environmentId: secondCloudEnvironment.id,
       id: "second-schema-registry-id",
     });
-    const testClusters: SchemaRegistryCluster[] = [TEST_SCHEMA_REGISTRY, secondSchemaRegistry];
+    const testClusters: CCloudSchemaRegistry[] = [TEST_SCHEMA_REGISTRY, secondSchemaRegistry];
 
     const rm = getResourceManager();
     await rm.setCCloudSchemaRegistryClusters(testClusters);
@@ -384,7 +384,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     // set the clusters
     await getResourceManager().setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     // verify the cluster was not found because the environment ID is incorrect
-    const missingCluster: SchemaRegistryCluster | null =
+    const missingCluster: CCloudSchemaRegistry | null =
       await getResourceManager().getCCloudSchemaRegistryCluster("nonexistent-env-id");
     assert.strictEqual(missingCluster, null);
   });
@@ -393,7 +393,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     // set the clusters
     await getResourceManager().setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     // verify the cluster was retrieved correctly
-    const cluster: SchemaRegistryCluster | null =
+    const cluster: CCloudSchemaRegistry | null =
       await getResourceManager().getCCloudSchemaRegistryClusterById(TEST_SCHEMA_REGISTRY.id);
 
     assert.deepStrictEqual(cluster, TEST_SCHEMA_REGISTRY);
@@ -403,7 +403,7 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     // set the clusters
     await getResourceManager().setCCloudSchemaRegistryClusters([TEST_SCHEMA_REGISTRY]);
     // verify the cluster was not found
-    const missingCluster: SchemaRegistryCluster | null =
+    const missingCluster: CCloudSchemaRegistry | null =
       await getResourceManager().getCCloudSchemaRegistryClusterById("nonexistent-cluster-id");
     assert.strictEqual(missingCluster, null);
   });

@@ -4,7 +4,7 @@ import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { Schema, SchemaType } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "./resourceManager";
 
@@ -136,10 +136,10 @@ export class CCloudResourcePreloader {
       await resourceManager.setCCloudKafkaClusters(kafkaClusters);
 
       // Likewise the schema registries, but filter out any undefineds for environments that don't have one.
-      const schemaRegistries: SchemaRegistryCluster[] = envGroups
+      const schemaRegistries: CCloudSchemaRegistry[] = envGroups
         .map((envGroup) => envGroup.schemaRegistry)
         .filter(
-          (schemaRegistry): schemaRegistry is SchemaRegistryCluster => schemaRegistry !== undefined,
+          (schemaRegistry): schemaRegistry is CCloudSchemaRegistry => schemaRegistry !== undefined,
         );
 
       await resourceManager.setCCloudSchemaRegistryClusters(schemaRegistries);

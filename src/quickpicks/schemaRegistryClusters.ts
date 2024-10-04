@@ -3,21 +3,21 @@ import { IconNames } from "../constants";
 import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("quickpicks.schemaRegistryClusters");
 
 /** Progress wrapper for the Schema Registry quickpick to accomodate data-fetching time. */
-export async function schemaRegistryQuickPick(): Promise<SchemaRegistryCluster | undefined> {
+export async function schemaRegistryQuickPick(): Promise<CCloudSchemaRegistry | undefined> {
   return await vscode.window.withProgress(
     {
       location: { viewId: "confluent-schemas" },
       title: "Loading Schema Registry clusters...",
     },
     async () => {
-      return await generateSchemaRegistryClusterQuickPick();
+      return await generateSchemaRegistryQuickPick();
     },
   );
 }
@@ -27,18 +27,17 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistryCluster |
  * separators). Mainly used in the event a command was triggered through the command palette instead
  * of through the view->item->context menu.
  */
-async function generateSchemaRegistryClusterQuickPick(): Promise<
-  SchemaRegistryCluster | undefined
-> {
+async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+  // TODO(shoup): update to support LocalSchemaRegistry
   if (!(await hasCCloudAuthSession())) {
     return undefined;
   }
   // list all Schema Registry clusters for all CCloud environments for the given connection; to be
   // separated further by environment in the quickpick menu below
   const envGroups = await getEnvironments();
-  const clusters: SchemaRegistryCluster[] = envGroups
+  const clusters: CCloudSchemaRegistry[] = envGroups
     .map((group) => group.schemaRegistry)
-    .filter((cluster) => cluster !== undefined) as SchemaRegistryCluster[];
+    .filter((cluster) => cluster !== undefined) as CCloudSchemaRegistry[];
   if (clusters.length === 0) {
     vscode.window.showInformationMessage("No Schema Registry clusters available.");
     return undefined;
@@ -58,8 +57,8 @@ async function generateSchemaRegistryClusterQuickPick(): Promise<
       label: "Confluent Cloud",
     },
   ];
-  const schemaRegistryClusterMap: Map<string, SchemaRegistryCluster> = new Map();
-  clusters.forEach((cluster: SchemaRegistryCluster) => {
+  const schemaRegistryClusterMap: Map<string, CCloudSchemaRegistry> = new Map();
+  clusters.forEach((cluster: CCloudSchemaRegistry) => {
     const environment: CCloudEnvironment | undefined = environmentMap.get(cluster.environmentId);
     if (!environment) {
       logger.warn(`No environment found for Schema Registry ${cluster.id}`);

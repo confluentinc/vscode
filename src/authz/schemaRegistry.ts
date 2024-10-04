@@ -1,7 +1,7 @@
 import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
@@ -31,7 +31,7 @@ export async function canAccessSchemaTypeForTopic(
   }
 
   const environmentId: string = topic.environmentId;
-  const schemaRegistry: SchemaRegistryCluster | null =
+  const schemaRegistry: CCloudSchemaRegistry | null =
     await getResourceManager().getCCloudSchemaRegistryCluster(environmentId);
   if (!schemaRegistry) {
     logger.debug(

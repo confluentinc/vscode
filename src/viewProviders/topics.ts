@@ -9,7 +9,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
@@ -289,7 +289,7 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
   // look up the associated SR cluster based on the topic's environment, then pull the schemas
   const resourceManager = getResourceManager();
 
-  const schemaRegistry: SchemaRegistryCluster | null =
+  const schemaRegistry: CCloudSchemaRegistry | null =
     await resourceManager.getCCloudSchemaRegistryCluster(topic.environmentId!);
   if (!schemaRegistry) {
     logger.warn("No Schema Registry cluster found for topic", topic);

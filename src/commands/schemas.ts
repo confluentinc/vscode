@@ -3,7 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
@@ -28,7 +28,7 @@ async function viewLocallyCommand(schema: Schema) {
 
 /** Copy the Schema Registry cluster ID from the Schemas tree provider nav action. */
 async function copySchemaRegistryId() {
-  const cluster: SchemaRegistryCluster | null = getSchemasViewProvider().schemaRegistry;
+  const cluster: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   if (!cluster) {
     return;
   }
