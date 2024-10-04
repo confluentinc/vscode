@@ -75,7 +75,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
         analytics?.identify({
           userId,
           anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
-          traits: { ...data?.user },
+          traits: { email: data?.user?.username, social_connection: data?.user?.social_connection },
         });
         // We don't want to send the user traits or identify prop in the following Track call
         delete data.identify;
