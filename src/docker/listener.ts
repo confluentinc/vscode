@@ -5,60 +5,54 @@ import { DockerClient } from "./client";
 
 const logger = new Logger("docker.listener");
 
-export async function getEvents(): Promise<void> {
+const EVENT_FILTERS = {
+  type: ["container"],
+  images: ["confluentinc/confluent-local"],
+};
+
+/**
+ * Continuously check for Docker availability and query the system events.
+ * Depending on the event, we may emit events to update the UI.
+ * @see https://docs.docker.com/reference/api/engine/version/v1.47/#tag/System/operation/SystemEvents
+ */
+export async function listenForEvents(): Promise<void> {
   const client = DockerClient.getInstance();
 
-  const eventQueryParams = {
-    type: ["container"],
-    // event: ["start", "die"],
-    images: ["confluentinc/confluent-local"],
-  };
-  const queryParams = JSON.stringify(eventQueryParams);
+  // TODO: make user-configurable with WorkspaceConfiguration?
+  const queryParams = JSON.stringify(EVENT_FILTERS);
   const endpoint = "/events?filters=" + encodeURIComponent(queryParams);
 
   // keep a top-level loop running in case we lose connection to docker or the stream ends
   // or something else goes wrong
   while (true) {
-    // make sure docker is available first
-    try {
-      await client.request("/_ping");
-    } catch (error) {
-      if (error instanceof Error) {
-        logger.warn("can't ping docker; not listening for events:", error.message);
-      }
+    // check if Docker is available before trying to listen for events, taking into account the user
+    // may have started the extension before Docker is running
+    const isDockerAvailable = await pingDocker();
+    if (!isDockerAvailable) {
+      // wait a bit before trying again
       await new Promise((resolve) => {
         setTimeout(resolve, 15_000);
       });
       continue;
     }
 
-    const response = await client.request(endpoint);
-    if (!response.ok) {
-      logger.warn("error response trying to get events:", {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      await new Promise((resolve) => {
-        setTimeout(resolve, 5000);
-      });
-      continue;
-    }
-
-    // this section will block until the stream ends or an error occurs, so we don't have to keep
-    // making requests against /events for each event we want to capture
-    const body: ReadableStream = response.body;
-    const reader: ReadableStreamDefaultReader<any> = body.getReader();
-    logger.debug("listening for events...", { locked: body.locked });
-    while (true) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const event = new TextDecoder().decode(value);
-        await handleEvent(event);
-      } catch (error) {
-        logger.error("error reading events stream:", error);
-        break;
+    try {
+      const response = await client.request(endpoint);
+      if (!response.ok) {
+        logger.debug("error response trying to get events:", {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        await new Promise((resolve) => {
+          setTimeout(resolve, 5000);
+        });
+        continue;
       }
+      // this will block until the stream ends or an error occurs, so we don't have to keep making
+      // requests against /events for each event we want to capture
+      await readEventStream(response.body as ReadableStream<Uint8Array>);
+    } catch (error) {
+      logger.error("error getting event stream:", error);
     }
 
     await new Promise((resolve) => {
@@ -67,39 +61,100 @@ export async function getEvents(): Promise<void> {
   }
 }
 
-export async function handleEvent(event: any) {
+/**
+ * Check if Docker is available by attempting to ping the API.
+ * @see https://docs.docker.com/reference/api/engine/version/v1.47/#tag/System/operation/SystemPing
+ */
+async function pingDocker(): Promise<boolean> {
   try {
-    event = JSON.parse(event.toString());
+    const resp = await DockerClient.getInstance().request("/_ping");
+    logger.debug("docker ping response:", resp);
+    return true;
   } catch (error) {
-    logger.error("error parsing event", error);
-    return;
+    if (error instanceof Error) {
+      logger.debug("can't ping docker; not listening for events:", { error: error.message });
+    }
   }
-  logger.debug("docker event observed: ", event);
+  return false;
+}
 
-  if (event?.Type === "container") {
-    await handleContainerEvent(event);
+/** Read the event stream and attempt to parse events before handling. */
+async function readEventStream(stream: ReadableStream<Uint8Array>) {
+  const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader();
+  logger.debug("listening for events...", { locked: stream.locked });
+  while (true) {
+    try {
+      // read an individual event from the stream
+      const { done, value } = await reader.read();
+      if (done) {
+        logger.debug("events stream ended");
+        break;
+      }
+      if (!value) {
+        logger.debug("empty value from events stream");
+        continue;
+      }
+      // convert the Uint8Array to a string and try to parse as JSON
+      let event: string = new TextDecoder().decode(value);
+      try {
+        event = JSON.parse(event);
+      } catch (error) {
+        logger.error("error parsing event", { error, event });
+        // TODO: notify the user of the error here? if a container we care about is started or
+        // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
+        // the view to see the current state
+        continue;
+      }
+      await handleEvent(event);
+    } catch (error) {
+      logger.error("error reading events stream:", error);
+      break;
+    }
   }
 }
 
-async function handleContainerEvent(event: any) {
+interface DockerEvent {
+  Type: string;
+  Action: string;
+  Actor: {
+    ID: string;
+    Attributes: {
+      [key: string]: string;
+    };
+  };
+  scope: string;
+  time: number;
+  timeNano: number;
+}
+
+export async function handleEvent(event: any) {
+  logger.debug("docker event observed: ", event);
+
+  if (event.Type !== "container") {
+    return;
+  }
   if (!event.status) {
-    logger.warn("container event missing status:", event);
+    logger.debug("container event missing status:", event);
     return;
   }
 
-  const eventTime: number = event.time ? event.time : new Date().getTime();
   const imageName: string = event?.Actor ? event.Actor.Attributes?.image ?? "" : "";
+  // capture the time of the event (or use the current time if not available) in case we need to
+  // compare it to container log timestamps
+  const eventTime: number = event.time ? event.time : new Date().getTime();
   logger.debug("container event:", { status: event.status, image: imageName });
 
   // NOTE: if we start adding more images to the `images` filter, we'll need to check those here
   if (event.status === "start") {
-    await waitForContainerRunning(event);
+    // wait for the container to be in a "Running" state (and optionally show the correct log line
+    // if it's the `confluentinc/confluent-local` image) before we consider it fully started
+    let started = await waitForContainerRunning(event);
     if (imageName.startsWith("confluentinc/confluent-local")) {
       logger.debug("container is running, checking logs...");
-      await waitForServerStartedLog(event.id, eventTime);
+      started = await waitForServerStartedLog(event.id, eventTime);
     }
-    await setContextValue(ContextValues.localKafkaClusterAvailable, true);
-    localKafkaConnected.fire(true);
+    await setContextValue(ContextValues.localKafkaClusterAvailable, started);
+    localKafkaConnected.fire(started);
   } else if (event.status === "die") {
     await setContextValue(ContextValues.localKafkaClusterAvailable, false);
     localKafkaConnected.fire(false);
@@ -107,26 +162,34 @@ async function handleContainerEvent(event: any) {
 }
 
 /** Wait for the container to be in a "Running" state. */
-async function waitForContainerRunning(event: any) {
-  const containerId = event.id;
-  const client = DockerClient.getInstance();
+async function waitForContainerRunning(event: any, maxWaitTimeSec: number = 60): Promise<boolean> {
+  // TODO: make wait time configurable?
+  let started = false;
 
   while (true) {
     try {
-      const response = await client.request(`/containers/${containerId}/json`);
+      const response = await DockerClient.getInstance().request(`/containers/${event.id}/json`);
       const containerInfo = await response.json();
       logger.debug(`container state:`, {
         state: containerInfo?.State,
         image: event.from,
       });
       if (containerInfo?.State.Running) {
+        started = true;
         break;
       }
     } catch (error) {
       logger.warn(`container not ready yet, waiting...`, { error });
     }
+
+    if (Date.now() - event.time > maxWaitTimeSec * 1000) {
+      logger.debug("timed out waiting for container to start");
+      break;
+    }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
+
+  return started;
 }
 
 /**
@@ -138,14 +201,15 @@ async function waitForServerStartedLog(
   containerId: string,
   since: number,
   maxWaitTimeSec: number = 60,
-) {
-  const client = DockerClient.getInstance();
+): Promise<boolean> {
+  // TODO: make wait time configurable?
+  let logLineFound = false;
 
   const endpoint = `/containers/${containerId}/logs?follow=true&stdout=true&since=${since}`;
 
   let logStream;
   try {
-    const response = await client.request(endpoint);
+    const response = await DockerClient.getInstance().request(endpoint);
     if (!response.ok) {
       const body = await response.text();
       logger.error("error response trying to get log stream:", {
@@ -153,12 +217,12 @@ async function waitForServerStartedLog(
         status: response.status,
         statusText: response.statusText,
       });
-      return;
+      return logLineFound;
     }
     logStream = response.body;
   } catch (error) {
     logger.error("error getting log stream:", error);
-    return;
+    return logLineFound;
   }
   const reader = logStream.getReader();
 
@@ -174,6 +238,7 @@ async function waitForServerStartedLog(
 
     if (logLine.includes("Server started, listening for requests...")) {
       logger.debug("server started log line found");
+      logLineFound = true;
       break;
     }
 
@@ -183,4 +248,5 @@ async function waitForServerStartedLog(
     }
   }
   reader.cancel();
+  return logLineFound;
 }
