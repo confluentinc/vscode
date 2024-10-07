@@ -72,6 +72,7 @@ export class DockerClient {
 
   private get defaultOptions(): RequestInit {
     return {
+      method: "GET",
       dispatcher: new Agent({
         connect: {
           socketPath: this.socketPath ? this.socketPath : undefined,
@@ -110,7 +111,7 @@ export class DockerClient {
       // callers should handle reading the response body (JSON, ReadableStream, etc.)
       return response;
     } catch (error) {
-      logger.error(`${requestOptions.method?.toUpperCase()} ${url} failed:`, error);
+      logger.debug(`${requestOptions.method?.toUpperCase()} ${url} failed:`, error);
       throw error;
     }
   }
