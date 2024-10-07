@@ -6,7 +6,6 @@ import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import { type KafkaTopic } from "./models/topic";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
-
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -26,8 +25,16 @@ import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
+import { scheduler } from "./scheduler";
 
 export function activateMessageViewer(context: ExtensionContext) {
+  /* All active message viewer instances share the same scheduler to perform API
+  requests. The scheduler defines number of concurrent requests at a time and a
+  minimum time interval for a single task to unblock a "thread". This all allows
+  faster consumption of retained messages for a single message viewer and prevents
+  rate limiting for multiple active message viewers. */
+  const schedule = scheduler(4, 500);
+
   // commands
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
@@ -43,7 +50,7 @@ export function activateMessageViewer(context: ExtensionContext) {
         showNoSchemaAccessWarningNotification();
       }
       const sidecar = await getSidecar();
-      return messageViewerStartPollingCommand(context, topic, sidecar);
+      return messageViewerStartPollingCommand(context, topic, sidecar, schedule);
     }),
   );
 }
@@ -66,6 +73,7 @@ function messageViewerStartPollingCommand(
   context: ExtensionContext,
   topic: KafkaTopic,
   sidecar: SidecarHandle,
+  schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
 ) {
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
   const panel = window.createWebviewPanel(
@@ -135,12 +143,18 @@ function messageViewerStartPollingCommand(
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
   /** Most recent failure info */
   const latestError = os.signal<{ message: string } | null>(null);
-  /** Timestamp of the most recent successful consumption request. */
-  const latestFetch = os.signal<number>(0);
 
-  /** Notify the webview only after flushing the rest of updates. */
+  /** Notify an active webview only after flushing the rest of updates. */
   const notifyUI = () => {
-    queueMicrotask(() => panel.webview.postMessage(["Timestamp", "Success", Date.now()]));
+    queueMicrotask(() => {
+      try {
+        if (panel.visible) {
+          panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+        }
+      } catch {
+        // panel might be disposed which causes `panel.visible` getter to throw
+      }
+    });
   };
 
   /** Provides partition filter bitset based on the most recent consumed result. */
@@ -237,22 +251,30 @@ function messageViewerStartPollingCommand(
     let ahead = ts.head;
     for (let i = limit; i >= 0; i--) {
       const tick = i === 0 ? 0 : ticks[i - 1];
-      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick)!;
-      let next = ahead;
+      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick);
+      const notEmptyBin = curr != null && ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
       let total = 0;
       let filter = 0;
-      let max = ts.size; // avoid any chance this can be an infinite loop
-      while (max-- > 0 && curr !== next) {
-        total++;
-        // do not count item if it's right bin boundary, unless it's right most bin
-        if (includes(next) && (next === ts.head || next !== ahead)) filter++;
-        next = ts.next[next];
+      if (notEmptyBin) {
+        let next = ahead;
+        // account for inclusive final bin
+        if (i === limit) {
+          total++;
+          if (includes(next)) filter++;
+        }
+        if (next !== curr) {
+          let max = ts.size;
+          do {
+            total++;
+            // avoid counting the right bin boundary, it is covered by the next bin
+            if (next !== ahead && includes(next)) filter++;
+            next = ts.next[next];
+          } while (max-- > 0 && next !== curr);
+          // make sure to count the left bin boundary
+          if (includes(curr)) filter++;
+        }
       }
-      ahead = curr;
-      // last bin has inclusive right boundary
-      if (curr === next && i === limit) total++;
-      // make sure to count remaining inclusive filtered item on the left
-      if (includes(curr)) filter++;
+      if (curr != null) ahead = curr;
       const x0 = i === 0 ? d0 : ticks[i - 1];
       const x1 = i === limit ? d1 : ticks[i];
       bins.unshift({ x0, x1, total, filter: bits != null ? filter : null });
@@ -303,19 +325,13 @@ function messageViewerStartPollingCommand(
     if (state() !== "running") return;
 
     try {
-      const now = Date.now();
-      const old = latestFetch();
       const currentStream = stream();
       const partitions = partitionConsumed();
       /* If current parameters were already used for successful request, the
       following request should consider offsets provided in previous results. */
       const requestParams = getOffsets(params(), latestResult(), partitions);
-
-      /* Ensure to wait at least some time before following polling request
-      if at least one was already made. The condition below should allow for
-      faster requests when the stream was resumed. */
-      if (now - old < MIN_POLLING_INTERVAL_MS) await sleep(signal);
-      const result = await consume(requestParams, signal);
+      /* Delegate an API call to shared scheduler. */
+      const result = await schedule(() => consume(requestParams, signal), signal);
 
       const datalist = result.partition_data_list ?? [];
       for (const partition of datalist) {
@@ -333,7 +349,6 @@ function messageViewerStartPollingCommand(
       os.batch(() => {
         flushMessages(currentStream);
         latestResult(result);
-        latestFetch(Date.now());
         latestError(null);
         notifyUI();
       });
@@ -388,7 +403,6 @@ function messageViewerStartPollingCommand(
       }
 
       os.batch(() => {
-        latestFetch(Date.now());
         // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
         if (shouldPause) {
           state("paused");
@@ -674,31 +688,6 @@ function getOffsets(
     return { max_poll_records, message_max_bytes, fetch_max_bytes, offsets };
   }
   return params;
-}
-
-const MIN_POLLING_INTERVAL_MS = 0.5 * 1000;
-const THRESHOLD_POLLING_INTERVAL_MS = 0.5 * 1000;
-
-/**
- * Await for a variable time. A random threshold added to avoid syncing with
- * other consumers running in parallel. AbortSignal can be provided to abort
- * the timer, in case the following procedure should not be executed anyway.
- */
-function sleep(signal: AbortSignal) {
-  const delay = MIN_POLLING_INTERVAL_MS + THRESHOLD_POLLING_INTERVAL_MS * Math.random();
-  return new Promise((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout>;
-    const abort = () => {
-      clearTimeout(timer);
-      const error = Object.assign(new Error(signal.reason), { name: "AbortError" });
-      reject(error);
-    };
-    signal.addEventListener("abort", abort, { once: true });
-    timer = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve(null);
-    }, delay);
-  });
 }
 
 /** Compress any valid json value into smaller payload for preview purpose. */

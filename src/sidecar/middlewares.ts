@@ -100,12 +100,6 @@ export class ErrorResponseMiddleware implements Middleware {
       });
       // don't throw an error because our openapi-generator client code will throw ResponseError by
       // default if status >= 400
-
-      // TODO: we may need to handle this for the kafkaRest and schemaRegistryRest clients as well
-      if (context.response.status === 401) {
-        // inform the auth provider that the auth session is no longer valid
-        ccloudAuthSessionInvalidated.fire();
-      }
     }
   }
 }

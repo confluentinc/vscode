@@ -118,9 +118,7 @@ Confluent provides these VSIX files:
 - Windows on x64 processors: `vscode-confluent-windows-x64-x.x.x.vsix`
 
 Additionally, for Windows ARM-64, you may use Windows Subsystem for Linux
-[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with the Linux ARM-64 .vsix file. (See
-the [Known Limitations section](#known-limitations) for a note about logging in to Confluent Cloud
-with WSL.)
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with the Linux ARM-64 .vsix file.
 
 You can install the Confluent extension by using the VS Code UI or by using the
 `code --install-extension` command in the terminal.
@@ -187,8 +185,6 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 - Preview links for non-default organizations work only after switching to the non-default
   organization in the Confluent Cloud UI in your browser.
 - When using multiple users on a single machine, only one user can run the extension at a time.
-- If using WSL while signing in to Confluent Cloud, you may need to manually change the
-  `127.0.0.1:26636` redirect URL to `localhost:26636` in the browser to complete the login process.
 
 ## Support
 
