@@ -160,9 +160,9 @@ export async function handleEvent(event: SystemEvent) {
     // if it's the `confluentinc/confluent-local` image) before we consider it fully started
     let started = await waitForContainerRunning(event);
     if (imageName.startsWith("confluentinc/confluent-local")) {
-      logger.debug("container is running, checking logs for server started message...", {
-        watchLine: SERVER_STARTED_LOG_LINE,
-      });
+      logger.debug(
+        `container status shows "running", checking logs for "${SERVER_STARTED_LOG_LINE}"...`,
+      );
       started = await waitForServerStartedLog(event.id, eventTime);
     }
     await setContextValue(ContextValues.localKafkaClusterAvailable, started);
