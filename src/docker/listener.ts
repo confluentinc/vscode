@@ -9,6 +9,8 @@ const EVENT_FILTERS = {
   type: ["container"],
   images: ["confluentinc/confluent-local"],
 };
+// log line to watch for before considering the container fully started and discoverable
+const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
 
 /**
  * Continuously check for Docker availability and query the system events.
@@ -95,17 +97,22 @@ async function readEventStream(stream: ReadableStream<Uint8Array>) {
         continue;
       }
       // convert the Uint8Array to a string and try to parse as JSON
-      let event: string = new TextDecoder().decode(value);
+      const eventString = new TextDecoder().decode(value);
+      if (!eventString) {
+        logger.debug("empty event string from events stream");
+        continue;
+      }
+
       try {
-        event = JSON.parse(event);
+        const event: SystemEvent = JSON.parse(eventString);
+        await handleEvent(event);
       } catch (error) {
-        logger.error("error parsing event", { error, event });
+        logger.error("error parsing event", { error, eventString });
         // TODO: notify the user of the error here? if a container we care about is started or
         // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
         // the view to see the current state
         continue;
       }
-      await handleEvent(event);
     } catch (error) {
       logger.error("error reading events stream:", error);
       break;
@@ -113,7 +120,10 @@ async function readEventStream(stream: ReadableStream<Uint8Array>) {
   }
 }
 
-interface DockerEvent {
+interface SystemEvent {
+  status: string;
+  id: string;
+  from: string;
   Type: string;
   Action: string;
   Actor: {
@@ -127,7 +137,7 @@ interface DockerEvent {
   timeNano: number;
 }
 
-export async function handleEvent(event: any) {
+export async function handleEvent(event: SystemEvent) {
   logger.debug("docker event observed: ", event);
 
   if (event.Type !== "container") {
@@ -138,7 +148,7 @@ export async function handleEvent(event: any) {
     return;
   }
 
-  const imageName: string = event?.Actor ? event.Actor.Attributes?.image ?? "" : "";
+  const imageName: string = event.Actor ? event.Actor.Attributes?.image ?? "" : "";
   // capture the time of the event (or use the current time if not available) in case we need to
   // compare it to container log timestamps
   const eventTime: number = event.time ? event.time : new Date().getTime();
@@ -150,7 +160,9 @@ export async function handleEvent(event: any) {
     // if it's the `confluentinc/confluent-local` image) before we consider it fully started
     let started = await waitForContainerRunning(event);
     if (imageName.startsWith("confluentinc/confluent-local")) {
-      logger.debug("container is running, checking logs...");
+      logger.debug("container is running, checking logs for server started message...", {
+        watchLine: SERVER_STARTED_LOG_LINE,
+      });
       started = await waitForServerStartedLog(event.id, eventTime);
     }
     await setContextValue(ContextValues.localKafkaClusterAvailable, started);
@@ -236,7 +248,7 @@ async function waitForServerStartedLog(
     const chunk = new TextDecoder().decode(value);
     logLine += chunk;
 
-    if (logLine.includes("Server started, listening for requests...")) {
+    if (logLine.includes(SERVER_STARTED_LOG_LINE)) {
       logger.debug("server started log line found");
       logLineFound = true;
       break;
