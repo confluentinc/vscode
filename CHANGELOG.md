@@ -4,18 +4,26 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.17.1
+
+- Hardened handling of empty bins in the histogram of the message viewer
+
+## 0.17.0
+
 ### Added
 
 - New context menu item "Copy Organization ID" for the logged-in "Confluent Cloud" resource,
   [issue #213](https://github.com/confluentinc/vscode/issues/213).
-- Users can now provide custom SSL certificates in the extension settings 
-  (Confluent -> SSL -> Pem Paths) for authenticating with Confluent Cloud. This is useful for users
-  whose machines are behind a corporate firewall or a VPC configuration that requires custom SSL
-  certificates. Please note that automatic use of certificates from Trust Store to alleviate the
-  need for custom SSL certificates is scheduled for a [future release](https://github.com/confluentinc/ide-sidecar/issues/69).
-- Added a new extension setting for disabling SSL server certificate verification on any HTTPS requests 
-  made by the extension. WARNING: Using this setting is not recommended as it may allow a Man-in-the-Middle
-  attack. It should only be used to diagnose SSL problems or to temporarily work around a known certificate issue.
+- Users can now provide custom SSL certificates in the extension settings (Confluent -> SSL -> Pem
+  Paths) for authenticating with Confluent Cloud. This is useful for users whose machines are behind
+  a corporate firewall or a VPC configuration that requires custom SSL certificates. Please note
+  that automatic use of certificates from Trust Store to alleviate the need for custom SSL
+  certificates is scheduled for a
+  [future release](https://github.com/confluentinc/ide-sidecar/issues/69).
+- Added a new extension setting for disabling SSL server certificate verification on any HTTPS
+  requests made by the extension. WARNING: Using this setting is not recommended as it may allow a
+  Man-in-the-Middle attack. It should only be used to diagnose SSL problems or to temporarily work
+  around a known certificate issue.
 
 ### Changed
 
