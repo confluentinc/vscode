@@ -58,21 +58,21 @@ function uploadVersionCommand(item: any) {
 }
 
 async function openLatestSchemasCommand(topic: KafkaTopic) {
-  logger.info("open latest schemas topic", { topic });
+  const highestVersionedSchemas = await getLatestSchemasForTopic(topic);
 
-  // get the schemas for the topic from resource manager.
+  // Make a nice message to show in the progress bar, albeit short lived.
+  const schemaSubjectVersionList = highestVersionedSchemas
+    .map((s) => `${s.subject} (${s.version})`)
+    .join(", ");
+  const maybe_ess = highestVersionedSchemas.length > 1 ? "s" : "";
+  const message = `Opening latest schema${maybe_ess} for topic "${topic.name}": "${schemaSubjectVersionList}"`;
 
-  const rm = ResourceManager.getInstance();
-  const highestVersionedSchemas = await rm.getSchemasForTopic(topic);
-  for (const schema of highestVersionedSchemas) {
-    logger.info(`Schema subject ${schema.subject} version ${schema.version}`);
-  }
+  logger.info(message);
 
-  // make string of subject name + version paren pairs)
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: "Loading schema(s) ...",
+      title: message,
     },
     async () => {
       const promises = highestVersionedSchemas.map((schema) => {
@@ -107,4 +107,52 @@ async function loadOrCreateSchemaViewer(schema: Schema) {
   // but they don't show up to the user unless they look at the "Window" output channel.
   vscode.languages.setTextDocumentLanguage(textDoc.document, schema.fileExtension());
   return textDoc;
+}
+
+/**
+ * Get the highest versioned schema(s) related to a single topic from the schema registry
+ * as decided by TopicNameStrategy. May return two schemas if the topic has both key and value schemas.
+ */
+export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
+  if (topic.isLocalTopic()) {
+    throw new Error("Cannot get schemas for local topics (yet)");
+  }
+
+  if (!topic.hasSchema) {
+    throw new Error("Wacky: asked to get schemas for a topic believed to not have schemas.");
+  }
+
+  const rm = ResourceManager.getInstance();
+
+  const schemaRegistry = await rm.getCCloudSchemaRegistryCluster(topic.environmentId!);
+  if (schemaRegistry === null) {
+    throw new Error("Wacky: could not determine schema registry for a topic with known schemas.");
+  }
+
+  const allSchemas = await rm.getSchemasForRegistry(schemaRegistry.id);
+
+  if (allSchemas === undefined || allSchemas.length === 0) {
+    throw new Error(
+      `Wacky: schema registry ${schemaRegistry.id} had no schemas, but we highly expected them`,
+    );
+  }
+
+  // Filter by TopicNameStrategy for this topic.
+  const topicSchemas = allSchemas.filter((schema) => schema.matchesTopicName(topic.name));
+
+  // Now make map of schema subject -> highest version'd schema for said subject
+  const nameToHighestVersion = new Map<string, Schema>();
+  for (const schema of topicSchemas) {
+    const existing = nameToHighestVersion.get(schema.subject);
+    if (existing === undefined || existing.version < schema.version) {
+      nameToHighestVersion.set(schema.subject, schema);
+    }
+  }
+
+  if (nameToHighestVersion.size === 0) {
+    throw new Error(`No schemas found for topic "${topic.name}", but highly expected them`);
+  }
+
+  // Return flattend values from the map, the list of highest-versioned schemas related to the topic.
+  return [...nameToHighestVersion.values()];
 }

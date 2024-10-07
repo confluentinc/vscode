@@ -23,6 +23,7 @@ export class Schema extends Data {
   schemaRegistryId!: Enforced<string>;
   environmentId!: Enforced<string>;
 
+  /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy */
   matchesTopicName(topicName: string): boolean {
     // strip off the -key/-value suffixes to match the topic name exactly based on TopicNameStrategy
     // since we can't use `startsWith` due to the potential for multiple topics with the same prefix

@@ -233,7 +233,7 @@
       },
       {
         "command": "confluent.topics.openlatestschemas",
-        "title": "Open Latest Schema Version(s)",
+        "title": "View Latest Schema Version(s)",
         "category": "Confluent: Topics"
       },
       {

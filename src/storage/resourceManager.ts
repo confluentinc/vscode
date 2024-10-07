@@ -448,48 +448,6 @@ export class ResourceManager {
     return schemaObjectsByCluster;
   }
 
-  /**
-   * Get the schemas for a specific topic.
-   */
-  async getSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
-    if (topic.isLocalTopic()) {
-      throw new Error("Cannot get schemas for local topics (yet)");
-    }
-
-    if (!topic.hasSchema) {
-      throw new Error("Wacky: sked to get schemas for a topic believed to not have schemas.");
-    }
-
-    const schemaRegistry = await this.getCCloudSchemaRegistryCluster(topic.environmentId!);
-    if (schemaRegistry === null) {
-      throw new Error("Wacky: could not determine schema registry for a topic with known schemas.");
-    }
-
-    // knowing the registry id, can now get at the schemas.
-    const allSchemas = await this.getSchemasForRegistry(schemaRegistry.id);
-
-    if (allSchemas === undefined || allSchemas.length === 0) {
-      throw new Error(
-        `Wacky: schema registry ${schemaRegistry.id} had no schemas, but we highly expected them`,
-      );
-    }
-
-    // Filter by the topic
-    const topicSchemas = allSchemas.filter((schema) => schema.matchesTopicName(topic.name));
-
-    // Now make map of schema subject -> highest version'd schema for said subject
-    const nameToHighestVersion = new Map<string, Schema>();
-    for (const schema of topicSchemas) {
-      const existing = nameToHighestVersion.get(schema.subject);
-      if (existing === undefined || schema.version > existing.version) {
-        nameToHighestVersion.set(schema.subject, schema);
-      }
-    }
-
-    // Return flattend values from the map, the list of highest-versioned schemas related to the topic.
-    return [...nameToHighestVersion.values()];
-  }
-
   /** Forget about all of the CCLoud schemas. */
   private async deleteCCloudSchemas(): Promise<void> {
     return await this.storage.deleteWorkspaceState(StateSchemas.CCLOUD);
