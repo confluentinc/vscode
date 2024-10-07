@@ -4,13 +4,20 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- New context menu item "View Latest Schema Version(s)" to quickly open the highest versioned value
+  and / or key schemas for a CCloud topic according to TopicNameStrategy,
+  [issue #261](https://github.com/confluentinc/vscode/issues/261).
+
+## 0.17.1
+
+- Hardened handling of empty bins in the histogram of the message viewer
+
+## 0.17.0
+
 ### Added
 
 - New context menu item "Copy Organization ID" for the logged-in "Confluent Cloud" resource,
   [issue #213](https://github.com/confluentinc/vscode/issues/213).
-- New context menu item "View Latest Schema Version(s)" to quickly open the highest versioned value
-  and / or key schemas for a CCloud topic according to TopicNameStrategy,
-  [issue #261](https://github.com/confluentinc/vscode/issues/261).
 - Users can now provide custom SSL certificates in the extension settings (Confluent -> SSL -> Pem
   Paths) for authenticating with Confluent Cloud. This is useful for users whose machines are behind
   a corporate firewall or a VPC configuration that requires custom SSL certificates. Please note
