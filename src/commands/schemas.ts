@@ -58,7 +58,19 @@ function uploadVersionCommand(item: any) {
 }
 
 async function openLatestSchemasCommand(topic: KafkaTopic) {
-  const highestVersionedSchemas = await getLatestSchemasForTopic(topic);
+  let highestVersionedSchemas: Schema[] | null = null;
+
+  try {
+    highestVersionedSchemas = await getLatestSchemasForTopic(topic);
+  } catch (e) {
+    if (e instanceof CannotLoadSchemasError) {
+      logger.error(e.message);
+      vscode.window.showErrorMessage(e.message);
+      return;
+    } else {
+      throw e;
+    }
+  }
 
   // Make a nice message to show in the progress bar, albeit short lived.
   const schemaSubjectVersionList = highestVersionedSchemas
@@ -114,26 +126,25 @@ async function loadOrCreateSchemaViewer(schema: Schema) {
  * as decided by TopicNameStrategy. May return two schemas if the topic has both key and value schemas.
  */
 export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
-  if (topic.isLocalTopic()) {
-    throw new Error("Cannot get schemas for local topics (yet)");
-  }
-
+  // This check indicates a programming error, not a user or external system contents issue.
   if (!topic.hasSchema) {
-    throw new Error("Wacky: asked to get schemas for a topic believed to not have schemas.");
+    throw new Error(`Asked to get schemas for topic ${topic.name} believed to not have schemas.`);
   }
 
   const rm = ResourceManager.getInstance();
 
   const schemaRegistry = await rm.getCCloudSchemaRegistryCluster(topic.environmentId!);
   if (schemaRegistry === null) {
-    throw new Error("Wacky: could not determine schema registry for a topic with known schemas.");
+    throw new CannotLoadSchemasError(
+      `Could not determine schema registry for topic ${topic.name} believed to have related schemas.`,
+    );
   }
 
   const allSchemas = await rm.getSchemasForRegistry(schemaRegistry.id);
 
   if (allSchemas === undefined || allSchemas.length === 0) {
-    throw new Error(
-      `Wacky: schema registry ${schemaRegistry.id} had no schemas, but we highly expected them`,
+    throw new CannotLoadSchemasError(
+      `Schema registry ${schemaRegistry.id} had no schemas, but we expected it to have some for topic "${topic.name}"`,
     );
   }
 
@@ -150,9 +161,18 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
   }
 
   if (nameToHighestVersion.size === 0) {
-    throw new Error(`No schemas found for topic "${topic.name}", but highly expected them`);
+    throw new CannotLoadSchemasError(`No schemas found for topic "${topic.name}"!`);
   }
 
   // Return flattend values from the map, the list of highest-versioned schemas related to the topic.
   return [...nameToHighestVersion.values()];
+}
+
+/** Raised when unexpectedly could not load schema(s) for a topic we previously believed
+ * had related schemas. Message will be informative and user-facing.
+ */
+export class CannotLoadSchemasError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
 }
