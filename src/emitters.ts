@@ -11,6 +11,8 @@ export const ccloudConnected = new vscode.EventEmitter<boolean>();
 export const ccloudAuthSessionInvalidated = new vscode.EventEmitter<void>();
 export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 
+export const localKafkaConnected = new vscode.EventEmitter<boolean>();
+
 /**
  * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
  * Cluster" action from the Topics view, or cleared out from a connection (or CCloud organization)
