@@ -17,7 +17,6 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
-    // stub the showOpenDialog method to avoid opening a dialog during tests
     resourceManagerStub = sandbox.stub(ResourceManager, "getInstance");
     resourceManager = sandbox.createStubInstance(ResourceManager);
     resourceManagerStub.returns(resourceManager);
