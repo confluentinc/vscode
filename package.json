@@ -304,19 +304,6 @@
           "type": "string",
           "default": "",
           "description": "Path to the Docker socket file."
-        },
-        "confluent.localDocker.host": {
-          "type": "string",
-          "default": "localhost",
-          "description": "Local Docker host."
-        },
-        "confluent.localDocker.port": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "default": null,
-          "description": "Local Docker port."
         }
       }
     },
