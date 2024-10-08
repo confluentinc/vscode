@@ -23,18 +23,14 @@ function getSocketPath(): string {
   return path;
 }
 
-/**
- * Default request options for Docker API requests.
- *
- * NOTE: This looks weird because our openapi-generator client code (in `src/clients/**`) relies on
- * RequestInit from `@types/node/globals.d.ts` which TypeScript complains about since it thinks
- * "dispatcher" doesn't exist (which it does).
- * @see https://github.com/nodejs/undici/issues/1489#issuecomment-1543856261
- *
- * This is a workaround to make TypeScript happy until we can find a better way to add the
- * `socketPath` to `RequestInit`.
- */
+/** Default request options for Docker API requests, to be used with service class methods from `src/clients/docker/*`. */
 export function defaultRequestInit(): RequestInit {
+  // NOTE: This looks weird because our openapi-generator client code (in `src/clients/**`) relies on
+  // RequestInit from `@types/node/globals.d.ts` which TypeScript complains about since it thinks
+  // "dispatcher" doesn't exist (which it does).
+  // This is a workaround to make TypeScript happy until we can find a better way to add the
+  // `socketPath` to `RequestInit`.
+  // (Also see https://github.com/nodejs/undici/issues/1489#issuecomment-1543856261)
   const init: UndiciRequestInit = {
     dispatcher: new Agent({
       connect: {
