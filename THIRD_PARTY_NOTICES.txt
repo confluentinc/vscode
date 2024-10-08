@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2024-10-1
+Date generated: 2024-10-8
 
-Revision ID: 6c8cb3443b47b142ce283c72b0be06228c081aa3
+Revision ID: b7ca05f30af478812b698d21fb4e2d78385e1af4
 
 ================================================================================
 ================================================================================
@@ -9245,19 +9245,6 @@ SOFTWARE.
 
 
 
-* Other Licenses *
-BouncyCastle
-
-
-Copyright (c) 2000 - 2020 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
 --------------------------------------------------------------------------------
 Package Title: @types/connect (3.4.36)
 
@@ -12204,41 +12191,8 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-Multi-license: BSD-2-Clause OR BSD-3-Clause, BSD-3-Clause
+BSD-3-Clause
 
-* Multi-license: BSD-2-Clause OR BSD-3-Clause *
-
-Copyright 2010-2021 Mike Bostock
-Copyright 2001 Robert Penner
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* Neither the name of the author nor the names of contributors may be used to
-  endorse or promote products derived from this software without specific prior
-  written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-* BSD-3-Clause *
 
 Copyright 2010-2021 Mike Bostock
 Copyright 2001 Robert Penner
@@ -13316,6 +13270,29 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
+mit-0
+
+
+Copyright (c) 2012-2014 Andris Reinman
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+* Other Licenses *
 MIT
 
 
@@ -13566,28 +13543,7 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-MIT, ISC
-
-* MIT *
-
-Copyright (c)  Isaac Z. Schlueter and Contributors
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+ISC, MIT
 
 * ISC *
 
@@ -13635,6 +13591,27 @@ the licensed code:
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
   DEALINGS IN THE SOFTWARE.
 
+
+* MIT *
+
+Copyright (c)  Isaac Z. Schlueter and Contributors
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 
 --------------------------------------------------------------------------------
@@ -17163,39 +17140,8 @@ Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
-Multi-license: BSD-2-Clause OR BSD-3-Clause, BSD-3-Clause
+BSD-3-Clause
 
-* Multi-license: BSD-2-Clause OR BSD-3-Clause *
-
-Copyright (c) 2014-2016, Michael Bostock
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* The name Michael Bostock may not be used to endorse or promote products
-  derived from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL MICHAEL BOSTOCK BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-* BSD-3-Clause *
 
 Copyright (c) 2014-2016, Michael Bostock
 All rights reserved.
@@ -20526,33 +20472,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-* BSD-2-Clause *
-
-Copyright (c) <year> <owner>
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-   1. Redistributions of source code must retain the above copyright notice, this
-      list of conditions and the following disclaimer.
-
-   2. Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-
-      and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 * BSD-3-Clause *
 
 Copyright (c) <year> <owner>
@@ -20582,16 +20501,6 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-* BouncyCastle *
-
-Copyright (c) 2000 - 2020 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 * CC-BY-SA-4.0 *
 
@@ -20919,6 +20828,26 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+
+
+* mit-0 *
+
+Copyright (c) 2012-2014 Andris Reinman
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 
 * MIT *
@@ -24515,6 +24444,8 @@ Copyright (c) 2024 Node.js contributors. All rights reserved.
 
 Copyright (c) The OpenTelemetry Authors
 
+Copyright (c) 2021 Datadog, Inc.
+
 Copyright (c) 2017 Lovell Fuller and others.
 
 Copyright (c) 2020 A11yance
@@ -24524,8 +24455,6 @@ Copyright (c) Microsoft Corporation
 Copyright (c) 2010-2024 Mike Bostock
 
 Copyright (c) 2002 Cynthia Brewer, Mark Harrower, and The Pennsylvania State University
-
-Copyright (c) 2021 Datadog, Inc.
 Apache License
 Version 2.0, January 2004
 http://www.apache.org/licenses/ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
@@ -24618,9 +24547,9 @@ BSD 3-Clause "New" or "Revised" License
 
 Copyright (c) 2009-2011 Mozilla Foundation and contributors
 
-Copyright (c) 2011 Mozilla Foundation and contributors
-
 Copyright (c) 2014 Mozilla Foundation and contributors
+
+Copyright (c) 2011 Mozilla Foundation and contributors
 
 Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
 
@@ -24637,6 +24566,8 @@ Copyright (c) 2016 Sentry (https://sentry.io/) and individual contributors.
 Copyright (c) 2008 Fair Oaks Labs, Inc.
 
 Copyright (c) 2010-2021 Mike Bostock
+
+Copyright (c) 2001 Robert Penner
 Copyright (c) <year> <owner>
 All rights reserved.
 
@@ -24664,20 +24595,6 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
---------------------------------------------------------------------------------
-The Bouncy Castle License
-
-Copyright (c) 2010-2016 Google, Inc. http://angularjs.org\n\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nimport { GLOBAL_OBJ } from '../worldwide';\n\nconst WINDOW = GLOBAL_OBJ as unknown as Window;\n\n/**\n * Tells whether current environment supports History API\n * {@link supportsHistory}.\n *\n * @returns Answer to the given question.\n */\nexport function supportsHistory(): boolean {\n  // NOTE: in Chrome App environment, touching history.pushState, *even inside\n  //       a try/catch block*, will cause Chrome to output an error to console.error\n  // borrowed from: https://github.com/angular/angular.js/pull/13945/files\n  /* eslint-disable @typescript-eslint/no-unsafe-member-access */\n  // eslint-disable-next-line @typescript-eslint/no-explicit-any\n  const chromeVar = (WINDOW as any).chrome;\n  const isChromePackagedApp = chromeVar && chromeVar.app && chromeVar.app.runtime;\n  /* eslint-enable @typescript-eslint/no-unsafe-member-access */\n  const hasHistoryApi = 'history' in WINDOW && !!WINDOW.history.pushState && !!WINDOW.history.replaceState;\n\n  return !isChromePackagedApp && hasHistoryApi;\n}\n"],"names":["GLOBAL_OBJ"],"mappings":";;;;AAAA;AACA;AACA;AAsBA;AACA,MAAM,MAAA,GAASA,oBAAW,EAAA;AAC1B;AACA;AACA;AACA;AACA;AACA;AACA;AACO,SAAS,eAAe,GAAY;AAC3C;AACA;AACA;AACA;AACA;AACA,EAAE,MAAM,SAAU,GAAE,CAAC,MAAO,GAAQ,MAAM,CAAA;AAC1C,EAAE,MAAM,mBAAA,GAAsB,SAAA,IAAa,SAAS,CAAC,GAAA,IAAO,SAAS,CAAC,GAAG,CAAC,OAAO,CAAA;AACjF;AACA,EAAE,MAAM,gBAAgB,SAAA,IAAa,MAAO,IAAG,CAAC,CAAC,MAAM,CAAC,OAAO,CAAC,aAAa,CAAC,CAAC,MAAM,CAAC,OAAO,CAAC,YAAY,CAAA;AAC1G;AACA,EAAE,OAAO,CAAC,mBAAoB,IAAG,aAAa,CAAA;AAC9C;;;;"}
-
-Copyright (c) 2010-2016 Google, Inc. http://angularjs.org\n\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nimport { GLOBAL_OBJ } from '../worldwide';\n\nconst WINDOW = GLOBAL_OBJ as unknown as Window;\n\n/**\n * Tells whether current environment supports History API\n * {@link supportsHistory}.\n *\n * @returns Answer to the given question.\n */\nexport function supportsHistory(): boolean {\n  // NOTE: in Chrome App environment, touching history.pushState, *even inside\n  //       a try/catch block*, will cause Chrome to output an error to console.error\n  // borrowed from: https://github.com/angular/angular.js/pull/13945/files\n  /* eslint-disable @typescript-eslint/no-unsafe-member-access */\n  // eslint-disable-next-line @typescript-eslint/no-explicit-any\n  const chromeVar = (WINDOW as any).chrome;\n  const isChromePackagedApp = chromeVar && chromeVar.app && chromeVar.app.runtime;\n  /* eslint-enable @typescript-eslint/no-unsafe-member-access */\n  const hasHistoryApi = 'history' in WINDOW && !!WINDOW.history.pushState && !!WINDOW.history.replaceState;\n\n  return !isChromePackagedApp && hasHistoryApi;\n}\n"],"names":[],"mappings":";;AAAA;AACA;AACA;AAsBA;AACA,MAAM,MAAA,GAAS,UAAW,EAAA;AAC1B;AACA;AACA;AACA;AACA;AACA;AACA;AACO,SAAS,eAAe,GAAY;AAC3C;AACA;AACA;AACA;AACA;AACA,EAAE,MAAM,SAAU,GAAE,CAAC,MAAO,GAAQ,MAAM,CAAA;AAC1C,EAAE,MAAM,mBAAA,GAAsB,SAAA,IAAa,SAAS,CAAC,GAAA,IAAO,SAAS,CAAC,GAAG,CAAC,OAAO,CAAA;AACjF;AACA,EAAE,MAAM,gBAAgB,SAAA,IAAa,MAAO,IAAG,CAAC,CAAC,MAAM,CAAC,OAAO,CAAC,aAAa,CAAC,CAAC,MAAM,CAAC,OAAO,CAAC,YAAY,CAAA;AAC1G;AACA,EAAE,OAAO,CAAC,mBAAoB,IAAG,aAAa,CAAA;AAC9C;;;;"}
-Copyright (c) 2000 - 2020 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Creative Commons Attribution 4.0
@@ -25114,7 +25031,7 @@ Copyright (c) 2012 James Halliday
 
 Copyright (c) 2015 David Clark
 
-Copyright (c) 2013 Thorsten Lorenz
+Copyright (c) 2013 Thorsten Lorenz.
 
 Copyright (c) 2018 Logan Smyth <loganfsmyth@gmail.com>
 
@@ -25174,6 +25091,8 @@ Copyright (c) 2012-2018 Aseem Kishore, and [others].
 
 Copyright (c) 2012-2019 Thorsten Lorenz, Paul Miller (https://paulmillr.com)
 
+Copyright (c)  Joyent, Inc. and other Node contributors.
+
 Copyright (c) 2013 Julian Gruber <julian@juliangruber.com>
 
 Copyright (c) 2014 present Sebastian McKenzie and other contributors
@@ -25207,8 +25126,6 @@ Copyright (c) 2022 present Johnson Chu
 Copyright (c) 2023 Sven Sauleau
 
 Copyright (c) 2023-2024 Functional Software, Inc. dba Sentry
-
-Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>*
 
 Copyright (c) 2023 present Johnson Chu
 
@@ -25279,8 +25196,6 @@ Copyright (c) 2018 present, Yuxi (Evan) You
 Copyright (c) Feross Aboukhadijeh, and other contributors.
 
 Copyright (c)  Feross Aboukhadijeh, and other contributors.
-
-Copyright (c)  Feross Aboukhadijeh](http://feross.org), and other contributors. Originally forked from an MIT-licensed module by Romain Beauxis.
 
 Copyright (c) 2014 Andrey Sitnik <andrey@sitnik.ru> and other contributors
 
@@ -25455,6 +25370,23 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 
 --------------------------------------------------------------------------------
+MIT No Attribution
+
+Copyright (c) 2012-2014 Andris Reinman
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
 Public Domain
 
 --------------------------------------------------------------------------------
@@ -25462,4 +25394,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2024-10-1
+Report Generated by FOSSA on 2024-10-8
