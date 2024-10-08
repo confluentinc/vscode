@@ -232,6 +232,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.openlatestschemas",
+        "title": "View Latest Schema Version(s)",
+        "category": "Confluent: Topics"
+      },
+      {
         "command": "confluent.topics.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -421,6 +426,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.openlatestschemas",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.copyKafkaClusterId",
           "when": "false"
         },
@@ -577,6 +586,11 @@
           "command": "confluent.topics.create",
           "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
           "group": "topics"
+        },
+        {
+          "command": "confluent.topics.openlatestschemas",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-with-schema.*/",
+          "group": "topic_schemas@1"
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
