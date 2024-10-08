@@ -590,7 +590,7 @@
         {
           "command": "confluent.topics.openlatestschemas",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-with-schema.*/",
-          "group": "topics"
+          "group": "topic_schemas@1"
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
