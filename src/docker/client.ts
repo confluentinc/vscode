@@ -1,5 +1,5 @@
 import { normalize } from "path";
-import { Agent, fetch, RequestInit } from "undici";
+import { Agent, fetch, RequestInit, Response } from "undici";
 import { workspace, WorkspaceConfiguration } from "vscode";
 import { Logger } from "../logging";
 import {
@@ -90,13 +90,13 @@ export class DockerClient {
    * @param options Additional options to pass to the fetch request.
    * @returns A Promise that resolves with the response from the Docker API.
    */
-  async request(endpoint: string, options?: RequestInit): Promise<any> {
+  async request(endpoint: string, options?: RequestInit): Promise<Response> {
     // remove any leading slashes
     const trimmedEndpoint = endpoint.replace(/^\/+/, "");
     const url = `${this.baseUrl}/${trimmedEndpoint}`;
     const requestOptions: RequestInit = { ...this.defaultOptions, ...options };
     try {
-      const response = await fetch(url, requestOptions);
+      const response: Response = await fetch(url, requestOptions);
       if (!response.ok) {
         const body = await response.text();
         logger.error("error response from docker API:", {
