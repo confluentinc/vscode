@@ -5,9 +5,10 @@ import { DockerClient } from "./client";
 
 const logger = new Logger("docker.listener");
 
+export const LOCAL_KAFKA_IMAGE = "confluentinc/confluent-local";
 const EVENT_FILTERS = {
   type: ["container"],
-  images: ["confluentinc/confluent-local"],
+  images: [LOCAL_KAFKA_IMAGE],
 };
 // log line to watch for before considering the container fully started and discoverable
 const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
@@ -67,7 +68,7 @@ export async function listenForEvents(): Promise<void> {
  * Check if Docker is available by attempting to ping the API.
  * @see https://docs.docker.com/reference/api/engine/version/v1.47/#tag/System/operation/SystemPing
  */
-async function pingDocker(): Promise<boolean> {
+export async function pingDocker(): Promise<boolean> {
   try {
     const resp = await DockerClient.getInstance().request("/_ping");
     logger.debug("docker ping response:", resp);
@@ -81,7 +82,7 @@ async function pingDocker(): Promise<boolean> {
 }
 
 /** Read the event stream and attempt to parse events before handling. */
-async function readEventStream(stream: ReadableStream<Uint8Array>) {
+export async function readEventStream(stream: ReadableStream<Uint8Array>) {
   const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader();
   logger.debug("listening for events...", { locked: stream.locked });
   while (true) {
@@ -120,7 +121,7 @@ async function readEventStream(stream: ReadableStream<Uint8Array>) {
   }
 }
 
-interface SystemEvent {
+export interface SystemEvent {
   status: string;
   id: string;
   from: string;
@@ -140,41 +141,71 @@ interface SystemEvent {
 export async function handleEvent(event: SystemEvent) {
   logger.debug("docker event observed: ", event);
 
-  if (event.Type !== "container") {
-    return;
-  }
-  if (!event.status) {
-    logger.debug("container event missing status:", event);
+  if (event.Type !== "container" || !event.status || !event.from) {
+    logger.debug("container event missing required fields:", event);
     return;
   }
 
-  const imageName: string = event.Actor ? event.Actor.Attributes?.image ?? "" : "";
-  // capture the time of the event (or use the current time if not available) in case we need to
-  // compare it to container log timestamps
-  const eventTime: number = event.time ? event.time : new Date().getTime();
-  logger.debug("container event:", { status: event.status, image: imageName });
-
+  logger.debug("container event:", { status: event.status, image: event.from });
   // NOTE: if we start adding more images to the `images` filter, we'll need to check those here
   if (event.status === "start") {
-    // wait for the container to be in a "Running" state (and optionally show the correct log line
-    // if it's the `confluentinc/confluent-local` image) before we consider it fully started
-    let started = await waitForContainerRunning(event);
-    if (imageName.startsWith("confluentinc/confluent-local")) {
-      logger.debug(
-        `container status shows "running", checking logs for "${SERVER_STARTED_LOG_LINE}"...`,
-      );
-      started = await waitForServerStartedLog(event.id, eventTime);
-    }
-    await setContextValue(ContextValues.localKafkaClusterAvailable, started);
-    localKafkaConnected.fire(started);
+    await handleContainerStartEvent(event);
   } else if (event.status === "die") {
-    await setContextValue(ContextValues.localKafkaClusterAvailable, false);
-    localKafkaConnected.fire(false);
+    await handleContainerDieEvent(event);
   }
 }
 
+/** Handling for an event that describes when a container starts for the first time or is started from
+ * a stopped state. */
+export async function handleContainerStartEvent(event: SystemEvent) {
+  const imageName: string = event.Actor ? event.Actor.Attributes?.image ?? "" : "";
+  if (!imageName) {
+    return;
+  }
+
+  // capture the time of the event (or use the current time if not available) in case we need to
+  // compare it to container log timestamps
+  const eventTime: number = event.time ? event.time : new Date().getTime();
+
+  // wait for the container to be in a "Running" state (and optionally show the correct log line
+  // if it's the `confluentinc/confluent-local` image) before we consider it fully started
+  let started = await waitForContainerRunning(event);
+  if (!started) {
+    logger.debug(`container didn't start in time, bailing and trying again later...`);
+    return;
+  }
+
+  if (imageName.startsWith(LOCAL_KAFKA_IMAGE) && started) {
+    logger.debug(
+      `container status shows "running", checking logs for "${SERVER_STARTED_LOG_LINE}"...`,
+    );
+    started = await waitForServerStartedLog(event.id, eventTime);
+
+    await setContextValue(ContextValues.localKafkaClusterAvailable, started);
+    localKafkaConnected.fire(started);
+  }
+  // TODO: handle other images we care about here
+}
+
+/** Handling for an event that describes when a container is stopped. */
+export async function handleContainerDieEvent(event: SystemEvent) {
+  const imageName: string = event.Actor ? event.Actor.Attributes?.image ?? "" : "";
+  if (!imageName) {
+    return;
+  }
+
+  if (imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
+    await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+    localKafkaConnected.fire(false);
+  }
+  // TODO: handle other images we care about here
+}
+
 /** Wait for the container to be in a "Running" state. */
-async function waitForContainerRunning(event: any, maxWaitTimeSec: number = 60): Promise<boolean> {
+export async function waitForContainerRunning(
+  event: any,
+  maxWaitTimeSec: number = 60,
+): Promise<boolean> {
   // TODO: make wait time configurable?
   let started = false;
 
@@ -209,7 +240,7 @@ async function waitForContainerRunning(event: any, maxWaitTimeSec: number = 60):
  * "Server started, listening for requests..."
  * So we need to wait for that log line to appear before we consider the container fully ready.
  */
-async function waitForServerStartedLog(
+export async function waitForServerStartedLog(
   containerId: string,
   since: number,
   maxWaitTimeSec: number = 60,
