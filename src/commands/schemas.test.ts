@@ -34,16 +34,18 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
           KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, hasSchema: false }),
         );
       },
-      (error) => {
-        return (
-          // Should exactly be Error, not subclass
-          error instanceof Error &&
-          error.constructor === Error &&
-          /Asked to get schemas for topic test-topic believed to not have schema/.test(
-            error.message,
-          )
+      raisedErrorMatcher(/Asked to get schemas for topic "test-topic" believed to not have schema/),
+    );
+  });
+
+  it("hates local topics (at this time)", async function () {
+    await assert.rejects(
+      async () => {
+        await getLatestSchemasForTopic(
+          KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, hasSchema: true }),
         );
       },
+      raisedErrorMatcher(/Asked to get schemas for local topic "test-topic"/),
     );
   });
 
@@ -54,14 +56,9 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
       async () => {
         await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
       },
-      (error) => {
-        return (
-          error instanceof CannotLoadSchemasError &&
-          /Could not determine schema registry for topic test-topic believed to have related schemas/.test(
-            error.message,
-          )
-        );
-      },
+      raisedCannotLoadSchemasErrorMatcher(
+        /Could not determine schema registry for topic "test-topic" believed to have related schemas/,
+      ),
     );
   });
 
@@ -72,14 +69,9 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
       async () => {
         await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
       },
-      (error) => {
-        return (
-          error instanceof CannotLoadSchemasError &&
-          /Schema registry .* had no schemas, but we expected it to have some for topic "test-topic"/.test(
-            error.message,
-          )
-        );
-      },
+      raisedCannotLoadSchemasErrorMatcher(
+        /Schema registry .* had no schemas, but we expected it to have some for topic "test-topic"/,
+      ),
     );
   });
 
@@ -92,12 +84,7 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
       async () => {
         await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
       },
-      (error) => {
-        return (
-          error instanceof CannotLoadSchemasError &&
-          /No schemas found for topic "test-topic"/.test(error.message)
-        );
-      },
+      raisedCannotLoadSchemasErrorMatcher(/No schemas found for topic "test-topic"/),
     );
   });
 
@@ -123,3 +110,22 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
     }
   });
 });
+
+/** Function generator that returns a matcher function that checks if the error message matches the given regex
+ *  and that the exception is an instance of Error (and only Error, not a subclass)
+ */
+function raisedErrorMatcher(matcher: RegExp): (error: any) => boolean {
+  return (error: any) => {
+    return error instanceof Error && error.constructor === Error && matcher.test(error.message);
+  };
+}
+
+/**
+ * Error matcher function generator that checks if the error is an instance of CannotLoadSchemasError and that the error message
+ * matches the given regex.
+ */
+function raisedCannotLoadSchemasErrorMatcher(matcher: RegExp): (error: any) => boolean {
+  return (error: any) => {
+    return error instanceof CannotLoadSchemasError && matcher.test(error.message);
+  };
+}

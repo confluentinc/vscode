@@ -126,9 +126,19 @@ async function loadOrCreateSchemaViewer(schema: Schema) {
  * as decided by TopicNameStrategy. May return two schemas if the topic has both key and value schemas.
  */
 export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
-  // This check indicates a programming error, not a user or external system contents issue.
+  // These two checks indicate programming errors, not a user or external system contents issues ...
   if (!topic.hasSchema) {
-    throw new Error(`Asked to get schemas for topic ${topic.name} believed to not have schemas.`);
+    throw new Error(`Asked to get schemas for topic "${topic.name}" believed to not have schemas.`);
+  }
+
+  // local topics, at time of writing, won't have any related schemas, 'cause we don't support any form
+  // of local schema registry (yet). But when supporting local schema registry will probably need a different
+  // way to get schemas than these ccloud-infected methods, so raise an error here as a reminder to revisit
+  // this code when local schema registry support is added.
+  if (topic.isLocalTopic()) {
+    throw new Error(
+      `Asked to get schemas for local topic "${topic.name}", but local topics should not have schemas.`,
+    );
   }
 
   const rm = ResourceManager.getInstance();
@@ -136,7 +146,7 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
   const schemaRegistry = await rm.getCCloudSchemaRegistryCluster(topic.environmentId!);
   if (schemaRegistry === null) {
     throw new CannotLoadSchemasError(
-      `Could not determine schema registry for topic ${topic.name} believed to have related schemas.`,
+      `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,
     );
   }
 
@@ -144,7 +154,7 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
 
   if (allSchemas === undefined || allSchemas.length === 0) {
     throw new CannotLoadSchemasError(
-      `Schema registry ${schemaRegistry.id} had no schemas, but we expected it to have some for topic "${topic.name}"`,
+      `Schema registry "${schemaRegistry.id}" had no schemas, but we expected it to have some for topic "${topic.name}"`,
     );
   }
 
