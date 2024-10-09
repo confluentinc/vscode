@@ -1,4 +1,3 @@
-import { isDockerAvailable } from ".";
 import {
   ApiResponse,
   ContainerApi,
@@ -10,7 +9,7 @@ import {
 import { ContextValues, setContextValue } from "../context";
 import { localKafkaConnected } from "../emitters";
 import { Logger } from "../logging";
-import { defaultRequestInit } from "./configs";
+import { defaultRequestInit, isDockerAvailable } from "./configs";
 
 const logger = new Logger("docker.listener");
 
