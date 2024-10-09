@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as Sentry from "@sentry/node";
 
 import { randomBytes } from "crypto";
 import { posix } from "path";
@@ -119,62 +120,77 @@ async function applyTemplate(
   pickedTemplate: Template,
   manifestOptionValues: { [key: string]: unknown },
 ) {
-  const client: TemplatesApi = (await getSidecar()).getTemplatesApi();
-  const applyTemplateResponse: Blob = await client.gatewayV1TemplatesNameApplyPost({
-    name: pickedTemplate.id,
-    ApplyTemplateRequest: {
-      options: manifestOptionValues,
-    },
-  });
+  try {
+    const client: TemplatesApi = (await getSidecar()).getTemplatesApi();
+    const applyTemplateResponse: Blob = await client.gatewayV1TemplatesNameApplyPost({
+      name: pickedTemplate.id,
+      ApplyTemplateRequest: {
+        options: manifestOptionValues,
+      },
+    });
 
-  const arrayBuffer = await applyTemplateResponse.arrayBuffer();
+    const arrayBuffer = await applyTemplateResponse.arrayBuffer();
 
-  const SAVE_LABEL = "Save to directory";
-  const fileUris = await vscode.window.showOpenDialog({
-    openLabel: SAVE_LABEL,
-    canSelectFiles: false,
-    canSelectFolders: true,
-    canSelectMany: false,
-    // Parameter might be ignored on some OSes (e.g. macOS)
-    title: SAVE_LABEL,
-  });
+    const SAVE_LABEL = "Save to directory";
+    const fileUris = await vscode.window.showOpenDialog({
+      openLabel: SAVE_LABEL,
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      // Parameter might be ignored on some OSes (e.g. macOS)
+      title: SAVE_LABEL,
+    });
 
-  if (!fileUris || fileUris.length !== 1) {
-    // This means the user cancelled @ save dialog. Show a message and return
-    getTelemetryLogger().logUsage("Scaffold Cancelled", {
+    if (!fileUris || fileUris.length !== 1) {
+      // This means the user cancelled @ save dialog. Show a message and return
+      getTelemetryLogger().logUsage("Scaffold Cancelled", {
+        templateName: pickedTemplate.spec.display_name,
+      });
+      vscode.window.showInformationMessage("Project generation cancelled");
+      return;
+    }
+
+    const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
+
+    await extractZipContents(arrayBuffer, destination);
+    getTelemetryLogger().logUsage("Scaffold Completed", {
       templateName: pickedTemplate.spec.display_name,
     });
-    vscode.window.showInformationMessage("Project generation cancelled");
-    return;
-  }
-
-  const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
-
-  await extractZipContents(arrayBuffer, destination);
-  getTelemetryLogger().logUsage("Scaffold Completed", {
-    templateName: pickedTemplate.spec.display_name,
-  });
-  // Notify the user that the project was generated successfully
-  const selection = await vscode.window.showInformationMessage(
-    `🎉 Project Generated`,
-    { modal: true, detail: `Location: ${destination.path}` },
-    { title: "Open in New Window" },
-    { title: "Open in Current Window" },
-    { title: "Dismiss", isCloseAffordance: true },
-  );
-  if (selection !== undefined) {
-    // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
-    // reusing the current one
-    const keepsExistingWindow = selection.title === "Open in New Window";
-    getTelemetryLogger().logUsage("Scaffold Folder Opened", {
-      templateName: pickedTemplate.spec.display_name,
-      keepsExistingWindow,
-    });
-    vscode.commands.executeCommand(
-      "vscode.openFolder",
-      vscode.Uri.file(destination.path),
-      keepsExistingWindow,
+    // Notify the user that the project was generated successfully
+    const selection = await vscode.window.showInformationMessage(
+      `🎉 Project Generated`,
+      { modal: true, detail: `Location: ${destination.path}` },
+      { title: "Open in New Window" },
+      { title: "Open in Current Window" },
+      { title: "Dismiss", isCloseAffordance: true },
     );
+    if (selection !== undefined) {
+      // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
+      // reusing the current one
+      const keepsExistingWindow = selection.title === "Open in New Window";
+      getTelemetryLogger().logUsage("Scaffold Folder Opened", {
+        templateName: pickedTemplate.spec.display_name,
+        keepsExistingWindow,
+      });
+      vscode.commands.executeCommand(
+        "vscode.openFolder",
+        vscode.Uri.file(destination.path),
+        keepsExistingWindow,
+      );
+    }
+  } catch (e) {
+    logger.error("Failed to apply template", e);
+    Sentry.captureException(e);
+    const action = await vscode.window.showErrorMessage(
+      "There was an error while generating the project. Try again or file an issue.",
+      { title: "Try again" },
+      { title: "Report an issue" },
+    );
+    if (action !== undefined) {
+      const cmd = action.title === "Try again" ? "confluent.scaffold" : "confluent.support.issue";
+      await vscode.commands.executeCommand(cmd);
+    }
+    return;
   }
 }
 
