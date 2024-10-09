@@ -1,15 +1,15 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import {
+  TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_LOCAL_KAFKA_TOPIC,
+  TEST_SCHEMA,
+  TEST_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
 import { CannotLoadSchemasError, getLatestSchemasForTopic } from "./schemas";
-import {
-  TEST_CCLOUD_KAFKA_TOPIC,
-  TEST_LOCAL_KAFKA_TOPIC,
-  TEST_SCHEMA_REGISTRY,
-  TEST_SCHEMA,
-} from "../../tests/unit/testResources";
 
 describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   let sandbox: sinon.SinonSandbox;
@@ -50,8 +50,8 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("hates topics without schema registry", async function () {
-    // mock resourceManager.getCCloudSchemaRegistryCluster() to return null
-    resourceManager.getCCloudSchemaRegistryCluster.resolves(null);
+    // mock resourceManager.getCCloudSchemaRegistry() to return null
+    resourceManager.getCCloudSchemaRegistry.resolves(null);
     await assert.rejects(
       async () => {
         await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
@@ -63,7 +63,7 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("hates empty schema registry", async function () {
-    resourceManager.getCCloudSchemaRegistryCluster.resolves(TEST_SCHEMA_REGISTRY);
+    resourceManager.getCCloudSchemaRegistry.resolves(TEST_SCHEMA_REGISTRY);
     resourceManager.getSchemasForRegistry.resolves([]);
     await assert.rejects(
       async () => {
@@ -76,7 +76,7 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("hates when no schemas match topic", async function () {
-    resourceManager.getCCloudSchemaRegistryCluster.resolves(TEST_SCHEMA_REGISTRY);
+    resourceManager.getCCloudSchemaRegistry.resolves(TEST_SCHEMA_REGISTRY);
     resourceManager.getSchemasForRegistry.resolves([
       Schema.create({ ...TEST_SCHEMA, subject: "some-other-topic-value" }),
     ]);
@@ -89,7 +89,7 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
-    resourceManager.getCCloudSchemaRegistryCluster.resolves(TEST_SCHEMA_REGISTRY);
+    resourceManager.getCCloudSchemaRegistry.resolves(TEST_SCHEMA_REGISTRY);
     resourceManager.getSchemasForRegistry.resolves([
       Schema.create({ ...TEST_SCHEMA, subject: "test-topic-value", version: 1 }),
       Schema.create({ ...TEST_SCHEMA, subject: "test-topic-value", version: 2 }),

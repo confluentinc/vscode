@@ -9,7 +9,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
@@ -176,9 +176,7 @@ export async function getTopicsForCluster(
     await preloader.ensureCoarseResourcesLoaded(forceRefresh);
 
     // Get the schema registry id for the cluster's environment
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(
-      cluster.environmentId,
-    );
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
 
     if (schemaRegistry) {
       // Ensure the schemas are loaded for the schema registry, honoring the forceRefresh flag.
@@ -200,7 +198,7 @@ export async function getTopicsForCluster(
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
 
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(environmentId);
     if (schemaRegistry) {
       schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
       if (schemas === undefined) {
@@ -286,13 +284,14 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
     // TODO: update this once we're able to associate schemas with local topics
     return [];
   }
-  // look up the associated SR cluster based on the topic's environment, then pull the schemas
+  // look up the associated Schema Registry based on the topic's environment, then pull the schemas
   const resourceManager = getResourceManager();
 
-  const schemaRegistry: SchemaRegistryCluster | null =
-    await resourceManager.getCCloudSchemaRegistryCluster(topic.environmentId!);
+  const schemaRegistry: CCloudSchemaRegistry | null = await resourceManager.getCCloudSchemaRegistry(
+    topic.environmentId!,
+  );
   if (!schemaRegistry) {
-    logger.warn("No Schema Registry cluster found for topic", topic);
+    logger.warn("No Schema Registry found for topic", topic);
     return [];
   }
 

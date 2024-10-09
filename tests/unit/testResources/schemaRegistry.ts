@@ -1,7 +1,7 @@
-import { SchemaRegistryCluster } from "../../../src/models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../../../src/models/schemaRegistry";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
 
-export const TEST_SCHEMA_REGISTRY: SchemaRegistryCluster = SchemaRegistryCluster.create({
+export const TEST_SCHEMA_REGISTRY: CCloudSchemaRegistry = CCloudSchemaRegistry.create({
   id: "lsrc-abc123",
   provider: TEST_CCLOUD_PROVIDER.toUpperCase(),
   region: TEST_CCLOUD_REGION,

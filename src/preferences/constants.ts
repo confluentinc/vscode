@@ -3,7 +3,7 @@ const prefix = "confluent.";
 
 /**
  * Whether or not warning notifications will appear when consuming messages without permission to
- * access the associated Schema Registry cluster.
+ * access the associated Schema Registry.
  */
 export const SCHEMA_RBAC_WARNINGS_ENABLED =
   prefix + "cloud.messageViewer.showSchemaWarningNotifications";
