@@ -13,10 +13,10 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { SchemaRegistryCluster, SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
-import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -30,7 +30,7 @@ type ResourceViewProviderData =
   | ContainerTreeItem<CCloudEnvironment>
   | CCloudEnvironment
   | CCloudKafkaCluster
-  | SchemaRegistryCluster
+  | CCloudSchemaRegistry
   | ContainerTreeItem<LocalKafkaCluster>
   | LocalKafkaCluster;
 
@@ -86,8 +86,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       return new CCloudEnvironmentTreeItem(element);
     } else if (element instanceof LocalKafkaCluster || element instanceof CCloudKafkaCluster) {
       return new KafkaClusterTreeItem(element);
-    } else if (element instanceof SchemaRegistryCluster) {
-      return new SchemaRegistryClusterTreeItem(element);
+    } else if (element instanceof CCloudSchemaRegistry) {
+      // TODO(shoup): update ^ for local SR once available
+      return new SchemaRegistryTreeItem(element);
     }
     // should only be left with ContainerTreeItems for Configurations
     return element;
@@ -205,7 +206,7 @@ async function loadResources(
  * @returns
  */
 async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
-  const subItems: (CCloudKafkaCluster | SchemaRegistryCluster)[] = [];
+  const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
   // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
   await CCloudResourcePreloader.getInstance().ensureCoarseResourcesLoaded();
@@ -216,7 +217,7 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   subItems.push(...kafkaClusters);
 
   // Schema registry?
-  const schemaRegistry: SchemaRegistryCluster | null = await rm.getCCloudSchemaRegistryCluster(
+  const schemaRegistry: CCloudSchemaRegistry | null = await rm.getCCloudSchemaRegistry(
     environment.id,
   );
   if (schemaRegistry) {

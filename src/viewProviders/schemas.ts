@@ -6,9 +6,9 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
-import { getResourceManager } from "../storage/resourceManager";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.schemas");
 
@@ -33,10 +33,10 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
-  /** The parent of the focused Schema Registry cluster, if it came from CCloud.  */
+  /** The parent of the focused Schema Registry, if it came from CCloud.  */
   public ccloudEnvironment: CCloudEnvironment | null = null;
-  /** The focused Schema Registry cluster; set by clicking a Schema Registry item in the Resources view. */
-  public schemaRegistry: SchemaRegistryCluster | null = null;
+  /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
+  public schemaRegistry: SchemaRegistry | null = null;
 
   private static instance: SchemasViewProvider | null = null;
   private constructor() {
@@ -55,7 +55,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       this.reset();
     });
 
-    currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistryCluster | null) => {
+    currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistry | null) => {
       if (!schemaRegistry) {
         this.reset();
       } else {

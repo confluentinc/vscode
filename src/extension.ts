@@ -157,7 +157,7 @@ async function setupContextValues() {
     "ccloud-kafka-cluster",
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
-    "ccloud-schema-registry-cluster",
+    "ccloud-schema-registry",
     "ccloud-schema",
   ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
@@ -170,7 +170,7 @@ async function setupContextValues() {
   const resourcesWithIds = setContextValue(ContextValues.RESOURCES_WITH_ID, [
     "ccloud-environment",
     "ccloud-kafka-cluster",
-    "ccloud-schema-registry-cluster", // only ID, no name
+    "ccloud-schema-registry", // only ID, no name
     "ccloud-schema",
     "local-kafka-cluster",
   ]);

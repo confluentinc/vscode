@@ -3,10 +3,10 @@ import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
 
-// Main class representing CCloud Schema Registry clusters, matching key/value pairs returned
-// by the `confluent schema-registry cluster describe` command.
-export class SchemaRegistryCluster extends Data {
+export class CCloudSchemaRegistry extends Data {
   readonly connectionId = CCLOUD_CONNECTION_ID;
+  readonly isLocal: boolean = false;
+  readonly isCCloud: boolean = true;
 
   id!: Enforced<string>;
   provider!: Enforced<string>;
@@ -20,38 +20,40 @@ export class SchemaRegistryCluster extends Data {
   }
 }
 
-// Tree item representing a CCloud Schema Registry cluster
-export class SchemaRegistryClusterTreeItem extends vscode.TreeItem {
-  resource: SchemaRegistryCluster;
+// TODO(shoup): add LocalSchemaRegistry once available
+export type SchemaRegistry = CCloudSchemaRegistry;
 
-  constructor(resource: SchemaRegistryCluster) {
+// Tree item representing a Schema Registry in the Resources view
+export class SchemaRegistryTreeItem extends vscode.TreeItem {
+  resource: SchemaRegistry;
+
+  constructor(resource: SchemaRegistry) {
     const label = "Schema Registry";
     super(label, vscode.TreeItemCollapsibleState.None);
 
     // internal properties
     this.resource = resource;
-    this.contextValue = "ccloud-schema-registry-cluster";
+    // TODO(shoup): update context value once local SR is available
+    this.contextValue = "ccloud-schema-registry";
 
     // user-facing properties
     this.description = this.resource.id;
     this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY);
-    this.tooltip = createSchemaRegistryClusterTooltip(this.resource);
+    this.tooltip = createSchemaRegistryTooltip(this.resource);
 
     // set primary click action to select this cluster as the current one, focusing it in the Schemas view
     this.command = {
       command: "confluent.resources.schema-registry.select",
-      title: "Set Current Schema Registry Cluster",
+      title: "Set Current Schema Registry",
       arguments: [this.resource],
     };
   }
 }
 
-function createSchemaRegistryClusterTooltip(
-  resource: SchemaRegistryCluster,
-): vscode.MarkdownString {
+function createSchemaRegistryTooltip(resource: CCloudSchemaRegistry): vscode.MarkdownString {
   // TODO(shoup) update for local SR once available
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry Cluster`)
+    .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Provider: \`${resource.provider}\`\n\n`)
