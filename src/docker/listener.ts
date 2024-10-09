@@ -9,6 +9,7 @@ import {
 import { ContextValues, setContextValue } from "../context";
 import { localKafkaConnected } from "../emitters";
 import { Logger } from "../logging";
+import { IntervalPoller } from "../utils/timing";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
 
 const logger = new Logger("docker.listener");
@@ -21,8 +22,16 @@ const EVENT_FILTERS = {
 // log line to watch for before considering the container fully started and discoverable
 const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
 
+// poll for Docker events every 15 seconds if we can't ping Docker, then increase to every 1 second
+export const pollDockerEvents = new IntervalPoller(
+  "pollDockerEvents",
+  listenForEvents,
+  15_000,
+  1_000,
+);
+
 /**
- * Continuously check for Docker availability and query the system events.
+ * Check for Docker availability and query the system events.
  * Depending on the (Docker) event, we may emit (extension) events to update the UI.
  */
 export async function listenForEvents(): Promise<void> {
@@ -32,87 +41,91 @@ export async function listenForEvents(): Promise<void> {
     filters: JSON.stringify(EVENT_FILTERS),
   };
 
-  // keep a top-level loop running in case we lose connection to docker or the stream ends
-  // or something else goes wrong
-  while (true) {
-    // check if Docker is available before trying to listen for events, taking into account the user
-    // may have started the extension before Docker is running
-    const dockerAvailable: boolean = await isDockerAvailable();
-    if (!dockerAvailable) {
-      // wait a bit before trying again
-      await new Promise((resolve) => {
-        setTimeout(resolve, 15_000);
-      });
-      continue;
-    }
-
-    let stream: ReadableStream<Uint8Array> | null = null;
-    try {
-      // NOTE: we have to use .systemEventsRaw() because .systemEvents() tries to convert the
-      // response to JSON instead of returning a readable stream, which silently fails
-      const response: ApiResponse<EventMessage> = await client.systemEventsRaw(queryParams, init);
-      stream = response.raw.body as ReadableStream<Uint8Array>;
-    } catch (error) {
-      logger.error("error getting event stream:", error);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 1000);
-      });
-      continue;
-    }
-
-    if (!stream) {
-      logger.debug("stream from event response is null");
-      await new Promise((resolve) => {
-        setTimeout(resolve, 1000);
-      });
-      continue;
-    }
-
-    // this will block until the stream ends or an error occurs, so we don't have to keep making
-    // requests against /events for each event we want to capture
-    await readEventStream(stream);
+  // check if Docker is available before trying to listen for events, taking into account the user
+  // may have started the extension before Docker is running
+  const dockerAvailable: boolean = await isDockerAvailable();
+  if (!dockerAvailable) {
+    // make sure we're using the regular polling frequency (15sec) if Docker isn't available
+    pollDockerEvents.useRegularFrequency();
+    return;
   }
+  // Docker is available, so we can use the high frequency (1sec) for event polling
+  pollDockerEvents.useHighFrequency();
+  // stop polling while we handle the event stream, then start back up once we're done
+  pollDockerEvents.stop();
+
+  let stream: ReadableStream<Uint8Array> | null = null;
+  try {
+    // NOTE: we have to use .systemEventsRaw() because .systemEvents() tries to convert the
+    // response to JSON instead of returning a readable stream, which silently fails
+    const response: ApiResponse<EventMessage> = await client.systemEventsRaw(queryParams, init);
+    stream = response.raw.body as ReadableStream<Uint8Array>;
+  } catch (error) {
+    logger.error("error getting event stream:", error);
+    return;
+  }
+
+  if (!stream) {
+    logger.error("stream from event response is null");
+    return;
+  }
+  // this will block until the stream ends or an error occurs, so we don't have to keep making
+  // requests against /events for each event we want to capture
+  logger.error("reading event stream...");
+  await readEventStream(stream);
+  logger.error("event stream ended");
+
+  pollDockerEvents.start();
 }
 
 /** Read the event stream and attempt to parse events before additional handling. */
 export async function readEventStream(stream: ReadableStream<Uint8Array>): Promise<void> {
-  const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader();
   logger.debug("listening for events...", { locked: stream.locked });
   while (true) {
     try {
-      // read an individual event from the stream
-      const { done, value } = await reader.read();
-      if (done) {
-        logger.debug("events stream ended");
+      const shouldContinue: boolean = await readEventFromStream(stream);
+      if (!shouldContinue) {
         break;
       }
-      if (!value) {
-        logger.debug("empty value from events stream");
-        continue;
-      }
-      // convert the Uint8Array to a string and try to parse as JSON
-      const eventString = new TextDecoder().decode(value);
-      if (!eventString || eventString === "") {
-        logger.debug("empty event string from events stream");
-        continue;
-      }
-
-      let event: CustomEventMessage;
-      try {
-        event = JSON.parse(eventString);
-      } catch (error) {
-        logger.error("error parsing event:", error);
-        // TODO: notify the user of the error here? if a container we care about is started or
-        // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
-        // the view to see the current state
-        continue;
-      }
-      await handleEvent(event);
     } catch (error) {
       logger.error("error reading events stream:", error);
       break;
     }
   }
+}
+
+/** Read a single event from the stream and handle it. */
+export async function readEventFromStream(stream: ReadableStream<Uint8Array>): Promise<boolean> {
+  const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader();
+  // read an individual event from the stream
+  const { done, value } = await reader.read();
+  if (done) {
+    logger.debug("events stream ended");
+    return false;
+  }
+  if (!value) {
+    logger.debug("empty value from events stream");
+    return true;
+  }
+  // convert the Uint8Array to a string and try to parse as JSON
+  const eventString = new TextDecoder().decode(value);
+  if (!eventString || eventString === "") {
+    logger.debug("empty event string from events stream");
+    return true;
+  }
+
+  let event: CustomEventMessage;
+  try {
+    event = JSON.parse(eventString);
+  } catch (error) {
+    logger.error("error parsing event:", error);
+    // TODO: notify the user of the error here? if a container we care about is started or
+    // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
+    // the view to see the current state
+    return true;
+  }
+  await handleEvent(event);
+  return true;
 }
 
 /** Custom event message type that includes additional fields we care about. */
