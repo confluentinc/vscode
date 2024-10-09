@@ -50,7 +50,7 @@ import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { ContextValues, setContextValue, setExtensionContext } from "./context";
-import { listenForEvents } from "./docker/listener";
+import { pollDockerEvents } from "./docker/listener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
@@ -124,7 +124,7 @@ async function _activateExtension(
   CCloudResourcePreloader.getInstance();
 
   // start the local Docker event listener to watch for container start/die events
-  listenForEvents();
+  pollDockerEvents.start();
 
   return context;
 }
