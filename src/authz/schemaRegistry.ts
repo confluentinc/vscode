@@ -1,7 +1,7 @@
 import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
@@ -31,11 +31,11 @@ export async function canAccessSchemaTypeForTopic(
   }
 
   const environmentId: string = topic.environmentId;
-  const schemaRegistry: SchemaRegistryCluster | null =
-    await getResourceManager().getCCloudSchemaRegistryCluster(environmentId);
+  const schemaRegistry: CCloudSchemaRegistry | null =
+    await getResourceManager().getCCloudSchemaRegistry(environmentId);
   if (!schemaRegistry) {
     logger.debug(
-      "no Schema Registry cluster in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",
+      "no Schema Registry in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",
       { environmentId },
     );
     // if we had schemas, we would have a schema registry

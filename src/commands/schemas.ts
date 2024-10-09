@@ -3,10 +3,10 @@ import { registerCommandWithLogging } from ".";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
-import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemas");
 
@@ -26,14 +26,14 @@ async function viewLocallyCommand(schema: Schema) {
   );
 }
 
-/** Copy the Schema Registry cluster ID from the Schemas tree provider nav action. */
+/** Copy the Schema Registry ID from the Schemas tree provider nav action. */
 async function copySchemaRegistryId() {
-  const cluster: SchemaRegistryCluster | null = getSchemasViewProvider().schemaRegistry;
-  if (!cluster) {
+  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  if (!schemaRegistry) {
     return;
   }
-  await vscode.env.clipboard.writeText(cluster.id);
-  vscode.window.showInformationMessage(`Copied "${cluster.id}" to clipboard.`);
+  await vscode.env.clipboard.writeText(schemaRegistry.id);
+  vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
 }
 
 function refreshCommand(item: any) {
@@ -143,7 +143,7 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
 
   const rm = ResourceManager.getInstance();
 
-  const schemaRegistry = await rm.getCCloudSchemaRegistryCluster(topic.environmentId!);
+  const schemaRegistry = await rm.getCCloudSchemaRegistry(topic.environmentId!);
   if (schemaRegistry === null) {
     throw new CannotLoadSchemasError(
       `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,
