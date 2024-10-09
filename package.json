@@ -95,6 +95,11 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.schemas.diffMostRecentVersions",
+        "title": "Show Latest Changes",
+        "category": "Confluent: Compare Resources"
+      },
+      {
         "command": "confluent.diff.selectForCompare",
         "icon": "$(pass-filled)",
         "title": "Select for Compare",
@@ -521,6 +526,11 @@
           "command": "confluent.copyResourceName",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
           "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.schemas.diffMostRecentVersions",
+          "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*/",
+          "group": "3_compare"
         },
         {
           "command": "confluent.diff.selectForCompare",

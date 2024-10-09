@@ -7,6 +7,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { ContainerTreeItem } from "../models/main";
 
 const logger = new Logger("commands.schemas");
 
@@ -57,6 +58,24 @@ function uploadVersionCommand(item: any) {
   );
 }
 
+async function diffLatestSchemasCommand(schemaGroup: ContainerTreeItem<Schema>) {
+  if (schemaGroup.children.length < 2) {
+    // Should not happen if the context value was set correctly over in generateSchemaSubjectGroups().
+    logger.warn("diffLatestSchemasCommand called with less than two schemas", schemaGroup);
+    return;
+  }
+
+  // generateSchemaSubjectGroups will have set up children as the most rececnt first
+  const latestSchema = schemaGroup.children[0];
+  const priorVersionSchema = schemaGroup.children[1];
+
+  logger.info("Comparing most recent schemas", latestSchema, priorVersionSchema);
+
+  // Select the latest, then compare against the prior version.
+  await vscode.commands.executeCommand("confluent.diff.selectForCompare", priorVersionSchema);
+  await vscode.commands.executeCommand("confluent.diff.compareWithSelected", latestSchema);
+}
+
 async function openLatestSchemasCommand(topic: KafkaTopic) {
   let highestVersionedSchemas: Schema[] | null = null;
 
@@ -103,6 +122,10 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
+    registerCommandWithLogging(
+      "confluent.schemas.diffMostRecentVersions",
+      diffLatestSchemasCommand,
+    ),
   ];
 }
 
