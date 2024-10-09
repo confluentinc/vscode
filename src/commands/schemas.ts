@@ -4,9 +4,9 @@ import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemas");
 
@@ -143,7 +143,7 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
 
   const rm = ResourceManager.getInstance();
 
-  const schemaRegistry = await rm.getCCloudSchemaRegistryCluster(topic.environmentId!);
+  const schemaRegistry = await rm.getCCloudSchemaRegistry(topic.environmentId!);
   if (schemaRegistry === null) {
     throw new CannotLoadSchemasError(
       `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,
