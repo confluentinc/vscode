@@ -5,22 +5,23 @@ import { SystemApi } from "../clients/docker";
 import { Logger } from "../logging";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 
-const logger = new Logger("docker.client");
+const logger = new Logger("docker.configs");
+
+export const DEFAULT_WINDOWS_SOCKET_PATH = "//./pipe/docker_engine";
+export const DEFAULT_UNIX_SOCKET_PATH = "/var/run/docker.sock";
 
 /** Get the path to the Docker socket based on user settings or platform defaults. */
-function getSocketPath(): string {
+export function getSocketPath(): string {
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
   let path: string = configs.get(LOCAL_DOCKER_SOCKET_PATH, "").trim();
-  if (!path || path !== "") {
-    // no socketPath config set by user, try to guess the default based on platform
-    if (process.platform === "win32") {
-      path = normalize("//./pipe/docker_engine");
-    } else {
-      path = "/var/run/docker.sock";
-    }
+
+  if (process.platform === "win32") {
+    path = path ? normalize(path) : normalize(DEFAULT_WINDOWS_SOCKET_PATH);
   } else {
-    logger.debug("using docker socket path from extension settings", { socketPath: path });
+    path = path ? path : DEFAULT_UNIX_SOCKET_PATH;
   }
+  logger.debug("using docker socket path:", { socketPath: path });
+
   return path;
 }
 
