@@ -1,0 +1,403 @@
+import {
+  ApiResponse,
+  ContainerApi,
+  ContainerInspectResponse,
+  ContainerStateStatusEnum,
+  EventMessage,
+  SystemApi,
+  SystemEventsRequest,
+} from "../clients/docker";
+import { ContextValues, setContextValue } from "../context";
+import { localKafkaConnected } from "../emitters";
+import { Logger } from "../logging";
+import { IntervalPoller } from "../utils/timing";
+import { defaultRequestInit, isDockerAvailable } from "./configs";
+
+const logger = new Logger("docker.eventListener");
+
+export const LOCAL_KAFKA_IMAGE = "confluentinc/confluent-local";
+const EVENT_FILTERS = {
+  type: ["container"],
+  images: [LOCAL_KAFKA_IMAGE],
+};
+/** The log line to watch for before considering the container fully started and discoverable. */
+export const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
+
+/**
+ * Singleton class that listens for Docker events and processes them as needed.
+ *
+ * NOTE: original functionality here was done with module-level functions that worked fine in click-
+ * testing, but attempting to create tests for them was difficult due to the way the functions were
+ * structured. This class is an attempt to encapsulate the event listener and poller functionality
+ * into a single class that can be more easily tested.
+ */
+export class EventListener {
+  /** Did something else in the codebase request that we stop listening for events? This will cause
+   * {@link readEventsFromStream()} to exit early if set to `true`. */
+  private stopped: boolean = false;
+
+  // singleton pattern to ensure only one instance of the event listener + poller is running
+  private static instance: EventListener | null = null;
+  private poller: IntervalPoller;
+  private constructor() {
+    // without the arrow function, `listenForEvents` gets bound to the `IntervalPoller` instance,
+    // not the `EventListener` instance, which then causes `this.poller` references to return
+    // `undefined` and `this` to return the poller. alternatively, we could use the following:
+    // ```ts
+    // this.listenForEvents = this.listenForEvents.bind(this);
+    // ```
+    // while passing `this.listenForEvents()` directly into the `IntervalPoller` constructor
+    this.poller = new IntervalPoller(
+      "pollDockerEvents",
+      () => {
+        this.listenForEvents();
+      },
+      15_000,
+      1_000,
+    );
+  }
+  static getInstance(): EventListener {
+    if (!EventListener.instance) {
+      EventListener.instance = new EventListener();
+    }
+    return EventListener.instance;
+  }
+
+  /** Start the poller and resume listening for events. */
+  start(): void {
+    this.stopped = false;
+    this.poller.start();
+  }
+
+  /**
+   * Stop the poller and pause listening for events. If any event is being processed, it will
+   * attempt to finish and then exit from reading the event stream.
+   */
+  stop(): void {
+    this.poller.stop();
+    this.stopped = true;
+  }
+
+  /**
+   * Main workflow method for the {@link EventListener} class, handling the following:
+   * - checking if Docker is available and adjusting the poller frequency accordingly
+   * - starting the event stream and reading events from it
+   * - handling container start and die events for the `confluentinc/confluent-local` image, to
+   *   include checking for a specific log line to appear in the container logs and informing the UI
+   *   that a local Kafka cluster is available
+   *
+   * This should not be called directly from other portions of the codebase, but should solely be
+   * controlled by the polling mechanism that starts on extension activation.
+   */
+  async listenForEvents(): Promise<void> {
+    const client = new SystemApi();
+    const init: RequestInit = defaultRequestInit();
+    const queryParams: SystemEventsRequest = {
+      filters: JSON.stringify(EVENT_FILTERS),
+    };
+
+    // check if Docker is available before trying to listen for events, taking into account the user
+    // may have started the extension before Docker is running
+    const dockerAvailable: boolean = await isDockerAvailable();
+    if (!dockerAvailable) {
+      // use the slower polling frequency (15sec) if Docker isn't available
+      this.poller.useRegularFrequency();
+      return;
+    }
+    // Docker is available, so we can use the more frequent (at most every 1sec) polling for events
+    // (NOTE: if we get a successful response back from /events, that will block until the stream
+    // ends, so we don't have to worry about making requests every second)
+    this.poller.useHighFrequency();
+    // stop polling while we handle the event stream, then start back up once we're done
+    this.poller.stop();
+
+    let stream: ReadableStream<Uint8Array> | null = null;
+    try {
+      // NOTE: we have to use .systemEventsRaw() because .systemEvents() tries to convert the
+      // response to JSON instead of returning a readable stream, which silently fails
+      const response: ApiResponse<EventMessage> = await client.systemEventsRaw(queryParams, init);
+      stream = response.raw.body as ReadableStream<Uint8Array>;
+    } catch (error) {
+      logger.error("error getting event stream:", error);
+      return;
+    }
+
+    if (!stream) {
+      logger.error("stream from event response is null");
+      return;
+    }
+
+    try {
+      // these will block until the stream ends or an error occurs, so we don't have to keep making
+      // .systemEventsRaw() requests for each event we want to capture
+      const yieldedEvents = this.readEventsFromStream(stream);
+      for await (const event of yieldedEvents) {
+        await this.handleEvent(event);
+      }
+    } catch (error) {
+      if (error instanceof TypeError && error.message === "terminated") {
+        logger.debug("stream ended:", error.cause);
+      } else {
+        logger.error("error handling events from stream:", error);
+      }
+    }
+
+    this.poller.start();
+  }
+
+  /** Read events from the stream, parse them, and yield them for processing until the stream closes
+   * or the listener/poller are told to stop. */
+  async *readEventsFromStream(
+    stream: ReadableStream<Uint8Array>,
+  ): AsyncGenerator<SystemEventMessage> {
+    logger.debug("reading events from stream...");
+    const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader();
+
+    while (true) {
+      // try to read an individual event (as a Uint8Array) from the stream
+      const { done, value } = await reader.read();
+      if (done) {
+        logger.debug("events stream ended");
+        break;
+      }
+      if (this.stopped) {
+        logger.debug("listener stopped, bailing...");
+        break;
+      }
+      if (!value) {
+        logger.debug("empty value from events stream");
+        continue;
+      }
+      // convert the Uint8Array to a string and try to parse as JSON
+      const eventString = new TextDecoder().decode(value);
+      if (!eventString) {
+        logger.debug("empty event string from events stream");
+        continue;
+      }
+
+      let event: SystemEventMessage;
+      try {
+        event = JSON.parse(eventString);
+      } catch (error) {
+        logger.error("error parsing event:", error);
+        // TODO: notify the user of the error here? if a container we care about is started or
+        // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
+        // the view to see the current state
+        continue;
+      }
+
+      yield event;
+    }
+  }
+
+  /** Handle a single event, checking for required fields and passing it off to the appropriate
+   * handler based on the event type. */
+  async handleEvent(event: SystemEventMessage): Promise<void> {
+    logger.trace("handling event:", event);
+
+    if (!event.status) {
+      logger.debug("missing required 'status' field in event, bailing...", event);
+      return;
+    }
+
+    if (event.Type === "container") {
+      await this.handleContainerEvent(event);
+    }
+    // TODO: handle other event types we care about here for future functionality
+  }
+
+  /** Pass container "start" and "die" events through for further handling. */
+  async handleContainerEvent(event: SystemEventMessage): Promise<void> {
+    // NOTE: if we start adding more images to the `images` filter, we'll need to check those here
+    if (event.status === "start") {
+      await this.handleContainerStartEvent(event);
+    } else if (event.status === "die") {
+      await this.handleContainerDieEvent(event);
+    }
+  }
+
+  /** Handling for an event that describes when a container starts for the first time or is started from
+   * a stopped state. */
+  async handleContainerStartEvent(event: SystemEventMessage): Promise<void> {
+    if (!event.id || !event.Actor?.Attributes?.image) {
+      logger.debug("missing required fields in container start event, bailing...", event);
+      return;
+    }
+
+    const containerId: string = event.id;
+    const imageName: string = event.Actor.Attributes.image;
+    // capture the time of the event (or use the current time if not available) in case we need to
+    // compare it to container log timestamps
+    const eventTime: number = event.time ? event.time : new Date().getTime();
+
+    if (!imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
+      // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
+      logger.debug(`ignoring container start event for image: "${imageName}"`);
+      return;
+    }
+
+    let started: boolean = await this.waitForContainerState(containerId, "running", eventTime);
+    if (!started) {
+      logger.debug(`container didn't show a 'running' state, bailing and trying again later`);
+      return;
+    }
+
+    // when the `confluent-local` container starts, it should show the following log line once it's ready:
+    // "Server started, listening for requests..."
+    // so we need to wait for that log line to appear before we consider the container fully ready
+    logger.debug("container status shows 'running', checking container logs...", {
+      stringToInclude: SERVER_STARTED_LOG_LINE,
+    });
+    started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
+    logger.debug("done waiting for container log line", {
+      started,
+      stringToInclude: SERVER_STARTED_LOG_LINE,
+    });
+
+    logger.debug(
+      `setting \`localKafkaClusterAvailable=${started}\` and firing \`localKafkaConnected\` with \`${started}\``,
+    );
+    await setContextValue(ContextValues.localKafkaClusterAvailable, started);
+    localKafkaConnected.fire(started);
+  }
+
+  /** Handling for an event that describes when a container is stopped. */
+  async handleContainerDieEvent(event: SystemEventMessage) {
+    const imageName: string = event.Actor?.Attributes?.image ?? "";
+    if (!imageName) {
+      return;
+    }
+    logger.debug(`container 'die' event for image: ${imageName}`);
+
+    if (!imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
+      // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
+      return;
+    }
+
+    logger.debug(
+      "setting `localKafkaClusterAvailable=false` and firing `localKafkaConnected` with `false`",
+    );
+    await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+    localKafkaConnected.fire(false);
+  }
+
+  /** Wait for the container to show a specific {@link ContainerStateStatusEnum} status. */
+  async waitForContainerState(
+    containerId: string,
+    status: ContainerStateStatusEnum,
+    since: number,
+    maxWaitTimeSec: number = 60,
+  ): Promise<boolean> {
+    // TODO: make wait time configurable?
+    let started = false;
+
+    while (true) {
+      const statusMatched: boolean = await this.matchContainerStatus(containerId, status);
+      if (statusMatched) {
+        started = true;
+        break;
+      }
+      if (Date.now() - since > maxWaitTimeSec * 1000) {
+        logger.debug("timed out waiting for container to start");
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    return started;
+  }
+
+  /** Check the status of a container and return `true` if it matches the expected status. */
+  async matchContainerStatus(
+    containerId: string,
+    state: ContainerStateStatusEnum,
+  ): Promise<boolean> {
+    const client = new ContainerApi();
+    const init: RequestInit = defaultRequestInit();
+    try {
+      const container: ContainerInspectResponse = await client.containerInspect(
+        { id: containerId },
+        init,
+      );
+      logger.debug(`container state:`, {
+        state: container.State?.Status,
+      });
+      if (container.State?.Status === state) {
+        return true;
+      }
+    } catch (error) {
+      logger.debug(`error checking container state, waiting and trying again...`, { error });
+    }
+    return false;
+  }
+
+  /** Make a request to `/containers/{id}/logs` and return a readable stream, then match the incoming
+   * log strings against a specific log line. */
+  async waitForContainerLog(
+    containerId: string,
+    stringToInclude: string,
+    since: number,
+    maxWaitTimeSec: number = 60,
+  ): Promise<boolean> {
+    // TODO: make wait time configurable?
+    let logLineFound = false;
+
+    const client = new ContainerApi();
+    const init: RequestInit = defaultRequestInit();
+
+    let stream: ReadableStream<Uint8Array> | null = null;
+    try {
+      // NOTE: we have to use .containerLogsRaw() because .containerLogs() tries to convert the
+      // response to a Blob instead of returning a readable stream, which silently fails
+      const response: ApiResponse<Blob> = await client.containerLogsRaw(
+        {
+          id: containerId,
+          since: since,
+          follow: true,
+          stdout: true,
+        },
+        init,
+      );
+      stream = response.raw.body as ReadableStream<Uint8Array>;
+    } catch (error) {
+      logger.error("error getting log stream:", error);
+      return logLineFound;
+    }
+    if (!stream) {
+      return logLineFound;
+    }
+    const reader = stream.getReader();
+
+    let logLine = "";
+    const startTime = Date.now();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      const chunk = new TextDecoder().decode(value);
+      logLine += chunk;
+
+      if (logLine.includes(stringToInclude)) {
+        logger.debug("container log line found", { logLine, stringToInclude });
+        logLineFound = true;
+        break;
+      }
+
+      if (Date.now() - startTime > maxWaitTimeSec * 1000) {
+        logger.debug("timed out waiting for server started log line");
+        break;
+      }
+    }
+    reader.cancel();
+    return logLineFound;
+  }
+}
+
+/** Custom event message type that includes additional fields we care about for events (`status` and
+ * `id`), not specified in the Docker OpenAPI spec. */
+export interface SystemEventMessage extends EventMessage {
+  status?: string;
+  id?: string;
+  // we could also use `from` for the image+tag, but that's already in Actor.Attributes.image
+}

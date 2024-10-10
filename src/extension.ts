@@ -50,6 +50,7 @@ import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { ContextValues, setContextValue, setExtensionContext } from "./context";
+import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
@@ -121,6 +122,9 @@ async function _activateExtension(
 
   // Construct the singleton, let it register its event listener.
   CCloudResourcePreloader.getInstance();
+
+  // set up the local Docker event listener singleton and start watching for system events
+  EventListener.getInstance().start();
 
   return context;
 }
