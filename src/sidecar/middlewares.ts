@@ -95,7 +95,7 @@ export class ErrorResponseMiddleware implements Middleware {
         context.response.status === 404 &&
         /gateway\/v1\/connections\/vscode-(confluent-cloud|local)-connection/.test(context.url)
       ) {
-        const localOrCcloud = context.url.includes("local") ? "local kafka" : "Confluent Cloud";
+        const localOrCcloud = context.url.includes("local") ? "local" : "Confluent Cloud";
 
         logger.debug(`Received 404 for ${localOrCcloud} connection.`);
         return;
