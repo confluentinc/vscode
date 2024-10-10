@@ -90,6 +90,14 @@ export class DebugRequestResponseMiddleware implements Middleware {
 export class ErrorResponseMiddleware implements Middleware {
   async post(context: ResponseContext): Promise<void> {
     if (context.response.status >= 400) {
+      // Special case: if we recieved a 404 about either ccloud or local kafka connection, no need to log it. Is expected.
+      if (
+        context.response.status === 404 &&
+        /gateway\/v1\/connections\/vscode-(confluent-cloud|local)-connection/.test(context.url)
+      ) {
+        return;
+      }
+
       const requestLogString = contextToRequestLogString(context);
       const responseLogString = await contextToResponseLogString(context);
 
