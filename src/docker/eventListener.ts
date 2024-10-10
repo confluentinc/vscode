@@ -149,11 +149,11 @@ export class EventListener {
         logger.debug("stream ended:", error.cause);
         if (error.cause && (error.cause as Error).message === "other side closed") {
           // Docker shut down and we can't listen for events anymore
-          logger.error("docker event stream closed, stopping listener...");
-          this.stop();
+          logger.error("lost connection to Docker socket");
           // also inform the UI that the local resources are no longer available
           await setContextValue(ContextValues.localKafkaClusterAvailable, false);
           localKafkaConnected.fire(false);
+          // don't stop the poller; let it go through another time and revert to the slower polling
         }
       } else {
         logger.error("error handling events from stream:", error);
