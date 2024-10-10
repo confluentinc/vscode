@@ -150,6 +150,18 @@ describe("Schema helper functions", () => {
     );
   });
 
+  it("generateSchemaSubjectGroups() should set the context value to 'multiple-versions' if a subject has more than one schema", () => {
+    const groups = generateSchemaSubjectGroups(schemas);
+
+    // valueSubject has two schema versions, so it should have the context value.
+    const testTopicGroup = groups.find((group) => group.label === valueSubject);
+    assert.equal(testTopicGroup?.contextValue, "multiple-versions");
+
+    // Only one version, so no context value.
+    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
+    assert.equal(anotherTopicGroup?.contextValue, undefined);
+  });
+
   it("generateSchemaSubjectGroups() should assign the correct icon based on schema subject suffix", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
