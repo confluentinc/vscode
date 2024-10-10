@@ -90,12 +90,6 @@ export class EventListener {
    * controlled by the polling mechanism that starts on extension activation.
    */
   async listenForEvents(): Promise<void> {
-    const client = new SystemApi();
-    const init: RequestInit = defaultRequestInit();
-    const queryParams: SystemEventsRequest = {
-      filters: JSON.stringify(EVENT_FILTERS),
-    };
-
     // check if Docker is available before trying to listen for events, taking into account the user
     // may have started the extension before Docker is running
     const dockerAvailable: boolean = await isDockerAvailable();
@@ -104,12 +98,19 @@ export class EventListener {
       this.poller.useRegularFrequency();
       return;
     }
+
     // Docker is available, so we can use the more frequent (at most every 1sec) polling for events
     // (NOTE: if we get a successful response back from /events, that will block until the stream
     // ends, so we don't have to worry about making requests every second)
     this.poller.useHighFrequency();
     // stop polling while we handle the event stream, then start back up once we're done
     this.poller.stop();
+
+    const client = new SystemApi();
+    const queryParams: SystemEventsRequest = {
+      filters: JSON.stringify(EVENT_FILTERS),
+    };
+    const init: RequestInit = defaultRequestInit();
 
     let stream: ReadableStream<Uint8Array> | null = null;
     try {
@@ -146,6 +147,7 @@ export class EventListener {
       }
     } catch (error) {
       if (error instanceof TypeError && error.message === "terminated") {
+        // usually a stream read timeout (~5min), but could also be a Docker shutdown
         logger.debug("stream ended:", error.cause);
         if (error.cause && (error.cause as Error).message === "other side closed") {
           // Docker shut down and we can't listen for events anymore
