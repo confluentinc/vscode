@@ -136,7 +136,7 @@ describe("docker/eventListener EventListener methods", function () {
 
   it("listenForEvents() should update the 'localKafkaClusterAvailable' context value if the connection to Docker is lost and an error with cause 'other side closed' is thrown while reading from the event stream", async function () {
     const isDockerAvailableStub = sandbox.stub(configs, "isDockerAvailable").resolves(true);
-    // stub the systemEventsRaw method so we don't actually make a request, but throw an error
+    // stub the systemEventsRaw method so we don't actually make a request
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
