@@ -33,7 +33,7 @@ export const SERVER_STARTED_LOG_LINE = "Server started, listening for requests..
  */
 export class EventListener {
   /** Did something else in the codebase request that we stop listening for events? This will cause
-   * {@link readEventsFromStream()} to exit early if set to `true`. */
+   * {@link readValuesFromStream()} to exit early if set to `true`. */
   private stopped: boolean = false;
 
   // singleton pattern to ensure only one instance of the event listener + poller is running
@@ -130,13 +130,31 @@ export class EventListener {
     try {
       // these will block until the stream ends or an error occurs, so we don't have to keep making
       // .systemEventsRaw() requests for each event we want to capture
-      const yieldedEvents = this.readEventsFromStream(stream);
-      for await (const event of yieldedEvents) {
+      const yieldedEventStrings = this.readValuesFromStream(stream);
+      for await (const eventString of yieldedEventStrings) {
+        let event: SystemEventMessage;
+        try {
+          event = JSON.parse(eventString);
+        } catch (error) {
+          logger.error("error parsing event:", error);
+          // TODO: notify the user of the error here? if a container we care about is started or
+          // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
+          // the view to see the current state
+          continue;
+        }
         await this.handleEvent(event);
       }
     } catch (error) {
       if (error instanceof TypeError && error.message === "terminated") {
         logger.debug("stream ended:", error.cause);
+        if (error.cause && (error.cause as Error).message === "other side closed") {
+          // Docker shut down and we can't listen for events anymore
+          logger.error("docker event stream closed, stopping listener...");
+          this.stop();
+          // also inform the UI that the local resources are no longer available
+          await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+          localKafkaConnected.fire(false);
+        }
       } else {
         logger.error("error handling events from stream:", error);
       }
@@ -145,56 +163,51 @@ export class EventListener {
     this.poller.start();
   }
 
-  /** Read events from the stream, parse them, and yield them for processing until the stream closes
-   * or the listener/poller are told to stop. */
-  async *readEventsFromStream(
+  /** Read and decode any returned value(s) from a stream before yielding them for processing until
+   * the stream closes or the listener/poller are told to stop. */
+  async *readValuesFromStream(
     stream: ReadableStream<Uint8Array>,
-  ): AsyncGenerator<SystemEventMessage> {
-    logger.debug("reading events from stream...");
+    maxWaitTimeSec?: number,
+  ): AsyncGenerator<string> {
+    logger.debug("reading from stream...");
     const reader: ReadableStreamDefaultReader<Uint8Array> = stream.getReader();
+    const decoder = new TextDecoder();
 
+    const startTime = Date.now();
     while (true) {
-      // try to read an individual event (as a Uint8Array) from the stream
+      // try to read an individual value (as a Uint8Array) from the stream
       const { done, value } = await reader.read();
       if (done) {
-        logger.debug("events stream ended");
+        logger.debug("stream ended");
         break;
       }
       if (this.stopped) {
-        logger.debug("listener stopped, bailing...");
+        logger.warn("listener stopped, exiting early");
         break;
       }
       if (!value) {
-        logger.debug("empty value from events stream");
+        logger.debug("got empty value from stream");
         continue;
       }
       // convert the Uint8Array to a string and try to parse as JSON
-      const eventString = new TextDecoder().decode(value);
-      if (!eventString) {
-        logger.debug("empty event string from events stream");
+      const valueString = decoder.decode(value);
+      if (!valueString) {
+        logger.debug("empty string decoded from stream");
         continue;
       }
 
-      let event: SystemEventMessage;
-      try {
-        event = JSON.parse(eventString);
-      } catch (error) {
-        logger.error("error parsing event:", error);
-        // TODO: notify the user of the error here? if a container we care about is started or
-        // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
-        // the view to see the current state
-        continue;
+      if (maxWaitTimeSec && Date.now() - startTime > maxWaitTimeSec * 1000) {
+        logger.error("timed out reading from stream");
+        break;
       }
 
-      yield event;
+      yield valueString;
     }
   }
 
   /** Handle a single event, checking for required fields and passing it off to the appropriate
    * handler based on the event type. */
   async handleEvent(event: SystemEventMessage): Promise<void> {
-    logger.trace("handling event:", event);
-
     if (!event.status) {
       logger.debug("missing required 'status' field in event, bailing...", event);
       return;
@@ -366,30 +379,17 @@ export class EventListener {
     if (!stream) {
       return logLineFound;
     }
-    const reader = stream.getReader();
 
     let logLine = "";
-    const startTime = Date.now();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      const chunk = new TextDecoder().decode(value);
-      logLine += chunk;
-
+    for await (const logValue of this.readValuesFromStream(stream, maxWaitTimeSec)) {
+      logLine += logValue;
       if (logLine.includes(stringToInclude)) {
-        logger.debug("container log line found", { logLine, stringToInclude });
+        logger.debug("container log line found", { stringToInclude });
         logLineFound = true;
         break;
       }
-
-      if (Date.now() - startTime > maxWaitTimeSec * 1000) {
-        logger.debug("timed out waiting for server started log line");
-        break;
-      }
     }
-    reader.cancel();
+
     return logLineFound;
   }
 }

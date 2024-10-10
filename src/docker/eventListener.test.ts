@@ -40,6 +40,10 @@ describe("docker/eventListener EventListener methods", function () {
   });
 
   afterEach(function () {
+    // explicitly reset `stopped` so we don't bail early in the event handling between tests
+    // (this doesn't happen in the normal flow since we'll either .start() or .stop() and not have
+    // to worry about the listener being stopped and then reinstantiated)
+    eventListener["stopped"] = false;
     sandbox.restore();
   });
 
@@ -55,10 +59,6 @@ describe("docker/eventListener EventListener methods", function () {
 
     assert.strictEqual(eventListener["stopped"], true);
     assert.ok(pollStopSpy.calledOnce);
-    // explicitly reset `stopped` so we don't bail early in the event handling in other tests
-    // (this doesn't happen in the normal flow since we'll either .start() or .stop() and not have
-    // to worry about the listener being stopped and then reinstantiated)
-    eventListener["stopped"] = false;
   });
 
   it("listenForEvents() should poll slowly if Docker is not available", async function () {
@@ -76,10 +76,10 @@ describe("docker/eventListener EventListener methods", function () {
         body: stream,
       },
     } as ApiResponse<EventMessage>);
-    // stub readEventsFromStream() and handleEvent() even though we should never reach them
-    const readEventsFromStreamStub = sandbox.stub(eventListener, "readEventsFromStream").returns(
+    // stub readValuesFromStream() and handleEvent() even though we should never reach them
+    const readValuesFromStreamStub = sandbox.stub(eventListener, "readValuesFromStream").returns(
       (async function* () {
-        yield TEST_CONTAINER_EVENT;
+        yield JSON.stringify(TEST_CONTAINER_EVENT);
       })(),
     );
     const handleEventStub = sandbox.stub(eventListener, "handleEvent").resolves();
@@ -93,7 +93,7 @@ describe("docker/eventListener EventListener methods", function () {
     assert.ok(useHighFrequencySpy.notCalled);
     assert.ok(pollStopSpy.notCalled);
     assert.ok(systemEventsRawStub.notCalled);
-    assert.ok(readEventsFromStreamStub.notCalled);
+    assert.ok(readValuesFromStreamStub.notCalled);
     assert.ok(handleEventStub.notCalled);
     assert.ok(pollStartSpy.notCalled);
   });
@@ -113,10 +113,10 @@ describe("docker/eventListener EventListener methods", function () {
         body: stream,
       },
     } as ApiResponse<EventMessage>);
-    // stub the readEventsFromStream method to yield a test event
-    const readEventsFromStreamStub = sandbox.stub(eventListener, "readEventsFromStream").returns(
+    // stub the readValuesFromStream method to yield a test event
+    const readValuesFromStreamStub = sandbox.stub(eventListener, "readValuesFromStream").returns(
       (async function* () {
-        yield TEST_CONTAINER_EVENT;
+        yield JSON.stringify(TEST_CONTAINER_EVENT);
       })(),
     );
     // don't actually go into the handleEvent() logic for this test
@@ -129,12 +129,12 @@ describe("docker/eventListener EventListener methods", function () {
     assert.ok(useHighFrequencySpy.calledOnce);
     assert.ok(pollStopSpy.calledOnce);
     assert.ok(systemEventsRawStub.calledOnce);
-    assert.ok(readEventsFromStreamStub.calledOnceWith(stream));
+    assert.ok(readValuesFromStreamStub.calledOnceWith(stream));
     assert.ok(handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT));
     assert.ok(pollStartSpy.calledOnce);
   });
 
-  it("readEventsFromStream() should successfully read an event from a ReadableStream before yielding", async function () {
+  it("readValuesFromStream() should successfully read a value from a ReadableStream before yielding", async function () {
     const stream: ReadableStream<Uint8Array> = new ReadableStream({
       start(controller) {
         controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
@@ -143,14 +143,14 @@ describe("docker/eventListener EventListener methods", function () {
     });
 
     const events = [];
-    for await (const event of eventListener.readEventsFromStream(stream)) {
+    for await (const event of eventListener.readValuesFromStream(stream)) {
       events.push(event);
     }
 
-    assert.deepStrictEqual(events, [TEST_CONTAINER_EVENT]);
+    assert.deepStrictEqual(events, [JSON.stringify(TEST_CONTAINER_EVENT)]);
   });
 
-  it("readEventsFromStream() should exit early if the stream returns 'done'", async function () {
+  it("readValuesFromStream() should exit early if the stream returns 'done'", async function () {
     const handleEventStub = sandbox.stub(eventListener, "handleEvent").resolves();
 
     const stream: ReadableStream<Uint8Array> = new ReadableStream({
@@ -158,12 +158,12 @@ describe("docker/eventListener EventListener methods", function () {
         controller.close();
       },
     });
-    await eventListener.readEventsFromStream(stream);
+    await eventListener.readValuesFromStream(stream);
 
     assert.ok(handleEventStub.notCalled);
   });
 
-  it("readEventsFromStream() should exit early if the event listener is stopped", async function () {
+  it("readValuesFromStream() should exit early if the event listener is stopped", async function () {
     // since we aren't starting the poller, we're just working with the `stopped` flag here
     eventListener.stop();
 
@@ -175,14 +175,14 @@ describe("docker/eventListener EventListener methods", function () {
     });
 
     const events = [];
-    for await (const event of eventListener.readEventsFromStream(stream)) {
+    for await (const event of eventListener.readValuesFromStream(stream)) {
       events.push(event);
     }
 
     assert.deepStrictEqual(events, []);
   });
 
-  it("readEventsFromStream() should exit early if no value is available", async function () {
+  it("readValuesFromStream() should exit early if no value is available", async function () {
     const stream: ReadableStream<Uint8Array> = new ReadableStream({
       start(controller) {
         // no controller.enqueue() here
@@ -190,23 +190,7 @@ describe("docker/eventListener EventListener methods", function () {
       },
     });
     const events = [];
-    for await (const event of eventListener.readEventsFromStream(stream)) {
-      events.push(event);
-    }
-
-    assert.deepStrictEqual(events, []);
-  });
-
-  it("readEventsFromStream() should exit early in the event of a JSON parsing error", async function () {
-    const stream: ReadableStream<Uint8Array> = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode("not JSON"));
-        controller.close();
-      },
-    });
-
-    const events = [];
-    for await (const event of eventListener.readEventsFromStream(stream)) {
+    for await (const event of eventListener.readValuesFromStream(stream)) {
       events.push(event);
     }
 
