@@ -23,6 +23,9 @@ All notable changes to this extension will be documented in this file.
 - New context menu item "Show Latest Changes" attached to schema registry schema subject groups
   having more than one version of the schema. Opens up a diff view between the current and prior
   versions, [issue #354](https://github.com/confluentinc/vscode/issues/354).
+- A new Docker event listener will automatically refresh the Resources view when a `confluent-local`
+  (Kafka broker) container starts or stops.
+  [issue #260](https://github.com/confluentinc/vscode/issues/260)
 
 ### Changed
 
