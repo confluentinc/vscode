@@ -58,6 +58,7 @@ function uploadVersionCommand(item: any) {
   );
 }
 
+/** Diff the most recent two versions of schemas bound to a subject. */
 async function diffLatestSchemasCommand(schemaGroup: ContainerTreeItem<Schema>) {
   if (schemaGroup.children.length < 2) {
     // Should not happen if the context value was set correctly over in generateSchemaSubjectGroups().
@@ -65,11 +66,13 @@ async function diffLatestSchemasCommand(schemaGroup: ContainerTreeItem<Schema>) 
     return;
   }
 
-  // generateSchemaSubjectGroups will have set up children as the most rececnt first
+  // generateSchemaSubjectGroups() will have set up `children` in reverse order ([0] is highest version).
   const latestSchema = schemaGroup.children[0];
   const priorVersionSchema = schemaGroup.children[1];
 
-  logger.info("Comparing most recent schemas", latestSchema, priorVersionSchema);
+  logger.info(
+    `Comparing most recent schema versions, subject ${latestSchema.subject}, versions (${latestSchema.version}, ${priorVersionSchema.version})`,
+  );
 
   // Select the latest, then compare against the prior version.
   await vscode.commands.executeCommand("confluent.diff.selectForCompare", priorVersionSchema);
