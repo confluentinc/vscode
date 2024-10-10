@@ -445,6 +445,10 @@
         {
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "false"
+        },
+        {
+          "command": "confluent.schemas.diffMostRecentVersions",
+          "when": "false"
         }
       ],
       "editor/title": [

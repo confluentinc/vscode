@@ -29,7 +29,7 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
     sinon.restore();
   });
 
-  it("diffLatestSchemasCommand should execute the correct commands when ", async () => {
+  it("diffLatestSchemasCommand should execute the correct commands when invoked on a proper schema group", async () => {
     // Make a 3-version schema group ...
     const oldestSchemaVersion = Schema.create({
       ...TEST_SCHEMA,
@@ -63,6 +63,7 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   });
 
   it("diffLatestSchemasCommand should not execute commands if there are fewer than two schemas in the group", async () => {
+    // (this should not happen if the schema group was generated correctly, but diffLatestSchemasCommand guards against it)
     const schemaGroup = new ContainerTreeItem<Schema>(
       "my-topic-value",
       vscode.TreeItemCollapsibleState.Collapsed,
