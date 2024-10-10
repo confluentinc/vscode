@@ -134,6 +134,52 @@ describe("docker/eventListener EventListener methods", function () {
     assert.ok(pollStartSpy.calledOnce);
   });
 
+  it("listenForEvents() should update the 'localKafkaClusterAvailable' context value if the connection to Docker is lost and an error with cause 'other side closed' is thrown while reading from the event stream", async function () {
+    const isDockerAvailableStub = sandbox.stub(configs, "isDockerAvailable").resolves(true);
+    // stub the systemEventsRaw method so we don't actually make a request, but throw an error
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
+        controller.close();
+      },
+    });
+    const systemEventsRawStub = sandbox.stub(SystemApi.prototype, "systemEventsRaw").resolves({
+      raw: {
+        body: stream,
+      },
+    } as ApiResponse<EventMessage>);
+    // stub the readValuesFromStream method to yield a test event and then throw an error
+    const readValuesFromStreamStub = sandbox.stub(eventListener, "readValuesFromStream").returns(
+      (async function* () {
+        yield JSON.stringify(TEST_CONTAINER_EVENT);
+        const disconnectedError = new TypeError("terminated");
+        disconnectedError.cause = new Error("other side closed");
+        throw disconnectedError;
+      })(),
+    );
+    // don't actually go into the handleEvent() logic for this test
+    const handleEventStub = sandbox.stub(eventListener, "handleEvent").resolves();
+    // stub the setContextValue and localKafkaConnected.fire methods so we can assert that they're called
+    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
+
+    await eventListener.listenForEvents();
+
+    assert.ok(isDockerAvailableStub.calledOnce);
+    assert.ok(useRegularFrequencySpy.notCalled);
+    assert.ok(useHighFrequencySpy.calledOnce);
+    assert.ok(systemEventsRawStub.calledOnce);
+    assert.ok(readValuesFromStreamStub.calledOnceWith(stream));
+    assert.ok(handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT));
+    // we'll get the event returned, but then catch the error and inform the UI that the local
+    // resources are no longer reachable/available
+    assert.ok(
+      setContextValueStub.calledOnceWith(context.ContextValues.localKafkaClusterAvailable, false),
+    );
+    assert.ok(localKafkaConnectedFireStub.calledOnceWith(false));
+    assert.ok(pollStartSpy.calledOnce);
+  });
+
   it("readValuesFromStream() should successfully read a value from a ReadableStream before yielding", async function () {
     const stream: ReadableStream<Uint8Array> = new ReadableStream({
       start(controller) {
@@ -295,6 +341,7 @@ describe("docker/eventListener EventListener methods", function () {
     const waitForServerStartedLogStub = sandbox
       .stub(eventListener, "waitForContainerLog")
       .resolves(true);
+    // stub the setContextValue and localKafkaConnected.fire methods so we can assert that they're called
     const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
