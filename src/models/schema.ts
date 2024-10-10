@@ -148,7 +148,7 @@ export function generateSchemaSubjectGroups(
     // override description to show schema types + count
     schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
     if (schemaGroup.length > 1) {
-      // set context key indiciating this group has multiple versions (so can be quickly diff'd, etc.)
+      // set context key indicating this group has multiple versions (so can be quickly diff'd, etc.)
       schemaContainerItem.contextValue = "multiple-versions";
     }
     schemaGroups.push(schemaContainerItem);
