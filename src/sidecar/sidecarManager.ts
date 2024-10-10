@@ -394,7 +394,7 @@ export class SidecarManager {
             );
 
             accessToken = await this.doHandshake();
-            logger.warn(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
+            logger.info(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
             break;
           } catch (e) {
             // We expect ECONNREFUSED while the sidecar is coming up, but log other unexpected errors.
