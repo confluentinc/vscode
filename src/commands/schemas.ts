@@ -59,7 +59,7 @@ function uploadVersionCommand(item: any) {
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */
-async function diffLatestSchemasCommand(schemaGroup: ContainerTreeItem<Schema>) {
+export async function diffLatestSchemasCommand(schemaGroup: ContainerTreeItem<Schema>) {
   if (schemaGroup.children.length < 2) {
     // Should not happen if the context value was set correctly over in generateSchemaSubjectGroups().
     logger.warn("diffLatestSchemasCommand called with less than two schemas", schemaGroup);

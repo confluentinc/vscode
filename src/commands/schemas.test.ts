@@ -1,5 +1,7 @@
 import * as assert from "assert";
+import * as vscode from "vscode";
 import sinon from "sinon";
+import { commands } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -9,7 +11,68 @@ import {
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
-import { CannotLoadSchemasError, getLatestSchemasForTopic } from "./schemas";
+import {
+  CannotLoadSchemasError,
+  getLatestSchemasForTopic,
+  diffLatestSchemasCommand,
+} from "./schemas";
+import { ContainerTreeItem } from "../models/main";
+
+describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
+  let executeCommandStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    executeCommandStub = sinon.stub(commands, "executeCommand");
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  it("diffLatestSchemasCommand should execute the correct commands when ", async () => {
+    // Make a 3-version schema group ...
+    const oldestSchemaVersion = Schema.create({
+      ...TEST_SCHEMA,
+      subject: "my-topic-value",
+      version: 0,
+    });
+
+    const olderSchemaVersion = Schema.create({
+      ...TEST_SCHEMA,
+      subject: "my-topic-value",
+      version: 1,
+    });
+    const latestSchemaVersion = Schema.create({
+      ...TEST_SCHEMA,
+      subject: "my-topic-value",
+      version: 2,
+    });
+    const schemaGroup = new ContainerTreeItem<Schema>(
+      "my-topic-value",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [latestSchemaVersion, olderSchemaVersion, oldestSchemaVersion],
+    );
+
+    // directly call what command "confluent.schemas.diffMostRecentVersions" would call (made harder to invoke
+    // because it's a command, and we've stubbed out vscode command execution)
+    await diffLatestSchemasCommand(schemaGroup);
+    assert.ok(executeCommandStub.calledWith("confluent.diff.selectForCompare", olderSchemaVersion));
+    assert.ok(
+      executeCommandStub.calledWith("confluent.diff.compareWithSelected", latestSchemaVersion),
+    );
+  });
+
+  it("diffLatestSchemasCommand should not execute commands if there are fewer than two schemas in the group", async () => {
+    const schemaGroup = new ContainerTreeItem<Schema>(
+      "my-topic-value",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [Schema.create({ ...TEST_SCHEMA, subject: "my-topic-value", version: 1 })],
+    );
+
+    await diffLatestSchemasCommand(schemaGroup);
+    assert.ok(executeCommandStub.notCalled);
+  });
+});
 
 describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   let sandbox: sinon.SinonSandbox;
