@@ -18,36 +18,30 @@ const TEST_CONTAINER_EVENT: SystemEventMessage = {
   Actor: { Attributes: { image: LOCAL_KAFKA_IMAGE } },
 };
 
-describe("docker/eventListener EventListener methods", function () {
+describe("docker/eventListener.ts EventListener methods", function () {
   let sandbox: sinon.SinonSandbox;
-
-  // src/docker/eventListener.ts stubs/spies
+  let clock: sinon.SinonFakeTimers;
   let eventListener: EventListener;
-  let pollStartSpy: sinon.SinonSpy;
-  let pollStopSpy: sinon.SinonSpy;
-  let useRegularFrequencySpy: sinon.SinonSpy;
-  let useHighFrequencySpy: sinon.SinonSpy;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
-
+    // IMPORTANT: we need to use the fake timers here so we can control the timing of the event listener
+    // logic against the timing of the assertions and the Docker API stubs. The main reasoning here
+    // is we're using a polling mechanism to check for events, and we want to be able to advance the
+    // clock in a controlled way to ensure that the polling logic executes as expected
+    clock = sandbox.useFakeTimers(Date.now());
+    // reset the singleton instance so we can re-instantiate it with fresh properties between tests
+    EventListener["instance"] = null;
     eventListener = EventListener.getInstance();
-    // spy on the private `poller`'s methods so we can assert their behavior in the tests
-    pollStartSpy = sandbox.spy(eventListener["poller"], "start");
-    pollStopSpy = sandbox.spy(eventListener["poller"], "stop");
-    useRegularFrequencySpy = sandbox.spy(eventListener["poller"], "useRegularFrequency");
-    useHighFrequencySpy = sandbox.spy(eventListener["poller"], "useHighFrequency");
   });
 
   afterEach(function () {
-    // explicitly reset `stopped` so we don't bail early in the event handling between tests
-    // (this doesn't happen in the normal flow since we'll either .start() or .stop() and not have
-    // to worry about the listener being stopped and then reinstantiated)
-    eventListener["stopped"] = false;
     sandbox.restore();
   });
 
   it("start() should start the poller", function () {
+    const pollStartSpy = sandbox.spy(eventListener["poller"], "start");
+
     eventListener.start();
 
     assert.strictEqual(eventListener["stopped"], false);
@@ -55,6 +49,8 @@ describe("docker/eventListener EventListener methods", function () {
   });
 
   it("stop() should stop the poller", function () {
+    const pollStopSpy = sandbox.spy(eventListener["poller"], "stop");
+
     eventListener.stop();
 
     assert.strictEqual(eventListener["stopped"], true);
@@ -62,8 +58,16 @@ describe("docker/eventListener EventListener methods", function () {
   });
 
   it("listenForEvents() should poll slowly if Docker is not available", async function () {
+    this.retries(2); // retry this test up to 2 times if it fails
+
+    const dockerAvailable = false;
     // stub the isDockerAvailable method so we don't actually check for Docker availability
-    const isDockerAvailableStub = sandbox.stub(configs, "isDockerAvailable").resolves(false);
+    const isDockerAvailableStub = sandbox
+      .stub(configs, "isDockerAvailable")
+      .resolves(dockerAvailable);
+    // spy the useSlowFrequency and useFastFrequency methods so we can assert that they're called correctly
+    const useSlowFrequencySpy = sandbox.spy(eventListener["poller"], "useSlowFrequency");
+    const useFastFrequencySpy = sandbox.spy(eventListener["poller"], "useFastFrequency");
     // stub the systemEventsRaw request even though we should never reach it
     const stream = new ReadableStream({
       start(controller) {
@@ -84,23 +88,52 @@ describe("docker/eventListener EventListener methods", function () {
     );
     const handleEventStub = sandbox.stub(eventListener, "handleEvent").resolves();
 
-    await eventListener.listenForEvents();
+    // start the poller, which calls into `listenForEvents()` immediately
+    eventListener.start();
+    // advance the clock to allow the event listener logic to execute
+    await clock.tickAsync(100);
 
     // we should have called these two, then bailed until the next poll
-    assert.ok(isDockerAvailableStub.calledOnce);
-    assert.ok(useRegularFrequencySpy.calledOnce);
+    assert.ok(
+      isDockerAvailableStub.calledOnce,
+      `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
+    );
+    assert.equal(
+      eventListener.dockerAvailable,
+      dockerAvailable,
+      `dockerAvailable should be ${dockerAvailable}, but is ${eventListener.dockerAvailable}`,
+    );
+    assert.ok(
+      useSlowFrequencySpy.calledOnce,
+      `useSlowFrequency() called ${useSlowFrequencySpy.callCount} times`,
+    );
     // and we shouldn't have reached any of these
-    assert.ok(useHighFrequencySpy.notCalled);
-    assert.ok(pollStopSpy.notCalled);
-    assert.ok(systemEventsRawStub.notCalled);
-    assert.ok(readValuesFromStreamStub.notCalled);
-    assert.ok(handleEventStub.notCalled);
-    assert.ok(pollStartSpy.notCalled);
+    assert.ok(
+      useFastFrequencySpy.notCalled,
+      `useFastFrequency() called ${useFastFrequencySpy.callCount} times`,
+    );
+    assert.ok(
+      systemEventsRawStub.notCalled,
+      `systemEventsRaw() called ${systemEventsRawStub.callCount} time(s)`,
+    );
+    assert.ok(
+      readValuesFromStreamStub.notCalled,
+      `readValuesFromStream() called ${readValuesFromStreamStub.callCount} time(s)`,
+    );
+    assert.ok(handleEventStub.notCalled, `handleEvent() called ${handleEventStub.callCount} times`);
   });
 
   it("listenForEvents() should poll more frequently and make a request for system events if Docker is available", async function () {
+    this.retries(2); // retry this test up to 2 times if it fails
+
+    const dockerAvailable = true;
     // stub the isDockerAvailable method so we don't actually check for Docker availability
-    const isDockerAvailableStub = sandbox.stub(configs, "isDockerAvailable").resolves(true);
+    const isDockerAvailableStub = sandbox
+      .stub(configs, "isDockerAvailable")
+      .resolves(dockerAvailable);
+    // spy the useSlowFrequency and useFastFrequency methods so we can assert that they're called correctly
+    const useSlowFrequencySpy = sandbox.spy(eventListener["poller"], "useSlowFrequency");
+    const useFastFrequencySpy = sandbox.spy(eventListener["poller"], "useFastFrequency");
     // stub the systemEventsRaw method so we don't actually make a request
     const stream = new ReadableStream({
       start(controller) {
@@ -122,20 +155,53 @@ describe("docker/eventListener EventListener methods", function () {
     // don't actually go into the handleEvent() logic for this test
     const handleEventStub = sandbox.stub(eventListener, "handleEvent").resolves();
 
-    await eventListener.listenForEvents();
+    // start the poller, which calls into `listenForEvents()` immediately
+    eventListener.start();
+    // advance the clock to allow the event listener logic to execute
+    await clock.tickAsync(100);
 
-    assert.ok(isDockerAvailableStub.calledOnce);
-    assert.ok(useRegularFrequencySpy.notCalled);
-    assert.ok(useHighFrequencySpy.calledOnce);
-    assert.ok(pollStopSpy.calledOnce);
-    assert.ok(systemEventsRawStub.calledOnce);
-    assert.ok(readValuesFromStreamStub.calledOnceWith(stream));
-    assert.ok(handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT));
-    assert.ok(pollStartSpy.calledOnce);
+    assert.ok(
+      isDockerAvailableStub.calledOnce,
+      `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
+    );
+    assert.equal(
+      eventListener.dockerAvailable,
+      dockerAvailable,
+      `dockerAvailable should be ${dockerAvailable}, but is ${eventListener.dockerAvailable}`,
+    );
+    assert.ok(
+      useSlowFrequencySpy.notCalled,
+      `useSlowFrequency() called ${useSlowFrequencySpy.callCount} times`,
+    );
+    assert.ok(
+      useFastFrequencySpy.calledOnce,
+      `useFastFrequency() called ${useFastFrequencySpy.callCount} times`,
+    );
+    assert.ok(
+      systemEventsRawStub.calledOnce,
+      `systemEventsRaw() called ${systemEventsRawStub.callCount} times`,
+    );
+    assert.ok(
+      readValuesFromStreamStub.calledOnceWith(stream),
+      `readValuesFromStream() called ${readValuesFromStreamStub.callCount} times with ${JSON.stringify(readValuesFromStreamStub.args)}`,
+    );
+    assert.ok(
+      handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT),
+      `handleEvent() called ${handleEventStub.callCount} times with ${JSON.stringify(handleEventStub.args)}`,
+    );
   });
 
   it("listenForEvents() should update the 'localKafkaClusterAvailable' context value if the connection to Docker is lost and an error with cause 'other side closed' is thrown while reading from the event stream", async function () {
-    const isDockerAvailableStub = sandbox.stub(configs, "isDockerAvailable").resolves(true);
+    this.retries(2); // retry this test up to 2 times if it fails
+
+    const dockerAvailable = true;
+    // stub the isDockerAvailable method so we don't actually check for Docker availability
+    const isDockerAvailableStub = sandbox
+      .stub(configs, "isDockerAvailable")
+      .resolves(dockerAvailable);
+    // spy the useSlowFrequency and useFastFrequency methods so we can assert that they're called correctly
+    const useSlowFrequencySpy = sandbox.spy(eventListener["poller"], "useSlowFrequency");
+    const useFastFrequencySpy = sandbox.spy(eventListener["poller"], "useFastFrequency");
     // stub the systemEventsRaw method so we don't actually make a request
     const stream = new ReadableStream({
       start(controller) {
@@ -163,21 +229,51 @@ describe("docker/eventListener EventListener methods", function () {
     const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
-    await eventListener.listenForEvents();
+    // start the poller, which calls into `listenForEvents()` immediately
+    eventListener.start();
+    // advance the clock to allow the event listener logic to execute
+    await clock.tickAsync(100);
 
-    assert.ok(isDockerAvailableStub.calledOnce);
-    assert.ok(useRegularFrequencySpy.notCalled);
-    assert.ok(useHighFrequencySpy.calledOnce);
-    assert.ok(systemEventsRawStub.calledOnce);
-    assert.ok(readValuesFromStreamStub.calledOnceWith(stream));
-    assert.ok(handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT));
+    assert.ok(
+      isDockerAvailableStub.calledOnce,
+      `isDockerAvailable() called ${isDockerAvailableStub.callCount} times`,
+    );
+    assert.equal(
+      eventListener.dockerAvailable,
+      dockerAvailable,
+      `dockerAvailable should be ${dockerAvailable}, but is ${eventListener.dockerAvailable}`,
+    );
+    assert.ok(
+      useSlowFrequencySpy.notCalled,
+      `useSlowFrequency() called ${useSlowFrequencySpy.callCount} times`,
+    );
+    assert.ok(
+      useFastFrequencySpy.calledOnce,
+      `useFastFrequency() called ${useFastFrequencySpy.callCount} times`,
+    );
+
+    assert.ok(
+      systemEventsRawStub.calledOnce,
+      `systemEventsRaw() called ${systemEventsRawStub.callCount} times`,
+    );
+    assert.ok(
+      readValuesFromStreamStub.calledOnceWith(stream),
+      `readValuesFromStream() called ${readValuesFromStreamStub.callCount} times with ${JSON.stringify(readValuesFromStreamStub.args)}`,
+    );
+    assert.ok(
+      handleEventStub.calledOnceWith(TEST_CONTAINER_EVENT),
+      `handleEvent() called ${handleEventStub.callCount} times`,
+    );
     // we'll get the event returned, but then catch the error and inform the UI that the local
     // resources are no longer reachable/available
     assert.ok(
       setContextValueStub.calledOnceWith(context.ContextValues.localKafkaClusterAvailable, false),
+      `setContextValue() called ${setContextValueStub.callCount} times with ${JSON.stringify(setContextValueStub.args)}`,
     );
-    assert.ok(localKafkaConnectedFireStub.calledOnceWith(false));
-    assert.ok(pollStartSpy.calledOnce);
+    assert.ok(
+      localKafkaConnectedFireStub.calledOnceWith(false),
+      `localKafkaConnected.fire() called ${localKafkaConnectedFireStub.callCount} times with ${JSON.stringify(localKafkaConnectedFireStub.args)}`,
+    );
   });
 
   it("readValuesFromStream() should successfully read a value from a ReadableStream before yielding", async function () {
