@@ -35,6 +35,8 @@ export class EventListener {
   /** Did something else in the codebase request that we stop listening for events? This will cause
    * {@link readValuesFromStream()} to exit early if set to `true`. */
   private stopped: boolean = false;
+  private handlingEventStream: boolean = false;
+  dockerAvailable: boolean = false;
 
   // singleton pattern to ensure only one instance of the event listener + poller is running
   private static instance: EventListener | null = null;
@@ -54,6 +56,7 @@ export class EventListener {
       },
       15_000,
       1_000,
+      true, // run immediately on start()
     );
   }
   static getInstance(): EventListener {
@@ -90,22 +93,44 @@ export class EventListener {
    * controlled by the polling mechanism that starts on extension activation.
    */
   async listenForEvents(): Promise<void> {
+    logger.debug("in listenForEvents()", { handlingEventStream: this.handlingEventStream });
+    if (this.handlingEventStream) {
+      // the poller won't wait for a previous listenForEvents() call to finish, so we need to check
+      // if we're still processing events and exit early if we are
+      logger.debug("already handling event stream, exiting early");
+      return;
+    }
+
     // check if Docker is available before trying to listen for events, taking into account the user
     // may have started the extension before Docker is running
-    const dockerAvailable: boolean = await isDockerAvailable();
-    if (!dockerAvailable) {
+    this.dockerAvailable = await isDockerAvailable();
+    logger.debug("dockerAvailable:", this.dockerAvailable);
+    if (!this.dockerAvailable) {
       // use the slower polling frequency (15sec) if Docker isn't available
-      this.poller.useRegularFrequency();
+      this.poller.useSlowFrequency();
+      logger.debug("set poller to slow frequency since Docker isn't available");
       return;
     }
 
     // Docker is available, so we can use the more frequent (at most every 1sec) polling for events
     // (NOTE: if we get a successful response back from /events, that will block until the stream
     // ends, so we don't have to worry about making requests every second)
-    this.poller.useHighFrequency();
-    // stop polling while we handle the event stream, then start back up once we're done
-    this.poller.stop();
+    this.poller.useFastFrequency();
+    logger.debug("set poller to fast frequency since Docker is available");
 
+    // "lock" the event stream handling so we don't start another one while we're still processing
+    this.handlingEventStream = true;
+    logger.debug("setting handlingEventStream=true");
+    try {
+      await this.handleEventStreamWorkflow();
+    } catch (error) {
+      logger.error("error handling event stream:", error);
+    }
+    this.handlingEventStream = false;
+    logger.debug("setting handlingEventStream=false");
+  }
+
+  private async handleEventStreamWorkflow(): Promise<void> {
     const client = new SystemApi();
     const queryParams: SystemEventsRequest = {
       filters: JSON.stringify(EVENT_FILTERS),
@@ -113,6 +138,7 @@ export class EventListener {
     const init: RequestInit = defaultRequestInit();
 
     let stream: ReadableStream<Uint8Array> | null = null;
+    logger.debug("sending request to systemEventsRaw()...");
     try {
       // NOTE: we have to use .systemEventsRaw() because .systemEvents() tries to convert the
       // response to JSON instead of returning a readable stream, which silently fails
@@ -161,8 +187,6 @@ export class EventListener {
         logger.error("error handling events from stream:", error);
       }
     }
-
-    this.poller.start();
   }
 
   /** Read and decode any returned value(s) from a stream before yielding them for processing until
