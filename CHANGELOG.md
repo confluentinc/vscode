@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.18.0
+
 ### Added
 
 - New context menu item "View Latest Schema Version(s)" to quickly open the highest versioned value
