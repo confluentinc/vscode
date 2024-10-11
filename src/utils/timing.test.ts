@@ -114,6 +114,25 @@ describe("IntervalPoller", () => {
       new IntervalPoller("test", () => {}, 1, 1);
     });
   });
+
+  it("should run the callback immediately if `runImmediately` is true", async () => {
+    let callCount = 0;
+    const func = () => {
+      callCount += 1;
+    };
+    const poller = new IntervalPoller("test", func, 10, 5, true);
+    poller.start();
+    // don't wait at all, callback should have run as soon as start() was called
+    assert.strictEqual(callCount, 1, "Callback wasn't called immediately on start");
+
+    await sleep(20);
+    poller.stop();
+    assert.strictEqual(
+      callCount >= 2,
+      true,
+      "Callback should be called at least once more after the initial call",
+    );
+  });
 });
 
 async function sleep(ms: number) {

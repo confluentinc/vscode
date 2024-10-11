@@ -20,13 +20,17 @@ export async function pauseWithJitter(minMs: number, maxMs: number): Promise<voi
   await new Promise((timeout_resolve) => setTimeout(timeout_resolve, pause_ms));
 }
 
-/** Class to manage calling a function periodically either at
- * a regular or a higher frequency interval.
+/**
+ * Class to manage calling a function periodically either at a regular or a higher frequency interval.
+ *
+ * If `runImmediately` is set to `true`, the callback will be called immediately when the poller is
+ * started. Otherwise, the callback will be called after the first interval has passed.
  */
 export class IntervalPoller {
   private name: string;
   readonly idleFrequency: number;
   readonly activeFrequency: number;
+  readonly runImmediately: boolean = false;
 
   private callback: () => void;
   private registeredInterval: NodeJS.Timeout | undefined;
@@ -36,6 +40,7 @@ export class IntervalPoller {
     callback: () => void,
     idleFrequency: number = IDLE_POLLING_FREQUENCY,
     activeFrequency: number = WAITING_FOR_EVENT_FREQUENCY,
+    runImmediately: boolean = false,
   ) {
     if (idleFrequency < 1) {
       throw new Error("Idle frequency must be at least 1ms");
@@ -53,6 +58,7 @@ export class IntervalPoller {
     this.callback = callback;
     this.idleFrequency = idleFrequency;
     this.activeFrequency = activeFrequency;
+    this.runImmediately = runImmediately;
   }
 
   /** Start this interval poller. Returns true if actually started
@@ -115,6 +121,10 @@ export class IntervalPoller {
     // Out with the old interval?
     if (this.registeredInterval) {
       clearInterval(this.registeredInterval);
+    }
+    // Run the callback immediately if the flag is set.
+    if (this.runImmediately) {
+      this.callback();
     }
     // In with the new frequency.
     this.registeredInterval = setInterval(() => {
