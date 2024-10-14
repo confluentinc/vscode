@@ -117,6 +117,10 @@ export class EventListener {
     // "lock" the event stream handling so we don't start another one while we're still processing
     this.handlingEventStream = true;
     try {
+      // worth noting that this can block for up to about 5 minutes while waiting for events before
+      // the stream times out and we (almost immediately) make another request to read system events
+      // (if Docker is still available), so we're mainly using the high-frequency polling as a means
+      // to quickly latch back onto the event stream if we lose it
       await this.handleEventStreamWorkflow();
     } catch (error) {
       logger.error("error handling event stream:", error);
