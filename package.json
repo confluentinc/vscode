@@ -220,6 +220,11 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.support.openSettings",
+        "title": "Open Settings",
+        "category": "Confluent: Support"
+      },
+      {
         "command": "confluent.topic.consume",
         "icon": "$(debug-start)",
         "title": "Browse Messages",
