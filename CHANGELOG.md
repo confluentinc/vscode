@@ -18,7 +18,7 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - New context menu item "View Latest Schema Version(s)" to quickly open the highest versioned value
-  and / or key schemas for a CCloud topic,
+  and / or key schemas for a CCloud topic, based on TopicNameStrategy,
   [issue #261](https://github.com/confluentinc/vscode/issues/261).
 - New context menu item "Show Latest Changes" attached to schema registry schema subject groups
   having more than one version of the schema. Opens up a diff view between the current and prior
