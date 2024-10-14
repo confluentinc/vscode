@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- "Show Sidecar Output Channel" command for direct access to the sidecar logs via the Output panel.
+
 ## 0.18.0
 
 ### Added
