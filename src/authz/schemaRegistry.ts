@@ -12,8 +12,13 @@ const logger = new Logger("authz.schemaRegistry");
 export async function canAccessSchemaForTopic(topic: KafkaTopic): Promise<boolean> {
   // even if the topic only has one schema type or the other, we'll see a 403 if we can't access
   // across both (key & value subject) request responses
+
   // NOTE: if the subject doesn't follow the TopicNameStrategy, we won't be able to track it via
-  // other extension features
+  // other extension features.
+
+  // TopicRecordNameStrategy complicates this, in that those schema
+  // subject names aren't  predictable from just the topic name like for TopicNameStrategy.
+
   const [keyAccess, valueAccess] = await Promise.all([
     canAccessSchemaTypeForTopic(topic, "key"),
     canAccessSchemaTypeForTopic(topic, "value"),

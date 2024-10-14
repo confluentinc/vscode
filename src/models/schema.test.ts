@@ -6,20 +6,31 @@ import { IconNames } from "../constants";
 import { Schema, SchemaType, generateSchemaSubjectGroups } from "./schema";
 
 describe("Schema model methods", () => {
-  it(".matchesTopicName() should return true if the subject matches the topic name without the -key or -value suffix", () => {
-    const schema = TEST_SCHEMA.copy({
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      subject: "test-topic-key",
-    });
-    assert.equal(schema.matchesTopicName("test-topic"), true);
-  });
+  it(".matchesTopicName() success / fail tests", () => {
+    for (const [subject, topic, expected] of [
+      // schemas named in TopicNameStrategy format
+      ["test-topic-value", "test-topic", true], // matching on TopicNameStrategy for value schemas
+      ["test-topic-key", "test-topic", true], // matching on TopicNameStrategy for key schemas
+      ["another-topic-key", "test-topic", false], // not matching on TopicNameStrategy
+      ["test-topic-with-suffix-value", "test-topic", false], // not matching on TopicNameStrategy value
+      ["test-topic-with-suffix-key", "test-topic", false], // not matching on TopicNameStrategy key
 
-  it(".matchesTopicName() should return false if the subject does not match the topic name", () => {
-    const schema = TEST_SCHEMA.copy({
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      subject: "another-topic-key",
-    });
-    assert.equal(schema.matchesTopicName("test-topic"), false);
+      // schemas named with TopicRecordNameStrategy format
+      ["test-topic-MyRecordSchema", "test-topic", true], // matching on TopicRecordNameStrategy (value is implied)
+      ["test-topic-MyOtherRecordSchema", "test-topic", true], // say, a different record schema for same topic
+      ["test-topic-MyRecordSchema", "test-topic-other-topic", false], // not matching on TopicRecordNameStrategy
+      ["test-topic-MyRecordSchema", "test-topic-MyRecordSchema", false], // isn't TopicRecordNameStrategy, but exact match, which is nothing.
+    ]) {
+      const schema = TEST_SCHEMA.copy({
+        // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+        subject,
+      });
+      assert.equal(
+        schema.matchesTopicName(topic as string),
+        expected,
+        `subject: ${subject}, topic: ${topic}`,
+      );
+    }
   });
 
   it(".fileExtension() should return the correct file extension for type=AVRO schemas", () => {
