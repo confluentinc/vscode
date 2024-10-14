@@ -1,4 +1,5 @@
 // Import this first!
+import * as SentryCore from "@sentry/core";
 import * as Sentry from "@sentry/node";
 /**
  * Initialize Sentry for error tracking (and future performance monitoring?).
@@ -14,7 +15,13 @@ if (process.env.SENTRY_DSN) {
     release: process.env.SENTRY_RELEASE,
     tracesSampleRate: 1.0, //  Capture 100% of the transactions
     profilesSampleRate: 1.0,
-    integrations: [Sentry.rewriteFramesIntegration()],
+    integrations: [
+      SentryCore.thirdPartyErrorFilterIntegration({
+        filterKeys: ["confluent-vscode-extension-sentry-do-not-use"],
+        behaviour: "drop-error-if-contains-third-party-frames",
+      }),
+      Sentry.rewriteFramesIntegration(),
+    ],
     ignoreErrors: [
       "The request failed and the interceptors did not return an alternative response",
     ],
@@ -27,34 +34,39 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
 }
 
-import { ConfluentCloudAuthProvider, getAuthProvider, getAuthSession } from "./authProvider";
+import { ConfluentCloudAuthProvider, getAuthProvider } from "./authProvider";
 import { registerCommandWithLogging } from "./commands";
-import { commands as connectionCommands } from "./commands/connections";
-import { commands as debugCommands } from "./commands/debugtools";
-import { commands as diffCommands } from "./commands/diffs";
-import { commands as environmentCommands } from "./commands/environments";
-import { commands as extraCommands } from "./commands/extra";
-import { commands as kafkaClusterCommands } from "./commands/kafkaClusters";
-import { commands as organizationCommands } from "./commands/organizations";
-import { commands as schemaRegistryCommands } from "./commands/schemaRegistry";
-import { commands as schemaCommands } from "./commands/schemas";
-import { commands as supportCommands } from "./commands/support";
-import { commands as topicCommands } from "./commands/topics";
+import { registerConnectionCommands } from "./commands/connections";
+import { registerDebugCommands } from "./commands/debugtools";
+import { registerDiffCommands } from "./commands/diffs";
+import { registerEnvironmentCommands } from "./commands/environments";
+import { registerExtraCommands } from "./commands/extra";
+import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
+import { registerOrganizationCommands } from "./commands/organizations";
+import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
+import { registerSchemaCommands } from "./commands/schemas";
+import { registerSupportCommands } from "./commands/support";
+import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
-import { setExtensionContext } from "./context";
+import { ContextValues, setContextValue, setExtensionContext } from "./context";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
+import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
+import { createConfigChangeListener } from "./preferences/listener";
+import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
+import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
+import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { getTelemetryLogger } from "./telemetry";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
-import { getTopicViewProvider } from "./viewProviders/topics";
+import { TopicViewProvider } from "./viewProviders/topics";
 
 const logger = new Logger("extension");
 
@@ -91,6 +103,9 @@ async function _activateExtension(
   context = await setupDebugHelpers(context);
   await setupContextValues();
 
+  const configListener: vscode.Disposable = await setupPreferences();
+  context.subscriptions.push(configListener);
+
   // these two need to be in order because they depend on each other
   context = await setupStorage(context);
   const authProviderDisposables = await setupAuthProvider();
@@ -104,91 +119,70 @@ async function _activateExtension(
   activateMessageViewer(context);
   registerProjectGenerationCommand(context);
 
+  // Construct the singleton, let it register its event listener.
+  CCloudResourcePreloader.getInstance();
+
   return context;
 }
 
 async function setupDebugHelpers(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
+  context.subscriptions.push(outputChannel, sidecarOutputChannel);
+  logger.info("Output channel disposables added");
+  // set up debugging commands before anything else, in case we need to reset global/workspace state
+  // or there's a problem further down with extension activation
+  context.subscriptions.push(...registerDebugCommands());
+  logger.info("Debug command disposables added");
   // automatically display and focus the Confluent extension output channel in development mode
   // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
   // host window during debugging
   if (process.env.LOGGING_MODE === "development") {
     await vscode.commands.executeCommand("confluent.showOutputChannel");
   }
-  context.subscriptions.push(outputChannel, sidecarOutputChannel);
-  logger.info("Output channel disposables added");
-  // set up debugging commands before anything else, in case we need to reset global/workspace state
-  // or there's a problem further down with extension activation
-  context.subscriptions.push(...debugCommands);
-  logger.info("Debug command disposables added");
   return context;
 }
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
-  const kafkaClusterSelected = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.kafkaClusterSelected",
-    false,
-  );
-  const schemaRegistrySelected = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.schemaRegistrySelected",
-    false,
-  );
-  // enables the "Select for Compare" / "Compare with Selected" commands
-  const diffResources = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.readOnlyDiffableResources",
-    ["ccloud-schema"],
-  );
-  // enables the "View in Confluent Cloud" command; these resources must have the "ccloudUrl" property
-  // and the `contextValue` in their *TreeItem classes must match the `contextValue` listed below
-  const openInCCloudResources = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.ccloudResources",
-    [
-      "ccloud-environment",
-      "ccloud-kafka-cluster",
-      "ccloud-kafka-topic",
-      "ccloud-kafka-topic-with-schema",
-      "ccloud-schema-registry-cluster",
-      "ccloud-schema",
-    ],
-  );
+  const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
+  const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
+  // constants for easier `when` clause matching in package.json; not updated dynamically
+  const diffResources = setContextValue(ContextValues.READONLY_DIFFABLE_RESOURCES, [
+    "ccloud-schema",
+  ]);
+  const openInCCloudResources = setContextValue(ContextValues.CCLOUD_RESOURCES, [
+    "ccloud-environment",
+    "ccloud-kafka-cluster",
+    "ccloud-kafka-topic",
+    "ccloud-kafka-topic-with-schema",
+    "ccloud-schema-registry",
+    "ccloud-schema",
+  ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
-  const viewsWithResources = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.viewsWithResources",
-    ["confluent-resources", "confluent-topics", "confluent-schemas"],
-  );
+  const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
+    "confluent-resources",
+    "confluent-topics",
+    "confluent-schemas",
+  ]);
   // enables the "Copy ID" command; these resources must have the "id" property
-  const resourcesWithIds = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.resourcesWithIDs",
-    [
-      "ccloud-environment",
-      "ccloud-kafka-cluster",
-      "ccloud-schema-registry-cluster", // only ID, no name
-      "ccloud-schema",
-      "local-kafka-cluster",
-    ],
-  );
-  const resourcesWithNames = vscode.commands.executeCommand(
-    "setContext",
-    "confluent.resourcesWithNames",
-    [
-      "ccloud-environment",
-      "ccloud-kafka-cluster",
-      "ccloud-kafka-topic", // only name, no ID
-      "ccloud-kafka-topic-with-schema", // only name, no ID
-      "local-kafka-cluster",
-      "local-kafka-topic", // only name, no ID
-      "local-kafka-topic-with-schema", // only name, no ID
-    ],
-  );
+  const resourcesWithIds = setContextValue(ContextValues.RESOURCES_WITH_ID, [
+    "ccloud-environment",
+    "ccloud-kafka-cluster",
+    "ccloud-schema-registry", // only ID, no name
+    "ccloud-schema",
+    "local-kafka-cluster",
+  ]);
+  const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
+    "ccloud-environment",
+    "ccloud-kafka-cluster",
+    "ccloud-kafka-topic", // only name, no ID
+    "ccloud-kafka-topic-with-schema", // only name, no ID
+    "local-kafka-cluster",
+    "local-kafka-topic", // only name, no ID
+    "local-kafka-topic-with-schema", // only name, no ID
+  ]);
   await Promise.all([
     kafkaClusterSelected,
     schemaRegistrySelected,
@@ -203,11 +197,26 @@ async function setupContextValues() {
 async function setupStorage(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
   // initialize singleton storage manager instance so other parts of the extension can access the
   // globalState, workspaceState, and secrets without needing to pass the extension context around
-  const manager = StorageManager.getOrCreateInstance();
+  const manager = StorageManager.getInstance();
   // Handle any storage migrations that need to happen before the extension can proceed.
   await migrateStorageIfNeeded(manager);
   logger.info("Storage manager initialized and migrations completed");
   return context;
+}
+
+/**
+ * Pass initial {@link vscode.WorkspaceConfiguration} settings to the sidecar's Preferences API on
+ * startup to ensure the sidecar is in sync with the extension's settings before other requests are made.
+ */
+async function setupPreferences(): Promise<vscode.Disposable> {
+  // pass initial configs to the sidecar on startup
+  const configs: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  const pemPaths: string[] = configs.get(SSL_PEM_PATHS, []);
+  const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
+  await updatePreferences({ tls_pem_paths: pemPaths, trust_all_certificates: trustAllCerts });
+
+  const listener: vscode.Disposable = createConfigChangeListener();
+  return listener;
 }
 
 async function setupAuthProvider(): Promise<vscode.Disposable[]> {
@@ -232,12 +241,12 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   //   local Kafka cluster (and CCloud connection changes will refresh the Resources view via the
   //   `ccloudConnected` event emitter)
   await Promise.all([
-    vscode.commands.executeCommand("setContext", "confluent.ccloudConnectionAvailable", false),
-    vscode.commands.executeCommand("setContext", "confluent.localKafkaClusterAvailable", false),
+    setContextValue(ContextValues.ccloudConnectionAvailable, false),
+    setContextValue(ContextValues.localKafkaClusterAvailable, false),
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
-  await getAuthSession();
+  await getCCloudAuthSession();
 
   return disposables;
 }
@@ -246,10 +255,11 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   logger.info("Creating view providers...");
 
   try {
-    const resourceViewProvider = new ResourceViewProvider();
+    const resourceViewProvider = ResourceViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.resources.refresh", () => {
-        resourceViewProvider.refresh();
+        // Force a deep refresh (of ccloud resouces) from sidecar.
+        resourceViewProvider.refresh(true);
       }),
     );
     logger.info("Resource view provider created");
@@ -258,10 +268,11 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   }
 
   try {
-    const topicViewProvider = getTopicViewProvider();
+    const topicViewProvider = TopicViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.topics.refresh", () => {
-        topicViewProvider.refresh();
+        // Force a deep refresh of the topic data for its current cluster from sidecar.
+        topicViewProvider.refresh(true);
       }),
     );
     logger.info("Topics view provider created");
@@ -270,10 +281,11 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
   }
 
   try {
-    const schemasViewProvider = new SchemasViewProvider();
+    const schemasViewProvider = SchemasViewProvider.getInstance();
     context.subscriptions.push(
       registerCommandWithLogging("confluent.schemas.refresh", () => {
-        schemasViewProvider.refresh();
+        // ask for a deep refresh of the schemas for the selected schema registry
+        schemasViewProvider.refresh(true);
       }),
     );
     logger.info("Schemas view provider created");
@@ -299,16 +311,16 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
 function setupCommands(context: vscode.ExtensionContext): vscode.ExtensionContext {
   logger.info("Storing main command disposables...");
   context.subscriptions.push(
-    ...connectionCommands,
-    ...organizationCommands,
-    ...kafkaClusterCommands,
-    ...environmentCommands,
-    ...schemaRegistryCommands,
-    ...schemaCommands,
-    ...supportCommands,
-    ...topicCommands,
-    ...diffCommands,
-    ...extraCommands,
+    ...registerConnectionCommands(),
+    ...registerOrganizationCommands(),
+    ...registerKafkaClusterCommands(),
+    ...registerEnvironmentCommands(),
+    ...registerSchemaRegistryCommands(),
+    ...registerSchemaCommands(),
+    ...registerSupportCommands(),
+    ...registerTopicCommands(),
+    ...registerDiffCommands(),
+    ...registerExtraCommands(),
   );
   logger.info("Main command disposables stored");
   return context;

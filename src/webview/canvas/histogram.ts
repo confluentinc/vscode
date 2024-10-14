@@ -234,7 +234,7 @@ export class Histogram extends HTMLElement {
         }
         this.selection([lo, hi]);
       } else if (!brushX.idle() && !down) {
-        brushX.up(x, y);
+        brushX.up();
         // if the pointer is released but no moving was done, clear the selection
         if (!pointerMoved) {
           brushX.set(null);

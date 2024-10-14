@@ -16,7 +16,7 @@ export enum StateKafkaTopics {
 }
 
 export enum StateSchemaRegistry {
-  CCLOUD = "schemaRegistryClusters.ccloud",
+  CCLOUD = "schemaRegistries.ccloud",
 }
 
 export enum StateSchemas {

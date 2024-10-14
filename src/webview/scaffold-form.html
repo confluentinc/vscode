@@ -32,13 +32,13 @@
                   <label data-text="this.field()[1].display_name"> </label>
                   <vscode-dropdown
                     data-attr-name="this.field()[0]"
-                    data-prop-value="this.field()[1].default_value"
+                    data-prop-value="this.field()[1].initial_value"
                   >
                     <template data-for="option of this.field()[1]._enum"
                       ><vscode-option
                         data-attr-value="this.option()"
                         data-text="this.option()"
-                        data-attr-selected="this.option() === this.field()[1].default_value"
+                        data-attr-selected="this.option() === this.field()[1].initial_value"
                       ></vscode-option>
                     </template>
                   </vscode-dropdown>
@@ -52,7 +52,7 @@
                   <label
                     data-text="this.field()[1].display_name"
                     data-attr-for="this.field()[0]"
-                    data-attr-class="this.field()[1].default_value == null ? 'label required' : 'label'"
+                    data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
                   ></label>
                   <input
                     class="input"
@@ -63,6 +63,7 @@
                     data-on-input="this.handleInput(event)"
                     data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
                     data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
+                    data-attr-required="this.field()[1].min_length > 0"
                   />
                 </div>
                 <span class="description" data-text="this.field()[1].description"></span>

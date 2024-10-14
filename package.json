@@ -2,30 +2,43 @@
   "name": "vscode-confluent",
   "type": "module",
   "displayName": "Confluent",
-  "description": "A tool for interacting with Confluent resources for easier development against Confluent Cloud and Apache Kafka®.",
-  "version": "0.16.0-6",
+  "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
+  "version": "0.20.0-4",
+  "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
   "author": {
     "name": "Confluent, Inc."
   },
-  "license": "https://www.confluent.io/software-evaluation-license/",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "repository": {
     "type": "git",
     "url": "https://github.com/confluentinc/vscode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/confluentinc/vscode/issues",
+    "email": "vscode-extension@confluent.io"
   },
   "icon": "resources/confluent_logo-mark-meadow.png",
   "engines": {
     "vscode": "^1.87.0"
   },
   "categories": [
+    "Programming Languages",
     "Other"
   ],
   "keywords": [
-    "confluent",
+    "Confluent",
+    "Confluent Cloud",
+    "Confluent Platform",
+    "Schema Registry",
+    "Apache Kafka",
+    "Apache Flink",
     "kafka",
-    "message",
-    "schema"
+    "flink",
+    "kstreams",
+    "schema",
+    "templates"
   ],
   "activationEvents": [
     "workspaceContains:**/*.confluent.*"
@@ -43,6 +56,12 @@
         "command": "confluent.connections.create",
         "icon": "$(plus)",
         "title": "Log in to Confluent Cloud",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.addSSLPemPath",
+        "icon": "$(key)",
+        "title": "Add SSL/TLS PEM Path",
         "category": "Confluent: Connections"
       },
       {
@@ -76,6 +95,11 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.schemas.diffMostRecentVersions",
+        "title": "Show Latest Changes",
+        "category": "Confluent: Compare Resources"
+      },
+      {
         "command": "confluent.diff.selectForCompare",
         "icon": "$(pass-filled)",
         "title": "Select for Compare",
@@ -86,13 +110,18 @@
         "icon": "$(diff)",
         "title": "Compare with Selected",
         "category": "Confluent: Compare Resources",
-        "enablement": "resourceSelectedForCompare"
+        "enablement": "confluent.resourceSelectedForCompare"
       },
       {
         "command": "confluent.organizations.use",
         "icon": "$(organization)",
         "title": "Change Organization",
         "category": "Confluent: Organizations"
+      },
+      {
+        "command": "confluent.copyOrganizationId",
+        "title": "Copy Organization ID",
+        "category": "Confluent: Resources"
       },
       {
         "command": "confluent.resources.refresh",
@@ -191,11 +220,15 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.support.openSettings",
+        "title": "Open Settings",
+        "category": "Confluent: Support"
+      },
+      {
         "command": "confluent.topic.consume",
         "icon": "$(debug-start)",
-        "title": "Open message viewer",
-        "category": "Confluent: Topic",
-        "enablement": "view == confluent-topics"
+        "title": "Browse Messages",
+        "category": "Confluent: Topic"
       },
       {
         "command": "confluent.topics.create",
@@ -204,13 +237,13 @@
         "category": "Confluent: Topics"
       },
       {
-        "command": "confluent.topics.configure",
-        "title": "Configure Topic",
+        "command": "confluent.topics.delete",
+        "title": "Delete Topic",
         "category": "Confluent: Topics"
       },
       {
-        "command": "confluent.topics.delete",
-        "title": "Delete Topic",
+        "command": "confluent.topics.openlatestschemas",
+        "title": "View Latest Schema Version(s)",
         "category": "Confluent: Topics"
       },
       {
@@ -252,7 +285,20 @@
         "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
           "type": "boolean",
           "default": true,
-          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry cluster."
+          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
+        },
+        "confluent.ssl.pemPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent/Kafka resources. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)"
+        },
+        "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
         }
       }
     },
@@ -330,6 +376,10 @@
           "when": "!confluent.ccloudConnectionAvailable"
         },
         {
+          "command": "confluent.copyOrganizationId",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyResourceId",
           "when": "false"
         },
@@ -386,7 +436,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.topics.configure",
+          "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
         {
@@ -399,6 +449,10 @@
         },
         {
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.diffMostRecentVersions",
           "when": "false"
         }
       ],
@@ -483,13 +537,18 @@
           "group": "2_copy@2"
         },
         {
+          "command": "confluent.schemas.diffMostRecentVersions",
+          "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*/",
+          "group": "3_compare"
+        },
+        {
           "command": "confluent.diff.selectForCompare",
           "when": "viewItem in confluent.readOnlyDiffableResources",
           "group": "3_compare"
         },
         {
           "command": "confluent.diff.compareWithSelected",
-          "when": "resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
+          "when": "confluent.resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
           "group": "3_compare"
         },
         {
@@ -506,6 +565,11 @@
           "command": "confluent.organizations.use",
           "when": "viewItem == resources-ccloud-container-connected",
           "group": "inline@2"
+        },
+        {
+          "command": "confluent.copyOrganizationId",
+          "when": "viewItem == resources-ccloud-container-connected",
+          "group": "2_copy@1"
         },
         {
           "command": "confluent.resources.item.rename",
@@ -533,11 +597,6 @@
           "group": "inline@1"
         },
         {
-          "command": "confluent.topics.configure",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
-          "group": "topics"
-        },
-        {
           "command": "confluent.topics.delete",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
           "group": "topics"
@@ -546,6 +605,11 @@
           "command": "confluent.topics.create",
           "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
           "group": "topics"
+        },
+        {
+          "command": "confluent.topics.openlatestschemas",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-with-schema.*/",
+          "group": "topic_schemas@1"
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
@@ -564,7 +628,7 @@
         },
         {
           "command": "confluent.openCCloudLink",
-          "when": "view in confluent.viewsWithResources && viewItem in confluent.ccloudResources",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/)",
           "group": "z_openInCloud"
         }
       ]
@@ -630,12 +694,26 @@
           {
             "id": "connect-local-cluster",
             "title": "Connect to Kafka",
-            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources \n[Get a Confluent Account](https://www.confluent.io/get-started/)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources panel \n[Confluent CLI for Local Clusters](https://docs.confluent.io/confluent-cli/current/overview.html)",
+            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources \n[Log in](command:confluent.connections.create)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources panel \n[Confluent CLI for Local Clusters](https://docs.confluent.io/confluent-cli/current/overview.html)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
             },
-            "completionEvents": []
+            "completionEvents": [
+              "onCommand:command:confluent.connections.create"
+            ]
+          },
+          {
+            "id": "view-topics",
+            "title": "View Messages",
+            "description": "Click the $(play) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
+            "media": {
+              "image": "resources/walkthrough/message-viewer.png",
+              "altText": "Click the Play button next to a topic to see the Message viewer."
+            },
+            "completionEvents": [
+              "onCommand:confluent.topic.consume"
+            ]
           },
           {
             "id": "inspect-schemas",
@@ -648,19 +726,9 @@
             "completionEvents": []
           },
           {
-            "id": "view-topics",
-            "title": "View Messages",
-            "description": "Click the $(play) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
-            "media": {
-              "image": "resources/walkthrough/message-viewer.png",
-              "altText": "Click the Play button next to a topic to see the Message viewer."
-            },
-            "completionEvents": []
-          },
-          {
             "id": "generate-project",
             "title": "Generate Files for a New Project",
-            "description": "Just starting out? Run ``Generate New Project`` to get a complete scaffolding setup with all the necessary boilerplate files to kickstart your Kafka project.",
+            "description": "Just starting out? Run ``Generate New Project`` to get a complete scaffolding setup with all the necessary boilerplate files to kickstart your Kafka project.\n[Create new project](command:confluent.scaffold)",
             "media": {
               "markdown": "resources/walkthrough/generate-project.md"
             },
@@ -671,7 +739,7 @@
           {
             "id": "give-feedback",
             "title": "Provide Feedback",
-            "description": "The Confluent extension for VS Code is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
+            "description": "Confluent for VS Code is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
             "media": {
               "markdown": "resources/walkthrough/feedback.md"
             },
@@ -703,6 +771,7 @@
     "@types/vscode": "^1.87.0",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
+    "@vscode/vsce": "^3.1.0",
     "dotenv": "^16.4.5",
     "esbuild": "^0.21.4",
     "eslint": "^9.4.0",
@@ -714,6 +783,7 @@
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
     "prettier": "3.2.5",
+    "rimraf": "^6.0.1",
     "rollup": "^4.18.0",
     "rollup-plugin-auto-external": "^2.0.0",
     "rollup-plugin-copy": "^3.5.0",
@@ -734,7 +804,7 @@
     "dataclass": "^3.0.0-beta.1",
     "gql.tada": "^1.8.3",
     "graphql": "^16.8.2",
-    "inertial": "^0.2.2",
+    "inertial": "^0.4.1",
     "tail": "^2.2.6",
     "unzipit": "^1.4.3"
   }

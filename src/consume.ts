@@ -6,7 +6,6 @@ import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import { type KafkaTopic } from "./models/topic";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
-
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -20,20 +19,38 @@ import {
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { Logger } from "./logging";
+import { getTelemetryLogger } from "./telemetry";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, Stream, includesSubstring } from "./stream/stream";
 import { handleWebviewMessage } from "./webview/comms/comms";
+import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
+import { topicQuickPick } from "./quickpicks/topics";
+import { scheduler } from "./scheduler";
 
 export function activateMessageViewer(context: ExtensionContext) {
+  /* All active message viewer instances share the same scheduler to perform API
+  requests. The scheduler defines number of concurrent requests at a time and a
+  minimum time interval for a single task to unblock a "thread". This all allows
+  faster consumption of retained messages for a single message viewer and prevents
+  rate limiting for multiple active message viewers. */
+  const schedule = scheduler(4, 500);
+
   // commands
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
-    registerCommandWithLogging("confluent.topic.consume", async (topic: KafkaTopic) => {
+    registerCommandWithLogging("confluent.topic.consume", async (topic?: KafkaTopic) => {
+      if (topic == null) {
+        const cluster = await kafkaClusterQuickPick(true, true);
+        if (cluster == null) return;
+        topic = await topicQuickPick(cluster);
+        if (topic == null) return;
+      }
+
       if (!(await canAccessSchemaForTopic(topic))) {
         showNoSchemaAccessWarningNotification();
       }
       const sidecar = await getSidecar();
-      return messageViewerStartPollingCommand(context, topic, sidecar);
+      return messageViewerStartPollingCommand(context, topic, sidecar, schedule);
     }),
   );
 }
@@ -56,6 +73,7 @@ function messageViewerStartPollingCommand(
   context: ExtensionContext,
   topic: KafkaTopic,
   sidecar: SidecarHandle,
+  schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
 ) {
   const staticRoot = Uri.joinPath(context.extensionUri, "webview");
   const panel = window.createWebviewPanel(
@@ -124,13 +142,19 @@ function messageViewerStartPollingCommand(
   /** Most recent response payload from Consume API. */
   const latestResult = os.signal<SimpleConsumeMultiPartitionResponse | null>(null);
   /** Most recent failure info */
-  const latestError = os.signal<string[] | null>(null);
-  /** Timestamp of the most recent successful consumption request. */
-  const latestFetch = os.signal<number>(0);
+  const latestError = os.signal<{ message: string } | null>(null);
 
-  /** Notify the webview only after flushing the rest of updates. */
+  /** Notify an active webview only after flushing the rest of updates. */
   const notifyUI = () => {
-    queueMicrotask(() => panel.webview.postMessage(["Timestamp", "Success", Date.now()]));
+    queueMicrotask(() => {
+      try {
+        if (panel.visible) {
+          panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
+        }
+      } catch {
+        // panel might be disposed which causes `panel.visible` getter to throw
+      }
+    });
   };
 
   /** Provides partition filter bitset based on the most recent consumed result. */
@@ -195,51 +219,66 @@ function messageViewerStartPollingCommand(
     // update this derivative after new batch of messages is consumed
     latestResult();
     const ts = stream().timestamp;
-    const bits = bitset();
     if (ts.size === 0) return null;
 
     // domain is defined by earliest and latest dates that are conveniently accessible via skiplist
-    const d0 = new Date(ts.getValue(ts.tail)!);
-    const d1 = new Date(ts.getValue(ts.head)!);
+    const d0 = ts.getValue(ts.tail)!;
+    const d1 = ts.getValue(ts.head)!;
     // following generates uniform ticks that are always between the domain extent
-    const uniformTicks = utcTicks(d0, d1, 70);
+    const uniformTicks = utcTicks(new Date(d0), new Date(d1), 70).map((v) => v.valueOf());
     let left = 0;
     let right = uniformTicks.length;
     while (uniformTicks.length > 0 && uniformTicks.at(left)! <= d0) left++;
     while (uniformTicks.length > 0 && uniformTicks.at(right - 1)! > d1) right--;
     let ticks = left < right ? uniformTicks.slice(left, right) : uniformTicks;
+    if (ticks.length === 0) return null;
 
-    let includes = bits != null ? bits.predicate() : () => false;
-    let cursor = ts.head;
-    let bins = [];
-    let totalCount = 0;
-    let filterCount = 0;
-    // in the following cycle we count number of records in the skiplist which
-    // timestamp is within the threshold. The threshold we target starts from
-    // [ticks[ticks.length - 1], d1], which is the final bin of the result.
-    // From there we go backwards over the ticks (because timestamp skiplist is
-    // in descending order) counting records and filtered number if applicable.
-    for (let i = ticks.length - 1, hi = d1.valueOf(), max = ts.size; i >= 0; i--) {
-      let tick = ticks[i].valueOf();
-      let totalB = 0;
-      let filterB = 0;
-      while (max-- > 0 && ts.getValue(cursor)! >= tick) {
-        totalB++;
-        totalCount++;
-        if (includes(cursor)) {
-          filterB++;
-          filterCount++;
+    /* Following algorithm counts number of records per each bin (aka histogram).
+    Bins are formed by uniformly distributed ticks which are timestamps between
+    oldest and newest timestamps:
+        lo • tick • • • tick • • • tick • • • tick • • hi
+    Bins have inclusive left boundary and right exclusive boundary. The last bin has
+    right inclusive. For each bin we need to count total number of records along
+    with number of records that satisfy currently applied filter.
+    Timestamp skiplist has descending order, so `head` means newest and `tail` means
+    oldest. Iterating from `head`, for each tick we find the insertion point (like
+    bisect left) in the skiplist and count number of records between the point and
+    the one we used in previous iteration. */
+    const bits = bitset();
+    const includes = bits != null ? bits.predicate() : () => false;
+    const bins: { x0: number; x1: number; total: number; filter: number | null }[] = [];
+    const limit = ticks.length;
+    let ahead = ts.head;
+    for (let i = limit; i >= 0; i--) {
+      const tick = i === 0 ? 0 : ticks[i - 1];
+      const curr = i === 0 ? ts.tail : ts.find((p) => ts.getValue(p)! <= tick);
+      const notEmptyBin = curr != null && ts.getValue(curr)! <= (ticks[i] ?? d1.valueOf());
+      let total = 0;
+      let filter = 0;
+      if (notEmptyBin) {
+        let next = ahead;
+        // account for inclusive final bin
+        if (i === limit) {
+          total++;
+          if (includes(next)) filter++;
         }
-        cursor = ts.next[cursor];
+        if (next !== curr) {
+          let max = ts.size;
+          do {
+            total++;
+            // avoid counting the right bin boundary, it is covered by the next bin
+            if (next !== ahead && includes(next)) filter++;
+            next = ts.next[next];
+          } while (max-- > 0 && next !== curr);
+          // make sure to count the left bin boundary
+          if (includes(curr)) filter++;
+        }
       }
-      bins.unshift({ x0: tick, x1: hi, total: totalB, filter: bits != null ? filterB : null });
-      hi = tick;
+      if (curr != null) ahead = curr;
+      const x0 = i === 0 ? d0 : ticks[i - 1];
+      const x1 = i === limit ? d1 : ticks[i];
+      bins.unshift({ x0, x1, total, filter: bits != null ? filter : null });
     }
-    // the final bin (which is the first one in the result) can be calculated
-    // by subtracting total values we counted from the collection size.
-    const total0 = ts.size - totalCount;
-    const filter0 = bits != null ? bits.count() - filterCount : null;
-    bins.unshift({ x0: d0.valueOf(), x1: ticks[0].valueOf(), total: total0, filter: filter0 });
 
     return bins;
   });
@@ -280,92 +319,101 @@ function messageViewerStartPollingCommand(
     queue = [];
   }
 
-  os.watch(() => {
-    /* This is the main consumption cycle. Every time input parameters change,
-    any in-flight requests should be aborted. See this controller's references,
-    it has to be passed to any async calls happening below. */
-    const ctl = new AbortController();
+  os.watch(async (signal) => {
+    /* Cannot proceed any further if state got paused by the user or other
+    events. If the state changes, this watcher is notified once again. */
+    if (state() !== "running") return;
 
-    /* This functions is IIFE because os.watch() needs a sync function. Input
-    parameters are all read in the same place to make sure no branches affect
-    this watchers dependency list. */
-    (async (streamParams, streamState, stream, partitions, prevResult, _timestamp) => {
-      /* Cannot proceed any further if state got paused by the user or other
-      events. If the state changes, this watcher is notified once again. */
-      if (streamState !== "running") return;
-      try {
-        const now = Date.now();
-        const old = os.peek(latestFetch);
-        /* Ensure to wait at least some time before following polling request
-        if at least one was already made. The condition below should allow for
-        faster requests when the stream was resumed. */
-        if (now - old < MIN_POLLING_INTERVAL_MS) await sleep(ctl.signal);
+    try {
+      const currentStream = stream();
+      const partitions = partitionConsumed();
+      /* If current parameters were already used for successful request, the
+      following request should consider offsets provided in previous results. */
+      const requestParams = getOffsets(params(), latestResult(), partitions);
+      /* Delegate an API call to shared scheduler. */
+      const result = await schedule(() => consume(requestParams, signal), signal);
 
-        /* If current parameters were already used for successful request, the
-        following request should consider offsets provided in previous results. */
-        const params = getOffsets(streamParams, prevResult, partitions);
-        const result = await consume(params, ctl.signal);
-
-        const datalist = result.partition_data_list ?? [];
-        for (const partition of datalist) {
-          /* The very first request always going to include messages from all
-          partitions. If we consume a subset of partitions, some messages need
-          to be dropped. */
-          if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
-          /* The messages that we _do_ process, are pushed to the queue, which 
-          then processes messages and puts them to the stream on its own pace. */
-          const records = partition.records ?? [];
-          for (const message of records) queue.push(message);
-        }
-
-        /* Update the state and notify the UI about another successful request processed. */
-        os.batch(() => {
-          flushMessages(stream);
-          latestResult(result);
-          latestFetch(Date.now());
-          notifyUI();
-        });
-      } catch (error) {
-        let reportable: any = null;
-        let shouldPause = false;
-        /* Async operations can be aborted by provided AbortController that is
-        controlled by the watcher. Nothing to log in this case. */
-        if (error instanceof Error && error.name === "AbortError") return;
-        /* In case of network issue, the current assumption is that the user is
-        going to see auth related error alerts. Logging and error displays is WIP. */
-        if (error instanceof ResponseError) {
-          const payload = await error.response.json();
-          // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
-          if (!payload?.aborted) {
-            shouldPause = error.response.status >= 400 && error.response.status < 500;
-            reportable = JSON.stringify(payload);
-            logger.error(
-              `An error occurred during messages consumption. Status ${error.response.status}`,
-            );
-          }
-        } else if (error instanceof Error) {
-          logger.error(error.message);
-          reportable = error.message;
-        }
-
-        os.batch(() => {
-          latestFetch(Date.now());
-          // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
-          if (shouldPause) {
-            state("paused");
-            timer((timer) => timer.pause());
-          }
-          if (reportable != null) {
-            latestError((errors) => {
-              return errors == null ? [reportable] : [reportable].concat(errors).slice(0, 10);
-            });
-          }
-          notifyUI();
-        });
+      const datalist = result.partition_data_list ?? [];
+      for (const partition of datalist) {
+        /* The very first request always going to include messages from all
+        partitions. If we consume a subset of partitions, some messages need
+        to be dropped. */
+        if (partitions != null && !partitions.includes(partition.partition_id!)) continue;
+        /* The messages that we _do_ process, are pushed to the queue, which
+        then processes messages and puts them to the stream on its own pace. */
+        const records = partition.records ?? [];
+        for (const message of records) queue.push(message);
       }
-    })(params(), state(), stream(), partitionConsumed(), latestResult(), latestFetch());
 
-    return () => ctl.abort();
+      /* Update the state and notify the UI about another successful request processed. */
+      os.batch(() => {
+        flushMessages(currentStream);
+        latestResult(result);
+        latestError(null);
+        notifyUI();
+      });
+    } catch (error) {
+      let reportable: { message: string } | null = null;
+      let shouldPause = false;
+      /* Async operations can be aborted by provided AbortController that is
+      controlled by the watcher. Nothing to log in this case. */
+      if (error instanceof Error && error.name === "AbortError") return;
+      /* In case of network issue, the current assumption is that the user is
+      going to see auth related error alerts. Logging and error displays is WIP. */
+      if (error instanceof ResponseError) {
+        const payload = await error.response.json();
+        // FIXME: this response error coming from the middleware that has to be present to avoid openapi error about missing middlewares
+        if (!payload?.aborted) {
+          const status = error.response.status;
+          shouldPause = status >= 400;
+          switch (status) {
+            case 401: {
+              reportable = { message: "Authentication required." };
+              break;
+            }
+            case 403: {
+              reportable = { message: "Insufficient permissions to read from topic." };
+              break;
+            }
+            case 404: {
+              if (String(payload?.title).startsWith("Error fetching the messages")) {
+                reportable = { message: "Topic not found." };
+              } else {
+                reportable = { message: "Unable to connect to the server." };
+              }
+              break;
+            }
+            case 429: {
+              reportable = { message: "Too many requests. Try again later." };
+              break;
+            }
+            default: {
+              reportable = { message: "Something went wrong." };
+              break;
+            }
+          }
+          logger.error(
+            `An error occurred during messages consumption. Status ${error.response.status}`,
+          );
+        }
+      } else if (error instanceof Error) {
+        logger.error(error.message);
+        reportable = { message: "An internal error occurred." };
+        shouldPause = true;
+      }
+
+      os.batch(() => {
+        // in case of 4xx error pause the stream since we most likely won't be able to continue consuming
+        if (shouldPause) {
+          state("paused");
+          timer((timer) => timer.pause());
+        }
+        if (reportable != null) {
+          latestError(reportable);
+        }
+        notifyUI();
+      });
+    }
   });
 
   function processMessage(...[type, body]: Parameters<MessageSender>) {
@@ -373,7 +421,7 @@ function messageViewerStartPollingCommand(
       case "GetMessages": {
         const offset = body.page * body.pageSize;
         const limit = body.pageSize;
-        const includes = bitset()?.predicate() ?? ((_: number) => true);
+        const includes = bitset()?.predicate() ?? (() => true);
         const { results, indices } = stream().slice(offset, limit, includes);
         const messages = results.map(({ partition_id, offset, timestamp, key, value }) => {
           key = truncate(key);
@@ -434,6 +482,7 @@ function messageViewerStartPollingCommand(
         return (search?.query ?? "") satisfies MessageResponse<"GetSearchQuery">;
       }
       case "PreviewMessageByIndex": {
+        track({ action: "preview-message" });
         const { messages, serialized } = stream();
         const index = body.index;
         const message = messages.at(index);
@@ -459,12 +508,13 @@ function messageViewerStartPollingCommand(
         return null;
       }
       case "PreviewJSON": {
+        track({ action: "preview-snapshot" });
         const {
           timestamp,
           messages: { values },
           serialized,
         } = stream();
-        const includes = bitset()?.predicate() ?? ((_: number) => true);
+        const includes = bitset()?.predicate() ?? (() => true);
         const records: string[] = [];
         for (
           let i = 0, p = timestamp.head, payload;
@@ -487,6 +537,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"PreviewJSON">;
       }
       case "SearchMessages": {
+        track({ action: "search" });
         if (body.search != null) {
           const { capacity, messages } = stream();
           const values = messages.values;
@@ -524,6 +575,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"StreamResume">;
       }
       case "ConsumeModeChange": {
+        track({ action: "consume-mode-change" });
         mode(body.mode);
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params(getParams(body.mode, body.timestamp, maxPollRecords));
@@ -542,6 +594,7 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"ConsumeModeChange">;
       }
       case "PartitionConsumeChange": {
+        track({ action: "consume-partition-change" });
         partitionConsumed(body.partitions);
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, os.peek(stream).capacity);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
@@ -560,16 +613,19 @@ function messageViewerStartPollingCommand(
         return null satisfies MessageResponse<"PartitionConsumeChange">;
       }
       case "PartitionFilterChange": {
+        track({ action: "filter-partition-change" });
         partitionFilter(body.partitions);
         notifyUI();
         return null satisfies MessageResponse<"PartitionFilterChange">;
       }
       case "TimestampFilterChange": {
+        debouncedTrack({ action: "filter-timestamp-change" });
         timestampFilter(body.timestamps);
         notifyUI();
         return null satisfies MessageResponse<"TimestampFilterChange">;
       }
       case "MessageLimitChange": {
+        track({ action: "consume-message-limit-change" });
         const maxPollRecords = Math.min(DEFAULT_MAX_POLL_RECORDS, body.limit);
         params((value) => getParams(os.peek(mode), value.timestamp, maxPollRecords));
         stream(new Stream(body.limit));
@@ -634,31 +690,6 @@ function getOffsets(
   return params;
 }
 
-const MIN_POLLING_INTERVAL_MS = 0.5 * 1000;
-const THRESHOLD_POLLING_INTERVAL_MS = 0.5 * 1000;
-
-/**
- * Await for a variable time. A random threshold added to avoid syncing with
- * other consumers running in parallel. AbortSignal can be provided to abort
- * the timer, in case the following procedure should not be executed anyway.
- */
-function sleep(signal: AbortSignal) {
-  const delay = MIN_POLLING_INTERVAL_MS + THRESHOLD_POLLING_INTERVAL_MS * Math.random();
-  return new Promise((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout>;
-    const abort = () => {
-      clearTimeout(timer);
-      const error = Object.assign(new Error(signal.reason), { name: "AbortError" });
-      reject(error);
-    };
-    signal.addEventListener("abort", abort, { once: true });
-    timer = setTimeout(() => {
-      signal.removeEventListener("abort", abort);
-      resolve(null);
-    }, delay);
-  });
-}
-
 /** Compress any valid json value into smaller payload for preview purpose. */
 function truncate(value: any): any {
   if (value == null) return null;
@@ -711,4 +742,14 @@ class Timer extends Data {
   reset(this: Timer) {
     return this.copy({ start: Date.now(), offset: 0 });
   }
+}
+
+function track(details: object) {
+  getTelemetryLogger().logUsage("Message Viewer Action", details);
+}
+
+let timer: ReturnType<typeof setTimeout>;
+function debouncedTrack(details: object) {
+  clearTimeout(timer);
+  timer = setTimeout(track, 200, details);
 }

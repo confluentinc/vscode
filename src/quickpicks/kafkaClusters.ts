@@ -5,7 +5,7 @@ import { getLocalKafkaClusters } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { getCCloudConnection } from "../sidecar/connections";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
@@ -44,7 +44,7 @@ async function generateKafkaClusterQuickPick(
   if (includeCCloud) {
     // list all Kafka clusters for all CCloud environments for the given connection; to be separated
     // further by environment in the quickpick menu below
-    if (await getCCloudConnection()) {
+    if (await hasCCloudAuthSession()) {
       const envGroups = await getEnvironments();
       cloudEnvironments = envGroups.map((group) => group.environment);
       cloudKafkaClusters = envGroups.map((group) => group.kafkaClusters).flat();
@@ -57,7 +57,17 @@ async function generateKafkaClusterQuickPick(
   let availableKafkaClusters: KafkaCluster[] = [];
   availableKafkaClusters.push(...localKafkaClusters, ...cloudKafkaClusters);
   if (availableKafkaClusters.length === 0) {
-    vscode.window.showInformationMessage("No Kafka clusters available.");
+    vscode.window.showInformationMessage("No local Apache Kafka clusters available.");
+    if (includeCCloud && !(await hasCCloudAuthSession())) {
+      const login = "Log in to Confluent Cloud";
+      vscode.window
+        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
+        .then((selected) => {
+          if (selected === login) {
+            vscode.commands.executeCommand("confluent.connections.create");
+          }
+        });
+    }
     return undefined;
   }
 
@@ -91,7 +101,7 @@ async function generateKafkaClusterQuickPick(
   cloudEnvironments.forEach((env: CCloudEnvironment) => {
     environmentMap.set(env.id, env);
   });
-  logger.info(`Found ${cloudEnvironments.length} environments`);
+  logger.debug(`Found ${cloudEnvironments.length} environments`);
 
   let lastEnvName: string = "";
   cloudKafkaClusters.forEach((kafkaCluster: CCloudKafkaCluster) => {

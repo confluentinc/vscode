@@ -1,5 +1,5 @@
 name: 'Report a documentation issue'
-description: Report an issue with the Confluent extension for VS Code documentation.
+description: Report an issue with the Confluent for VS Code documentation.
 title: 'Docs: '
 labels:
   - 'docs'

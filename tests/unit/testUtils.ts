@@ -50,5 +50,5 @@ export async function getExtensionContext(
 export async function getTestStorageManager(): Promise<StorageManager> {
   // the extension needs to be activated before we can use the StorageManager
   await getExtensionContext();
-  return StorageManager.getOrCreateInstance();
+  return StorageManager.getInstance();
 }

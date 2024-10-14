@@ -60,7 +60,11 @@ async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) 
 }
 
 async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
-  const kafkaCluster: KafkaCluster | undefined = cluster || (await kafkaClusterQuickPick());
+  // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
+  const kafkaCluster: KafkaCluster | undefined =
+    cluster instanceof CCloudKafkaCluster || cluster instanceof LocalKafkaCluster
+      ? cluster
+      : await kafkaClusterQuickPick();
   if (!kafkaCluster) {
     return;
   }
@@ -129,10 +133,10 @@ async function deleteTopicCommand(topic: KafkaTopic) {
         // Another 1/3 way done now.
         progress.report({ increment: 33 });
 
-        // explicitly refresh the topics view after deleting a topic, so that repainting
+        // explicitly deep refresh the topics view after deleting a topic, so that repainting
         // ommitting the newly deleted topic is a foreground task we block on before
         // closing the progress window.
-        getTopicViewProvider().refresh();
+        getTopicViewProvider().refresh(true, cluster.id);
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
@@ -216,8 +220,9 @@ async function createTopicCommand(item?: KafkaCluster) {
         progress.report({ increment: 33 });
 
         // Refresh in the foreground after creating a topic, so that the new topic is visible
-        // immediately after the progress window closes.
-        getTopicViewProvider().refresh();
+        // immediately after the progress window closes (assuming topics view is showing this cluster).
+
+        getTopicViewProvider().refresh(true, cluster.id);
       } catch (error) {
         if (!(error instanceof ResponseError)) {
           // generic error handling
@@ -319,14 +324,19 @@ async function copyBootstrapServers(item: KafkaCluster) {
   vscode.window.showInformationMessage(`Copied "${bootstrapServers}" to clipboard.`);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),
-  registerCommandWithLogging("confluent.resources.kafka-cluster.select", selectKafkaClusterCommand),
-  registerCommandWithLogging("confluent.topics.create", createTopicCommand),
-  registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
-  registerCommandWithLogging("confluent.topics.configure", configureTopicCommand),
-  registerCommandWithLogging(
-    "confluent.resources.kafka-cluster.copyBootstrapServers",
-    copyBootstrapServers,
-  ),
-];
+export function registerKafkaClusterCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.kafka-clusters.item.rename", renameKafkaClusterCommand),
+    registerCommandWithLogging(
+      "confluent.resources.kafka-cluster.select",
+      selectKafkaClusterCommand,
+    ),
+    registerCommandWithLogging("confluent.topics.create", createTopicCommand),
+    registerCommandWithLogging("confluent.topics.delete", deleteTopicCommand),
+    registerCommandWithLogging(
+      "confluent.resources.kafka-cluster.copyBootstrapServers",
+      copyBootstrapServers,
+    ),
+    registerCommandWithLogging("confluent.topics.configure", configureTopicCommand),
+  ];
+}

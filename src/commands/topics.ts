@@ -33,11 +33,13 @@ async function copyKafkaClusterBootstrapUrl() {
   vscode.window.showInformationMessage(`Copied "${cluster.bootstrapServers}" to clipboard.`);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.topics.copyKafkaClusterId", copyKafkaClusterId),
-  registerCommandWithLogging("confluent.topics.copyKafkaClusterName", copyKafkaClusterName),
-  registerCommandWithLogging(
-    "confluent.topics.copyKafkaClusterBootstrapServers",
-    copyKafkaClusterBootstrapUrl,
-  ),
-];
+export function registerTopicCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.topics.copyKafkaClusterId", copyKafkaClusterId),
+    registerCommandWithLogging("confluent.topics.copyKafkaClusterName", copyKafkaClusterName),
+    registerCommandWithLogging(
+      "confluent.topics.copyKafkaClusterBootstrapServers",
+      copyKafkaClusterBootstrapUrl,
+    ),
+  ];
+}

@@ -2,13 +2,13 @@ import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 
 export interface CCloudEnvironmentGroup {
   environment: CCloudEnvironment;
   kafkaClusters: CCloudKafkaCluster[];
-  schemaRegistry?: SchemaRegistryCluster;
+  schemaRegistry?: CCloudSchemaRegistry;
   // TODO: Add Flink compute pool as cluster type eventually
 }
 
@@ -57,7 +57,8 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
       environment: CCloudEnvironment.create({
         id: env.id,
         name: env.name,
-        stream_governance_package: env.governancePackage,
+        streamGovernancePackage: env.governancePackage,
+        hasClusters: env.kafkaClusters.length > 0 || env.schemaRegistry !== null,
       }),
       kafkaClusters: [],
       schemaRegistry: undefined,
@@ -75,7 +76,7 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
     }
     // parse Schema Registry
     if (env.schemaRegistry) {
-      envGroup.schemaRegistry = SchemaRegistryCluster.create({
+      envGroup.schemaRegistry = CCloudSchemaRegistry.create({
         ...env.schemaRegistry,
         environmentId: env.id,
       });

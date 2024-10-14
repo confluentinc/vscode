@@ -1,23 +1,24 @@
 import * as vscode from "vscode";
 import { getExtensionContext } from "../context";
+import { ExtensionContextNotSetError } from "../errors";
 
 export class StorageManager {
-  private static instance: StorageManager;
   private globalState: vscode.Memento;
   private workspaceState: vscode.Memento;
   private secrets: vscode.SecretStorage;
 
-  constructor() {
+  private static instance: StorageManager | null = null;
+  private constructor() {
     const context = getExtensionContext();
     if (!context) {
-      throw new Error("ExtensionContext not set yet");
+      throw new ExtensionContextNotSetError("StorageManager");
     }
     this.globalState = context.globalState;
     this.workspaceState = context.workspaceState;
     this.secrets = context.secrets;
   }
 
-  static getOrCreateInstance(): StorageManager {
+  static getInstance(): StorageManager {
     if (!StorageManager.instance) {
       StorageManager.instance = new StorageManager();
     }
@@ -83,5 +84,5 @@ export class StorageManager {
 
 export function getStorageManager(): StorageManager {
   // should only be called after extension activation and context is set
-  return StorageManager.getOrCreateInstance();
+  return StorageManager.getInstance();
 }

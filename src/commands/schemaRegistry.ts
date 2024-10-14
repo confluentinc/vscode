@@ -1,11 +1,14 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentSchemaRegistryChanged } from "../emitters";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
-import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistryClusters";
+import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 
-async function selectSchemaRegistryCommand(cluster?: SchemaRegistryCluster) {
-  const schemaRegistry = cluster || (await schemaRegistryQuickPick());
+async function selectSchemaRegistryCommand(cluster?: SchemaRegistry) {
+  // ensure whatever was passed in is a SchemaRegistry instance; if not, prompt the user to pick one
+  // TODO(shoup): update to support LocalSchemaRegistry
+  const schemaRegistry =
+    cluster instanceof CCloudSchemaRegistry ? cluster : await schemaRegistryQuickPick();
   if (!schemaRegistry) {
     return;
   }
@@ -15,9 +18,11 @@ async function selectSchemaRegistryCommand(cluster?: SchemaRegistryCluster) {
   vscode.commands.executeCommand("confluent-schemas.focus");
 }
 
-export const commands = [
-  registerCommandWithLogging(
-    "confluent.resources.schema-registry.select",
-    selectSchemaRegistryCommand,
-  ),
-];
+export function registerSchemaRegistryCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging(
+      "confluent.resources.schema-registry.select",
+      selectSchemaRegistryCommand,
+    ),
+  ];
+}

@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import "mocha";
 import { SIDECAR_LOGFILE_PATH } from "./constants";
-import { constructSidecarEnv, wasConnRefused } from "./sidecarManager";
+import { constructSidecarEnv, wasConnRefused, killSidecar } from "./sidecarManager";
 
 describe("Test wasConnRefused", () => {
   it("wasConnRefused() should return true for various spellings of a connection refused error", () => {
@@ -58,5 +58,46 @@ describe("constructSidecarEnv tests", () => {
     const env = { FOO: "bar" };
     const result = constructSidecarEnv(env);
     assert.strictEqual("bar", result.FOO);
+  });
+});
+
+describe("killSidecar() tests", () => {
+  let kill: (pid: number, signal?: string | number | undefined) => true;
+
+  beforeEach(() => {
+    // mock out process.kill
+    kill = process.kill;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    process.kill = (pid: number, signal: string | number) => {
+      return true;
+    };
+  });
+
+  afterEach(() => {
+    // restore
+    process.kill = kill;
+  });
+
+  it("refuses to kill nonpositive pids", () => {
+    for (const pid of [0, -1, -2]) {
+      assert.throws(() => killSidecar(pid), /Refusing to kill process with PID <= 1/);
+    }
+  });
+
+  it("Will try to kill positive pids", () => {
+    const pid = 1234;
+    // mock out process.kill
+    const kill = process.kill;
+    process.kill = (pid: number, signal: string | number) => {
+      assert.strictEqual(1234, pid);
+      assert.strictEqual("SIGTERM", signal);
+      return true;
+    };
+
+    assert.doesNotThrow(() => killSidecar(pid));
+
+    // restore
+    process.kill = kill;
   });
 });

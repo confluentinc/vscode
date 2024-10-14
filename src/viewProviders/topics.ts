@@ -1,15 +1,18 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
+import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -26,35 +29,54 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   readonly onDidChangeTreeData: vscode.Event<TopicViewProviderData | undefined | void> =
     this._onDidChangeTreeData.event;
 
-  refresh(): void {
+  private forceDeepRefresh: boolean = false;
+
+  /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
+  refresh(forceDeepRefresh: boolean = false, onlyIfViewingClusterId: string | null = null): void {
+    if (
+      onlyIfViewingClusterId &&
+      this.kafkaCluster &&
+      this.kafkaCluster.id !== onlyIfViewingClusterId
+    ) {
+      // If the view is currently focused on a different cluster, no need to refresh
+      return;
+    }
+
+    this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
   }
 
   private treeView: vscode.TreeView<TopicViewProviderData>;
-  /** The parent of the focused Kafka cluster, if it came from CCloud.  */
-  public ccloudEnvironment: CCloudEnvironment | null = null;
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
   public kafkaCluster: KafkaCluster | null = null;
 
-  constructor() {
+  private static instance: TopicViewProvider | null = null;
+  private constructor() {
+    if (!getExtensionContext()) {
+      // getChildren() will fail without the extension context
+      throw new ExtensionContextNotSetError("TopicViewProvider");
+    }
     // instead of calling `.registerTreeDataProvider`, we're creating a TreeView to dynamically
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
-      logger.debug("ccloudConnected event fired, resetting", connected);
-      if (this.ccloudEnvironment && this.kafkaCluster?.isCCloud) {
+      if (this.kafkaCluster?.isCCloud) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
         // a CCloud Kafka Cluster
+        logger.debug(
+          "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
+          { connected },
+        );
         this.reset();
       }
     });
     currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
       if (!cluster) {
-        vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
+        logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting.");
         this.reset();
       } else {
-        vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", true);
+        setContextValue(ContextValues.kafkaClusterSelected, true);
         this.kafkaCluster = cluster;
         // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
         if (cluster.isLocal) {
@@ -65,19 +87,24 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
             await getResourceManager().getCCloudEnvironment(
               (this.kafkaCluster as CCloudKafkaCluster).environmentId,
             );
-          this.ccloudEnvironment = parentEnvironment;
-          this.treeView.description = `${this.ccloudEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
+          this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
         }
         this.refresh();
       }
     });
   }
 
+  static getInstance(): TopicViewProvider {
+    if (!TopicViewProvider.instance) {
+      TopicViewProvider.instance = new TopicViewProvider();
+    }
+    return TopicViewProvider.instance;
+  }
+
   /** Convenience method to revert this view to its original state. */
   reset(): void {
-    vscode.commands.executeCommand("setContext", "confluent.kafkaClusterSelected", false);
+    setContextValue(ContextValues.kafkaClusterSelected, false);
     this.kafkaCluster = null;
-    this.ccloudEnvironment = null;
     this.treeView.description = "";
     this.refresh();
   }
@@ -111,27 +138,87 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         return topicItems;
       }
 
-      const topics: KafkaTopic[] = await getTopicsForCluster(this.kafkaCluster);
+      const topics: KafkaTopic[] = await getTopicsForCluster(
+        this.kafkaCluster,
+        this.forceDeepRefresh,
+      );
       topicItems.push(...topics);
+
+      // clear any prior request to deep refresh, allow any subsequent repaint
+      // to draw from workspace storage cache.
+      this.forceDeepRefresh = false;
     }
     return topicItems;
   }
 }
 
-var topicViewProvider = new TopicViewProvider();
 /** Get the singleton instance of the {@link TopicViewProvider} */
 export function getTopicViewProvider() {
-  return topicViewProvider;
+  return TopicViewProvider.getInstance();
 }
 
-export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
+/** Determine the topics offered from this cluster. If topics are already known
+ * from a prior sidecar fetch, return those, otherwise deep fetch from sidecar.
+ */
+export async function getTopicsForCluster(
+  cluster: KafkaCluster,
+  forceRefresh: boolean = false,
+): Promise<KafkaTopic[]> {
+  const resourceManager = getResourceManager();
+
+  if (cluster instanceof CCloudKafkaCluster) {
+    // Ensure all of the needed ccloud preloading is complete before referencing
+    // resource manager ccloud resources, namely the schema registry and its schemas.
+
+    const preloader = CCloudResourcePreloader.getInstance();
+
+    // Honor forceRefresh, in case they, say, _just_ created the schema registry.
+    await preloader.ensureCoarseResourcesLoaded(forceRefresh);
+
+    // Get the schema registry id for the cluster's environment
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
+
+    if (schemaRegistry) {
+      // Ensure the schemas are loaded for the schema registry, honoring the forceRefresh flag.
+      await preloader.ensureSchemasLoaded(schemaRegistry.id, forceRefresh);
+    }
+  }
+
+  let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
+  if (cachedTopics !== undefined && !forceRefresh) {
+    // Cache hit.
+    logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
+    return cachedTopics;
+  }
+
+  // Otherwise make a deep fetch, cache in resource manager, and return.
+  let environmentId: string | null = null;
+  let schemas: Schema[] | undefined = [];
+
+  if (cluster instanceof CCloudKafkaCluster) {
+    environmentId = cluster.environmentId;
+
+    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(environmentId);
+    if (schemaRegistry) {
+      schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
+      if (schemas === undefined) {
+        logger.error("Wacky: schema registry known, but unknown schemas (should be empty array)", {
+          schemaRegistry,
+        });
+        // promote unknown to empty array as work around to what should never happen.
+        schemas = [];
+      }
+    }
+  }
+
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-
   let topicsResp: TopicDataList;
+
   try {
     topicsResp = await client.listKafkaTopics({
       cluster_id: cluster.id,
+      includeAuthorizedOperations: true,
     });
   } catch (error) {
     if (error instanceof ResponseError) {
@@ -143,24 +230,13 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
     } else {
       logger.error("Failed to list Kafka topics: ", error);
     }
+    // short circuit return, do NOT cache result on error. Ensure we try again on next refresh.
     return [];
   }
 
-  let environmentId: string | null = null;
-  let schemas: Schema[] = [];
-
-  if (cluster instanceof CCloudKafkaCluster) {
-    environmentId = cluster.environmentId;
-    const resourceManager = getResourceManager();
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistryCluster(environmentId);
-    if (schemaRegistry) {
-      schemas = await resourceManager.getCCloudSchemasForCluster(schemaRegistry.id);
-    }
-  }
-
-  // Promote each from-response-topic to an internal KafkaTopic object
+  // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
+    const hasMatchingSchema: boolean = schemas!.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
 
@@ -177,17 +253,16 @@ export async function getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaT
       operations: toKafkaTopicOperations(topic.authorized_operations!),
     });
   });
-  if (cluster instanceof CCloudKafkaCluster) {
-    await getResourceManager().setCCloudTopics(topics);
-  } else {
-    await getResourceManager().setLocalTopics(topics);
-  }
+
+  logger.debug(`Deep fetched ${topics.length} topics for cluster ${cluster.id}`);
+  await resourceManager.setTopicsForCluster(cluster, topics);
+
   return topics;
 }
 
 /**
- * Load the schemas for a given topic from extension state by using the `TopicNameStrategy` to match
- * schema subjects with the topic name.
+ * Load the schemas related to the given topic from extension state by using either `TopicNameStrategy`
+ * or `TopicRecordNameStrategy` to match schema subjects with the topic's name.
  * @param topic The Kafka topic to load schemas for.
  * @returns An array of {@link ContainerTreeItem} objects representing the topic's schemas, grouped
  * by subject as {@link ContainerTreeItem}s, with the {@link Schema}s in version-descending order.
@@ -209,18 +284,19 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
     // TODO: update this once we're able to associate schemas with local topics
     return [];
   }
-  // look up the associated SR cluster based on the topic's environment, then pull the schemas
+  // look up the associated Schema Registry based on the topic's environment, then pull the schemas
   const resourceManager = getResourceManager();
 
-  const schemaRegistry: SchemaRegistryCluster | null =
-    await resourceManager.getCCloudSchemaRegistryCluster(topic.environmentId!);
+  const schemaRegistry: CCloudSchemaRegistry | null = await resourceManager.getCCloudSchemaRegistry(
+    topic.environmentId!,
+  );
   if (!schemaRegistry) {
-    logger.warn("No Schema Registry cluster found for topic", topic);
+    logger.warn("No Schema Registry found for topic", topic);
     return [];
   }
 
   const schemas: Schema[] =
-    (await getResourceManager().getCCloudSchemasForCluster(schemaRegistry.id)) || [];
+    (await getResourceManager().getSchemasForRegistry(schemaRegistry.id)) || [];
   if (schemas.length === 0) {
     logger.warn("No schemas found for topic", topic);
     return [];

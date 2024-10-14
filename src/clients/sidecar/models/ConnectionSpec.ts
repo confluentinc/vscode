@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * Confluent ide-sidecar API
- * API for the Confluent ide-sidecar, part of the Confluent extension for VS Code
+ * API for the Confluent ide-sidecar, part of Confluent for VS Code
  *
  * The version of the OpenAPI document: 1.0.1
  * Contact: vscode@confluent.io
@@ -19,6 +19,8 @@ import {
   ConnectionTypeFromJSONTyped,
   ConnectionTypeToJSON,
 } from "./ConnectionType";
+import type { LocalConfig } from "./LocalConfig";
+import { LocalConfigFromJSON, LocalConfigFromJSONTyped, LocalConfigToJSON } from "./LocalConfig";
 import type { CCloudConfig } from "./CCloudConfig";
 import {
   CCloudConfigFromJSON,
@@ -56,6 +58,12 @@ export interface ConnectionSpec {
    * @memberof ConnectionSpec
    */
   ccloud_config?: CCloudConfig;
+  /**
+   *
+   * @type {LocalConfig}
+   * @memberof ConnectionSpec
+   */
+  local_config?: LocalConfig;
 }
 
 /**
@@ -82,6 +90,8 @@ export function ConnectionSpecFromJSONTyped(
     type: json["type"] == null ? undefined : ConnectionTypeFromJSON(json["type"]),
     ccloud_config:
       json["ccloud_config"] == null ? undefined : CCloudConfigFromJSON(json["ccloud_config"]),
+    local_config:
+      json["local_config"] == null ? undefined : LocalConfigFromJSON(json["local_config"]),
   };
 }
 
@@ -94,5 +104,6 @@ export function ConnectionSpecToJSON(value?: ConnectionSpec | null): any {
     name: value["name"],
     type: ConnectionTypeToJSON(value["type"]),
     ccloud_config: CCloudConfigToJSON(value["ccloud_config"]),
+    local_config: LocalConfigToJSON(value["local_config"]),
   };
 }

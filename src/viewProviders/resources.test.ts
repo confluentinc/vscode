@@ -9,14 +9,14 @@ import { TEST_SCHEMA_REGISTRY } from "../../tests/unit/testResources/schemaRegis
 import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
 import { KafkaClusterTreeItem } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { SchemaRegistryClusterTreeItem } from "../models/schemaRegistry";
+import { SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import { ResourceViewProvider } from "./resources";
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
 
   before(() => {
-    provider = new ResourceViewProvider();
+    provider = ResourceViewProvider.getInstance();
   });
 
   it("getTreeItem() should return a CCloudEnvironmentTreeItem for a CCloudEnvironment instance", () => {
@@ -34,9 +34,9 @@ describe("ResourceViewProvider methods", () => {
     assert.ok(treeItem instanceof KafkaClusterTreeItem);
   });
 
-  it("getTreeItem() should return a SchemaRegistryClusterTreeItem for a SchemaRegistryCluster instance", () => {
+  it("getTreeItem() should return a SchemaRegistryTreeItem for a SchemaRegistry instance", () => {
     const treeItem = provider.getTreeItem(TEST_SCHEMA_REGISTRY);
-    assert.ok(treeItem instanceof SchemaRegistryClusterTreeItem);
+    assert.ok(treeItem instanceof SchemaRegistryTreeItem);
   });
 
   it("getTreeItem() should pass ContainerTreeItems through directly", () => {

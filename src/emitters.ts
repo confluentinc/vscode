@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { KafkaCluster } from "./models/kafkaCluster";
-import { SchemaRegistryCluster } from "./models/schemaRegistry";
+import { SchemaRegistry } from "./models/schemaRegistry";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
@@ -18,8 +18,8 @@ export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
  */
 export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster | null>();
 /**
- * Fired whenever a Schema Registry cluster is selected from the Resources view, chosen from the
+ * Fired whenever a Schema Registry is selected from the Resources view, chosen from the
  * "Select Schema Registry" action from the Schemas view, or cleared out from a connection
  * (or CCloud organization) change.
  */
-export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistryCluster | null>();
+export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistry | null>();

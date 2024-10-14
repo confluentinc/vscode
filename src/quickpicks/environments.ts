@@ -2,14 +2,14 @@ import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getEnvironments } from "../graphql/environments";
 import { CCloudEnvironment } from "../models/environment";
-import { getCCloudConnection } from "../sidecar/connections";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 
 export async function environmentQuickPick(): Promise<CCloudEnvironment | undefined> {
   // Convenience function to get the name of a cloud environment if a command was triggered through
   // the command palette instead of through the view->item->context menu
   let cloudEnvironments: CCloudEnvironment[] = [];
 
-  if (!(await getCCloudConnection())) {
+  if (!(await hasCCloudAuthSession())) {
     vscode.window.showInformationMessage("No Confluent Cloud connection found.");
     return undefined;
   }

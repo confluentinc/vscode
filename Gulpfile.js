@@ -21,15 +21,16 @@ import { readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
+import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
 import external from "rollup-plugin-auto-external";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
-
 configDotenv();
 const DESTINATION = "out";
 const IS_CI = process.env.CI != null;
+const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
 
@@ -39,8 +40,13 @@ export const clicktest = series(bundle, install);
 
 clean.description = "Clean up static assets.";
 export function clean(done) {
-  const result = spawnSync("rm", ["-rf", DESTINATION], { stdio: "inherit" });
-  return done(result.status);
+  try {
+    rimrafSync(DESTINATION);
+    return done(0);
+  } catch (e) {
+    console.error("Failed to clean up static assets", e);
+    return done(1);
+  }
 }
 
 pack.description = "Create .vsix file for the extension. Make sure to pre-build assets.";
@@ -51,7 +57,12 @@ export function pack(done) {
     vsceCommandArgs.push("--target");
     vsceCommandArgs.push(process.env.TARGET);
   }
-  const result = spawnSync("npx", vsceCommandArgs, { stdio: "inherit", cwd: DESTINATION });
+  const result = spawnSync("npx", vsceCommandArgs, {
+    stdio: "inherit",
+    cwd: DESTINATION,
+    shell: IS_WINDOWS,
+  });
+  if (result.error) throw result.error;
   return done(result.status);
 }
 
@@ -60,8 +71,7 @@ export function build(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
-  // Download the sidecar executable from GitHub Releases
-  const result = spawnSync("make", ["download-sidecar-executable"], { stdio: "inherit" });
+  const result = downloadSidecar();
   if (result.error) throw result.error;
 
   if (production) {
@@ -114,7 +124,7 @@ export function build(done) {
             ],
             dest: DESTINATION,
           },
-          { src: ["public/README.md"], dest: DESTINATION, rename: "README.md" },
+          { src: ["README.md"], dest: DESTINATION },
           { src: ["CHANGELOG.md"], dest: DESTINATION },
         ],
       }),
@@ -124,6 +134,7 @@ export function build(done) {
         project: "vscode-extension",
         release: { name: process.env.SENTRY_RELEASE },
         disable: !process.env.SENTRY_AUTH_TOKEN,
+        applicationKey: "confluent-vscode-extension-sentry-do-not-use",
       }),
     ],
     onLog: handleBuildLog,
@@ -195,11 +206,14 @@ function getSentryReleaseVersion() {
   let revision = "noRevision";
   try {
     // add "dirty" to the revision instead of sha if there are uncommmited changes
-    // eslint-disable-next-line eqeqeq
-    const isDirty = spawnSync("git", ["diff", "--quiet"], { stdio: "pipe" }).status != 0;
+    const isDirty =
+      spawnSync("git", ["diff", "--quiet"], { stdio: "pipe", shell: IS_WINDOWS }).status !== 0;
     if (isDirty) revision = "dirty";
     else {
-      revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], { stdio: "pipe" })
+      revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+        stdio: "pipe",
+        shell: IS_WINDOWS,
+      })
         .stdout.toString()
         .trim();
     }
@@ -228,13 +242,14 @@ function setupSentry() {
   const sentryToken = spawnSync(
     "vault",
     ["kv", "get", "-field", "SENTRY_AUTH_TOKEN", "v1/ci/kv/vscodeextension/telemetry"],
-    { stdio: "pipe" },
+    { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (sentryToken.error != null) {
     if (IS_CI) throw sentryToken.error;
     else console.error(sentryToken.error);
   } else if (sentryToken.status !== 0) {
-    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${sentryToken.stderr}`);
+    if (IS_CI)
+      throw new Error(`Failed to fetch SENTRY_AUTH_TOKEN from Vault: ${sentryToken.stderr}`);
     else console.error(sentryToken.stderr.toString());
   } else {
     process.env.SENTRY_AUTH_TOKEN = sentryToken.stdout.toString().trim();
@@ -243,13 +258,13 @@ function setupSentry() {
   const sentryDsn = spawnSync(
     "vault",
     ["kv", "get", "-field", "SENTRY_DSN", "v1/ci/kv/vscodeextension/telemetry"],
-    { stdio: "pipe" },
+    { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (sentryDsn.error != null) {
     if (IS_CI) throw sentryDsn.error;
     else console.error(sentryDsn.error);
   } else if (sentryDsn.status !== 0) {
-    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${sentryDsn.stderr}`);
+    if (IS_CI) throw new Error(`Failed to fetch SENTRY_DSN from Vault: ${sentryDsn.stderr}`);
     else console.error(sentryDsn.stderr.toString());
   } else {
     process.env.SENTRY_DSN = sentryDsn.stdout.toString().trim();
@@ -262,13 +277,14 @@ function setupSegment() {
   const segmentKey = spawnSync(
     "vault",
     ["kv", "get", "-field", "SEGMENT_WRITE_KEY", "v1/ci/kv/vscodeextension/telemetry"],
-    { stdio: "pipe" },
+    { stdio: "pipe", shell: IS_WINDOWS },
   );
   if (segmentKey.error != null) {
     if (IS_CI) throw segmentKey.error;
     else console.error(segmentKey.error);
   } else if (segmentKey.status !== 0) {
-    if (IS_CI) throw new Error(`Failed to fetch Segment key from Vault: ${segmentKey.stderr}`);
+    if (IS_CI)
+      throw new Error(`Failed to fetch SEGMENT_WRITE_KEY from Vault: ${segmentKey.stderr}`);
     else console.error(segmentKey.stderr.toString());
   } else {
     process.env.SEGMENT_WRITE_KEY = segmentKey.stdout.toString().trim();
@@ -312,7 +328,8 @@ function pkgjson() {
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner`;
+  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
+
   return [
     virtual({
       "ide-sidecar": `export const version = "${sidecarVersion}"; export default new URL("./${sidecarFilename}", import.meta.url).pathname;`,
@@ -426,7 +443,10 @@ function stylesheet(options = {}) {
 check.description = "Run TypeScript compiler to check for any type errors.";
 export function check(done) {
   // Before running type checking, make sure to generate declarations for GraphQL schemas
-  const precheck = spawnSync("npx", ["gql.tada", "generate-output"], { stdio: "ignore" });
+  const precheck = spawnSync("npx", ["gql.tada", "generate-output"], {
+    stdio: "ignore",
+    shell: IS_WINDOWS,
+  });
   if (precheck.error) throw precheck.error;
 
   // Entry points are the extension.ts and webview script files
@@ -574,7 +594,7 @@ function coverage(options) {
 }
 
 export function functional(done) {
-  const result = spawnSync("npx", ["playwright", "test"], { stdio: "inherit" });
+  const result = spawnSync("npx", ["playwright", "test"], { stdio: "inherit", shell: IS_WINDOWS });
   if (result.error) throw result.error;
   return done(result.status);
 }
@@ -588,7 +608,7 @@ export async function apigen() {
   const lockResult = spawnSync(
     "npx",
     ["openapi-generator-cli", "version-manager", "set", openapiGeneratorVersion],
-    { stdio: "inherit" },
+    { stdio: "inherit", shell: IS_WINDOWS },
   );
   if (lockResult.error) throw lockResult.error;
   if (lockResult.status !== 0)
@@ -632,6 +652,7 @@ export async function apigen() {
       ],
       {
         stdio: "inherit",
+        shell: IS_WINDOWS,
       },
     );
     if (result.error) throw result.error;
@@ -730,6 +751,7 @@ export function install(done) {
   // (may holler about "Extension 'confluent.vscode-confluent' is not installed.", but that's fine)
   spawnSync("code", ["--uninstall-extension", "confluent.vscode-confluent"], {
     stdio: "inherit",
+    shell: IS_WINDOWS,
   });
 
   const files = globSync("out/*.vsix");
@@ -750,6 +772,29 @@ export function install(done) {
   // or a path to a VSIX. The identifier of an extension is '${publisher}.${name}'. Use '--force'
   // argument to update to latest version. To install a specific version provide '@${version}'.
   // For example: 'vscode.csharp@1.2.3'."
-  const result = spawnSync("code", ["--install-extension", extensionVsix], { stdio: "inherit" });
+  const result = spawnSync("code", ["--install-extension", extensionVsix], {
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
   return done(result.status);
+}
+
+export async function downloadSidecar() {
+  let result;
+  if (IS_WINDOWS) {
+    result = spawnSync(
+      "powershell.exe",
+      // Add "-ExecutionPolicy", "Bypass" if necessary
+      ["-ExecutionPolicy", "Bypass", "-File", "./scripts/windows/download-sidecar-executable.ps1"],
+      { stdio: "inherit", shell: IS_WINDOWS },
+    );
+  } else {
+    // Use the make target to download the sidecar executable
+    result = spawnSync("make", ["download-sidecar-executable"], {
+      stdio: "inherit",
+      shell: IS_WINDOWS,
+    });
+  }
+
+  return result;
 }

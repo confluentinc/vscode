@@ -5,7 +5,7 @@ import esbuild from "rollup-plugin-esbuild";
 import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
 import { SinonStub } from "sinon";
-import { OptionProperties, TemplateManifest } from "../clients/sidecar";
+import { TemplateManifest } from "../clients/sidecar";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
 
@@ -43,7 +43,7 @@ test.use({
   ],
 });
 
-test.only("dummy form submission", async ({ execute, page }) => {
+test("dummy form submission", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -66,7 +66,7 @@ test.only("dummy form submission", async ({ execute, page }) => {
             "One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.",
           pattern:
             "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))(,([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-.]{0,61}[a-zA-Z0-9])[:]([0-9]{2,8}))*$",
-          default_value: "",
+          initial_value: "",
         },
         api_key: {
           display_name: "Kafka Cluster API Key",
@@ -95,7 +95,7 @@ test.only("dummy form submission", async ({ execute, page }) => {
           description:
             "What to do when there is no initial offset in the Kafka topic or if the current offset does not exist any more on the server (e.g. because that data has been deleted).",
           _enum: ["earliest", "latest"],
-          default_value: "earliest",
+          initial_value: "earliest",
         },
       },
     };
@@ -103,7 +103,7 @@ test.only("dummy form submission", async ({ execute, page }) => {
       dummy.options !== undefined
         ? Object.entries(dummy.options).reduce(
             (acc, [key, value]) => {
-              acc[key] = value.default_value;
+              acc[key] = value.initial_value || "";
               return acc;
             },
             {} as Record<string, string>,

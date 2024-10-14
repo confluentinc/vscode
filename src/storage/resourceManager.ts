@@ -10,7 +10,7 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { AUTH_COMPLETED_KEY } from "./constants";
 
@@ -23,28 +23,28 @@ export type CCloudKafkaClustersByEnv = Map<string, CCloudKafkaCluster[]>;
 export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
 
 /**
- * Type for storing {@link SchemaRegistryCluster}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
- * @remarks If we ever have to deal with situations where multiple Schema Registry clusters are
+ * Type for storing {@link CCloudSchemaRegistry}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
+ * @remarks If we ever have to deal with situations where multiple Schema Registries are
  * available under a single parent resource, this type will either need to be updated or a new type
  * will need to be created. For now, we're leaning into the fact that CCloud environments only have
- * one Schema Registry cluster apiece.
+ * one Schema Registry apiece.
  */
-export type CCloudSchemaRegistryByEnv = Map<string, SchemaRegistryCluster>;
+export type CCloudSchemaRegistryByEnv = Map<string, CCloudSchemaRegistry>;
 
-/** Type for storing {@link Schema}s in extension state, where the parent {@link SchemaRegistryCluster} ID is the key. */
-export type CCloudSchemaBySchemaRegistryCluster = Map<string, Schema[]>;
+/** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
+export type CCloudSchemaBySchemaRegistry = Map<string, Schema[]>;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
-  private static instance: ResourceManager;
-
+  static instance: ResourceManager | null = null;
   private constructor(private storage: StorageManager) {}
 
-  static getInstance(storageManager: StorageManager): ResourceManager {
+  static getInstance(): ResourceManager {
     if (!ResourceManager.instance) {
-      ResourceManager.instance = new ResourceManager(storageManager);
+      // will throw an ExtensionContextNotSetError if the context isn't available for StorageManager
+      ResourceManager.instance = new ResourceManager(getStorageManager());
     }
     return ResourceManager.instance;
   }
@@ -59,7 +59,7 @@ export class ResourceManager {
     await Promise.all([
       this.deleteCCloudEnvironments(),
       this.deleteCCloudKafkaClusters(),
-      this.deleteCCloudSchemaRegistryClusters(),
+      this.deleteCCloudSchemaRegistries(),
       this.deleteCCloudSchemas(),
       this.deleteCCloudTopics(),
     ]);
@@ -171,6 +171,16 @@ export class ResourceManager {
   }
 
   /**
+   * Get the list of available CCloud Kafka clusters for a specific environment from extension state.
+   * @param environmentId The ID of the {@link CCloudEnvironment} for which to get Kafka clusters
+   * @returns The list of {@link CCloudKafkaCluster}s for the specified environment. If no clusters are found, an empty array is returned.
+   */
+  async getCCloudKafkaClustersForEnvironment(environmentId: string): Promise<CCloudKafkaCluster[]> {
+    const clusters: CCloudKafkaClustersByEnv = await this.getCCloudKafkaClusters();
+    return clusters.get(environmentId) ?? [];
+  }
+
+  /**
    * Delete the list of available Kafka clusters from extension state.
    * @param environment Optional: the ID of the environment for which to delete Kafka clusters;
    * if not provided, all <environmentId, {@link CCloudKafkaCluster}> pairs will be deleted
@@ -232,347 +242,212 @@ export class ResourceManager {
 
   // SCHEMA REGISTRY
 
-  /**
-   * Set the list of available Schema Registry clusters in extension state.
-   * @param clusters The list of {@link SchemaRegistryCluster}s to set
-   */
-  async setCCloudSchemaRegistryCluster(cluster: SchemaRegistryCluster): Promise<void> {
-    // get any existing map of <environmentId, SchemaRegistryCluster>
-    const envClusters: Map<string, SchemaRegistryCluster> =
-      (await this.getCCloudSchemaRegistryClusters()) ?? new Map();
-    const envId: string = cluster.environmentId;
-    envClusters.set(envId, cluster);
-    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, envClusters);
+  /** Cache all of the CCloud schema registries at once. */
+  async setCCloudSchemaRegistries(clusters: CCloudSchemaRegistry[]): Promise<void> {
+    const clustersByEnv: CCloudSchemaRegistryByEnv = new Map();
+    clusters.forEach((cluster) => {
+      clustersByEnv.set(cluster.environmentId, cluster);
+    });
+    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, clustersByEnv);
   }
 
   /**
-   * Get the available {@link SchemaRegistryCluster}s from extension state.
-   * @returns The map of <environmentId (string), {@link SchemaRegistryCluster}>
+   * Get the available {@link CCloudSchemaRegistry}s from extension state.
+   * @returns The map of <environmentId (string), {@link CCloudSchemaRegistry}>
    */
-  async getCCloudSchemaRegistryClusters(): Promise<CCloudSchemaRegistryByEnv> {
+  async getCCloudSchemaRegistries(): Promise<CCloudSchemaRegistryByEnv> {
     const clustersByEnvPlainJSON: CCloudSchemaRegistryByEnv | undefined =
       await this.storage.getWorkspaceState(StateSchemaRegistry.CCLOUD);
 
     if (clustersByEnvPlainJSON) {
-      // Promote each member to be an instance of SchemaRegistryCluster
+      // Promote each member to be an instance of SchemaRegistry
       return new Map(
         Array.from(clustersByEnvPlainJSON).map(([envId, cluster]) => [
           envId,
-          SchemaRegistryCluster.create(cluster),
+          CCloudSchemaRegistry.create(cluster),
         ]),
       );
     } else {
-      return new Map<string, SchemaRegistryCluster>();
+      return new Map<string, CCloudSchemaRegistry>();
     }
   }
 
   /**
-   * Get a specific Schema Registry cluster from extension state.
-   * @param environmentId The ID of the {@link CCloudEnvironment} from which to get the Schema Registry cluster
-   * @returns The associated {@link SchemaRegistryCluster}, or `null` (if the environment is not found)
+   * Get a specific Schema Registry from extension state.
+   * @param environmentId The ID of the {@link CCloudEnvironment} from which to get the Schema Registry
+   * @returns The associated {@link CCloudSchemaRegistry}, or `null` (if the environment is not found or has no Schema Registry)
    */
-  async getCCloudSchemaRegistryCluster(
-    environmentId: string,
-  ): Promise<SchemaRegistryCluster | null> {
-    const clusters: CCloudSchemaRegistryByEnv = await this.getCCloudSchemaRegistryClusters();
-    const clusterForEnv: SchemaRegistryCluster | null = clusters.get(environmentId) ?? null;
-    if (!clusterForEnv) {
-      logger.warn(`No Schema Registry cluster found for environment ${environmentId}`);
+  async getCCloudSchemaRegistry(environmentId: string): Promise<CCloudSchemaRegistry | null> {
+    const schemaRegistries: CCloudSchemaRegistryByEnv = await this.getCCloudSchemaRegistries();
+    const schemaRegistryForEnv: CCloudSchemaRegistry | null =
+      schemaRegistries.get(environmentId) ?? null;
+    if (!schemaRegistryForEnv) {
+      logger.warn(`No Schema Registry found for environment ${environmentId}`);
     }
-    return clusterForEnv;
+    return schemaRegistryForEnv;
+  }
+
+  /** Get a specific Schema Registry by its id */
+  async getCCloudSchemaRegistryById(id: string): Promise<CCloudSchemaRegistry | null> {
+    const clusters = await this.getCCloudSchemaRegistries();
+    for (const cluster of clusters.values()) {
+      if (cluster.id === id) {
+        return cluster;
+      }
+    }
+    return null;
   }
 
   /**
-   * Delete the list of available Schema Registry clusters from extension state.
-   * @param environment Optional: the ID of the environment for which to delete Schema Registry clusters;
-   * if not provided, all <environmentId, {@link SchemaRegistryCluster}> pairs will be deleted
+   * Delete the list of available Schema Registries from extension state.
+   * @param environment Optional: the ID of the environment for which to delete Schema Registries;
+   * if not provided, all <environmentId, {@link CCloudSchemaRegistry}> pairs will be deleted
    */
-  async deleteCCloudSchemaRegistryClusters(environment?: string): Promise<void> {
+  async deleteCCloudSchemaRegistries(environment?: string): Promise<void> {
     if (!environment) {
       return await this.storage.deleteWorkspaceState(StateSchemaRegistry.CCLOUD);
     }
-    const clusters = await this.getCCloudSchemaRegistryClusters();
-    clusters.delete(environment);
-    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, clusters);
+    const schemaRegistriesByEnv = await this.getCCloudSchemaRegistries();
+    schemaRegistriesByEnv.delete(environment);
+    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, schemaRegistriesByEnv);
   }
 
   // TOPICS
 
   /**
-   * Convert an array of available (CCloud) Kafka topics and store as a {@link TopicsByKafkaCluster}
-   * in extension state.
-   * @param topics The list of {@link KafkaTopic}s to set
+   *  Store this (possibly empty) list of topics for a cluster, be it local or ccloud, in workspace state.
+   *  If is known that a given cluster has no topics, then should call with empty topic array.
+   *
+   *  Raises an error if the cluster ID of any topic does not match the given cluster's ID.
    */
-  async setCCloudTopics(topics: KafkaTopic[]): Promise<void> {
-    // get any existing map of <clusterId, KafkaTopic[]>
-    const existingTopicsByCluster: TopicsByKafkaCluster = await this.getCCloudTopics();
-    // create a map of <clusterId, KafkaTopic[]> for the new topics
-    const newTopicsByCluster: TopicsByKafkaCluster = new Map();
-    topics.forEach((topic) => {
-      if (!newTopicsByCluster.has(topic.clusterId)) {
-        newTopicsByCluster.set(topic.clusterId, []);
-      }
-      newTopicsByCluster.get(topic.clusterId)?.push(topic);
-    });
-    // merge the new topics into the existing map
-    for (const [clusterId, newTopics] of newTopicsByCluster) {
-      // replace any existing topics for the cluster with the new topics
-      existingTopicsByCluster.set(clusterId, newTopics);
+  async setTopicsForCluster(cluster: KafkaCluster, topics: KafkaTopic[]): Promise<void> {
+    // Ensure that all topics have the correct cluster ID.
+    if (topics.some((topic) => topic.clusterId !== cluster.id)) {
+      logger.warn("Cluster ID mismatch in topics", cluster, topics);
+      throw new Error("Cluster ID mismatch in topics");
     }
-    await this.storage.setWorkspaceState(StateKafkaTopics.CCLOUD, existingTopicsByCluster);
+
+    const key = this.topicKeyForCluster(cluster);
+
+    // Fetch the proper map from storage, or create a new one if none exists.
+    const topicsByCluster =
+      (await this.storage.getWorkspaceState<TopicsByKafkaCluster>(key)) ||
+      new Map<string, KafkaTopic[]>();
+
+    // Set the new topics for the cluster
+    topicsByCluster.set(cluster.id, topics);
+
+    // Now save the updated cluster topics into the proper key'd storage.
+    await this.storage.setWorkspaceState(key, topicsByCluster);
   }
 
   /**
-   * Get the available {@link KafkaTopic}s from extension state.
-   * @returns The map of <clusterId (string), {@link KafkaTopic}[]>
+   * Get topics given a cluster, be it local or ccloud.
+   *
+   * @returns KafkaTopic[] (possibly empty) if known, else undefined
+   * indicating nothing at all known about this cluster (and should be deep probed).
    */
-  async getCCloudTopics(): Promise<TopicsByKafkaCluster> {
-    const topicsByClusterPlainJSON: TopicsByKafkaCluster | undefined =
-      await this.storage.getWorkspaceState(StateKafkaTopics.CCLOUD);
+  async getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[] | undefined> {
+    const key = this.topicKeyForCluster(cluster);
 
-    if (topicsByClusterPlainJSON) {
-      // Promote each member to be an instance of KafkaTopic
-      return new Map(
-        Array.from(topicsByClusterPlainJSON).map(([clusterId, topics]) => [
-          clusterId,
-          topics.map((topic) => KafkaTopic.create(topic)),
-        ]),
-      );
+    // Fetch the proper map from storage.
+    const topicsByCluster: TopicsByKafkaCluster | undefined =
+      await this.storage.getWorkspaceState<TopicsByKafkaCluster>(key);
+
+    if (topicsByCluster === undefined) {
+      return undefined;
+    }
+
+    // Will either be undefined or an array of plain json objects since
+    // just deserialized from storage.
+    const vanillaJSONTopics = topicsByCluster.get(cluster.id);
+
+    if (vanillaJSONTopics === undefined) {
+      return undefined;
+    }
+
+    // Promote each member to be an instance of KafkaTopic, return.
+    // (Empty list will be returned as is, indicating that we know there are
+    //  no topics in this cluster.)
+    return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic));
+  }
+
+  /**
+   * Delete all ccloud topics from workspace state, such as when user logs out from ccloud.
+   */
+  async deleteCCloudTopics(): Promise<void> {
+    return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
+  }
+
+  /** Return the use-with-storage StateKafkaTopics key for this type of cluster.
+   *
+   * (not private only for testing)
+   */
+  topicKeyForCluster(cluster: KafkaCluster): StateKafkaTopics {
+    if (cluster instanceof CCloudKafkaCluster) {
+      return StateKafkaTopics.CCLOUD;
+    } else if (cluster instanceof LocalKafkaCluster) {
+      return StateKafkaTopics.LOCAL;
     } else {
-      return new Map<string, KafkaTopic[]>();
+      logger.warn("Unknown cluster type", cluster);
+      throw new Error("Unknown cluster type");
     }
-  }
-
-  /**
-   * Get the available {@link KafkaTopic}s for a specific Kafka cluster from extension state.
-   * @param clusterId The ID of the Kafka cluster for which to get topics
-   * @returns The list of {@link KafkaTopic}s for the specified cluster
-   */
-  async getCCloudTopicsForCluster(clusterId: string): Promise<KafkaTopic[]> {
-    const topicsByCluster = await this.getCCloudTopics();
-    return topicsByCluster.get(clusterId) ?? [];
-  }
-
-  /**
-   * Get a specific Kafka topic from extension state.
-   * @param clusterId The ID of the {@link KafkaCluster} to which the topic belongs
-   * @param topicName The name of the topic to get
-   * @returns The {@link KafkaTopic}, or `null` (if the cluster or topic are not found)
-   */
-  async getCCloudTopic(clusterId: string, topicName: string): Promise<KafkaTopic | null> {
-    const topics: KafkaTopic[] = await this.getCCloudTopicsForCluster(clusterId);
-    if (topics.length === 0) {
-      logger.warn(`No topics found for cluster ${clusterId}`);
-      return null;
-    }
-    return topics.find((topic) => topic.name === topicName) ?? null;
-  }
-
-  /**
-   * Delete the list of available Kafka topics from extension state.
-   * @param cluster Optional: the ID of the cluster for which to delete topics;
-   * if not provided, all <clusterId, {@link KafkaTopic}> pairs will be deleted
-   */
-  async deleteCCloudTopics(cluster?: string): Promise<void> {
-    if (!cluster) {
-      return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
-    }
-    const topics = await this.getCCloudTopics();
-    topics.delete(cluster);
-    await this.storage.setWorkspaceState(StateKafkaTopics.CCLOUD, topics);
-  }
-
-  /**
-   * Convert an array of available (local) Kafka topics and store as a {@link TopicsByKafkaCluster}
-   * in extension state.
-   * @param topics The list of {@link KafkaTopic}s to set
-   */
-  async setLocalTopics(topics: KafkaTopic[]): Promise<void> {
-    // get any existing map of <clusterId, KafkaTopic[]>
-    const existingTopicsByCluster: TopicsByKafkaCluster = await this.getLocalTopics();
-    // create a map of <clusterId, KafkaTopic[]> for the new topics
-    const newTopicsByCluster: TopicsByKafkaCluster = new Map();
-    topics.forEach((topic) => {
-      if (!newTopicsByCluster.has(topic.clusterId)) {
-        newTopicsByCluster.set(topic.clusterId, []);
-      }
-      newTopicsByCluster.get(topic.clusterId)?.push(topic);
-    });
-    // merge the new topics into the existing map
-    for (const [clusterId, newTopics] of newTopicsByCluster) {
-      // replace any existing topics for the cluster with the new topics
-      existingTopicsByCluster.set(clusterId, newTopics);
-    }
-    await this.storage.setWorkspaceState(StateKafkaTopics.LOCAL, existingTopicsByCluster);
-  }
-
-  /**
-   * Get the available local {@link KafkaTopic}s from extension state.
-   * @returns The {@link TopicsByKafkaCluster} map
-   */
-  async getLocalTopics(): Promise<TopicsByKafkaCluster> {
-    const topicsByClusterPlainJSON: TopicsByKafkaCluster | undefined =
-      await this.storage.getWorkspaceState(StateKafkaTopics.LOCAL);
-
-    if (topicsByClusterPlainJSON) {
-      // Promote each member to be an instance of KafkaTopic
-      return new Map(
-        Array.from(topicsByClusterPlainJSON).map(([clusterId, topics]) => [
-          clusterId,
-          topics.map((topic) => KafkaTopic.create(topic)),
-        ]),
-      );
-    } else {
-      return new Map<string, KafkaTopic[]>();
-    }
-  }
-
-  /**
-   * Get the available {@link KafkaTopic}s for a specific {@link LocalKafkaCluster} from extension
-   * state.
-   * @param clusterId The ID of the Kafka cluster for which to get topics
-   * @returns The list of {@link KafkaTopic}s for the specified cluster
-   */
-  async getLocalTopicsForCluster(clusterId: string): Promise<KafkaTopic[]> {
-    const topicsByCluster = await this.getLocalTopics();
-    return topicsByCluster.get(clusterId) ?? [];
-  }
-
-  /**
-   * Get a specific local Kafka topic from extension state.
-   * @param clusterId The ID of the {@link LocalKafkaCluster} to which the topic belongs
-   * @param topicName The name of the topic to get
-   * @returns The {@link KafkaTopic}, or `null` (if the cluster or topic are not found)
-   */
-  async getLocalTopic(clusterId: string, topicName: string): Promise<KafkaTopic | null> {
-    const topics: KafkaTopic[] = await this.getLocalTopicsForCluster(clusterId);
-    if (topics.length === 0) {
-      logger.warn(`No topics found for cluster ${clusterId}`);
-      return null;
-    }
-    return topics.find((topic) => topic.name === topicName) ?? null;
-  }
-
-  /**
-   * Delete local Kafka topics from extension state.
-   * @param cluster Optional: the ID of the cluster for which to delete topics;
-   * if not provided, all <clusterId, {@link KafkaTopic}> pairs will be deleted
-   */
-  async deleteLocalTopics(cluster?: string): Promise<void> {
-    if (!cluster) {
-      return await this.storage.deleteWorkspaceState(StateKafkaTopics.LOCAL);
-    }
-    const topics = await this.getLocalTopics();
-    topics.delete(cluster);
-    await this.storage.setWorkspaceState(StateKafkaTopics.LOCAL, topics);
   }
 
   // SCHEMAS
 
   /**
-   * Convert an array of available (CCloud) schemas and store as a {@link CCloudSchemaBySchemaRegistryCluster}
-   * in extension state.
-   * @param schemas The list of schemas to set
+   * (Re)assign the list of schemas associated with a Schema Registry.
    */
-  async setCCloudSchemas(schemas: Schema[]): Promise<void> {
-    const existingSchemasByCluster: CCloudSchemaBySchemaRegistryCluster =
-      await this.getCCloudSchemas();
-    // create a map of <clusterId, Schema[]> for the new schemas
-    const schemasByCluster: CCloudSchemaBySchemaRegistryCluster = new Map();
-    schemas.forEach((schema) => {
-      const clusterId = schema.schemaRegistryId;
-      if (!schemasByCluster.has(clusterId)) {
-        schemasByCluster.set(clusterId, []);
-      }
-      schemasByCluster.get(clusterId)?.push(schema);
-    });
-    // merge the new schemas with the existing ones
-    for (const [clusterId, newSchemas] of schemasByCluster) {
-      // replace any existing schemas with the new ones
-      existingSchemasByCluster.set(clusterId, newSchemas);
+  async setSchemasForRegistry(schemaRegistryId: string, schemas: Schema[]): Promise<void> {
+    // Ensure that all schemas have the expected schema registry ID.
+    if (schemas.some((schema) => schema.schemaRegistryId !== schemaRegistryId)) {
+      logger.warn("Schema registry ID mismatch in schemas", schemaRegistryId, schemas);
+      throw new Error("Schema registry ID mismatch in schemas");
     }
-    await this.storage.setWorkspaceState(StateSchemas.CCLOUD, existingSchemasByCluster);
+
+    const existingSchemasBySchemaRegistry: CCloudSchemaBySchemaRegistry = await this.getSchemaMap();
+
+    // wholly reassign the list of schemas for this Schema Registry.
+    existingSchemasBySchemaRegistry.set(schemaRegistryId, schemas);
+
+    // And repersist.
+    await this.storage.setWorkspaceState(StateSchemas.CCLOUD, existingSchemasBySchemaRegistry);
   }
 
   /**
-   * Get the available {@link Schema}s from extension state.
+   * Get the available {@link Schema}s for a specific {@link CCloudSchemaRegistry} from extension state.
+   * @param schemaRegistryId The ID of the Schema Registry for which to get schemas
+   * @returns The list of {@link Schema}s for the specified Schema Registry, or undefined if we do not have this Schema Registry currently cached.
+   */
+  async getSchemasForRegistry(schemaRegistryId: string): Promise<Schema[] | undefined> {
+    // Will have already promoted the from-JSON objects to instances of Schema.
+    const schemasBySchemaRegistry = await this.getSchemaMap();
+    const schemasFromStorage = schemasBySchemaRegistry.get(schemaRegistryId);
+    if (schemasFromStorage === undefined) {
+      return undefined;
+    }
+    // Promote each plain-json member to be an instance of Schema, return.
+    return schemasFromStorage.map((schema) => Schema.create(schema));
+  }
+
+  /**
+   * Get the available {@link Schema}s from extension state, in the form of a map of <clusterId, Schema[]>
+   * The Schema[] values will be the plain from-json spelling of the schemas.
    * @returns The map of <clusterId (string), {@link Schema}[]>
    */
-  async getCCloudSchemas(): Promise<CCloudSchemaBySchemaRegistryCluster> {
-    const defaultValue: CCloudSchemaBySchemaRegistryCluster = new Map<string, Schema[]>();
-    const schemaObjectsByCluster: CCloudSchemaBySchemaRegistryCluster | undefined =
+  private async getSchemaMap(): Promise<CCloudSchemaBySchemaRegistry> {
+    const schemaObjectsBySchemaRegistry: CCloudSchemaBySchemaRegistry | undefined =
       await this.storage.getWorkspaceState(StateSchemas.CCLOUD);
-    if (!schemaObjectsByCluster) {
-      return defaultValue;
+    if (schemaObjectsBySchemaRegistry === undefined) {
+      return new Map<string, Schema[]>();
     }
-    // explicitly convert the Schema `object`s back to instances of the Schema class to allow callers
-    // to use the Schema class methods
-    const schemasByCluster = new Map<string, Schema[]>();
-    schemaObjectsByCluster.forEach((schemas, clusterId) => {
-      schemasByCluster.set(
-        clusterId,
-        schemas.map((schema) => Schema.create(schema)),
-      );
-    });
-    return schemasByCluster ?? new Map<string, Schema[]>();
+    return schemaObjectsBySchemaRegistry;
   }
 
-  /**
-   * Get the available {@link Schema}s for a specific {@link SchemaRegistryCluster} from extension state.
-   * @param clusterId The ID of the Schema Registry cluster for which to get schemas
-   * @returns The list of {@link Schema}s for the specified cluster
-   */
-  async getCCloudSchemasForCluster(clusterId: string): Promise<Schema[]> {
-    const schemasByCluster = await this.getCCloudSchemas();
-    return schemasByCluster.get(clusterId) ?? [];
-  }
-
-  /**
-   * Get schemas from extension state, filtered by their ID, sorted by subject.
-   * @param clusterId The ID of the {@link SchemaRegistryCluster} to which the schema belongs
-   * @param schemaId The ID of the schema(s) to get
-   * @returns The array of {@link Schema}s, sorted in subject-ascending order
-   */
-  async getCCloudSchemasById(clusterId: string, schemaId: string): Promise<Schema[]> {
-    const schemas: Schema[] = await this.getCCloudSchemasForCluster(clusterId);
-    if (schemas.length === 0) {
-      logger.warn(`No schemas found for cluster ${clusterId}`);
-      return schemas;
-    }
-    const schemasForId = schemas.filter((schema) => schema.id === schemaId);
-    schemasForId.sort((a, b) => a.subject.localeCompare(b.subject));
-    return schemasForId;
-  }
-
-  /**
-   * Get a specific schema (or versions of a schema) from extension state by its `subject`.
-   * @param clusterId The ID of the {@link SchemaRegistryCluster} to which the schema belongs
-   * @param subject The subject of the schema to get
-   * @returns The array of {@link Schema}s, sorted in version-descending order
-   */
-  async getCCloudSchemasBySubject(clusterId: string, subject: string): Promise<Schema[]> {
-    const schemas: Schema[] = await this.getCCloudSchemasForCluster(clusterId);
-    if (schemas.length === 0) {
-      logger.warn(`No schemas found for cluster ${clusterId}`);
-      return schemas;
-    }
-    const schemasForSubject = schemas.filter((schema) => schema.subject === subject);
-    schemasForSubject.sort((a, b) => b.version - a.version);
-    return schemasForSubject;
-  }
-
-  /**
-   * Delete the list of available schemas from extension state.
-   * @param cluster Optional: the ID of the {@link SchemaRegistryCluster} for which to delete schemas;
-   * if not provided, all <clusterId, {@link Schema}> pairs will be deleted
-   */
-  async deleteCCloudSchemas(cluster?: string): Promise<void> {
-    if (!cluster) {
-      return await this.storage.deleteWorkspaceState(StateSchemas.CCLOUD);
-    }
-    const schemas = await this.getCCloudSchemas();
-    schemas.delete(cluster);
-    await this.storage.setWorkspaceState(StateSchemas.CCLOUD, schemas);
+  /** Forget about all of the CCLoud schemas. */
+  private async deleteCCloudSchemas(): Promise<void> {
+    return await this.storage.deleteWorkspaceState(StateSchemas.CCLOUD);
   }
 
   // AUTH PROVIDER
@@ -599,9 +474,5 @@ export class ResourceManager {
  * @returns The ResourceManager singleton instance
  */
 export function getResourceManager(): ResourceManager {
-  const manager = getStorageManager();
-  if (!manager) {
-    throw new Error("Can't get ResourceManager until StorageManager is initialized");
-  }
-  return ResourceManager.getInstance(manager);
+  return ResourceManager.getInstance();
 }

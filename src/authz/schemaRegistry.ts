@@ -1,20 +1,24 @@
-import { window, WorkspaceConfiguration } from "vscode";
+import { window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
-import { getConfigs } from "../configs";
 import { Logger } from "../logging";
-import { SchemaRegistryCluster } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
-import { SCHEMA_RBAC_WARNING_SETTING_NAME } from "./constants";
 
 const logger = new Logger("authz.schemaRegistry");
 
 export async function canAccessSchemaForTopic(topic: KafkaTopic): Promise<boolean> {
   // even if the topic only has one schema type or the other, we'll see a 403 if we can't access
   // across both (key & value subject) request responses
+
   // NOTE: if the subject doesn't follow the TopicNameStrategy, we won't be able to track it via
-  // other extension features
+  // other extension features.
+
+  // TopicRecordNameStrategy complicates this, in that those schema
+  // subject names aren't  predictable from just the topic name like for TopicNameStrategy.
+
   const [keyAccess, valueAccess] = await Promise.all([
     canAccessSchemaTypeForTopic(topic, "key"),
     canAccessSchemaTypeForTopic(topic, "value"),
@@ -32,11 +36,11 @@ export async function canAccessSchemaTypeForTopic(
   }
 
   const environmentId: string = topic.environmentId;
-  const schemaRegistry: SchemaRegistryCluster | null =
-    await getResourceManager().getCCloudSchemaRegistryCluster(environmentId);
+  const schemaRegistry: CCloudSchemaRegistry | null =
+    await getResourceManager().getCCloudSchemaRegistry(environmentId);
   if (!schemaRegistry) {
     logger.debug(
-      "no Schema Registry cluster in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",
+      "no Schema Registry in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",
       { environmentId },
     );
     // if we had schemas, we would have a schema registry
@@ -103,8 +107,8 @@ export async function determineAccessFromResponseError(response: Response): Prom
  * by updating the setting.
  * */
 export function showNoSchemaAccessWarningNotification(): void {
-  const configs: WorkspaceConfiguration = getConfigs();
-  const warningsEnabled: boolean = configs.get(SCHEMA_RBAC_WARNING_SETTING_NAME, true);
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  const warningsEnabled: boolean = configs.get(SCHEMA_RBAC_WARNINGS_ENABLED, true);
   if (!warningsEnabled) {
     logger.warn("user is missing schema access, but warning notifications are disabled");
     return;
@@ -118,7 +122,7 @@ export function showNoSchemaAccessWarningNotification(): void {
     )
     .then((value: string | undefined) => {
       if (value === dismissButton) {
-        configs.update(SCHEMA_RBAC_WARNING_SETTING_NAME, false, true);
+        configs.update(SCHEMA_RBAC_WARNINGS_ENABLED, false, true);
       }
     });
 }

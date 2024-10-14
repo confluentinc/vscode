@@ -1,9 +1,12 @@
 import { graphql } from "gql.tada";
-import { commands } from "vscode";
 import { Connection, ConnectionsResourceApi } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../constants";
+import { ContextValues, setContextValue } from "../context";
+import { Logger } from "../logging";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { getSidecar } from "../sidecar";
+
+const logger = new Logger("graphql.local");
 
 export async function getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
   let localKafkaClusters: LocalKafkaCluster[] = [];
@@ -32,7 +35,7 @@ export async function getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
   try {
     response = await sidecar.query(query, LOCAL_CONNECTION_ID);
   } catch (error) {
-    console.error("Error fetching local connections", error);
+    logger.error("Error fetching local connections", error);
     return localKafkaClusters;
   }
 
@@ -53,11 +56,7 @@ export async function getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
     });
   }
   // indicate to the UI that we have at least one local Kafka cluster available
-  await commands.executeCommand(
-    "setContext",
-    "confluent.localKafkaClusterAvailable",
-    localKafkaClusters.length > 0,
-  );
+  await setContextValue(ContextValues.localKafkaClusterAvailable, localKafkaClusters.length > 0);
   return localKafkaClusters;
 }
 
@@ -70,7 +69,7 @@ async function ensureLocalConnection(): Promise<void> {
       id: LOCAL_CONNECTION_ID,
     });
   } catch (e) {
-    console.error("Error getting existing local connection", e);
+    logger.error("Error getting existing local connection", e);
   }
 
   if (!localConnection) {

@@ -21,7 +21,7 @@ export default [
   },
   {
     files: ["src/**/*.ts", "src/**/*.mts"],
-    ignores: ["src/kafkaRestClient/**", "src/schemaRegistryRestClient/**", "src/sidecarClient/**"],
+    ignores: ["src/clients/**"],
     plugins: { "@typescript-eslint": ts },
     rules: {
       ...js.configs.recommended.rules,

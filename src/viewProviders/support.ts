@@ -50,7 +50,15 @@ export class SupportViewProvider implements vscode.TreeDataProvider<vscode.TreeI
         tooltip: "Click to generate a project from a pre-defined template",
       };
 
-      children.push(walkthroughItem, feedbackItem, issueItem, scaffoldItem);
+      const settingsItem: vscode.TreeItem = new vscode.TreeItem("Open Settings");
+      settingsItem.iconPath = new vscode.ThemeIcon("gear");
+      settingsItem.command = {
+        command: "confluent.support.openSettings",
+        title: "Open Settings",
+        tooltip: "Click to open the Confluent Extension settings",
+      };
+
+      children.push(walkthroughItem, feedbackItem, issueItem, scaffoldItem, settingsItem);
     }
 
     return children;

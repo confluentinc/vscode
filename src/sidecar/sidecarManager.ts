@@ -20,6 +20,7 @@ import {
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 
+import { normalize } from "path";
 import { Tail } from "tail";
 
 /**
@@ -34,7 +35,7 @@ const MOMENTARY_PAUSE_MS = 500; // half a second.
 
 const logger = new Logger("sidecarManager");
 
-// Internal singleton class manageing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
+// Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
 // which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
 // we won't be in position to restart / rehandshake with the sidecar if needed.
 export class SidecarManager {
@@ -133,8 +134,7 @@ export class SidecarManager {
             logger.info(`${logPrefix}:  Wrong access token, restarting sidecar`);
             // Kill the process, pause an iota, restart it, then try again.
             try {
-              // TODO: How to do this on Windows also?
-              this.killSidecar(e.sidecar_process_id);
+              killSidecar(e.sidecar_process_id);
             } catch (e: any) {
               logger.error(
                 `${logPrefix}: failed to kill sidecar process ${e.sidecar_process_id}: ${e}`,
@@ -193,16 +193,51 @@ export class SidecarManager {
     }
 
     if (version_result.version !== currentSidecarVersion) {
-      logger.warn("Shutting down existing sidecar process due to version mismatch...");
-      this.killSidecar(await handle.getSidecarPid());
+      const wantedMessage = `${version_result.version}, need ${currentSidecarVersion}`;
+
+      logger.warn(
+        "Trying to shut down existing sidecar process due to version mismatch (${wantedMessage})",
+      );
+
+      let sidecarPid: number;
+      try {
+        // May raise exception if any issue with getting the PID from the sidecar.
+        sidecarPid = await handle.getSidecarPid();
+      } catch (e) {
+        logger.error(
+          `Failed to get sidecar PID when needing to kill sidecar due to bad version (${wantedMessage}): ${e}`,
+          e,
+        );
+        vscode.window.showErrorMessage(
+          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
+        );
+        throw e;
+      }
+
+      try {
+        // Kill the sidecar process. May possible raise permission errors if, say, the sidecar is running as a different user.
+        killSidecar(sidecarPid);
+      } catch (e) {
+        logger.error(
+          `Failed to kill sidecar process ${sidecarPid} due to bad version (${wantedMessage}): ${e}`,
+          e,
+        );
+        vscode.window.showErrorMessage(
+          `Wrong sidecar version detected (${wantedMessage}), and could not self-correct. Please explicitly kill the ide-sidecar process.`,
+        );
+        throw e;
+      }
+
       // Allow the old one a little bit of time to die off.
       await this.pause();
+
       if (this.pendingHandlePromise != null) {
         // clear out the old promise and start fresh
         this.pendingHandlePromise = null;
       }
       // Ask to get a new handle, which will start a new sidecar process,
-      // which will end up calling firstSidecarContactActions() again (eventually).
+      // and will eventually end up calling firstSidecarContactActions() here again
+      // (and hopefully not conflict about the sidecar version the next time).
       logger.info("Restarting sidecar after shutting down old version...");
       await this.getHandle();
     }
@@ -236,10 +271,20 @@ export class SidecarManager {
         const sidecar_pid = response.headers.get(SIDECAR_PROCESS_ID_HEADER);
         if (sidecar_pid) {
           const sidecar_pid_int = parseInt(sidecar_pid);
-          throw new WrongAuthSecretError(
-            `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401.`,
-            sidecar_pid_int,
-          );
+          if (sidecar_pid_int > 0) {
+            // Have enough trustworthy info to throw a specific error that will cause
+            // us to kill the sidecar process and start a new one.
+            throw new WrongAuthSecretError(
+              `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401.`,
+              sidecar_pid_int,
+            );
+          } else {
+            // sidecar quarkus dev mode may skip initialization and still return 401 and this header, but
+            // with PID 0, which we will never want to try to kill -- kills whole process group!
+            throw new Error(
+              `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401, but claimed PID ${sidecar_pid_int} in the response headers!`,
+            );
+          }
         } else {
           throw new Error(
             `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401, but without a PID in the response headers!`,
@@ -272,23 +317,27 @@ export class SidecarManager {
         const logPrefix = `startSidecar(${callnum})`;
         logger.info(`${logPrefix}: Starting new sidecar process`);
 
+        let executablePath = sidecarExecutablePath;
+        // check platform and adjust the path, so we don't end up with paths like:
+        // "C:/c:/Users/.../ide-sidecar-0.26.0-runner.exe"
+        if (process.platform === "win32") {
+          executablePath = normalize(executablePath.replace(/^[/\\]+/, ""));
+        }
         this.sidecarContacted = false;
 
         if (this.sidecarArchitectureBlessed === null) {
           // check to see if the sidecar file exists
-          logger.info(`exe path ${sidecarExecutablePath}, version ${currentSidecarVersion}`);
+          logger.info(`exe path ${executablePath}, version ${currentSidecarVersion}`);
           try {
-            fs.accessSync(sidecarExecutablePath);
+            fs.accessSync(executablePath);
           } catch (e) {
-            logger.error(`${logPrefix}: component ${sidecarExecutablePath} does not exist`, e);
-            reject(
-              new NoSidecarExecutableError(`Component ${sidecarExecutablePath} does not exist`),
-            );
+            logger.error(`${logPrefix}: component ${executablePath} does not exist`, e);
+            reject(new NoSidecarExecutableError(`Component ${executablePath} does not exist`));
           }
 
           // Now check to see if is cooked for the right OS + architecture
           try {
-            checkSidecarOsAndArch(sidecarExecutablePath);
+            checkSidecarOsAndArch(executablePath);
             this.sidecarArchitectureBlessed = true;
           } catch (e) {
             this.sidecarArchitectureBlessed = false;
@@ -307,7 +356,7 @@ export class SidecarManager {
         const sidecar_env = constructSidecarEnv(process.env);
 
         try {
-          const sidecarProcess = spawn(sidecarExecutablePath, [], {
+          const sidecarProcess = spawn(executablePath, [], {
             detached: true,
             stdio: "ignore",
             env: sidecar_env,
@@ -345,7 +394,7 @@ export class SidecarManager {
             );
 
             accessToken = await this.doHandshake();
-            logger.warn(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
+            logger.info(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
             break;
           } catch (e) {
             // We expect ECONNREFUSED while the sidecar is coming up, but log other unexpected errors.
@@ -434,18 +483,6 @@ export class SidecarManager {
     }
     return "";
   }
-
-  /**
-   * Kill the sidecar process by PID.
-   * @todo: Currently only works on Unix-like systems. Needs Windows support.
-   * @param process_id The sidecar's process id.
-   */
-  private killSidecar(process_id: number) {
-    // TODO: How to do this on Windows also?
-    process.kill(process_id, "SIGTERM");
-    logger.debug(`Killed old sidecar process ${process_id}`);
-  }
-
   /**
    * Pause for a moment.
    */
@@ -523,13 +560,30 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   sidecar_env["QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT"] = "false";
   sidecar_env["QUARKUS_LOG_FILE_PATH"] = SIDECAR_LOGFILE_PATH;
 
-  // If we are running within WSL, then need to have sidecar
-  // bind to 0.0.0.0 instead of its default localhost so that
-  // browsers running on Windows can connect to it during oauth
-  // flow. The server port will still be guarded by the firewall.
+  // If we are running within WSL, then need to have sidecar bind to 0.0.0.0 instead of its default
+  // localhost so that browsers running on Windows can connect to it during OAuth flow. The server
+  // port will still be guarded by the firewall.
+  // We also need to use the IPv6 loopback address for the OAuth redirect URI instead of the IPv4
+  // (127.0.0.1) address, as the latter is not reachable from WSL2.
   if (env.WSL_DISTRO_NAME) {
     sidecar_env["QUARKUS_HTTP_HOST"] = "0.0.0.0";
+    sidecar_env["IDE_SIDECAR_CONNECTIONS_CCLOUD_OAUTH_REDIRECT_URI"] =
+      "http://[::1]:26636/gateway/v1/callback-vscode-docs";
   }
 
   return sidecar_env;
+}
+
+/**
+ * Kill the sidecar process by its PID. Will raise an exception if the PID does not seem like a concrete process id. See kill(2).
+ * @param process_id The sidecar's process id.
+ */
+export function killSidecar(process_id: number) {
+  if (process_id <= 1) {
+    logger.warn("Refusing to kill process with PID <= 1");
+    throw new Error(`Refusing to kill process with PID <= 1`);
+  } else {
+    process.kill(process_id, "SIGTERM");
+    logger.debug(`Killed old sidecar process ${process_id}`);
+  }
 }

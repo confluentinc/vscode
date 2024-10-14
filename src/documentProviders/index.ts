@@ -1,3 +1,4 @@
+import { homedir } from "os";
 import { join } from "path";
 import * as vscode from "vscode";
 
@@ -21,7 +22,7 @@ export abstract class ResourceDocumentProvider implements vscode.TextDocumentCon
   resourceToUri(resource: any, filename: string): vscode.Uri {
     return vscode.Uri.from({
       scheme: this.scheme,
-      path: join(process.env["HOME"]!, filename),
+      path: join(homedir(), filename),
       query: encodeURIComponent(JSON.stringify(resource)),
     });
   }

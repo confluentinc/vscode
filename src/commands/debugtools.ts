@@ -181,19 +181,21 @@ async function showOutputChannelCommand() {
   outputChannel.show();
 }
 
-export const commands = [
-  registerCommandWithLogging(
-    "confluent.debugtools.globalState.showWebView",
-    showGlobalStateCommand,
-  ),
-  registerCommandWithLogging(
-    "confluent.debugtools.workspaceState.showWebView",
-    showWorkspaceStateCommand,
-  ),
-  registerCommandWithLogging("confluent.debugtools.globalState.reset", resetGlobalStateCommand),
-  registerCommandWithLogging(
-    "confluent.debugtools.workspaceState.reset",
-    resetWorkspaceStateCommand,
-  ),
-  registerCommandWithLogging("confluent.showOutputChannel", showOutputChannelCommand),
-];
+export function registerDebugCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging(
+      "confluent.debugtools.globalState.showWebView",
+      showGlobalStateCommand,
+    ),
+    registerCommandWithLogging(
+      "confluent.debugtools.workspaceState.showWebView",
+      showWorkspaceStateCommand,
+    ),
+    registerCommandWithLogging("confluent.debugtools.globalState.reset", resetGlobalStateCommand),
+    registerCommandWithLogging(
+      "confluent.debugtools.workspaceState.reset",
+      resetWorkspaceStateCommand,
+    ),
+    registerCommandWithLogging("confluent.showOutputChannel", showOutputChannelCommand),
+  ];
+}

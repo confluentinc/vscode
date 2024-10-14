@@ -1,6 +1,8 @@
+import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { StateDiffs } from "../constants";
+import { ContextValues, setContextValue } from "../context";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
@@ -13,10 +15,10 @@ async function selectForCompareCommand(item: any) {
     return;
   }
   const uri: vscode.Uri = convertItemToUri(item);
-  logger.info("Selected item for compare", uri);
+  logger.debug("Selected item for compare", uri);
   await getStorageManager().setWorkspaceState(StateDiffs.SELECTED_RESOURCE, uri);
   // allows the "Compare with Selected" command to be used
-  await vscode.commands.executeCommand("setContext", "resourceSelectedForCompare", true);
+  await setContextValue(ContextValues.resourceSelectedForCompare, true);
 }
 
 async function compareWithSelectedCommand(item: any) {
@@ -24,7 +26,7 @@ async function compareWithSelectedCommand(item: any) {
     return;
   }
   const uri2: vscode.Uri = convertItemToUri(item);
-  logger.info("Comparing with selected item", uri2);
+  logger.debug("Comparing with selected item", uri2);
 
   const uri1: vscode.Uri | undefined = await getStorageManager().getWorkspaceState(
     StateDiffs.SELECTED_RESOURCE,
@@ -35,17 +37,19 @@ async function compareWithSelectedCommand(item: any) {
   }
 
   // replace fsPaths with ~ if they contain $HOME
-  const uri1Path = uri1.fsPath.replace(process.env["HOME"]!, "~");
-  const uri2Path = uri2.fsPath.replace(process.env["HOME"]!, "~");
+  const uri1Path = uri1.fsPath.replace(homedir(), "~");
+  const uri2Path = uri2.fsPath.replace(homedir(), "~");
   const title = `${uri1Path} ↔ ${uri2Path}`;
-  logger.info("Comparing resources", uri1, uri2, title);
+  logger.debug("Comparing resources", uri1, uri2, title);
   vscode.commands.executeCommand("vscode.diff", uri1, uri2, title);
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.diff.selectForCompare", selectForCompareCommand),
-  registerCommandWithLogging("confluent.diff.compareWithSelected", compareWithSelectedCommand),
-];
+export function registerDiffCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.diff.selectForCompare", selectForCompareCommand),
+    registerCommandWithLogging("confluent.diff.compareWithSelected", compareWithSelectedCommand),
+  ];
+}
 
 /**
  * Converts a resource item to a URI for comparison.

@@ -18,11 +18,21 @@ function issueCommand() {
   vscode.commands.executeCommand("vscode.openIssueReporter", "confluentinc.vscode-confluent");
 }
 
-export const commands = [
-  registerCommandWithLogging(
-    "confluent.support.confluent-walkthrough.launch",
-    openWalkthroughCommand,
-  ),
-  registerCommandWithLogging("confluent.support.feedback", feedbackCommand),
-  registerCommandWithLogging("confluent.support.issue", issueCommand),
-];
+function openSettings() {
+  vscode.commands.executeCommand(
+    "workbench.action.openSettings",
+    "@ext:confluentinc.vscode-confluent",
+  );
+}
+
+export function registerSupportCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging(
+      "confluent.support.confluent-walkthrough.launch",
+      openWalkthroughCommand,
+    ),
+    registerCommandWithLogging("confluent.support.feedback", feedbackCommand),
+    registerCommandWithLogging("confluent.support.issue", issueCommand),
+    registerCommandWithLogging("confluent.support.openSettings", openSettings),
+  ];
+}

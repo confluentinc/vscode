@@ -3,12 +3,73 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { getAndActivateExtension, getExtensionContext } from "../tests/unit/testUtils";
+import { ConfluentCloudAuthProvider } from "./authProvider";
+import { ExtensionContextNotSetError } from "./errors";
+import { StorageManager } from "./storage";
+import { ResourceManager } from "./storage/resourceManager";
 import { checkTelemetrySettings } from "./telemetry";
+import { ResourceViewProvider } from "./viewProviders/resources";
+import { SchemasViewProvider } from "./viewProviders/schemas";
+import { TopicViewProvider } from "./viewProviders/topics";
 
 describe("Base Extension Test", () => {
   it("should activate the extension", async () => {
     await getAndActivateExtension();
   });
+
+  it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
+    const extensionContextSingletons = [
+      {
+        callable: () => ResourceViewProvider.getInstance(),
+        source: "ResourceViewProvider",
+      },
+      {
+        callable: () => TopicViewProvider.getInstance(),
+        source: "TopicViewProvider",
+      },
+      {
+        callable: () => SchemasViewProvider.getInstance(),
+        source: "SchemasViewProvider",
+      },
+      {
+        callable: () => ConfluentCloudAuthProvider.getInstance(),
+        source: "ConfluentCloudAuthProvider",
+      },
+      {
+        callable: () => StorageManager.getInstance(),
+        source: "StorageManager",
+      },
+      {
+        callable: () => ResourceManager.getInstance(),
+        source: "ResourceManager",
+      },
+    ];
+
+    extensionContextSingletons.forEach(({ callable, source }) => {
+      assertThrowsExtensionContextNotSetError(callable, source);
+    });
+
+    // activate the extension and setExtensionContext()
+    await getExtensionContext();
+
+    extensionContextSingletons.forEach(({ callable, source }) => {
+      assertDoesNotThrowExtensionContextNotSetError(callable, source);
+    });
+  });
+
+  /** Assert {@link ExtensionContextNotSetError} was thrown from a specific source. */
+  function assertThrowsExtensionContextNotSetError(callable: () => void, source: string) {
+    assert.throws(callable, ExtensionContextNotSetError, `${source}: ExtensionContext not set yet`);
+  }
+
+  /** Assert {@link ExtensionContextNotSetError} was not thrown from a specific source. */
+  function assertDoesNotThrowExtensionContextNotSetError(callable: () => void, source: string) {
+    assert.doesNotThrow(
+      callable,
+      ExtensionContextNotSetError,
+      `${source}: ExtensionContext not set yet`,
+    );
+  }
 });
 
 describe("Extension manifest tests", () => {

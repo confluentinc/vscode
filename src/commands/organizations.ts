@@ -7,10 +7,10 @@ import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudOrganization } from "../models/organization";
 import { organizationQuickPick } from "../quickpicks/organizations";
 import { getSidecar } from "../sidecar";
-import { clearCurrentCCloudResources, getCCloudConnection } from "../sidecar/connections";
+import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections";
 
 async function useOrganizationCommand() {
-  if (!(await getCCloudConnection())) {
+  if (!(await hasCCloudAuthSession())) {
     return;
   }
   const organization: CCloudOrganization | undefined = await organizationQuickPick();
@@ -48,6 +48,19 @@ async function useOrganizationCommand() {
   );
 }
 
-export const commands = [
-  registerCommandWithLogging("confluent.organizations.use", useOrganizationCommand),
-];
+async function copyOrganizationId() {
+  const currentOrg = await getCurrentOrganization();
+  if (!currentOrg) {
+    return;
+  }
+
+  await vscode.env.clipboard.writeText(currentOrg.id);
+  vscode.window.showInformationMessage(`Copied "${currentOrg.id}" to clipboard.`);
+}
+
+export function registerOrganizationCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.organizations.use", useOrganizationCommand),
+    registerCommandWithLogging("confluent.copyOrganizationId", copyOrganizationId),
+  ];
+}
