@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { Logger, outputChannel } from "../logging";
+import { sidecarOutputChannel } from "../sidecar";
 import { getStorageManager } from "../storage";
 
 const logger = new Logger("commands.debugtools");
@@ -181,6 +182,12 @@ async function showOutputChannelCommand() {
   outputChannel.show();
 }
 
+async function showSidecarOutputChannelCommand() {
+  // make sure the Output panel is visible first
+  await vscode.commands.executeCommand("workbench.panel.output.focus");
+  sidecarOutputChannel.show();
+}
+
 export function registerDebugCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging(
@@ -197,5 +204,9 @@ export function registerDebugCommands(): vscode.Disposable[] {
       resetWorkspaceStateCommand,
     ),
     registerCommandWithLogging("confluent.showOutputChannel", showOutputChannelCommand),
+    registerCommandWithLogging(
+      "confluent.showSidecarOutputChannel",
+      showSidecarOutputChannelCommand,
+    ),
   ];
 }
