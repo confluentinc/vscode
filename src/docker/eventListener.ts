@@ -93,11 +93,9 @@ export class EventListener {
    * controlled by the polling mechanism that starts on extension activation.
    */
   async listenForEvents(): Promise<void> {
-    logger.debug("in listenForEvents()", { handlingEventStream: this.handlingEventStream });
     if (this.handlingEventStream) {
       // the poller won't wait for a previous listenForEvents() call to finish, so we need to check
       // if we're still processing events and exit early if we are
-      logger.debug("already handling event stream, exiting early");
       return;
     }
 
@@ -108,7 +106,6 @@ export class EventListener {
     if (!this.dockerAvailable) {
       // use the slower polling frequency (15sec) if Docker isn't available
       this.poller.useSlowFrequency();
-      logger.debug("set poller to slow frequency since Docker isn't available");
       return;
     }
 
@@ -116,18 +113,15 @@ export class EventListener {
     // (NOTE: if we get a successful response back from /events, that will block until the stream
     // ends, so we don't have to worry about making requests every second)
     this.poller.useFastFrequency();
-    logger.debug("set poller to fast frequency since Docker is available");
 
     // "lock" the event stream handling so we don't start another one while we're still processing
     this.handlingEventStream = true;
-    logger.debug("setting handlingEventStream=true");
     try {
       await this.handleEventStreamWorkflow();
     } catch (error) {
       logger.error("error handling event stream:", error);
     }
     this.handlingEventStream = false;
-    logger.debug("setting handlingEventStream=false");
   }
 
   private async handleEventStreamWorkflow(): Promise<void> {
@@ -138,7 +132,6 @@ export class EventListener {
     const init: RequestInit = defaultRequestInit();
 
     let stream: ReadableStream<Uint8Array> | null = null;
-    logger.debug("sending request to systemEventsRaw()...");
     try {
       // NOTE: we have to use .systemEventsRaw() because .systemEvents() tries to convert the
       // response to JSON instead of returning a readable stream, which silently fails
@@ -215,7 +208,7 @@ export class EventListener {
         logger.debug("got empty value from stream");
         continue;
       }
-      // convert the Uint8Array to a string and try to parse as JSON
+      // convert the Uint8Array to a string before yielding it
       const valueString = decoder.decode(value);
       if (!valueString) {
         logger.debug("empty string decoded from stream");
