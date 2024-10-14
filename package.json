@@ -205,6 +205,12 @@
         "category": "Confluent"
       },
       {
+        "command": "confluent.showSidecarOutputChannel",
+        "title": "Show Sidecar Output Channel",
+        "icon": "$(output)",
+        "category": "Confluent"
+      },
+      {
         "command": "confluent.support.confluent-walkthrough.launch",
         "title": "Get Started with Kafka",
         "category": "Confluent: Support"
