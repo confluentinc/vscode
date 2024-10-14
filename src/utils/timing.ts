@@ -31,7 +31,7 @@ export class IntervalPoller {
   readonly fastFrequency: number;
   currentFrequency: number;
 
-  readonly runImmediately: boolean = false;
+  runImmediately: boolean = false;
 
   private callback: () => void;
   /** The current interval timer, if it is currently running. */
@@ -137,13 +137,16 @@ export class IntervalPoller {
     if (this.registeredInterval) {
       clearInterval(this.registeredInterval);
     }
-    // Run the callback immediately if the flag is set.
-    if (this.runImmediately) {
-      this.callback();
-    }
-    // In with the new frequency.
+    // In with the new frequency. (Done before any immediate call to ensure callbacks that may affect the poller don't trip up checking .isRunning())
     this.registeredInterval = setInterval(() => {
+      logger.debug(`${this.name}: calling callback function`);
       this.callback();
     }, frequency);
+    // Run the callback immediately if the flag is set and then defer to the interval for subsequent calls.
+    if (this.runImmediately) {
+      logger.debug(`${this.name}: calling callback function immediately`);
+      this.callback();
+      this.runImmediately = false;
+    }
   }
 }
