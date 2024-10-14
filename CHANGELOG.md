@@ -8,6 +8,11 @@ All notable changes to this extension will be documented in this file.
 
 - "Open Settings" command to quickly access the Confluent for VS Code extension settings.
 
+### Changed
+
+- Topic -> Schema correlation now recognizes schemas using `TopicRecordNameStrategy` in addition to
+  `TopicNameStrategy`, [issue #298](https://github.com/confluentinc/vscode/issues/298).
+
 ## 0.18.0
 
 ### Added

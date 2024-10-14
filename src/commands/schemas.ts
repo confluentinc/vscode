@@ -148,8 +148,8 @@ async function loadOrCreateSchemaViewer(schema: Schema) {
 }
 
 /**
- * Get the highest versioned schema(s) related to a single topic from the schema registry
- * as decided by TopicNameStrategy. May return two schemas if the topic has both key and value schemas.
+ * Get the highest versioned schema(s) related to a single topic from the schema registry.
+ * May return two schemas if the topic has both key and value schemas.
  */
 export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
   // These two checks indicate programming errors, not a user or external system contents issues ...
@@ -184,7 +184,7 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
     );
   }
 
-  // Filter by TopicNameStrategy for this topic.
+  // Filter for schemas related to this topic.
   const topicSchemas = allSchemas.filter((schema) => schema.matchesTopicName(topic.name));
 
   // Now make map of schema subject -> highest version'd schema for said subject

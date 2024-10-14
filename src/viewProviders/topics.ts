@@ -261,8 +261,8 @@ export async function getTopicsForCluster(
 }
 
 /**
- * Load the schemas for a given topic from extension state by using the `TopicNameStrategy` to match
- * schema subjects with the topic name.
+ * Load the schemas related to the given topic from extension state by using either `TopicNameStrategy`
+ * or `TopicRecordNameStrategy` to match schema subjects with the topic's name.
  * @param topic The Kafka topic to load schemas for.
  * @returns An array of {@link ContainerTreeItem} objects representing the topic's schemas, grouped
  * by subject as {@link ContainerTreeItem}s, with the {@link Schema}s in version-descending order.
