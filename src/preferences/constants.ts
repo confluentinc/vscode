@@ -19,3 +19,6 @@ export const SSL_VERIFY_SERVER_CERT_DISABLED =
   prefix + "debugging.sslTls.serverCertificateVerificationDisabled";
 
 export const LOCAL_DOCKER_SOCKET_PATH = prefix + "localDocker.socketPath";
+
+export const LOCAL_KAFKA_IMAGE = prefix + "localDocker.kafkaImageRepo";
+export const LOCAL_KAFKA_IMAGE_TAG = prefix + "localDocker.kafkaImageTag";
