@@ -2,10 +2,7 @@ import { randomBytes } from "crypto";
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
-import { ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
-import { type KafkaTopic } from "./models/topic";
-import { type post } from "./webview/message-viewer";
-import messageViewerTemplate from "./webview/message-viewer.html";
+import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -19,13 +16,16 @@ import {
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { Logger } from "./logging";
-import { getTelemetryLogger } from "./telemetry";
-import { getSidecar, type SidecarHandle } from "./sidecar";
-import { BitSet, Stream, includesSubstring } from "./stream/stream";
-import { handleWebviewMessage } from "./webview/comms/comms";
+import { type KafkaTopic } from "./models/topic";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
+import { getSidecar, type SidecarHandle } from "./sidecar";
+import { BitSet, includesSubstring, Stream } from "./stream/stream";
+import { getTelemetryLogger } from "./telemetry";
+import { handleWebviewMessage } from "./webview/comms/comms";
+import { type post } from "./webview/message-viewer";
+import messageViewerTemplate from "./webview/message-viewer.html";
 
 export function activateMessageViewer(context: ExtensionContext) {
   /* All active message viewer instances share the same scheduler to perform API
@@ -389,6 +389,13 @@ function messageViewerStartPollingCommand(
             }
             default: {
               reportable = { message: "Something went wrong." };
+              window
+                .showErrorMessage("Error response while consuming messages.", "Open Logs")
+                .then((action) => {
+                  if (action === "Open Logs") {
+                    commands.executeCommand("confluent.showSidecarOutputChannel");
+                  }
+                });
               break;
             }
           }
