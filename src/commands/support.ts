@@ -18,6 +18,13 @@ function issueCommand() {
   vscode.commands.executeCommand("vscode.openIssueReporter", "confluentinc.vscode-confluent");
 }
 
+function openSettings() {
+  vscode.commands.executeCommand(
+    "workbench.action.openSettings",
+    "@ext:confluentinc.vscode-confluent",
+  );
+}
+
 export function registerSupportCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging(
@@ -26,5 +33,6 @@ export function registerSupportCommands(): vscode.Disposable[] {
     ),
     registerCommandWithLogging("confluent.support.feedback", feedbackCommand),
     registerCommandWithLogging("confluent.support.issue", issueCommand),
+    registerCommandWithLogging("confluent.support.openSettings", openSettings),
   ];
 }
