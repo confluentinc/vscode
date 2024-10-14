@@ -1,0 +1,13 @@
+/**
+ * Default image to use for local Kafka (broker) container(s).
+ *
+ * Must match the default value in the "confluent.docker.localKafkaImage" configuration in package.json.
+ */
+export const DEFAULT_KAFKA_IMAGE_REPO = "confluentinc/confluent-local";
+
+/**
+ * Default image tag to use for local Kafka (broker) container(s).
+ *
+ * Must match the default value in the "confluent.docker.localKafkaImageTag" configuration in package.json.
+ */
+export const DEFAULT_KAFKA_IMAGE_TAG = "latest";
