@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- "Open Settings" command to quickly access the Confluent for VS Code extension settings.
+
 ## 0.18.0
 
 ### Added
