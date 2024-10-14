@@ -9,6 +9,12 @@ export enum SchemaType {
   Protobuf = "PROTOBUF",
 }
 
+const extensionMap: { [key in SchemaType]: string } = {
+  [SchemaType.Avro]: "avsc",
+  [SchemaType.Json]: "json",
+  [SchemaType.Protobuf]: "proto",
+};
+
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
 export class Schema extends Data {
@@ -23,20 +29,21 @@ export class Schema extends Data {
   schemaRegistryId!: Enforced<string>;
   environmentId!: Enforced<string>;
 
-  /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy */
+  /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
-    // strip off the -key/-value suffixes to match the topic name exactly based on TopicNameStrategy
-    // since we can't use `startsWith` due to the potential for multiple topics with the same prefix
-    const suffixlessSubject = this.subject.replace(/-key$|-value$/, "");
-    return suffixlessSubject === topicName;
+    if (this.subject.endsWith("-key")) {
+      // TopicNameStrategy key schema
+      return this.subject === `${topicName}-key`;
+    } else if (this.subject.endsWith("-value")) {
+      // TopicNameStrategy value schema
+      return this.subject === `${topicName}-value`;
+    } else {
+      // only other possibility is a matching TopicRecordNameStrategy (value) schema
+      return this.subject.startsWith(`${topicName}-`);
+    }
   }
 
   fileExtension(): string {
-    const extensionMap: { [key in SchemaType]: string } = {
-      [SchemaType.Avro]: "avsc",
-      [SchemaType.Json]: "json",
-      [SchemaType.Protobuf]: "proto",
-    };
     return extensionMap[this.type];
   }
 
@@ -140,7 +147,12 @@ export function generateSchemaSubjectGroups(
     // set the icon based on subject suffix
     if (subject.endsWith("-key")) {
       schemaContainerItem.iconPath = new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
-    } else if (subject.endsWith("-value")) {
+    } else if (subject.endsWith("-value") || topicName) {
+      // value schema or topic record name strategy (if made it this far given a topic name)
+      // (Alas when showing all schemas in the Schemas view controller, we can't tell if the
+      //  same topic record name strategy schema is a value schema without a topic name to
+      //  compare against, so the icon chosen then will be the fallthrough OTHER_SUBJECT
+      //  and be wrong).
       schemaContainerItem.iconPath = new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
     } else {
       schemaContainerItem.iconPath = new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
