@@ -4,6 +4,7 @@ import { Logger } from "../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../preferences/constants";
 import { defaultRequestInit } from "./configs";
 import { DEFAULT_KAFKA_IMAGE_REPO, DEFAULT_KAFKA_IMAGE_TAG } from "./constants";
+import { streamToString } from "./stream";
 
 const logger = new Logger("docker.images");
 
@@ -28,15 +29,23 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
 
   try {
     const response: ImageInspect = await client.imageInspect({ name: repo }, init);
-    logger.debug(`Checking ${repoTag} in response repoTags...`, { repoTags: response.RepoTags });
+    logger.debug(`Checking "${repoTag}" in response repoTags...`, {
+      responseRepoTags: response.RepoTags,
+    });
     return `${response.RepoTags}`.includes(repoTag);
   } catch (error) {
     if (error instanceof ResponseError) {
-      logger.info("Error response pulling image:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: error.response.body,
-      });
+      const body = await streamToString(error.response.clone().body);
+      if (error.response.status === 404) {
+        logger.debug(`Image not found: ${repoTag}`);
+        return false;
+      } else {
+        logger.error("Error response inspecting image:", {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          body: body,
+        });
+      }
     } else {
       logger.error("Error inspecting image:", error);
     }
@@ -53,12 +62,14 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
 
   try {
     await client.imageCreate({ fromImage: repoTag }, init);
+    logger.debug("Image pulled successfully", { repo, tag });
   } catch (error) {
     if (error instanceof ResponseError) {
+      const body = await streamToString(error.response.clone().body);
       logger.error("Error response pulling image:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: error.response.body,
+        body: body,
       });
     } else {
       logger.error("Error pulling image:", error);
