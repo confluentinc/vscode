@@ -9,7 +9,7 @@ The following 3rd-party software packages may be used by or distributed with git
 
 Date generated: 2024-10-14
 
-Revision ID: 2a99a54382e421defb38d3c8579f1d27e0e10b7f
+Revision ID: ad8e7143d77dc47b771c2630ffcd03d7f49dae46
 
 ================================================================================
 ================================================================================
@@ -18317,6 +18317,42 @@ END OF TERMS AND CONDITIONS
 
 
 --------------------------------------------------------------------------------
+Package Title: undici (6.19.8)
+
+Package Locator: npm+undici$6.19.8
+
+Package Depth: Direct
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+MIT License
+
+Copyright (c) Matteo Collina and Undici contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+--------------------------------------------------------------------------------
 Package Title: undici-types (5.26.5)
 
 Package Locator: npm+undici-types$5.26.5
@@ -23520,6 +23556,31 @@ SOFTWARE.
 * MIT *
 
 MIT License
+
+Copyright (c) Matteo Collina and Undici contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+* MIT *
+
+MIT License
 -----------
 
 Copyright (C) 2010-2020 by Philipp Dunkel, Ben Noordhuis, Elan Shankar, Paul Miller
@@ -25153,9 +25214,9 @@ Copyright (c) 2009-2011 Mozilla Foundation and contributors
 
 Copyright (c) 2011 Mozilla Foundation and contributors
 
-Copyright (c) 2014 Mozilla Foundation and contributors
-
 Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
+
+Copyright (c) 2014 Mozilla Foundation and contributors
 
 Copyright (c) 2022 Sentry
 
@@ -25731,6 +25792,8 @@ Copyright (c) 2023 Sven Sauleau
 
 Copyright (c) 2023-2024 Functional Software, Inc. dba Sentry
 
+Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>*
+
 Copyright (c) 2023 present Johnson Chu
 
 Copyright (c) Facebook, Inc. and its affiliates.
@@ -25744,6 +25807,12 @@ Copyright (c)  GraphQL Contributors
 Copyright (c) Jordan Harband and contributors
 
 Copyright (c)  Jordan Harband and contributors
+
+Copyright (c) Matteo Collina and Undici contributors
+
+Copyright (c)  Matteo Collina and Undici contributors
+
+Copyright (c) 2020 Ethan Arrowood
 
 Copyright (c) 2010-2020 by Philipp Dunkel, Ben Noordhuis, Elan Shankar, Paul Miller
 
