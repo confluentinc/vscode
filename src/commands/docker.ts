@@ -17,6 +17,17 @@ async function startLocalResourcesWithProgress() {
   await runWorkflowWithProgress();
 }
 
+async function stopLocalResourcesWithProgress() {
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    // this should not happen, but just in case
+    window.showErrorMessage("Unable to shutdown local Kafka because Docker is not available.");
+    return;
+  }
+
+  await runWorkflowWithProgress(false);
+}
+
 async function runWorkflowWithProgress(start: boolean = true) {
   const imageRepo: string = getLocalKafkaImageName();
   logger.debug("using image repo", { imageRepo, confluent: ConfluentLocalWorkflow.imageRepo });
@@ -43,8 +54,9 @@ async function runWorkflowWithProgress(start: boolean = true) {
     async (progress, token: CancellationToken) => {
       if (start) {
         await workflow.start(token, progress);
+      } else {
+        await workflow.stop(token, progress);
       }
-      // TODO: add support for running the workflow .stop() method
     },
   );
 }
@@ -54,6 +66,10 @@ export function registerDockerCommands(): Disposable[] {
     registerCommandWithLogging(
       "confluent.docker.startLocalResources",
       startLocalResourcesWithProgress,
+    ),
+    registerCommandWithLogging(
+      "confluent.docker.stopLocalResources",
+      stopLocalResourcesWithProgress,
     ),
   ];
 }
