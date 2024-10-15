@@ -347,6 +347,19 @@
           "default": 8082,
           "description": "Port to use for the Kafka REST Proxy when starting a local Kafka cluster",
           "minimum": 1,
+          "maximum": 65535,
+          "readOnly": true
+        },
+        "confluent.localDocker.kafkaPlainTextPorts": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "default": [
+            9092
+          ],
+          "description": "Ports to use for the Kafka brokers when starting a local Kafka cluster",
+          "minimum": 1,
           "maximum": 65535
         }
       }
