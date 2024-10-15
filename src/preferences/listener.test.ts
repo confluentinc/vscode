@@ -23,7 +23,7 @@ describe("preferences/listener", function () {
 
   it("should call updatePreferences() with 'tls_pem_paths' when the SSL_PEM_PATHS config changes", async function () {
     const mockConfig = {
-      get: sinon.stub().withArgs(SSL_PEM_PATHS).returns(["path/to/pem"]),
+      get: sandbox.stub().withArgs(SSL_PEM_PATHS).returns(["path/to/pem"]),
     };
     getConfigurationStub.returns(mockConfig);
     const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();
@@ -41,7 +41,7 @@ describe("preferences/listener", function () {
 
   it("should call updatePreferences() with 'trust_all_certificates' when the SSL_VERIFY_SERVER_CERT_DISABLED config changes", async function () {
     const mockConfig = {
-      get: sinon.stub().withArgs(SSL_VERIFY_SERVER_CERT_DISABLED).returns(true),
+      get: sandbox.stub().withArgs(SSL_VERIFY_SERVER_CERT_DISABLED).returns(true),
     };
     getConfigurationStub.returns(mockConfig);
     const updatePreferencesStub = sandbox.stub(updates, "updatePreferences").resolves();

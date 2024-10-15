@@ -35,7 +35,7 @@ describe("authz.schemaRegistry", function () {
     sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
     // mock the workspace configuration until we can solve this in the test runner:
     // "Unable to write to Workspace Settings because no workspace is opened. Please open a workspace first and try again.: CodeExpectedError: Unable to write to Workspace Settings because no workspace is opened. Please open a workspace first and try again."
-    getConfigurationStub = sinon.stub(workspace, "getConfiguration");
+    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
   });
 
   afterEach(async function () {
@@ -131,7 +131,7 @@ describe("authz.schemaRegistry", function () {
   // showNoSchemaAccessWarningNotification() tests
   it("showNoSchemaAccessWarningNotification() should show warning if warnings are enabled", function () {
     const mockConfig = {
-      get: sinon.stub().callsFake((key: string) => {
+      get: sandbox.stub().callsFake((key: string) => {
         if (key === SCHEMA_RBAC_WARNINGS_ENABLED) return true;
       }),
     };
@@ -144,7 +144,7 @@ describe("authz.schemaRegistry", function () {
 
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
     const mockConfig = {
-      get: sinon.stub().callsFake((key: string) => {
+      get: sandbox.stub().callsFake((key: string) => {
         if (key === SCHEMA_RBAC_WARNINGS_ENABLED) return false;
       }),
     };

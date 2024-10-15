@@ -27,19 +27,21 @@ function createFakeConnection(expiresInMinutes: number | undefined): Connection 
 }
 
 describe("CCloud auth expiration checks", () => {
+  let sandbox: sinon.SinonSandbox;
   let showWarningMessageStub: sinon.SinonStub;
   let showErrorMessageStub: sinon.SinonStub;
 
   beforeEach(() => {
+    sandbox = sinon.createSandbox();
     // REAUTH_BUTTON_TEXT is the only option that doesn't adjust the AuthPromptTracker's
     // `reauthWarningPromptOpen`, so if we don't use that, we'll see weird state changes
     const warningMessageThenable = Promise.resolve(REAUTH_BUTTON_TEXT);
-    showWarningMessageStub = sinon.stub(vscode.window, "showWarningMessage");
+    showWarningMessageStub = sandbox.stub(vscode.window, "showWarningMessage");
     showWarningMessageStub.returns(warningMessageThenable);
 
     // we don't need to handle any specific return value for this stub
     const errorMessageThenable = Promise.resolve("test");
-    showErrorMessageStub = sinon.stub(vscode.window, "showErrorMessage");
+    showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
     showErrorMessageStub.returns(errorMessageThenable);
 
     // reset the auth prompt tracker state
@@ -49,8 +51,7 @@ describe("CCloud auth expiration checks", () => {
   });
 
   afterEach(() => {
-    showWarningMessageStub.restore();
-    showErrorMessageStub.restore();
+    sandbox.restore();
   });
 
   /** Reusable helper function to check that our "reauth warning" notification was called as expected. */
