@@ -62,7 +62,12 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
 
   try {
     await client.imageCreate({ fromImage: repoTag }, init);
-    logger.debug("Image pulled successfully", { repo, tag });
+    try {
+      await waitForImageToExist(repo, tag);
+      logger.debug("Image pulled successfully", { repo, tag });
+    } catch (error) {
+      logger.error("Error waiting for image to exist:", error);
+    }
   } catch (error) {
     if (error instanceof ResponseError) {
       const body = await streamToString(error.response.clone().body);
@@ -75,4 +80,17 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
       logger.error("Error pulling image:", error);
     }
   }
+}
+
+async function waitForImageToExist(repo: string, tag: string, maxWaitTimeSec: number = 60) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitTimeSec * 1000) {
+    if (await imageExists(repo, tag)) {
+      const duration = Date.now() - start;
+      logger.debug(`Image ${repo}:${tag} found after ${duration}ms`);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Image ${repo}:${tag} not found after ${maxWaitTimeSec} seconds`);
 }
