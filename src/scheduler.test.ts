@@ -4,8 +4,9 @@ import { scheduler, semaphore } from "./scheduler";
 
 describe("scheduler", () => {
   it("should execute tasks in sequence", async () => {
+    const sandbox = sinon.createSandbox();
     const promise = sinon.promise();
-    const setTimeout = sinon.stub(global, "setTimeout");
+    const setTimeout = sandbox.stub(global, "setTimeout");
     setTimeout.callsFake((fn: () => void) => (promise.then(fn), 0 as any));
     const schedule = scheduler(1, 100);
 
@@ -32,16 +33,17 @@ describe("scheduler", () => {
     equal(await resultB, 1);
     equal(setTimeout.callCount, 2);
     equal(setTimeout.getCall(1).args[1], 100);
-    setTimeout.restore();
+    sandbox.restore();
   });
 
   it("should not execute more concurrent tasks than defined by limit", async () => {
+    const sandbox = sinon.createSandbox();
     const queue: (() => void)[] = [];
     const progressQueue = async () => {
       const cb = queue.shift();
       if (cb != null) cb();
     };
-    const setTimeout = sinon.stub(global, "setTimeout");
+    const setTimeout = sandbox.stub(global, "setTimeout");
     setTimeout.callsFake((fn: () => void) => (queue.push(fn), 0 as any));
     const schedule = scheduler(2, 100);
 
@@ -86,17 +88,18 @@ describe("scheduler", () => {
     await promiseD.resolve("d");
     equal(await resultD, "d");
 
-    setTimeout.restore();
+    sandbox.restore();
   });
 
   it("should skip aborted tasks", async () => {
+    const sandbox = sinon.createSandbox();
     const promise = sinon.promise();
-    const setTimeout = sinon.stub(global, "setTimeout");
+    const setTimeout = sandbox.stub(global, "setTimeout");
     setTimeout.callsFake((fn: () => void) => (promise.then(fn), 0 as any));
     const schedule = scheduler(1, 100);
     const signal = AbortSignal.abort();
     await rejects(() => schedule(() => Promise.resolve(), signal));
-    setTimeout.restore();
+    sandbox.restore();
   });
 });
 
