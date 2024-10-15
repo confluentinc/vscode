@@ -147,17 +147,18 @@ describe("ExtensionContext subscription tests", () => {
 });
 
 describe("Sentry user settings check", () => {
+  let sandbox: sinon.SinonSandbox;
   let getConfigurationStub: sinon.SinonStub;
   let isTelemetryEnabledStub: sinon.SinonStub;
 
   before(() => {
-    getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
-    isTelemetryEnabledStub = sinon.stub(vscode.env, "isTelemetryEnabled");
+    sandbox = sinon.createSandbox();
+    getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration");
+    isTelemetryEnabledStub = sandbox.stub(vscode.env, "isTelemetryEnabled");
   });
 
   after(() => {
-    getConfigurationStub.restore();
-    isTelemetryEnabledStub.restore();
+    sandbox.restore();
   });
 
   it("should return null when telemetry is disabled", () => {

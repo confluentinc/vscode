@@ -4,14 +4,16 @@ import { commands } from "vscode";
 import { ContextValues, getContextValue, setContextValue } from "./context";
 
 describe("ContextValue functions", () => {
+  let sandbox: sinon.SinonSandbox;
   let executeCommandStub: sinon.SinonStub;
 
   beforeEach(() => {
-    executeCommandStub = sinon.stub(commands, "executeCommand");
+    sandbox = sinon.createSandbox();
+    executeCommandStub = sandbox.stub(commands, "executeCommand");
   });
 
   afterEach(() => {
-    sinon.restore();
+    sandbox.restore();
   });
 
   it("setContextValue() should correctly context value and execute the setContext command", async () => {

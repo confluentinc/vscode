@@ -1,6 +1,6 @@
 import * as assert from "assert";
-import * as vscode from "vscode";
 import sinon from "sinon";
+import * as vscode from "vscode";
 import { commands } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
@@ -8,25 +8,27 @@ import {
   TEST_SCHEMA,
   TEST_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
+import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
 import {
   CannotLoadSchemasError,
-  getLatestSchemasForTopic,
   diffLatestSchemasCommand,
+  getLatestSchemasForTopic,
 } from "./schemas";
-import { ContainerTreeItem } from "../models/main";
 
 describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
+  let sandbox: sinon.SinonSandbox;
   let executeCommandStub: sinon.SinonStub;
 
   beforeEach(() => {
-    executeCommandStub = sinon.stub(commands, "executeCommand");
+    sandbox = sinon.createSandbox();
+    executeCommandStub = sandbox.stub(commands, "executeCommand");
   });
 
   afterEach(() => {
-    sinon.restore();
+    sandbox.restore();
   });
 
   it("diffLatestSchemasCommand should execute the correct commands when invoked on a proper schema group", async () => {
