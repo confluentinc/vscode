@@ -1,5 +1,6 @@
 import { CancellationToken, Disposable, Progress, ProgressLocation, window } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { ContainerCreateResponse } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
 import { createContainer, startContainer } from "../docker/containers";
 import {
@@ -69,13 +70,17 @@ async function launchLocalKafkaWithProgress(
   const createContainerMsg = "Creating local Kafka container...";
   logger.debug(createContainerMsg);
   progress.report({ message: createContainerMsg });
-  await createContainer(imageRepo, imageTag);
+  const container: ContainerCreateResponse | undefined = await createContainer(imageRepo, imageTag);
   progress.report({ increment: 30 });
+  if (!container) {
+    window.showErrorMessage("Failed to create local Kafka container.");
+    return;
+  }
 
   const startContainerMsg = "Starting local Kafka container...";
   logger.debug(startContainerMsg);
   progress.report({ message: startContainerMsg });
-  await startContainer(imageRepo, imageTag);
+  await startContainer(container.Id);
   progress.report({ increment: 30 });
 
   const successMsg = "Local Kafka started successfully.";
