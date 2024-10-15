@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getExtensionContext } from "../context";
@@ -140,28 +141,44 @@ async function loadResources(
   // - an unexpandable item with a "No connection" description where the user can connect to CCloud
   // - a "connected" expandable item with a description of the current connection name and the ability
   //   to add a new connection or switch connections
-
-  const preloader = CCloudResourcePreloader.getInstance();
-
   if (await hasCCloudAuthSession()) {
-    // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
-    await preloader.ensureCoarseResourcesLoaded(forceDeepRefresh);
+    const preloader = CCloudResourcePreloader.getInstance();
+    // TODO: have this cached in the resource manager  via the preloader
+    const currentOrg = await getCurrentOrganization();
 
-    const resourceManager = getResourceManager();
+    let ccloudEnvironments: CCloudEnvironment[] = [];
+    try {
+      // Ensure all of the preloading is complete before referencing resource manager CCloud resources.
+      await preloader.ensureCoarseResourcesLoaded(forceDeepRefresh);
+      const resourceManager = getResourceManager();
+      ccloudEnvironments = await resourceManager.getCCloudEnvironments();
+    } catch (e) {
+      // if we fail to load CCloud environments, we need to get as much information as possible as to
+      // what went wrong since the user is effectively locked out of the CCloud resources for this org
+      const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
+      logger.error(msg, e);
+      Sentry.captureException(e);
+      vscode.window.showErrorMessage(msg, "Open Logs", "File Issue").then(async (action) => {
+        if (action === "Open Logs") {
+          vscode.commands.executeCommand("confluent.showOutputChannel");
+        } else if (action === "File Issue") {
+          vscode.commands.executeCommand("confluent.support.issue");
+        }
+      });
+    }
 
-    const ccloudEnvironments: CCloudEnvironment[] = await resourceManager.getCCloudEnvironments();
-
+    const collapsibleState =
+      ccloudEnvironments.length > 0
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.None;
     const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
       "Confluent Cloud",
-      vscode.TreeItemCollapsibleState.Expanded,
+      collapsibleState,
       ccloudEnvironments,
     );
     cloudContainerItem.id = "ccloud-container-connected";
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
-
-    // TODO: have this cached in the resource manager  via the preloader
-    const currentOrg = await getCurrentOrganization();
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.iconPath = CONFLUENT_ICON;
     resources.push(cloudContainerItem);
