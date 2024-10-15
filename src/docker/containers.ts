@@ -114,3 +114,23 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
     throw error;
   }
 }
+
+export async function stopContainer(id: string) {
+  const client = new ContainerApi();
+  const init: RequestInit = defaultRequestInit();
+
+  try {
+    await client.containerStop({ id }, init);
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      const body = await streamToString(error.response.clone().body);
+      logger.error("Error response stopping container:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: body,
+      });
+    } else {
+      logger.error("Error stopping container:", error);
+    }
+  }
+}
