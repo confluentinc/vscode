@@ -17,7 +17,7 @@ import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
 const logger = new Logger("docker.eventListener");
 
 const EVENT_FILTERS = {
-  type: ["container"],
+  type: ["container", "image"],
   images: [DEFAULT_KAFKA_IMAGE_REPO],
 };
 /** The log line to watch for before considering the container fully started and discoverable. */
@@ -235,6 +235,7 @@ export class EventListener {
       logger.debug("missing required 'status' field in event, bailing...", event);
       return;
     }
+    logger.trace("handling event:", event);
 
     if (event.Type === "container") {
       await this.handleContainerEvent(event);
