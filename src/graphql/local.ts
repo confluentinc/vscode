@@ -1,5 +1,5 @@
 import { graphql } from "gql.tada";
-import { Connection, ConnectionsResourceApi } from "../clients/sidecar";
+import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../constants";
 import { ContextValues, setContextValue } from "../context";
 import { Logger } from "../logging";
@@ -69,7 +69,19 @@ async function ensureLocalConnection(): Promise<void> {
       id: LOCAL_CONNECTION_ID,
     });
   } catch (e) {
-    logger.error("Error getting existing local connection", e);
+    if (e instanceof ResponseError) {
+      if (e.response.status === 404) {
+        logger.debug("No local connection");
+      } else {
+        logger.error("Error response from fetching existing local connection:", {
+          status: e.response.status,
+          statusText: e.response.statusText,
+          body: JSON.stringify(e.response.body),
+        });
+      }
+    } else {
+      logger.error("Error while fetching local connection:", e);
+    }
   }
 
   if (!localConnection) {
