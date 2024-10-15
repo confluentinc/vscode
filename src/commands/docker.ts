@@ -12,6 +12,10 @@ async function startLocalResourcesWithProgress() {
   await runWorkflowWithProgress();
 }
 
+async function stopLocalResourcesWithProgress() {
+  await runWorkflowWithProgress(false);
+}
+
 /** Run the local resource workflow(s) with a progress notification. */
 async function runWorkflowWithProgress(start: boolean = true) {
   const dockerAvailable = await isDockerAvailable();
@@ -108,6 +112,10 @@ export function registerDockerCommands(): Disposable[] {
     registerCommandWithLogging(
       "confluent.docker.startLocalResources",
       startLocalResourcesWithProgress,
+    ),
+    registerCommandWithLogging(
+      "confluent.docker.stopLocalResources",
+      stopLocalResourcesWithProgress,
     ),
   ];
 }
