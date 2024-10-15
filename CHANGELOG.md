@@ -4,9 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.18.1
+
 ### Added
 
 - "Show Sidecar Output Channel" command for direct access to the sidecar logs via the Output panel.
+- Additional logging and error handling during Confluent Cloud resource loading after successful
+  authentication.
 
 ## 0.18.0
 
