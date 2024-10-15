@@ -24,6 +24,7 @@ if (process.env.SENTRY_DSN) {
     ],
     ignoreErrors: [
       "The request failed and the interceptors did not return an alternative response",
+      "ENOENT: no such file or directory, lstat",
     ],
   });
 }
