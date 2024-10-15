@@ -13,6 +13,12 @@ All notable changes to this extension will be documented in this file.
 - Topic -> Schema correlation now recognizes schemas using `TopicRecordNameStrategy` in addition to
   `TopicNameStrategy`, [issue #298](https://github.com/confluentinc/vscode/issues/298).
 
+## 0.18.1
+
+- "Show Sidecar Output Channel" command for direct access to the sidecar logs via the Output panel.
+- Additional logging and error handling during Confluent Cloud resource loading after successful
+  authentication.
+
 ## 0.18.0
 
 ### Added
