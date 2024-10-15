@@ -6,6 +6,7 @@ import {
   ContainerCreateRequest,
   ContainerCreateResponse,
   ContainerListRequest,
+  ContainerStateStatusEnum,
   ContainerSummary,
   ResponseError,
 } from "../clients/docker";
@@ -24,16 +25,23 @@ const logger = new Logger("docker.containers");
 export async function getContainersForImage(
   imageRepo: string,
   imageTag: string,
+  status?: ContainerStateStatusEnum,
 ): Promise<ContainerSummary[]> {
-  const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
-
   // if the tag is "latest", we don't need to specify it
   const repoTag = imageTag === "latest" ? imageRepo : `${imageRepo}:${imageTag}`;
-  const request: ContainerListRequest = {
-    filters: JSON.stringify({ ancestor: [repoTag] }),
-  };
 
+  // if `status` is provided, use that instead of listing all containers
+  const filters: Record<string, any> = {
+    ancestor: [repoTag],
+  };
+  if (status) filters["status"] = [status];
+  const request: ContainerListRequest = {
+    filters: JSON.stringify(filters),
+  };
+  if (!status) request.all = true;
+
+  const client = new ContainerApi();
+  const init: RequestInit = defaultRequestInit();
   try {
     const response: ContainerSummary[] = await client.containerList(request, init);
     logger.debug("Containers listed successfully", JSON.stringify(response));
@@ -58,22 +66,13 @@ export async function createContainer(
   imageTag: string,
 ): Promise<ContainerCreateResponse | undefined> {
   const existingContainers: ContainerSummary[] = await getContainersForImage(imageRepo, imageTag);
-  if (existingContainers.length > 0 && existingContainers[0].Id) {
-    const containerId: string = existingContainers[0].Id;
-    window
-      .showWarningMessage(
-        "Local Kafka container already exists.",
-        "Start Container",
-        "Delete Container",
-      )
-      .then((selection) => {
-        if (selection === "Start Container") {
-          startContainer(containerId);
-        } else if (selection === "Delete Container") {
-          deleteContainer(containerId);
-        }
-      });
-    return;
+  if (existingContainers.length > 0) {
+    // TODO(shoup): add buttons for (re)start / delete container in follow-on branch
+    window.showWarningMessage(
+      "Local Kafka container already exists. Please remove it and try again.",
+    );
+    // isn't shown to the user:
+    throw new ContainerExistsError("Container already exists");
   } else {
     if (!(await imageExists(imageRepo, imageTag))) {
       await pullImage(imageRepo, imageTag);
@@ -201,26 +200,6 @@ export async function startContainer(containerId: string) {
   }
 }
 
-export async function deleteContainer(id: string) {
-  const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
-
-  try {
-    await client.containerDelete({ id }, init);
-  } catch (error) {
-    if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
-      logger.error("Error response deleting container:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        body: body,
-      });
-    } else {
-      logger.error("Error removing container:", error);
-    }
-  }
-}
-
 async function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -231,4 +210,11 @@ async function findFreePort(): Promise<number> {
       server.close(() => resolve(port));
     });
   });
+}
+
+export class ContainerExistsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ContainerExistsError";
+  }
 }
