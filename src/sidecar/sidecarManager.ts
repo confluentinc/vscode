@@ -462,7 +462,13 @@ export class SidecarManager {
           false,
         );
         if (notifySidecarExceptions) {
-          vscode.window.showErrorMessage(`Sidecar error: ${errorMatch[2]}`);
+          vscode.window
+            .showErrorMessage(`Sidecar error: ${errorMatch[2]}`, "Open Logs")
+            .then((action) => {
+              if (action === "Open Logs") {
+                vscode.commands.executeCommand("confluent.showSidecarOutputChannel");
+              }
+            });
         }
       }
       sidecarOutputChannel.appendLine(line);
