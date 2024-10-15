@@ -62,7 +62,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
   resource: Schema;
 
   constructor(resource: Schema) {
-    const label = resource.id.toString();
+    const label = `v${resource.version}`;
     super(label, vscode.TreeItemCollapsibleState.None);
 
     // internal properties
@@ -70,7 +70,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.contextValue = "ccloud-schema";
 
     // user-facing properties
-    this.description = `v${resource.version}`;
+    this.description = resource.id.toString();
     this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA);
     this.tooltip = createSchemaTooltip(this.resource);
   }
