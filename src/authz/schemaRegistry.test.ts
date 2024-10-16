@@ -42,8 +42,6 @@ describe("authz.schemaRegistry", function () {
     sandbox.restore();
     // clear out the existing Schema Registry after each test
     await resourceManager.deleteCCloudSchemaRegistries(TEST_SCHEMA_REGISTRY.environmentId);
-    // restore `getConfiguration()` to its original implementation
-    getConfigurationStub.restore();
   });
 
   // FIXME: canAccessSchemaForTopic() tests
