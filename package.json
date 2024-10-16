@@ -95,6 +95,12 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.docker.launchLocalKafka",
+        "icon": "$(docker)",
+        "title": "Start Local Kafka Cluster",
+        "category": "Confluent: Docker"
+      },
+      {
         "command": "confluent.schemas.diffMostRecentVersions",
         "title": "Show Latest Changes",
         "category": "Confluent: Compare Resources"
@@ -310,6 +316,39 @@
           "type": "string",
           "default": "",
           "description": "Path to the Docker socket file."
+        },
+        "confluent.localDocker.kafkaImageRepo": {
+          "type": "string",
+          "enum": [
+            "confluentinc/confluent-local"
+          ],
+          "default": "confluentinc/confluent-local",
+          "description": "Docker image repo to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.kafkaImageTag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Docker image tag to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.kafkaRestHost": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
+        },
+        "confluent.localDocker.kafkaRestPort": {
+          "type": "number",
+          "default": 8082,
+          "description": "Port to use for the Kafka REST Proxy when starting a local Kafka cluster",
+          "minimum": 1,
+          "maximum": 65535,
+          "readOnly": true
+        },
+        "confluent.localDocker.kafkaPlainTextPort": {
+          "type": "number",
+          "default": 9092,
+          "description": "Port to use for the Kafka broker when starting a local Kafka cluster",
+          "minimum": 1,
+          "maximum": 65535
         }
       }
     },
@@ -489,6 +528,11 @@
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation"
+        },
+        {
+          "command": "confluent.docker.launchLocalKafka",
+          "when": "view == confluent-resources && !confluent.localKafkaClusterAvailable",
+          "group": "local@1"
         },
         {
           "command": "confluent.resources.schema-registry.select",
