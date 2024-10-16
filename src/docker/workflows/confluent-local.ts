@@ -5,13 +5,10 @@ import {
   ContainerCreateRequest,
   ContainerCreateResponse,
 } from "../../clients/docker";
+import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
-import {
-  LOCAL_KAFKA_PLAINTEXT_PORT,
-  LOCAL_KAFKA_REST_HOST,
-  LOCAL_KAFKA_REST_PORT,
-} from "../../preferences/constants";
+import { LOCAL_KAFKA_PLAINTEXT_PORT, LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
 import { ContainerExistsError, createContainer, startContainer } from "../containers";
 import { createNetwork } from "../networks";
 
