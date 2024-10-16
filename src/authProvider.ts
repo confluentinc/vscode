@@ -182,20 +182,22 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     const storageManager = getStorageManager();
     // check with the sidecar to see if we have an existing CCloud connection, and also check in to
     // see what the (persistent, cross-workspace) secret store says about existence of a session
-    const [connection, sessionSecret] = await Promise.all([
+    const [connection, sessionSecret, authComplete] = await Promise.all([
       getCCloudConnection(),
       storageManager.getSecret(AUTH_SESSION_EXISTS_KEY),
+      storageManager.getSecret(AUTH_COMPLETED_KEY),
     ]);
 
     const connectionExists: boolean = !!connection; // sidecar says we have a connection
     const cachedSessionExists: boolean = !!this._session; // we have a cached session
-    const sessionSecretExists: boolean = !!sessionSecret;
+    const sessionSecretExists: boolean = !!sessionSecret || !!authComplete;
     if (sessionSecretExists && !connectionExists) {
       // NOTE: this may happen if the user was previously signed in, then VS Code was closed and the
       // sidecar process was stopped, because the secrets would still exist in storage. In this case,
       // we need to remove the secret so that the user can sign in again (and other workspaces will
       // react to the actual change in secret state).
       logger.debug("getSessions() session secret exists but no connection found, removing secret");
+      // WARNING: if you add a value below, also add it to the if block, otherwise it may not trigger the onChange event when setting later
       await Promise.all([
         storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
         storageManager.deleteSecret(AUTH_COMPLETED_KEY),
