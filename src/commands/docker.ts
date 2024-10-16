@@ -20,7 +20,7 @@ type NotificationProgress = Progress<{
   increment?: number;
 }>;
 
-async function launchLocalKafka() {
+async function launchLocalKafkaWithProgress() {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     window.showErrorMessage("Unable to launch local Kafka because Docker is not available.");
@@ -35,12 +35,12 @@ async function launchLocalKafka() {
       title: "Local Kafka",
     },
     async (progress: NotificationProgress, token: CancellationToken) => {
-      await launchLocalKafkaWithProgress(progress, token, imageRepo, imageTag);
+      await launchLocalKafka(progress, token, imageRepo, imageTag);
     },
   );
 }
 
-async function launchLocalKafkaWithProgress(
+async function launchLocalKafka(
   progress: NotificationProgress,
   token: CancellationToken,
   imageRepo: string,
@@ -104,5 +104,7 @@ async function launchLocalKafkaWithProgress(
 }
 
 export function registerDockerCommands(): Disposable[] {
-  return [registerCommandWithLogging("confluent.docker.launchLocalKafka", launchLocalKafka)];
+  return [
+    registerCommandWithLogging("confluent.docker.launchLocalKafka", launchLocalKafkaWithProgress),
+  ];
 }
