@@ -531,7 +531,7 @@
         },
         {
           "command": "confluent.docker.launchLocalKafka",
-          "when": "view == confluent-resources",
+          "when": "view == confluent-resources && !confluent.localKafkaClusterAvailable",
           "group": "local@1"
         },
         {
