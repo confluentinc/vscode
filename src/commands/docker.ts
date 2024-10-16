@@ -1,24 +1,12 @@
-import { CancellationToken, Disposable, Progress, ProgressLocation, window } from "vscode";
+import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ContainerCreateResponse } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
-import { ContainerExistsError, createContainer, startContainer } from "../docker/containers";
-import {
-  getLocalKafkaImageName,
-  getLocalKafkaImageTag,
-  imageExists,
-  pullImage,
-} from "../docker/images";
-import { createNetwork } from "../docker/networks";
-import { localKafkaConnected } from "../emitters";
+import { getLocalKafkaImageName } from "../docker/images";
+import { LocalResourceWorkflow } from "../docker/workflows";
+import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.docker");
-
-type NotificationProgress = Progress<{
-  message?: string;
-  increment?: number;
-}>;
 
 async function launchLocalKafkaWithProgress() {
   const dockerAvailable = await isDockerAvailable();
@@ -28,79 +16,30 @@ async function launchLocalKafkaWithProgress() {
   }
 
   const imageRepo: string = getLocalKafkaImageName();
-  const imageTag: string = getLocalKafkaImageTag();
+  logger.debug("using image repo", { imageRepo, confluent: ConfluentLocalWorkflow.imageRepo });
+  // based on the imageRepo chosen by the user, select the appropriate workflow before starting
+  let workflow: LocalResourceWorkflow;
+  switch (imageRepo) {
+    case ConfluentLocalWorkflow.imageRepo:
+      workflow = ConfluentLocalWorkflow.getInstance();
+      break;
+    // TODO: add support for other images here
+    default:
+      window.showErrorMessage(`Unsupported image repo: ${imageRepo}`);
+      return;
+  }
+
+  logger.debug("starting local Kafka with workflow", { imageRepo });
   window.withProgress(
     {
       location: ProgressLocation.Notification,
       title: "Local Kafka",
+      cancellable: true,
     },
-    async (progress: NotificationProgress, token: CancellationToken) => {
-      await launchLocalKafka(progress, token, imageRepo, imageTag);
+    async (progress, token: CancellationToken) => {
+      await workflow.start(token, progress);
     },
   );
-}
-
-async function launchLocalKafka(
-  progress: NotificationProgress,
-  token: CancellationToken,
-  imageRepo: string,
-  imageTag: string,
-): Promise<void> {
-  if (token.isCancellationRequested) {
-    // TODO: cleanup created container?
-    return;
-  }
-
-  // check for image first and pull if necessary
-  const checkImageMsg = `Checking for "${imageRepo}:${imageTag}"...`;
-  logger.debug(checkImageMsg);
-  progress.report({ message: checkImageMsg });
-  const existingImage = await imageExists(imageRepo, imageTag);
-  logger.debug(`Image exists: ${existingImage}`, { imageRepo, imageTag });
-  if (!existingImage) {
-    const pullImageMsg = `Pulling "${imageRepo}:${imageTag}"...`;
-    logger.debug(pullImageMsg);
-    progress.report({ message: pullImageMsg });
-    await pullImage(imageRepo, imageTag);
-  }
-
-  // create the network if it doesn't exist
-  await createNetwork("confluent-local-network");
-
-  const createContainerMsg = "Creating container...";
-  logger.debug(createContainerMsg);
-  progress.report({ message: createContainerMsg });
-  let containerId: string;
-  try {
-    const container: ContainerCreateResponse | undefined = await createContainer(
-      imageRepo,
-      imageTag,
-    );
-    if (!container) {
-      window.showErrorMessage("Failed to create local Kafka container.");
-      return;
-    }
-    containerId = container.Id;
-  } catch (error) {
-    if (error instanceof ContainerExistsError) {
-      // TODO: handle when container needs to be stopped first
-    } else {
-      logger.error("Error creating container:", error);
-    }
-    return;
-  }
-
-  const startContainerMsg = "Starting container...";
-  logger.debug(startContainerMsg);
-  progress.report({ message: startContainerMsg });
-  await startContainer(containerId);
-
-  // block until the `localKafkaConnected` emitter fires
-  await new Promise((resolve) => {
-    localKafkaConnected.event(() => {
-      resolve(void 0);
-    });
-  });
 }
 
 export function registerDockerCommands(): Disposable[] {
