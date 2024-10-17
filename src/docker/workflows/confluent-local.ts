@@ -63,6 +63,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   async start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
+    withSchemaRegistry: boolean = false,
   ): Promise<void> {
     this.progress = progress;
     this.logger.debug(`Starting "confluent-local" workflow...`);
@@ -129,7 +130,19 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
 
-    // TODO: add additional logic here for connecting with Schema Registry if a flag is set
+    if (withSchemaRegistry) {
+      const startedSRContainer: ContainerInspectResponse | undefined =
+        await this.startLocalSchemaRegistryContainer();
+      if (!startedSRContainer) {
+        // TODO: add error notification
+        return;
+      }
+      if (!(startedSRContainer.Id && startedSRContainer.Name)) {
+        this.logger.warn("Container started without ID or name:", startedSRContainer);
+        return;
+      }
+      this.containers.push({ id: startedSRContainer.Id, name: startedSRContainer.Name });
+    }
 
     const waitMsg = `Waiting for container${numContainers > 1 ? "s" : ""} to be ready...`;
     this.logger.debug(waitMsg);
