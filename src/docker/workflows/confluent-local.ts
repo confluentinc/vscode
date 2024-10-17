@@ -24,7 +24,6 @@ import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import {
   createContainer,
-  deleteContainer,
   getContainer,
   getContainersForImage,
   startContainer,
@@ -173,35 +172,27 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<void> {
     this.progress = progress;
     this.logger.debug(`Stopping "confluent-local" workflow...`);
-
-    const promises: Promise<void>[] = [];
-
-    // TODO: list containers for this image and stop them
-
-    await this.waitForLocalResourceEventChange();
-  }
-
-  private async stopAndRemoveContainer(container: LocalResourceContainer): Promise<void> {
-    // check container status before deleting
-    this.progress?.report({ message: `Stopping container "${container.name}"...` });
-    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
-      container.id,
+    const containers: ContainerSummary[] = await getContainersForImage(
+      ConfluentLocalWorkflow.imageRepo,
+      this.imageTag,
     );
-    if (!existingContainer) {
-      // assume it was cleaned up some other way
-      this.logger.warn("Container not found, skipping stop and delete steps.", {
-        id: container.id,
-        name: container.name,
-      });
+    if (containers.length === 0) {
       return;
     }
 
-    if (existingContainer.State?.Status === "running") {
-      await stopContainer(container.id);
+    const promises: Promise<void>[] = [];
+    for (const container of containers) {
+      if (!container.Id || !container.Names) {
+        this.logger.error("Container missing ID or name", {
+          id: container.Id,
+          names: container.Names,
+        });
+        continue;
+      }
+      promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
     }
 
-    this.progress?.report({ message: `Removing container "${container.name}"...` });
-    await deleteContainer(container.id);
+    await this.waitForLocalResourceEventChange();
   }
 
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
@@ -351,6 +342,26 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<ContainerInspectResponse | undefined> {
     await startContainer(container.id);
     return await getContainer(container.id);
+  }
+
+  private async stopContainer(container: LocalResourceContainer): Promise<void> {
+    // check container status before deleting
+    this.progress?.report({ message: `Stopping container "${container.name}"...` });
+    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
+      container.id,
+    );
+    if (!existingContainer) {
+      // assume it was cleaned up some other way
+      this.logger.warn("Container not found, skipping stop and delete steps.", {
+        id: container.id,
+        name: container.name,
+      });
+      return;
+    }
+
+    if (existingContainer.State?.Status === "running") {
+      await stopContainer(container.id);
+    }
   }
 }
 
