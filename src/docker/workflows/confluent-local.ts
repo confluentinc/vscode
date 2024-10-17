@@ -71,7 +71,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
     // TODO: add additional logic here for connecting with Schema Registry if a flag is set
 
-    await this.waitForConnectionChangeEvent();
+    await this.waitForLocalResourceEventChange();
   }
 
   /**
@@ -89,6 +89,17 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     // TODO(shoup): implement
   }
 
+  /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
+   * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
+  async waitForLocalResourceEventChange(): Promise<void> {
+    // not set in the base class since each workflow may need to wait for specific events to fire
+    await new Promise((resolve) => {
+      localKafkaConnected.event(() => {
+        resolve(void 0);
+      });
+    });
+  }
+
   private async startLocalKafkaContainer(
     brokerNum: number,
   ): Promise<ContainerInspectResponse | undefined> {
@@ -103,17 +114,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await startContainer(container.id);
 
     return await getContainer(container.id);
-  }
-
-  /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
-   * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
-  async waitForConnectionChangeEvent(): Promise<void> {
-    // not set in the base class since each workflow may need to wait for specific events to fire
-    await new Promise((resolve) => {
-      localKafkaConnected.event(() => {
-        resolve(void 0);
-      });
-    });
   }
 
   async createKafkaContainer(brokerNum: number): Promise<LocalResourceContainer | undefined> {
