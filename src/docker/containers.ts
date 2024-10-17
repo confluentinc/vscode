@@ -134,3 +134,23 @@ export async function stopContainer(id: string) {
     }
   }
 }
+
+export async function deleteContainer(id: string) {
+  const client = new ContainerApi();
+  const init: RequestInit = defaultRequestInit();
+
+  try {
+    await client.containerDelete({ id }, init);
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      const body = await streamToString(error.response.clone().body);
+      logger.error("Error response deleting container:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: body,
+      });
+    } else {
+      logger.error("Error removing container:", error);
+    }
+  }
+}
