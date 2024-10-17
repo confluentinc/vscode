@@ -15,8 +15,13 @@ async function launchLocalKafkaWithProgress() {
     return;
   }
 
+  await runWorkflowWithProgress();
+}
+
+async function runWorkflowWithProgress(start: boolean = true) {
   const imageRepo: string = getLocalKafkaImageName();
   logger.debug("using image repo", { imageRepo, confluent: ConfluentLocalWorkflow.imageRepo });
+
   // based on the imageRepo chosen by the user, select the appropriate workflow before starting
   let workflow: LocalResourceWorkflow;
   switch (imageRepo) {
@@ -29,7 +34,7 @@ async function launchLocalKafkaWithProgress() {
       return;
   }
 
-  logger.debug("starting local Kafka with workflow", { imageRepo });
+  logger.debug("executing local Kafka workflow", { start, imageRepo });
   window.withProgress(
     {
       location: ProgressLocation.Notification,
@@ -37,7 +42,10 @@ async function launchLocalKafkaWithProgress() {
       cancellable: true,
     },
     async (progress, token: CancellationToken) => {
-      await workflow.start(token, progress);
+      if (start) {
+        await workflow.start(token, progress);
+      }
+      // TODO: add support for running the workflow .stop() method
     },
   );
 }
