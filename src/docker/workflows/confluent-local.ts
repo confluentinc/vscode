@@ -64,6 +64,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   async start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
+    withSchemaRegistry: boolean = false,
   ): Promise<void> {
     this.progress = progress;
     this.imageTag = getLocalKafkaImageTag();
