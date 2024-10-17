@@ -98,30 +98,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       promises.push(this.stopAndRemoveContainer(container));
     }
 
-    await this.waitForConnectionChangeEvent();
-  }
-
-  private async stopAndRemoveContainer(container: LocalResourceContainer): Promise<void> {
-    // check container status before deleting
-    this.progress?.report({ message: `Stopping container "${container.name}"...` });
-    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
-      container.id,
-    );
-    if (!existingContainer) {
-      // assume it was cleaned up some other way
-      this.logger.warn("Container not found, skipping stop and delete steps.", {
-        id: container.id,
-        name: container.name,
-      });
-      return;
-    }
-
-    if (existingContainer.State?.Status === "running") {
-      await stopContainer(container.id);
-    }
-
-    this.progress?.report({ message: `Removing container "${container.name}"...` });
-    await deleteContainer(container.id);
+    await this.waitForLocalResourceEventChange();
   }
 
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
@@ -268,6 +245,29 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1",
       "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1",
     ];
+  }
+
+  private async stopAndRemoveContainer(container: LocalResourceContainer): Promise<void> {
+    // check container status before deleting
+    this.progress?.report({ message: `Stopping container "${container.name}"...` });
+    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
+      container.id,
+    );
+    if (!existingContainer) {
+      // assume it was cleaned up some other way
+      this.logger.warn("Container not found, skipping stop and delete steps.", {
+        id: container.id,
+        name: container.name,
+      });
+      return;
+    }
+
+    if (existingContainer.State?.Status === "running") {
+      await stopContainer(container.id);
+    }
+
+    this.progress?.report({ message: `Removing container "${container.name}"...` });
+    await deleteContainer(container.id);
   }
 }
 
