@@ -82,6 +82,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
    * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
   async waitForConnectionChangeEvent(): Promise<void> {
+    // not set in the base class since each workflow may need to wait for specific events to fire
     await new Promise((resolve) => {
       localKafkaConnected.event(() => {
         resolve(void 0);
