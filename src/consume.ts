@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { randomBytes } from "crypto";
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
@@ -389,6 +390,7 @@ function messageViewerStartPollingCommand(
             }
             default: {
               reportable = { message: "Something went wrong." };
+              Sentry.captureException(error, { data: { status, payload } });
               window
                 .showErrorMessage("Error response while consuming messages.", "Open Logs")
                 .then((action) => {
