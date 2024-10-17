@@ -47,6 +47,14 @@ export abstract class LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void>;
 
+  /**
+   * Wait for the local resource(s) to be created/removed based on event emitters.
+   *
+   * This should be called at the end of the `start` or `stop` methods to ensure the resource(s) are
+   * ready to be used, and any existing progress notifications can be resolved.
+   */
+  abstract waitForLocalResourceEventChange(): Promise<void>;
+
   /** Check if the this workflow's base image repo:tag exists locally, pulling it if not. */
   protected async checkForImage(): Promise<void> {
     // get the repo from the child instances' static property
