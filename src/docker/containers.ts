@@ -2,6 +2,7 @@ import {
   ContainerApi,
   ContainerCreateOperationRequest,
   ContainerCreateResponse,
+  ContainerInspectResponse,
   ContainerListRequest,
   ContainerStateStatusEnum,
   ContainerSummary,
@@ -107,6 +108,26 @@ export async function startContainer(containerId: string) {
       });
     } else {
       logger.error("Error starting container:", error);
+    }
+  }
+}
+
+export async function getContainer(id: string): Promise<ContainerInspectResponse | undefined> {
+  const client = new ContainerApi();
+  const init: RequestInit = defaultRequestInit();
+
+  try {
+    return await client.containerInspect({ id }, init);
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      const body = await streamToString(error.response.clone().body);
+      logger.error("Error response inspecting container:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: body,
+      });
+    } else {
+      logger.error("Error inspecting container:", error);
     }
   }
 }
