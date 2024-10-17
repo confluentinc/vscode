@@ -17,9 +17,14 @@ export abstract class LocalResourceWorkflow {
   protected abstract logger: Logger;
   protected progress?: Progress<{ message?: string; increment?: number }>;
 
-  /** Docker image to use for this workflow. */
+  /**
+   * Docker image to use for this workflow.
+   *
+   * Should **not** be configurable by the user, only selectable from an array of string enum values
+   * set in the `confluent.localDocker.kafkaImageRepo` setting, which should match to one workflow.
+   */
   static imageRepo: string;
-  /** Tag for the Docker image to use for this workflow. */
+  /** Tag for the Docker image to use for this workflow. Should be configurable by the user in extension settings. */
   protected imageTag: string = "latest";
 
   /** Start the workflow to launch the local resource(s). */
@@ -57,6 +62,7 @@ export abstract class LocalResourceWorkflow {
   }
 }
 
+// maybe this can live somewhere else if we need it for more than just container creation:
 /** Look for an available port on the host machine and return it. */
 export async function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
