@@ -1,11 +1,16 @@
 import { CancellationToken, Progress, window, workspace, WorkspaceConfiguration } from "vscode";
-import { findFreePort, LocalResourceWorkflow } from ".";
-import { ContainerCreateRequest, ContainerCreateResponse, HostConfig } from "../../clients/docker";
+import { findFreePort, LocalResourceContainer, LocalResourceWorkflow } from ".";
+import {
+  ContainerCreateRequest,
+  ContainerCreateResponse,
+  ContainerInspectResponse,
+  HostConfig,
+} from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_PLAINTEXT_PORT, LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
-import { ContainerExistsError, createContainer, startContainer } from "../containers";
+import { ContainerExistsError, createContainer, getContainer, startContainer } from "../containers";
 import { createNetwork } from "../networks";
 
 export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
@@ -49,15 +54,20 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.progress?.report({ message: createNetworkMsg });
     await createNetwork(this.networkName);
 
-    // TODO: support multiple broker containers?
-    const containerId: string | undefined = await this.createKafkaContainer();
-    if (!containerId) {
-      return;
+    // TODO: determine where to put the config for number of containers (settings, quick input, etc)
+    const numContainers: number = 1;
+    for (let i = 1; i <= numContainers; i++) {
+      const startedContainer: ContainerInspectResponse | undefined =
+        await this.startLocalKafkaContainer(i);
+      if (!startedContainer) {
+        continue;
+      }
+      if (!(startedContainer.Id && startedContainer.Name)) {
+        this.logger.warn("Container started without ID or name:", startedContainer);
+        return;
+      }
+      this.containers.push({ id: startedContainer.Id, name: startedContainer.Name });
     }
-    const startContainerMsg = "Starting container...";
-    this.logger.debug(startContainerMsg);
-    this.progress?.report({ message: startContainerMsg });
-    await startContainer(containerId);
 
     // TODO: add additional logic here for connecting with Schema Registry if a flag is set
 
@@ -79,6 +89,22 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     // TODO(shoup): implement
   }
 
+  private async startLocalKafkaContainer(
+    brokerNum: number,
+  ): Promise<ContainerInspectResponse | undefined> {
+    const container: LocalResourceContainer | undefined =
+      await this.createKafkaContainer(brokerNum);
+    if (!container) {
+      return;
+    }
+    const startContainerMsg = "Starting container...";
+    this.logger.debug(startContainerMsg);
+    this.progress?.report({ message: startContainerMsg });
+    await startContainer(container.id);
+
+    return await getContainer(container.id);
+  }
+
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
    * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
   async waitForConnectionChangeEvent(): Promise<void> {
@@ -90,17 +116,16 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     });
   }
 
-  async createKafkaContainer(): Promise<string | undefined> {
-    const createContainerMsg = "Creating container...";
+  async createKafkaContainer(brokerNum: number): Promise<LocalResourceContainer | undefined> {
+    const brokerContainerName: string = `confluent-local-broker-${brokerNum}`;
+
+    const createContainerMsg = `Creating container ${brokerContainerName}...`;
     this.logger.debug(createContainerMsg);
     this.progress?.report({ message: createContainerMsg });
 
-    // TODO: support multiple broker containers?
-    const brokerContainerName: string = "confluent-local-broker-1";
-
     const ports: KafkaContainerPorts = await this.configurePorts();
     const hostConfig: HostConfig = this.generateHostConfig(ports);
-    const containerEnv: string[] = this.generateContainerEnv(brokerContainerName, ports);
+    const containerEnv: string[] = this.generateContainerEnv(brokerNum, brokerContainerName, ports);
 
     // create the container before starting
     const body: ContainerCreateRequest = {
@@ -131,7 +156,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         window.showErrorMessage("Failed to create Kafka container.");
         return;
       }
-      return container.Id;
+      return { id: container.Id, name: brokerContainerName };
     } catch (error) {
       if (error instanceof ContainerExistsError) {
         // TODO(shoup): add buttons for (re)start / delete container in follow-on branch
@@ -181,13 +206,17 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     };
   }
 
-  private generateContainerEnv(brokerContainerName: string, ports: KafkaContainerPorts): string[] {
+  private generateContainerEnv(
+    brokerNum: number,
+    brokerContainerName: string,
+    ports: KafkaContainerPorts,
+  ): string[] {
     const config: WorkspaceConfiguration = workspace.getConfiguration();
     // TODO: determine if this needs to be configurable (i.e. for WSL)
     const kafkaRestHost: string = config.get(LOCAL_KAFKA_REST_HOST, "localhost");
     return [
       `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${brokerContainerName}:${ports.plainText},PLAINTEXT_HOST://${kafkaRestHost}:${ports.plainText}`,
-      "KAFKA_BROKER_ID=1",
+      `KAFKA_BROKER_ID=${brokerNum}`,
       "KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
       `KAFKA_CONTROLLER_QUORUM_VOTERS=1@${brokerContainerName}:${ports.controller}`,
       "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0",

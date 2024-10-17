@@ -3,6 +3,11 @@ import { CancellationToken, Progress } from "vscode";
 import { Logger } from "../../logging";
 import { imageExists, pullImage } from "../images";
 
+export interface LocalResourceContainer {
+  id: string;
+  name: string;
+}
+
 /**
  * Base class for workflows that launch local Confluent/Kafka related resources with Docker.
  *
@@ -26,6 +31,9 @@ export abstract class LocalResourceWorkflow {
   static imageRepo: string;
   /** Tag for the Docker image to use for this workflow. Should be configurable by the user in extension settings. */
   protected imageTag: string = "latest";
+
+  /** List of containers created by this workflow. */
+  containers: LocalResourceContainer[] = [];
 
   /** Start the workflow to launch the local resource(s). */
   abstract start(
