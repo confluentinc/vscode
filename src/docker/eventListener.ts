@@ -12,13 +12,13 @@ import { localKafkaConnected } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
 import { defaultRequestInit, isDockerAvailable } from "./configs";
+import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
 
 const logger = new Logger("docker.eventListener");
 
-export const LOCAL_KAFKA_IMAGE = "confluentinc/confluent-local";
 const EVENT_FILTERS = {
-  type: ["container"],
-  images: [LOCAL_KAFKA_IMAGE],
+  type: ["container", "image"],
+  images: [DEFAULT_KAFKA_IMAGE_REPO],
 };
 /** The log line to watch for before considering the container fully started and discoverable. */
 export const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
@@ -235,6 +235,7 @@ export class EventListener {
       logger.debug("missing required 'status' field in event, bailing...", event);
       return;
     }
+    logger.trace("handling event:", event);
 
     if (event.Type === "container") {
       await this.handleContainerEvent(event);
@@ -266,7 +267,7 @@ export class EventListener {
     // compare it to container log timestamps
     const eventTime: number = event.time ? event.time : new Date().getTime();
 
-    if (!imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
+    if (!imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO)) {
       // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
@@ -305,7 +306,7 @@ export class EventListener {
     }
     logger.debug(`container 'die' event for image: ${imageName}`);
 
-    if (!imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
+    if (!imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO)) {
       // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
       return;
     }
