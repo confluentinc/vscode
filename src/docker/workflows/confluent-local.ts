@@ -182,19 +182,20 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   }
 
   private async stopAndRemoveContainer(container: LocalResourceContainer): Promise<void> {
-    // check if container is running, and if so, stop it before deleting
+    // check container status before deleting
     this.progress?.report({ message: `Stopping container "${container.name}"...` });
     const existingContainer: ContainerInspectResponse | undefined = await getContainer(
       container.id,
     );
     if (!existingContainer) {
       // assume it was cleaned up some other way
-      this.logger.warn("Container not found, skipping stop and remove steps.", {
+      this.logger.warn("Container not found, skipping stop and delete steps.", {
         id: container.id,
         name: container.name,
       });
       return;
     }
+
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
     }
