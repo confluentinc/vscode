@@ -154,9 +154,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // User logged in successfully so we send an identify event to Segment
     if (authenticatedConnection.status.authentication.user) {
+      const userEmail = new vscode.TelemetryTrustedValue(
+        authenticatedConnection.status.authentication.user,
+      );
       getTelemetryLogger().logUsage("Signed In", {
         identify: true,
-        user: authenticatedConnection.status.authentication.user,
+        user: { ...authenticatedConnection.status.authentication.user, username: userEmail },
       });
     }
     // we want to continue regardless of whether or not the user dismisses the notification,
