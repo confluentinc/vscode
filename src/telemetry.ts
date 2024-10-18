@@ -66,7 +66,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
     }
     analytics = new Analytics({ writeKey, disable: false });
   }
-  // We extract the vscode session ID from the event data, but this random id will be sent if it is undefined (unlikely but not guranteed by the type def)
+
   segmentAnonId = randomUUID();
 
   telemetryLogger = vscode.env.createTelemetryLogger({
@@ -80,7 +80,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
         const traits = prepareSegmentIdentifyTraits(data.user as UserInfo);
         analytics?.identify({
           userId,
-          anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
+          anonymousId: segmentAnonId,
           traits,
         });
         // We don't want to send the user traits or identify prop in the following Track call
@@ -89,7 +89,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
       }
       analytics?.track({
         userId,
-        anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
+        anonymousId: segmentAnonId,
         event: cleanEventName,
         properties: { currentSidecarVersion, ...data }, // VSCode Common properties in data includes the extension version
       });
@@ -118,10 +118,11 @@ type SegmentIdentifyTraits = {
   social_connection?: string;
   username?: string;
   domain?: string;
+  id?: string;
 };
 
 function prepareSegmentIdentifyTraits(userInfo: UserInfo): SegmentIdentifyTraits {
-  let traits: SegmentIdentifyTraits = {};
+  let traits: SegmentIdentifyTraits = { id: userInfo.id };
   if (userInfo.social_connection) traits["social_connection"] = userInfo.social_connection;
   if (userInfo.username) {
     traits["username"] = userInfo.username;
@@ -133,4 +134,22 @@ function prepareSegmentIdentifyTraits(userInfo: UserInfo): SegmentIdentifyTraits
     }
   }
   return traits;
+}
+
+/** Given authenticated session and/or user, process user information & send an Identify event to Segment via TelemetryLogger*/
+export function sendTelemetryIdentifyEvent({
+  eventName,
+  userInfo,
+  session,
+}: {
+  eventName: string;
+  userInfo: UserInfo | undefined;
+  session: vscode.AuthenticationSession | undefined;
+}) {
+  const id = userInfo?.id || session?.account.id;
+  const username = userInfo?.username || session?.account.label;
+  getTelemetryLogger().logUsage(eventName, {
+    identify: true,
+    user: { ...userInfo, id, username: new vscode.TelemetryTrustedValue(username) },
+  });
 }

@@ -63,7 +63,7 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { getTelemetryLogger } from "./telemetry";
+import { getTelemetryLogger, sendTelemetryIdentifyEvent } from "./telemetry";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -251,7 +251,18 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
-  await getCCloudAuthSession();
+  const cloudSession = await getCCloudAuthSession();
+
+  if (cloudSession) {
+    logger.info("Initial CCloud auth session found");
+    sendTelemetryIdentifyEvent({
+      eventName: "Activated With Session",
+      userInfo: undefined,
+      session: cloudSession,
+    });
+  } else {
+    logger.info("No initial CCloud auth session found");
+  }
 
   return disposables;
 }
