@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import { Logger } from "./logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
 import "opentelemetry-instrumentation-fetch-node";
+import { UserInfo } from "./clients/sidecar/models/UserInfo";
 
 const logger = new Logger("telemetry");
 
@@ -65,17 +66,22 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
     }
     analytics = new Analytics({ writeKey, disable: false });
   }
-  // We extract the vscode session ID from the event data, but this random id will be sent if it is undefined (unlikely but not guranteed by the type def)
+
   segmentAnonId = randomUUID();
+
   telemetryLogger = vscode.env.createTelemetryLogger({
     sendEventData: (eventName, data) => {
-      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, ""); // Remove the prefix that vscode adds to event names
-      if (data?.user?.id) userId = data.user.id;
-      if (data?.identify && userId) {
+      // Remove the prefix that vscode adds to event names
+      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, "");
+      // Extract & save the user id if was sent
+      if (data?.user) userId = data.user.id;
+      // To send an identify call, include `identify: true` and a user object in the logUsage call data
+      if (data?.identify && data?.user) {
+        const traits = prepareSegmentIdentifyTraits(data.user as UserInfo);
         analytics?.identify({
           userId,
-          anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
-          traits: { email: data?.user?.username, social_connection: data?.user?.social_connection },
+          anonymousId: segmentAnonId,
+          traits,
         });
         // We don't want to send the user traits or identify prop in the following Track call
         delete data.identify;
@@ -83,7 +89,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
       }
       analytics?.track({
         userId,
-        anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
+        anonymousId: segmentAnonId,
         event: cleanEventName,
         properties: { currentSidecarVersion, ...data }, // VSCode Common properties in data includes the extension version
       });
@@ -106,4 +112,44 @@ export function checkTelemetrySettings(event: Sentry.Event) {
     return null;
   }
   return event;
+}
+
+type SegmentIdentifyTraits = {
+  social_connection?: string;
+  username?: string;
+  domain?: string;
+  id?: string;
+};
+
+function prepareSegmentIdentifyTraits(userInfo: UserInfo): SegmentIdentifyTraits {
+  let traits: SegmentIdentifyTraits = { id: userInfo.id };
+  if (userInfo.social_connection) traits["social_connection"] = userInfo.social_connection;
+  if (userInfo.username) {
+    traits["username"] = userInfo.username;
+    // Validate email and extract domain
+    const emailRegex = /@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+/;
+    const match = userInfo.username.match(emailRegex);
+    if (match) {
+      traits["domain"] = userInfo.username.split("@")[1];
+    }
+  }
+  return traits;
+}
+
+/** Given authenticated session and/or user, process user information & send an Identify event to Segment via TelemetryLogger*/
+export function sendTelemetryIdentifyEvent({
+  eventName,
+  userInfo,
+  session,
+}: {
+  eventName: string;
+  userInfo: UserInfo | undefined;
+  session: vscode.AuthenticationSession | undefined;
+}) {
+  const id = userInfo?.id || session?.account.id;
+  const username = userInfo?.username || session?.account.label;
+  getTelemetryLogger().logUsage(eventName, {
+    identify: true,
+    user: { ...userInfo, id, username: new vscode.TelemetryTrustedValue(username) },
+  });
 }
