@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
-  "version": "0.20.0-14",
+  "version": "0.20.0-15",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
