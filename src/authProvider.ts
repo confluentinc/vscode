@@ -17,7 +17,7 @@ import { getStorageManager } from "./storage";
 import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "./storage/constants";
 import { getResourceManager } from "./storage/resourceManager";
 import { getUriHandler } from "./uriHandler";
-import { getTelemetryLogger } from "./telemetry";
+import { sendTelemetryIdentifyEvent } from "./telemetry";
 
 const logger = new Logger("authProvider");
 
@@ -154,12 +154,10 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // User logged in successfully so we send an identify event to Segment
     if (authenticatedConnection.status.authentication.user) {
-      const userEmail = new vscode.TelemetryTrustedValue(
-        authenticatedConnection.status.authentication.user,
-      );
-      getTelemetryLogger().logUsage("Signed In", {
-        identify: true,
-        user: { ...authenticatedConnection.status.authentication.user, username: userEmail },
+      sendTelemetryIdentifyEvent({
+        eventName: "Signed In",
+        userInfo: authenticatedConnection.status.authentication.user,
+        session: undefined,
       });
     }
     // we want to continue regardless of whether or not the user dismisses the notification,
