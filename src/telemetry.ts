@@ -6,6 +6,7 @@ import * as vscode from "vscode";
 import { Logger } from "./logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
 import "opentelemetry-instrumentation-fetch-node";
+import { UserInfo } from "./clients/sidecar/models/UserInfo";
 
 const logger = new Logger("telemetry");
 
@@ -30,9 +31,9 @@ let warnedAboutSegmentKey = false;
  * Use Proper Case, Noun + Past Tense Verb to represent the user's action (e.g. "Order Completed", "File Downloaded", "User Registered")
  * Optionally, add any relevant data as the second parameter
  *
- * For IDENTIFY calls - add the "identify" key to the data along with a user object (with at least an id) to send an identify type call.
+ * For IDENTIFY calls - use sendTelemetryIdentifyEvent with a user object (with at least an id) to send an identify type call.
  * ```
- * getTelemetryLogger().logUsage("Event That Triggered Identify", { identify: true, user: { id: "123", ...} });"
+ * sendTelemetryIdentifyEvent({eventName: "Event That Triggered Identify", userInfo: { id: "123", ...} });"
  * ```
  * It will send an Identify call followed by a Track event per this Segment recommendation:
  * "Whenever possible, follow the Identify call with a Track event that records what caused the user to be identified."
@@ -65,17 +66,20 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
     }
     analytics = new Analytics({ writeKey, disable: false });
   }
-  // We extract the vscode session ID from the event data, but this random id will be sent if it is undefined (unlikely but not guranteed by the type def)
+
   segmentAnonId = randomUUID();
+
   telemetryLogger = vscode.env.createTelemetryLogger({
     sendEventData: (eventName, data) => {
-      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, ""); // Remove the prefix that vscode adds to event names
+      // Remove the prefix that vscode adds to event names
+      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, "");
+      // Extract & save the user id if was sent
       if (data?.user?.id) userId = data.user.id;
-      if (data?.identify && userId) {
+      if (data?.identify && data?.user) {
         analytics?.identify({
           userId,
-          anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
-          traits: { email: data?.user?.username, social_connection: data?.user?.social_connection },
+          anonymousId: segmentAnonId,
+          ...data.user,
         });
         // We don't want to send the user traits or identify prop in the following Track call
         delete data.identify;
@@ -83,7 +87,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
       }
       analytics?.track({
         userId,
-        anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
+        anonymousId: segmentAnonId,
         event: cleanEventName,
         properties: { currentSidecarVersion, ...data }, // VSCode Common properties in data includes the extension version
       });
@@ -106,4 +110,34 @@ export function checkTelemetrySettings(event: Sentry.Event) {
     return null;
   }
   return event;
+}
+
+/** Given authenticated session and/or user, process user information & send an Identify event to Segment via TelemetryLogger*/
+export function sendTelemetryIdentifyEvent({
+  eventName,
+  userInfo,
+  session,
+}: {
+  eventName: string;
+  userInfo: UserInfo | undefined;
+  session: vscode.AuthenticationSession | undefined;
+}) {
+  const id = userInfo?.id || session?.account.id;
+  const username = userInfo?.username || session?.account.label;
+  const social_connection = userInfo?.social_connection;
+  let domain: string | undefined;
+  if (username) {
+    //  email is redacted by VSCode TelemetryLogger, but we extract domain for Confluent analytics use
+    const emailRegex = /@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+/;
+    const match = username.match(emailRegex);
+    if (match) {
+      domain = username.split("@")[1];
+    }
+  }
+  if (id) {
+    getTelemetryLogger().logUsage(eventName, {
+      identify: true,
+      user: { id, domain, social_connection },
+    });
+  }
 }
