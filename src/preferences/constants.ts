@@ -24,4 +24,3 @@ export const LOCAL_KAFKA_IMAGE = prefix + "localDocker.kafkaImageRepo";
 export const LOCAL_KAFKA_IMAGE_TAG = prefix + "localDocker.kafkaImageTag";
 
 export const LOCAL_KAFKA_REST_HOST = prefix + "localDocker.kafkaRestHost";
-export const LOCAL_KAFKA_PLAINTEXT_PORT = prefix + "localDocker.kafkaPlainTextPort";
