@@ -158,12 +158,17 @@ export class EventListener {
       for await (const eventString of yieldedEventStrings) {
         let event: SystemEventMessage;
         try {
-          event = JSON.parse(eventString);
+          event = JSON.parse(eventString.trim());
         } catch (error) {
-          logger.error("error parsing event:", error);
-          // TODO: notify the user of the error here? if a container we care about is started or
-          // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
-          // the view to see the current state
+          if (error instanceof Error) {
+            logger.error("error parsing event", {
+              error: error.message,
+              eventString: eventString.trim(),
+            });
+            // TODO: notify the user of the error here? if a container we care about is started or
+            // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
+            // the view to see the current state
+          }
           continue;
         }
         await this.handleEvent(event);
