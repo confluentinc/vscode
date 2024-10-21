@@ -10,12 +10,13 @@ import {
 import * as context from "../context";
 import { localKafkaConnected } from "../emitters";
 import * as configs from "./configs";
-import { EventListener, LOCAL_KAFKA_IMAGE, SystemEventMessage } from "./eventListener";
+import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
+import { EventListener, SystemEventMessage } from "./eventListener";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",
   Type: "container",
-  Actor: { Attributes: { image: LOCAL_KAFKA_IMAGE } },
+  Actor: { Attributes: { image: DEFAULT_KAFKA_IMAGE_REPO } },
 };
 
 describe("docker/eventListener.ts EventListener methods", function () {
