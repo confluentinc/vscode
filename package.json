@@ -339,20 +339,13 @@
         },
         "confluent.localDocker.kafkaImageTag": {
           "type": "string",
-          "default": "latest",
+          "default": "7.6.0",
           "description": "Docker image tag to use when starting a local Kafka container"
         },
         "confluent.localDocker.kafkaRestHost": {
           "type": "string",
           "default": "localhost",
           "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
-        },
-        "confluent.localDocker.kafkaPlainTextPort": {
-          "type": "number",
-          "default": 9092,
-          "description": "Port to use for the Kafka broker when starting a local Kafka cluster",
-          "minimum": 1,
-          "maximum": 65535
         }
       }
     },
