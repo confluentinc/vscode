@@ -305,7 +305,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const ports: KafkaContainerPorts = brokerConfig.ports;
 
     const envVars = [
-      `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${containerName}:${ports.broker},PLAINTEXT_HOST://${containerName}:${ports.plainText}`,
+      `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${containerName}:${ports.broker},PLAINTEXT_HOST://${kafkaRestHost}:${ports.plainText}`,
       `KAFKA_BROKER_ID=${brokerNum}`,
       "KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
       `KAFKA_CONTROLLER_QUORUM_VOTERS=${controllerQuorumVoters.join(",")}`,
