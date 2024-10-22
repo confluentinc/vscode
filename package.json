@@ -419,6 +419,14 @@
           "when": "false"
         },
         {
+          "command": "confluent.kafka-clusters.item.rename",
+          "when": "false"
+        },
+        {
+          "command": "confluent.resources.item.rename",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemaViewer.refresh",
           "when": "false"
         },
