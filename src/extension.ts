@@ -30,7 +30,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import * as vscode from "vscode";
-import { checkTelemetrySettings } from "./telemetry";
+import { checkTelemetrySettings } from "./telemetry/telemetry";
 if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
 }
@@ -63,7 +63,8 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { getTelemetryLogger } from "./telemetry";
+import { getTelemetryLogger } from "./telemetry/telemetryLogger";
+import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -251,7 +252,16 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
-  await getCCloudAuthSession();
+  const cloudSession = await getCCloudAuthSession();
+
+  // Send an Identify event to Segment with the session info if available
+  if (cloudSession) {
+    sendTelemetryIdentifyEvent({
+      eventName: "Activated With Session",
+      userInfo: undefined,
+      session: cloudSession,
+    });
+  }
 
   return disposables;
 }

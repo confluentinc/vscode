@@ -7,7 +7,7 @@ import { ConfluentCloudAuthProvider } from "./authProvider";
 import { ExtensionContextNotSetError } from "./errors";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
-import { checkTelemetrySettings } from "./telemetry";
+import { checkTelemetrySettings } from "./telemetry/telemetry";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
