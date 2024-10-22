@@ -1,6 +1,36 @@
 body:
   - type: textarea
     attributes:
+      label: Users
+      description: Who is affected by this issue?
+      value: |
+        - [ ] Development manager tasked with ensuring a team is successful in using streaming data
+        - [ ] Developer on a team tasked with building new features using streaming data
+        - [ ] Developer at an org who manages a streaming platform while building new features that use streaming data
+        - [ ] Developer tasked with building pipelines for use in business analytics
+        - [ ] Other: [User type] tasked with [primary goal in the realm of streaming data]
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Problems
+      description: What problem are these users experiencing?
+      value: |
+        1.
+        2.
+        3.
+  - type: textarea
+    attributes:
+      label: Solutions
+      description: How will this issue solve this problem?
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
       label: Goals
       description: Short list of what the feature request aims to address?
       value: |
