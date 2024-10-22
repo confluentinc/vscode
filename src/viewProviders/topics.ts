@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
-import { ccloudConnected, currentKafkaClusterChanged } from "../emitters";
+import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -66,6 +66,17 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         // a CCloud Kafka Cluster
         logger.debug(
           "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
+          { connected },
+        );
+        this.reset();
+      }
+    });
+    localKafkaConnected.event((connected: boolean) => {
+      if (this.kafkaCluster?.isLocal) {
+        // any transition of local resource availability should reset the tree view if we're focused
+        // on a local Kafka cluster
+        logger.debug(
+          "Resetting topics view due to localKafkaConnected event and currently focused on a local cluster",
           { connected },
         );
         this.reset();
