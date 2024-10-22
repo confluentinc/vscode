@@ -14,7 +14,7 @@ async function startLocalResourcesWithProgress() {
     return;
   }
 
-  await runWorkflowWithProgress();
+  await runWorkflowWithProgress(true);
 }
 
 async function stopLocalResourcesWithProgress() {
