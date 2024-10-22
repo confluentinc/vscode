@@ -3,7 +3,15 @@ import { randomBytes } from "crypto";
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
-import { commands, ExtensionContext, Uri, ViewColumn, window, workspace } from "vscode";
+import {
+  commands,
+  ExtensionContext,
+  Uri,
+  ViewColumn,
+  WebviewPanel,
+  window,
+  workspace,
+} from "vscode";
 import {
   canAccessSchemaForTopic,
   showNoSchemaAccessWarningNotification,
@@ -24,6 +32,7 @@ import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { getTelemetryLogger } from "./telemetry";
+import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
@@ -36,22 +45,71 @@ export function activateMessageViewer(context: ExtensionContext) {
   rate limiting for multiple active message viewers. */
   const schedule = scheduler(4, 500);
 
+  /* We track active topic as a kafka topic of a webview panel that is currently
+  visible on the screen. When the user clicks on Duplicate Message Browser action
+  at the top of the window, we can use the topic entity to start another message
+  viewer with the same topic. Otherwise, we use webview panel cache to only keep
+  a single active message browser per topic. */
+  let activeTopic: KafkaTopic | null = null;
+  const cache = new WebviewPanelCache();
+
   // commands
   context.subscriptions.push(
     // the consume command is available in topic tree view's item actions
-    registerCommandWithLogging("confluent.topic.consume", async (topic?: KafkaTopic) => {
-      if (topic == null) {
-        const cluster = await kafkaClusterQuickPick(true, true);
-        if (cluster == null) return;
-        topic = await topicQuickPick(cluster);
-        if (topic == null) return;
-      }
+    registerCommandWithLogging(
+      "confluent.topic.consume",
+      async (topic?: KafkaTopic, duplicate = false) => {
+        if (topic == null) {
+          const cluster = await kafkaClusterQuickPick(true, true);
+          if (cluster == null) return;
+          topic = await topicQuickPick(cluster);
+          if (topic == null) return;
+        }
 
-      if (!(await canAccessSchemaForTopic(topic))) {
-        showNoSchemaAccessWarningNotification();
+        if (!(await canAccessSchemaForTopic(topic))) {
+          showNoSchemaAccessWarningNotification();
+        }
+        const sidecar = await getSidecar();
+
+        const staticRoot = Uri.joinPath(context.extensionUri, "webview");
+        const [panel, cached] = cache.findOrCreate(
+          duplicate
+            ? `${topic.clusterId}/${topic.name}/${Math.random().toString(16).slice(2)}`
+            : `${topic.clusterId}/${topic.name}`,
+          "message-viewer",
+          `Topic: ${topic.name}`,
+          ViewColumn.One,
+          { enableScripts: true, localResourceRoots: [staticRoot] },
+        );
+
+        // this panel going to be active, so setting its topic to the currently active
+        activeTopic = topic;
+        if (cached) {
+          panel.reveal();
+        } else {
+          panel.webview.html = messageViewerTemplate({
+            cspSource: panel.webview.cspSource,
+            nonce: randomBytes(16).toString("base64"),
+            webviewUri: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
+            webviewStylesheet: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.css")),
+            messageViewerUri: panel.webview.asWebviewUri(
+              Uri.joinPath(staticRoot, "message-viewer.js"),
+            ),
+          });
+
+          panel.onDidChangeViewState((e) => {
+            // whenever we switch between panels, override active topic
+            if (e.webviewPanel.active) activeTopic = topic;
+          });
+
+          messageViewerStartPollingCommand(panel, topic, sidecar, schedule);
+        }
+      },
+    ),
+    registerCommandWithLogging("confluent.topic.consume.duplicate", async () => {
+      if (activeTopic != null) {
+        commands.executeCommand("confluent.topic.consume", activeTopic, true);
       }
-      const sidecar = await getSidecar();
-      return messageViewerStartPollingCommand(context, topic, sidecar, schedule);
     }),
   );
 }
@@ -71,27 +129,11 @@ const DEFAULT_CONSUME_PARAMS = {
 };
 
 function messageViewerStartPollingCommand(
-  context: ExtensionContext,
+  panel: WebviewPanel,
   topic: KafkaTopic,
   sidecar: SidecarHandle,
   schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
 ) {
-  const staticRoot = Uri.joinPath(context.extensionUri, "webview");
-  const panel = window.createWebviewPanel(
-    "message-viewer",
-    `Topic: ${topic.name}`,
-    ViewColumn.One,
-    { enableScripts: true, localResourceRoots: [staticRoot] },
-  );
-
-  panel.webview.html = messageViewerTemplate({
-    cspSource: panel.webview.cspSource,
-    nonce: randomBytes(16).toString("base64"),
-    webviewUri: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
-    webviewStylesheet: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.css")),
-    messageViewerUri: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "message-viewer.js")),
-  });
-
   const service = sidecar.getKafkaConsumeApi(topic.connectionId);
   const partitionApi = sidecar.getPartitionV3Api(topic.clusterId, topic.connectionId);
 
