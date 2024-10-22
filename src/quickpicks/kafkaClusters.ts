@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getEnvironments } from "../graphql/environments";
-import { getLocalKafkaClusters } from "../graphql/local";
+import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -39,7 +39,10 @@ export async function kafkaClusterQuickPick(
   // first we grab all available (local+CCloud) Kafka Clusters
   let localKafkaClusters: LocalKafkaCluster[] = [];
   if (includeLocal) {
-    localKafkaClusters = await getLocalKafkaClusters();
+    const localResources: LocalResourceGroup[] = await getLocalResources();
+    localKafkaClusters = localResources.flatMap(
+      (group): LocalKafkaCluster[] => group.kafkaClusters,
+    );
   }
   let cloudKafkaClusters: CCloudKafkaCluster[] = [];
   let cloudEnvironments: CCloudEnvironment[] = [];
