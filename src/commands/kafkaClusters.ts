@@ -15,13 +15,9 @@ const logger = new Logger("commands.kafkaClusters");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) {
-  // TEMPORARY: remove this info message and un-comment the lines below once the sidecar supports
-  // mutations via GraphQL to update the KafkaCluster name
-  vscode.window.showInformationMessage(
-    "COMING SOON: Renaming Kafka clusters is not yet supported.",
-  );
-  return;
-
+  // TODO: un-comment the lines below once the sidecar supports mutations via GraphQL
+  // refer to https://github.com/confluentinc/vscode/pull/420 for reverting changes to package.json
+  // ---
   // // If the command was triggered through the command palette, `item` will be undefined, so we
   // // need to prompt the user for the CCloud Kafka cluster.
   // const kafkaCluster: CCloudKafkaCluster | undefined =
@@ -29,10 +25,8 @@ async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) 
   // if (!kafkaCluster) {
   //   return;
   // }
-
   // // LocalKafkaClusters aren't returned above, so we can safely assume it's a CCloudKafkaCluster
   // const cloudKafkaCluster = kafkaCluster as CCloudKafkaCluster;
-
   // const newName: string | undefined = await vscode.window.showInputBox({
   //   prompt: "Enter new name",
   //   ignoreFocusOut: true,
@@ -41,7 +35,6 @@ async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) 
   // if (!newName) {
   //   return;
   // }
-
   // await vscode.window.withProgress(
   //   {
   //     location: vscode.ProgressLocation.Notification,

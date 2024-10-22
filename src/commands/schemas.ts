@@ -2,12 +2,12 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
+import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { ContainerTreeItem } from "../models/main";
 
 const logger = new Logger("commands.schemas");
 
@@ -37,25 +37,21 @@ async function copySchemaRegistryId() {
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
 }
 
+// refer to https://github.com/confluentinc/vscode/pull/420 for reverting changes to package.json for
+// the following three commands:
 function refreshCommand(item: any) {
   logger.info("item", item);
-  vscode.window.showInformationMessage(
-    "COMING SOON: Refreshing schema content is not yet supported.",
-  );
+  // TODO: implement this
 }
 
 function validateCommand(item: any) {
   logger.info("item", item);
-  vscode.window.showInformationMessage(
-    "COMING SOON: Validating schema content is not yet supported.",
-  );
+  // TODO: implement this
 }
 
 function uploadVersionCommand(item: any) {
   logger.info("item", item);
-  vscode.window.showInformationMessage(
-    "COMING SOON: Uploading new version to Schema Registry is not yet supported.",
-  );
+  // TODO: implement this
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */

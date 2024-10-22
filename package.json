@@ -419,6 +419,14 @@
           "when": "false"
         },
         {
+          "command": "confluent.kafka-clusters.item.rename",
+          "when": "false"
+        },
+        {
+          "command": "confluent.resources.item.rename",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemaViewer.refresh",
           "when": "false"
         },
@@ -471,17 +479,17 @@
         {
           "command": "confluent.schemaViewer.refresh",
           "group": "navigation@1",
-          "when": "resourceFilename =~ /.*\\.confluent\\.(avsc|json|proto)/"
+          "when": "false"
         },
         {
           "command": "confluent.schemaViewer.validate",
           "group": "navigation@2",
-          "when": "resourceFilename =~ /.*\\.confluent\\.(avsc|json|proto)/"
+          "when": "false"
         },
         {
           "command": "confluent.schemaViewer.uploadVersion",
           "group": "navigation@3",
-          "when": "resourceFilename =~ /.*\\.confluent\\.(avsc|json|proto)/"
+          "when": "false"
         }
       ],
       "view/title": [
@@ -564,7 +572,7 @@
         },
         {
           "command": "confluent.kafka-clusters.item.rename",
-          "when": "view == confluent-resources && viewItem == ccloud-kafka-cluster",
+          "when": "false",
           "group": "inline@2"
         },
         {
@@ -584,7 +592,7 @@
         },
         {
           "command": "confluent.resources.item.rename",
-          "when": "view == confluent-resources && viewItem == ccloud-environment",
+          "when": "false",
           "group": "inline@2"
         },
         {
