@@ -26,13 +26,13 @@ import {
   getContainersForImage,
   startContainer,
 } from "../containers";
+import { getLocalKafkaImageTag } from "../images";
 import { createNetwork } from "../networks";
 
 const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
 
 export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   static imageRepo = "confluentinc/confluent-local";
-  imageTag: string = "7.6.0";
 
   logger = new Logger("docker.workflow.confluent-local");
 
@@ -64,6 +64,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<void> {
     this.progress = progress;
     this.logger.debug(`Starting "confluent-local" workflow...`);
+    this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
     await this.checkForImage();
@@ -108,6 +109,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
     let success: boolean = true;
     for (const brokerConfig of brokerConfigs) {
+      // get the environment variables for this broker container based on its number before starting
       const containerEnvs: string[] = allContainerEnvs[brokerConfig.brokerNum - 1];
       const startedContainer: ContainerInspectResponse | undefined =
         await this.startLocalKafkaContainer(brokerConfig, containerEnvs);
