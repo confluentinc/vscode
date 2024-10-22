@@ -48,12 +48,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
-      // TODO(shoup): check this for CCloud vs local once we start supporting local SR; check the
-      // TopicViewProvider for a similar check
-      logger.debug("ccloudConnected event fired, resetting", { connected });
-      // any transition of CCloud connection state should reset the tree view
-      this.reset();
+      if (this.schemaRegistry?.isCCloud) {
+        logger.debug("ccloudConnected event fired, resetting", { connected });
+        // any transition of CCloud connection state should reset the tree view
+        this.reset();
+      }
     });
+
+    // TODO(shoup): check localKafkaConnected and reset this view if local SR availability changes
 
     currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistry | null) => {
       if (!schemaRegistry) {
