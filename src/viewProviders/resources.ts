@@ -243,12 +243,16 @@ export async function loadLocalResources(): Promise<
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // Kafka cluster first
     const localKafkaClusters: LocalKafkaCluster[] = localResources.flatMap(
-      (group) => group.kafkaClusters,
+      (group): LocalKafkaCluster[] => group.kafkaClusters,
     );
     // ...then Schema Registry
     const localSchemaRegistries: LocalSchemaRegistry[] = localResources
-      .flatMap((group): LocalSchemaRegistry | undefined => group.schemaRegistry)
-      .filter((schemaRegistry: LocalSchemaRegistry | undefined) => schemaRegistry !== undefined);
+      .flatMap((group: LocalResourceGroup): LocalSchemaRegistry | undefined => group.schemaRegistry)
+      .filter(
+        (schemaRegistry: LocalSchemaRegistry | undefined): schemaRegistry is LocalSchemaRegistry =>
+          schemaRegistry !== undefined,
+      );
+    localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
     // TODO: this should be handled in the preloader once it (and ResourceManager) start handling
