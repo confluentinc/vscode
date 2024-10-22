@@ -10,17 +10,17 @@ import {
   TEST_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestStorageManager } from "../../tests/unit/testUtils";
-import {
-  StateEnvironments,
-  StateKafkaClusters,
-  StateKafkaTopics,
-  StateSchemaRegistry,
-} from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import {
+  StateEnvironments,
+  StateKafkaClusters,
+  StateKafkaTopics,
+  StateSchemaRegistry,
+} from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,

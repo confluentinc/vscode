@@ -1,3 +1,30 @@
+// Global/Workspace state keys
+export enum StateEnvironments {
+  CCLOUD = "environments.ccloud",
+}
+
+export enum StateKafkaClusters {
+  LOCAL = "kafkaClusters.local",
+  CCLOUD = "kafkaClusters.ccloud",
+}
+
+export enum StateKafkaTopics {
+  LOCAL = "kafkaTopics.local",
+  CCLOUD = "kafkaTopics.ccloud",
+}
+
+export enum StateSchemaRegistry {
+  CCLOUD = "schemaRegistries.ccloud",
+}
+
+export enum StateSchemas {
+  CCLOUD = "schemas.ccloud",
+}
+
+export enum StateDiffs {
+  SELECTED_RESOURCE = "diffs.selectedResource",
+}
+
 // SECRET STORAGE KEYS
 // NOTE: these aren't actually storing any secrets, just used for cross-workspace event handling
 

@@ -1,18 +1,18 @@
 import { StorageManager, getStorageManager } from ".";
-import {
-  StateEnvironments,
-  StateKafkaClusters,
-  StateKafkaTopics,
-  StateSchemaRegistry,
-  StateSchemas,
-} from "../constants";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { AUTH_COMPLETED_KEY } from "./constants";
+import {
+  AUTH_COMPLETED_KEY,
+  StateEnvironments,
+  StateKafkaClusters,
+  StateKafkaTopics,
+  StateSchemaRegistry,
+  StateSchemas,
+} from "./constants";
 
 const logger = new Logger("storage.resourceManager");
 

@@ -1,32 +1,5 @@
 import { ConnectionSpec } from "./clients/sidecar";
 
-// Global/Workspace state keys
-export enum StateEnvironments {
-  CCLOUD = "environments.ccloud",
-}
-
-export enum StateKafkaClusters {
-  LOCAL = "kafkaClusters.local",
-  CCLOUD = "kafkaClusters.ccloud",
-}
-
-export enum StateKafkaTopics {
-  LOCAL = "kafkaTopics.local",
-  CCLOUD = "kafkaTopics.ccloud",
-}
-
-export enum StateSchemaRegistry {
-  CCLOUD = "schemaRegistries.ccloud",
-}
-
-export enum StateSchemas {
-  CCLOUD = "schemas.ccloud",
-}
-
-export enum StateDiffs {
-  SELECTED_RESOURCE = "diffs.selectedResource",
-}
-
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
  * @see https://code.visualstudio.com/api/references/icons-in-labels
