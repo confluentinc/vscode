@@ -30,7 +30,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import * as vscode from "vscode";
-import { checkTelemetrySettings } from "./telemetry";
+import { checkTelemetrySettings } from "./telemetry/telemetry";
 if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
 }
@@ -63,7 +63,8 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { getTelemetryLogger, sendTelemetryIdentifyEvent } from "./telemetry";
+import { getTelemetryLogger } from "./telemetry/telemetryLogger";
+import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";

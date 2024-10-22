@@ -10,7 +10,7 @@ import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, Uri, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
-import { getTelemetryLogger } from "./telemetry";
+import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/scaffold-form";

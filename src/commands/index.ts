@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { Logger } from "../logging";
-import { getTelemetryLogger } from "../telemetry";
+import { getTelemetryLogger } from "../telemetry/telemetryLogger";
 
 const logger = new Logger("commands");
 

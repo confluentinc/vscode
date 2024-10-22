@@ -17,7 +17,7 @@ import { getStorageManager } from "./storage";
 import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "./storage/constants";
 import { getResourceManager } from "./storage/resourceManager";
 import { getUriHandler } from "./uriHandler";
-import { sendTelemetryIdentifyEvent } from "./telemetry";
+import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 
 const logger = new Logger("authProvider");
 

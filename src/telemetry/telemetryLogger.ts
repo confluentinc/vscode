@@ -1,12 +1,10 @@
 import { Analytics } from "@segment/analytics-node";
-import * as Sentry from "@sentry/node";
 import { randomUUID } from "crypto";
 import { version as currentSidecarVersion } from "ide-sidecar";
 import * as vscode from "vscode";
-import { Logger } from "./logging";
+import { Logger } from "../logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
 import "opentelemetry-instrumentation-fetch-node";
-import { UserInfo } from "./clients/sidecar/models/UserInfo";
 
 const logger = new Logger("telemetry");
 
@@ -31,12 +29,7 @@ let warnedAboutSegmentKey = false;
  * Use Proper Case, Noun + Past Tense Verb to represent the user's action (e.g. "Order Completed", "File Downloaded", "User Registered")
  * Optionally, add any relevant data as the second parameter
  *
- * For IDENTIFY calls - use sendTelemetryIdentifyEvent with a userInfo or session object to send an identify type call.
- * ```
- * sendTelemetryIdentifyEvent({eventName: "Event That Triggered Identify", userInfo: { id: "123", ...} });"
- * ```
- * It will send an Identify call followed by a Track event per this Segment recommendation:
- * "Whenever possible, follow the Identify call with a Track event that records what caused the user to be identified."
+ * For IDENTIFY calls - use sendTelemetryIdentifyEvent from telemetry.ts instead
  */
 export function getTelemetryLogger(): vscode.TelemetryLogger {
   // If there is already an instance of the Segment Telemetry Logger, return it
@@ -101,43 +94,4 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
   });
 
   return telemetryLogger;
-}
-
-export function checkTelemetrySettings(event: Sentry.Event) {
-  const telemetryLevel = vscode.workspace.getConfiguration()?.get("telemetry.telemetryLevel");
-  if (!vscode.env.isTelemetryEnabled || telemetryLevel === "off") {
-    // Returning `null` will drop the event
-    return null;
-  }
-  return event;
-}
-
-/** Given authenticated session and/or userInfo, clean the data & send an Identify event to Segment via TelemetryLogger*/
-export function sendTelemetryIdentifyEvent({
-  eventName,
-  userInfo,
-  session,
-}: {
-  eventName: string;
-  userInfo: UserInfo | undefined;
-  session: vscode.AuthenticationSession | undefined;
-}) {
-  const id = userInfo?.id || session?.account.id;
-  const username = userInfo?.username || session?.account.label;
-  const social_connection = userInfo?.social_connection;
-  let domain: string | undefined;
-  if (username) {
-    //  email is redacted by VSCode TelemetryLogger, but we extract domain for Confluent analytics use
-    const emailRegex = /@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+/;
-    const match = username.match(emailRegex);
-    if (match) {
-      domain = username.split("@")[1];
-    }
-  }
-  if (id) {
-    getTelemetryLogger().logUsage(eventName, {
-      identify: true,
-      user: { id, domain, social_connection },
-    });
-  }
 }
