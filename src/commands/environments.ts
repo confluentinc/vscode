@@ -12,8 +12,8 @@ async function renameEnvironmentCommand(item?: CCloudEnvironment | undefined) {
     return;
   }
 
-  // TODO: fix this once we can update CCloud environments via the sidecar
-  vscode.window.showInformationMessage("COMING SOON: Renaming environments is not yet supported.");
+  // TODO: implement this once we can update CCloud environments via the sidecar
+  // refer to https://github.com/confluentinc/vscode/pull/420 for reverting changes to package.json
 }
 
 export function registerEnvironmentCommands(): vscode.Disposable[] {
