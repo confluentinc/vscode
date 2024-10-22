@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.18.2
+
+### Changed
+
+- Updated the sidecar version to better support SSL configurations for Windows users.
+
 ## 0.18.1
 
 ### Added
