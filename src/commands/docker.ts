@@ -28,7 +28,7 @@ async function stopLocalResourcesWithProgress() {
   await runWorkflowWithProgress(false);
 }
 
-async function runWorkflowWithProgress(start: boolean = true) {
+async function runWorkflowWithProgress(start: boolean = true, withSchemaRegistry: boolean = false) {
   const imageRepo: string = getLocalKafkaImageName();
   logger.debug("using image repo", { imageRepo, confluent: ConfluentLocalWorkflow.imageRepo });
 
@@ -53,7 +53,7 @@ async function runWorkflowWithProgress(start: boolean = true) {
     },
     async (progress, token: CancellationToken) => {
       if (start) {
-        await workflow.start(token, progress);
+        await workflow.start(token, progress, withSchemaRegistry);
       } else {
         await workflow.stop(token, progress);
       }
