@@ -1,9 +1,8 @@
 import { Analytics } from "@segment/analytics-node";
-import * as Sentry from "@sentry/node";
 import { randomUUID } from "crypto";
 import { version as currentSidecarVersion } from "ide-sidecar";
 import * as vscode from "vscode";
-import { Logger } from "./logging";
+import { Logger } from "../logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
 import "opentelemetry-instrumentation-fetch-node";
 
@@ -30,12 +29,7 @@ let warnedAboutSegmentKey = false;
  * Use Proper Case, Noun + Past Tense Verb to represent the user's action (e.g. "Order Completed", "File Downloaded", "User Registered")
  * Optionally, add any relevant data as the second parameter
  *
- * For IDENTIFY calls - add the "identify" key to the data along with a user object (with at least an id) to send an identify type call.
- * ```
- * getTelemetryLogger().logUsage("Event That Triggered Identify", { identify: true, user: { id: "123", ...} });"
- * ```
- * It will send an Identify call followed by a Track event per this Segment recommendation:
- * "Whenever possible, follow the Identify call with a Track event that records what caused the user to be identified."
+ * For IDENTIFY calls - use sendTelemetryIdentifyEvent from telemetry.ts instead
  */
 export function getTelemetryLogger(): vscode.TelemetryLogger {
   // If there is already an instance of the Segment Telemetry Logger, return it
@@ -65,17 +59,20 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
     }
     analytics = new Analytics({ writeKey, disable: false });
   }
-  // We extract the vscode session ID from the event data, but this random id will be sent if it is undefined (unlikely but not guranteed by the type def)
+
   segmentAnonId = randomUUID();
+
   telemetryLogger = vscode.env.createTelemetryLogger({
     sendEventData: (eventName, data) => {
-      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, ""); // Remove the prefix that vscode adds to event names
+      // Remove the prefix that vscode adds to event names
+      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, "");
+      // Extract & save the user id if was sent
       if (data?.user?.id) userId = data.user.id;
-      if (data?.identify && userId) {
+      if (data?.identify && data?.user) {
         analytics?.identify({
           userId,
-          anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
-          traits: { email: data?.user?.username, social_connection: data?.user?.social_connection },
+          anonymousId: segmentAnonId,
+          traits: { ...data.user },
         });
         // We don't want to send the user traits or identify prop in the following Track call
         delete data.identify;
@@ -83,7 +80,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
       }
       analytics?.track({
         userId,
-        anonymousId: data?.["common.vscodesessionid"] || segmentAnonId,
+        anonymousId: segmentAnonId,
         event: cleanEventName,
         properties: { currentSidecarVersion, ...data }, // VSCode Common properties in data includes the extension version
       });
@@ -97,13 +94,4 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
   });
 
   return telemetryLogger;
-}
-
-export function checkTelemetrySettings(event: Sentry.Event) {
-  const telemetryLevel = vscode.workspace.getConfiguration()?.get("telemetry.telemetryLevel");
-  if (!vscode.env.isTelemetryEnabled || telemetryLevel === "off") {
-    // Returning `null` will drop the event
-    return null;
-  }
-  return event;
 }

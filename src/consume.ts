@@ -23,7 +23,7 @@ import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
-import { getTelemetryLogger } from "./telemetry";
+import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
