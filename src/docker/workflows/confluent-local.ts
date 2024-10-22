@@ -36,7 +36,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
   logger = new Logger("docker.workflow.confluent-local");
 
-  networkName: string = "confluent-local-network";
+  networkName: string = "vscode-confluent-local-network";
 
   // ensure only one instance of this workflow can run at a time
   private static instance: ConfluentLocalWorkflow;
@@ -159,6 +159,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     });
   }
 
+  /** Start a Kafka container with the provided broker configuration and environment variables. */
   private async startLocalKafkaContainer(
     brokerConfig: KafkaBrokerConfig,
     envVars: string[],
@@ -331,17 +332,19 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   }
 }
 
-// KAFKA_CONTROLLER_QUORUM_VOTERS=1@confluent-local-broker-1:49808,2@confluent-local-broker-2:49809
+/** Convert an array of broker configs to a list of controller quorum voter strings. */
 function brokerConfigsToControllerQuorumVoters(configs: KafkaBrokerConfig[]): string[] {
   return configs.map(
     (config) => `${config.brokerNum}@${config.containerName}:${config.ports.controller}`,
   );
 }
 
+/** Convert an array of broker configs to a list of REST bootstrap server strings. */
 function brokerConfigsToRestBootstrapServers(configs: KafkaBrokerConfig[]): string[] {
   return configs.map((config) => `${config.containerName}:${config.ports.broker}`);
 }
 
+/** Validate the user's input for the number of brokers/containers to start. */
 function validateBrokerInput(userInput: string): string | InputBoxValidationMessage | undefined {
   const num: number = parseInt(userInput, 10);
   if (isNaN(num) || num < 1 || num > 4) {
