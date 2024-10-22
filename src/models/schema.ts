@@ -1,6 +1,6 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
 
 export enum SchemaType {
@@ -18,16 +18,13 @@ const extensionMap: { [key in SchemaType]: string } = {
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
 export class Schema extends Data {
-  // TODO: this will need to be updated once we split this class into LocalSchema and CCloudSchema
-  readonly connectionId = CCLOUD_CONNECTION_ID;
-
   id!: Enforced<string>;
   subject!: Enforced<string>;
   version!: Enforced<number>;
   type!: SchemaType;
   // added separately from the response data, used for follow-on API calls
   schemaRegistryId!: Enforced<string>;
-  environmentId!: Enforced<string>;
+  environmentId?: Enforced<string>;
 
   /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
@@ -52,12 +49,22 @@ export class Schema extends Data {
   }
 
   get ccloudUrl(): string {
+    if (this.isLocalSchema()) {
+      return "";
+    }
     return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas/${this.subject}`;
+  }
+
+  isLocalSchema(): boolean {
+    return this.environmentId == null;
+  }
+
+  get connectionId(): string {
+    return this.isLocalSchema() ? LOCAL_CONNECTION_ID : CCLOUD_CONNECTION_ID;
   }
 }
 
 // Tree item representing a CCloud Schema Registry schema
-// TODO: SIDECAR UPDATE
 export class SchemaTreeItem extends vscode.TreeItem {
   resource: Schema;
 
@@ -77,18 +84,20 @@ export class SchemaTreeItem extends vscode.TreeItem {
 }
 
 function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
-  // TODO(shoup) update for local SR once available
   const tooltip = new CustomMarkdownString()
     .appendMarkdown("#### $(primitive-square) Schema")
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Subject: \`${resource.subject}\`\n\n`)
     .appendMarkdown(`Version: \`${resource.version}\`\n\n`)
-    .appendMarkdown(`Type: \`${resource.type}\``)
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(
-      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
-    );
+    .appendMarkdown(`Type: \`${resource.type}\``);
+  if (!resource.isLocalSchema()) {
+    tooltip
+      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(
+        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+      );
+  }
   return tooltip;
 }
 
