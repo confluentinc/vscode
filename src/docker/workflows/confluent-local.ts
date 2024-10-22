@@ -66,7 +66,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     withSchemaRegistry: boolean = false,
   ): Promise<void> {
     this.progress = progress;
-    this.logger.debug(`Starting "confluent-local" workflow...`);
+    this.logger.debug(`Starting "confluent-local" workflow...`, { withSchemaRegistry });
     this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
@@ -77,6 +77,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       this.imageTag,
     );
     if (existingContainers.length > 0) {
+      this.logger.warn("Container already exists, skipping creation.", {
+        imageRepo: ConfluentLocalWorkflow.imageRepo,
+        imageTag: this.imageTag,
+      });
       throw new ContainerExistsError("Container already exists");
     }
 
@@ -130,6 +134,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
 
+    const waitMsg = `Waiting for container${numContainers > 1 ? "s" : ""} to be ready...`;
+    this.logger.debug(waitMsg);
+    this.progress?.report({ message: waitMsg });
+    await this.waitForLocalResourceEventChange();
+
     if (withSchemaRegistry) {
       const startedSRContainer: ContainerInspectResponse | undefined =
         await this.startLocalSchemaRegistryContainer(brokerConfigs);
@@ -143,11 +152,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       }
       this.containers.push({ id: startedSRContainer.Id, name: startedSRContainer.Name });
     }
-
-    const waitMsg = `Waiting for container${numContainers > 1 ? "s" : ""} to be ready...`;
-    this.logger.debug(waitMsg);
-    this.progress?.report({ message: waitMsg });
-    await this.waitForLocalResourceEventChange();
   }
 
   /**
