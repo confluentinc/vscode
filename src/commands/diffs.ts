@@ -1,12 +1,12 @@
 import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { StateDiffs } from "../constants";
 import { ContextValues, setContextValue } from "../context";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
 import { getStorageManager } from "../storage";
+import { StateDiffs } from "../storage/constants";
 
 const logger = new Logger("commands.diffs");
 
