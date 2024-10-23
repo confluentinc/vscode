@@ -143,7 +143,7 @@ export function getResourceViewProvider() {
  * Otherwise, the container will be collapsed and show a "No connection" message with an action to
  * connect to CCloud.
  */
-async function loadCCloudResources(
+export async function loadCCloudResources(
   forceDeepRefresh: boolean = false,
 ): Promise<ContainerTreeItem<CCloudEnvironment>> {
   // empty container item for the Confluent Cloud resources to start, whose `.id` will change
@@ -189,6 +189,7 @@ async function loadCCloudResources(
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
+    cloudContainerItem.children = ccloudEnvironments;
   } else {
     // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
     cloudContainerItem.id = "ccloud-container";
@@ -206,7 +207,7 @@ async function loadCCloudResources(
  *
  * @returns A container tree item with the local Kafka clusters as children
  */
-async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster>> {
+export async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster>> {
   const localContainerItem = new ContainerTreeItem<LocalKafkaCluster>(
     "Local",
     vscode.TreeItemCollapsibleState.None,
