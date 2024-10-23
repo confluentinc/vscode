@@ -1,7 +1,18 @@
 import { AuthenticationSession, authentication } from "vscode";
 import { getSidecar } from ".";
-import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
-import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
+import {
+  Connection,
+  ConnectionSpec,
+  ConnectionsResourceApi,
+  ResponseError,
+} from "../clients/sidecar";
+import {
+  AUTH_PROVIDER_ID,
+  CCLOUD_CONNECTION_ID,
+  CCLOUD_CONNECTION_SPEC,
+  LOCAL_CONNECTION_ID,
+  LOCAL_CONNECTION_SPEC,
+} from "../constants";
 import { ContextValues, getContextValue } from "../context";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
@@ -9,37 +20,66 @@ import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("sidecar.connections");
 
-/** Get the Confluent Cloud {@link Connection} (if it exists). */
-export async function getCCloudConnection(): Promise<Connection | null> {
+/** Get the existing {@link Connection} (if it exists). */
+async function tryToGetConnection(id: string): Promise<Connection | null> {
   let connection: Connection | null = null;
   const client = (await getSidecar()).getConnectionsResourceApi();
   try {
-    connection = await client.gatewayV1ConnectionsIdGet({ id: CCLOUD_CONNECTION_ID });
-  } catch (e) {
-    if (!(e instanceof ResponseError && e.response.status === 404)) {
+    connection = await client.gatewayV1ConnectionsIdGet({ id: id });
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      if (error.response.status === 404) {
+        logger.debug("No connection found", { connectionId: id });
+      } else {
+        logger.error("Error response from fetching existing local connection:", {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          body: JSON.stringify(error.response.body),
+          connectionId: id,
+        });
+      }
+    } else {
       // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
-      logger.error("Error getting existing connection", e);
+      logger.error("Error getting existing connection", { error, connectionId: id });
     }
   }
   return connection;
 }
 
-/** Create the Confluent Cloud {@link Connection} and return it. */
-export async function createCCloudConnection(): Promise<Connection> {
-  // create the initial Connection object, which will be kept in sidecar memory as well as
-  // in the extension's global state
+/** Get the Confluent Cloud {@link Connection} (if it exists). */
+export async function getCCloudConnection(): Promise<Connection | null> {
+  return await tryToGetConnection(CCLOUD_CONNECTION_ID);
+}
+
+/** Get the local {@link Connection} (if it exists). */
+export async function getLocalConnection(): Promise<Connection | null> {
+  return await tryToGetConnection(LOCAL_CONNECTION_ID);
+}
+
+/** Create a new {@link Connection} with the given {@link ConnectionSpec}. */
+async function tryToCreateConnection(spec: ConnectionSpec): Promise<Connection> {
   let connection: Connection;
   const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
     connection = await client.gatewayV1ConnectionsPost({
-      ConnectionSpec: CCLOUD_CONNECTION_SPEC,
+      ConnectionSpec: spec,
     });
-    logger.debug("created new CCloud connection");
+    logger.debug("created new connection", { type: spec.type });
     return connection;
   } catch (error) {
     logger.error("create connection error", error);
     throw new Error("Error while trying to create new connection. Please try again.");
   }
+}
+
+/** Create the Confluent Cloud {@link Connection} and return it. */
+export async function createCCloudConnection(): Promise<Connection> {
+  return await tryToCreateConnection(CCLOUD_CONNECTION_SPEC);
+}
+
+/** Create the local {@link Connection} and return it. */
+export async function createLocalConnection(): Promise<Connection> {
+  return await tryToCreateConnection(LOCAL_CONNECTION_SPEC);
 }
 
 /** Delete the existing Confluent Cloud {@link Connection} (if it exists). */
