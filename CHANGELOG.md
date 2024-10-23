@@ -13,6 +13,13 @@ All notable changes to this extension will be documented in this file.
 - Topic -> Schema correlation now recognizes schemas using `TopicRecordNameStrategy` in addition to
   `TopicNameStrategy`, [issue #298](https://github.com/confluentinc/vscode/issues/298).
 
+## 0.18.3
+
+### Fixed
+
+- Includes a fix for when the sidecar becomes unresponsive due to periodic Confluent Cloud status
+  checks that weren't timing out properly.
+
 ## 0.18.2
 
 ### Changed
