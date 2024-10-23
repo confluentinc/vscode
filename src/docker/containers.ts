@@ -46,12 +46,6 @@ export async function createContainer(
   imageTag: string,
   request: ContainerCreateOperationRequest,
 ): Promise<ContainerCreateResponse | undefined> {
-  const existingContainers: ContainerSummary[] = await getContainersForImage(imageRepo, imageTag);
-  if (existingContainers.length > 0) {
-    // isn't shown to the user:
-    throw new ContainerExistsError("Container already exists");
-  }
-
   if (!(await imageExists(imageRepo, imageTag))) {
     await pullImage(imageRepo, imageTag);
   }
