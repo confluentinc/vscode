@@ -4,7 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-### 0.18.3
+## 0.18.3
+
+### Fixed
 
 - Includes a fix for when the sidecar becomes unresponsive due to periodic Confluent Cloud status
   checks that weren't timing out properly.
