@@ -21,8 +21,6 @@ import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
 
-const CONFLUENT_ICON = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-
 /**
  * The types managed by the {@link ResourceViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
@@ -96,7 +94,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       // TODO(shoup): update ^ for local SR once available
       return new SchemaRegistryTreeItem(element);
     }
-    // should only be left with ContainerTreeItems for Configurations
+    // should only be left with ContainerTreeItems
     return element;
   }
 
@@ -115,12 +113,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const toplevelItems = await loadResources(this.forceDeepRefresh);
+      const resources: ResourceViewProviderData[] = await Promise.all([
+        loadCCloudResources(this.forceDeepRefresh),
+        loadLocalResources(),
+      ]);
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
       }
-      return toplevelItems;
+      return resources;
     }
 
     return resourceItems;
@@ -132,18 +133,31 @@ export function getResourceViewProvider() {
   return ResourceViewProvider.getInstance();
 }
 
-async function loadResources(
+/**
+ * Load the Confluent Cloud container and child resources based on CCloud connection status.
+ *
+ * If the user has an active CCloud connection, the container will be expanded to show the
+ * CCloud environments and their sub-resources. The description will also change to show the
+ * current organization name.
+ *
+ * Otherwise, the container will not be expandable and show a "No connection" message with an action to
+ * connect to CCloud.
+ */
+export async function loadCCloudResources(
   forceDeepRefresh: boolean = false,
-): Promise<ResourceViewProviderData[]> {
-  const resources: ResourceViewProviderData[] = [];
+): Promise<ContainerTreeItem<CCloudEnvironment>> {
+  // empty container item for the Confluent Cloud resources to start, whose `.id` will change
+  // depending on the user's CCloud connection status to adjust the collapsible state and actions
+  const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
+    "Confluent Cloud",
+    vscode.TreeItemCollapsibleState.None,
+    [],
+  );
+  cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
-  // the section below will create a "Confluent Cloud" container item that will be either:
-  // - an unexpandable item with a "No connection" description where the user can connect to CCloud
-  // - a "connected" expandable item with a description of the current connection name and the ability
-  //   to add a new connection or switch connections
   if (hasCCloudAuthSession()) {
     const preloader = CCloudResourcePreloader.getInstance();
-    // TODO: have this cached in the resource manager  via the preloader
+    // TODO: have this cached in the resource manager via the preloader
     const currentOrg = await getCurrentOrganization();
 
     let ccloudEnvironments: CCloudEnvironment[] = [];
@@ -166,56 +180,57 @@ async function loadResources(
         }
       });
     }
-
-    const collapsibleState =
+    cloudContainerItem.collapsibleState =
       ccloudEnvironments.length > 0
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
-    const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
-      "Confluent Cloud",
-      collapsibleState,
-      ccloudEnvironments,
-    );
+    // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
     cloudContainerItem.id = "ccloud-container-connected";
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
-    cloudContainerItem.iconPath = CONFLUENT_ICON;
-    resources.push(cloudContainerItem);
+    cloudContainerItem.children = ccloudEnvironments;
   } else {
-    // the user doesn't have a current CCloud connection, just show the placeholder with action to connect
-    const emptyCloudContainerItem = new ContainerTreeItem(
-      "Confluent Cloud",
-      vscode.TreeItemCollapsibleState.None,
-      [],
-    );
-    emptyCloudContainerItem.id = "ccloud-container";
+    // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
+    cloudContainerItem.id = "ccloud-container";
     // enables the "Add Connection" action to be displayed on hover
-    emptyCloudContainerItem.contextValue = "resources-ccloud-container";
-    emptyCloudContainerItem.description = "(No connection)";
-    emptyCloudContainerItem.iconPath = CONFLUENT_ICON;
-    resources.push(emptyCloudContainerItem);
+    cloudContainerItem.contextValue = "resources-ccloud-container";
+    cloudContainerItem.description = "(No connection)";
   }
 
-  // also load local Kafka clusters for display alongside CCloud environments
+  return cloudContainerItem;
+}
+
+// TODO(shoup): update this comment + underlying logic once we have local resource management actions
+/**
+ * Load the local resources into a container tree item.
+ *
+ * @returns A container tree item with the local Kafka clusters as children
+ */
+export async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster>> {
+  const localContainerItem = new ContainerTreeItem<LocalKafkaCluster>(
+    "Local",
+    vscode.TreeItemCollapsibleState.None,
+    [],
+  );
+  localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
+  localContainerItem.description = "(Not running)";
+  localContainerItem.tooltip = new vscode.MarkdownString(
+    "Local Kafka clusters discoverable at port `8082` are shown here.",
+  );
+
   const localClusters: LocalKafkaCluster[] = await getLocalKafkaClusters();
   if (localClusters.length > 0) {
-    const localContainerItem = new ContainerTreeItem(
-      "Local",
-      vscode.TreeItemCollapsibleState.Expanded,
-      localClusters,
-    );
+    localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localClusters.map((cluster) => cluster.uri).join(", ");
-    resources.push(localContainerItem);
-
-    // store the local clusters in the resource manager for later use
-    // (XXX somewhat asymetric with when CCloud environments get cached,
-    ///  which get stored in the resource manager within the preloadEnvironmentResources() call above)
+    // TODO: this should be handled in the preloader once it (and ResourceManager) start handling
+    // local resources
     getResourceManager().setLocalKafkaClusters(localClusters);
+    localContainerItem.children = localClusters;
   }
 
-  return resources;
+  return localContainerItem;
 }
 
 /**

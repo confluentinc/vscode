@@ -90,7 +90,7 @@ async function generateKafkaClusterQuickPick(
     clusterItems.push({
       label: kafkaCluster.name,
       description: kafkaCluster.id,
-      iconPath: new vscode.ThemeIcon(IconNames.LOCAL_KAFKA),
+      iconPath: new vscode.ThemeIcon(IconNames.KAFKA_CLUSTER),
     });
     const quickPickKey = `${kafkaCluster.name}:${kafkaCluster.id}`;
     kafkaClusterNameMap.set(quickPickKey, kafkaCluster);
@@ -124,7 +124,7 @@ async function generateKafkaClusterQuickPick(
     clusterItems.push({
       label: kafkaCluster.name,
       description: kafkaCluster.id,
-      iconPath: new vscode.ThemeIcon(IconNames.CCLOUD_KAFKA),
+      iconPath: new vscode.ThemeIcon(IconNames.KAFKA_CLUSTER),
     });
     const quickPickKey = `${kafkaCluster.name}:${kafkaCluster.id}`;
     kafkaClusterNameMap.set(quickPickKey, kafkaCluster);
