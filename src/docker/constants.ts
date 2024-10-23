@@ -18,4 +18,5 @@ export const MANAGED_CONTAINER_LABEL = "io.confluent.vscode.managed";
 /** Types of resources that can be locally managed by this extension through the Docker engine API. */
 export enum LocalResourceKind {
   Kafka = "Kafka",
+  SchemaRegistry = "Schema Registry",
 }
