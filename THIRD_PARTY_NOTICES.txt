@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2024-10-10
+Date generated: 2024-10-23
 
-Revision ID: 92eb6eba185cd0eb0944784f3a58ca2b3ad905ce
+Revision ID: 3bd6f1f25b64aae1a28b90d7e4add17b74cdefb7
 
 ================================================================================
 ================================================================================
@@ -50,6 +50,10 @@ No licenses found
 
 --------------------------------------------------------------------------------
 Package Title: @0no-co/graphql.web (1.0.7)
+
+Package Locator: npm+@0no-co/graphql.web$1.0.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -82,6 +86,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @0no-co/graphqlsp (1.12.12)
+
+Package Locator: npm+@0no-co/graphqlsp$1.12.12
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -114,6 +122,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @ampproject/remapping (2.3.0)
+
+Package Locator: npm+@ampproject/remapping$2.3.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -327,6 +339,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @babel/code-frame (7.24.7)
+
+Package Locator: npm+@babel/code-frame$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -360,6 +376,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/compat-data (7.24.7)
+
+Package Locator: npm+@babel/compat-data$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -393,6 +413,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/core (7.24.7)
+
+Package Locator: npm+@babel/core$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -426,6 +450,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/generator (7.24.7)
+
+Package Locator: npm+@babel/generator$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -459,6 +487,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-compilation-targets (7.24.7)
+
+Package Locator: npm+@babel/helper-compilation-targets$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -492,6 +524,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-environment-visitor (7.24.7)
+
+Package Locator: npm+@babel/helper-environment-visitor$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -525,6 +561,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-function-name (7.24.7)
+
+Package Locator: npm+@babel/helper-function-name$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -558,6 +598,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-hoist-variables (7.24.7)
+
+Package Locator: npm+@babel/helper-hoist-variables$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -591,6 +635,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-module-imports (7.24.7)
+
+Package Locator: npm+@babel/helper-module-imports$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -624,6 +672,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-module-transforms (7.24.7)
+
+Package Locator: npm+@babel/helper-module-transforms$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -657,6 +709,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-simple-access (7.24.7)
+
+Package Locator: npm+@babel/helper-simple-access$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -690,6 +746,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-split-export-declaration (7.24.7)
+
+Package Locator: npm+@babel/helper-split-export-declaration$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -723,6 +783,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-string-parser (7.24.7)
+
+Package Locator: npm+@babel/helper-string-parser$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -756,6 +820,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-validator-identifier (7.24.7)
+
+Package Locator: npm+@babel/helper-validator-identifier$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -789,6 +857,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helper-validator-option (7.24.7)
+
+Package Locator: npm+@babel/helper-validator-option$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -822,6 +894,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/helpers (7.24.7)
+
+Package Locator: npm+@babel/helpers$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -855,6 +931,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/highlight (7.24.7)
+
+Package Locator: npm+@babel/highlight$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -888,6 +968,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/parser (7.24.7)
+
+Package Locator: npm+@babel/parser$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -918,6 +1002,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/template (7.24.7)
+
+Package Locator: npm+@babel/template$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -951,6 +1039,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/traverse (7.24.7)
+
+Package Locator: npm+@babel/traverse$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -984,6 +1076,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @babel/types (7.24.7)
+
+Package Locator: npm+@babel/types$7.24.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1017,6 +1113,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @gql.tada/cli-utils (1.5.2)
+
+Package Locator: npm+@gql.tada/cli-utils$1.5.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1426,6 +1526,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @gql.tada/internal (1.0.5)
+
+Package Locator: npm+@gql.tada/internal$1.0.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1531,6 +1635,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/gen-mapping (0.3.5)
+
+Package Locator: npm+@jridgewell/gen-mapping$0.3.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1561,6 +1669,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/resolve-uri (3.1.2)
+
+Package Locator: npm+@jridgewell/resolve-uri$3.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1590,6 +1702,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/set-array (1.2.1)
+
+Package Locator: npm+@jridgewell/set-array$1.2.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1620,6 +1736,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/sourcemap-codec (1.4.15)
+
+Package Locator: npm+@jridgewell/sourcemap-codec$1.4.15
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1652,6 +1772,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @jridgewell/trace-mapping (0.3.25)
+
+Package Locator: npm+@jridgewell/trace-mapping$0.3.25
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1682,6 +1806,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @lukeed/csprng (1.1.0)
+
+Package Locator: npm+@lukeed/csprng$1.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1710,6 +1838,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @lukeed/uuid (2.0.1)
+
+Package Locator: npm+@lukeed/uuid$2.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1738,6 +1870,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-element (1.13.0)
+
+Package Locator: npm+@microsoft/fast-element$1.13.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1766,6 +1902,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-foundation (2.49.6)
+
+Package Locator: npm+@microsoft/fast-foundation$2.49.6
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1803,6 +1943,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-react-wrapper (0.3.24)
+
+Package Locator: npm+@microsoft/fast-react-wrapper$0.3.24
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1870,6 +2014,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 --------------------------------------------------------------------------------
 Package Title: @microsoft/fast-web-utilities (5.4.1)
+
+Package Locator: npm+@microsoft/fast-web-utilities$5.4.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -1898,6 +2046,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/api (1.9.0)
+
+Package Locator: npm+@opentelemetry/api$1.9.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -2110,6 +2262,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/api-logs (0.52.1)
+
+Package Locator: npm+@opentelemetry/api-logs$0.52.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -2322,6 +2478,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/context-async-hooks (1.25.1)
+
+Package Locator: npm+@opentelemetry/context-async-hooks$1.25.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -2534,6 +2694,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/core (1.25.1)
+
+Package Locator: npm+@opentelemetry/core$1.25.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -2746,6 +2910,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation (0.46.0)
+
+Package Locator: npm+@opentelemetry/instrumentation$0.46.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -2958,6 +3126,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation (0.52.1)
+
+Package Locator: npm+@opentelemetry/instrumentation$0.52.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -3170,6 +3342,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-connect (0.38.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-connect$0.38.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -3382,6 +3558,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-express (0.41.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-express$0.41.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -3594,6 +3774,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-fastify (0.38.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-fastify$0.38.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -3806,6 +3990,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-graphql (0.42.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-graphql$0.42.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -4018,6 +4206,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-hapi (0.40.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-hapi$0.40.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -4230,6 +4422,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-http (0.52.1)
+
+Package Locator: npm+@opentelemetry/instrumentation-http$0.52.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -4442,6 +4638,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-ioredis (0.42.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-ioredis$0.42.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -4654,6 +4854,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-koa (0.42.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-koa$0.42.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -4866,6 +5070,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mongodb (0.46.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-mongodb$0.46.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -5078,6 +5286,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mongoose (0.40.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-mongoose$0.40.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -5290,6 +5502,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mysql (0.40.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-mysql$0.40.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -5502,6 +5718,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-mysql2 (0.40.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-mysql2$0.40.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -5714,6 +5934,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-nestjs-core (0.39.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-nestjs-core$0.39.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -5926,6 +6150,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-pg (0.43.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-pg$0.43.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -6138,6 +6366,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/instrumentation-redis-4 (0.41.0)
+
+Package Locator: npm+@opentelemetry/instrumentation-redis-4$0.41.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -6350,6 +6582,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/redis-common (0.36.2)
+
+Package Locator: npm+@opentelemetry/redis-common$0.36.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -6562,6 +6798,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/resources (1.25.1)
+
+Package Locator: npm+@opentelemetry/resources$1.25.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -6774,6 +7014,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/sdk-metrics (1.25.1)
+
+Package Locator: npm+@opentelemetry/sdk-metrics$1.25.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -6986,6 +7230,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/sdk-trace-base (1.25.1)
+
+Package Locator: npm+@opentelemetry/sdk-trace-base$1.25.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7198,6 +7446,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/semantic-conventions (1.25.1)
+
+Package Locator: npm+@opentelemetry/semantic-conventions$1.25.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7410,6 +7662,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @opentelemetry/sql-common (0.40.1)
+
+Package Locator: npm+@opentelemetry/sql-common$0.40.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7622,6 +7878,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @prisma/instrumentation (5.16.1)
+
+Package Locator: npm+@prisma/instrumentation$5.16.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7834,6 +8094,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-android-arm-eabi (4.18.0)
+
+Package Locator: npm+@rollup/rollup-android-arm-eabi$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7862,6 +8126,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-android-arm64 (4.18.0)
+
+Package Locator: npm+@rollup/rollup-android-arm64$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7890,6 +8158,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-darwin-arm64 (4.18.0)
+
+Package Locator: npm+@rollup/rollup-darwin-arm64$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7918,6 +8190,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-darwin-x64 (4.18.0)
+
+Package Locator: npm+@rollup/rollup-darwin-x64$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7946,6 +8222,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm-gnueabihf (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-arm-gnueabihf$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -7974,6 +8254,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm-musleabihf (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-arm-musleabihf$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8002,6 +8286,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm64-gnu (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-arm64-gnu$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8030,6 +8318,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-arm64-musl (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-arm64-musl$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8058,6 +8350,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-powerpc64le-gnu (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-powerpc64le-gnu$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8086,6 +8382,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-riscv64-gnu (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-riscv64-gnu$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8114,6 +8414,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-s390x-gnu (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-s390x-gnu$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8142,6 +8446,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-x64-gnu (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-x64-gnu$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8170,6 +8478,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-linux-x64-musl (4.18.0)
+
+Package Locator: npm+@rollup/rollup-linux-x64-musl$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8198,6 +8510,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-win32-arm64-msvc (4.18.0)
+
+Package Locator: npm+@rollup/rollup-win32-arm64-msvc$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8226,6 +8542,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-win32-ia32-msvc (4.18.0)
+
+Package Locator: npm+@rollup/rollup-win32-ia32-msvc$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8254,6 +8574,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @rollup/rollup-win32-x64-msvc (4.18.0)
+
+Package Locator: npm+@rollup/rollup-win32-x64-msvc$4.18.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8282,6 +8606,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @segment/analytics-core (1.6.0)
+
+Package Locator: npm+@segment/analytics-core$1.6.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8313,6 +8641,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @segment/analytics-generic-utils (1.2.0)
+
+Package Locator: npm+@segment/analytics-generic-utils$1.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8345,6 +8677,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @segment/analytics-node (2.1.2)
+
+Package Locator: npm+@segment/analytics-node$2.1.2
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8377,6 +8713,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/babel-plugin-component-annotate (2.21.1)
+
+Package Locator: npm+@sentry/babel-plugin-component-annotate$2.21.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8439,6 +8779,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/bundler-plugin-core (2.21.1)
+
+Package Locator: npm+@sentry/bundler-plugin-core$2.21.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8501,6 +8845,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli (2.33.0)
+
+Package Locator: npm+@sentry/cli$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8539,6 +8887,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-darwin (2.33.0)
+
+Package Locator: npm+@sentry/cli-darwin$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8575,6 +8927,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-arm (2.33.0)
+
+Package Locator: npm+@sentry/cli-linux-arm$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8611,6 +8967,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-arm64 (2.33.0)
+
+Package Locator: npm+@sentry/cli-linux-arm64$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8647,6 +9007,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-i686 (2.33.0)
+
+Package Locator: npm+@sentry/cli-linux-i686$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8683,6 +9047,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-linux-x64 (2.33.0)
+
+Package Locator: npm+@sentry/cli-linux-x64$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8719,6 +9087,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-win32-i686 (2.33.0)
+
+Package Locator: npm+@sentry/cli-win32-i686$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8755,6 +9127,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/cli-win32-x64 (2.33.0)
+
+Package Locator: npm+@sentry/cli-win32-x64$2.33.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8791,6 +9167,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/core (8.17.0)
+
+Package Locator: npm+@sentry/core$8.17.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8823,6 +9203,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/node (8.17.0)
+
+Package Locator: npm+@sentry/node$8.17.0
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8855,6 +9239,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/opentelemetry (8.17.0)
+
+Package Locator: npm+@sentry/opentelemetry$8.17.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8887,6 +9275,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/profiling-node (8.17.0)
+
+Package Locator: npm+@sentry/profiling-node$8.17.0
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8919,6 +9311,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/rollup-plugin (2.21.1)
+
+Package Locator: npm+@sentry/rollup-plugin$2.21.1
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -8981,6 +9377,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/types (8.17.0)
+
+Package Locator: npm+@sentry/types$8.17.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9013,6 +9413,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @sentry/utils (8.17.0)
+
+Package Locator: npm+@sentry/utils$8.17.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9045,6 +9449,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @types/connect (3.4.36)
+
+Package Locator: npm+@types/connect$3.4.36
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9077,6 +9485,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @types/estree (1.0.5)
+
+Package Locator: npm+@types/estree$1.0.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9109,6 +9521,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @types/mysql (2.15.22)
+
+Package Locator: npm+@types/mysql$2.15.22
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9141,6 +9557,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @types/node (18.19.36)
+
+Package Locator: npm+@types/node$18.19.36
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9173,6 +9593,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @types/pg (8.6.1)
+
+Package Locator: npm+@types/pg$8.6.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9205,6 +9629,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @types/pg-pool (2.0.4)
+
+Package Locator: npm+@types/pg-pool$2.0.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9237,6 +9665,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @types/shimmer (1.2.0)
+
+Package Locator: npm+@types/shimmer$1.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9269,6 +9701,10 @@ MIT
 
 --------------------------------------------------------------------------------
 Package Title: @volar/language-core (2.4.0-alpha.18)
+
+Package Locator: npm+@volar/language-core$2.4.0-alpha.18
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9301,6 +9737,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @volar/source-map (2.4.0-alpha.18)
+
+Package Locator: npm+@volar/source-map$2.4.0-alpha.18
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9333,6 +9773,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @vscode/codicons (0.0.36)
+
+Package Locator: npm+@vscode/codicons$0.0.36
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9855,6 +10299,10 @@ Creative Commons may be contacted at creativecommons.org.
 
 --------------------------------------------------------------------------------
 Package Title: @vscode/webview-ui-toolkit (1.4.0)
+
+Package Locator: npm+@vscode/webview-ui-toolkit$1.4.0
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9947,6 +10395,10 @@ either expressed or implied, of the FreeBSD Project.
 
 --------------------------------------------------------------------------------
 Package Title: @vue/compiler-core (3.4.34)
+
+Package Locator: npm+@vue/compiler-core$3.4.34
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -9979,6 +10431,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @vue/compiler-dom (3.4.34)
+
+Package Locator: npm+@vue/compiler-dom$3.4.34
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10011,6 +10467,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @vue/compiler-vue2 (2.7.16)
+
+Package Locator: npm+@vue/compiler-vue2$2.7.16
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10048,6 +10508,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 --------------------------------------------------------------------------------
 Package Title: @vue/language-core (2.0.29)
+
+Package Locator: npm+@vue/language-core$2.0.29
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10080,6 +10544,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: @vue/shared (3.4.34)
+
+Package Locator: npm+@vue/shared$3.4.34
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10112,6 +10580,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: acorn (8.12.0)
+
+Package Locator: npm+acorn$8.12.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10144,6 +10616,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: acorn-import-assertions (1.9.0)
+
+Package Locator: npm+acorn-import-assertions$1.9.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10172,6 +10648,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: acorn-import-attributes (1.9.5)
+
+Package Locator: npm+acorn-import-attributes$1.9.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10204,6 +10684,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: agent-base (6.0.2)
+
+Package Locator: npm+agent-base$6.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10232,6 +10716,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: ansi-styles (3.2.1)
+
+Package Locator: npm+ansi-styles$3.2.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10260,6 +10748,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: anymatch (3.1.3)
+
+Package Locator: npm+anymatch$3.1.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10286,6 +10778,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: aria-query (5.3.0)
+
+Package Locator: npm+aria-query$5.3.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10498,6 +10994,10 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 Package Title: axobject-query (4.1.0)
+
+Package Locator: npm+axobject-query$4.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10710,6 +11210,10 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 Package Title: balanced-match (1.0.2)
+
+Package Locator: npm+balanced-match$1.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10742,6 +11246,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: base64-js (1.5.1)
+
+Package Locator: npm+base64-js$1.5.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10774,6 +11282,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: binary-extensions (2.3.0)
+
+Package Locator: npm+binary-extensions$2.3.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10802,6 +11314,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: brace-expansion (2.0.1)
+
+Package Locator: npm+brace-expansion$2.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10834,6 +11350,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: braces (3.0.3)
+
+Package Locator: npm+braces$3.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10866,6 +11386,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: browserslist (4.23.1)
+
+Package Locator: npm+browserslist$4.23.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10897,6 +11421,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: buffer (6.0.3)
+
+Package Locator: npm+buffer$6.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -10929,6 +11457,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: caniuse-lite (1.0.30001639)
+
+Package Locator: npm+caniuse-lite$1.0.30001639
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11335,6 +11867,10 @@ Creative Commons may be contacted at creativecommons.org.
 
 --------------------------------------------------------------------------------
 Package Title: chalk (2.4.2)
+
+Package Locator: npm+chalk$2.4.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11363,6 +11899,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: chokidar (3.6.0)
+
+Package Locator: npm+chokidar$3.6.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11395,6 +11935,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: cjs-module-lexer (1.3.1)
+
+Package Locator: npm+cjs-module-lexer$1.3.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11416,6 +11960,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: code-red (1.0.4)
+
+Package Locator: npm+code-red$1.0.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11434,6 +11982,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: color-convert (1.9.3)
+
+Package Locator: npm+color-convert$1.9.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11466,6 +12018,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: color-name (1.1.3)
+
+Package Locator: npm+color-name$1.1.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11484,6 +12040,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: commander (7.2.0)
+
+Package Locator: npm+commander$7.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11517,6 +12077,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: computeds (0.0.1)
+
+Package Locator: npm+computeds$0.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11549,6 +12113,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: convert-source-map (2.0.0)
+
+Package Locator: npm+convert-source-map$2.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11583,6 +12151,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: css-tree (2.3.1)
+
+Package Locator: npm+css-tree$2.3.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11613,6 +12185,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3 (7.9.0)
+
+Package Locator: npm+d3$7.9.0
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11637,6 +12213,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-array (3.2.4)
+
+Package Locator: npm+d3-array$3.2.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11661,6 +12241,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-axis (3.0.0)
+
+Package Locator: npm+d3-axis$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11685,6 +12269,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-brush (3.0.0)
+
+Package Locator: npm+d3-brush$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11709,6 +12297,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-chord (3.0.1)
+
+Package Locator: npm+d3-chord$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11733,6 +12325,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-color (3.1.0)
+
+Package Locator: npm+d3-color$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11757,6 +12353,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-contour (4.0.2)
+
+Package Locator: npm+d3-contour$4.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11781,6 +12381,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-delaunay (6.0.4)
+
+Package Locator: npm+d3-delaunay$6.0.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11806,6 +12410,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-dispatch (3.0.1)
+
+Package Locator: npm+d3-dispatch$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11830,6 +12438,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-drag (3.0.0)
+
+Package Locator: npm+d3-drag$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11854,6 +12466,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-dsv (3.0.1)
+
+Package Locator: npm+d3-dsv$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11878,6 +12494,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-ease (3.0.1)
+
+Package Locator: npm+d3-ease$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11917,6 +12537,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-fetch (3.0.1)
+
+Package Locator: npm+d3-fetch$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11941,6 +12565,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-force (3.0.0)
+
+Package Locator: npm+d3-force$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11965,6 +12593,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-format (3.1.0)
+
+Package Locator: npm+d3-format$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -11989,6 +12621,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-geo (3.1.1)
+
+Package Locator: npm+d3-geo$3.1.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12056,6 +12692,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-hierarchy (3.1.2)
+
+Package Locator: npm+d3-hierarchy$3.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12080,6 +12720,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-interpolate (3.0.1)
+
+Package Locator: npm+d3-interpolate$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12104,6 +12748,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-path (3.1.0)
+
+Package Locator: npm+d3-path$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12128,6 +12776,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-polygon (3.0.1)
+
+Package Locator: npm+d3-polygon$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12152,6 +12804,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-quadtree (3.0.1)
+
+Package Locator: npm+d3-quadtree$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12176,6 +12832,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-random (3.0.1)
+
+Package Locator: npm+d3-random$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12200,6 +12860,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-scale (4.0.2)
+
+Package Locator: npm+d3-scale$4.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12224,6 +12888,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-scale-chromatic (3.1.0)
+
+Package Locator: npm+d3-scale-chromatic$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12270,6 +12938,10 @@ specific language governing permissions and limitations under the License.
 
 --------------------------------------------------------------------------------
 Package Title: d3-selection (3.0.0)
+
+Package Locator: npm+d3-selection$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12294,6 +12966,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-shape (3.2.0)
+
+Package Locator: npm+d3-shape$3.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12318,6 +12994,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-time (3.1.0)
+
+Package Locator: npm+d3-time$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12342,6 +13022,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-time-format (4.1.0)
+
+Package Locator: npm+d3-time-format$4.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12366,6 +13050,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-timer (3.0.1)
+
+Package Locator: npm+d3-timer$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12390,6 +13078,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-transition (3.0.1)
+
+Package Locator: npm+d3-transition$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12414,6 +13106,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: d3-zoom (3.0.0)
+
+Package Locator: npm+d3-zoom$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12438,6 +13134,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: dataclass (3.0.0-beta.1)
+
+Package Locator: npm+dataclass$3.0.0-beta.1
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12464,6 +13164,10 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: de-indent (1.0.2)
+
+Package Locator: npm+de-indent$1.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12492,6 +13196,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: debug (4.3.5)
+
+Package Locator: npm+debug$4.3.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12523,6 +13231,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: dedent-js (1.0.1)
+
+Package Locator: npm+dedent-js$1.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12553,6 +13265,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: delaunator (5.0.1)
+
+Package Locator: npm+delaunator$5.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12579,6 +13295,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: dequal (2.0.3)
+
+Package Locator: npm+dequal$2.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12607,6 +13327,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: detect-libc (2.0.3)
+
+Package Locator: npm+detect-libc$2.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12819,6 +13543,10 @@ Apache-2.0
 
 --------------------------------------------------------------------------------
 Package Title: dotenv (16.4.5)
+
+Package Locator: npm+dotenv$16.4.5
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12853,6 +13581,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: dset (3.1.4)
+
+Package Locator: npm+dset$3.1.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12881,6 +13613,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: electron-to-chromium (1.4.816)
+
+Package Locator: npm+electron-to-chromium$1.4.816
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12897,6 +13633,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 --------------------------------------------------------------------------------
 Package Title: encoding (0.1.13)
+
+Package Locator: npm+encoding$0.1.13
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12948,6 +13688,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: entities (4.5.0)
+
+Package Locator: npm+entities$4.5.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12970,6 +13714,10 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: escalade (3.1.2)
+
+Package Locator: npm+escalade$3.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -12998,6 +13746,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: escape-string-regexp (1.0.5)
+
+Package Locator: npm+escape-string-regexp$1.0.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13026,6 +13778,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: estree-walker (2.0.2)
+
+Package Locator: npm+estree-walker$2.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13043,6 +13799,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: estree-walker (3.0.3)
+
+Package Locator: npm+estree-walker$3.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13060,6 +13820,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: exenv-es6 (1.1.1)
+
+Package Locator: npm+exenv-es6$1.1.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13092,6 +13856,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: fill-range (7.1.1)
+
+Package Locator: npm+fill-range$7.1.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13124,6 +13892,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: find-up (5.0.0)
+
+Package Locator: npm+find-up$5.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13152,6 +13924,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: fs.realpath (1.0.0)
+
+Package Locator: npm+fs.realpath$1.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13228,6 +14004,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: fsevents (2.3.3)
+
+Package Locator: npm+fsevents$2.3.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13261,6 +14041,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: function-bind (1.1.2)
+
+Package Locator: npm+function-bind$1.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13292,6 +14076,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: gensync (1.0.0-beta.2)
+
+Package Locator: npm+gensync$1.0.0-beta.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13310,6 +14098,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: glob (9.3.5)
+
+Package Locator: npm+glob$9.3.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13427,6 +14219,10 @@ Creative Commons may be contacted at creativecommons.org.
 
 --------------------------------------------------------------------------------
 Package Title: glob-parent (5.1.2)
+
+Package Locator: npm+glob-parent$5.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13453,6 +14249,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: globals (11.12.0)
+
+Package Locator: npm+globals$11.12.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13481,6 +14281,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: gql.tada (1.8.3)
+
+Package Locator: npm+gql.tada$1.8.3
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13512,6 +14316,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: graphql (16.8.2)
+
+Package Locator: npm+graphql$16.8.2
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13544,6 +14352,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: has-flag (3.0.0)
+
+Package Locator: npm+has-flag$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13572,6 +14384,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: hasown (2.0.2)
+
+Package Locator: npm+hasown$2.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13604,6 +14420,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: he (1.2.0)
+
+Package Locator: npm+he$1.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13635,6 +14455,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: https-proxy-agent (5.0.1)
+
+Package Locator: npm+https-proxy-agent$5.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13663,6 +14487,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: iconv-lite (0.6.3)
+
+Package Locator: npm+iconv-lite$0.6.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13695,6 +14523,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: ieee754 (1.2.1)
+
+Package Locator: npm+ieee754$1.2.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13717,6 +14549,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 --------------------------------------------------------------------------------
 Package Title: import-in-the-middle (1.7.1)
+
+Package Locator: npm+import-in-the-middle$1.7.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13743,6 +14579,10 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 Package Title: import-in-the-middle (1.9.0)
+
+Package Locator: npm+import-in-the-middle$1.9.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13957,6 +14797,10 @@ Apache-2.0, unknown
 
 --------------------------------------------------------------------------------
 Package Title: inertial (0.4.1)
+
+Package Locator: npm+inertial$0.4.1
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -13983,6 +14827,10 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: internmap (2.0.3)
+
+Package Locator: npm+internmap$2.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14007,6 +14855,10 @@ THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: is-binary-path (2.1.0)
+
+Package Locator: npm+is-binary-path$2.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14035,6 +14887,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: is-core-module (2.13.1)
+
+Package Locator: npm+is-core-module$2.13.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14065,6 +14921,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: is-extglob (2.1.1)
+
+Package Locator: npm+is-extglob$2.1.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14097,6 +14957,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: is-glob (4.0.3)
+
+Package Locator: npm+is-glob$4.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14129,6 +14993,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: is-number (7.0.0)
+
+Package Locator: npm+is-number$7.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14161,6 +15029,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: is-reference (3.0.2)
+
+Package Locator: npm+is-reference$3.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14189,6 +15061,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: isexe (2.0.0)
+
+Package Locator: npm+isexe$2.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14215,6 +15091,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: jose (5.6.2)
+
+Package Locator: npm+jose$5.6.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14247,6 +15127,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: js-tokens (4.0.0)
+
+Package Locator: npm+js-tokens$4.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14279,6 +15163,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: jsesc (2.5.2)
+
+Package Locator: npm+jsesc$2.5.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14310,6 +15198,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: json5 (2.2.3)
+
+Package Locator: npm+json5$2.2.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14348,6 +15240,10 @@ public-domain
 
 --------------------------------------------------------------------------------
 Package Title: locate-character (3.0.0)
+
+Package Locator: npm+locate-character$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14376,6 +15272,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: locate-path (6.0.0)
+
+Package Locator: npm+locate-path$6.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14404,6 +15304,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: lodash.merge (4.6.2)
+
+Package Locator: npm+lodash.merge$4.6.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14484,6 +15388,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: loose-envify (1.4.0)
+
+Package Locator: npm+loose-envify$1.4.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14516,6 +15424,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: lower-case (2.0.2)
+
+Package Locator: npm+lower-case$2.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14548,6 +15460,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: lru-cache (10.2.2)
+
+Package Locator: npm+lru-cache$10.2.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14574,6 +15490,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: lru-cache (5.1.1)
+
+Package Locator: npm+lru-cache$5.1.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14600,6 +15520,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: magic-string (0.30.10)
+
+Package Locator: npm+magic-string$0.30.10
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14618,6 +15542,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: magic-string (0.30.8)
+
+Package Locator: npm+magic-string$0.30.8
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14636,6 +15564,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: mdn-data (2.0.30)
+
+Package Locator: npm+mdn-data$2.0.30
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14763,6 +15695,10 @@ For more information, please see
 
 --------------------------------------------------------------------------------
 Package Title: minimatch (8.0.4)
+
+Package Locator: npm+minimatch$8.0.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14789,6 +15725,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: minimatch (9.0.4)
+
+Package Locator: npm+minimatch$9.0.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14815,6 +15755,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: minipass (4.2.8)
+
+Package Locator: npm+minipass$4.2.8
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14841,6 +15785,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: minipass (7.1.2)
+
+Package Locator: npm+minipass$7.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14867,6 +15815,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: module-details-from-path (1.0.3)
+
+Package Locator: npm+module-details-from-path$1.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14899,6 +15851,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: ms (2.1.2)
+
+Package Locator: npm+ms$2.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14927,6 +15883,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: muggle-string (0.4.1)
+
+Package Locator: npm+muggle-string$0.4.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14959,6 +15919,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: no-case (3.0.4)
+
+Package Locator: npm+no-case$3.0.4
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -14991,6 +15955,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: node-abi (3.65.0)
+
+Package Locator: npm+node-abi$3.65.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15023,6 +15991,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: node-fetch (2.7.0)
+
+Package Locator: npm+node-fetch$2.7.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15056,6 +16028,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: node-releases (2.0.14)
+
+Package Locator: npm+node-releases$2.0.14
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15088,6 +16064,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: normalize-path (3.0.0)
+
+Package Locator: npm+normalize-path$3.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15120,6 +16100,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: opentelemetry-instrumentation-fetch-node (1.2.3)
+
+Package Locator: npm+opentelemetry-instrumentation-fetch-node$1.2.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15152,6 +16136,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: p-limit (3.1.0)
+
+Package Locator: npm+p-limit$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15180,6 +16168,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: p-locate (5.0.0)
+
+Package Locator: npm+p-locate$5.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15208,6 +16200,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: pascal-case (3.1.2)
+
+Package Locator: npm+pascal-case$3.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15240,6 +16236,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: path-browserify (1.0.1)
+
+Package Locator: npm+path-browserify$1.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15271,6 +16271,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: path-exists (4.0.0)
+
+Package Locator: npm+path-exists$4.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15299,6 +16303,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: path-parse (1.0.7)
+
+Package Locator: npm+path-parse$1.0.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15331,6 +16339,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: path-scurry (1.11.1)
+
+Package Locator: npm+path-scurry$1.11.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15397,6 +16409,10 @@ software or this license, under any kind of legal claim.***
 
 --------------------------------------------------------------------------------
 Package Title: periscopic (3.1.0)
+
+Package Locator: npm+periscopic$3.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15415,6 +16431,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: pg-int8 (1.0.1)
+
+Package Locator: npm+pg-int8$1.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15439,6 +16459,10 @@ PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: pg-protocol (1.6.1)
+
+Package Locator: npm+pg-protocol$1.6.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15471,6 +16495,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: pg-types (2.2.0)
+
+Package Locator: npm+pg-types$2.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15499,6 +16527,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: picocolors (1.0.1)
+
+Package Locator: npm+picocolors$1.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15525,6 +16557,10 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: picomatch (2.3.1)
+
+Package Locator: npm+picomatch$2.3.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15557,6 +16593,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: postgres-array (2.0.0)
+
+Package Locator: npm+postgres-array$2.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15585,6 +16625,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: postgres-bytea (1.0.0)
+
+Package Locator: npm+postgres-bytea$1.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15613,6 +16657,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: postgres-date (1.0.7)
+
+Package Locator: npm+postgres-date$1.0.7
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15641,6 +16689,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: postgres-interval (1.2.0)
+
+Package Locator: npm+postgres-interval$1.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15669,6 +16721,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: progress (2.0.3)
+
+Package Locator: npm+progress$2.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15702,6 +16758,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: proxy-from-env (1.1.0)
+
+Package Locator: npm+proxy-from-env$1.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15733,6 +16793,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: react (18.3.1)
+
+Package Locator: npm+react$18.3.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15765,6 +16829,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: readdirp (3.6.0)
+
+Package Locator: npm+readdirp$3.6.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15797,6 +16865,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: require-in-the-middle (7.3.0)
+
+Package Locator: npm+require-in-the-middle$7.3.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15830,6 +16902,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: resolve (1.22.8)
+
+Package Locator: npm+resolve$1.22.8
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15872,6 +16948,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO
 
 --------------------------------------------------------------------------------
 Package Title: robust-predicates (3.0.2)
+
+Package Locator: npm+robust-predicates$3.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -15907,6 +16987,10 @@ For more information, please refer to <http://unlicense.org>
 
 --------------------------------------------------------------------------------
 Package Title: rollup (4.18.0)
+
+Package Locator: npm+rollup$4.18.0
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16593,6 +17677,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: rw (1.3.3)
+
+Package Locator: npm+rw$1.3.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16630,6 +17718,10 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: safer-buffer (2.1.2)
+
+Package Locator: npm+safer-buffer$2.1.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16662,6 +17754,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: semver (6.3.1)
+
+Package Locator: npm+semver$6.3.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16688,6 +17784,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: semver (7.6.2)
+
+Package Locator: npm+semver$7.6.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16714,6 +17814,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: shimmer (1.2.1)
+
+Package Locator: npm+shimmer$1.2.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16750,6 +17854,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: source-map-js (1.2.0)
+
+Package Locator: npm+source-map-js$1.2.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16789,6 +17897,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Package Title: supports-color (5.5.0)
+
+Package Locator: npm+supports-color$5.5.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16817,6 +17929,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: supports-preserve-symlinks-flag (1.0.0)
+
+Package Locator: npm+supports-preserve-symlinks-flag$1.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16849,6 +17965,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: svelte (4.2.19)
+
+Package Locator: npm+svelte$4.2.19
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16867,6 +17987,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 --------------------------------------------------------------------------------
 Package Title: svelte2tsx (0.7.13)
+
+Package Locator: npm+svelte2tsx$0.7.13
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16899,6 +18023,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: tabbable (5.3.3)
+
+Package Locator: npm+tabbable$5.3.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16932,6 +18060,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: tail (2.2.6)
+
+Package Locator: npm+tail$2.2.6
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16964,6 +18096,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: to-fast-properties (2.0.0)
+
+Package Locator: npm+to-fast-properties$2.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -16992,6 +18128,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: to-regex-range (5.0.1)
+
+Package Locator: npm+to-regex-range$5.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17024,6 +18164,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: tr46 (0.0.3)
+
+Package Locator: npm+tr46$0.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17052,6 +18196,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: tslib (1.14.1)
+
+Package Locator: npm+tslib$1.14.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17074,6 +18222,10 @@ PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: tslib (2.6.3)
+
+Package Locator: npm+tslib$2.6.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17096,6 +18248,10 @@ PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: typescript (5.4.5)
+
+Package Locator: npm+typescript$5.4.5
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17162,6 +18318,10 @@ END OF TERMS AND CONDITIONS
 
 --------------------------------------------------------------------------------
 Package Title: undici-types (5.26.5)
+
+Package Locator: npm+undici-types$5.26.5
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17190,6 +18350,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: unplugin (1.0.1)
+
+Package Locator: npm+unplugin$1.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17222,6 +18386,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: unzipit (1.4.3)
+
+Package Locator: npm+unzipit$1.4.3
+
+Package Depth: Direct
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17276,6 +18444,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: update-browserslist-db (1.0.16)
+
+Package Locator: npm+update-browserslist-db$1.0.16
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17307,6 +18479,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: uzip-module (1.0.3)
+
+Package Locator: npm+uzip-module$1.0.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17339,6 +18515,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: webidl-conversions (3.0.1)
+
+Package Locator: npm+webidl-conversions$3.0.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17362,6 +18542,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 --------------------------------------------------------------------------------
 Package Title: webpack-sources (3.2.3)
+
+Package Locator: npm+webpack-sources$3.2.3
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17394,6 +18578,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: webpack-virtual-modules (0.5.0)
+
+Package Locator: npm+webpack-virtual-modules$0.5.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17426,6 +18614,10 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: whatwg-url (5.0.0)
+
+Package Locator: npm+whatwg-url$5.0.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17458,6 +18650,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: which (2.0.2)
+
+Package Locator: npm+which$2.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17484,6 +18680,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: xtend (4.0.2)
+
+Package Locator: npm+xtend$4.0.2
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17515,6 +18715,10 @@ THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: yallist (3.1.1)
+
+Package Locator: npm+yallist$3.1.1
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -17541,6 +18745,10 @@ IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 Package Title: yocto-queue (0.1.0)
+
+Package Locator: npm+yocto-queue$0.1.0
+
+Package Depth: Transitive
 --------------------------------------------------------------------------------
 
 * Declared Licenses *
@@ -23828,7 +25036,43 @@ Copyright (c) Microsoft Corporation.
 
 Copyright (c)  Microsoft Corporation.
 
-Copyright (c)  Micro
+Copyright (c) 2011 Gary Court.
+
+Copyright (c) 2011 Gary Court. All rights reserved.
+
+Copyright (c)  Microsoft Corporation. All rights reserved.
+
+Copyright (c) 2015-2017 Evgeny Poberezkin
+
+Copyright (c) 2018 Chris Holt
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+Copyright (c) 2013 James Halliday
+
+Copyright (c) 2013 Raynos.
+
+Copyright (c) 2013 Thiago de Arruda
+
+Copyright (c) 2014 Dave Justice
+
+Copyright (c) 2013 Alex Kocharin
+
+Copyright (c)  OpenJS Foundation and other contributors <https://openjsf.org/>
+
+Copyright (c)  Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+
+Copyright (c)  Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+Copyright (c)  Jeremy Ashkenas,
+
+Copyright (c) 2015 Javier Blanco
+
+Copyright (c)  Mathias Bynens <https://mathiasbynens.be/>
+
+Copyright (c) 2012 James Halliday
+
+Copyright (c) 2015 David Clark
 Copyright (C) 2006 by Rob Landley <rob@landley.net>
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
@@ -23943,11 +25187,11 @@ BSD 3-Clause "New" or "Revised" License
 
 Copyright (c) 2009-2011 Mozilla Foundation and contributors
 
-Copyright (c) 2014 Mozilla Foundation and contributors
-
 Copyright (c) 2011 Mozilla Foundation and contributors
 
 Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
+
+Copyright (c) 2014 Mozilla Foundation and contributors
 
 Copyright (c) 2022 Sentry
 
@@ -24353,8 +25597,6 @@ MIT License
 
 Copyright (c) Microsoft Corporation.
 
-Copyright (c)  Node.js contributors. All rights reserved.
-
 Copyright (c)  Microsoft Corporation.
 
 Copyright (c)  Microsoft Corporation. All rights reserved.
@@ -24367,9 +25609,9 @@ Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 
 Copyright (c) 2014-2017 TJ Holowaychuk <tj@vision-media.ca>
 
-Copyright (c) 2018-2021 Josh Junon
-
 Copyright (c) 2014-2017 TJ Holowaychuk &lt;tj@vision-media.ca&gt;
+
+Copyright (c) 2018-2021 Josh Junon
 
 Copyright (c) 2017 TJ Holowaychuk <tj@vision-media.ca>
 
@@ -24473,6 +25715,42 @@ Copyright (c) 2014-2022 Denis Pushkarev
 
 Copyright (c) 2014 Petka Antonov
 
+Copyright (c) 2015 Rich Harris
+
+Copyright (c) 2019 RollupJS Plugin Contributors (https://github.com/rollup/plugins/graphs/contributors)
+
+Copyright (c) 2019 Elan Shanker, Paul Miller (https://paulmillr.com)
+
+Copyright (c)  Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+
+Copyright (c)  Paul Miller (https://paulmillr.com)
+
+Copyright (c) 2014-2018 Jon Schlinkert.
+
+Copyright (c) 2012-2019 Paul Miller (https://paulmillr.com), Elan Shanker
+
+Copyright (c)  Jorge Bucaran <<https://jorgebucaran.com>>
+
+Copyright (c) 2014 present, Jon Schlinkert.
+
+Copyright (c)  Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
+
+Copyright (c) 2015, 2019 Elan Shanker
+
+Copyright (c) 2014-2016 Jon Schlinkert
+
+Copyright (c) 2014-2017 Jon Schlinkert.
+
+Copyright (c) 2017 present, Jon Schlinkert.
+
+Copyright (c) 2012-2019 Thorsten Lorenz, Paul Miller (https://paulmillr.com)
+
+Copyright (c) 2015-2023 Benjamin Coe, Isaac Z. Schlueter, and Contributors
+
+Copyright (c) 2015 present, Jon Schlinkert.
+
+Copyright (c) 2016 Contributors
+
 Copyright (c) 2012-2022 by various contributors (see AUTHORS)
 
 Copyright (c)  0no.co
@@ -24484,8 +25762,6 @@ Copyright (c)  urql GraphQL Team and other contributors
 Copyright (c) 2010 - 2021 Brian Carlson
 
 Copyright (c) 2012-2018 Aseem Kishore, and [others].
-
-Copyright (c) 2012-2019 Thorsten Lorenz, Paul Miller (https://paulmillr.com)
 
 Copyright (c)  Joyent, Inc. and other Node contributors.
 
@@ -24543,13 +25819,9 @@ Copyright (c) 2018-2020 Guy Bedford
 
 Copyright (c) 2016-2018 Rob Wu <rob@robwu.nl>
 
-Copyright (c) 2015 Rich Harris
-
 Copyright (c) 2017 Sergey Rubanov (https://github.com/chicoxyzzy)
 
 Copyright (c) 2011 2012 2013 Forward
-
-Copyright (c) 2012-2019 Paul Miller (https://paulmillr.com), Elan Shanker
 
 Copyright (c) 2014 Blake Embrey (hello@blakeembrey.com)
 
@@ -24561,17 +25833,7 @@ Copyright (c) 2019 Gregg Tavares
 
 Copyright (c) 2014, 2015, 2016, 2017, 2018 Simon Lydell
 
-Copyright (c) 2014-2016 Jon Schlinkert
-
-Copyright (c) 2014-2017 Jon Schlinkert.
-
-Copyright (c) 2014-2018 Jon Schlinkert.
-
-Copyright (c) 2014 present, Jon Schlinkert.
-
 Copyright (c) 2015 Andres Suarez <zertosh@gmail.com>
-
-Copyright (c) 2015 present, Jon Schlinkert.
 
 Copyright (c) 2015–2016 Sebastian Mayr
 
@@ -24582,8 +25844,6 @@ Copyright (c) 2016 Thomas Watson Steen
 Copyright (c) 2016-2019 Thomas Watson Steen
 
 Copyright (c) 2019-2023 Elasticsearch B.V.
-
-Copyright (c) 2017 present, Jon Schlinkert.
 
 Copyright (c) 2018 Filip Skokan
 
@@ -24790,4 +26050,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2024-10-10
+Report Generated by FOSSA on 2024-10-23
