@@ -94,7 +94,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       // TODO(shoup): update ^ for local SR once available
       return new SchemaRegistryTreeItem(element);
     }
-    // should only be left with ContainerTreeItems for Configurations
+    // should only be left with ContainerTreeItems
     return element;
   }
 
@@ -226,6 +226,7 @@ async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster
     // TODO: this should be handled in the preloader once it (and ResourceManager) start handling
     // local resources
     getResourceManager().setLocalKafkaClusters(localClusters);
+    localContainerItem.children = localClusters;
   }
 
   return localContainerItem;
