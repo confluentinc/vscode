@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
 
-import { randomBytes } from "crypto";
 import { posix } from "path";
 import { unzip } from "unzipit";
 import { Template, TemplateList, TemplateManifest, TemplatesApi } from "./clients/sidecar";
@@ -25,12 +24,12 @@ const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommand = (context: ExtensionContext) => {
   const scaffoldProjectCommand = registerCommandWithLogging("confluent.scaffold", () =>
-    scaffoldProjectRequest(context),
+    scaffoldProjectRequest(),
   );
   context.subscriptions.push(scaffoldProjectCommand);
 };
 
-export const scaffoldProjectRequest = async (context: ExtensionContext) => {
+export const scaffoldProjectRequest = async () => {
   let pickedTemplate: Template | undefined = undefined;
   try {
     const templateListResponse: TemplateList = await getTemplatesList();
@@ -54,29 +53,17 @@ export const scaffoldProjectRequest = async (context: ExtensionContext) => {
   }
 
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
-    pickedTemplate.spec.name,
+    { id: pickedTemplate.spec.name, template: scaffoldFormTemplate },
     "template-options-form",
     `Generate ${pickedTemplate.spec.display_name} Template`,
     ViewColumn.One,
-    {
-      enableScripts: true,
-    },
+    { enableScripts: true },
   );
 
   if (wasExisting) {
     optionsForm.reveal();
     return;
   }
-
-  const staticRoot = Uri.joinPath(context.extensionUri, "webview");
-
-  optionsForm.webview.html = scaffoldFormTemplate({
-    cspSource: optionsForm.webview.cspSource,
-    webviewUri: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
-    submitScriptUri: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "scaffold-form.js")),
-    webviewStylesheet: optionsForm.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.css")),
-    nonce: randomBytes(16).toString("base64"),
-  });
 
   /** Stores a map of options with key: value pairs that is then updated on form input
    * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
