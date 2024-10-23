@@ -213,7 +213,7 @@ async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster
     [],
   );
   localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
-  localContainerItem.description = "";
+  localContainerItem.description = "(Not running)";
   localContainerItem.tooltip = new vscode.MarkdownString(
     "Local Kafka clusters discoverable at port `8082` are shown here.",
   );
