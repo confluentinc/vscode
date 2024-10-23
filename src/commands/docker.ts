@@ -1,20 +1,32 @@
-import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
+import { CancellationToken, Disposable, ProgressLocation, QuickPickItem, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { Logger } from "../logging";
+import {
+  localResourcesQuickPick,
+  SCHEMA_REGISTRY_RESOURCE_LABEL,
+} from "../quickpicks/localResources";
 
 const logger = new Logger("commands.docker");
 
 async function startLocalResourcesWithProgress() {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
-    window.showErrorMessage("Unable to launch local Kafka because Docker is not available.");
+    window.showErrorMessage("Unable to launch local resources because Docker is not available.");
     return;
   }
 
-  await runWorkflowWithProgress(true);
+  // show multi-select quickpick to allow user to choose which resources to launch and determine
+  // how the workflow should be run
+  const resources: QuickPickItem[] = await localResourcesQuickPick();
+  const resourceLabels: string[] = resources.map((resource) => resource.label);
+  logger.debug("selected resources", { resources: resourceLabels });
+  const shouldLaunchSchemaRegistry: boolean = resourceLabels.includes(
+    SCHEMA_REGISTRY_RESOURCE_LABEL,
+  );
+  await runWorkflowWithProgress(true, shouldLaunchSchemaRegistry);
 }
 
 async function stopLocalResourcesWithProgress() {
