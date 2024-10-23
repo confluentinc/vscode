@@ -19,6 +19,7 @@ import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
+import { getLocalKafkaImageTag } from "../configs";
 import {
   ContainerExistsError,
   createContainer,
@@ -26,7 +27,6 @@ import {
   getContainersForImage,
   startContainer,
 } from "../containers";
-import { getLocalKafkaImageTag } from "../images";
 import { createNetwork } from "../networks";
 
 const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
