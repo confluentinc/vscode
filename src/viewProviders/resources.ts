@@ -220,6 +220,7 @@ async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster
 
   const localClusters: LocalKafkaCluster[] = await getLocalKafkaClusters();
   if (localClusters.length > 0) {
+    localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localClusters.map((cluster) => cluster.uri).join(", ");
     // TODO: this should be handled in the preloader once it (and ResourceManager) start handling
