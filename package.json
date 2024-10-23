@@ -352,7 +352,18 @@
           "type": "string",
           "default": "localhost",
           "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
-        }
+        },
+        "confluent.localDocker.schemaRegistryImageRepo": {
+          "type": "string",
+          "default": "confluentinc/cp-schema-registry",
+          "description": "Docker image repo to use when starting a local Schema Registry container",
+          "readOnly": true
+        },
+        "confluent.localDocker.schemaRegistryImageTag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Docker image tag to use when starting a local Schema Registry container"
+        },
       }
     },
     "viewsContainers": {
