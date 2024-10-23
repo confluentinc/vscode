@@ -27,9 +27,24 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
   private forceDeepRefresh: boolean = false;
 
+  /** (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
+   * in the schema registry.
+   */
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
+  }
+
+  refreshIfShowingRegistry(schemaRegistryId: string): void {
+    // if the schema registry is the one being shown, deep refresh the view
+    if (this.schemaRegistry?.id === schemaRegistryId) {
+      this.refresh(true);
+    } else {
+      // Otherwise at least inform the preloader to purge the cache for this schema registry
+      // (if currently cached).
+      const preloader = CCloudResourcePreloader.getInstance();
+      preloader.purgeSchemas(schemaRegistryId);
+    }
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;

@@ -95,6 +95,12 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.schemas.upload",
+        "icon": "$(plus)",
+        "title": "Upload Schema to Schema Registry",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.diffMostRecentVersions",
         "title": "Show Latest Changes",
         "category": "Confluent: Compare Resources"
@@ -494,14 +500,9 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemaViewer.uploadVersion",
+          "command": "confluent.schemas.upload",
           "group": "navigation@3",
-          "when": "false"
-        },
-        {
-          "command": "confluent.topic.consume.duplicate",
-          "group": "navigation",
-          "when": "activeWebviewPanelId == message-viewer"
+          "when": "resourceFilename =~ /.*\\.(avsc|json|proto)/"
         }
       ],
       "editor/title/context": [
