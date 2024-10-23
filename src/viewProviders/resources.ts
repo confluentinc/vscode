@@ -141,7 +141,7 @@ async function loadResources(
   // - an unexpandable item with a "No connection" description where the user can connect to CCloud
   // - a "connected" expandable item with a description of the current connection name and the ability
   //   to add a new connection or switch connections
-  if (await hasCCloudAuthSession()) {
+  if (hasCCloudAuthSession()) {
     const preloader = CCloudResourcePreloader.getInstance();
     // TODO: have this cached in the resource manager  via the preloader
     const currentOrg = await getCurrentOrganization();

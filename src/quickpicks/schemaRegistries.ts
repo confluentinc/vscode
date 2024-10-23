@@ -29,7 +29,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
  */
 async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
   // TODO(shoup): update to support LocalSchemaRegistry
-  if (!(await hasCCloudAuthSession())) {
+  if (!hasCCloudAuthSession()) {
     return undefined;
   }
   // list all Schema Registries for all CCloud environments for the given connection; to be

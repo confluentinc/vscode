@@ -9,7 +9,7 @@ export async function environmentQuickPick(): Promise<CCloudEnvironment | undefi
   // the command palette instead of through the view->item->context menu
   let cloudEnvironments: CCloudEnvironment[] = [];
 
-  if (!(await hasCCloudAuthSession())) {
+  if (!hasCCloudAuthSession()) {
     vscode.window.showInformationMessage("No Confluent Cloud connection found.");
     return undefined;
   }
