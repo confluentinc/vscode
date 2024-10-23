@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/node";
-import { randomBytes } from "crypto";
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
@@ -71,32 +70,23 @@ export function activateMessageViewer(context: ExtensionContext) {
         }
         const sidecar = await getSidecar();
 
-        const staticRoot = Uri.joinPath(context.extensionUri, "webview");
+        // this panel going to be active, so setting its topic to the currently active
+        activeTopic = topic;
         const [panel, cached] = cache.findOrCreate(
-          duplicate
-            ? `${topic.clusterId}/${topic.name}/${Math.random().toString(16).slice(2)}`
-            : `${topic.clusterId}/${topic.name}`,
+          {
+            id: `${topic.clusterId}/${topic.name}`,
+            multiple: duplicate,
+            template: messageViewerTemplate,
+          },
           "message-viewer",
           `Topic: ${topic.name}`,
           ViewColumn.One,
-          { enableScripts: true, localResourceRoots: [staticRoot] },
+          { enableScripts: true },
         );
 
-        // this panel going to be active, so setting its topic to the currently active
-        activeTopic = topic;
         if (cached) {
           panel.reveal();
         } else {
-          panel.webview.html = messageViewerTemplate({
-            cspSource: panel.webview.cspSource,
-            nonce: randomBytes(16).toString("base64"),
-            webviewUri: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.js")),
-            webviewStylesheet: panel.webview.asWebviewUri(Uri.joinPath(staticRoot, "main.css")),
-            messageViewerUri: panel.webview.asWebviewUri(
-              Uri.joinPath(staticRoot, "message-viewer.js"),
-            ),
-          });
-
           panel.onDidChangeViewState((e) => {
             // whenever we switch between panels, override active topic
             if (e.webviewPanel.active) activeTopic = topic;

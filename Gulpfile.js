@@ -368,7 +368,17 @@ function template(options = {}) {
     transform(code, id) {
       if (filter(id)) {
         return {
-          code: `const template = ${JSON.stringify(code)}; export default (variables) => template.replace(/\\$\\{([^}]+)\\}/g, (_, v) => variables[v]);`,
+          code: `
+          const template = ${JSON.stringify(code)}; 
+          export default (variables) => {
+            const keys = Object.keys(variables);
+            const values = Object.values(variables);
+            return template.replace(/\\$\\{([^}]+)\\}/g, (_, expr) => {
+              // evaluate expression in { } in the context of variables
+              const fn = new Function(...keys, 'return (' + expr + ');');
+              return fn(...values);
+            });
+          }`,
           map: { mappings: "" },
         };
       }
@@ -677,6 +687,7 @@ export async function format() {
       "src/**/*.ts",
       "src/**/*.css",
       "src/**/*.html",
+      "src/**/*.json",
       "src/**/*.graphql",
       "*.md",
       "*.js",

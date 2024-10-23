@@ -7,7 +7,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; font-src ${cspSource}; style-src 'nonce-${nonce}'; style-src-attr 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';"
     />
-    <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${webviewStylesheet}" />
+    <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
   </head>
   <body>
     <main class="container">
@@ -75,8 +75,8 @@
       </form>
     </main>
 
-    <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
-    <script nonce="${nonce}" src="${submitScriptUri}" type="module"></script>
+    <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
+    <script type="module" nonce="${nonce}" src="${path('scaffold-form.js')}"></script>
     <style nonce="${nonce}">
       body {
         max-width: 1000px;
