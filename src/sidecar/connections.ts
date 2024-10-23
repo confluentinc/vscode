@@ -23,7 +23,7 @@ const logger = new Logger("sidecar.connections");
 /** Get the existing {@link Connection} (if it exists). */
 async function tryToGetConnection(id: string): Promise<Connection | null> {
   let connection: Connection | null = null;
-  const client = (await getSidecar()).getConnectionsResourceApi();
+  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
     connection = await client.gatewayV1ConnectionsIdGet({ id: id });
   } catch (error) {
@@ -31,7 +31,7 @@ async function tryToGetConnection(id: string): Promise<Connection | null> {
       if (error.response.status === 404) {
         logger.debug("No connection found", { connectionId: id });
       } else {
-        logger.error("Error response from fetching existing local connection:", {
+        logger.error("Error response fetching existing connection:", {
           status: error.response.status,
           statusText: error.response.statusText,
           body: JSON.stringify(error.response.body),
@@ -40,7 +40,7 @@ async function tryToGetConnection(id: string): Promise<Connection | null> {
       }
     } else {
       // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
-      logger.error("Error getting existing connection", { error, connectionId: id });
+      logger.error("Error fetching connection", { error, connectionId: id });
     }
   }
   return connection;
@@ -64,11 +64,11 @@ async function tryToCreateConnection(spec: ConnectionSpec): Promise<Connection> 
     connection = await client.gatewayV1ConnectionsPost({
       ConnectionSpec: spec,
     });
-    logger.debug("created new connection", { type: spec.type });
+    logger.debug("created new connection:", { type: spec.type });
     return connection;
   } catch (error) {
-    logger.error("create connection error", error);
-    throw new Error("Error while trying to create new connection. Please try again.");
+    logger.error("create connection error:", error);
+    throw error;
   }
 }
 
@@ -84,7 +84,7 @@ export async function createLocalConnection(): Promise<Connection> {
 
 /** Delete the existing Confluent Cloud {@link Connection} (if it exists). */
 export async function deleteCCloudConnection(): Promise<void> {
-  const client = (await getSidecar()).getConnectionsResourceApi();
+  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
     await client.gatewayV1ConnectionsIdDelete({ id: CCLOUD_CONNECTION_ID });
     logger.debug("deleted existing CCloud connection");
