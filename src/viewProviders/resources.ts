@@ -21,8 +21,6 @@ import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
 
-const CONFLUENT_ICON = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-
 /**
  * The types managed by the {@link ResourceViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
@@ -115,9 +113,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[][] = await Promise.all([
+      const resources: ResourceViewProviderData[] = await Promise.all([
         loadCCloudResources(this.forceDeepRefresh),
-        loadLocalResources(this.forceDeepRefresh),
+        loadLocalResources(),
       ]);
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
@@ -155,7 +153,7 @@ async function loadCCloudResources(
     vscode.TreeItemCollapsibleState.None,
     [],
   );
-  cloudContainerItem.iconPath = CONFLUENT_ICON;
+  cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
   if (hasCCloudAuthSession()) {
     const preloader = CCloudResourcePreloader.getInstance();
@@ -202,11 +200,22 @@ async function loadCCloudResources(
   return cloudContainerItem;
 }
 
+// TODO(shoup): update this comment + underlying logic once we have local resource management actions
+/**
+ * Load the local resources into a container tree item.
+ *
+ * @returns A container tree item with the local Kafka clusters as children
+ */
 async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster>> {
   const localContainerItem = new ContainerTreeItem<LocalKafkaCluster>(
     "Local",
     vscode.TreeItemCollapsibleState.None,
     [],
+  );
+  localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
+  localContainerItem.description = "";
+  localContainerItem.tooltip = new vscode.MarkdownString(
+    "Local Kafka clusters discoverable at port `8082` are shown here.",
   );
 
   const localClusters: LocalKafkaCluster[] = await getLocalKafkaClusters();
