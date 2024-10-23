@@ -165,6 +165,13 @@ export class CCloudResourcePreloader {
     }
   }
 
+  /** Mark this schema registry cache as stale, such as when known that a schema has been added or removed,
+   * but the registry isn't currently being displayed
+   */
+  public purgeSchemas(schemaRegistryId: string): void {
+    this.schemaRegistryCacheStates.set(schemaRegistryId, false);
+  }
+
   /** Ensure that this single Schema Registry's schemas have been loaded. */
   public async ensureSchemasLoaded(
     schemaRegistryId: string,

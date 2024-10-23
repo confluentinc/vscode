@@ -7,6 +7,7 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - "Open Settings" command to quickly access the Confluent for VS Code extension settings.
+- Create new schemas + subjects or new versions of existing schemas.
 
 ### Changed
 
