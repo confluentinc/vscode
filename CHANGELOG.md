@@ -12,6 +12,9 @@ All notable changes to this extension will be documented in this file.
 
 - Topic -> Schema correlation now recognizes schemas using `TopicRecordNameStrategy` in addition to
   `TopicNameStrategy`, [issue #298](https://github.com/confluentinc/vscode/issues/298).
+- The "Local" item in the Resources view now persists regardless of whether or not a local Kafka
+  cluster is discoverable, in preparation for future enhancements to local resource management.
+  [issue #441](https://github.com/confluentinc/vscode/issues/441)
 
 ## 0.18.3
 
