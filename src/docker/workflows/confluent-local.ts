@@ -21,7 +21,11 @@ import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
 import { getSidecar } from "../../sidecar";
-import { getLocalKafkaImageTag } from "../configs";
+import {
+  getLocalKafkaImageTag,
+  getLocalSchemaRegistryImageName,
+  getLocalSchemaRegistryImageTag,
+} from "../configs";
 import {
   ContainerExistsError,
   createContainer,
@@ -213,9 +217,9 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const imageMsg = "Checking for Schema Registry image...";
     this.logger.debug(imageMsg);
     this.progress?.report({ message: imageMsg });
-    // TODO: make SR image repo+tag configurable?
-    const schemaRegistryImageRepo = "confluentinc/cp-schema-registry";
-    const schemaRegistryImageTag = "latest";
+
+    const schemaRegistryImageRepo = getLocalSchemaRegistryImageName();
+    const schemaRegistryImageTag = getLocalSchemaRegistryImageTag();
     await this.checkForImage(schemaRegistryImageRepo, schemaRegistryImageTag);
 
     const existingContainers: ContainerSummary[] = await getContainersForImage(
