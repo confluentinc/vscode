@@ -140,7 +140,7 @@ export function getResourceViewProvider() {
  * CCloud environments and their sub-resources. The description will also change to show the
  * current organization name.
  *
- * Otherwise, the container will be collapsed and show a "No connection" message with an action to
+ * Otherwise, the container will not be expandable and show a "No connection" message with an action to
  * connect to CCloud.
  */
 export async function loadCCloudResources(

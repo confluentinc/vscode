@@ -111,7 +111,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
-    assert.ok(result.description === TEST_LOCAL_KAFKA_CLUSTER.uri);
+    assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
     assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER]);
   });
 
