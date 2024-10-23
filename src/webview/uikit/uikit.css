@@ -139,7 +139,7 @@
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
   border-radius: 3px;
-  border: 2px solid var(--vscode-input-border);
+  border: 1px solid var(--vscode-dropdown-border);
   height: var(--cflt-input-height);
   min-width: var(--cflt-input-min-width);
   padding: 2px 5px;
