@@ -44,7 +44,7 @@ async function generateKafkaClusterQuickPick(
   if (includeCCloud) {
     // list all Kafka clusters for all CCloud environments for the given connection; to be separated
     // further by environment in the quickpick menu below
-    if (await hasCCloudAuthSession()) {
+    if (hasCCloudAuthSession()) {
       const envGroups = await getEnvironments();
       cloudEnvironments = envGroups.map((group) => group.environment);
       cloudKafkaClusters = envGroups.map((group) => group.kafkaClusters).flat();
@@ -58,7 +58,7 @@ async function generateKafkaClusterQuickPick(
   availableKafkaClusters.push(...localKafkaClusters, ...cloudKafkaClusters);
   if (availableKafkaClusters.length === 0) {
     vscode.window.showInformationMessage("No local Apache Kafka clusters available.");
-    if (includeCCloud && !(await hasCCloudAuthSession())) {
+    if (includeCCloud && !hasCCloudAuthSession()) {
       const login = "Log in to Confluent Cloud";
       vscode.window
         .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)

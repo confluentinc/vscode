@@ -2,6 +2,7 @@ import { AuthenticationSession, authentication } from "vscode";
 import { getSidecar } from ".";
 import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
+import { ContextValues, getContextValue } from "../context";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
@@ -79,6 +80,12 @@ export async function getCCloudAuthSession(
   return await authentication.getSession(AUTH_PROVIDER_ID, [], { createIfNone: createIfNone });
 }
 
-export async function hasCCloudAuthSession(): Promise<boolean> {
-  return !!(await getCCloudAuthSession());
+/** Do we currently have a ccloud connection? */
+export function hasCCloudAuthSession(): boolean {
+  // Fastest way to check if the user is connected to Confluent Cloud, no round trips to sidecar. At extension startup
+  // we set the initial context value to false, and any changes via ccloud auth provider will update this value.
+  const isCcloudConnected: boolean | undefined = getContextValue(
+    ContextValues.ccloudConnectionAvailable,
+  );
+  return !!isCcloudConnected;
 }
