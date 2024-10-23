@@ -504,6 +504,13 @@
           "when": "activeWebviewPanelId == message-viewer"
         }
       ],
+      "editor/title/context": [
+        {
+          "command": "confluent.topic.consume.duplicate",
+          "group": "navigation",
+          "when": "activeWebviewPanelId == message-viewer"
+        }
+      ],
       "view/title": [
         {
           "command": "confluent.resources.refresh",
