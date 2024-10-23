@@ -237,6 +237,13 @@
         "category": "Confluent: Topic"
       },
       {
+        "command": "confluent.topic.consume.duplicate",
+        "icon": "$(explorer-view-icon)",
+        "title": "Duplicate Message Browser",
+        "category": "Confluent: Topic",
+        "enablement": "activeWebviewPanelId == message-viewer"
+      },
+      {
         "command": "confluent.topics.create",
         "icon": "$(plus)",
         "title": "Create Topic",
@@ -490,6 +497,11 @@
           "command": "confluent.schemaViewer.uploadVersion",
           "group": "navigation@3",
           "when": "false"
+        },
+        {
+          "command": "confluent.topic.consume.duplicate",
+          "group": "navigation",
+          "when": "activeWebviewPanelId == message-viewer"
         }
       ],
       "view/title": [
