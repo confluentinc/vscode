@@ -7,9 +7,9 @@
 
 The following 3rd-party software packages may be used by or distributed with git@github.com:confluentinc/vscode.git. Any information relevant to third-party vendors listed below are collected using common, reasonable means.
 
-Date generated: 2024-10-14
+Date generated: 2024-10-23
 
-Revision ID: ad8e7143d77dc47b771c2630ffcd03d7f49dae46
+Revision ID: 539c9c8fdc9cb2fb33360c133fb698e93dc4fa5c
 
 ================================================================================
 ================================================================================
@@ -8093,41 +8093,9 @@ Apache-2.0
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-android-arm-eabi (4.18.0)
+Package Title: @rollup/rollup-android-arm-eabi (4.24.0)
 
-Package Locator: npm+@rollup/rollup-android-arm-eabi$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-android-arm64 (4.18.0)
-
-Package Locator: npm+@rollup/rollup-android-arm64$4.18.0
+Package Locator: npm+@rollup/rollup-android-arm-eabi$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8157,41 +8125,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-darwin-arm64 (4.18.0)
+Package Title: @rollup/rollup-android-arm64 (4.24.0)
 
-Package Locator: npm+@rollup/rollup-darwin-arm64$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-darwin-x64 (4.18.0)
-
-Package Locator: npm+@rollup/rollup-darwin-x64$4.18.0
+Package Locator: npm+@rollup/rollup-android-arm64$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8221,41 +8157,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-arm-gnueabihf (4.18.0)
+Package Title: @rollup/rollup-darwin-arm64 (4.24.0)
 
-Package Locator: npm+@rollup/rollup-linux-arm-gnueabihf$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-arm-musleabihf (4.18.0)
-
-Package Locator: npm+@rollup/rollup-linux-arm-musleabihf$4.18.0
+Package Locator: npm+@rollup/rollup-darwin-arm64$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8285,41 +8189,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-arm64-gnu (4.18.0)
+Package Title: @rollup/rollup-darwin-x64 (4.24.0)
 
-Package Locator: npm+@rollup/rollup-linux-arm64-gnu$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-arm64-musl (4.18.0)
-
-Package Locator: npm+@rollup/rollup-linux-arm64-musl$4.18.0
+Package Locator: npm+@rollup/rollup-darwin-x64$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8349,41 +8221,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-powerpc64le-gnu (4.18.0)
+Package Title: @rollup/rollup-linux-arm-gnueabihf (4.24.0)
 
-Package Locator: npm+@rollup/rollup-linux-powerpc64le-gnu$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-riscv64-gnu (4.18.0)
-
-Package Locator: npm+@rollup/rollup-linux-riscv64-gnu$4.18.0
+Package Locator: npm+@rollup/rollup-linux-arm-gnueabihf$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8413,41 +8253,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-s390x-gnu (4.18.0)
+Package Title: @rollup/rollup-linux-arm-musleabihf (4.24.0)
 
-Package Locator: npm+@rollup/rollup-linux-s390x-gnu$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-x64-gnu (4.18.0)
-
-Package Locator: npm+@rollup/rollup-linux-x64-gnu$4.18.0
+Package Locator: npm+@rollup/rollup-linux-arm-musleabihf$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8477,41 +8285,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-linux-x64-musl (4.18.0)
+Package Title: @rollup/rollup-linux-arm64-gnu (4.24.0)
 
-Package Locator: npm+@rollup/rollup-linux-x64-musl$4.18.0
-
-Package Depth: Transitive
---------------------------------------------------------------------------------
-
-* Declared Licenses *
-MIT
-
-
-Copyright (c) <year> <copyright holders>
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
---------------------------------------------------------------------------------
-Package Title: @rollup/rollup-win32-arm64-msvc (4.18.0)
-
-Package Locator: npm+@rollup/rollup-win32-arm64-msvc$4.18.0
+Package Locator: npm+@rollup/rollup-linux-arm64-gnu$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8541,9 +8317,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-win32-ia32-msvc (4.18.0)
+Package Title: @rollup/rollup-linux-arm64-musl (4.24.0)
 
-Package Locator: npm+@rollup/rollup-win32-ia32-msvc$4.18.0
+Package Locator: npm+@rollup/rollup-linux-arm64-musl$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -8573,9 +8349,233 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: @rollup/rollup-win32-x64-msvc (4.18.0)
+Package Title: @rollup/rollup-linux-powerpc64le-gnu (4.24.0)
 
-Package Locator: npm+@rollup/rollup-win32-x64-msvc$4.18.0
+Package Locator: npm+@rollup/rollup-linux-powerpc64le-gnu$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-linux-riscv64-gnu (4.24.0)
+
+Package Locator: npm+@rollup/rollup-linux-riscv64-gnu$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-linux-s390x-gnu (4.24.0)
+
+Package Locator: npm+@rollup/rollup-linux-s390x-gnu$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-linux-x64-gnu (4.24.0)
+
+Package Locator: npm+@rollup/rollup-linux-x64-gnu$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-linux-x64-musl (4.24.0)
+
+Package Locator: npm+@rollup/rollup-linux-x64-musl$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-win32-arm64-msvc (4.24.0)
+
+Package Locator: npm+@rollup/rollup-win32-arm64-msvc$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-win32-ia32-msvc (4.24.0)
+
+Package Locator: npm+@rollup/rollup-win32-ia32-msvc$4.24.0
+
+Package Depth: Transitive
+--------------------------------------------------------------------------------
+
+* Declared Licenses *
+MIT
+
+
+Copyright (c) <year> <copyright holders>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Package Title: @rollup/rollup-win32-x64-msvc (4.24.0)
+
+Package Locator: npm+@rollup/rollup-win32-x64-msvc$4.24.0
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -9484,9 +9484,9 @@ MIT
 
 
 --------------------------------------------------------------------------------
-Package Title: @types/estree (1.0.5)
+Package Title: @types/estree (1.0.6)
 
-Package Locator: npm+@types/estree$1.0.5
+Package Locator: npm+@types/estree$1.0.6
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -16986,9 +16986,9 @@ For more information, please refer to <http://unlicense.org>
 
 
 --------------------------------------------------------------------------------
-Package Title: rollup (4.18.0)
+Package Title: rollup (4.24.0)
 
-Package Locator: npm+rollup$4.18.0
+Package Locator: npm+rollup$4.24.0
 
 Package Depth: Direct
 --------------------------------------------------------------------------------
@@ -17122,7 +17122,7 @@ Repository: micromatch/braces
 
 > The MIT License (MIT)
 > 
-> Copyright (c) 2014-2018, Jon Schlinkert.
+> Copyright (c) 2014-present, Jon Schlinkert.
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -19766,7 +19766,7 @@ Repository: micromatch/braces
 
 > The MIT License (MIT)
 > 
-> Copyright (c) 2014-2018, Jon Schlinkert.
+> Copyright (c) 2014-present, Jon Schlinkert.
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
@@ -25097,7 +25097,43 @@ Copyright (c) Microsoft Corporation.
 
 Copyright (c)  Microsoft Corporation.
 
-Copyright (c)  Micro
+Copyright (c) 2011 Gary Court.
+
+Copyright (c) 2011 Gary Court. All rights reserved.
+
+Copyright (c)  Microsoft Corporation. All rights reserved.
+
+Copyright (c) 2015-2017 Evgeny Poberezkin
+
+Copyright (c) 2018 Chris Holt
+
+Copyright (c) 2017 Evgeny Poberezkin
+
+Copyright (c) 2013 James Halliday
+
+Copyright (c) 2013 Raynos.
+
+Copyright (c) 2013 Thiago de Arruda
+
+Copyright (c) 2014 Dave Justice
+
+Copyright (c) 2013 Alex Kocharin
+
+Copyright (c)  OpenJS Foundation and other contributors <https://openjsf.org/>
+
+Copyright (c)  Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+
+Copyright (c)  Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+Copyright (c)  Jeremy Ashkenas,
+
+Copyright (c) 2015 Javier Blanco
+
+Copyright (c)  Mathias Bynens <https://mathiasbynens.be/>
+
+Copyright (c) 2012 James Halliday
+
+Copyright (c) 2015 David Clark
 Copyright (C) 2006 by Rob Landley <rob@landley.net>
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
@@ -25792,8 +25828,6 @@ Copyright (c) 2023 Sven Sauleau
 
 Copyright (c) 2023-2024 Functional Software, Inc. dba Sentry
 
-Copyright (c) 2013 Nathan Rajlich <nathan@tootallnate.net>*
-
 Copyright (c) 2023 present Johnson Chu
 
 Copyright (c) Facebook, Inc. and its affiliates.
@@ -26067,4 +26101,4 @@ Public Domain
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-Report Generated by FOSSA on 2024-10-14
+Report Generated by FOSSA on 2024-10-23
