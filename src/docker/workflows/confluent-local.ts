@@ -213,7 +213,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.progress?.report({ message: imageMsg });
     // TODO: make SR image repo+tag configurable?
     const schemaRegistryImageRepo = "confluentinc/cp-schema-registry";
-    const schemaRegistryImageTag = "7.7.0";
+    const schemaRegistryImageTag = "latest";
     await this.checkForImage(schemaRegistryImageRepo, schemaRegistryImageTag);
 
     const existingContainers: ContainerSummary[] = await getContainersForImage(
