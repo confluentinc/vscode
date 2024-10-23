@@ -10,7 +10,7 @@ import { getSidecar } from "../sidecar";
 import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections";
 
 async function useOrganizationCommand() {
-  if (!(await hasCCloudAuthSession())) {
+  if (!hasCCloudAuthSession()) {
     return;
   }
   const organization: CCloudOrganization | undefined = await organizationQuickPick();
