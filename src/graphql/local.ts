@@ -26,7 +26,7 @@ export async function getLocalResources(): Promise<LocalResourceGroup[]> {
     } catch {
       // error should be caught+logged in createLocalConnection
       // TODO: window.showErrorMessage here? might get noisy since this is triggered from refreshes
-      return localKafkaClusters;
+      return localResources;
     }
   }
 
