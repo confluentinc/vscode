@@ -15,10 +15,12 @@ import {
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
-import { LOCAL_KAFKA_REST_PORT } from "../../constants";
+import { Connection, ConnectionsResourceApi } from "../../clients/sidecar";
+import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC, LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
+import { getSidecar } from "../../sidecar";
 import { getLocalKafkaImageTag } from "../configs";
 import {
   ContainerExistsError,
@@ -269,6 +271,20 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       window.showErrorMessage("Failed to create Schema Registry container.");
       return;
     }
+
+    // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
+    // assigned REST proxy port
+    const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+    const resp: Connection = await client.gatewayV1ConnectionsIdPut({
+      id: LOCAL_CONNECTION_ID,
+      ConnectionSpec: {
+        ...LOCAL_CONNECTION_SPEC,
+        local_config: {
+          schema_registry_uri: `http://localhost:${restProxyPort}`,
+        },
+      },
+    });
+    this.logger.debug("Updated local connection with Schema Registry URI:", resp);
 
     const startContainerMsg = `Starting container "${containerName}"...`;
     this.logger.debug(startContainerMsg);
