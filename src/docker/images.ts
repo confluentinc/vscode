@@ -1,24 +1,9 @@
-import { workspace, WorkspaceConfiguration } from "vscode";
 import { ImageApi, ImageInspect, ResponseError } from "../clients/docker";
 import { Logger } from "../logging";
-import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../preferences/constants";
 import { defaultRequestInit } from "./configs";
-import { DEFAULT_KAFKA_IMAGE_REPO, DEFAULT_KAFKA_IMAGE_TAG } from "./constants";
 import { streamToString } from "./stream";
 
 const logger = new Logger("docker.images");
-
-/** Get the local Kafka image name based on user settings. */
-export function getLocalKafkaImageName(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  return configs.get(LOCAL_KAFKA_IMAGE, DEFAULT_KAFKA_IMAGE_REPO);
-}
-
-/** Get the local Kafka image tag based on user settings. */
-export function getLocalKafkaImageTag(): string {
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
-  return configs.get(LOCAL_KAFKA_IMAGE_TAG, DEFAULT_KAFKA_IMAGE_TAG);
-}
 
 /** Check if an image exists in the local registry. */
 export async function imageExists(repo: string, tag: string): Promise<boolean> {
