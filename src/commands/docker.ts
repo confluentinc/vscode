@@ -1,7 +1,6 @@
 import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { isDockerAvailable } from "../docker/configs";
-import { getLocalKafkaImageName } from "../docker/images";
+import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { Logger } from "../logging";
