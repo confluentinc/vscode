@@ -20,14 +20,14 @@ remove-test-env:
 	@echo "Removing .env file"
 	@rm -f .env
 
-# Install additional dependencies to run VSCode testing in headless mode
+# Install additional test dependencies to run VSCode testing in headless mode (on Linux)
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
 test: setup-test-env install-dependencies
 	sudo apt-get update
 	sudo apt install -y libgbm1 libgtk-3-0 xvfb
 	npx gulp ci
-	xvfb-run -a npx gulp test
+	[[ $$(uname -s) == "Linux" ]] && xvfb-run -a npx gulp test ||
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
@@ -73,7 +73,7 @@ EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
 SKIP_DOWNLOAD_EXECUTABLE := $(shell [ -x $(EXECUTABLE_DOWNLOAD_PATH) ] && echo true || echo false)
 
 # Get the OS and architecture combination for the sidecar executable
-SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/')" )
+SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')" )
 
 IDE_SIDECAR_REPO := confluentinc/ide-sidecar
 
