@@ -13,6 +13,8 @@ servers:
   - url: http://127.0.0.1:26636
     description: Auto generated value
 tags:
+  - name: Feature Flags
+    description: Feature flags
   - name: Templates
     description: Code generation templates
 paths:
@@ -172,6 +174,41 @@ paths:
       responses:
         "204":
           description: No Content
+  /gateway/v1/feature-flags/{id}/value:
+    get:
+      tags:
+        - Feature Flags
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JsonNode"
+        "401":
+          description: Not Authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "404":
+          description: Feature flag not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "500":
+          description: Internal error parsing feature flags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
   /gateway/v1/handshake:
     get:
       tags:
