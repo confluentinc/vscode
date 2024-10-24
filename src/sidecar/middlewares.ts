@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 
-import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 const logger = new Logger("sidecar.middlewares");
 

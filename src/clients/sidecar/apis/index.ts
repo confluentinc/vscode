@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from "./ConnectionsResourceApi";
+export * from "./FeatureFlagsApi";
 export * from "./HandshakeResourceApi";
 export * from "./KafkaConsumeResourceApi";
 export * from "./LoginRealmResourceApi";

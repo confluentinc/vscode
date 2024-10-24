@@ -16,6 +16,13 @@ All notable changes to this extension will be documented in this file.
   cluster is discoverable, in preparation for future enhancements to local resource management.
   [issue #441](https://github.com/confluentinc/vscode/issues/441)
 
+### Fixed
+
+- Temporary disruptions to CCloud auth sessions will now show a notification to the user while the
+  extension sidecar attempts to resolve the issue (instead of invalidating the session immediately
+  and forcing the user to sign in again).
+  [issue #307](https://github.com/confluentinc/vscode/issues/307)
+
 ## 0.18.3
 
 ### Fixed

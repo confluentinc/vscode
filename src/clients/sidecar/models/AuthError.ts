@@ -31,6 +31,12 @@ export interface AuthError {
    * @memberof AuthError
    */
   message?: string;
+  /**
+   *
+   * @type {boolean}
+   * @memberof AuthError
+   */
+  is_transient?: boolean;
 }
 
 /**
@@ -51,6 +57,7 @@ export function AuthErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   return {
     created_at: json["created_at"] == null ? undefined : new Date(json["created_at"]),
     message: json["message"] == null ? undefined : json["message"],
+    is_transient: json["is_transient"] == null ? undefined : json["is_transient"],
   };
 }
 
@@ -61,5 +68,6 @@ export function AuthErrorToJSON(value?: AuthError | null): any {
   return {
     created_at: value["created_at"] == null ? undefined : value["created_at"].toISOString(),
     message: value["message"],
+    is_transient: value["is_transient"],
   };
 }

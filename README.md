@@ -72,8 +72,8 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 
 The **Schemas** view displays all the schemas available for the current Confluent Cloud
 environment's Schema Registry. Schemas are also shown in the **Topics** view by expanding a topic
-item if they match using either
-`TopicNameStrategy` or `TopicRecordNameStrategy` [schema naming strategies](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview)
+item if they match using either `TopicNameStrategy` or `TopicRecordNameStrategy`
+[schema naming strategies](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview)
 and the user has the appropriate permissions.
 
 Schema definitions can be viewed by expanding the schema subject to see a specific schema version,
