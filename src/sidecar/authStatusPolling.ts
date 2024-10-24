@@ -86,6 +86,8 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     nonInvalidTokenStatus.fire();
     // and go back to polling every 10sec
     pollCCloudConnectionAuth.useSlowFrequency();
+    // and set the flag back so the notification can open again if we see another `INVALID_TOKEN`
+    invalidTokenNotificationOpen = false;
   }
 
   if (["NO_TOKEN", "FAILED"].includes(connection.status.authentication.status)) {
