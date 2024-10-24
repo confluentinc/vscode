@@ -7,7 +7,7 @@ import { Logger } from "../logging";
 
 const logger = new Logger("commands.docker");
 
-async function launchLocalKafkaWithProgress() {
+async function startLocalResourcesWithProgress() {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     window.showErrorMessage("Unable to launch local Kafka because Docker is not available.");
@@ -37,7 +37,7 @@ async function runWorkflowWithProgress(start: boolean = true) {
   window.withProgress(
     {
       location: ProgressLocation.Notification,
-      title: "Local Kafka",
+      title: "Local",
       cancellable: true,
     },
     async (progress, token: CancellationToken) => {
@@ -51,6 +51,9 @@ async function runWorkflowWithProgress(start: boolean = true) {
 
 export function registerDockerCommands(): Disposable[] {
   return [
-    registerCommandWithLogging("confluent.docker.launchLocalKafka", launchLocalKafkaWithProgress),
+    registerCommandWithLogging(
+      "confluent.docker.startLocalResources",
+      startLocalResourcesWithProgress,
+    ),
   ];
 }

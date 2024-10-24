@@ -100,9 +100,9 @@
         "category": "Confluent: Debug Tools"
       },
       {
-        "command": "confluent.docker.launchLocalKafka",
+        "command": "confluent.docker.startLocalResources",
         "icon": "$(docker)",
-        "title": "Start Local Kafka Cluster",
+        "title": "Start Local Resources",
         "category": "Confluent: Docker"
       },
       {
@@ -546,7 +546,7 @@
       ],
       "view/title": [
         {
-          "command": "confluent.docker.launchLocalKafka",
+          "command": "confluent.docker.startLocalResources",
           "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
           "group": "local@1"
         },
