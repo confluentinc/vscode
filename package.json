@@ -101,7 +101,7 @@
       },
       {
         "command": "confluent.docker.startLocalResources",
-        "icon": "$(docker)",
+        "icon": "$(play)",
         "title": "Start Local Resources",
         "category": "Confluent: Docker"
       },
