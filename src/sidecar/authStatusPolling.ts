@@ -64,6 +64,8 @@ let nonInvalidTokenStatus: vscode.EventEmitter<void> = new vscode.EventEmitter<v
 export const pollCCloudConnectionAuth = new IntervalPoller(
   "pollCCloudConnectionAuth",
   watchCCloudConnectionStatus,
+  10_000,
+  5_000,
 );
 
 /** Checks the current CCloud connection's authentication status passes the connection through for
