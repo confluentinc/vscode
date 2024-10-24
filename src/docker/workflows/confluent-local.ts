@@ -23,9 +23,11 @@ import { getLocalKafkaImageTag } from "../configs";
 import {
   ContainerExistsError,
   createContainer,
+  deleteContainer,
   getContainer,
   getContainersForImage,
   startContainer,
+  stopContainer,
 } from "../containers";
 import { createNetwork } from "../networks";
 
@@ -137,17 +139,22 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
   /**
    * Stop and remove `confluent-local` resources:
-   * - Stop the container
-   * - Remove the container
-   * - Remove the network
+   * - Stop the container(s)
+   * - Remove the container(s)
    */
   async stop(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.logger.debug("Stopping ...");
-    // TODO(shoup): implement
+    this.logger.debug(`Stopping "confluent-local" workflow...`);
+
+    const promises: Promise<void>[] = [];
+    for (const container of this.containers) {
+      promises.push(this.stopAndRemoveContainer(container));
+    }
+
+    await this.waitForLocalResourceEventChange();
   }
 
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
@@ -331,6 +338,29 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       );
     }
     return envVars;
+  }
+
+  private async stopAndRemoveContainer(container: LocalResourceContainer): Promise<void> {
+    // check container status before deleting
+    this.progress?.report({ message: `Stopping container "${container.name}"...` });
+    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
+      container.id,
+    );
+    if (!existingContainer) {
+      // assume it was cleaned up some other way
+      this.logger.warn("Container not found, skipping stop and delete steps.", {
+        id: container.id,
+        name: container.name,
+      });
+      return;
+    }
+
+    if (existingContainer.State?.Status === "running") {
+      await stopContainer(container.id);
+    }
+
+    this.progress?.report({ message: `Removing container "${container.name}"...` });
+    await deleteContainer(container.id);
   }
 }
 
