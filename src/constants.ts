@@ -50,3 +50,6 @@ export const LOCAL_CONNECTION_SPEC: ConnectionSpec = {
 // everywhere in the codebase
 export const LOCAL_CONNECTION_ID = LOCAL_CONNECTION_SPEC.id!;
 export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name!;
+/** The port used for the local Kafka REST proxy. Used by the extension during container creation,
+ * and by the sidecar for local Kafka discovery. */
+export const LOCAL_KAFKA_REST_PORT = 8082; // TODO: make this configurable once the sidecar supports it
