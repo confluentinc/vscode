@@ -87,7 +87,7 @@ else
 	mkdir -p bin && \
 	echo "Using curl to download sidecar executable from GitHub release $(IDE_SIDECAR_VERSION)"; \
 	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
-		curl -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
+		curl --fail -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
 		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
 		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)";
 endif
