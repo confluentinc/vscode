@@ -546,14 +546,14 @@
       ],
       "view/title": [
         {
+          "command": "confluent.docker.launchLocalKafka",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "group": "local@1"
+        },
+        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation"
-        },
-        {
-          "command": "confluent.docker.launchLocalKafka",
-          "when": "view == confluent-resources && !confluent.localKafkaClusterAvailable",
-          "group": "local@1"
         },
         {
           "command": "confluent.resources.schema-registry.select",
