@@ -102,7 +102,7 @@
       },
       {
         "command": "confluent.docker.stopLocalResources",
-        "icon": "$(docker)",
+        "icon": "$(stop)",
         "title": "Stop Local Resources",
         "category": "Confluent: Docker"
       },
