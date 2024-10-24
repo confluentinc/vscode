@@ -110,6 +110,7 @@ describe("ResourceViewProvider loading functions", () => {
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
+    assert.equal(result.id, "local-container-connected");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
     assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER]);
@@ -122,6 +123,7 @@ describe("ResourceViewProvider loading functions", () => {
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
+    assert.equal(result.id, "local-container");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
     assert.equal(result.description, "(Not running)");
     assert.deepStrictEqual(result.children, []);
