@@ -5,6 +5,7 @@ SEM_CACHE_DURATION_DAYS ?= 7
 current_time := $(shell date +"%s")
 # OS Name
 os_name := $(shell uname -s)
+os_name_and_arch := $(shell echo $$(uname -s)-$$(uname -m) | tr '[:upper:]' '[:lower:]')
 
 .PHONY: store-test-results-to-semaphore
 store-test-results-to-semaphore:
@@ -23,10 +24,10 @@ endif
 ci-bin-sem-cache-store:
 ifneq ($(SEMAPHORE_GIT_REF_TYPE),pull-request)
 	@echo "Storing semaphore caches"
-	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
+	$(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_npm_cache SEM_CACHE_PATH=$(HOME)/.npm
 # Cache packages installed by `npx playwright install`
-	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
-	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
+	[[ $(os_name) == "Darwin" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_playwright_cache SEM_CACHE_PATH=$(HOME)/Library/Caches/ms-playwright || true
+	[[ $(os_name) == "Linux" ]] && $(MAKE) _ci-bin-sem-cache-store SEM_CACHE_KEY=$(os_name_and_arch)_playwright_cache SEM_CACHE_PATH=$(HOME)/.cache/ms-playwright || true
 endif
 
 # cache restore allows fuzzy matching. When it finds multiple matches, it will select the most recent cache archive.
@@ -54,5 +55,5 @@ _ci-bin-sem-cache-store:
 .PHONY: ci-bin-sem-cache-restore
 ci-bin-sem-cache-restore:
 	@echo "Restoring semaphore caches"
-	cache restore $(os_name)_npm_cache
-	cache restore $(os_name)_playwright_cache || true
+	cache restore $(os_name_and_arch)_npm_cache
+	cache restore $(os_name_and_arch)_playwright_cache || true
