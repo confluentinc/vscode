@@ -60,12 +60,20 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     expiration: connection.status.authentication.requires_authentication_at,
     errors: connection.status.authentication.errors,
   });
-  if (connection.status.authentication.status !== "VALID_TOKEN") {
-    // INVALID_TOKEN or NO_TOKEN
-    logger.error("current CCloud connection has invalid or no token; invalidating auth session", {
-      status: connection.status.authentication.status,
-    });
+  if (["NO_TOKEN", "FAILED"].includes(connection.status.authentication.status)) {
+    // some unusable state that requires the user to reauthenticate
+    logger.error(
+      "current CCloud connection has no token or transitioned to a failed state; invalidating auth session",
+      {
+        status: connection.status.authentication.status,
+      },
+    );
     ccloudAuthSessionInvalidated.fire();
+  } else if (connection.status.authentication.status === "INVALID_TOKEN") {
+    // the sidecar is handling a transient error, so exit this polling iteration early and check
+    // the status again on the next iteration
+    logger.warn("current CCloud connection has an invalid token; waiting for updated status");
+    return;
   }
 
   // if we get any kind of `.status.authentication.errors`, throw an error notification so the user
