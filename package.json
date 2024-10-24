@@ -537,11 +537,6 @@
       ],
       "view/title": [
         {
-          "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
-          "group": "local@1"
-        },
-        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation"
@@ -602,6 +597,11 @@
           "command": "confluent.copyResourceName",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
           "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.docker.startLocalResources",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "group": "local@1"
         },
         {
           "command": "confluent.schemas.diffMostRecentVersions",
