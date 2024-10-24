@@ -411,6 +411,8 @@ components:
           $ref: "#/components/schemas/Instant"
         message:
           type: string
+        is_transient:
+          type: boolean
     AuthErrors:
       type: object
       properties:
@@ -802,6 +804,7 @@ components:
         - NO_TOKEN
         - VALID_TOKEN
         - INVALID_TOKEN
+        - FAILED
       type: string
     Template:
       required:
