@@ -20,6 +20,7 @@ export const Status = {
   NoToken: "NO_TOKEN",
   ValidToken: "VALID_TOKEN",
   InvalidToken: "INVALID_TOKEN",
+  Failed: "FAILED",
 } as const;
 export type Status = (typeof Status)[keyof typeof Status];
 
