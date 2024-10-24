@@ -15,11 +15,17 @@ import {
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
-import { LOCAL_KAFKA_REST_PORT } from "../../constants";
+import { Connection, ConnectionsResourceApi } from "../../clients/sidecar";
+import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC, LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
-import { getLocalKafkaImageTag } from "../configs";
+import { getSidecar } from "../../sidecar";
+import {
+  getLocalKafkaImageTag,
+  getLocalSchemaRegistryImageName,
+  getLocalSchemaRegistryImageTag,
+} from "../configs";
 import {
   ContainerExistsError,
   createContainer,
@@ -63,19 +69,24 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   async start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
+    withSchemaRegistry: boolean = false,
   ): Promise<void> {
     this.progress = progress;
-    this.logger.debug(`Starting "confluent-local" workflow...`);
+    this.logger.debug(`Starting "confluent-local" workflow...`, { withSchemaRegistry });
     this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
-    await this.checkForImage();
+    await this.checkForImage(ConfluentLocalWorkflow.imageRepo, this.imageTag);
 
     const existingContainers: ContainerSummary[] = await getContainersForImage(
       ConfluentLocalWorkflow.imageRepo,
       this.imageTag,
     );
     if (existingContainers.length > 0) {
+      this.logger.warn("Container already exists, skipping creation.", {
+        imageRepo: ConfluentLocalWorkflow.imageRepo,
+        imageTag: this.imageTag,
+      });
       throw new ContainerExistsError("Container already exists");
     }
 
@@ -129,12 +140,24 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
 
-    // TODO: add additional logic here for connecting with Schema Registry if a flag is set
-
     const waitMsg = `Waiting for container${numContainers > 1 ? "s" : ""} to be ready...`;
     this.logger.debug(waitMsg);
     this.progress?.report({ message: waitMsg });
     await this.waitForLocalResourceEventChange();
+
+    if (withSchemaRegistry) {
+      const startedSRContainer: ContainerInspectResponse | undefined =
+        await this.startLocalSchemaRegistryContainer(brokerConfigs);
+      if (!startedSRContainer) {
+        // TODO: add error notification
+        return;
+      }
+      if (!(startedSRContainer.Id && startedSRContainer.Name)) {
+        this.logger.warn("Container started without ID or name:", startedSRContainer);
+        return;
+      }
+      this.containers.push({ id: startedSRContainer.Id, name: startedSRContainer.Name });
+    }
   }
 
   /**
@@ -186,6 +209,93 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await startContainer(container.id);
 
     return await getContainer(container.id);
+  }
+
+  private async startLocalSchemaRegistryContainer(
+    brokerConfigs: KafkaBrokerConfig[],
+  ): Promise<ContainerInspectResponse | undefined> {
+    const imageMsg = "Checking for Schema Registry image...";
+    this.logger.debug(imageMsg);
+    this.progress?.report({ message: imageMsg });
+
+    const schemaRegistryImageRepo = getLocalSchemaRegistryImageName();
+    const schemaRegistryImageTag = getLocalSchemaRegistryImageTag();
+    await this.checkForImage(schemaRegistryImageRepo, schemaRegistryImageTag);
+
+    const existingContainers: ContainerSummary[] = await getContainersForImage(
+      schemaRegistryImageRepo,
+      schemaRegistryImageTag,
+    );
+    if (existingContainers.length > 0) {
+      this.logger.warn("Schema Registry container already exists, skipping creation.");
+      // TODO: stop/delete existing container?
+      throw new ContainerExistsError("Schema Registry container already exists");
+    }
+
+    const createMsg = "Creating Schema Registry container...";
+    this.logger.debug(createMsg);
+    this.progress?.report({ message: createMsg });
+    const bootstrapServers: string[] = brokerConfigsToRestBootstrapServers(brokerConfigs);
+    const containerName = "vscode-confluent-local-schema-registry";
+    const restProxyPort: number = await findFreePort();
+
+    const hostConfig: HostConfig = {
+      NetworkMode: this.networkName,
+      PortBindings: {
+        [`${restProxyPort}/tcp`]: [{ HostIp: "0.0.0.0", HostPort: restProxyPort.toString() }],
+      },
+    };
+
+    const envVars: string[] = [
+      `SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://${bootstrapServers.join(",")}`,
+      `SCHEMA_REGISTRY_HOST_NAME=${containerName}`,
+      `SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:${restProxyPort}`,
+      "SCHEMA_REGISTRY_DEBUG=true",
+    ];
+    const body: ContainerCreateRequest = {
+      Image: `${schemaRegistryImageRepo}:${schemaRegistryImageTag}`,
+      Hostname: containerName,
+      ExposedPorts: {
+        [`${restProxyPort}/tcp`]: {},
+      },
+      HostConfig: hostConfig,
+      Env: envVars,
+      Tty: false,
+    };
+
+    const container: ContainerCreateResponse | undefined = await createContainer(
+      schemaRegistryImageRepo,
+      schemaRegistryImageTag,
+      {
+        body,
+        name: containerName,
+      },
+    );
+    if (!container) {
+      window.showErrorMessage("Failed to create Schema Registry container.");
+      return;
+    }
+
+    // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
+    // assigned REST proxy port
+    const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+    const resp: Connection = await client.gatewayV1ConnectionsIdPut({
+      id: LOCAL_CONNECTION_ID,
+      ConnectionSpec: {
+        ...LOCAL_CONNECTION_SPEC,
+        local_config: {
+          schema_registry_uri: `http://localhost:${restProxyPort}`,
+        },
+      },
+    });
+    this.logger.debug("Updated local connection with Schema Registry URI:", resp);
+
+    const startContainerMsg = `Starting container "${containerName}"...`;
+    this.logger.debug(startContainerMsg);
+    this.progress?.report({ message: startContainerMsg });
+    await startContainer(container.Id);
+
+    return await getContainer(container.Id);
   }
 
   /** Create a Kafka container with the provided broker configuration and environment variables. */

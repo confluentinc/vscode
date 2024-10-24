@@ -11,8 +11,9 @@ import { ContextValues, setContextValue } from "../context";
 import { localKafkaConnected } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
-import { defaultRequestInit, isDockerAvailable } from "./configs";
+import { defaultRequestInit, getLocalSchemaRegistryImageName, isDockerAvailable } from "./configs";
 import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
+import { getLocalKafkaImageName } from "./images";
 
 const logger = new Logger("docker.eventListener");
 
@@ -272,7 +273,9 @@ export class EventListener {
     // compare it to container log timestamps
     const eventTime: number = event.time ? event.time : new Date().getTime();
 
-    if (!imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO)) {
+    const kafkaImage = getLocalKafkaImageName();
+    const schameRegistryImage = getLocalSchemaRegistryImageName();
+    if (!(imageName.startsWith(kafkaImage) || imageName.startsWith(schameRegistryImage))) {
       // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
