@@ -54,9 +54,7 @@ export class KafkaClusterTreeItem extends vscode.TreeItem {
 
     // user-facing properties
     this.description = `${this.resource.id}`;
-    this.iconPath = new vscode.ThemeIcon(
-      this.resource.isLocal ? IconNames.LOCAL_KAFKA : IconNames.CCLOUD_KAFKA,
-    );
+    this.iconPath = new vscode.ThemeIcon(IconNames.KAFKA_CLUSTER);
     this.tooltip = createKafkaClusterTooltip(this.resource);
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
@@ -73,7 +71,7 @@ function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownStrin
   if (resource.isCCloud) {
     const ccloudCluster = resource as CCloudKafkaCluster;
     tooltip
-      .appendMarkdown(`#### $(${IconNames.CCLOUD_KAFKA}) Confluent Cloud Kafka Cluster`)
+      .appendMarkdown(`#### $(${IconNames.KAFKA_CLUSTER}) Confluent Cloud Kafka Cluster`)
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(`ID: \`${ccloudCluster.id}\`\n\n`)
       .appendMarkdown(`Name: \`${ccloudCluster.name}\`\n\n`)
@@ -87,7 +85,7 @@ function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownStrin
   } else {
     const localCluster = resource as LocalKafkaCluster;
     tooltip
-      .appendMarkdown(`#### $(${IconNames.LOCAL_KAFKA}) Local Kafka Cluster`)
+      .appendMarkdown(`#### $(${IconNames.KAFKA_CLUSTER}) Local Kafka Cluster`)
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(`ID: \`${localCluster.id}\`\n\n`)
       .appendMarkdown(`Bootstrap Servers: \`${localCluster.bootstrapServers}\`\n\n`)
