@@ -9,9 +9,14 @@ import {
   window,
 } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
+import {
+  getLocalKafkaImageName,
+  getLocalSchemaRegistryImageName,
+  isDockerAvailable,
+} from "../docker/configs";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
+import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import { Logger } from "../logging";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
 
@@ -151,7 +156,17 @@ export function getKafkaWorkflow(): LocalResourceWorkflow | undefined {
   return workflow;
 }
 
+/** Determine which Schema Registry workflow to use based on the user-selected configuration. */
 function getSchemaRegistryWorkflow(): LocalResourceWorkflow | undefined {
-  // TODO: implement this once the ConfluentPlatformSchemaRegistryWorkflow is available
-  return;
+  const imageRepo: string = getLocalSchemaRegistryImageName();
+  let workflow: LocalResourceWorkflow;
+  switch (imageRepo) {
+    case ConfluentPlatformSchemaRegistryWorkflow.imageRepo:
+      workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
+      break;
+    default:
+      window.showErrorMessage(`Unsupported image repo: ${imageRepo}`);
+      return;
+  }
+  return workflow;
 }
