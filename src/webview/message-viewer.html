@@ -233,10 +233,21 @@
       </section>
 
       <section class="content">
-        <template data-if="this.waitingForMessages() && this.streamError() == null">
+        <template
+          data-if="this.waitingForMessages() && this.streamState() === 'running' && this.streamError() == null"
+        >
           <div class="grid-banner">
             <vscode-progress-ring></vscode-progress-ring>
             <label>Waiting for messages…</label>
+          </div>
+        </template>
+
+        <template
+          data-if="this.waitingForMessages() && this.streamState() === 'paused' && this.streamError() == null"
+        >
+          <div class="grid-banner">
+            <span class="codicon codicon-debug-pause banner-pending"></span>
+            <label>Paused</label>
           </div>
         </template>
 
@@ -542,6 +553,7 @@
         font-size: var(--vscode-font-size);
         line-height: normal;
         margin-bottom: 2px;
+        white-space: nowrap;
       }
 
       .grid-banner {
@@ -555,6 +567,10 @@
       .codicon.banner-error {
         font-size: 28px;
         color: var(--vscode-editorError-foreground);
+      }
+      .codicon.banner-pending {
+        font-size: 28px;
+        color: var(--vscode-progressBar-background);
       }
       .grid-settings-control {
         grid-column: -1;
