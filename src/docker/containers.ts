@@ -4,7 +4,6 @@ import {
   ContainerCreateResponse,
   ContainerInspectResponse,
   ContainerListRequest,
-  ContainerStateStatusEnum,
   ContainerSummary,
   ResponseError,
 } from "../clients/docker";
@@ -17,23 +16,8 @@ import { streamToString } from "./stream";
 const logger = new Logger("docker.containers");
 
 export async function getContainersForImage(
-  imageRepo: string,
-  imageTag: string,
-  status?: ContainerStateStatusEnum,
+  request: ContainerListRequest,
 ): Promise<ContainerSummary[]> {
-  // if the tag is "latest", we don't need to specify it
-  const repoTag = imageTag === "latest" ? imageRepo : `${imageRepo}:${imageTag}`;
-
-  // if `status` is provided, use that instead of listing all containers
-  const filters: Record<string, any> = {
-    ancestor: [repoTag],
-  };
-  if (status) filters["status"] = [status];
-  const request: ContainerListRequest = {
-    filters: JSON.stringify(filters),
-  };
-  if (!status) request.all = true;
-
   const client = new ContainerApi();
   const init: RequestInit = defaultRequestInit();
   try {
