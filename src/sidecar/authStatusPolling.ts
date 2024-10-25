@@ -106,7 +106,7 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     // the sidecar is handling a transient error, so exit this polling iteration early and check
     // the status again on the next iteration
     logger.warn("current CCloud connection has an invalid token; waiting for updated status");
-    // only notify if there are pending requests to Confluent Cloud and we haven't shown the notification yet
+    // only notify if CCloud requests have happened recently and we haven't shown the notification yet
     if (numRecentCCloudRequests > 0 && !invalidTokenNotificationOpen) {
       invalidTokenNotificationOpen = true;
       vscode.window.withProgress(
