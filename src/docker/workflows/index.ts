@@ -1,8 +1,9 @@
 import net from "net";
-import { CancellationToken, Progress } from "vscode";
+import { CancellationToken, commands, Progress } from "vscode";
 import { Logger } from "../../logging";
 import { imageExists, pullImage } from "../images";
 
+/** Basic container information for a local resource. */
 export interface LocalResourceContainer {
   id: string;
   name: string;
@@ -31,9 +32,6 @@ export abstract class LocalResourceWorkflow {
   static imageRepo: string;
   /** Tag for the Docker image to use for this workflow. Should be configurable by the user in extension settings. */
   protected imageTag: string = "latest";
-
-  /** List of containers created by this workflow. */
-  containers: LocalResourceContainer[] = [];
 
   /** Start the workflow to launch the local resource(s). */
   abstract start(
@@ -74,6 +72,14 @@ export abstract class LocalResourceWorkflow {
       this.logger.debug(pullImageMsg);
       this.progress?.report({ message: pullImageMsg });
       await pullImage(imageRepo, this.imageTag);
+    }
+  }
+
+  // TODO: maybe put this somewhere else for more general use?
+  /** Handle the user's selection from the "Open Logs" button on a notification. */
+  handleOpenLogsButton(selection: string | undefined) {
+    if (selection === "Open Logs") {
+      commands.executeCommand("confluent.showOutputChannel");
     }
   }
 }
