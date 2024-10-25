@@ -600,7 +600,7 @@
         },
         {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/",
           "group": "inline"
         },
         {
