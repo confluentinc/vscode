@@ -62,7 +62,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.logger.debug(`Starting "confluent-local" workflow...`);
     this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
