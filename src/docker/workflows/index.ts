@@ -31,7 +31,7 @@ export abstract class LocalResourceWorkflow {
    */
   static imageRepo: string;
   /** Tag for the Docker image to use for this workflow. Should be configurable by the user in extension settings. */
-  protected imageTag: string = "latest";
+  imageTag: string = "latest";
 
   /** Start the workflow to launch the local resource(s). */
   abstract start(
