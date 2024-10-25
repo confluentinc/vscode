@@ -612,7 +612,7 @@
         {
           "command": "confluent.docker.stopLocalResources",
           "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
-          "group": "local@2"
+          "group": "inline"
         },
         {
           "command": "confluent.schemas.diffMostRecentVersions",
