@@ -12,6 +12,7 @@ import {
   ContainerCreateRequest,
   ContainerCreateResponse,
   ContainerInspectResponse,
+  ContainerListRequest,
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
@@ -67,10 +68,15 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     // already handles logging + updating the progress notification
     await this.checkForImage();
 
-    const existingContainers: ContainerSummary[] = await getContainersForImage(
-      ConfluentLocalWorkflow.imageRepo,
-      this.imageTag,
-    );
+    const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
+    const listImagesRequest: ContainerListRequest = {
+      all: true,
+      filters: JSON.stringify({
+        ancestor: [repoTag],
+        label: { MANAGED_CONTAINER_LABEL: ["true"] },
+      }),
+    };
+    const existingContainers: ContainerSummary[] = await getContainersForImage(listImagesRequest);
     if (existingContainers.length > 0) {
       window.showWarningMessage(
         "Existing Kafka container(s) found. Please stop and remove them before starting new ones.",
