@@ -5,6 +5,7 @@ import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
 import { getCCloudAuthSession, getCCloudConnection } from "./connections";
+import { numRecentCCloudRequests } from "./middlewares";
 
 const logger = new Logger("sidecar.authStatusPolling");
 
@@ -105,7 +106,8 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     // the sidecar is handling a transient error, so exit this polling iteration early and check
     // the status again on the next iteration
     logger.warn("current CCloud connection has an invalid token; waiting for updated status");
-    if (!invalidTokenNotificationOpen) {
+    // only notify if there are pending requests to Confluent Cloud and we haven't shown the notification yet
+    if (numRecentCCloudRequests > 0 && !invalidTokenNotificationOpen) {
       invalidTokenNotificationOpen = true;
       vscode.window.withProgress(
         {
@@ -115,7 +117,10 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
         },
         async () => {
           await new Promise((resolve) => {
-            nonInvalidTokenStatus.event(resolve);
+            const subscriber: vscode.Disposable = nonInvalidTokenStatus.event(() => {
+              subscriber.dispose();
+              resolve(void 0);
+            });
           });
         },
       );
