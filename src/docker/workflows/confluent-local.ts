@@ -145,14 +145,15 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.progress = progress;
 
     const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
-    const listImagesRequest: ContainerListRequest = {
+    const containerListRequest: ContainerListRequest = {
       all: true,
       filters: JSON.stringify({
         ancestor: [repoTag],
         label: [MANAGED_CONTAINER_LABEL],
       }),
     };
-    const existingContainers: ContainerSummary[] = await getContainersForImage(listImagesRequest);
+    const existingContainers: ContainerSummary[] =
+      await getContainersForImage(containerListRequest);
     if (existingContainers.length === 0) {
       return;
     }
