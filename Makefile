@@ -24,10 +24,24 @@ remove-test-env:
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
 test: setup-test-env install-dependencies
-	sudo apt-get update
-	sudo apt install -y libgbm1 libgtk-3-0 xvfb
+	@echo "Installing test dependencies for $(shell uname -s)"
+	@if [ $$(uname -s) = "Linux" ]; then \
+			sudo apt-get update; \
+			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			brew update; \
+			brew install gtk+3; \
+			brew install --cask xquartz; \
+	else \
+			echo "Unsupported OS for headless testing"; \
+			exit 1; \
+	fi
 	npx gulp ci
-	[[ $$(uname -s) == "Linux" ]] && xvfb-run -a npx gulp test || npx gulp test
+	@if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp test; \
+	else \
+			npx gulp test; \
+	fi
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
