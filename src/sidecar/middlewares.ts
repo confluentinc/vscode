@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
-
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
+
 const logger = new Logger("sidecar.middlewares");
 
 // only create this if enabled in SidecarHandle setup
@@ -112,4 +113,47 @@ export class ErrorResponseMiddleware implements Middleware {
       // default if status >= 400
     }
   }
+}
+
+/** Track the number of requests to Confluent Cloud that have happened recently, controlled by
+ * {@link CCloudRecentRequestsMiddleware}. */
+export let numRecentCCloudRequests: number = 0;
+/** Middleware to track the number of requests to Confluent Cloud that have happened recently. */
+export class CCloudRecentRequestsMiddleware implements Middleware {
+  async pre(context: RequestContext): Promise<void> {
+    // increment the count of pending requests to Confluent Cloud
+    if (hasCCloudConnectionIdHeader(context.init.headers)) {
+      const origValue: number = numRecentCCloudRequests;
+      numRecentCCloudRequests++;
+      logger.debug(`CCloud requests pending: ${origValue} -> ${numRecentCCloudRequests}`);
+    }
+  }
+  async post(context: ResponseContext): Promise<void> {
+    // decrement the count of pending requests to Confluent Cloud after a delay so we get a feeling
+    // for "recent activity" instead of the exact current state of pending requests (which will
+    // likely be 0 unless someone get the timing just right)
+    if (hasCCloudConnectionIdHeader(context.init.headers)) {
+      const origValue: number = numRecentCCloudRequests;
+      setTimeout(() => {
+        numRecentCCloudRequests--;
+        logger.debug(
+          `CCloud requests pending (delayed): ${origValue} -> ${numRecentCCloudRequests}`,
+        );
+      }, 15_000);
+    }
+  }
+}
+
+/** Check if headers include the CCloud connection ID, indicating that the request is going to be
+ * sent to CCloud via the sidecar. */
+function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined): boolean {
+  if (!headers) {
+    return false;
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === "x-connection-id" && value === CCLOUD_CONNECTION_ID) {
+      return true;
+    }
+  }
+  return false;
 }
