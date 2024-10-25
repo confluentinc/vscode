@@ -161,6 +161,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       }
       promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
     }
+    await Promise.all(promises);
 
     await this.waitForLocalResourceEventChange();
   }
@@ -347,8 +348,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   }
 
   private async stopContainer(container: LocalResourceContainer): Promise<void> {
+    // names may start with a leading slash, so try to remove it
+    const containerName = container.name.replace(/^\/+/, "");
+    this.progress?.report({ message: `Stopping container "${containerName}"...` });
     // check container status before deleting
-    this.progress?.report({ message: `Stopping container "${container.name}"...` });
     const existingContainer: ContainerInspectResponse | undefined = await getContainer(
       container.id,
     );
@@ -356,7 +359,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       // assume it was cleaned up some other way
       this.logger.warn("Container not found, skipping stop and delete steps.", {
         id: container.id,
-        name: container.name,
+        name: containerName,
       });
       return;
     }
