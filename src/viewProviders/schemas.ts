@@ -6,7 +6,7 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -48,12 +48,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
 
     ccloudConnected.event((connected: boolean) => {
-      // TODO(shoup): check this for CCloud vs local once we start supporting local SR; check the
-      // TopicViewProvider for a similar check
-      logger.debug("ccloudConnected event fired, resetting", { connected });
-      // any transition of CCloud connection state should reset the tree view
-      this.reset();
+      if (this.schemaRegistry?.isCCloud) {
+        logger.debug("ccloudConnected event fired, resetting", { connected });
+        // any transition of CCloud connection state should reset the tree view
+        this.reset();
+      }
     });
+
+    // TODO(shoup): check localKafkaConnected and reset this view if local SR availability changes
 
     currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistry | null) => {
       if (!schemaRegistry) {
@@ -61,10 +63,18 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       } else {
         setContextValue(ContextValues.schemaRegistrySelected, true);
         this.schemaRegistry = schemaRegistry;
-        const environment: CCloudEnvironment | null =
-          await getResourceManager().getCCloudEnvironment(this.schemaRegistry.environmentId);
-        this.ccloudEnvironment = environment;
-        this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
+        // update the tree view title to show the currently focused Schema Registry and repopulate the tree
+        if (this.schemaRegistry.isLocal) {
+          // just show "Local" since we don't have a name for the local SR instance
+          this.treeView.description = "Local";
+        } else {
+          const environment: CCloudEnvironment | null =
+            await getResourceManager().getCCloudEnvironment(
+              (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
+            );
+          this.ccloudEnvironment = environment;
+          this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
+        }
         this.refresh();
       }
     });
