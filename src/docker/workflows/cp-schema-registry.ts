@@ -13,9 +13,15 @@ import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { getLocalSchemaRegistryImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
-import { createContainer, getContainer, getContainersForImage, stopContainer } from "../containers";
+import {
+  createContainer,
+  getContainer,
+  getContainersForImage,
+  startContainer,
+  stopContainer,
+} from "../containers";
 
-const CONTAINER_NAME_PREFIX = "vscode-confluent-schema-registry";
+const CONTAINER_NAME = "vscode-confluent-schema-registry";
 
 export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkflow {
   static imageRepo = "confluentinc/cp-schema-registry";
@@ -76,42 +82,11 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    // list existing Kafka containers based on the user-configured image repo+tag
-    const kafkaWorkflow: LocalResourceWorkflow | undefined = getKafkaWorkflow();
-    if (!kafkaWorkflow) {
-      this.logger.error("Unable to look up Kafka image from workflow.");
+    const startedContainer: ContainerInspectResponse | undefined =
+      await this.startLocalSchemaRegistryContainer();
+    if (!startedContainer) {
       return;
     }
-
-    const kafkaImageRepo: string = kafkaWorkflow.constructor().imageRepo;
-    const kafkaImageTag: string = kafkaWorkflow.constructor().imageTag;
-    const kafkaContainerListRequest: ContainerListRequest = {
-      all: true,
-      filters: JSON.stringify({
-        ancestor: [`${kafkaImageRepo}:${kafkaImageTag}`],
-        label: [MANAGED_CONTAINER_LABEL],
-      }),
-    };
-    const kafkaContainers: ContainerSummary[] =
-      await getContainersForImage(kafkaContainerListRequest);
-    if (kafkaContainers.length === 0) {
-      window.showErrorMessage(
-        "No Kafka containers found. Please start Kafka before Schema Registry.",
-      );
-      return;
-    }
-
-    // inspect the containers to get the boostrap server URLs and Docker network name
-    const kafkaBootstrapServers: string[] = [];
-
-    // create the SR container
-    const createdContainer: ContainerCreateResponse | undefined =
-      await this.createSchemaRegistryContainer(kafkaBootstrapServers);
-    if (!createdContainer) {
-      window.showErrorMessage("Failed to create Schema Registry container.");
-      return;
-    }
-    // start the SR container
 
     const waitMsg = "Waiting for container to be ready...";
     this.logger.debug(waitMsg);
@@ -169,9 +144,62 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     });
   }
 
+  async startLocalSchemaRegistryContainer(): Promise<ContainerInspectResponse | undefined> {
+    // list existing Kafka containers based on the user-configured image repo+tag
+    const kafkaWorkflow: LocalResourceWorkflow | undefined = getKafkaWorkflow();
+    if (!kafkaWorkflow) {
+      this.logger.error("Unable to look up Kafka image from workflow.");
+      return;
+    }
+
+    const kafkaImageRepo: string = kafkaWorkflow.constructor().imageRepo;
+    const kafkaImageTag: string = kafkaWorkflow.constructor().imageTag;
+    const kafkaContainerListRequest: ContainerListRequest = {
+      all: true,
+      filters: JSON.stringify({
+        ancestor: [`${kafkaImageRepo}:${kafkaImageTag}`],
+        label: [MANAGED_CONTAINER_LABEL],
+      }),
+    };
+    const kafkaContainers: ContainerSummary[] =
+      await getContainersForImage(kafkaContainerListRequest);
+    if (kafkaContainers.length === 0) {
+      window.showErrorMessage("No Kafka containers found. Please start Kafka and try again.");
+      return;
+    }
+
+    // inspect the containers to get the boostrap server URLs and Docker network name
+    const kafkaBootstrapServers: string[] = [];
+
+    // create the SR container
+    const container: LocalResourceContainer | undefined =
+      await this.createSchemaRegistryContainer(kafkaBootstrapServers);
+    if (!container) {
+      window.showErrorMessage("Failed to create Schema Registry container.");
+      return;
+    }
+
+    // start the SR container
+    const startContainerMsg = `Starting container "${container.name}"...`;
+    this.logger.debug(startContainerMsg);
+    this.progress?.report({ message: startContainerMsg });
+    await startContainer(container.id);
+    const startedContainer: ContainerInspectResponse | undefined = await getContainer(container.id);
+    if (!startedContainer) {
+      window
+        .showErrorMessage(
+          `Failed to start Schema Registry container "${CONTAINER_NAME}".`,
+          "Open Logs",
+        )
+        .then(this.handleOpenLogsButton);
+      return;
+    }
+    return startedContainer;
+  }
+
   async createSchemaRegistryContainer(
-    bootstrapServers: string[],
-  ): Promise<ContainerCreateResponse | undefined> {
+    kafkaBootstrapServers: string[],
+  ): Promise<LocalResourceContainer | undefined> {
     const restProxyPort: number = await findFreePort();
 
     const hostConfig: HostConfig = {
@@ -181,14 +209,14 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       },
     };
     const envVars: string[] = [
-      `SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://${bootstrapServers.join(",")}`,
-      `SCHEMA_REGISTRY_HOST_NAME=${CONTAINER_NAME_PREFIX}`,
+      `SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://${kafkaBootstrapServers.join(",")}`,
+      `SCHEMA_REGISTRY_HOST_NAME=${CONTAINER_NAME}`,
       `SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:${restProxyPort}`,
       "SCHEMA_REGISTRY_DEBUG=true",
     ];
     const body: ContainerCreateRequest = {
       Image: `${ConfluentPlatformSchemaRegistryWorkflow.imageRepo}:${this.imageTag}`,
-      Hostname: CONTAINER_NAME_PREFIX,
+      Hostname: CONTAINER_NAME,
       ExposedPorts: {
         [`${restProxyPort}/tcp`]: {},
       },
@@ -202,14 +230,14 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       this.imageTag,
       {
         body,
-        name: CONTAINER_NAME_PREFIX,
+        name: CONTAINER_NAME,
       },
     );
     if (!container) {
       window.showErrorMessage("Failed to create Schema Registry container.");
       return;
     }
-    return container;
+    return { id: container.Id, name: CONTAINER_NAME };
   }
 
   private async stopContainer(container: LocalResourceContainer): Promise<void> {
