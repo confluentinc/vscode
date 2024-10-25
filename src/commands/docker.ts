@@ -2,10 +2,11 @@ import * as Sentry from "@sentry/node";
 import { CancellationToken, Disposable, env, ProgressLocation, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
-import { isDockerAvailable } from "../docker/configs";
+import { getLocalSchemaRegistryImageName, isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { getKafkaWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
+import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import { Logger } from "../logging";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
 
@@ -153,6 +154,15 @@ export function registerDockerCommands(): Disposable[] {
 }
 
 function getSchemaRegistryWorkflow(): LocalResourceWorkflow | undefined {
-  // TODO: implement this once the ConfluentPlatformSchemaRegistryWorkflow is available
-  return;
+  const imageRepo: string = getLocalSchemaRegistryImageName();
+  let workflow: LocalResourceWorkflow;
+  switch (imageRepo) {
+    case ConfluentPlatformSchemaRegistryWorkflow.imageRepo:
+      workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
+      break;
+    default:
+      window.showErrorMessage(`Unsupported image repo: ${imageRepo}`);
+      return;
+  }
+  return workflow;
 }
