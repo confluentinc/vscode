@@ -19,10 +19,8 @@ function fakeRequestWithHeader(key: string, value: string): RequestContext {
 function fakeResponseWithHeader(key: string, value: string): ResponseContext {
   const request = fakeRequestWithHeader(key, value);
   return {
-    fetch: () => Promise.resolve(new Response()),
-    url: "test",
+    ...request,
     response: new Response(),
-    init: request.init,
   };
 }
 
