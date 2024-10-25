@@ -11,3 +11,6 @@ export const DEFAULT_KAFKA_IMAGE_REPO = "confluentinc/confluent-local";
  * Must match the default value in the "confluent.docker.localKafkaImageTag" configuration in package.json.
  */
 export const DEFAULT_KAFKA_IMAGE_TAG = "latest";
+
+/** Label to use when creating containers, to allow for easier identification later. */
+export const MANAGED_CONTAINER_LABEL = "io.confluent.vscode.managed";
