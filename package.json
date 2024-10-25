@@ -101,6 +101,12 @@
         "category": "Confluent: Docker"
       },
       {
+        "command": "confluent.docker.stopLocalResources",
+        "icon": "$(stop)",
+        "title": "Stop Local Resources",
+        "category": "Confluent: Docker"
+      },
+      {
         "command": "confluent.schemas.diffMostRecentVersions",
         "title": "Show Latest Changes",
         "category": "Confluent: Compare Resources"
@@ -601,6 +607,11 @@
         {
           "command": "confluent.docker.startLocalResources",
           "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "group": "inline"
+        },
+        {
+          "command": "confluent.docker.stopLocalResources",
+          "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
           "group": "inline"
         },
         {
