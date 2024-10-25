@@ -72,7 +72,7 @@ export function registerDockerCommands(): Disposable[] {
 }
 
 /** Determine which Kafka workflow to use based on the user-selected configuration. */
-function getKafkaWorkflow(): LocalResourceWorkflow | undefined {
+export function getKafkaWorkflow(): LocalResourceWorkflow | undefined {
   const imageRepo: string = getLocalKafkaImageName();
   let workflow: LocalResourceWorkflow;
   switch (imageRepo) {
