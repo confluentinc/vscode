@@ -120,6 +120,7 @@ export async function stopContainer(id: string) {
   const init: RequestInit = defaultRequestInit();
 
   try {
+    logger.debug("Stopping container", { id });
     await client.containerStop({ id }, init);
   } catch (error) {
     if (error instanceof ResponseError) {

@@ -171,7 +171,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.logger.debug(`Stopping "confluent-local" workflow...`);
     const containers: ContainerSummary[] = await getContainersForImage(
       ConfluentLocalWorkflow.imageRepo,
       this.imageTag,
@@ -180,6 +179,9 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
 
+    const stopMsg = `Stopping ${containers.length} container(s)...`;
+    this.logger.debug(stopMsg);
+    this.progress?.report({ message: stopMsg });
     const promises: Promise<void>[] = [];
     for (const container of containers) {
       if (!container.Id || !container.Names) {
@@ -348,7 +350,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   private async stopContainer(container: LocalResourceContainer): Promise<void> {
     // names may start with a leading slash, so try to remove it
     const containerName = container.name.replace(/^\/+/, "");
-    this.progress?.report({ message: `Stopping container "${containerName}"...` });
     // check container status before deleting
     const existingContainer: ContainerInspectResponse | undefined = await getContainer(
       container.id,
