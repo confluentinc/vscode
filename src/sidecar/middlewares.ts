@@ -116,10 +116,10 @@ export class ErrorResponseMiddleware implements Middleware {
 }
 
 /** Track the number of requests to Confluent Cloud that have happened recently, controlled by
- * {@link CCloudRequestsPendingMiddleware}. */
+ * {@link CCloudRecentRequestsMiddleware}. */
 export let numRecentCCloudRequests: number = 0;
-/** Middleware to track the number of requests to Confluent Cloud that are currently pending. */
-export class CCloudRequestsPendingMiddleware implements Middleware {
+/** Middleware to track the number of requests to Confluent Cloud that have happened recently. */
+export class CCloudRecentRequestsMiddleware implements Middleware {
   async pre(context: RequestContext): Promise<void> {
     // increment the count of pending requests to Confluent Cloud
     if (hasCCloudConnectionIdHeader(context.init.headers)) {
