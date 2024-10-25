@@ -8,6 +8,11 @@ import { Logger } from "../logging";
 const logger = new Logger("commands.docker");
 
 async function startLocalResourcesWithProgress() {
+  await runWorkflowWithProgress();
+}
+
+/** Run the local resource workflow(s) with a progress notification. */
+async function runWorkflowWithProgress(start: boolean = true) {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     window
@@ -24,11 +29,6 @@ async function startLocalResourcesWithProgress() {
     return;
   }
 
-  await runWorkflowWithProgress();
-}
-
-/** Run the local resource workflow(s) with a progress notification. */
-async function runWorkflowWithProgress(start: boolean = true) {
   // TODO(shoup): add multi-select quickpick to determine which resource(s) to start/stop; for now
   // just default to Kafka
   const resources = ["Kafka"];
@@ -50,10 +50,13 @@ async function runWorkflowWithProgress(start: boolean = true) {
     },
     async (progress, token: CancellationToken) => {
       for (const workflow of subworkflows) {
+        logger.debug(`running ${workflow.constructor.name} workflow`, { start });
         if (start) {
           await workflow.start(token, progress);
+        } else {
+          await workflow.stop(token, progress);
         }
-        // TODO: add support for running the workflow .stop() method
+        logger.debug(`finished ${workflow.constructor.name} workflow`, { start });
       }
     },
   );
