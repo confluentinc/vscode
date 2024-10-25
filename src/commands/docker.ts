@@ -18,7 +18,11 @@ import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import { Logger } from "../logging";
-import { localResourcesQuickPick } from "../quickpicks/localResources";
+import {
+  KAFKA_RESOURCE_LABEL,
+  localResourcesQuickPick,
+  SCHEMA_REGISTRY_RESOURCE_LABEL,
+} from "../quickpicks/localResources";
 
 const logger = new Logger("commands.docker");
 
@@ -56,11 +60,11 @@ async function runWorkflowWithProgress(start: boolean = true) {
 
   // based on the imageRepo chosen by the user, select the appropriate workflow before running them
   const subworkflows: LocalResourceWorkflow[] = [];
-  if (resourceLabels.includes("Kafka")) {
+  if (resourceLabels.includes(KAFKA_RESOURCE_LABEL)) {
     const kafkaWorkflow = getKafkaWorkflow();
     if (kafkaWorkflow) subworkflows.push(kafkaWorkflow);
   }
-  if (resourceLabels.includes("Schema Registry")) {
+  if (resourceLabels.includes(SCHEMA_REGISTRY_RESOURCE_LABEL)) {
     const schemaRegistryWorkflow = getSchemaRegistryWorkflow();
     if (schemaRegistryWorkflow) subworkflows.push(schemaRegistryWorkflow);
   }
