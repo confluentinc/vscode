@@ -10,6 +10,7 @@ import {
 } from "../clients/docker";
 import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
+import { MANAGED_CONTAINER_LABEL } from "./constants";
 import { imageExists, pullImage } from "./images";
 import { streamToString } from "./stream";
 
@@ -63,6 +64,10 @@ export async function createContainer(
     await pullImage(imageRepo, imageTag);
   }
   logger.debug("Creating container from image", { imageRepo, imageTag });
+
+  // always add our label to the container for easier identification later
+  if (!request.body.Labels) request.body.Labels = {};
+  request.body.Labels[MANAGED_CONTAINER_LABEL] = "true";
 
   const client = new ContainerApi();
   const init: RequestInit = defaultRequestInit();
