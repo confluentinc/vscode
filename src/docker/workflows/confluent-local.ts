@@ -70,14 +70,15 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await this.checkForImage();
 
     const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
-    const listImagesRequest: ContainerListRequest = {
+    const containerListRequest: ContainerListRequest = {
       all: true,
       filters: JSON.stringify({
         ancestor: [repoTag],
         label: [MANAGED_CONTAINER_LABEL],
       }),
     };
-    const existingContainers: ContainerSummary[] = await getContainersForImage(listImagesRequest);
+    const existingContainers: ContainerSummary[] =
+      await getContainersForImage(containerListRequest);
     if (existingContainers.length > 0) {
       window.showWarningMessage(
         "Existing Kafka container(s) found. Please stop and remove them before starting new ones.",
