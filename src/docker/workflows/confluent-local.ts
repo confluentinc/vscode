@@ -141,19 +141,25 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    const containers: ContainerSummary[] = await getContainersForImage(
-      ConfluentLocalWorkflow.imageRepo,
-      this.imageTag,
-    );
-    if (containers.length === 0) {
+
+    const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
+    const listImagesRequest: ContainerListRequest = {
+      all: true,
+      filters: JSON.stringify({
+        ancestor: [repoTag],
+        label: [MANAGED_CONTAINER_LABEL],
+      }),
+    };
+    const existingContainers: ContainerSummary[] = await getContainersForImage(listImagesRequest);
+    if (existingContainers.length === 0) {
       return;
     }
 
-    const stopMsg = `Stopping ${containers.length} container(s)...`;
+    const stopMsg = `Stopping ${existingContainers.length} container(s)...`;
     this.logger.debug(stopMsg);
     this.progress?.report({ message: stopMsg });
     const promises: Promise<void>[] = [];
-    for (const container of containers) {
+    for (const container of existingContainers) {
       if (!container.Id || !container.Names) {
         this.logger.error("Container missing ID or name", {
           id: container.Id,
