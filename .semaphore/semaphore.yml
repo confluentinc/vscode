@@ -25,21 +25,10 @@ global_job_config:
       - checkout
       - make ci-bin-sem-cache-restore
       - |
-        if [ "$(uname -s)" = "Linux" ] || [ "$(uname -s)" = "Darwin" ]; then
-          if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
-            echo "Skipping Vault setup for Semaphore CI"
-          else
-            . vault-setup
-          fi
-        elif [ "$(uname -s)" = "MINGW64_NT-10.0" ]; then
-          if ($env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
-            Write-Output "Skipping Vault setup for Semaphore CI"
-          } else {
-            .\vault-setup.ps1
-          }
+        if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+          echo "Skipping Vault setup for Semaphore CI"
         else
-          echo "Unsupported OS"
-          exit 1
+          . vault-setup
         fi
   epilogue:
     always:
