@@ -21,6 +21,7 @@ import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
 import { getLocalKafkaImageTag } from "../configs";
+import { MANAGED_CONTAINER_LABEL } from "../constants";
 import {
   createContainer,
   getContainer,
@@ -73,7 +74,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       all: true,
       filters: JSON.stringify({
         ancestor: [repoTag],
-        label: { MANAGED_CONTAINER_LABEL: ["true"] },
+        label: [MANAGED_CONTAINER_LABEL],
       }),
     };
     const existingContainers: ContainerSummary[] = await getContainersForImage(listImagesRequest);

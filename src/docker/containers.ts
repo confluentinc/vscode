@@ -22,7 +22,11 @@ export async function getContainersForImage(
   const init: RequestInit = defaultRequestInit();
   try {
     const response: ContainerSummary[] = await client.containerList(request, init);
-    logger.debug("Containers listed successfully", JSON.stringify(response));
+    const containerIdsAndNames = response.map((container) => ({
+      id: container.Id,
+      name: container.Names,
+    }));
+    logger.debug("Containers listed successfully:", JSON.stringify(containerIdsAndNames));
     return response;
   } catch (error) {
     if (error instanceof ResponseError) {
