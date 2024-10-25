@@ -24,16 +24,16 @@ function fakeResponseWithHeader(key: string, value: string): ResponseContext {
   };
 }
 
-describe("CCloudRequestsPendingMiddleware methods", () => {
+describe("CCloudRecentRequestsMiddleware methods", () => {
   let sandbox: sinon.SinonSandbox;
   let clock: sinon.SinonFakeTimers;
-  let middleware: middlewares.CCloudRequestsPendingMiddleware;
+  let middleware: middlewares.CCloudRecentRequestsMiddleware;
   let numRecentCCloudRequestsStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     clock = sandbox.useFakeTimers();
-    middleware = new middlewares.CCloudRequestsPendingMiddleware();
+    middleware = new middlewares.CCloudRecentRequestsMiddleware();
     // can't edit this as a read-only import, so we use a stub to set the value, but then
     // assert against `middlewares.numRecentCCloudRequests` directly
     numRecentCCloudRequestsStub = sandbox.stub(middlewares, "numRecentCCloudRequests").value(0);
@@ -73,8 +73,9 @@ describe("CCloudRequestsPendingMiddleware methods", () => {
     numRecentCCloudRequestsStub.value(numRequests);
 
     await middleware.post(responseContext);
-    clock.tick(15000);
 
+    assert.equal(middlewares.numRecentCCloudRequests, numRequests);
+    clock.tick(15000);
     assert.equal(middlewares.numRecentCCloudRequests, numRequests - 1);
   });
 
