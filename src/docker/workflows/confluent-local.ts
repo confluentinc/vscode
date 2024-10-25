@@ -21,7 +21,6 @@ import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
 import { getLocalKafkaImageTag } from "../configs";
 import {
-  ContainerExistsError,
   createContainer,
   getContainer,
   getContainersForImage,
@@ -54,9 +53,9 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
    * Start `confluent-local` resources locally:
    * - Ensure the Docker image is available
    * - Create a network if it doesn't exist
-   * - Create a container
-   * - Start the container
-   * - Wait for the container to be connected
+   * - Create the container(s) for the Kafka broker(s)
+   * - Start the container(s)
+   * - Wait for the container(s) to be ready
    */
   async start(
     token: CancellationToken,
@@ -74,7 +73,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       this.imageTag,
     );
     if (existingContainers.length > 0) {
-      throw new ContainerExistsError("Container already exists");
+      window.showWarningMessage(
+        "Existing Kafka container(s) found. Please stop and remove them before starting new ones.",
+      );
+      return;
     }
 
     const createNetworkMsg = `Creating "${this.networkName}" network...`;
@@ -85,7 +87,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const prepMsg = "Preparing for broker container creation...";
     this.logger.debug(prepMsg);
     this.progress?.report({ message: prepMsg });
-
     let numContainers: number = 1;
     const numContainersString: string | undefined = await window.showInputBox({
       title: "Start Confluent Local",
@@ -117,17 +118,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         success = false;
         break;
       }
-      if (!(startedContainer.Id && startedContainer.Name)) {
-        this.logger.warn("Container started without ID or name:", startedContainer);
-        return;
-      }
-      this.containers.push({ id: startedContainer.Id, name: startedContainer.Name });
     }
     if (!success) {
       return;
     }
-
-    // TODO: add additional logic here for connecting with Schema Registry if a flag is set
 
     const waitMsg = `Waiting for container${numContainers > 1 ? "s" : ""} to be ready...`;
     this.logger.debug(waitMsg);
@@ -135,12 +129,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await this.waitForLocalResourceEventChange();
   }
 
-  /**
-   * Stop and remove `confluent-local` resources:
-   * - Stop the container
-   * - Remove the container
-   * - Remove the network
-   */
+  /** Stop `confluent-local` container(s). */
   async stop(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
@@ -153,7 +142,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
    * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
   async waitForLocalResourceEventChange(): Promise<void> {
-    // not set in the base class since each workflow may need to wait for specific events to fire
     await new Promise((resolve) => {
       localKafkaConnected.event(() => {
         resolve(void 0);
@@ -178,7 +166,16 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.progress?.report({ message: startContainerMsg });
     await startContainer(container.id);
 
-    return await getContainer(container.id);
+    const startedContainer: ContainerInspectResponse | undefined = await getContainer(container.id);
+    if (!startedContainer) {
+      window
+        .showErrorMessage(
+          `Failed to start Kafka container "${brokerConfig.containerName}".`,
+          "Open Logs",
+        )
+        .then(this.handleOpenLogsButton);
+    }
+    return startedContainer;
   }
 
   /** Create a Kafka container with the provided broker configuration and environment variables. */
@@ -207,31 +204,21 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       Tty: false,
     };
 
-    try {
-      const container: ContainerCreateResponse | undefined = await createContainer(
-        ConfluentLocalWorkflow.imageRepo,
-        this.imageTag,
-        {
-          body,
-          name: containerName,
-        },
-      );
-      if (!container) {
-        window.showErrorMessage("Failed to create Kafka container.");
-        return;
-      }
-      return { id: container.Id, name: containerName };
-    } catch (error) {
-      if (error instanceof ContainerExistsError) {
-        // TODO(shoup): add buttons for (re)start / delete container in follow-on branch
-        window.showWarningMessage(
-          "Local Kafka container already exists. Please remove it and try again.",
-        );
-      } else {
-        this.logger.error("Error creating container:", error);
-      }
+    const container: ContainerCreateResponse | undefined = await createContainer(
+      ConfluentLocalWorkflow.imageRepo,
+      this.imageTag,
+      {
+        body,
+        name: containerName,
+      },
+    );
+    if (!container) {
+      window
+        .showErrorMessage(`Failed to create Kafka container "${containerName}".`, "Open Logs")
+        .then(this.handleOpenLogsButton);
       return;
     }
+    return { id: container.Id, name: containerName };
   }
 
   /** Generate the broker configurations for the number of brokers specified. */
