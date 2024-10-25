@@ -58,8 +58,7 @@ async function runWorkflowWithProgress(
     }
   }
   if (resources.includes(LocalResourceKind.SchemaRegistry)) {
-    const schemaRegistryWorkflow = getSchemaRegistryWorkflow();
-    if (schemaRegistryWorkflow) subworkflows.push(schemaRegistryWorkflow);
+    subworkflows.push(getSchemaRegistryWorkflow());
   }
   // add logic for looking up other resources' workflows here
 
@@ -161,8 +160,7 @@ function getSchemaRegistryWorkflow(): LocalResourceWorkflow | undefined {
       workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
       break;
     default:
-      window.showErrorMessage(`Unsupported image repo: ${imageRepo}`);
-      return;
+      throw new Error(`Unsupported Schema Registry image repo: ${imageRepo}`);
   }
   return workflow;
 }

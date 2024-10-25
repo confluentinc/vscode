@@ -10,13 +10,13 @@ export async function localResourcesQuickPick(): Promise<LocalResourceKind[]> {
   const quickpick: QuickPick<QuickPickItem> = window.createQuickPick();
   quickpick.title = "Local Resources";
   quickpick.ignoreFocusOut = true;
-  quickpick.placeholder = "Select resources to launch";
+  quickpick.placeholder = "Select resource types";
   quickpick.canSelectMany = true;
 
   quickpick.items = [
     {
       label: LocalResourceKind.Kafka,
-      iconPath: new ThemeIcon(IconNames.CCLOUD_KAFKA),
+      iconPath: new ThemeIcon(IconNames.KAFKA_CLUSTER),
       detail: "A local Kafka cluster with a user-specified number of broker containers",
       picked: true,
     },
