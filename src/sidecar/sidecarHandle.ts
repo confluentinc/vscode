@@ -34,6 +34,7 @@ import {
   SIDECAR_PROCESS_ID_HEADER,
 } from "./constants";
 import {
+  CCloudRequestsPendingMiddleware,
   DebugRequestResponseMiddleware,
   ErrorResponseMiddleware,
   setDebugOutputChannel,
@@ -73,7 +74,10 @@ export class SidecarHandle {
       Authorization: `Bearer ${this.auth_secret}`,
     };
 
-    let middleware: Middleware[] = [new ErrorResponseMiddleware()];
+    let middleware: Middleware[] = [
+      new ErrorResponseMiddleware(),
+      new CCloudRequestsPendingMiddleware(),
+    ];
     if (ENABLE_REQUEST_RESPONSE_LOGGING) {
       // Add middleware to log request and response details; disabled by default
       setDebugOutputChannel();
