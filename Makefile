@@ -9,6 +9,23 @@ install-dependencies:
 	npm ci --prefer-offline --include=dev
 	npx playwright install
 
+# Install additional test dependencies to run VSCode testing in headless mode (on Linux)
+# ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
+.PHONY: install-test-dependencies
+install-test-dependencies:
+	@echo "Installing test dependencies for $(shell uname -s)"
+	@if [ $$(uname -s) = "Linux" ]; then \
+			sudo apt-get update; \
+			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			sudo brew update; \
+			sudo brew install gtk+3; \
+			sudo brew install --cask xquartz; \
+	else \
+			echo "Unsupported OS for headless testing"; \
+			exit 1; \
+	fi
+
 .PHONY: setup-test-env
 setup-test-env:
 	@echo "Pulling automated-test-user credentials from Vault into .env file for testing"
@@ -20,22 +37,8 @@ remove-test-env:
 	@echo "Removing .env file"
 	@rm -f .env
 
-# Install additional test dependencies to run VSCode testing in headless mode (on Linux)
-# ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
-test: setup-test-env install-dependencies
-	@echo "Installing test dependencies for $(shell uname -s)"
-	@if [ $$(uname -s) = "Linux" ]; then \
-			sudo apt-get update; \
-			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
-	elif [ $$(uname -s) = "Darwin" ]; then \
-			brew update; \
-			brew install gtk+3; \
-			brew install --cask xquartz; \
-	else \
-			echo "Unsupported OS for headless testing"; \
-			exit 1; \
-	fi
+test: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
