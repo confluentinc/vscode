@@ -363,7 +363,7 @@
           "type": "string",
           "default": "latest",
           "description": "Docker image tag to use when starting a local Schema Registry container"
-        },
+        }
       }
     },
     "viewsContainers": {
