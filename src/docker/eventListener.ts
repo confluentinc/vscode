@@ -9,7 +9,7 @@ import {
   SystemEventsRequest,
 } from "../clients/docker";
 import { ContextValues, setContextValue } from "../context";
-import { localKafkaConnected } from "../emitters";
+import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
 import {
@@ -327,8 +327,9 @@ export class EventListener {
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, started);
       localKafkaConnected.fire(started);
+    } else if (imageName.startsWith(schemaRegistryImage)) {
+      localSchemaRegistryConnected.fire(started);
     }
-    // TODO(shoup): update for Schema Registry image
   }
 
   /** Handling for an event that describes when a container is stopped. */
