@@ -2,7 +2,12 @@ import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getExtensionContext } from "../context";
-import { ccloudConnected, ccloudOrganizationChanged, localKafkaConnected } from "../emitters";
+import {
+  ccloudConnected,
+  ccloudOrganizationChanged,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -79,6 +84,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     localKafkaConnected.event((connected: boolean) => {
       logger.debug("localKafkaConnected event fired", { connected });
+      this.refresh();
+    });
+    localSchemaRegistryConnected.event((connected: boolean) => {
+      logger.debug("localSchemaRegistryConnected event fired", { connected });
       this.refresh();
     });
   }

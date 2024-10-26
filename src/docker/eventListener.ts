@@ -1,3 +1,4 @@
+import { window } from "vscode";
 import {
   ApiResponse,
   ContainerApi,
@@ -8,7 +9,7 @@ import {
   SystemEventsRequest,
 } from "../clients/docker";
 import { ContextValues, setContextValue } from "../context";
-import { localKafkaConnected } from "../emitters";
+import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
 import {
@@ -278,8 +279,8 @@ export class EventListener {
     const eventTime: number = event.time ? event.time : new Date().getTime();
 
     const kafkaImage = getLocalKafkaImageName();
-    const schameRegistryImage = getLocalSchemaRegistryImageName();
-    if (!(imageName.startsWith(kafkaImage) || imageName.startsWith(schameRegistryImage))) {
+    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+    if (!(imageName.startsWith(kafkaImage) || imageName.startsWith(schemaRegistryImage))) {
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
     }
@@ -290,23 +291,37 @@ export class EventListener {
       return;
     }
 
-    // when the `confluent-local` container starts, it should show the following log line once it's ready:
-    // "Server started, listening for requests..."
-    // so we need to wait for that log line to appear before we consider the container fully ready
-    logger.debug("container status shows 'running', checking container logs...", {
-      stringToInclude: SERVER_STARTED_LOG_LINE,
-    });
-    started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
-    logger.debug("done waiting for container log line", {
-      started,
-      stringToInclude: SERVER_STARTED_LOG_LINE,
-    });
-
-    logger.debug(
-      `setting \`localKafkaClusterAvailable=${started}\` and firing \`localKafkaConnected\` with \`${started}\``,
-    );
-    await setContextValue(ContextValues.localKafkaClusterAvailable, started);
-    localKafkaConnected.fire(started);
+    if (imageName.startsWith(kafkaImage) || imageName.startsWith(schemaRegistryImage)) {
+      // when the `confluent-local`/`cp-schema-registry` container starts, it should show the
+      // following log line once it's ready:
+      // "Server started, listening for requests..."
+      // so we need to wait for that log line to appear before we consider the container fully ready
+      logger.debug("container status shows 'running', checking container logs...", {
+        stringToInclude: SERVER_STARTED_LOG_LINE,
+        imageName,
+      });
+      // show loader in the Resources view while we wait for the correct log line to appear
+      await window.withProgress(
+        {
+          location: { viewId: "confluent-resources" },
+          title: "Waiting for local resources to be ready...",
+        },
+        async () => {
+          started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
+        },
+      );
+      logger.debug("done waiting for container log line", {
+        started,
+        stringToInclude: SERVER_STARTED_LOG_LINE,
+        imageName,
+      });
+      if (imageName.startsWith(kafkaImage)) {
+        await setContextValue(ContextValues.localKafkaClusterAvailable, started);
+        localKafkaConnected.fire(started);
+      } else {
+        localSchemaRegistryConnected.fire(started);
+      }
+    }
   }
 
   /** Handling for an event that describes when a container is stopped. */
