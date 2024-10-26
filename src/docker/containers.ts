@@ -140,3 +140,12 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
     throw error;
   }
 }
+
+export function getContainerEnvVars(container: ContainerInspectResponse): Record<string, string> {
+  const envVars: Record<string, string> = {};
+  container.Config?.Env?.forEach((envVar) => {
+    const [key, value] = envVar.split("=");
+    envVars[key] = value;
+  });
+  return envVars;
+}
