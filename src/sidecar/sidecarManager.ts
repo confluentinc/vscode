@@ -15,7 +15,6 @@ import {
   SIDECAR_LOGFILE_PATH,
   SIDECAR_PORT,
   SIDECAR_PROCESS_ID_HEADER,
-  WORKSPACE_PROCESS_ID_HEADER,
 } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
@@ -29,6 +28,9 @@ import { Tail } from "tail";
  */
 export const sidecarOutputChannel: vscode.OutputChannel =
   vscode.window.createOutputChannel("Confluent (Sidecar)");
+
+/** Header name for the workspace's PID in the request headers. */
+const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
 const SIDECAR_AUTH_TOKEN_SECRET_KEY = "CONFLUENT_SIDECAR_AUTH_SECRET";
 const MOMENTARY_PAUSE_MS = 500; // half a second.
@@ -184,7 +186,7 @@ export class SidecarManager {
     // outside of this function.
     var version_result: SidecarVersionResponse | undefined = undefined;
     try {
-      version_result = await handle.VersionResourceApi().gatewayV1VersionGet();
+      version_result = await handle.getVersionResourceApi().gatewayV1VersionGet();
       logger.info(`Sidecar version: ${version_result.version}`);
     } catch (e) {
       // Some devs may have sidecars running that don't have the version endpoint (Pinnipeds especially)
