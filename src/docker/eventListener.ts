@@ -319,6 +319,7 @@ export class EventListener {
         await setContextValue(ContextValues.localKafkaClusterAvailable, started);
         localKafkaConnected.fire(started);
       } else {
+        await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
         localSchemaRegistryConnected.fire(started);
       }
     }
@@ -332,16 +333,15 @@ export class EventListener {
     }
     logger.debug(`container 'die' event for image: ${imageName}`);
 
-    if (!imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO)) {
-      // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
-      return;
+    const kafkaImage = getLocalKafkaImageName();
+    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+    if (imageName.startsWith(kafkaImage)) {
+      await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+      localKafkaConnected.fire(false);
+    } else if (imageName.startsWith(schemaRegistryImage)) {
+      await setContextValue(ContextValues.localSchemaRegistryAvailable, false);
+      localSchemaRegistryConnected.fire(false);
     }
-
-    logger.debug(
-      "setting `localKafkaClusterAvailable=false` and firing `localKafkaConnected` with `false`",
-    );
-    await setContextValue(ContextValues.localKafkaClusterAvailable, false);
-    localKafkaConnected.fire(false);
   }
 
   /** Wait for the container to show a specific {@link ContainerStateStatusEnum} status. */
