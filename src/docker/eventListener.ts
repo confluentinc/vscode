@@ -328,6 +328,7 @@ export class EventListener {
       await setContextValue(ContextValues.localKafkaClusterAvailable, started);
       localKafkaConnected.fire(started);
     } else if (imageName.startsWith(schemaRegistryImage)) {
+      await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
       localSchemaRegistryConnected.fire(started);
     }
   }
@@ -341,11 +342,15 @@ export class EventListener {
     logger.debug(`container 'die' event for image: ${imageName}`);
 
     const kafkaImage = getLocalKafkaImageName();
+    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, false);
       localKafkaConnected.fire(false);
+    } else if (imageName.startsWith(schemaRegistryImage)) {
+      await setContextValue(ContextValues.localSchemaRegistryAvailable, false);
+      localSchemaRegistryConnected.fire(false);
     }
-    // TODO(shoup): update for Schema Registry image
   }
 
   /** Wait for the container to show a specific {@link ContainerStateStatusEnum} status. */
