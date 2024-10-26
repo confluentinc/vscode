@@ -273,9 +273,6 @@ export class SidecarHandle {
       ...this.defaultClientConfigParams.headers,
       [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
     });
-    // headers.append("Content-Type", "application/json");
-    // headers.append("Authorization", `Bearer ${this.auth_secret}`);
-    // headers.append(SIDECAR_CONNECTION_ID_HEADER, connectionId);
 
     const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
       method: "POST",
