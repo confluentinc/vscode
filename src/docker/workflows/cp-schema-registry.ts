@@ -8,12 +8,10 @@ import {
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
-import { Connection, ConnectionsResourceApi } from "../../clients/sidecar";
 import { getKafkaWorkflow } from "../../commands/docker";
-import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
 import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
-import { getSidecar } from "../../sidecar";
+import { updateLocalSchemaRegistryURI } from "../../sidecar/connections";
 import { getLocalKafkaImageName, getLocalSchemaRegistryImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import {
@@ -276,17 +274,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
     // assigned REST proxy port
-    const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
-    const resp: Connection = await client.gatewayV1ConnectionsIdPut({
-      id: LOCAL_CONNECTION_ID,
-      ConnectionSpec: {
-        ...LOCAL_CONNECTION_SPEC,
-        local_config: {
-          schema_registry_uri: `http://localhost:${restProxyPort}`,
-        },
-      },
-    });
-    this.logger.debug("Updated local connection with Schema Registry URI:", resp);
+    await updateLocalSchemaRegistryURI(`http://localhost:${restProxyPort}`);
 
     return { id: container.Id, name: CONTAINER_NAME };
   }
