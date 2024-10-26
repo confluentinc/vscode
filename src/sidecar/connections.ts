@@ -129,3 +129,25 @@ export function hasCCloudAuthSession(): boolean {
   );
   return !!isCcloudConnected;
 }
+
+/** Update the local connection's Schema Registry URI. */
+export async function updateLocalSchemaRegistryURI(uri: string): Promise<void> {
+  if (!(await getLocalConnection())) {
+    try {
+      await createLocalConnection();
+    } catch {
+      // error should be caught+logged in createLocalConnection
+    }
+  }
+  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+  const resp: Connection = await client.gatewayV1ConnectionsIdPut({
+    id: LOCAL_CONNECTION_ID,
+    ConnectionSpec: {
+      ...LOCAL_CONNECTION_SPEC,
+      local_config: {
+        schema_registry_uri: uri,
+      },
+    },
+  });
+  logger.debug("Updated local connection with Schema Registry URI:", resp);
+}
