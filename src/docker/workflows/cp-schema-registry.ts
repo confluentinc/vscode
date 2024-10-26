@@ -8,14 +8,18 @@ import {
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
+import { Connection, ConnectionsResourceApi } from "../../clients/sidecar";
 import { getKafkaWorkflow } from "../../commands/docker";
-import { localKafkaConnected } from "../../emitters";
+import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
+import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
-import { getLocalSchemaRegistryImageTag } from "../configs";
+import { getSidecar } from "../../sidecar";
+import { getLocalKafkaImageName, getLocalSchemaRegistryImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import {
   createContainer,
   getContainer,
+  getContainerEnvVars,
   getContainersForImage,
   startContainer,
   stopContainer,
@@ -27,8 +31,6 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
   static imageRepo = "confluentinc/cp-schema-registry";
 
   logger = new Logger("docker.workflow.cp-schema-registry");
-
-  networkName: string = "vscode-confluent-local-network";
 
   // ensure only one instance of this workflow can run at a time
   private static instance: ConfluentPlatformSchemaRegistryWorkflow;
@@ -134,11 +136,11 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     await this.waitForLocalResourceEventChange();
   }
 
-  /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
-   * in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
+  /** Block until we see the {@link localSchemaRegistryConnected} event fire. (Controlled by the
+   * EventListener in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
   async waitForLocalResourceEventChange(): Promise<void> {
     await new Promise((resolve) => {
-      localKafkaConnected.event(() => {
+      localSchemaRegistryConnected.event(() => {
         resolve(void 0);
       });
     });
@@ -152,13 +154,13 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    const kafkaImageRepo: string = kafkaWorkflow.constructor().imageRepo;
-    const kafkaImageTag: string = kafkaWorkflow.constructor().imageTag;
+    const kafkaImageRepo: string = getLocalKafkaImageName();
+    const kafkaImageTag: string = kafkaWorkflow.imageTag;
     const kafkaContainerListRequest: ContainerListRequest = {
       all: true,
       filters: JSON.stringify({
         ancestor: [`${kafkaImageRepo}:${kafkaImageTag}`],
-        label: [MANAGED_CONTAINER_LABEL],
+        // label: [MANAGED_CONTAINER_LABEL],
       }),
     };
     const kafkaContainers: ContainerSummary[] =
@@ -168,12 +170,46 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    // inspect the containers to get the boostrap server URLs and Docker network name
+    // inspect the containers to get the Docker network name and boostrap server host+port combos
+    const kafkaNetworks: string[] = kafkaContainers
+      .map((container): string | undefined => container.HostConfig?.NetworkMode)
+      .filter((network) => !!network) as string[];
+
+    const kafkaContainerInspectPromises: Promise<ContainerInspectResponse | undefined>[] =
+      kafkaContainers
+        .filter((container) => !!container.Id)
+        .map((container) => getContainer(container.Id!));
+    const kafkaContainerInspectResponses: ContainerInspectResponse[] = (
+      await Promise.all(kafkaContainerInspectPromises)
+    ).filter((response): response is ContainerInspectResponse => !!response);
     const kafkaBootstrapServers: string[] = [];
+    kafkaContainerInspectResponses.forEach((response: ContainerInspectResponse) => {
+      const envVars: Record<string, string> = getContainerEnvVars(response);
+      if (!envVars || !envVars.KAFKA_LISTENERS) {
+        return;
+      }
+      // e.g. PLAINTEXT://:9092,CONTROLLER://:9093 and maybe PLAINTEXT_HOST://:9094
+      const listeners: string[] = envVars.KAFKA_LISTENERS.split(",");
+      for (const listener of listeners) {
+        if (!listener.startsWith("PLAINTEXT://")) {
+          continue;
+        }
+        const bootstrapServer = listener.split("//")[1];
+        kafkaBootstrapServers.push(bootstrapServer);
+      }
+    });
+
+    this.logger.debug("Kafka container(s) found", {
+      count: kafkaContainers.length,
+      bootstrapServers: kafkaBootstrapServers,
+      networks: kafkaNetworks,
+    });
 
     // create the SR container
-    const container: LocalResourceContainer | undefined =
-      await this.createSchemaRegistryContainer(kafkaBootstrapServers);
+    const container: LocalResourceContainer | undefined = await this.createSchemaRegistryContainer(
+      kafkaBootstrapServers,
+      kafkaNetworks,
+    );
     if (!container) {
       window.showErrorMessage("Failed to create Schema Registry container.");
       return;
@@ -199,11 +235,11 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
   async createSchemaRegistryContainer(
     kafkaBootstrapServers: string[],
+    kafkaNetworks: string[],
   ): Promise<LocalResourceContainer | undefined> {
     const restProxyPort: number = await findFreePort();
-
     const hostConfig: HostConfig = {
-      NetworkMode: this.networkName,
+      NetworkMode: kafkaNetworks[0],
       PortBindings: {
         [`${restProxyPort}/tcp`]: [{ HostIp: "0.0.0.0", HostPort: restProxyPort.toString() }],
       },
@@ -237,6 +273,21 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       window.showErrorMessage("Failed to create Schema Registry container.");
       return;
     }
+
+    // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
+    // assigned REST proxy port
+    const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+    const resp: Connection = await client.gatewayV1ConnectionsIdPut({
+      id: LOCAL_CONNECTION_ID,
+      ConnectionSpec: {
+        ...LOCAL_CONNECTION_SPEC,
+        local_config: {
+          schema_registry_uri: `http://localhost:${restProxyPort}`,
+        },
+      },
+    });
+    this.logger.debug("Updated local connection with Schema Registry URI:", resp);
+
     return { id: container.Id, name: CONTAINER_NAME };
   }
 
