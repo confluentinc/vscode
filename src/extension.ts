@@ -256,6 +256,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   await Promise.all([
     setContextValue(ContextValues.ccloudConnectionAvailable, false),
     setContextValue(ContextValues.localKafkaClusterAvailable, false),
+    setContextValue(ContextValues.localSchemaRegistryAvailable, false),
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
