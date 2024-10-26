@@ -114,6 +114,15 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
   }
 }
 
+export function getContainerEnvVars(container: ContainerInspectResponse): Record<string, string> {
+  const envVars: Record<string, string> = {};
+  container.Config?.Env?.forEach((envVar) => {
+    const [key, value] = envVar.split("=");
+    envVars[key] = value;
+  });
+  return envVars;
+}
+
 export async function stopContainer(id: string) {
   const client = new ContainerApi();
   const init: RequestInit = defaultRequestInit();
