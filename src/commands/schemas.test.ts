@@ -14,7 +14,9 @@ import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
 import {
   CannotLoadSchemasError,
+  determineSchemaType,
   diffLatestSchemasCommand,
+  DocumentErrorRangeSerde,
   getLatestSchemasForTopic,
 } from "./schemas";
 
@@ -74,6 +76,169 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
 
     await diffLatestSchemasCommand(schemaGroup);
     assert.ok(executeCommandStub.notCalled);
+  });
+});
+
+describe("commands/schemas.ts determineSchemaType tests", function () {
+  it("determineSchemaType successfully determines schema type from file URI", () => {
+    // for pair of (file extension, expected schema type) from array of string pairs ...
+    for (const [fileExtension, expectedSchemaType] of [
+      ["avsc", "AVRO"],
+      ["json", "JSON"],
+      ["proto", "PROTOBUF"],
+    ]) {
+      const fileUri = vscode.Uri.file(`some-file.${fileExtension}`);
+      const schemaType = determineSchemaType(fileUri, null);
+      assert.strictEqual(
+        schemaType,
+        expectedSchemaType,
+        `Expected ${expectedSchemaType} given ${fileExtension}, got ${schemaType} instead`,
+      );
+    }
+  });
+
+  it("determineSchemaType successfully determines schema type from language ID", () => {
+    // for pair of (language ID, expected schema type) from array of string pairs ...
+    for (const [languageId, expectedSchemaType] of [
+      ["avroavsc", "AVRO"],
+      ["json", "JSON"],
+      ["proto", "PROTOBUF"],
+    ]) {
+      const schemaType = determineSchemaType(null, languageId);
+      assert.strictEqual(
+        schemaType,
+        expectedSchemaType,
+        `Expected ${expectedSchemaType} given ${languageId}, got ${schemaType} instead`,
+      );
+    }
+  });
+
+  it("determineSchemaType successfully determines schema type from language ID when file URI is also provided", () => {
+    for (const [fileExtension, languageId, expectedSchemaType] of [
+      ["avsc", "avroavsc", "AVRO"],
+      ["json", "json", "JSON"],
+      ["proto", "proto", "PROTOBUF"],
+    ]) {
+      const fileUri = vscode.Uri.file(`some-file.${fileExtension}`);
+      const schemaType = determineSchemaType(fileUri, languageId);
+      assert.strictEqual(
+        schemaType,
+        expectedSchemaType,
+        `Expected ${expectedSchemaType} given ${fileExtension} and ${languageId}, got ${schemaType} instead`,
+      );
+    }
+  });
+
+  it("determineSchemaType should raise Error when neither file URI nor languageID is provided", () => {
+    assert.throws(() => {
+      determineSchemaType(null, null);
+    }, /Must call with either a file or document/);
+  });
+});
+
+describe("DocumentErrorRangeSerde tests", function () {
+  it("Distinct errors should all have simple display messages w/o line numbers", () => {
+    const errors = [
+      new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, 0),
+        "Error 1",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(1, 0, 0, 0),
+        "Error 2",
+        vscode.DiagnosticSeverity.Error,
+      ),
+    ];
+
+    const errorSerde = new DocumentErrorRangeSerde(errors);
+    // no line numbers in the message
+    assert.deepEqual(errorSerde.getMessages(), ["Error 1", "Error 2"]);
+  });
+
+  it("Same error on multiple lines should have line numbers in display message", () => {
+    const errors = [
+      new vscode.Diagnostic(
+        new vscode.Range(9, 0, 9, 1),
+        "Missing comma",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(19, 0, 19, 1),
+        "Missing comma",
+        vscode.DiagnosticSeverity.Error,
+      ),
+    ];
+
+    const errorSerde = new DocumentErrorRangeSerde(errors);
+    // line numbers in the message, and remember that Range is 0-indexed, so add 1
+    assert.deepEqual(errorSerde.getMessages(), [
+      "Missing comma (line 10)",
+      "Missing comma (line 20)",
+    ]);
+  });
+
+  it("More than three errors are truncated", () => {
+    const errors = [
+      new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, 0),
+        "Error 1",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(1, 0, 0, 0),
+        "Error 2",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(2, 0, 0, 0),
+        "Error 3",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(3, 0, 0, 0),
+        "Error 4",
+        vscode.DiagnosticSeverity.Error,
+      ),
+    ];
+
+    const errorSerde = new DocumentErrorRangeSerde(errors);
+    // no line numbers in the message
+    assert.deepEqual(errorSerde.getMessages(), ["Error 1", "Error 2", "Error 3"]);
+  });
+
+  it("findErrorByString() works correctly", () => {
+    const errors = [
+      new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, 1),
+        "Error 1",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(1, 0, 1, 5),
+        "Error 1",
+        vscode.DiagnosticSeverity.Error,
+      ),
+      new vscode.Diagnostic(
+        new vscode.Range(2, 0, 2, 10),
+        "Error 3",
+        vscode.DiagnosticSeverity.Error,
+      ),
+    ];
+
+    const errorSerde = new DocumentErrorRangeSerde(errors);
+    assert.deepEqual(errorSerde.getMessages(), ["Error 1 (line 1)", "Error 1 (line 2)", "Error 3"]);
+    assert.deepEqual(
+      errorSerde.findErrorByString("Error 1 (line 1)"),
+      errors[0],
+      "Error 1 (line 1)",
+    );
+    assert.deepEqual(
+      errorSerde.findErrorByString("Error 1 (line 2)"),
+      errors[1],
+      "Error 1 (line 2)",
+    );
+    assert.deepEqual(errorSerde.findErrorByString("Error 3"), errors[2], "Error 3");
   });
 });
 

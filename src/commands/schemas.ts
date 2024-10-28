@@ -1,11 +1,14 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { RegisterRequest, ResponseError, SubjectVersion } from "../clients/schemaRegistryRest";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
+import { getSidecar } from "../sidecar";
 import { ResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
@@ -49,9 +52,352 @@ function validateCommand(item: any) {
   // TODO: implement this
 }
 
-function uploadVersionCommand(item: any) {
-  logger.info("item", item);
-  // TODO: implement this
+/**
+ * Class to serialize an array of vscode.Diagnostic objects to strings for display in error message buttons,
+ * then to return the selected Diagnostic object given the string chosen by the user (if any).
+ */
+export class DocumentErrorRangeSerde {
+  readonly messages: string[] = [];
+  readonly messageToError: Map<string, vscode.Diagnostic> = new Map();
+
+  public constructor(diagnostics: vscode.Diagnostic[]) {
+    // Only retain the first three errors. Convert each to a string for display in the error message buttons.
+
+    // First see if the error messages are unique or not. Those not unique will be appended with their line number.
+    const messageToCount = new Map<string, number>();
+    for (const d of diagnostics) {
+      const message = d.message;
+      const count = messageToCount.get(message) || 0;
+      messageToCount.set(message, count + 1);
+    }
+
+    function getDisplayMessage(d: vscode.Diagnostic): string {
+      // If the message is not unique (seen more than once), append the line number to the message.
+      const count = messageToCount.get(d.message) || 0;
+      return count > 1 ? `${d.message} (line ${d.range.start.line + 1})` : d.message;
+    }
+
+    for (const d of diagnostics.slice(0, 3)) {
+      const message = getDisplayMessage(d);
+      // Preserves the order of the messages from the diagnostics from the document.
+      this.messages.push(message);
+      // Will be hash-ordered.
+      this.messageToError.set(message, d);
+    }
+  }
+
+  /** Return the error messages to display to the user */
+  public getMessages(): string[] {
+    return this.messages;
+  }
+
+  /** Given the choice made by the user, return the corresponding error Diagnostic */
+  public findErrorByString(errorString: string): vscode.Diagnostic | undefined {
+    return this.messageToError.get(errorString);
+  }
+}
+
+/* TODO
+
+  * Change package registration to "resourceExtname in CONFLUENT_SCHEMA_FILE_EXTENSIONS" (look in extension.ts for other examples -- setup context values())
+    -- would then pivot off of the language type, not the file extension, https://code.visualstudio.com/api/references/when-clause-contexts
+
+
+/** Upload a new schema / version (or perhaps a new subject binding to an existing schema) to a schema registry */
+export async function uploadNewSchema(item: vscode.Uri) {
+  // First determine the kind of schema we're dealing with given the file URI and its contents.
+
+  // (We like the active editor because easy to get at both the file contents as well as the languageId.)
+  let activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    vscode.window.showErrorMessage("Must be invoked from an active editor");
+    return;
+  }
+  const schemaContents = activeEditor.document.getText();
+
+  if (!item) {
+    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
+    return;
+  }
+
+  // What kind of schema is this? We must tell the schema registry.
+  let schemaType: string;
+  try {
+    schemaType = determineSchemaType(item, activeEditor.document.languageId);
+  } catch (e) {
+    vscode.window.showErrorMessage((e as Error).message);
+    return;
+  }
+
+  // Does the document have any self-contained errors? If so, don't proceed with upload.
+  const diagnostics = vscode.languages.getDiagnostics(activeEditor.document.uri);
+  const errorDiagnostics = diagnostics.filter(
+    (d) => d.severity === vscode.DiagnosticSeverity.Error,
+  );
+  if (errorDiagnostics.length > 0) {
+    const errorSerde = new DocumentErrorRangeSerde(errorDiagnostics);
+
+    logger.error("Not going to upload schema since there are errors in the document");
+    const choice = await vscode.window.showErrorMessage(
+      `Errors are being reported in the ${schemaType} document. Please fix and try again.`,
+      ...errorSerde.getMessages(),
+    );
+
+    // they picked one of the errors, so jump to it.
+    if (choice) {
+      const error = errorSerde.findErrorByString(choice);
+      if (error) {
+        const range = error.range;
+        activeEditor.revealRange(range);
+        activeEditor.selection = new vscode.Selection(range.start, range.end);
+      }
+    }
+    return;
+  }
+
+  // todo quickpick to select schema registry, default to the one in the view
+  const registry = await schemaRegistryQuickPick();
+  if (!registry) {
+    logger.info("No schema registry selected, aborting schema upload");
+    return;
+  }
+
+  // todo quickpick to select subject, default to one selected in view (if any)
+  const subject = await vscode.window.showInputBox({
+    title: "Schema Subject",
+    prompt: "Enter subject name",
+  });
+
+  if (!subject) {
+    logger.info("No subject chosen, aborting schema upload");
+    return;
+  }
+
+  // Warn if subject doesn't match TopicNamingStrategy, but allow if they really want.
+  if (!subject.endsWith("-key") && !subject.endsWith("-value")) {
+    const choice = await vscode.window.showInputBox({
+      title: "Subject Name Warning",
+      prompt: `Subject name "${subject}" does not end with "-key" or "-value". Continue (yes or no)?`,
+    });
+    // case-insignificant comparison to "yes"
+    if (!choice || choice.toLowerCase() !== "yes") {
+      vscode.window.showInformationMessage("Schema upload aborted.");
+      return;
+    }
+  }
+
+  const sidecar = await getSidecar();
+  // Has the route for registering a schema under a subject.
+  const schemaSubjectsApi = sidecar.getSubjectsV1Api(registry.id, registry.connectionId);
+  // Can be used to look up subject + version pairs given a schema id.
+  const schemasApi = sidecar.getSchemasV1Api(registry.id, registry.connectionId);
+
+  // Learn the highest existing verion number of the schemas bound to this subject, if any. This way we can
+  // tell if we're uploading a new schema or a new version of an existing schema.
+  let existingVersion: number | null = null;
+  try {
+    const existingVersions = await schemaSubjectsApi.listVersions({ subject: subject });
+    if (existingVersions.length > 0) {
+      // Ensure sorted
+      existingVersions.sort((a, b) => a - b);
+      // assign the last (highest version number) to existingVersion
+      existingVersion = existingVersions[existingVersions.length - 1];
+    }
+  } catch (e) {
+    if (e instanceof ResponseError) {
+      const http_code = e.response.status;
+      if (http_code === 404) {
+        // This is fine, it means the subject doesn't exist yet.
+        // Leave existingVersion as null.
+      } else {
+        // Some other error, so re-throw.
+        throw e;
+      }
+    }
+  }
+
+  // todo ask if want to normalize schema? They ... probably do?
+  const normalize = true;
+  const uploadRequest: RegisterRequest = {
+    subject: subject,
+    RegisterSchemaRequest: {
+      schemaType: schemaType,
+      schema: schemaContents,
+    },
+    normalize: normalize,
+  };
+
+  // First look up the schema by subject to see if it already exists.
+  // TODO
+
+  try {
+    // See ... terrible news at https://github.com/confluentinc/schema-registry/issues/173#issuecomment-362950435
+    // (FROM DARK AGES 2018)
+    // otherwise we get random 415 Unsupported Media Type errors when POSTing new schemas based on if the
+    // request gets handled by 'follower node' and not the 'master' (sic).
+    const mainHeaders = schemaSubjectsApi["configuration"].headers!;
+    const overrides = {
+      headers: { ...mainHeaders, "Content-Type": "application/json" },
+    };
+
+    const response = await schemaSubjectsApi.register(uploadRequest, overrides);
+    const maybeNewId = response.id!;
+
+    logger.info(
+      `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
+    );
+
+    // TODO: push this into a helper function getRegisteredVersion(subject, schemaId): number
+
+    // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
+    // (may take a few times / pauses)
+    let registeredVersion: number | undefined;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      let subjectVersionPairs: SubjectVersion[] | undefined;
+      try {
+        subjectVersionPairs = await schemasApi.getVersions({ id: maybeNewId });
+      } catch (e) {
+        if (e instanceof ResponseError) {
+          const http_code = e.response.status;
+          if (http_code === 404) {
+            // Pause a moment before trying again. We were just served by a read replica that
+            // doesn't yet know about the schema we just registered.
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            continue;
+          }
+        }
+      }
+      logger.info("subjectVersionPairs", subjectVersionPairs);
+
+      for (const pair of subjectVersionPairs!) {
+        if (pair.subject === subject) {
+          // This is the version number used for the subject we just bound it to.
+          registeredVersion = pair.version;
+          break;
+        }
+      }
+      break;
+    }
+
+    if (registeredVersion === undefined) {
+      // Could not find the subject in the list of versions?!
+      logger.error(
+        `Could not find subject "${subject}" in the list of versions for schema id ${maybeNewId}`,
+      );
+    }
+
+    // Log + inform user of the result.
+    // TODO: Improve this: Was this a new version being registered of existing subject, or a new subject?
+    const message = schemaRegistrationMessage(
+      schemaType,
+      subject,
+      registry.id,
+      maybeNewId,
+      existingVersion,
+      registeredVersion!,
+    );
+
+    logger.info(message);
+    vscode.window.showInformationMessage(message);
+    // Refresh that schema registry in view controller if needed, otherwise at least
+    getSchemasViewProvider().refreshIfShowingRegistry(registry.id);
+  } catch (e) {
+    if (e instanceof ResponseError) {
+      const http_code = e.response.status;
+      const body = await e.response.json();
+
+      let message: string | null = null;
+      switch (http_code) {
+        case 415:
+          // The header override didn't do the trick!
+          message = `Alas, Unsupported Media Type. Try again?`;
+          break;
+        case 409:
+          // this schema conflicted with with prior version(s) of the schema
+          message = `Conflict with prior schema version(s): ${body.message}`;
+          break;
+        case 422:
+          if (body.error_code === 42201) {
+            // the schema was invalid / bad syntax
+            message = `Invalid schema: ${body.message}`;
+          }
+          break;
+      }
+
+      if (!message) {
+        message = `Error ${http_code} uploading schema: ${body.message}`;
+      }
+
+      logger.error(message);
+      vscode.window.showErrorMessage(message);
+    } else {
+      // non-http-related error!
+      // TODO log these in sentry
+      logger.error("Error uploading schema", e);
+      vscode.window.showErrorMessage(`Error uploading schema: ${e}`);
+    }
+  }
+}
+
+/** Return the success message to show the user after having uploaded a new schema */
+export function schemaRegistrationMessage(
+  schemaType: string,
+  subject: string,
+  registry_id: string,
+  schemaId: number,
+  existingVersion: number | null,
+  registeredVersion: number,
+): string {
+  // todo: make this return markdown and to not induce pain for the reader. Use a header
+  // that clearly delineates the different cases, then key / value rows for the details.
+
+  // todo: then write tests.
+  if (existingVersion === null) {
+    return `Schema registered to new subject subject "${subject}" in registry "${registry_id}" as schema id ${schemaId}, version ${registeredVersion}, type ${schemaType}`;
+  } else if (existingVersion === registeredVersion) {
+    // was normalized and matched an existing schema version for this subject
+    return `Normalized to existing ${schemaType} schema version ${registeredVersion} for subject "${subject}" in registry "${registry_id}, id ${schemaId}`;
+  } else {
+    // This was a new version of an existing subject.
+    return `New ${schemaType} schema version registered to existing subject "${subject}" in registry "${registry_id}" as schema id ${schemaId}, version ${registeredVersion}`;
+  }
+}
+
+export function determineSchemaType(file: vscode.Uri | null, languageId: string | null): string {
+  if (!file && !languageId) {
+    throw new Error("Must call with either a file or document");
+  }
+
+  let schemaType: string | unknown = null;
+
+  if (languageId) {
+    const languageIdToSchemaType = new Map([
+      ["avroavsc", "AVRO"],
+      ["proto", "PROTOBUF"],
+      ["json", "JSON"],
+    ]);
+    schemaType = languageIdToSchemaType.get(languageId);
+  }
+
+  if (!schemaType && file) {
+    // extract the file extension from file.path
+    const ext = file.path.split(".").pop();
+    if (ext) {
+      const extensionToSchemaType = new Map([
+        ["avsc", "AVRO"],
+        ["proto", "PROTOBUF"],
+        ["json", "JSON"],
+      ]);
+      schemaType = extensionToSchemaType.get(ext);
+    }
+  }
+
+  if (!schemaType) {
+    throw new Error("Could not determine schema type from file or document");
+  }
+
+  return schemaType as string;
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */
@@ -117,7 +463,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
-    registerCommandWithLogging("confluent.schemaViewer.uploadVersion", uploadVersionCommand),
+    registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
