@@ -7,6 +7,7 @@ import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   AUTH_COMPLETED_KEY,
+  CCLOUD_TRANSIENT_ERROR_STATE_KEY,
   StateEnvironments,
   StateKafkaClusters,
   StateKafkaTopics,
@@ -466,6 +467,19 @@ export class ResourceManager {
   async getAuthFlowCompleted(): Promise<boolean> {
     const success: string | undefined = await this.storage.getSecret(AUTH_COMPLETED_KEY);
     return success === "true";
+  }
+
+  /** Indicate that the sidecar is handling a transient error (e.g. `INVALID_TOKEN` auth status) to
+   * inform all active extension instances that they need to block certain requests/actions. */
+  async setCCloudTransientErrorState(active: boolean): Promise<void> {
+    await this.storage.setSecret(CCLOUD_TRANSIENT_ERROR_STATE_KEY, String(active));
+  }
+
+  async getCCloudTransientErrorState(): Promise<boolean> {
+    const active: string | undefined = await this.storage.getSecret(
+      CCLOUD_TRANSIENT_ERROR_STATE_KEY,
+    );
+    return active === "true";
   }
 }
 
