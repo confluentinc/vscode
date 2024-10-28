@@ -1,8 +1,12 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { RequestContext, ResponseContext } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
-import * as middlewares from "./middlewares";
+import { getExtensionContext } from "../../tests/unit/testUtils";
+import { RequestContext } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { ccloudAuthSessionInvalidated } from "../emitters";
+import { getResourceManager, ResourceManager } from "../storage/resourceManager";
+import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+import { CCloudAuthStatusMiddleware } from "./middlewares";
 
 function fakeRequestWithHeader(key: string, value: string): RequestContext {
   return {
@@ -16,88 +20,107 @@ function fakeRequestWithHeader(key: string, value: string): RequestContext {
   };
 }
 
-function fakeResponseWithHeader(key: string, value: string): ResponseContext {
-  const request = fakeRequestWithHeader(key, value);
-  return {
-    ...request,
-    response: new Response(),
-  };
-}
+describe("CCloudAuthStatusMiddleware behavior", () => {
+  let resourceManager: ResourceManager;
+  let middleware: CCloudAuthStatusMiddleware;
 
-describe("CCloudRecentRequestsMiddleware methods", () => {
   let sandbox: sinon.SinonSandbox;
-  let clock: sinon.SinonFakeTimers;
-  let middleware: middlewares.CCloudRecentRequestsMiddleware;
-  let numRecentCCloudRequestsStub: sinon.SinonStub;
+  let getCCloudAuthStatusStub: sinon.SinonStub;
+  let handleCCloudAuthStatusSpy: sinon.SinonSpy;
+  let handleCCloudInvalidTokenStatusStub: sinon.SinonStub;
+  let ccloudAuthSessionInvalidatedStub: sinon.SinonStub;
+
+  before(async () => {
+    await getExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    clock = sandbox.useFakeTimers();
-    middleware = new middlewares.CCloudRecentRequestsMiddleware();
-    // can't edit this as a read-only import, so we use a stub to set the value, but then
-    // assert against `middlewares.numRecentCCloudRequests` directly
-    numRecentCCloudRequestsStub = sandbox.stub(middlewares, "numRecentCCloudRequests").value(0);
+
+    ccloudAuthSessionInvalidatedStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
+
+    resourceManager = getResourceManager();
+    getCCloudAuthStatusStub = sandbox.stub(resourceManager, "getCCloudAuthStatus");
+
+    middleware = new CCloudAuthStatusMiddleware();
+    handleCCloudAuthStatusSpy = sandbox.spy(middleware, "handleCCloudAuthStatus");
+    handleCCloudInvalidTokenStatusStub = sandbox.stub(middleware, "handleCCloudInvalidTokenStatus");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("pre() should increment numRecentCCloudRequests only if the x-connection-id header is set to the static CCloud connection ID", async () => {
-    const requestContext = fakeRequestWithHeader("x-connection-id", CCLOUD_CONNECTION_ID);
+  it("should call handleCCloudAuthStatus() when the correct CCloud connection header is passed", async () => {
+    const requestContext = fakeRequestWithHeader(
+      SIDECAR_CONNECTION_ID_HEADER,
+      CCLOUD_CONNECTION_ID,
+    );
+    getCCloudAuthStatusStub.resolves("foo");
 
     await middleware.pre(requestContext);
 
-    assert.equal(middlewares.numRecentCCloudRequests, 1);
+    assert.ok(handleCCloudAuthStatusSpy.calledOnce);
+    assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
   });
 
-  it("pre() should NOT increment numRecentCCloudRequests for non-'x-connection-id' headers", async () => {
-    const requestContext = fakeRequestWithHeader("foo", CCLOUD_CONNECTION_ID);
+  it("should not call handleCCloudAuthStatus() when the CCloud connection header is missing", async () => {
+    const requestContext1 = fakeRequestWithHeader("some-other-header", "some-value");
+    const requestContext2 = fakeRequestWithHeader("some-other-header", CCLOUD_CONNECTION_ID);
+    const requestContext3 = fakeRequestWithHeader(SIDECAR_CONNECTION_ID_HEADER, "some-value");
+
+    await middleware.pre(requestContext1);
+    await middleware.pre(requestContext2);
+    await middleware.pre(requestContext3);
+
+    assert.ok(handleCCloudAuthStatusSpy.notCalled);
+    assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
+  });
+
+  it("should call handleCCloudInvalidTokenStatus() from an INVALID_TOKEN auth status", async () => {
+    const requestContext = fakeRequestWithHeader(
+      SIDECAR_CONNECTION_ID_HEADER,
+      CCLOUD_CONNECTION_ID,
+    );
+    getCCloudAuthStatusStub.resolves("INVALID_TOKEN");
 
     await middleware.pre(requestContext);
 
-    assert.equal(middlewares.numRecentCCloudRequests, 0);
+    assert.ok(handleCCloudAuthStatusSpy.calledOnce);
+    assert.ok(handleCCloudInvalidTokenStatusStub.calledOnce);
   });
 
-  it("pre() should NOT increment numRecentCCloudRequests for 'x-connection-id' headers that don't match the static CCloud connection ID", async () => {
-    const requestContext = fakeRequestWithHeader("x-connection-id", LOCAL_CONNECTION_ID);
+  it("should fire ccloudAuthSessionInvalidated from a NO_TOKEN or FAILED auth status", async () => {
+    const requestContext = fakeRequestWithHeader(
+      SIDECAR_CONNECTION_ID_HEADER,
+      CCLOUD_CONNECTION_ID,
+    );
+    getCCloudAuthStatusStub.resolves("FAILED");
 
     await middleware.pre(requestContext);
 
-    assert.equal(middlewares.numRecentCCloudRequests, 0);
+    assert.ok(ccloudAuthSessionInvalidatedStub.calledOnce);
+
+    // isn't easy to get into this state since we should delete the CCloud connection and reset the
+    // associated resources for the (previous) connection, but just in case:
+    getCCloudAuthStatusStub.resolves("NO_TOKEN");
+
+    await middleware.pre(requestContext);
+
+    assert.ok(ccloudAuthSessionInvalidatedStub.calledTwice);
   });
 
-  it("post() should decrement numRecentCCloudRequests after a delay if headers contain 'x-connection-id'", async () => {
-    const numRequests = 1;
-    const responseContext = fakeResponseWithHeader("x-connection-id", CCLOUD_CONNECTION_ID);
-    numRecentCCloudRequestsStub.value(numRequests);
+  it("should not block requests from a VALID_TOKEN auth status", async () => {
+    const requestContext = fakeRequestWithHeader(
+      SIDECAR_CONNECTION_ID_HEADER,
+      CCLOUD_CONNECTION_ID,
+    );
+    getCCloudAuthStatusStub.resolves("VALID_TOKEN");
 
-    await middleware.post(responseContext);
+    await middleware.pre(requestContext);
 
-    assert.equal(middlewares.numRecentCCloudRequests, numRequests);
-    clock.tick(15000);
-    assert.equal(middlewares.numRecentCCloudRequests, numRequests - 1);
-  });
-
-  it("post() should NOT decrement numRecentCCloudRequests if headers don't contain 'x-connection-id'", async () => {
-    const numRequests = 1;
-    const responseContext = fakeResponseWithHeader("foo", CCLOUD_CONNECTION_ID);
-    numRecentCCloudRequestsStub.value(numRequests);
-
-    await middleware.post(responseContext);
-    clock.tick(15000);
-
-    assert.equal(middlewares.numRecentCCloudRequests, numRequests);
-  });
-
-  it("post() should NOT decrement numRecentCCloudRequests for 'x-connection-id' headers that don't match the static CCloud connection ID", async () => {
-    const numRequests = 1;
-    const responseContext = fakeResponseWithHeader("foo", CCLOUD_CONNECTION_ID);
-    numRecentCCloudRequestsStub.value(numRequests);
-
-    await middleware.post(responseContext);
-    clock.tick(15000);
-
-    assert.equal(middlewares.numRecentCCloudRequests, numRequests);
+    assert.ok(handleCCloudAuthStatusSpy.calledOnce);
+    assert.ok(handleCCloudInvalidTokenStatusStub.notCalled);
+    assert.ok(ccloudAuthSessionInvalidatedStub.notCalled);
   });
 });

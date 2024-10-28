@@ -38,4 +38,5 @@ export const AUTH_COMPLETED_KEY = "authCompleted";
  * ever set to "true" or deleted. */
 export const AUTH_SESSION_EXISTS_KEY = "authSessionExists";
 
-export const CCLOUD_TRANSIENT_ERROR_STATE_KEY = "ccloudTransientErrorState";
+/** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+export const CCLOUD_AUTH_STATUS_KEY = "ccloudAuthStatus";

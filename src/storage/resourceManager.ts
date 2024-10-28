@@ -1,4 +1,5 @@
 import { StorageManager, getStorageManager } from ".";
+import { Status } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -7,7 +8,7 @@ import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   AUTH_COMPLETED_KEY,
-  CCLOUD_TRANSIENT_ERROR_STATE_KEY,
+  CCLOUD_AUTH_STATUS_KEY,
   StateEnvironments,
   StateKafkaClusters,
   StateKafkaTopics,
@@ -469,17 +470,14 @@ export class ResourceManager {
     return success === "true";
   }
 
-  /** Indicate that the sidecar is handling a transient error (e.g. `INVALID_TOKEN` auth status) to
-   * inform all active extension instances that they need to block certain requests/actions. */
-  async setCCloudTransientErrorState(active: boolean): Promise<void> {
-    await this.storage.setSecret(CCLOUD_TRANSIENT_ERROR_STATE_KEY, String(active));
+  /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+  async setCCloudAuthStatus(status: Status): Promise<void> {
+    await this.storage.setSecret(CCLOUD_AUTH_STATUS_KEY, String(status));
   }
 
-  async getCCloudTransientErrorState(): Promise<boolean> {
-    const active: string | undefined = await this.storage.getSecret(
-      CCLOUD_TRANSIENT_ERROR_STATE_KEY,
-    );
-    return active === "true";
+  /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+  async getCCloudAuthStatus(): Promise<string | undefined> {
+    return await this.storage.getSecret(CCLOUD_AUTH_STATUS_KEY);
   }
 }
 
