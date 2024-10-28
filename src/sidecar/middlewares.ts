@@ -2,9 +2,11 @@ import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context";
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
-import { CCLOUD_TRANSIENT_ERROR_STATE_KEY } from "../storage/constants";
+import { CCLOUD_AUTH_STATUS_KEY } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
+import { pollCCloudConnectionAuth } from "./authStatusPolling";
 import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
 
 const logger = new Logger("sidecar.middlewares");
@@ -119,50 +121,97 @@ export class ErrorResponseMiddleware implements Middleware {
   }
 }
 
-/** Track the number of requests to Confluent Cloud that have happened recently, controlled by
- * {@link CCloudRecentRequestsMiddleware}. */
-export let numRecentCCloudRequests: number = 0;
-/** Middleware to track the number of requests to Confluent Cloud that have happened recently. */
-export class CCloudRecentRequestsMiddleware implements Middleware {
-  async pre(context: RequestContext): Promise<void> {
-    // increment the count of pending requests to Confluent Cloud and block any pending requests if
-    // we're in the middle of a transient error state
-    if (hasCCloudConnectionIdHeader(context.init.headers)) {
-      const origValue: number = numRecentCCloudRequests;
-      numRecentCCloudRequests++;
-      logger.debug(`CCloud requests pending: ${origValue} -> ${numRecentCCloudRequests}`);
-      const inTransientErrorState: boolean =
-        await getResourceManager().getCCloudTransientErrorState();
+/** Middleware to check if a request is for Confluent Cloud, look up the existing auth status, and
+ * handle various auth statuses. */
+export class CCloudAuthStatusMiddleware implements Middleware {
+  /** Used to prevent multiple instances of the `INVALID_TOKEN` progress notification stacking up. */
+  invalidTokenNotificationOpen: boolean = false;
+  /** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
+   * current CCloud connection, and is only used to resolve an open progress notification. */
+  nonInvalidTokenStatus = new vscode.EventEmitter<void>();
 
-      if (inTransientErrorState) {
-        // block the request until the secret changes (controlled via the auth status poller)
-        await new Promise((resolve) => {
-          getExtensionContext().secrets.onDidChange(
-            async ({ key }: vscode.SecretStorageChangeEvent) => {
-              // the only way we get here is because the ccloudTransientErrorState secret was "true",
-              // so any change (set to `false` or deleted entirely) should resolve and unblock requests
-              if (key === CCLOUD_TRANSIENT_ERROR_STATE_KEY) {
-                resolve(void 0);
-              }
-            },
-          );
-        });
+  async pre(context: RequestContext): Promise<void> {
+    if (hasCCloudConnectionIdHeader(context.init.headers)) {
+      const status: string | undefined = await getResourceManager().getCCloudAuthStatus();
+      logger.error("CCloudAuthStatusMiddleware pre", { status });
+      if (status) {
+        await this.handleCCloudAuthStatus(status);
       }
     }
   }
-  async post(context: ResponseContext): Promise<void> {
-    // decrement the count of pending requests to Confluent Cloud after a delay so we get a feeling
-    // for "recent activity" instead of the exact current state of pending requests (which will
-    // likely be 0 unless someone get the timing just right)
-    if (hasCCloudConnectionIdHeader(context.init.headers)) {
-      const origValue: number = numRecentCCloudRequests;
-      setTimeout(() => {
-        numRecentCCloudRequests--;
-        logger.debug(
-          `CCloud requests pending (delayed): ${origValue} -> ${numRecentCCloudRequests}`,
-        );
-      }, 15_000);
+
+  /**
+   * Handle the various auth statuses that can be returned by the sidecar for the current CCloud connection.
+   *
+   * - If the status is `INVALID_TOKEN`, block the request and show a progress notification until we
+   *  see a status change (to a non-transient state like `VALID_TOKEN` or `FAILED`/`NO_TOKEN`) from the
+   *  auth poller.
+   * - If the status is `NO_TOKEN` or `FAILED`, invalidate the current CCloud auth session to prompt
+   *  the user to sign in again.
+   */
+  async handleCCloudAuthStatus(status: string): Promise<void> {
+    if (status !== "INVALID_TOKEN") {
+      pollCCloudConnectionAuth.useSlowFrequency();
+      // resolve any open progress notification if we see a non-`INVALID_TOKEN` status
+      this.nonInvalidTokenStatus.fire();
+      // and set the flag back so the notification can open again if we see another `INVALID_TOKEN`
+      this.invalidTokenNotificationOpen = false;
     }
+
+    logger.error("CCloudAuthStatusMiddleware handleCCloudAuthStatus", { status });
+    if (["NO_TOKEN", "FAILED"].includes(status)) {
+      // some unusable state that requires the user to reauthenticate
+      logger.error(
+        "current CCloud connection has no token or transitioned to a failed state; invalidating auth session",
+        {
+          status,
+        },
+      );
+      ccloudAuthSessionInvalidated.fire();
+    } else if (status === "INVALID_TOKEN") {
+      // this may block for a while depending on how long it takes before we get an updated auth status
+      await this.handleCCloudInvalidTokenStatus();
+    }
+  }
+
+  async handleCCloudInvalidTokenStatus() {
+    // poll faster to try and resolve the connection status so the notification doesn't need to stay
+    // open for the full 10sec until the next check
+    pollCCloudConnectionAuth.useFastFrequency();
+
+    logger.warn("current CCloud connection has an invalid token; waiting for updated status");
+    // only notify if CCloud requests have happened recently and we haven't shown the notification yet
+    if (!this.invalidTokenNotificationOpen) {
+      this.invalidTokenNotificationOpen = true;
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Attempting to reconnect to Confluent Cloud...",
+          cancellable: false,
+        },
+        async () => {
+          await new Promise((resolve) => {
+            const subscriber: vscode.Disposable = this.nonInvalidTokenStatus.event(() => {
+              subscriber.dispose();
+              resolve(void 0);
+            });
+          });
+        },
+      );
+    }
+
+    // block the request that got us into this flow until the auth status "secret" changes
+    await new Promise((resolve) => {
+      getExtensionContext().secrets.onDidChange(
+        async ({ key }: vscode.SecretStorageChangeEvent) => {
+          // the only way we get here is because the ccloudTransientErrorState secret was "true",
+          // so any change (set to `false` or deleted entirely) should resolve and unblock requests
+          if (key === CCLOUD_AUTH_STATUS_KEY) {
+            resolve(void 0);
+          }
+        },
+      );
+    });
   }
 }
 

@@ -14,10 +14,14 @@ import {
   getCCloudConnection,
 } from "./sidecar/connections";
 import { getStorageManager } from "./storage";
-import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "./storage/constants";
+import {
+  AUTH_COMPLETED_KEY,
+  AUTH_SESSION_EXISTS_KEY,
+  CCLOUD_AUTH_STATUS_KEY,
+} from "./storage/constants";
 import { getResourceManager } from "./storage/resourceManager";
-import { getUriHandler } from "./uriHandler";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
+import { getUriHandler } from "./uriHandler";
 
 const logger = new Logger("authProvider");
 
@@ -202,6 +206,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       await Promise.all([
         storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
         storageManager.deleteSecret(AUTH_COMPLETED_KEY),
+        // we don't need to check for this up above, just clear it out if we don't have a connection
+        storageManager.deleteSecret(CCLOUD_AUTH_STATUS_KEY),
       ]);
     } else if (!sessionSecretExists && connectionExists) {
       // NOTE: this should never happen, because in order for the connection to be made with the
