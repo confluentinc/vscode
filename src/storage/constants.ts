@@ -37,3 +37,5 @@ export const AUTH_COMPLETED_KEY = "authCompleted";
 /** Only used as a way to kick off cross-workspace events foir the authentication provider. Only\
  * ever set to "true" or deleted. */
 export const AUTH_SESSION_EXISTS_KEY = "authSessionExists";
+
+export const CCLOUD_TRANSIENT_ERROR_STATE_KEY = "ccloudTransientErrorState";

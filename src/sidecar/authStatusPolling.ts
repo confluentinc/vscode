@@ -3,6 +3,7 @@ import { AuthErrors, Connection } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
+import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
 import { getCCloudAuthSession, getCCloudConnection } from "./connections";
 import { numRecentCCloudRequests } from "./middlewares";
@@ -53,7 +54,7 @@ export const AUTH_PROMPT_TRACKER = AuthPromptTracker.getInstance();
 let invalidTokenNotificationOpen: boolean = false;
 /** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
  * current CCloud connection, and is only used to resolve an open progress notification. */
-let nonInvalidTokenStatus: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+const nonInvalidTokenStatus = new vscode.EventEmitter<void>();
 
 /**
  * Poller to call {@link watchCCloudConnectionStatus} every 10 seconds to check the auth status of
@@ -84,6 +85,9 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     errors: connection.status.authentication.errors,
   });
 
+  await getResourceManager().setCCloudTransientErrorState(
+    connection.status.authentication.status === "INVALID_TOKEN",
+  );
   if (connection.status.authentication.status !== "INVALID_TOKEN") {
     // resolve any open progress notification if we see a non-`INVALID_TOKEN` status
     nonInvalidTokenStatus.fire();
