@@ -11,7 +11,6 @@ import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
 import { MANAGED_CONTAINER_LABEL } from "./constants";
 import { imageExists, pullImage } from "./images";
-import { streamToString } from "./stream";
 
 const logger = new Logger("docker.containers");
 
@@ -30,11 +29,10 @@ export async function getContainersForImage(
     return response;
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
       logger.error("Error response listing containers:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: body,
+        body: await error.response.clone().json(),
       });
     } else {
       logger.error("Error listing containers:", error);
@@ -65,14 +63,12 @@ export async function createContainer(
     return response;
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
-
       // TODO: if port is occupied, throw a more specific error
 
       logger.error("Container creation returned error response:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: body,
+        body: await error.response.clone().json(),
       });
     } else {
       logger.error("Error creating container:", error);
@@ -88,11 +84,10 @@ export async function startContainer(containerId: string) {
     await client.containerStart({ id: containerId }, init);
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
       logger.error("Error response starting container:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: body,
+        body: await error.response.clone().json(),
       });
     } else {
       logger.error("Error starting container:", error);
@@ -108,11 +103,10 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
     return await client.containerInspect({ id }, init);
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
       logger.error("Error response inspecting container:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: body,
+        body: await error.response.clone().json(),
       });
     } else {
       logger.error("Error inspecting container:", error);
