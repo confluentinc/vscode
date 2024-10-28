@@ -4,7 +4,7 @@ import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } fro
 export const TEST_LOCAL_KAFKA_CLUSTER = LocalKafkaCluster.create({
   id: "local-abc123",
   bootstrapServers: "localhost:9092",
-  uri: "http://localhost:9092",
+  uri: "http://localhost:8082",
 });
 
 export const TEST_CCLOUD_KAFKA_CLUSTER = CCloudKafkaCluster.create({

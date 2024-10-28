@@ -422,7 +422,7 @@ function messageViewerStartPollingCommand(
             }
             default: {
               reportable = { message: "Something went wrong." };
-              Sentry.captureException(error, { data: { status, payload } });
+              Sentry.captureException(error, { extra: { status, payload } });
               window
                 .showErrorMessage("Error response while consuming messages.", "Open Logs")
                 .then((action) => {
