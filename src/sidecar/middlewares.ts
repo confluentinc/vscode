@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
+import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
 
 const logger = new Logger("sidecar.middlewares");
 
@@ -150,10 +151,10 @@ function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined)
   if (!headers) {
     return false;
   }
-  for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() === "x-connection-id" && value === CCLOUD_CONNECTION_ID) {
-      return true;
-    }
-  }
-  return false;
+  // coerce to Headers object since HeadersInit doesn't have .has()/.get() methods
+  headers = new Headers(headers);
+  return (
+    headers.has(SIDECAR_CONNECTION_ID_HEADER) &&
+    headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
+  );
 }
