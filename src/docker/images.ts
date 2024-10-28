@@ -1,7 +1,6 @@
 import { ImageApi, ImageInspect, ResponseError } from "../clients/docker";
 import { Logger } from "../logging";
 import { defaultRequestInit } from "./configs";
-import { streamToString } from "./stream";
 
 const logger = new Logger("docker.images");
 
@@ -23,7 +22,6 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
     return repoTagFound;
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
       if (error.response.status === 404) {
         // image not found, callers will probably need to pull it after this returns
         return false;
@@ -31,7 +29,7 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
         logger.error("Error response inspecting image:", {
           status: error.response.status,
           statusText: error.response.statusText,
-          body: body,
+          body: await error.response.clone().json(),
         });
       }
     } else {
@@ -52,11 +50,10 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
     await client.imageCreate({ fromImage: repoTag }, init);
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await streamToString(error.response.clone().body);
       logger.error("Error response pulling image:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: body,
+        body: await error.response.clone().json(),
       });
     } else {
       logger.error("Error pulling image:", error);
