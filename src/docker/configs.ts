@@ -51,6 +51,10 @@ export function defaultRequestInit(): RequestInit {
   // `socketPath` to `RequestInit`.
   // (Also see https://github.com/nodejs/undici/issues/1489#issuecomment-1543856261)
   const init: UndiciRequestInit = {
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
     dispatcher: new Agent({
       connect: {
         socketPath: getSocketPath(),
