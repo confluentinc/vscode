@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
-
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { getExtensionContext } from "../context";
 import { Logger } from "../logging";
+import { CCLOUD_TRANSIENT_ERROR_STATE_KEY } from "../storage/constants";
+import { getResourceManager } from "../storage/resourceManager";
+import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
+
 const logger = new Logger("sidecar.middlewares");
 
 // only create this if enabled in SidecarHandle setup
@@ -112,4 +117,65 @@ export class ErrorResponseMiddleware implements Middleware {
       // default if status >= 400
     }
   }
+}
+
+/** Track the number of requests to Confluent Cloud that have happened recently, controlled by
+ * {@link CCloudRecentRequestsMiddleware}. */
+export let numRecentCCloudRequests: number = 0;
+/** Middleware to track the number of requests to Confluent Cloud that have happened recently. */
+export class CCloudRecentRequestsMiddleware implements Middleware {
+  async pre(context: RequestContext): Promise<void> {
+    // increment the count of pending requests to Confluent Cloud and block any pending requests if
+    // we're in the middle of a transient error state
+    if (hasCCloudConnectionIdHeader(context.init.headers)) {
+      const origValue: number = numRecentCCloudRequests;
+      numRecentCCloudRequests++;
+      logger.debug(`CCloud requests pending: ${origValue} -> ${numRecentCCloudRequests}`);
+      const inTransientErrorState: boolean =
+        await getResourceManager().getCCloudTransientErrorState();
+
+      if (inTransientErrorState) {
+        // block the request until the secret changes (controlled via the auth status poller)
+        await new Promise((resolve) => {
+          getExtensionContext().secrets.onDidChange(
+            async ({ key }: vscode.SecretStorageChangeEvent) => {
+              // the only way we get here is because the ccloudTransientErrorState secret was "true",
+              // so any change (set to `false` or deleted entirely) should resolve and unblock requests
+              if (key === CCLOUD_TRANSIENT_ERROR_STATE_KEY) {
+                resolve(void 0);
+              }
+            },
+          );
+        });
+      }
+    }
+  }
+  async post(context: ResponseContext): Promise<void> {
+    // decrement the count of pending requests to Confluent Cloud after a delay so we get a feeling
+    // for "recent activity" instead of the exact current state of pending requests (which will
+    // likely be 0 unless someone get the timing just right)
+    if (hasCCloudConnectionIdHeader(context.init.headers)) {
+      const origValue: number = numRecentCCloudRequests;
+      setTimeout(() => {
+        numRecentCCloudRequests--;
+        logger.debug(
+          `CCloud requests pending (delayed): ${origValue} -> ${numRecentCCloudRequests}`,
+        );
+      }, 15_000);
+    }
+  }
+}
+
+/** Check if headers include the CCloud connection ID, indicating that the request is going to be
+ * sent to CCloud via the sidecar. */
+function hasCCloudConnectionIdHeader(headers: HeadersInit | Headers | undefined): boolean {
+  if (!headers) {
+    return false;
+  }
+  // coerce to Headers object since HeadersInit doesn't have .has()/.get() methods
+  headers = new Headers(headers);
+  return (
+    headers.has(SIDECAR_CONNECTION_ID_HEADER) &&
+    headers.get(SIDECAR_CONNECTION_ID_HEADER) === CCLOUD_CONNECTION_ID
+  );
 }

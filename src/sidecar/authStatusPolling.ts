@@ -3,8 +3,10 @@ import { AuthErrors, Connection } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
+import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
 import { getCCloudAuthSession, getCCloudConnection } from "./connections";
+import { numRecentCCloudRequests } from "./middlewares";
 
 const logger = new Logger("sidecar.authStatusPolling");
 
@@ -52,7 +54,7 @@ export const AUTH_PROMPT_TRACKER = AuthPromptTracker.getInstance();
 let invalidTokenNotificationOpen: boolean = false;
 /** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
  * current CCloud connection, and is only used to resolve an open progress notification. */
-let nonInvalidTokenStatus: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+const nonInvalidTokenStatus = new vscode.EventEmitter<void>();
 
 /**
  * Poller to call {@link watchCCloudConnectionStatus} every 10 seconds to check the auth status of
@@ -83,6 +85,9 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     errors: connection.status.authentication.errors,
   });
 
+  await getResourceManager().setCCloudTransientErrorState(
+    connection.status.authentication.status === "INVALID_TOKEN",
+  );
   if (connection.status.authentication.status !== "INVALID_TOKEN") {
     // resolve any open progress notification if we see a non-`INVALID_TOKEN` status
     nonInvalidTokenStatus.fire();
@@ -105,7 +110,8 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     // the sidecar is handling a transient error, so exit this polling iteration early and check
     // the status again on the next iteration
     logger.warn("current CCloud connection has an invalid token; waiting for updated status");
-    if (!invalidTokenNotificationOpen) {
+    // only notify if CCloud requests have happened recently and we haven't shown the notification yet
+    if (numRecentCCloudRequests > 0 && !invalidTokenNotificationOpen) {
       invalidTokenNotificationOpen = true;
       vscode.window.withProgress(
         {
@@ -115,7 +121,10 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
         },
         async () => {
           await new Promise((resolve) => {
-            nonInvalidTokenStatus.event(resolve);
+            const subscriber: vscode.Disposable = nonInvalidTokenStatus.event(() => {
+              subscriber.dispose();
+              resolve(void 0);
+            });
           });
         },
       );
