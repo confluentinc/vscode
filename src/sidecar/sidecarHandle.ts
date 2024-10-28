@@ -14,7 +14,6 @@ import {
   SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
 import {
-  Configuration,
   ConfigurationParameters,
   ConnectionsResourceApi,
   KafkaConsumeResourceApi,
@@ -22,14 +21,16 @@ import {
   Middleware,
   PreferencesResourceApi,
   ResponseError,
+  Configuration as SidecarRestConfiguration,
   TemplatesApi,
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
 import {
+  CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
   SIDECAR_BASE_URL,
-  SIDECAR_CURRENT_CONNECTION_ID_HEADER,
+  SIDECAR_CONNECTION_ID_HEADER,
   SIDECAR_PROCESS_ID_HEADER,
 } from "./constants";
 import {
@@ -40,9 +41,10 @@ import {
 
 const logger = new Logger("sidecarHandle");
 
-// sidecar handle module
-// Represents a short-term handle to a running, handshaken sidecar process.
-// Should be used for a single code block and then discarded.
+/**
+ * A short-term handle to a running, handshaken sidecar process.
+ * Should be used for a single code block and then discarded.
+ */
 export class SidecarHandle {
   authToken: string;
   myPid: string;
@@ -64,9 +66,9 @@ export class SidecarHandle {
     // used for client creation for individual service (class) methods, merged with any custom
     // config parameters provided by the caller
     this.defaultHeaders = {
-      // Intercept requests to set the Accept header to `application/*` to handle non-JSON responses
-      // For example, the sidecar returns a ZIP file for the `POST /gateway/v1/templates/{name}/apply` endpoint
-      Accept: "application/*",
+      // Expect JSON request and response bodies unless otherwise overridden (e.g. TemplatesApi).
+      Accept: "application/json",
+      "Content-Type": "application/json",
       // Set the Authorization header to the current auth token.
       Authorization: `Bearer ${this.auth_secret}`,
     };
@@ -85,85 +87,59 @@ export class SidecarHandle {
     };
   }
 
-  /* Convenience methods to return the pre-configured OpenAPI-spec generated sidecar client
-    services for making REST requests to the sidecar. Obtaining from a SidecarHandle
-    obtained from getSidecar() ensures that the sidecar has been started, handshook with,
-    and that OpenAPI request filter has been installed which will inject the necessary
-    auth and process id headers.
-  */
+  // === OPENAPI CLIENT METHODS ===
 
-  createCustomHeaders(headers: Record<string, string>): Record<string, string> {
-    return { ...this.defaultHeaders, ...headers };
+  // --- SIDECAR OPENAPI CLIENT METHODS ---
+
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link ConnectionsResourceApi} client instance with a preconfigured
+   * {@link SidecarRestConfiguration}.
+   */
+  public getConnectionsResourceApi(): ConnectionsResourceApi {
+    const config = new SidecarRestConfiguration(this.defaultClientConfigParams);
+    return new ConnectionsResourceApi(config);
   }
 
-  createClientConfig(params?: ConfigurationParameters): Configuration {
-    if (params == null) {
-      return new Configuration(this.defaultClientConfigParams);
-    }
-    // if any headers are passed, make sure we don't replace the default headers
-    if (params.headers != null) {
-      params.headers = this.createCustomHeaders(params.headers);
-    }
-    return new Configuration({ ...this.defaultClientConfigParams, ...params });
-  }
-
-  // Return a client instance for making REST requests to the sidecar.
-  private getClient<T>(
-    clientServiceClass: new (config: Configuration) => T,
-    configParams?: ConfigurationParameters,
-  ): T {
-    const config: Configuration = this.createClientConfig(configParams);
-    return new clientServiceClass(config);
-  }
-
-  // Return the ConnectionsResourceApi client instance for making REST requests to the sidecar.
-  public getConnectionsResourceApi(configParams?: ConfigurationParameters): ConnectionsResourceApi {
-    return this.getClient(ConnectionsResourceApi, configParams);
-  }
-
-  // Return the TemplatesApi client instance for making REST requests to the sidecar.
-  public getTemplatesApi(configParams?: ConfigurationParameters): TemplatesApi {
-    return this.getClient(TemplatesApi, configParams);
-  }
-
-  public VersionResourceApi(configParams?: ConfigurationParameters): VersionResourceApi {
-    return this.getClient(VersionResourceApi, configParams);
-  }
-
-  public getTopicV3Api(clusterId: string, connectionId: string): TopicV3Api {
-    const config: unknown = this.createClientConfig({
-      headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
-    });
-    return new TopicV3Api(config as KafkaRestConfiguration);
-  }
-
-  public getPartitionV3Api(clusterId: string, connectionId: string): PartitionV3Api {
-    const config: unknown = this.createClientConfig({
-      headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
-    });
-    return new PartitionV3Api(config as KafkaRestConfiguration);
-  }
-
-  public getSchemasV1Api(clusterId: string, connectionId: string): SchemasV1Api {
-    const config: unknown = this.createClientConfig({
-      headers: { "x-cluster-id": clusterId, "x-connection-id": connectionId },
-    });
-    return new SchemasV1Api(config as SchemaRegistryRestConfiguration);
-  }
-
-  public getSubjectsV1Api(clusterId: string, connectionId: string): SubjectsV1Api {
-    const config: unknown = this.createClientConfig({
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link TemplatesApi} client instance with a
+   * preconfigured {@link SidecarRestConfiguration}.
+   */
+  public getTemplatesApi(): TemplatesApi {
+    const config = new SidecarRestConfiguration({
+      ...this.defaultClientConfigParams,
       headers: {
-        "x-cluster-id": clusterId,
-        "x-connection-id": connectionId,
+        ...this.defaultClientConfigParams.headers,
+        // Intercept requests to set the Accept header to `application/*` to handle non-JSON responses
+        // For example, the sidecar returns a ZIP file for the `POST /gateway/v1/templates/{name}/apply` endpoint
+        Accept: "application/*",
       },
     });
-    return new SubjectsV1Api(config as SchemaRegistryRestConfiguration);
+    return new TemplatesApi(config);
   }
 
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link VersionResourceApi} client instance
+   * with a preconfigured {@link SidecarRestConfiguration}.
+   */
+  public getVersionResourceApi(configParams?: ConfigurationParameters): VersionResourceApi {
+    const config = new SidecarRestConfiguration({
+      ...this.defaultClientConfigParams,
+      ...configParams,
+    });
+    return new VersionResourceApi(config);
+  }
+
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link KafkaConsumeResourceApi} client instance
+   * with a preconfigured {@link SidecarRestConfiguration}.
+   */
   public getKafkaConsumeApi(connectionId: string) {
-    const configuration = this.createClientConfig({
-      headers: { "x-connection-id": connectionId },
+    const configuration = new SidecarRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
       middleware: [
         {
           async onError(context) {
@@ -190,11 +166,102 @@ export class SidecarHandle {
     return new KafkaConsumeResourceApi(configuration);
   }
 
-  public getPreferencesApi() {
-    return new PreferencesResourceApi(this.createClientConfig());
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link PreferencesResourceApi} client instance
+   * with a preconfigured {@link SidecarRestConfiguration}.
+   */
+  public getPreferencesApi(): PreferencesResourceApi {
+    const config = new SidecarRestConfiguration({
+      ...this.defaultClientConfigParams,
+    });
+    return new PreferencesResourceApi(config);
   }
 
-  // Make a GraphQL request to the sidecar.
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link MicroProfileHealthApi} client instance
+   * with the provided {@link SidecarRestConfiguration}.
+   */
+  public getMicroProfileHealthApi(config: SidecarRestConfiguration): MicroProfileHealthApi {
+    // Factored out of getSidecarPid() to allow for test mocking.
+    return new MicroProfileHealthApi(config);
+  }
+
+  // --- KAFKA REST OPENAPI CLIENT METHODS ---
+
+  /**
+   * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link TopicV3Api} client instance with a
+   * preconfigured {@link KafkaRestConfiguration}.
+   */
+  public getTopicV3Api(clusterId: string, connectionId: string): TopicV3Api {
+    const config = new KafkaRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [CLUSTER_ID_HEADER]: clusterId,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new TopicV3Api(config);
+  }
+
+  /**
+   * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link PartitionV3Api} client instance with a
+   * preconfigured {@link KafkaRestConfiguration}.
+   */
+  public getPartitionV3Api(clusterId: string, connectionId: string): PartitionV3Api {
+    const config = new KafkaRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [CLUSTER_ID_HEADER]: clusterId,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new PartitionV3Api(config);
+  }
+
+  // --- SCHEMA REGISTRY REST OPENAPI CLIENT METHODS ---
+
+  /**
+   * Creates and returns a (Schema Registry REST OpenAPI spec) {@link SchemasV1Api} client instance
+   * with a preconfigured {@link SchemaRegistryRestConfiguration}.
+   */
+  public getSchemasV1Api(clusterId: string, connectionId: string): SchemasV1Api {
+    const config = new SchemaRegistryRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [CLUSTER_ID_HEADER]: clusterId,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new SchemasV1Api(config);
+  }
+
+  /**
+   * Creates and returns a (Schema Registry REST OpenAPI spec) {@link SubjectsV1Api} client instance
+   * with a preconfigured {@link SchemaRegistryRestConfiguration}.
+   */
+  public getSubjectsV1Api(clusterId: string, connectionId: string): SubjectsV1Api {
+    const config = new SchemaRegistryRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [CLUSTER_ID_HEADER]: clusterId,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new SubjectsV1Api(config);
+  }
+
+  // === END OF OPENAPI CLIENT METHODS ===
+
+  /**
+   * Make a GraphQL request to the sidecar via fetch.
+   *
+   * NOTE: This uses the GraphQL schema in `src/graphql/sidecar.graphql` to generate the types for
+   * the query and variables via the `gql.tada` package.
+   */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
     connectionId: string,
@@ -202,10 +269,10 @@ export class SidecarHandle {
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
   ): Promise<Result> {
-    const headers = new Headers();
-    headers.append("Content-Type", "application/json");
-    headers.append("Authorization", `Bearer ${this.auth_secret}`);
-    headers.append(SIDECAR_CURRENT_CONNECTION_ID_HEADER, connectionId);
+    const headers = new Headers({
+      ...this.defaultClientConfigParams.headers,
+      [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+    });
 
     const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
       method: "POST",
@@ -238,19 +305,14 @@ export class SidecarHandle {
     return payload.data;
   }
 
-  public getMicroProfileHealthApi(config: Configuration): MicroProfileHealthApi {
-    // Factored out of getSidecarPid() to allow for test mocking.
-    return new MicroProfileHealthApi(config);
-  }
-
   /** Return the PID of the sidecar process by provoking it to raise a 401 Unauthorized error.
    * with the PID in the response header.
    * */
   public async getSidecarPid(): Promise<number> {
     // coax the sidecar to yield its pid by sending a bad auth token request to the
     // healthcheck route.
-
-    const config = this.createClientConfig({
+    const config = new SidecarRestConfiguration({
+      ...this.defaultClientConfigParams,
       headers: { Authorization: "Bearer bad-token" },
       // Need to prevent the default ErrorResponseMiddleware from catching the error we expect.
       middleware: [],
