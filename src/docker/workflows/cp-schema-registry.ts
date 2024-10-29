@@ -18,6 +18,7 @@ import {
   createContainer,
   getContainer,
   getContainerEnvVars,
+  getContainerPorts,
   getContainersForImage,
   startContainer,
   stopContainer,
@@ -72,18 +73,16 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     const existingContainers: ContainerSummary[] =
       await getContainersForImage(containerListRequest);
     if (existingContainers.length > 0) {
-      this.logger.warn("Container already exists, skipping creation.", {
+      this.logger.warn(`${existingContainers.length} container(s) found, skipping creation`, {
         imageRepo: ConfluentPlatformSchemaRegistryWorkflow.imageRepo,
         imageTag: this.imageTag,
       });
-      window.showWarningMessage(
-        "Existing Schema Registry container(s) found. Please stop and remove them before starting new ones.",
-      );
+      await this.handleExistingContainers(existingContainers);
       return;
     }
 
     const startedContainer: ContainerInspectResponse | undefined =
-      await this.startLocalSchemaRegistryContainer();
+      await this.createAndStartSchemaRegistryContainer();
     if (!startedContainer) {
       return;
     }
@@ -144,58 +143,15 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     });
   }
 
-  async startLocalSchemaRegistryContainer(): Promise<ContainerInspectResponse | undefined> {
-    // list existing Kafka containers based on the user-configured image repo+tag
-    const kafkaWorkflow: LocalResourceWorkflow | undefined = getKafkaWorkflow();
-    if (!kafkaWorkflow) {
-      this.logger.error("Unable to look up Kafka image from workflow.");
-      return;
-    }
-
-    const kafkaImageRepo: string = getLocalKafkaImageName();
-    const kafkaImageTag: string = kafkaWorkflow.imageTag;
-    const kafkaContainerListRequest: ContainerListRequest = {
-      all: true,
-      filters: JSON.stringify({
-        ancestor: [`${kafkaImageRepo}:${kafkaImageTag}`],
-        // label: [MANAGED_CONTAINER_LABEL],
-      }),
-    };
-    const kafkaContainers: ContainerSummary[] =
-      await getContainersForImage(kafkaContainerListRequest);
+  async createAndStartSchemaRegistryContainer(): Promise<ContainerInspectResponse | undefined> {
+    const kafkaContainers = await this.fetchAndFilterKafkaContainers();
     if (kafkaContainers.length === 0) {
-      window.showErrorMessage("No Kafka containers found. Please start Kafka and try again.");
       return;
     }
 
     // inspect the containers to get the Docker network name and boostrap server host+port combos
-    const kafkaNetworks: string[] = kafkaContainers
-      .map((container): string | undefined => container.HostConfig?.NetworkMode)
-      .filter((network) => !!network) as string[];
-
-    const kafkaContainerInspectPromises: Promise<ContainerInspectResponse | undefined>[] =
-      kafkaContainers
-        .filter((container) => !!container.Id)
-        .map((container) => getContainer(container.Id!));
-    const kafkaContainerInspectResponses: ContainerInspectResponse[] = (
-      await Promise.all(kafkaContainerInspectPromises)
-    ).filter((response): response is ContainerInspectResponse => !!response);
-    const kafkaBootstrapServers: string[] = [];
-    kafkaContainerInspectResponses.forEach((response: ContainerInspectResponse) => {
-      const envVars: Record<string, string> = getContainerEnvVars(response);
-      if (!envVars || !envVars.KAFKA_LISTENERS) {
-        return;
-      }
-      // e.g. PLAINTEXT://:9092,CONTROLLER://:9093 and maybe PLAINTEXT_HOST://:9094
-      const listeners: string[] = envVars.KAFKA_LISTENERS.split(",");
-      for (const listener of listeners) {
-        if (!listener.startsWith("PLAINTEXT://")) {
-          continue;
-        }
-        const bootstrapServer = listener.split("//")[1];
-        kafkaBootstrapServers.push(bootstrapServer);
-      }
-    });
+    const kafkaNetworks: string[] = this.determineKafkaDockerNetworks(kafkaContainers);
+    const kafkaBootstrapServers = await this.determineKafkaBootstrapServers(kafkaContainers);
 
     this.logger.debug("Kafka container(s) found", {
       count: kafkaContainers.length,
@@ -229,6 +185,127 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
     return startedContainer;
+  }
+
+  /** List existing Kafka broker containers by user-configurable image repo+tag, then
+   * return the container-inspect responses. */
+  async fetchAndFilterKafkaContainers(): Promise<ContainerInspectResponse[]> {
+    const kafkaWorkflow: LocalResourceWorkflow | undefined = getKafkaWorkflow();
+    if (!kafkaWorkflow) {
+      this.logger.error("Unable to look up Kafka image from workflow.");
+      return [];
+    }
+
+    const kafkaImageRepo: string = getLocalKafkaImageName();
+    const kafkaImageTag: string = kafkaWorkflow.imageTag;
+
+    // TEMPORARY: this will go away once we start working with direct connections
+    // ---
+    // first, look for a container with the Kafka REST proxy port exposed (8082),
+    // then use that network to find any other Kafka broker containers
+    const leaderListRequest: ContainerListRequest = {
+      filters: JSON.stringify({
+        ancestor: [`${kafkaImageRepo}:${kafkaImageTag}`],
+        expose: ["8082"],
+      }),
+    };
+    const leaderContainers: ContainerSummary[] = await getContainersForImage(leaderListRequest);
+
+    const containerSummaries: ContainerSummary[] = [];
+    if (leaderContainers.length > 0) {
+      // shouldn't have more than one with exposed REST proxy port
+      const leaderContainer: ContainerSummary = leaderContainers[0];
+      const containerListFilters: Record<string, string[]> = {
+        ancestor: [`${kafkaImageRepo}:${kafkaImageTag}`],
+        // label: [MANAGED_CONTAINER_LABEL],
+      };
+      if (leaderContainer.HostConfig?.NetworkMode) {
+        containerListFilters.network = [leaderContainer.HostConfig.NetworkMode];
+      }
+      // don't set `all: true` here because we only want running containers
+      const containerListFiltersRequest: ContainerListRequest = {
+        filters: JSON.stringify(containerListFilters),
+      };
+      // fetch container summaries for other associated Kafka containers first, then inspect them
+      // since we'll need to look up env vars and ports later
+      const summaries: ContainerSummary[] = await getContainersForImage(
+        containerListFiltersRequest,
+      );
+      containerSummaries.push(...summaries);
+    }
+
+    // either there was no leader container or we couldn't find any other containers
+    if (containerSummaries.length === 0) {
+      this.logger.warn("no Kafka containers found, skipping creation");
+      window.showErrorMessage(
+        "No running Kafka containers found. Please start Kafka and try again.",
+      );
+      // TODO: add button to allow starting the Kafka workflow from here
+      return [];
+    }
+
+    const kafkaContainers: ContainerInspectResponse[] = [];
+    const inspectPromises: Promise<ContainerInspectResponse | undefined>[] = [];
+    containerSummaries.forEach((container) => {
+      if (!container.Id) {
+        return;
+      }
+      inspectPromises.push(getContainer(container.Id));
+    });
+    (await Promise.all(inspectPromises)).forEach(
+      (response: ContainerInspectResponse | undefined) => {
+        if (response) kafkaContainers.push(response);
+      },
+    );
+
+    // TODO: inspect ports and do filtering by network?
+    const kafkaPorts = kafkaContainers.map((container) => getContainerPorts(container));
+    this.logger.debug("Kafka container ports:", kafkaPorts);
+
+    return kafkaContainers;
+  }
+
+  /** Determine the Docker network name for the Kafka containers. */
+  determineKafkaDockerNetworks(kafkaContainers: ContainerInspectResponse[]): string[] {
+    const kafkaNetworks: string[] = [];
+    kafkaContainers.forEach((container) => {
+      if (!container.NetworkSettings?.Networks) {
+        return;
+      }
+      for (const networkName of Object.keys(container.NetworkSettings.Networks)) {
+        if (kafkaNetworks.includes(networkName)) {
+          continue;
+        }
+        kafkaNetworks.push(networkName);
+      }
+    });
+    return kafkaNetworks;
+  }
+
+  /** Determine the bootstrap servers from the Kafka container environment variables. */
+  async determineKafkaBootstrapServers(
+    kafkaContainers: ContainerInspectResponse[],
+  ): Promise<string[]> {
+    const bootstrapServers: string[] = [];
+
+    // parse the KAFKA_LISTENERS env vars to get the bootstrap servers
+    kafkaContainers.forEach((container: ContainerInspectResponse) => {
+      const envVars: Record<string, string> = getContainerEnvVars(container);
+      if (!envVars || !envVars.KAFKA_LISTENERS) {
+        return;
+      }
+      // e.g. PLAINTEXT://:9092,CONTROLLER://:9093 and maybe PLAINTEXT_HOST://:9094
+      const listeners: string[] = envVars.KAFKA_LISTENERS.split(",");
+      for (const listener of listeners) {
+        if (!listener.startsWith("PLAINTEXT://")) {
+          continue;
+        }
+        const bootstrapServer = listener.split("//")[1];
+        bootstrapServers.push(bootstrapServer);
+      }
+    });
+
+    return bootstrapServers;
   }
 
   async createSchemaRegistryContainer(
