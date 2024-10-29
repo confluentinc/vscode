@@ -7,6 +7,9 @@ import { SchemaRegistry } from "./models/schemaRegistry";
 
 /** Indicate whether or not we have a CCloud connection (controlled by our auth provider). */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
+/** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
+ * current CCloud connection, and is only used to resolve any open progress notification(s). */
+export const nonInvalidTokenStatus = new vscode.EventEmitter<void>();
 /** Signal to the auth provider that we no longer have a valid auth status for the current CCloud connection. */
 export const ccloudAuthSessionInvalidated = new vscode.EventEmitter<void>();
 export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
