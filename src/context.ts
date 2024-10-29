@@ -46,6 +46,8 @@ export enum ContextValues {
   RESOURCES_WITH_ID = "confluent.resourcesWithIDs",
   /** Array of resources that have a `name` property for enabling the `Copy Name` action. */
   RESOURCES_WITH_NAMES = "confluent.resourcesWithNames",
+  /** Array of resources that have a `uri` property for enabling the `Copy URI` action. */
+  RESOURCES_WITH_URIS = "confluent.resourcesWithURIs",
 
   // -- ADJUSTABLE CONTEXT VALUES --
   /** The user has a valid, authenticated connection to Confluent Cloud.

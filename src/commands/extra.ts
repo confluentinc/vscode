@@ -33,10 +33,21 @@ async function copyResourceName(item: any) {
   vscode.window.showInformationMessage(`Copied "${item.name}" to clipboard.`);
 }
 
+async function copyResourceUri(item: any) {
+  logger.debug("Copying resource URI", item);
+  // make sure the item has the "uri" property
+  if (!item?.uri) {
+    return;
+  }
+  await vscode.env.clipboard.writeText(item.uri);
+  vscode.window.showInformationMessage(`Copied "${item.uri}" to clipboard.`);
+}
+
 export function registerExtraCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
     registerCommandWithLogging("confluent.copyResourceId", copyResourceId),
     registerCommandWithLogging("confluent.copyResourceName", copyResourceName),
+    registerCommandWithLogging("confluent.copyResourceUri", copyResourceUri),
   ];
 }
