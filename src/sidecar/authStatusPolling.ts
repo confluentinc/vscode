@@ -84,11 +84,11 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     // poll faster to try and get to a non-transient status as quickly as possible since it's going
     // to affect how our CCloudAuthStatusMiddleware behaves
     pollCCloudConnectionAuth.useFastFrequency();
-    // ensure any open progress notifications are closed even if no requests are going through the middleware
-    nonInvalidTokenStatus.fire();
     // ...and don't bother checking for expiration or errors until we get another status back
     return;
   } else {
+    // ensure any open progress notifications are closed even if no requests are going through the middleware
+    nonInvalidTokenStatus.fire();
     pollCCloudConnectionAuth.useSlowFrequency();
   }
 

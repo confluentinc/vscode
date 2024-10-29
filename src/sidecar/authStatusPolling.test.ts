@@ -4,14 +4,17 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
 import { getExtensionContext } from "../../tests/unit/testUtils";
-import { Connection } from "../clients/sidecar";
+import { Connection, Status } from "../clients/sidecar";
+import { nonInvalidTokenStatus } from "../emitters";
 import {
   AUTH_PROMPT_TRACKER,
   checkAuthExpiration,
   MINUTES_UNTIL_REAUTH_WARNING,
   REAUTH_BUTTON_TEXT,
   REMIND_BUTTON_TEXT,
+  watchCCloudConnectionStatus,
 } from "./authStatusPolling";
+import * as connections from "./connections";
 
 configDotenv();
 
@@ -167,5 +170,48 @@ describe("CCloud auth expiration checks", () => {
     assert.ok(!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen);
     // error notification should not show up
     assertAuthExpiredPromptNotOpened();
+  });
+});
+
+describe("CCloud connection status polling", () => {
+  let sandbox: sinon.SinonSandbox;
+  let getCCloudConnectionStub: sinon.SinonStub;
+  let nonInvalidTokenStatusFireStub: sinon.SinonStub;
+
+  before(async () => {
+    await getExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    getCCloudConnectionStub = sandbox.stub(connections, "getCCloudConnection");
+    nonInvalidTokenStatusFireStub = sandbox.stub(nonInvalidTokenStatus, "fire");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  const nonTransientStatuses: Status[] = ["FAILED", "NO_TOKEN", "VALID_TOKEN"];
+  nonTransientStatuses.forEach((status) => {
+    it(`should fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${status}`, async () => {
+      const connection = createFakeConnection(120);
+      connection.status.authentication.status = status;
+      getCCloudConnectionStub.resolves(connection);
+
+      await watchCCloudConnectionStatus();
+
+      assert.ok(nonInvalidTokenStatusFireStub.called);
+    });
+  });
+
+  it("should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
+    const connection = createFakeConnection(120);
+    connection.status.authentication.status = "INVALID_TOKEN";
+    getCCloudConnectionStub.resolves(connection);
+
+    await watchCCloudConnectionStatus();
+
+    assert.ok(nonInvalidTokenStatusFireStub.notCalled);
   });
 });
