@@ -95,6 +95,12 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.docker.startLocalResources",
+        "icon": "$(debug-start)",
+        "title": "Start Local Resources",
+        "category": "Confluent: Docker"
+      },
+      {
         "command": "confluent.schemas.diffMostRecentVersions",
         "title": "Show Latest Changes",
         "category": "Confluent: Compare Resources"
@@ -317,6 +323,24 @@
           "type": "string",
           "default": "",
           "description": "Path to the Docker socket file."
+        },
+        "confluent.localDocker.kafkaImageRepo": {
+          "type": "string",
+          "enum": [
+            "confluentinc/confluent-local"
+          ],
+          "default": "confluentinc/confluent-local",
+          "description": "Docker image repo to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.kafkaImageTag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Docker image tag to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.kafkaRestHost": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
         }
       }
     },
@@ -573,6 +597,11 @@
           "command": "confluent.copyResourceName",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
           "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.docker.startLocalResources",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/",
+          "group": "inline"
         },
         {
           "command": "confluent.schemas.diffMostRecentVersions",
