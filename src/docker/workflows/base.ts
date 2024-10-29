@@ -2,7 +2,7 @@ import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
-import { getContainer, startContainer } from "../containers";
+import { getContainer, restartContainer, startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
 /** Basic container information for a local resource. */
@@ -198,7 +198,7 @@ export abstract class LocalResourceWorkflow {
               continue;
             }
             if (anyRunning) {
-              // TODO: implement stop+start in downstream branch
+              await restartContainer(container.Id);
             } else {
               await this.startContainer({ id: container.Id, name: container.Names[0] });
             }
