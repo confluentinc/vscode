@@ -149,3 +149,17 @@ export function getContainerEnvVars(container: ContainerInspectResponse): Record
   });
   return envVars;
 }
+
+export function getContainerPorts(container: ContainerInspectResponse): Record<string, string> {
+  const ports: Record<string, string> = {};
+  const portBindings = container.HostConfig?.PortBindings;
+  if (portBindings) {
+    Object.keys(portBindings).forEach((containerPort) => {
+      const hostPort = portBindings[containerPort]?.[0]?.HostPort;
+      if (hostPort) {
+        ports[containerPort] = hostPort;
+      }
+    });
+  }
+  return ports;
+}
