@@ -173,7 +173,7 @@ describe("CCloud auth expiration checks", () => {
   });
 });
 
-describe.only("CCloud connection status polling", () => {
+describe("CCloud connection status polling", () => {
   let sandbox: sinon.SinonSandbox;
   let getCCloudConnectionStub: sinon.SinonStub;
   let nonInvalidTokenStatusFireStub: sinon.SinonStub;
