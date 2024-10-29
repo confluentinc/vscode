@@ -80,9 +80,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const existingContainers: ContainerSummary[] =
       await getContainersForImage(containerListRequest);
     if (existingContainers.length > 0) {
-      window.showWarningMessage(
-        "Existing Kafka container(s) found. Please stop and remove them before starting new ones.",
-      );
+      await this.handleExistingContainers(existingContainers);
       return;
     }
 
