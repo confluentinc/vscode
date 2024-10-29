@@ -37,3 +37,6 @@ export const AUTH_COMPLETED_KEY = "authCompleted";
 /** Only used as a way to kick off cross-workspace events foir the authentication provider. Only\
  * ever set to "true" or deleted. */
 export const AUTH_SESSION_EXISTS_KEY = "authSessionExists";
+
+/** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+export const CCLOUD_AUTH_STATUS_KEY = "ccloudAuthStatus";

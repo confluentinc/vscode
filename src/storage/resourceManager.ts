@@ -1,4 +1,5 @@
 import { StorageManager, getStorageManager } from ".";
+import { Status } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -7,6 +8,7 @@ import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   AUTH_COMPLETED_KEY,
+  CCLOUD_AUTH_STATUS_KEY,
   StateEnvironments,
   StateKafkaClusters,
   StateKafkaTopics,
@@ -466,6 +468,16 @@ export class ResourceManager {
   async getAuthFlowCompleted(): Promise<boolean> {
     const success: string | undefined = await this.storage.getSecret(AUTH_COMPLETED_KEY);
     return success === "true";
+  }
+
+  /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+  async setCCloudAuthStatus(status: Status): Promise<void> {
+    await this.storage.setSecret(CCLOUD_AUTH_STATUS_KEY, String(status));
+  }
+
+  /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+  async getCCloudAuthStatus(): Promise<string | undefined> {
+    return await this.storage.getSecret(CCLOUD_AUTH_STATUS_KEY);
   }
 }
 
