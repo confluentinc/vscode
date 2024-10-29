@@ -1,6 +1,5 @@
 import { graphql } from "gql.tada";
 import { LOCAL_CONNECTION_ID } from "../constants";
-import { ContextValues, setContextValue } from "../context";
 import { Logger } from "../logging";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
@@ -26,7 +25,7 @@ export async function getLocalResources(): Promise<LocalResourceGroup[]> {
     } catch {
       // error should be caught+logged in createLocalConnection
       // TODO: window.showErrorMessage here? might get noisy since this is triggered from refreshes
-      return localKafkaClusters;
+      return localResources;
     }
   }
 
@@ -84,7 +83,5 @@ export async function getLocalResources(): Promise<LocalResourceGroup[]> {
       });
     });
   }
-  // indicate to the UI that we have at least one local Kafka cluster available
-  await setContextValue(ContextValues.localKafkaClusterAvailable, localResources.length > 0);
   return localResources;
 }

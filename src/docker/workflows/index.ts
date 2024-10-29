@@ -37,6 +37,7 @@ export abstract class LocalResourceWorkflow {
   abstract start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
+    ...args: any[]
   ): Promise<void>;
 
   /** Stop and remove the local resource(s) associated with this workflow. */
@@ -54,24 +55,21 @@ export abstract class LocalResourceWorkflow {
   abstract waitForLocalResourceEventChange(): Promise<void>;
 
   /** Check if the this workflow's base image repo:tag exists locally, pulling it if not. */
-  protected async checkForImage(): Promise<void> {
-    // get the repo from the child instances' static property
-    const imageRepo = (this.constructor as typeof LocalResourceWorkflow).imageRepo;
-
-    const checkImageMsg = `Checking for "${imageRepo}:${this.imageTag}"...`;
+  protected async checkForImage(imageRepo: string, imageTag: string): Promise<void> {
+    const checkImageMsg = `Checking for "${imageRepo}:${imageTag}"...`;
     this.logger.debug(checkImageMsg);
     this.progress?.report({ message: checkImageMsg });
 
-    const existingImage = await imageExists(imageRepo, this.imageTag);
+    const existingImage = await imageExists(imageRepo, imageTag);
     this.logger.debug(`Image exists: ${existingImage}`, {
       imageRepo,
-      imageTag: this.imageTag,
+      imageTag: imageTag,
     });
     if (!existingImage) {
-      const pullImageMsg = `Pulling "${imageRepo}:${this.imageTag}"...`;
+      const pullImageMsg = `Pulling "${imageRepo}:${imageTag}"...`;
       this.logger.debug(pullImageMsg);
       this.progress?.report({ message: pullImageMsg });
-      await pullImage(imageRepo, this.imageTag);
+      await pullImage(imageRepo, imageTag);
     }
   }
 

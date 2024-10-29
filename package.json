@@ -347,6 +347,17 @@
           "type": "string",
           "default": "localhost",
           "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
+        },
+        "confluent.localDocker.schemaRegistryImageRepo": {
+          "type": "string",
+          "default": "confluentinc/cp-schema-registry",
+          "description": "Docker image repo to use when starting a local Schema Registry container",
+          "readOnly": true
+        },
+        "confluent.localDocker.schemaRegistryImageTag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Docker image tag to use when starting a local Schema Registry container"
         }
       }
     },
@@ -389,17 +400,17 @@
       {
         "view": "confluent-schemas",
         "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.create)",
-        "when": "!confluent.ccloudConnectionAvailable"
+        "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
       },
       {
         "view": "confluent-schemas",
         "contents": "No Schema Registry selected. Click below to get started.\n[Select Schema Registry](command:confluent.resources.schema-registry.select)",
-        "when": "confluent.ccloudConnectionAvailable && !confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && !confluent.schemaRegistrySelected"
       },
       {
         "view": "confluent-schemas",
         "contents": "No schemas found.",
-        "when": "confluent.ccloudConnectionAvailable && confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
       },
       {
         "view": "confluent-topics",
