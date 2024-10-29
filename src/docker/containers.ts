@@ -113,10 +113,3 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
     }
   }
 }
-
-export class ContainerExistsError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ContainerExistsError";
-  }
-}
