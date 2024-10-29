@@ -63,8 +63,8 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
+import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
@@ -189,6 +189,11 @@ async function setupContextValues() {
     "local-kafka-topic", // only name, no ID
     "local-kafka-topic-with-schema", // only name, no ID
   ]);
+  const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
+    "ccloud-schema-registry",
+    "local-kafka-cluster",
+    // TODO(shoup): add local-schema-registry here when implemented
+  ]);
   await Promise.all([
     kafkaClusterSelected,
     schemaRegistrySelected,
@@ -197,6 +202,7 @@ async function setupContextValues() {
     viewsWithResources,
     resourcesWithIds,
     resourcesWithNames,
+    resourcesWithURIs,
   ]);
 }
 

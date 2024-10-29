@@ -75,6 +75,11 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.copyResourceUri",
+        "title": "Copy URI",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.debugtools.globalState.showWebView",
         "title": "Show Global State Inspector",
         "category": "Confluent: Debug Tools"
@@ -406,6 +411,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.copyResourceUri",
+          "when": "false"
+        },
+        {
           "command": "confluent.debugtools.globalState.showWebView",
           "when": "true"
         },
@@ -573,6 +582,11 @@
           "command": "confluent.copyResourceName",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
           "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.copyResourceUri",
+          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithURIs",
+          "group": "2_copy@3"
         },
         {
           "command": "confluent.schemas.diffMostRecentVersions",
