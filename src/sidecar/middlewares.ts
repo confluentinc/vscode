@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context";
-import { ccloudAuthSessionInvalidated } from "../emitters";
+import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
 import { CCLOUD_AUTH_STATUS_KEY } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
@@ -120,14 +120,11 @@ export class ErrorResponseMiddleware implements Middleware {
   }
 }
 
+/** Used to prevent multiple instances of the `INVALID_TOKEN` progress notification stacking up. */
+let invalidTokenNotificationOpen: boolean = false;
+
 /** Check if a request is for Confluent Cloud handle different auth status scenarios. */
 export class CCloudAuthStatusMiddleware implements Middleware {
-  /** Used to prevent multiple instances of the `INVALID_TOKEN` progress notification stacking up. */
-  invalidTokenNotificationOpen: boolean = false;
-  /** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
-   * current CCloud connection, and is only used to resolve an open progress notification. */
-  nonInvalidTokenStatus = new vscode.EventEmitter<void>();
-
   async pre(context: RequestContext): Promise<void> {
     if (hasCCloudConnectionIdHeader(context.init.headers)) {
       // check the last auth status stored as a "secret" by the auth poller instead of re-fetching
@@ -150,9 +147,9 @@ export class CCloudAuthStatusMiddleware implements Middleware {
   async handleCCloudAuthStatus(status: string): Promise<void> {
     if (status !== "INVALID_TOKEN") {
       // resolve any open progress notification if we see a non-`INVALID_TOKEN` status
-      this.nonInvalidTokenStatus.fire();
+      nonInvalidTokenStatus.fire();
       // and set the flag back so the notification can open again if we see another `INVALID_TOKEN`
-      this.invalidTokenNotificationOpen = false;
+      invalidTokenNotificationOpen = false;
     }
 
     if (["NO_TOKEN", "FAILED"].includes(status)) {
@@ -173,8 +170,8 @@ export class CCloudAuthStatusMiddleware implements Middleware {
   async handleCCloudInvalidTokenStatus() {
     logger.warn("current CCloud connection has an invalid token; waiting for updated status");
     // only notify if we haven't shown the notification yet
-    if (!this.invalidTokenNotificationOpen) {
-      this.invalidTokenNotificationOpen = true;
+    if (!invalidTokenNotificationOpen) {
+      invalidTokenNotificationOpen = true;
       vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -183,7 +180,7 @@ export class CCloudAuthStatusMiddleware implements Middleware {
         },
         async () => {
           await new Promise((resolve) => {
-            const subscriber: vscode.Disposable = this.nonInvalidTokenStatus.event(() => {
+            const subscriber: vscode.Disposable = nonInvalidTokenStatus.event(() => {
               subscriber.dispose();
               resolve(void 0);
             });
