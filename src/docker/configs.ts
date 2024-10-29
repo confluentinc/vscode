@@ -52,12 +52,14 @@ export function getLocalKafkaImageTag(): string {
 /** Get the local Schema Registry image name based on user settings. */
 export function getLocalSchemaRegistryImageName(): string {
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  // we are not currently exposing these settings, so we'll always use the default value
   return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE, DEFAULT_SCHEMA_REGISTRY_REPO);
 }
 
 /** Get the local Schema Registry image tag based on user settings. */
 export function getLocalSchemaRegistryImageTag(): string {
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  // we are not currently exposing these settings, so we'll always use the default value
   return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, DEFAULT_SCHEMA_REGISTRY_TAG);
 }
 
