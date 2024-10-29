@@ -1,6 +1,8 @@
 import net from "net";
-import { CancellationToken, commands, Progress } from "vscode";
+import { CancellationToken, commands, Progress, window } from "vscode";
+import { ContainerSummary } from "../../clients/docker";
 import { Logger } from "../../logging";
+import { startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
 /** Basic container information for a local resource. */
@@ -81,6 +83,53 @@ export abstract class LocalResourceWorkflow {
     if (selection === "Open Logs") {
       commands.executeCommand("confluent.showOutputChannel");
     }
+  }
+
+  /**
+   * Handle when a workflow detects existing containers based on its image repo+tag by checking the
+   * container states and prompting the user to take action.
+   */
+  async handleExistingContainers(containers: ContainerSummary[]) {
+    const containerNames: string[] = containers.map(
+      (container) => container.Names?.join(", ") || "unknown",
+    );
+    const containerImages: string[] = containers.map((container) => container.Image || "unknown");
+    const containerStates: string[] = containers.map((container) => container.State || "unknown");
+    this.logger.debug(`found ${containers.length} existing container(s)`, {
+      states: containerStates,
+      names: containerNames,
+      images: containerImages,
+    });
+    // if any are in RUNNING state, ask to restart, otherwise ask to start
+    let buttonLabel = "";
+    const anyRunning = containerStates.includes("running");
+    if (anyRunning) {
+      buttonLabel = containers.length > 1 ? "Restart All" : "Restart";
+    } else {
+      buttonLabel = containers.length > 1 ? "Start All" : "Start";
+    }
+
+    window
+      .showWarningMessage(
+        "Existing container(s) found. Please remove them before starting new ones.",
+        buttonLabel,
+      )
+      .then(async (choice) => {
+        if (choice === buttonLabel) {
+          const promises: Promise<void>[] = [];
+          containers.forEach((container) => {
+            if (!container.Id) {
+              return;
+            }
+            if (anyRunning) {
+              // TODO: implement stop+start in downstream branch
+            } else {
+              promises.push(startContainer(container.Id));
+            }
+          });
+          await Promise.all(promises);
+        }
+      });
   }
 }
 
