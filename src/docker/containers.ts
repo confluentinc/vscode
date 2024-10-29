@@ -114,6 +114,45 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
   }
 }
 
+export async function stopContainer(id: string) {
+  const client = new ContainerApi();
+  const init: RequestInit = defaultRequestInit();
+
+  try {
+    logger.debug("Stopping container", { id });
+    await client.containerStop({ id }, init);
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      logger.error("Error response stopping container:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: await error.response.clone().json(),
+      });
+    } else {
+      logger.error("Error stopping container:", error);
+    }
+  }
+}
+
+export async function deleteContainer(id: string) {
+  const client = new ContainerApi();
+  const init: RequestInit = defaultRequestInit();
+
+  try {
+    await client.containerDelete({ id }, init);
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      logger.error("Error response deleting container:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: await error.response.clone().json(),
+      });
+    } else {
+      logger.error("Error removing container:", error);
+    }
+  }
+}
+
 export class ContainerExistsError extends Error {
   constructor(message: string) {
     super(message);
