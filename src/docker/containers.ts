@@ -114,15 +114,6 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
   }
 }
 
-export function getContainerEnvVars(container: ContainerInspectResponse): Record<string, string> {
-  const envVars: Record<string, string> = {};
-  container.Config?.Env?.forEach((envVar) => {
-    const [key, value] = envVar.split("=");
-    envVars[key] = value;
-  });
-  return envVars;
-}
-
 export async function stopContainer(id: string) {
   const client = new ContainerApi();
   const init: RequestInit = defaultRequestInit();
@@ -146,4 +137,27 @@ export async function stopContainer(id: string) {
 export async function restartContainer(id: string) {
   await stopContainer(id);
   await startContainer(id);
+}
+
+export function getContainerEnvVars(container: ContainerInspectResponse): Record<string, string> {
+  const envVars: Record<string, string> = {};
+  container.Config?.Env?.forEach((envVar) => {
+    const [key, value] = envVar.split("=");
+    envVars[key] = value;
+  });
+  return envVars;
+}
+
+export function getContainerPorts(container: ContainerInspectResponse): Record<string, string> {
+  const ports: Record<string, string> = {};
+  const portBindings = container.HostConfig?.PortBindings;
+  if (portBindings) {
+    Object.keys(portBindings).forEach((containerPort) => {
+      const hostPort = portBindings[containerPort]?.[0]?.HostPort;
+      if (hostPort) {
+        ports[containerPort] = hostPort;
+      }
+    });
+  }
+  return ports;
 }
