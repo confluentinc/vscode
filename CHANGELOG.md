@@ -10,6 +10,8 @@ All notable changes to this extension will be documented in this file.
 
 - An error notification is now shown if the wrong extension version is installed based on the
   platform and/or architecture. [issue #317](https://github.com/confluentinc/vscode/issues/317)
+- The consume mode dropdown and timestamp values in the Message Viewer will no longer reset when
+  switching between Message Viewer tabs.
 
 ## 0.20.0
 
