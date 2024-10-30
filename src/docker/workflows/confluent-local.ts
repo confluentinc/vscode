@@ -128,7 +128,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
 
-    const waitMsg = `Waiting for container${numContainers > 1 ? "s" : ""} to be ready...`;
+    const waitMsg = `Waiting for Kafka container${numContainers > 1 ? "s" : ""} to be ready...`;
     this.logger.debug(waitMsg);
     this.progress?.report({ message: waitMsg });
     await this.waitForLocalResourceEventChange();
