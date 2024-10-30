@@ -3,8 +3,8 @@ import sinon from "sinon";
 import { window, workspace } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_TOPIC,
-  TEST_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
@@ -23,7 +23,7 @@ describe("authz.schemaRegistry", function () {
     // preload the schema registry in extension state
     await getExtensionContext();
     resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistries([TEST_SCHEMA_REGISTRY]);
+    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
 
     sandbox = sinon.createSandbox();
     // create the stubs for the sidecar + service client
@@ -41,7 +41,7 @@ describe("authz.schemaRegistry", function () {
   afterEach(async function () {
     sandbox.restore();
     // clear out the existing Schema Registry after each test
-    await resourceManager.deleteCCloudSchemaRegistries(TEST_SCHEMA_REGISTRY.environmentId);
+    await resourceManager.deleteCCloudSchemaRegistries(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId);
   });
 
   // FIXME: canAccessSchemaForTopic() tests
@@ -81,7 +81,7 @@ describe("authz.schemaRegistry", function () {
 
   it("canAccessSchemaTypeForTopic() should return true if schemaRegistry is not found", async function () {
     // clear out the existing Schema Registry before checking schema access
-    await resourceManager.deleteCCloudSchemaRegistries(TEST_SCHEMA_REGISTRY.environmentId);
+    await resourceManager.deleteCCloudSchemaRegistries(TEST_CCLOUD_SCHEMA_REGISTRY.environmentId);
 
     const result = await schemaRegistry.canAccessSchemaTypeForTopic(TEST_CCLOUD_KAFKA_TOPIC, "key");
     assert.strictEqual(result, true);
