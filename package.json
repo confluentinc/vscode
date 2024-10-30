@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
-  "version": "0.21.0-1",
+  "version": "0.21.0-2",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -100,12 +100,6 @@
         "category": "Confluent: Debug Tools"
       },
       {
-        "command": "confluent.schemas.upload",
-        "icon": "$(plus)",
-        "title": "Upload Schema to Schema Registry",
-        "category": "Confluent: Schemas"
-      },
-      {
         "command": "confluent.schemas.diffMostRecentVersions",
         "title": "Show Latest Changes",
         "category": "Confluent: Compare Resources"
@@ -193,15 +187,15 @@
         "category": "Confluent: Schema"
       },
       {
-        "command": "confluent.schemaViewer.uploadVersion",
-        "icon": "$(cloud-upload)",
-        "title": "Upload New Version to Schema Registry",
-        "category": "Confluent: Schema"
-      },
-      {
         "command": "confluent.schemas.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.upload",
+        "icon": "$(cloud-upload)",
+        "title": "Upload Schema to Schema Registry",
         "category": "Confluent: Schemas"
       },
       {
@@ -461,10 +455,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemaViewer.uploadVersion",
-          "when": "false"
-        },
-        {
           "command": "confluent.schemas.refresh",
           "when": "false"
         },
@@ -512,6 +502,11 @@
           "command": "confluent.schemas.upload",
           "group": "navigation@3",
           "when": "resourceFilename =~ /.*\\.(avsc|json|proto)/"
+        },
+        {
+          "command": "confluent.topic.consume.duplicate",
+          "group": "navigation",
+          "when": "activeWebviewPanelId == message-viewer"
         }
       ],
       "editor/title/context": [
