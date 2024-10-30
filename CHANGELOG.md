@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.20.1
+
+### Fixed
+
+- An error notification is now shown if the wrong extension version is installed based on the
+  platform and/or architecture. [issue #317](https://github.com/confluentinc/vscode/issues/317)
+
 ## 0.20.0
 
 ### Added
@@ -11,6 +18,7 @@ All notable changes to this extension will be documented in this file.
 - "Open Settings" command to quickly access the Confluent for VS Code extension settings.
 - "Copy URI" context menu item for CCloud Schema Registry items and local Kafka clusters in the
   Resources view. [issue #445](https://github.com/confluentinc/vscode/issues/445)
+- New JavaScript Producer and Python Producer project templates for generating Kafka applications.
 
 ### Changed
 
