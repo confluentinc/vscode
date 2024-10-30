@@ -4,9 +4,9 @@ import * as vscode from "vscode";
 import { commands } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_TOPIC,
-  TEST_SCHEMA,
-  TEST_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
@@ -34,18 +34,18 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   it("diffLatestSchemasCommand should execute the correct commands when invoked on a proper schema group", async () => {
     // Make a 3-version schema group ...
     const oldestSchemaVersion = Schema.create({
-      ...TEST_SCHEMA,
+      ...TEST_CCLOUD_SCHEMA,
       subject: "my-topic-value",
       version: 0,
     });
 
     const olderSchemaVersion = Schema.create({
-      ...TEST_SCHEMA,
+      ...TEST_CCLOUD_SCHEMA,
       subject: "my-topic-value",
       version: 1,
     });
     const latestSchemaVersion = Schema.create({
-      ...TEST_SCHEMA,
+      ...TEST_CCLOUD_SCHEMA,
       subject: "my-topic-value",
       version: 2,
     });
@@ -69,7 +69,7 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
     const schemaGroup = new ContainerTreeItem<Schema>(
       "my-topic-value",
       vscode.TreeItemCollapsibleState.Collapsed,
-      [Schema.create({ ...TEST_SCHEMA, subject: "my-topic-value", version: 1 })],
+      [Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "my-topic-value", version: 1 })],
     );
 
     await diffLatestSchemasCommand(schemaGroup);
@@ -129,7 +129,7 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("hates empty schema registry", async function () {
-    resourceManager.getCCloudSchemaRegistry.resolves(TEST_SCHEMA_REGISTRY);
+    resourceManager.getCCloudSchemaRegistry.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
     resourceManager.getSchemasForRegistry.resolves([]);
     await assert.rejects(
       async () => {
@@ -142,9 +142,9 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("hates when no schemas match topic", async function () {
-    resourceManager.getCCloudSchemaRegistry.resolves(TEST_SCHEMA_REGISTRY);
+    resourceManager.getCCloudSchemaRegistry.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
     resourceManager.getSchemasForRegistry.resolves([
-      Schema.create({ ...TEST_SCHEMA, subject: "some-other-topic-value" }),
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "some-other-topic-value" }),
     ]);
     await assert.rejects(
       async () => {
@@ -155,11 +155,11 @@ describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
   });
 
   it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
-    resourceManager.getCCloudSchemaRegistry.resolves(TEST_SCHEMA_REGISTRY);
+    resourceManager.getCCloudSchemaRegistry.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
     resourceManager.getSchemasForRegistry.resolves([
-      Schema.create({ ...TEST_SCHEMA, subject: "test-topic-value", version: 1 }),
-      Schema.create({ ...TEST_SCHEMA, subject: "test-topic-value", version: 2 }),
-      Schema.create({ ...TEST_SCHEMA, subject: "test-topic-key", version: 1 }),
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "test-topic-value", version: 1 }),
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "test-topic-value", version: 2 }),
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "test-topic-key", version: 1 }),
     ]);
 
     const fetchedLatestSchemas = await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
