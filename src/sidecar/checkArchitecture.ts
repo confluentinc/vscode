@@ -13,7 +13,7 @@ export function checkSidecarOsAndArch(sidecarPath: string): void {
   logger.debug("platform+arch check complete", { ourBuild, sidecarBuild });
 
   if (!ourBuild.equals(sidecarBuild)) {
-    const errorMsg = `This Confluent for VS Code component is built for a different platform (${sidecarBuild.platform}-${sidecarBuild.arch}), whereas your VS Code is on ${ourBuild.platform}-${ourBuild.arch}.`;
+    const errorMsg = `This Confluent extension is built for a different platform (${sidecarBuild.platform}-${sidecarBuild.arch}), whereas your VS Code is on ${ourBuild.platform}-${ourBuild.arch}.`;
     const button = "Open Marketplace";
     window.showErrorMessage(errorMsg, button).then((action) => {
       if (action === button) {
