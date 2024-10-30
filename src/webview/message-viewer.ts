@@ -469,8 +469,12 @@ class MessageViewerViewModel extends ViewModel {
   }
 
   /** Consume mode affects parameters used for consuming messages. */
-  consumeMode = this.signal<ConsumeMode>("beginning");
-  consumeModeTimestamp = this.signal(Date.now());
+  consumeMode = this.resolve(() => {
+    return post("GetConsumeMode", { timestamp: this.timestamp() });
+  }, "beginning" as ConsumeMode);
+  consumeModeTimestamp = this.resolve(() => {
+    return post("GetConsumeModeTimestamp", { timestamp: this.timestamp() });
+  }, Date.now());
 
   async handleConsumeModeChange(value: ConsumeMode) {
     const timestamp = Date.now();
@@ -625,6 +629,8 @@ export function post(
 ): Promise<keyof typeof messageLimitLabel>;
 export function post(type: "GetConsumedPartitions", body: object): Promise<number[] | null>;
 export function post(type: "GetFilteredPartitions", body: object): Promise<number[] | null>;
+export function post(type: "GetConsumeMode", body: object): Promise<ConsumeMode>;
+export function post(type: "GetConsumeModeTimestamp", body: object): Promise<number | null>;
 export function post(
   type: "PartitionConsumeChange",
   body: { partitions: number[] | null },

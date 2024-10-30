@@ -177,16 +177,17 @@ function messageViewerStartPollingCommand(
   /** Most recent failure info */
   const latestError = os.signal<{ message: string } | null>(null);
 
+  /** Wrapper for `panel.visible` that gracefully switches to `false` when panel is disposed. */
+  const panelActive = os.produce(true, (value, signal) => {
+    const disposed = panel.onDidDispose(() => value(false));
+    const changedState = panel.onDidChangeViewState(() => value(panel.visible));
+    signal.onabort = () => (disposed.dispose(), changedState.dispose());
+  });
+
   /** Notify an active webview only after flushing the rest of updates. */
   const notifyUI = () => {
     queueMicrotask(() => {
-      try {
-        if (panel.visible) {
-          panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
-        }
-      } catch {
-        // panel might be disposed which causes `panel.visible` getter to throw
-      }
+      if (panelActive()) panel.webview.postMessage(["Timestamp", "Success", Date.now()]);
     });
   };
 
@@ -495,6 +496,12 @@ function messageViewerStartPollingCommand(
       }
       case "GetFilteredPartitions": {
         return partitionFilter() satisfies MessageResponse<"GetFilteredPartitions">;
+      }
+      case "GetConsumeMode": {
+        return mode() satisfies MessageResponse<"GetConsumeMode">;
+      }
+      case "GetConsumeModeTimestamp": {
+        return (params().timestamp ?? null) satisfies MessageResponse<"GetConsumeModeTimestamp">;
       }
       case "GetMaxSize": {
         return String(stream().capacity) satisfies MessageResponse<"GetMaxSize">;
