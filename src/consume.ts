@@ -496,6 +496,12 @@ function messageViewerStartPollingCommand(
       case "GetFilteredPartitions": {
         return partitionFilter() satisfies MessageResponse<"GetFilteredPartitions">;
       }
+      case "GetConsumeMode": {
+        return mode() satisfies MessageResponse<"GetConsumeMode">;
+      }
+      case "GetConsumeModeTimestamp": {
+        return (params().timestamp ?? null) satisfies MessageResponse<"GetConsumeModeTimestamp">;
+      }
       case "GetMaxSize": {
         return String(stream().capacity) satisfies MessageResponse<"GetMaxSize">;
       }
