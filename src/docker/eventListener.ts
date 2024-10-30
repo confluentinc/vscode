@@ -1,3 +1,4 @@
+import { window } from "vscode";
 import {
   ApiResponse,
   ContainerApi,
@@ -11,14 +12,14 @@ import { ContextValues, setContextValue } from "../context";
 import { localKafkaConnected } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
-import { defaultRequestInit, isDockerAvailable } from "./configs";
+import { defaultRequestInit, getLocalKafkaImageName, isDockerAvailable } from "./configs";
+import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
 
 const logger = new Logger("docker.eventListener");
 
-export const LOCAL_KAFKA_IMAGE = "confluentinc/confluent-local";
 const EVENT_FILTERS = {
-  type: ["container"],
-  images: [LOCAL_KAFKA_IMAGE],
+  type: ["container", "image"],
+  images: [DEFAULT_KAFKA_IMAGE_REPO],
 };
 /** The log line to watch for before considering the container fully started and discoverable. */
 export const SERVER_STARTED_LOG_LINE = "Server started, listening for requests...";
@@ -158,12 +159,17 @@ export class EventListener {
       for await (const eventString of yieldedEventStrings) {
         let event: SystemEventMessage;
         try {
-          event = JSON.parse(eventString);
+          event = JSON.parse(eventString.trim());
         } catch (error) {
-          logger.error("error parsing event:", error);
-          // TODO: notify the user of the error here? if a container we care about is started or
-          // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
-          // the view to see the current state
+          if (error instanceof Error) {
+            logger.error("error parsing event", {
+              error: error.message,
+              eventString: eventString.trim(),
+            });
+            // TODO: notify the user of the error here? if a container we care about is started or
+            // stopped, we may miss it if we can't parse the event, and they may need to manually refresh
+            // the view to see the current state
+          }
           continue;
         }
         await this.handleEvent(event);
@@ -235,6 +241,7 @@ export class EventListener {
       logger.debug("missing required 'status' field in event, bailing...", event);
       return;
     }
+    logger.trace("handling event:", event);
 
     if (event.Type === "container") {
       await this.handleContainerEvent(event);
@@ -266,35 +273,54 @@ export class EventListener {
     // compare it to container log timestamps
     const eventTime: number = event.time ? event.time : new Date().getTime();
 
-    if (!imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
-      // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
+    // first, make sure it's an image we support tracking for updates in the Resources view
+    const kafkaImage = getLocalKafkaImageName();
+    const isManagedImage = imageName.startsWith(kafkaImage); // TODO(shoup): add SR here
+    if (!isManagedImage) {
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
     }
 
+    // if it's an image we care about, check if the container is in a "running" state
     let started: boolean = await this.waitForContainerState(containerId, "running", eventTime);
     if (!started) {
       logger.debug(`container didn't show a 'running' state, bailing and trying again later`);
       return;
     }
 
-    // when the `confluent-local` container starts, it should show the following log line once it's ready:
-    // "Server started, listening for requests..."
-    // so we need to wait for that log line to appear before we consider the container fully ready
-    logger.debug("container status shows 'running', checking container logs...", {
-      stringToInclude: SERVER_STARTED_LOG_LINE,
-    });
-    started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
-    logger.debug("done waiting for container log line", {
-      started,
-      stringToInclude: SERVER_STARTED_LOG_LINE,
-    });
+    // then if it's an image that requires a specific log line to appear before it's fully ready, wait
+    // for that log line to appear before considering the container fully started
+    const needToWaitForLog = imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO);
+    if (needToWaitForLog) {
+      // when the `confluent-local` container starts, it should show the following log line once it's ready:
+      // "Server started, listening for requests..."
+      logger.debug("container status shows 'running', checking container logs...", {
+        stringToInclude: SERVER_STARTED_LOG_LINE,
+        imageName,
+      });
+      // show loader in the Resources view while we wait for the correct log line to appear
+      // TODO: also update status bar item once it's available
+      await window.withProgress(
+        {
+          location: { viewId: "confluent-resources" },
+          title: "Waiting for local resources to be ready...",
+        },
+        async () => {
+          started = await this.waitForContainerLog(containerId, SERVER_STARTED_LOG_LINE, eventTime);
+        },
+      );
+      logger.debug("done waiting for container log line", {
+        started,
+        stringToInclude: SERVER_STARTED_LOG_LINE,
+        imageName,
+      });
+    }
 
-    logger.debug(
-      `setting \`localKafkaClusterAvailable=${started}\` and firing \`localKafkaConnected\` with \`${started}\``,
-    );
-    await setContextValue(ContextValues.localKafkaClusterAvailable, started);
-    localKafkaConnected.fire(started);
+    if (imageName.startsWith(kafkaImage)) {
+      await setContextValue(ContextValues.localKafkaClusterAvailable, started);
+      localKafkaConnected.fire(started);
+    }
+    // TODO(shoup): update for Schema Registry image
   }
 
   /** Handling for an event that describes when a container is stopped. */
@@ -305,16 +331,12 @@ export class EventListener {
     }
     logger.debug(`container 'die' event for image: ${imageName}`);
 
-    if (!imageName.startsWith(LOCAL_KAFKA_IMAGE)) {
-      // TODO(shoup): update this once we start monitoring other images (e.g. Schema Registry)
-      return;
+    const kafkaImage = getLocalKafkaImageName();
+    if (imageName.startsWith(kafkaImage)) {
+      await setContextValue(ContextValues.localKafkaClusterAvailable, false);
+      localKafkaConnected.fire(false);
     }
-
-    logger.debug(
-      "setting `localKafkaClusterAvailable=false` and firing `localKafkaConnected` with `false`",
-    );
-    await setContextValue(ContextValues.localKafkaClusterAvailable, false);
-    localKafkaConnected.fire(false);
+    // TODO(shoup): update for Schema Registry image
   }
 
   /** Wait for the container to show a specific {@link ContainerStateStatusEnum} status. */
