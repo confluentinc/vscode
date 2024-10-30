@@ -13,7 +13,8 @@ import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("quickpicks.schemaRegistry");
 
-/** Progress wrapper for the Schema Registry quickpick to accomodate data-fetching time. */
+/** Wrapper for the Schema Registry quickpick to accomodate data-fetching time and display a progress
+ * indicator on the Schemas view. */
 export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
   return await vscode.window.withProgress(
     {
@@ -105,7 +106,15 @@ async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undef
   });
   logger.debug(`Found ${cloudEnvironments.length} environments`);
 
-  let lastEnvName: string = "";
+  if (cloudSchemaRegistries.length > 0) {
+    // show a top-level separator for CCloud Schema Registries (unlike the Kafka cluster quickpick,
+    // we don't need to split by CCloud environments since each Schema Registry is tied to a single
+    // environment)
+    quickPickItems.push({
+      kind: vscode.QuickPickItemKind.Separator,
+      label: `Confluent Cloud`,
+    });
+  }
   cloudSchemaRegistries.forEach((schemaRegistry: CCloudSchemaRegistry) => {
     const environment: CCloudEnvironment | undefined = environmentMap.get(
       schemaRegistry.environmentId,
@@ -115,15 +124,6 @@ async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undef
         `No environment found for Schema Registry envId "${schemaRegistry.environmentId}"`,
       );
       return;
-    }
-    // show a separator by environment to make it easier to differentiate between local+CCloud and
-    // also to make it clear which environment the CCloud clusters are associated with
-    if (lastEnvName !== environment.name) {
-      quickPickItems.push({
-        kind: vscode.QuickPickItemKind.Separator,
-        label: `Confluent Cloud: ${environment.name}`,
-      });
-      lastEnvName = environment.name;
     }
     quickPickItems.push({
       label: environment.name,
