@@ -2,7 +2,7 @@ import net from "net";
 import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerSummary } from "../../clients/docker";
 import { Logger } from "../../logging";
-import { startContainer } from "../containers";
+import { restartContainer, startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
 /** Basic container information for a local resource. */
@@ -122,7 +122,7 @@ export abstract class LocalResourceWorkflow {
               return;
             }
             if (anyRunning) {
-              // TODO: implement stop+start in downstream branch
+              promises.push(restartContainer(container.Id));
             } else {
               promises.push(startContainer(container.Id));
             }
