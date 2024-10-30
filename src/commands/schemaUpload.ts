@@ -2,12 +2,13 @@ import * as vscode from "vscode";
 import {
   RegisterRequest,
   ResponseError,
+  SchemasV1Api,
   SubjectsV1Api,
   SubjectVersion,
 } from "../clients/schemaRegistryRest";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
-import { SchemaType } from "../models/schema";
+import { Schema, SchemaType } from "../models/schema";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 import { schemaSubjectQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
@@ -73,7 +74,6 @@ export async function uploadNewSchema(item: vscode.Uri) {
   }
 
   // OK, all the user input is in. Let's upload the schema.
-
   const sidecar = await getSidecar();
   // Has the route for registering a schema under a subject.
   const schemaSubjectsApi = sidecar.getSubjectsV1Api(registry.id, registry.connectionId);
@@ -86,141 +86,70 @@ export async function uploadNewSchema(item: vscode.Uri) {
   //  we have to look it up separately.)
   const existingVersion = await getHighestRegisteredVersion(schemaSubjectsApi, subject);
 
-  // todo ask if want to normalize schema? They ... probably do?
-  const normalize = true;
-  const uploadRequest: RegisterRequest = {
-    subject: subject,
-    RegisterSchemaRequest: {
-      schemaType: schemaType,
-      schema: schemaContents,
-    },
-    normalize: normalize,
-  };
+  /** ID given to the uploaded schema. May have been a preexisting id if this schema body had been registered previously. */
+  let maybeNewId: number | undefined;
 
   try {
-    // See ... terrible news at https://github.com/confluentinc/schema-registry/issues/173#issuecomment-362950435
-    // (FROM DARK AGES 2018)
-    // otherwise we get random 415 Unsupported Media Type errors when POSTing new schemas based on if the
-    // request gets handled by 'follower node' and not the 'master' (sic).
-    const mainHeaders = schemaSubjectsApi["configuration"].headers!;
-    const overrides = {
-      headers: { ...mainHeaders, "Content-Type": "application/json" },
-    };
+    // todo ask if want to normalize schema? They ... probably do?
+    const normalize = true;
 
-    const response = await schemaSubjectsApi.register(uploadRequest, overrides);
-    const maybeNewId = response.id!;
+    maybeNewId = await registerSchema(
+      schemaSubjectsApi,
+      subject,
+      schemaType,
+      schemaContents,
+      normalize,
+    );
 
     logger.info(
       `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
     );
+  } catch (e) {
+    // Error message already shown in registerSchema()
+    return;
+  }
 
-    // TODO: push this into a helper function getRegisteredVersion(subject, schemaId): number
-
+  let registeredVersion: number | undefined;
+  try {
     // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
     // (may take a few times / pauses if the request is served by a read replica that doesn't yet know about the schema we just registered, sigh.)
-    let registeredVersion: number | undefined;
 
-    for (let attempt = 0; attempt < 5; attempt++) {
-      let subjectVersionPairs: SubjectVersion[] | undefined;
-      try {
-        subjectVersionPairs = await schemasApi.getVersions({ id: maybeNewId });
-      } catch (e) {
-        if (e instanceof ResponseError) {
-          const http_code = e.response.status;
-          if (http_code === 404) {
-            // Pause a moment before trying again. We were just served by a read replica that
-            // doesn't yet know about the schema we just registered.
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            continue;
-          }
-        }
-      }
-      logger.info("subjectVersionPairs", subjectVersionPairs);
-
-      for (const pair of subjectVersionPairs!) {
-        if (pair.subject === subject) {
-          // This is the version number used for the subject we just bound it to.
-          registeredVersion = pair.version;
-          break;
-        }
-      }
-      break;
-    }
-
-    if (registeredVersion === undefined) {
-      // Could not find the subject in the list of versions?!
-      logger.error(
-        `Could not find subject "${subject}" in the list of versions for schema id ${maybeNewId}`,
-      );
-    }
-
-    // Log + inform user of the result.
-    const message = schemaRegistrationMessage(subject, existingVersion, registeredVersion!);
-
-    logger.info(message);
-    const viewChoice = await vscode.window.showInformationMessage(
-      message,
-      "View in Schema Registry",
-    );
-    if (viewChoice) {
-      // get the schemas view controller to refresh and show the new schema
-      // (change this to directly using the preloader so we know exactly when it completes)
-      const preloader = CCloudResourcePreloader.getInstance();
-      // Force a refresh of the schemas for this registry, since we just added a new schema.
-      await preloader.ensureSchemasLoaded(registry.id, true);
-
-      // Get the schemas view provider to refresh the view on the right registry.
-      currentSchemaRegistryChanged.fire(registry);
-
-      // Find the schema in the list of schemas for this registry.
-      const allSchemas = await getResourceManager().getSchemasForRegistry(registry.id);
-      const schema = allSchemas!.find((s) => s.id === `${maybeNewId}` && s.subject === subject);
-
-      // get the new schema to show in the view by getting the treeitem to reveal
-      // the schema's item.
-      const schemaViewProvider = getSchemasViewProvider();
-      schemaViewProvider.revealSchema(schema!);
-    }
-    // Refresh that schema registry in view controller if needed, otherwise at least
-    getSchemasViewProvider().refreshIfShowingRegistry(registry.id);
+    registeredVersion = await getNewlyRegisteredVersion(schemasApi, subject, maybeNewId);
   } catch (e) {
-    if (e instanceof ResponseError) {
-      const http_code = e.response.status;
-      const body = await e.response.json();
+    // Error message already shown in getNewlyRegisteredVersion()
+    return;
+  }
 
-      let message: string | null = null;
-      switch (http_code) {
-        case 415:
-          // The header override didn't do the trick!
-          message = `Alas, Unsupported Media Type. Try again?`;
-          break;
-        case 409:
-          // this schema conflicted with with prior version(s) of the schema
-          message = `Conflict with prior schema version(s): ${body.message}`;
-          break;
-        case 422:
-          if (body.error_code === 42201) {
-            // the schema was invalid / bad syntax. Most of these will end with
-            // "details: " followed by a more specific error message. Let's just show that
-            // part.
-            message = `Invalid schema: ${extractDetail(body.message)}`;
-            logger.error(message);
-          }
-          break;
-      }
+  // Log + inform user of the successful schema registration, give them the option to view the schema in the schema registry.
+  const message = schemaRegistrationMessage(subject, existingVersion, registeredVersion!);
 
-      if (!message) {
-        message = `Error ${http_code} uploading schema: ${body.message}`;
-      }
+  logger.info(message);
 
-      logger.error(message);
-      vscode.window.showErrorMessage(message);
-    } else {
-      // non-http-related error!
-      // TODO log these in sentry
-      logger.error("Error uploading schema", e);
-      vscode.window.showErrorMessage(`Error uploading schema: ${e}`);
-    }
+  // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
+  const promises = [
+    vscode.window.showInformationMessage(message, "View in Schema Registry"),
+    updateRegistryCacheAndFindNewSchema(registry.id, maybeNewId, subject),
+  ];
+
+  const results = await Promise.all(promises);
+
+  const schemaViewProvider = getSchemasViewProvider();
+
+  if (results[0]) {
+    // User chose to view the schema in the schema registry.
+
+    // Get the schemas view provider to refresh the view on the right registry.
+    // (The resource manager data for that registry will be updated with the new schema
+    //  via updateRegistryCacheAndFindNewSchema() which has already resolved.)
+    currentSchemaRegistryChanged.fire(registry);
+
+    // get the new schema to show in the view by getting the treeitem to reveal
+    // the schema's item.
+    schemaViewProvider.revealSchema(results[1] as Schema);
+  } else {
+    // They didn't want to view the schema in the schema registry.
+    // But at least do a shallow refresh of the schema registry view.
+    schemaViewProvider.refresh();
   }
 }
 
@@ -305,6 +234,32 @@ function extractDetail(message: string): string {
     return message;
   }
   return message.slice(detailIndex + 9);
+}
+
+function parseConflictMessage(message: string): string {
+  const details = extractDetail(message);
+
+  // Extract the "description" subsets from the details.
+  // example: description:'The field 'sdfsdf' at path '/fields/7' in the new schema has no default value and is missing in the old schema',
+  // (There may be more than one of these)
+  const infoBlurbs: string[] = [];
+
+  const descriptionRegex = /description:'(.*?)', additionalInfo/g;
+  const matches = details.matchAll(descriptionRegex);
+  // for each match, extract the description and log it.
+  if (matches) {
+    for (const match of matches) {
+      // collect the first capture group from the match
+      infoBlurbs.push(match[1]);
+    }
+  }
+
+  if (infoBlurbs.length > 0) {
+    return infoBlurbs.join(";  ");
+  } else {
+    // Couldn't find any description blurbs, so just return the details.
+    return details;
+  }
 }
 
 /** Return the success message to show the user after having uploaded a new schema */
@@ -395,4 +350,141 @@ async function getHighestRegisteredVersion(
   }
 
   return existingVersion;
+}
+
+/** Drive the schema register route
+ * @returns the schema id of the newly registered schema, which, if was normalized
+ *         to an existing schema, will be the id of that existing schema.
+ */
+async function registerSchema(
+  schemaSubjectsApi: SubjectsV1Api,
+  subject: string,
+  schemaType: SchemaType,
+  schemaContents: string,
+  normalize: boolean,
+): Promise<number> {
+  const registerRequest: RegisterRequest = {
+    subject: subject,
+    RegisterSchemaRequest: {
+      schemaType: schemaType,
+      schema: schemaContents,
+    },
+    normalize: normalize,
+  };
+
+  try {
+    // See ... terrible news at https://github.com/confluentinc/schema-registry/issues/173#issuecomment-362950435
+    // (FROM DARK AGES 2018)
+    // otherwise we get random 415 Unsupported Media Type errors when POSTing new schemas based on if the
+    // request gets handled by 'follower node' and not the 'master' (sic).
+    const mainHeaders = schemaSubjectsApi["configuration"].headers!;
+    const overrides = {
+      headers: { ...mainHeaders, "Content-Type": "application/json" },
+    };
+
+    const response = await schemaSubjectsApi.register(registerRequest, overrides);
+    // May be a brand new id, may be the id of an existing schema that this one was normalized to.
+    return response.id!;
+  } catch (e) {
+    if (e instanceof ResponseError) {
+      const http_code = e.response.status;
+      const body = await e.response.json();
+
+      let message: string | null = null;
+      switch (http_code) {
+        case 415:
+          // The header override didn't do the trick!
+          message = `Unsupported Media Type. Try again?`;
+          break;
+        case 409:
+          // this schema conflicted with with prior version(s) of the schema
+          // Extract out the juicy details from the error message.
+          message = `Conflict with prior schema version:\n${parseConflictMessage(body.message)}`;
+          break;
+        case 422:
+          if (body.error_code === 42201) {
+            // the schema was invalid / bad syntax. Most of these will end with
+            // "details: " followed by a more specific error message. Let's just show that
+            // part.
+            message = `Invalid schema: ${extractDetail(body.message)}`;
+          }
+          break;
+      }
+
+      if (!message) {
+        message = `Error ${http_code} uploading schema: ${body.message}`;
+      }
+
+      logger.error(message);
+      vscode.window.showErrorMessage(message);
+    } else {
+      // non-http-related error!
+      // TODO log these in sentry
+      logger.error("Error uploading schema", e);
+      vscode.window.showErrorMessage(`Error uploading schema: ${e}`);
+    }
+
+    // rethrow to stop the overall process
+    throw e;
+  }
+}
+
+/**
+ * Return the version number of the schema we just registered for the subject we
+ * just bound it to.
+ */
+async function getNewlyRegisteredVersion(
+  schemasApi: SchemasV1Api,
+  subject: string,
+  schemaId: number,
+): Promise<number> {
+  // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
+  // (may take a few times / pauses if the request is served by a read replica that doesn't yet know about the schema we just registered, sigh.)
+  let registeredVersion: number | undefined;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let subjectVersionPairs: SubjectVersion[] | undefined;
+    try {
+      subjectVersionPairs = await schemasApi.getVersions({ id: schemaId });
+    } catch (e) {
+      if (e instanceof ResponseError) {
+        const http_code = e.response.status;
+        if (http_code === 404) {
+          // Pause a moment before trying again. We were just served by a read replica that
+          // doesn't yet know about the schema id we just registered.
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          continue;
+        }
+      }
+    }
+
+    for (const pair of subjectVersionPairs!) {
+      if (pair.subject === subject) {
+        // This is the version number used for the subject we just bound it to.
+        return pair.version!;
+      }
+    }
+    break;
+  }
+
+  // If we didn't get it in 5 tries, log and raise an error.
+  const message = `Could not find subject "${subject}" in the list of bindings for schema id ${schemaId}`;
+  logger.error(message);
+  throw new Error(message);
+}
+
+async function updateRegistryCacheAndFindNewSchema(
+  registryId: string,
+  newSchemaID: number,
+  boundSubject: string,
+): Promise<Schema> {
+  const preloader = CCloudResourcePreloader.getInstance();
+  await preloader.ensureSchemasLoaded(registryId, true);
+
+  // Find the schema in the list of schemas for this registry. We know that
+  // it should be present in the cache.
+  const allSchemas = await getResourceManager().getSchemasForRegistry(registryId);
+  const schema = allSchemas!.find((s) => s.id === `${newSchemaID}` && s.subject === boundSubject);
+
+  return schema!;
 }
