@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.20.1
+
 ### Fixed
 
 - An error notification is now shown if the wrong extension version is installed based on the
