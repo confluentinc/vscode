@@ -1,8 +1,13 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { getExtensionContext } from "../context";
-import { ccloudConnected, ccloudOrganizationChanged, localKafkaConnected } from "../emitters";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import {
+  ccloudConnected,
+  ccloudOrganizationChanged,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -79,6 +84,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     localKafkaConnected.event((connected: boolean) => {
       logger.debug("localKafkaConnected event fired", { connected });
+      this.refresh();
+    });
+    localSchemaRegistryConnected.event((connected: boolean) => {
+      logger.debug("localSchemaRegistryConnected event fired", { connected });
       this.refresh();
     });
   }
@@ -241,10 +250,14 @@ export async function loadLocalResources(): Promise<
     localContainerItem.contextValue = connectedId;
 
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-    // Kafka cluster first
+
+    // Kafka cluster(s) first
     const localKafkaClusters: LocalKafkaCluster[] = localResources.flatMap(
       (group): LocalKafkaCluster[] => group.kafkaClusters,
     );
+    // indicate to the UI that we have at least one local Kafka cluster available
+    await setContextValue(ContextValues.localKafkaClusterAvailable, localResources.length > 0);
+
     // ...then Schema Registry
     const localSchemaRegistries: LocalSchemaRegistry[] = localResources
       .flatMap((group: LocalResourceGroup): LocalSchemaRegistry | undefined => group.schemaRegistry)
@@ -252,6 +265,12 @@ export async function loadLocalResources(): Promise<
         (schemaRegistry: LocalSchemaRegistry | undefined): schemaRegistry is LocalSchemaRegistry =>
           schemaRegistry !== undefined,
       );
+    // indicate to the UI that we have at least one local Schema Registry available
+    await setContextValue(
+      ContextValues.localSchemaRegistryAvailable,
+      localSchemaRegistries.length > 0,
+    );
+
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");

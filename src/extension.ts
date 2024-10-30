@@ -250,12 +250,14 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
 
   // set the initial connection states of our main views; these will be adjusted by the following:
   // - ccloudConnectionAvailable: `true/false` if the auth provider has a valid CCloud connection
-  // - localKafkaClusterAvailable: `true/false` if the Resources view loads/refreshes and can find a
-  //   local Kafka cluster (and CCloud connection changes will refresh the Resources view via the
-  //   `ccloudConnected` event emitter)
+  // - localKafkaClusterAvailable: `true/false` if the Resources view loads/refreshes and we can
+  //  discover a local Kafka cluster
+  // - localSchemaRegistryAvailable: `true/false` if the Resources view loads/refreshes and we can
+  //  discover a local Schema Registry
   await Promise.all([
     setContextValue(ContextValues.ccloudConnectionAvailable, false),
     setContextValue(ContextValues.localKafkaClusterAvailable, false),
+    setContextValue(ContextValues.localSchemaRegistryAvailable, false),
   ]);
 
   // attempt to get a session to trigger the initial auth badge for signing in
