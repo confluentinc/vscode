@@ -9,9 +9,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
-/** Progress wrapper for the Kafka Cluster quickpick to accomodate data-fetching time.
- * Highlights the topics view while the quickpick is awaited.
- */
+/** Wrapper for the Kafka Cluster quickpick to accomodate data-fetching time and display a progress indicator on the Topics view. */
 export async function kafkaClusterQuickPickWithViewProgress(
   includeLocal: boolean = true,
   includeCCloud: boolean = true,
