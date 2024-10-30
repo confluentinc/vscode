@@ -1,13 +1,14 @@
 import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
-import { TEST_SCHEMA } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
 import { Schema, SchemaType, generateSchemaSubjectGroups } from "./schema";
 
 describe("Schema model methods", () => {
   it(".matchesTopicName() success / fail tests", () => {
-    for (const [subject, topic, expected] of [
+    type SchemaProperties = [string, string, boolean];
+    const testSchemas: SchemaProperties[] = [
       // schemas named in TopicNameStrategy format
       ["test-topic-value", "test-topic", true], // matching on TopicNameStrategy for value schemas
       ["test-topic-key", "test-topic", true], // matching on TopicNameStrategy for key schemas
@@ -20,13 +21,11 @@ describe("Schema model methods", () => {
       ["test-topic-MyOtherRecordSchema", "test-topic", true], // say, a different record schema for same topic
       ["test-topic-MyRecordSchema", "test-topic-other-topic", false], // not matching on TopicRecordNameStrategy
       ["test-topic-MyRecordSchema", "test-topic-MyRecordSchema", false], // isn't TopicRecordNameStrategy, but exact match, which is nothing.
-    ]) {
-      const schema = TEST_SCHEMA.copy({
-        // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-        subject,
-      });
+    ];
+    for (const [subject, topic, expected] of testSchemas) {
+      const schema = Schema.create({ ...TEST_CCLOUD_SCHEMA, subject });
       assert.equal(
-        schema.matchesTopicName(topic as string),
+        schema.matchesTopicName(topic),
         expected,
         `subject: ${subject}, topic: ${topic}`,
       );
@@ -34,28 +33,28 @@ describe("Schema model methods", () => {
   });
 
   it(".fileExtension() should return the correct file extension for type=AVRO schemas", () => {
-    const schema = TEST_SCHEMA.copy({
+    const schema = TEST_CCLOUD_SCHEMA.copy({
       type: SchemaType.Avro,
     });
     assert.equal(schema.fileExtension(), "avsc");
   });
 
   it(".fileExtension() should return the correct file extension for type=JSON schemas", () => {
-    const schema = TEST_SCHEMA.copy({
+    const schema = TEST_CCLOUD_SCHEMA.copy({
       type: SchemaType.Json,
     });
     assert.equal(schema.fileExtension(), "json");
   });
 
   it(".fileExtension() should return the correct file extension for type=PROTOBUF schemas", () => {
-    const schema = TEST_SCHEMA.copy({
+    const schema = TEST_CCLOUD_SCHEMA.copy({
       type: SchemaType.Protobuf,
     });
     assert.equal(schema.fileExtension(), "proto");
   });
 
   it(".filename() should return the correct file name", () => {
-    const schema = TEST_SCHEMA.copy({
+    const schema = TEST_CCLOUD_SCHEMA.copy({
       // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
       subject: "test-topic",
       // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
@@ -73,18 +72,42 @@ describe("Schema helper functions", () => {
   const keySubject = "test-topic-key";
   const otherSubject = "test-topic";
   const schemas: Schema[] = [
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: valueSubject, version: 1, type: SchemaType.Avro }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: valueSubject, version: 2, type: SchemaType.Avro }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: keySubject, version: 1, type: SchemaType.Protobuf }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: otherSubject, version: 1, type: SchemaType.Json }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: otherSubject, version: 3, type: SchemaType.Json }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: otherSubject, version: 2, type: SchemaType.Json }),
+    Schema.create({
+      ...TEST_CCLOUD_SCHEMA,
+      subject: valueSubject,
+      version: 1,
+      type: SchemaType.Avro,
+    }),
+    Schema.create({
+      ...TEST_CCLOUD_SCHEMA,
+      subject: valueSubject,
+      version: 2,
+      type: SchemaType.Avro,
+    }),
+    Schema.create({
+      ...TEST_CCLOUD_SCHEMA,
+      subject: keySubject,
+      version: 1,
+      type: SchemaType.Protobuf,
+    }),
+    Schema.create({
+      ...TEST_CCLOUD_SCHEMA,
+      subject: otherSubject,
+      version: 1,
+      type: SchemaType.Json,
+    }),
+    Schema.create({
+      ...TEST_CCLOUD_SCHEMA,
+      subject: otherSubject,
+      version: 3,
+      type: SchemaType.Json,
+    }),
+    Schema.create({
+      ...TEST_CCLOUD_SCHEMA,
+      subject: otherSubject,
+      version: 2,
+      type: SchemaType.Json,
+    }),
   ];
 
   it("generateSchemaSubjectGroups() should group schemas under a subject-labeled container item", () => {
