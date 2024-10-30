@@ -68,7 +68,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
-    await this.checkForImage();
+    await this.checkForImage(ConfluentLocalWorkflow.imageRepo, this.imageTag);
 
     const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
     const containerListRequest: ContainerListRequest = {
@@ -81,6 +81,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const existingContainers: ContainerSummary[] =
       await getContainersForImage(containerListRequest);
     if (existingContainers.length > 0) {
+      this.logger.warn(`${existingContainers.length} container(s) found, skipping creation`, {
+        imageRepo: ConfluentLocalWorkflow.imageRepo,
+        imageTag: this.imageTag,
+      });
       await this.handleExistingContainers(existingContainers);
       return;
     }
