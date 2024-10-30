@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.20.0
+
 ### Added
 
 - "Open Settings" command to quickly access the Confluent for VS Code extension settings.
@@ -24,6 +26,10 @@ All notable changes to this extension will be documented in this file.
   extension sidecar attempts to resolve the issue (instead of invalidating the session immediately
   and forcing the user to sign in again).
   [issue #307](https://github.com/confluentinc/vscode/issues/307)
+
+## 0.19.x
+
+(Skipped due to internal bug in the release process.)
 
 ## 0.18.3
 

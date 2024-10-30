@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { AuthErrors, Connection, Status } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudAuthSessionInvalidated } from "../emitters";
+import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
@@ -84,7 +84,11 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     // poll faster to try and get to a non-transient status as quickly as possible since it's going
     // to affect how our CCloudAuthStatusMiddleware behaves
     pollCCloudConnectionAuth.useFastFrequency();
+    // ...and don't bother checking for expiration or errors until we get another status back
+    return;
   } else {
+    // ensure any open progress notifications are closed even if no requests are going through the middleware
+    nonInvalidTokenStatus.fire();
     pollCCloudConnectionAuth.useSlowFrequency();
   }
 
