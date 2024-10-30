@@ -177,7 +177,7 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 
 ## Known Limitations
 
-- Confluent Cloud connections require reauthenticating after 4 hours, and you will be prompted to
+- Confluent Cloud connections require reauthenticating after 8 hours, and you will be prompted to
   reauthenticate.
   - Signing out of Confluent Cloud through the browser will also sign you out of the Confluent
     extension.
