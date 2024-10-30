@@ -87,7 +87,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    const waitMsg = "Waiting for container to be ready...";
+    const waitMsg = "Waiting for Schema Registry container to be ready...";
     this.logger.debug(waitMsg);
     this.progress?.report({ message: waitMsg });
     await this.waitForLocalResourceEventChange();
