@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Updated sidecar version to include new JavaScript Producer and Python Producer project templates
+  for generating Kafka applications.
+
 ### Fixed
 
 - An error notification is now shown if the wrong extension version is installed based on the
