@@ -2,14 +2,17 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { RegisterRequest, ResponseError, SubjectVersion } from "../clients/schemaRegistryRest";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
+import { currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
-import { Schema } from "../models/schema";
+import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
+import { schemaSubjectQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
-import { ResourceManager } from "../storage/resourceManager";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemas");
@@ -121,7 +124,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
   }
 
   // What kind of schema is this? We must tell the schema registry.
-  let schemaType: string;
+  let schemaType: SchemaType;
   try {
     schemaType = determineSchemaType(item, activeEditor.document.languageId);
   } catch (e) {
@@ -135,55 +138,64 @@ export async function uploadNewSchema(item: vscode.Uri) {
     (d) => d.severity === vscode.DiagnosticSeverity.Error,
   );
   if (errorDiagnostics.length > 0) {
-    const errorSerde = new DocumentErrorRangeSerde(errorDiagnostics);
-
     logger.error("Not going to upload schema since there are errors in the document");
-    const choice = await vscode.window.showErrorMessage(
-      `Errors are being reported in the ${schemaType} document. Please fix and try again.`,
-      ...errorSerde.getMessages(),
+    const doView = await vscode.window.showErrorMessage(
+      `The schema document has errors.`,
+      "View Errors",
     );
 
     // they picked one of the errors, so jump to it.
-    if (choice) {
-      const error = errorSerde.findErrorByString(choice);
-      if (error) {
-        const range = error.range;
-        activeEditor.revealRange(range);
-        activeEditor.selection = new vscode.Selection(range.start, range.end);
-      }
+    if (doView) {
+      // execute command workbench.panel.markers.view.focus
+      vscode.commands.executeCommand("workbench.panel.markers.view.focus");
     }
     return;
   }
 
-  // todo quickpick to select schema registry, default to the one in the view
   const registry = await schemaRegistryQuickPick();
   if (!registry) {
-    logger.info("No schema registry selected, aborting schema upload");
+    logger.info("No registry chosen, aborting schema upload");
+    vscode.window.showInformationMessage("Schema upload aborted.");
     return;
   }
 
-  // todo quickpick to select subject, default to one selected in view (if any)
-  const subject = await vscode.window.showInputBox({
-    title: "Schema Subject",
-    prompt: "Enter subject name",
-  });
+  let subject = await schemaSubjectQuickPick(registry.id, schemaType);
+
+  if (subject === "") {
+    // User chose the 'create a new subject' quickpick item. Prompt for the new name.
+    subject = await vscode.window.showInputBox({
+      title: "Schema Subject",
+      prompt: "Enter subject name",
+      value: "newSubject-value",
+    });
+
+    // Warn if subject doesn't match TopicNamingStrategy, but allow if they really want.
+    if (subject && !subject.endsWith("-key") && !subject.endsWith("-value")) {
+      const choice = await vscode.window.showInputBox({
+        title: "Subject Name Warning",
+        prompt: `Subject name "${subject}" does not end with "-key" or "-value". Continue ("yes", "no", or enter new subject name ending with either "-key" or "-value")?`,
+      });
+
+      if (choice) {
+        if (choice.endsWith("-key") || choice.endsWith("-value")) {
+          subject = choice;
+        } else if (choice.toLowerCase() === "yes") {
+          // they confirmed they want to continue with the subject as is
+        } else {
+          // aborted, indicate abort path.
+          subject = undefined;
+        }
+      } else {
+        // escape aborted
+        subject = undefined;
+      }
+    }
+  }
 
   if (!subject) {
     logger.info("No subject chosen, aborting schema upload");
+    vscode.window.showInformationMessage("Schema upload aborted.");
     return;
-  }
-
-  // Warn if subject doesn't match TopicNamingStrategy, but allow if they really want.
-  if (!subject.endsWith("-key") && !subject.endsWith("-value")) {
-    const choice = await vscode.window.showInputBox({
-      title: "Subject Name Warning",
-      prompt: `Subject name "${subject}" does not end with "-key" or "-value". Continue (yes or no)?`,
-    });
-    // case-insignificant comparison to "yes"
-    if (!choice || choice.toLowerCase() !== "yes") {
-      vscode.window.showInformationMessage("Schema upload aborted.");
-      return;
-    }
   }
 
   const sidecar = await getSidecar();
@@ -226,9 +238,6 @@ export async function uploadNewSchema(item: vscode.Uri) {
     },
     normalize: normalize,
   };
-
-  // First look up the schema by subject to see if it already exists.
-  // TODO
 
   try {
     // See ... terrible news at https://github.com/confluentinc/schema-registry/issues/173#issuecomment-362950435
@@ -299,7 +308,29 @@ export async function uploadNewSchema(item: vscode.Uri) {
     );
 
     logger.info(message);
-    vscode.window.showInformationMessage(message);
+    const viewChoice = await vscode.window.showInformationMessage(
+      message,
+      "View in Schema Registry",
+    );
+    if (viewChoice) {
+      // get the schemas view controller to refresh and show the new schema
+      // (change this to directly using the preloader so we know exactly when it completes)
+      const preloader = CCloudResourcePreloader.getInstance();
+      // Force a refresh of the schemas for this registry, since we just added a new schema.
+      await preloader.ensureSchemasLoaded(registry.id, true);
+
+      // Get the schemas view provider to refresh the view on the right registry.
+      currentSchemaRegistryChanged.fire(registry);
+
+      // Find the schema in the list of schemas for this registry.
+      const allSchemas = await getResourceManager().getSchemasForRegistry(registry.id);
+      const schema = allSchemas!.find((s) => s.id === `${maybeNewId}` && s.subject === subject);
+
+      // get the new schema to show in the view by getting the treeitem to reveal
+      // the schema's item.
+      const schemaViewProvider = getSchemasViewProvider();
+      schemaViewProvider.revealSchema(schema!);
+    }
     // Refresh that schema registry in view controller if needed, otherwise at least
     getSchemasViewProvider().refreshIfShowingRegistry(registry.id);
   } catch (e) {
@@ -319,8 +350,11 @@ export async function uploadNewSchema(item: vscode.Uri) {
           break;
         case 422:
           if (body.error_code === 42201) {
-            // the schema was invalid / bad syntax
-            message = `Invalid schema: ${body.message}`;
+            // the schema was invalid / bad syntax. Most of these will end with
+            // "details: " followed by a more specific error message. Let's just show that
+            // part.
+            message = `Invalid schema: ${extractDetail(body.message)}`;
+            logger.error(message);
           }
           break;
       }
@@ -338,6 +372,17 @@ export async function uploadNewSchema(item: vscode.Uri) {
       vscode.window.showErrorMessage(`Error uploading schema: ${e}`);
     }
   }
+}
+
+/**
+ * Find the last occurrence of "details: " in the message, then return everything after it.
+ */
+export function extractDetail(message: string): string {
+  const detailIndex = message.lastIndexOf("details: ");
+  if (detailIndex === -1) {
+    return message;
+  }
+  return message.slice(detailIndex + 9);
 }
 
 /** Return the success message to show the user after having uploaded a new schema */
@@ -364,18 +409,21 @@ export function schemaRegistrationMessage(
   }
 }
 
-export function determineSchemaType(file: vscode.Uri | null, languageId: string | null): string {
+export function determineSchemaType(
+  file: vscode.Uri | null,
+  languageId: string | null,
+): SchemaType {
   if (!file && !languageId) {
     throw new Error("Must call with either a file or document");
   }
 
-  let schemaType: string | unknown = null;
+  let schemaType: SchemaType | unknown = null;
 
   if (languageId) {
     const languageIdToSchemaType = new Map([
-      ["avroavsc", "AVRO"],
-      ["proto", "PROTOBUF"],
-      ["json", "JSON"],
+      ["avroavsc", SchemaType.Avro],
+      ["proto", SchemaType.Protobuf],
+      ["json", SchemaType.Json],
     ]);
     schemaType = languageIdToSchemaType.get(languageId);
   }
@@ -385,9 +433,9 @@ export function determineSchemaType(file: vscode.Uri | null, languageId: string 
     const ext = file.path.split(".").pop();
     if (ext) {
       const extensionToSchemaType = new Map([
-        ["avsc", "AVRO"],
-        ["proto", "PROTOBUF"],
-        ["json", "JSON"],
+        ["avsc", SchemaType.Avro],
+        ["proto", SchemaType.Protobuf],
+        ["json", SchemaType.Json],
       ]);
       schemaType = extensionToSchemaType.get(ext);
     }
@@ -397,7 +445,7 @@ export function determineSchemaType(file: vscode.Uri | null, languageId: string 
     throw new Error("Could not determine schema type from file or document");
   }
 
-  return schemaType as string;
+  return schemaType as SchemaType;
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */

@@ -35,6 +35,10 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this._onDidChangeTreeData.fire();
   }
 
+  /** Deep refesh + repaint the view if it is showing the given registry id. Otherwise, hint
+   * the preloader to purge the cache for this schema registry (if currently cached), so that next
+   * time it is shown, it will be deep-fetched.
+   */
   refreshIfShowingRegistry(schemaRegistryId: string): void {
     // if the schema registry is the one being shown, deep refresh the view
     if (this.schemaRegistry?.id === schemaRegistryId) {
@@ -45,6 +49,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       const preloader = CCloudResourcePreloader.getInstance();
       preloader.purgeSchemas(schemaRegistryId);
     }
+  }
+
+  /** Try to reveal this particular schema, if present */
+  revealSchema(schema: Schema): void {
+    this.treeView.reveal(schema, { focus: true, select: true, expand: true });
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
@@ -107,6 +116,15 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       return new SchemaTreeItem(element);
     }
     return element;
+  }
+
+  getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
+    if (element instanceof Schema) {
+      // if we're a schema, our parent is (an equivalent) container tree item (that will have the right label (the schema subject))
+      return { label: element.subject, children: [] };
+    }
+    // Otherwise the parent of a container tree item is the root.
+    return null;
   }
 
   async getChildren(element?: SchemasViewProviderData): Promise<SchemasViewProviderData[]> {

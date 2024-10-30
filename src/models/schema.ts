@@ -65,6 +65,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
     const label = `v${resource.version}`;
     super(label, vscode.TreeItemCollapsibleState.None);
 
+    this.id = `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
     this.contextValue = "ccloud-schema";
