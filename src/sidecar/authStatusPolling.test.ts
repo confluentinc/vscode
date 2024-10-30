@@ -4,8 +4,8 @@ import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
 import { getExtensionContext } from "../../tests/unit/testUtils";
-import { Connection } from "../clients/sidecar";
-import * as emitters from "../emitters";
+import { Connection, Status } from "../clients/sidecar";
+import { nonInvalidTokenStatus } from "../emitters";
 import {
   AUTH_PROMPT_TRACKER,
   checkAuthExpiration,
@@ -176,57 +176,42 @@ describe("CCloud auth expiration checks", () => {
 describe("CCloud connection status polling", () => {
   let sandbox: sinon.SinonSandbox;
   let getCCloudConnectionStub: sinon.SinonStub;
-  let ccloudAuthSessionInvalidatedStub: sinon.SinonStub;
+  let nonInvalidTokenStatusFireStub: sinon.SinonStub;
+
+  before(async () => {
+    await getExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     getCCloudConnectionStub = sandbox.stub(connections, "getCCloudConnection");
-    ccloudAuthSessionInvalidatedStub = sandbox.stub(emitters.ccloudAuthSessionInvalidated, "fire");
+    nonInvalidTokenStatusFireStub = sandbox.stub(nonInvalidTokenStatus, "fire");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("should fire the ccloudAuthSessionInvalidated event emitter when the CCloud auth status is FAILED", async () => {
-    const connection = createFakeConnection(120);
-    connection.status.authentication.status = "FAILED";
-    getCCloudConnectionStub.resolves(connection);
+  const nonTransientStatuses: Status[] = ["FAILED", "NO_TOKEN", "VALID_TOKEN"];
+  nonTransientStatuses.forEach((status) => {
+    it(`should fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${status}`, async () => {
+      const connection = createFakeConnection(120);
+      connection.status.authentication.status = status;
+      getCCloudConnectionStub.resolves(connection);
 
-    await watchCCloudConnectionStatus();
+      await watchCCloudConnectionStatus();
 
-    assert.ok(ccloudAuthSessionInvalidatedStub.calledOnce);
+      assert.ok(nonInvalidTokenStatusFireStub.called);
+    });
   });
 
-  it("should fire the ccloudAuthSessionInvalidated event emitter when the CCloud auth status is NO_TOKEN", async () => {
-    // this shouldn't be possible since NO_TOKEN means the user hasn't completed authentication, which
-    // means the poller shouldn't be active, but just in case:
-    const connection = createFakeConnection(120);
-    connection.status.authentication.status = "NO_TOKEN";
-    getCCloudConnectionStub.resolves(connection);
-
-    await watchCCloudConnectionStatus();
-
-    assert.ok(ccloudAuthSessionInvalidatedStub.calledOnce);
-  });
-
-  it("should NOT fire the ccloudAuthSessionInvalidated event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
+  it("should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
     const connection = createFakeConnection(120);
     connection.status.authentication.status = "INVALID_TOKEN";
     getCCloudConnectionStub.resolves(connection);
 
     await watchCCloudConnectionStatus();
 
-    assert.ok(ccloudAuthSessionInvalidatedStub.notCalled);
-  });
-
-  it("should NOT fire the ccloudAuthSessionInvalidated event emitter when the CCloud auth status is VALID_TOKEN", async () => {
-    const connection = createFakeConnection(120);
-    connection.status.authentication.status = "VALID_TOKEN";
-    getCCloudConnectionStub.resolves(connection);
-
-    await watchCCloudConnectionStatus();
-
-    assert.ok(ccloudAuthSessionInvalidatedStub.notCalled);
+    assert.ok(nonInvalidTokenStatusFireStub.notCalled);
   });
 });

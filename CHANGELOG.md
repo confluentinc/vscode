@@ -6,8 +6,16 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- "Open Settings" command to quickly access the Confluent for VS Code extension settings.
 - Create new schemas + subjects or new versions of existing schemas.
+
+
+## 0.20.0
+
+### Added
+
+- "Open Settings" command to quickly access the Confluent for VS Code extension settings.
+- "Copy URI" context menu item for CCloud Schema Registry items and local Kafka clusters in the
+  Resources view. [issue #445](https://github.com/confluentinc/vscode/issues/445)
 
 ### Changed
 
@@ -23,6 +31,10 @@ All notable changes to this extension will be documented in this file.
   extension sidecar attempts to resolve the issue (instead of invalidating the session immediately
   and forcing the user to sign in again).
   [issue #307](https://github.com/confluentinc/vscode/issues/307)
+
+## 0.19.x
+
+(Skipped due to internal bug in the release process.)
 
 ## 0.18.3
 

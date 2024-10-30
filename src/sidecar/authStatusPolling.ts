@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import { AuthErrors, Connection } from "../clients/sidecar";
+import { AuthErrors, Connection, Status } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ccloudAuthSessionInvalidated } from "../emitters";
+import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
+import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
 import { getCCloudAuthSession, getCCloudConnection } from "./connections";
 
@@ -48,12 +49,6 @@ class AuthPromptTracker {
 }
 export const AUTH_PROMPT_TRACKER = AuthPromptTracker.getInstance();
 
-/** Used to prevent multiple instances of the `INVALID_TOKEN` progress notification stacking up. */
-let invalidTokenNotificationOpen: boolean = false;
-/** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
- * current CCloud connection, and is only used to resolve an open progress notification. */
-let nonInvalidTokenStatus: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
-
 /**
  * Poller to call {@link watchCCloudConnectionStatus} every 10 seconds to check the auth status of
  * the current CCloud connection.
@@ -83,47 +78,18 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     errors: connection.status.authentication.errors,
   });
 
-  if (connection.status.authentication.status !== "INVALID_TOKEN") {
-    // resolve any open progress notification if we see a non-`INVALID_TOKEN` status
-    nonInvalidTokenStatus.fire();
-    // and go back to polling every 10sec
-    pollCCloudConnectionAuth.useSlowFrequency();
-    // and set the flag back so the notification can open again if we see another `INVALID_TOKEN`
-    invalidTokenNotificationOpen = false;
-  }
-
-  if (["NO_TOKEN", "FAILED"].includes(connection.status.authentication.status)) {
-    // some unusable state that requires the user to reauthenticate
-    logger.error(
-      "current CCloud connection has no token or transitioned to a failed state; invalidating auth session",
-      {
-        status: connection.status.authentication.status,
-      },
-    );
-    ccloudAuthSessionInvalidated.fire();
-  } else if (connection.status.authentication.status === "INVALID_TOKEN") {
-    // the sidecar is handling a transient error, so exit this polling iteration early and check
-    // the status again on the next iteration
-    logger.warn("current CCloud connection has an invalid token; waiting for updated status");
-    if (!invalidTokenNotificationOpen) {
-      invalidTokenNotificationOpen = true;
-      vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Attempting to reconnect to Confluent Cloud...",
-          cancellable: false,
-        },
-        async () => {
-          await new Promise((resolve) => {
-            nonInvalidTokenStatus.event(resolve);
-          });
-        },
-      );
-    }
-    // poll faster to try and resolve the connection status so the notification doesn't need to stay
-    // open for the full 10sec until the next check
+  const authStatus: Status = connection.status.authentication.status;
+  await getResourceManager().setCCloudAuthStatus(authStatus);
+  if (authStatus === "INVALID_TOKEN") {
+    // poll faster to try and get to a non-transient status as quickly as possible since it's going
+    // to affect how our CCloudAuthStatusMiddleware behaves
     pollCCloudConnectionAuth.useFastFrequency();
+    // ...and don't bother checking for expiration or errors until we get another status back
     return;
+  } else {
+    // ensure any open progress notifications are closed even if no requests are going through the middleware
+    nonInvalidTokenStatus.fire();
+    pollCCloudConnectionAuth.useSlowFrequency();
   }
 
   // if we get any kind of `.status.authentication.errors`, throw an error notification so the user

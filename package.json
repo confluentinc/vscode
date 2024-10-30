@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
-  "version": "0.20.0-27",
+  "version": "0.21.0-1",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -72,6 +72,11 @@
       {
         "command": "confluent.copyResourceName",
         "title": "Copy Name",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.copyResourceUri",
+        "title": "Copy URI",
         "category": "Confluent: Resources"
       },
       {
@@ -412,6 +417,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.copyResourceUri",
+          "when": "false"
+        },
+        {
           "command": "confluent.debugtools.globalState.showWebView",
           "when": "true"
         },
@@ -574,6 +583,11 @@
           "command": "confluent.copyResourceName",
           "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
           "group": "2_copy@2"
+        },
+        {
+          "command": "confluent.copyResourceUri",
+          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithURIs",
+          "group": "2_copy@3"
         },
         {
           "command": "confluent.schemas.diffMostRecentVersions",
