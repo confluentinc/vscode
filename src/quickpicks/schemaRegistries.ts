@@ -21,10 +21,8 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   // TODO(shoup): update to support LocalSchemaRegistry
 
   // schema registries are a coarse resource, so ensure they are loaded before proceeding
-  logger.info("Ensuring coarse resources are loaded before asking user to pick a Schema Registry");
   const preloader = CCloudResourcePreloader.getInstance();
   await preloader.ensureCoarseResourcesLoaded();
-  logger.info("Coarse resources loaded");
 
   // list all Schema Registries for all CCloud environments for the given connection; to be
   // separated further by environment in the quickpick menu below
@@ -49,7 +47,6 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   environments.forEach((env: CCloudEnvironment) => {
     environmentMap.set(env.id, env);
   });
-  logger.debug(`Found ${environments.length} environments`);
 
   // Is there a selected schema registry already in the view?
   const selectedSchemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
