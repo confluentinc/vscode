@@ -77,7 +77,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
-    await this.checkForImage();
+    await this.checkForImage(this.imageRepo, this.imageTag);
     if (token.isCancellationRequested) return;
 
     const containerListRequest: ContainerListRequest = {
