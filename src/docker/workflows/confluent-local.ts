@@ -66,9 +66,13 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<void> {
     token.onCancellationRequested(() => {
       this.logger.debug("cancellation requested, exiting start() early");
-      getTelemetryLogger().logUsage("Progress Notification 'Cancel' Button Clicked", {
-        workflow: this.constructor.name,
-        image: this.imageRepo,
+      getTelemetryLogger().logUsage("Notification Button Clicked", {
+        extensionUserFlow: "Local Resource Management",
+        localResourceWorkflow: this.constructor.name,
+        localResourceKind: this.resourceKind,
+        dockerImage: this.imageRepoTag,
+        buttonLabel: "Cancel",
+        notificationType: "progress",
       });
       // early returns handled below depending on the stage of the workflow
     });
@@ -114,9 +118,12 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
     numContainers = parseInt(numContainersString, 10);
-    getTelemetryLogger().logUsage("Broker/Container Count Set", {
-      workflow: this.constructor.name,
-      image: this.imageRepo,
+    getTelemetryLogger().logUsage("Input Box Filled", {
+      extensionUserFlow: "Local Resource Management",
+      localResourceWorkflow: this.constructor.name,
+      localResourceKind: this.resourceKind,
+      dockerImage: this.imageRepoTag,
+      purpose: "Kafka Broker/Container Count",
       numContainers,
     });
     if (token.isCancellationRequested) return;
@@ -156,9 +163,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         break;
       }
       getTelemetryLogger().logUsage("Docker Container Created", {
-        workflow: this.constructor.name,
-        image: this.imageRepo,
-        containerName: container.name,
+        extensionUserFlow: "Local Resource Management",
+        localResourceWorkflow: this.constructor.name,
+        localResourceKind: this.resourceKind,
+        dockerImage: this.imageRepoTag,
+        dockerContainerName: container.name,
       });
       // then start the container
       const startedContainer: ContainerInspectResponse | undefined =
@@ -174,9 +183,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         break;
       }
       getTelemetryLogger().logUsage("Docker Container Started", {
-        workflow: this.constructor.name,
-        image: this.imageRepo,
-        containerName: container.name,
+        extensionUserFlow: "Local Resource Management",
+        localResourceWorkflow: this.constructor.name,
+        localResourceKind: this.resourceKind,
+        dockerImage: this.imageRepoTag,
+        dockerContainerName: container.name,
       });
     }
     // can't wait for containers to be ready if they didn't start
@@ -188,8 +199,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await this.waitForLocalResourceEventChange();
 
     getTelemetryLogger().logUsage("Workflow Finished", {
-      workflow: this.constructor.name,
-      image: this.imageRepo,
+      extensionUserFlow: "Local Resource Management",
+      localResourceWorkflow: this.constructor.name,
+      localResourceKind: this.resourceKind,
+      dockerImage: this.imageRepoTag,
       start: true,
     });
   }

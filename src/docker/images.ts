@@ -50,8 +50,7 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
   try {
     await client.imageCreate({ fromImage: repoTag }, init);
     getTelemetryLogger().logUsage("Docker Image Pulled", {
-      imageRepo: repo,
-      imageTag: tag,
+      dockerImage: repoTag,
     });
   } catch (error) {
     if (error instanceof ResponseError) {
