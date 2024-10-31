@@ -27,6 +27,7 @@ import {
 const CONTAINER_NAME = "vscode-confluent-schema-registry";
 
 export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkflow {
+  resourceKind: string = "Schema Registry";
   static imageRepo = "confluentinc/cp-schema-registry";
 
   logger = new Logger("docker.workflow.cp-schema-registry");
@@ -87,7 +88,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    const waitMsg = "Waiting for Schema Registry container to be ready...";
+    const waitMsg = `Waiting for ${this.resourceKind} container to be ready...`;
     this.logger.debug(waitMsg);
     this.progress?.report({ message: waitMsg });
     await this.waitForLocalResourceEventChange();
@@ -114,7 +115,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    const stopMsg = `Stopping ${existingContainers.length} container(s)...`;
+    const stopMsg = `Stopping ${existingContainers.length} ${this.resourceKind} container(s)...`;
     this.logger.debug(stopMsg);
     this.progress?.report({ message: stopMsg });
     const promises: Promise<void>[] = [];
@@ -165,7 +166,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       kafkaNetworks,
     );
     if (!container) {
-      window.showErrorMessage("Failed to create Schema Registry container.");
+      window.showErrorMessage(`Failed to create ${this.resourceKind} container.`);
       return;
     }
 
@@ -178,7 +179,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     if (!startedContainer) {
       window
         .showErrorMessage(
-          `Failed to start Schema Registry container "${CONTAINER_NAME}".`,
+          `Failed to start ${this.resourceKind} container "${CONTAINER_NAME}".`,
           "Open Logs",
         )
         .then(this.handleOpenLogsButton);
@@ -345,7 +346,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       },
     );
     if (!container) {
-      window.showErrorMessage("Failed to create Schema Registry container.");
+      window.showErrorMessage(`Failed to create ${this.resourceKind} container.`);
       return;
     }
 
