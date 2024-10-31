@@ -74,16 +74,17 @@ export abstract class LocalResourceWorkflow {
   abstract waitForLocalResourceEventChange(): Promise<void>;
 
   /** Check if the this workflow's base image repo:tag exists locally, pulling it if not. */
-  protected async checkForImage(): Promise<void> {
-    this.logAndUpdateProgress(`Checking for "${this.imageRepo}:${this.imageTag}"...`);
-    const existingImage = await imageExists(this.imageRepo, this.imageTag);
+  protected async checkForImage(imageRepo: string, imageTag: string): Promise<void> {
+    this.logAndUpdateProgress(`Checking for "${imageRepo}:${imageTag}"...`);
+
+    const existingImage = await imageExists(imageRepo, imageTag);
     this.logger.debug(`Image exists: ${existingImage}`, {
-      imageRepo: this.imageRepo,
-      imageTag: this.imageTag,
+      imageRepo,
+      imageTag,
     });
     if (!existingImage) {
-      this.logAndUpdateProgress(`Pulling "${this.imageRepo}:${this.imageTag}"...`);
-      await pullImage(this.imageRepo, this.imageTag);
+      this.logAndUpdateProgress(`Pulling "${imageRepo}:${imageTag}"...`);
+      await pullImage(imageRepo, imageTag);
     }
   }
 
