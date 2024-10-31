@@ -1,5 +1,6 @@
 import { ImageApi, ImageInspect, ResponseError } from "../clients/docker";
 import { Logger } from "../logging";
+import { getTelemetryLogger } from "../telemetry/telemetryLogger";
 import { defaultRequestInit } from "./configs";
 
 const logger = new Logger("docker.images");
@@ -48,6 +49,10 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
 
   try {
     await client.imageCreate({ fromImage: repoTag }, init);
+    getTelemetryLogger().logUsage("Docker Image Pulled", {
+      imageRepo: repo,
+      imageTag: tag,
+    });
   } catch (error) {
     if (error instanceof ResponseError) {
       logger.error("Error response pulling image:", {
