@@ -455,6 +455,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.upload",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.refresh",
           "when": "false"
         },
