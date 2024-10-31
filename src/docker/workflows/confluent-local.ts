@@ -20,6 +20,7 @@ import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
+import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import {
@@ -52,6 +53,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
   /**
    * Start `confluent-local` resources locally:
+   * - Check for existing containers and exit early if found
    * - Ensure the Docker image is available
    * - Create a network if it doesn't exist
    * - Create the container(s) for the Kafka broker(s)
@@ -62,11 +64,21 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
+    token.onCancellationRequested(() => {
+      this.logger.debug("cancellation requested, exiting start() early");
+      getTelemetryLogger().logUsage("Progress Notification 'Cancel' Button Clicked", {
+        workflow: this.constructor.name,
+        image: this.imageRepo,
+      });
+      // early returns handled below depending on the stage of the workflow
+    });
+
     this.progress = progress;
     this.imageTag = getLocalKafkaImageTag();
 
     // already handles logging + updating the progress notification
     await this.checkForImage();
+    if (token.isCancellationRequested) return;
 
     const containerListRequest: ContainerListRequest = {
       all: true,
@@ -78,18 +90,16 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const existingContainers: ContainerSummary[] =
       await getContainersForImage(containerListRequest);
     if (existingContainers.length > 0) {
+      // this will handle logging and notifications
       await this.handleExistingContainers(existingContainers);
       return;
     }
 
-    const createNetworkMsg = `Creating "${this.networkName}" network...`;
-    this.logger.debug(createNetworkMsg);
-    this.progress?.report({ message: createNetworkMsg });
+    this.logAndUpdateProgress(`Creating "${this.networkName}" network...`);
     await createNetwork(this.networkName);
+    if (token.isCancellationRequested) return;
 
-    const prepMsg = "Preparing for broker container creation...";
-    this.logger.debug(prepMsg);
-    this.progress?.report({ message: prepMsg });
+    this.logAndUpdateProgress("Preparing for broker container creation...");
     let numContainers: number = 1;
     const numContainersString: string | undefined = await window.showInputBox({
       title: "Start Confluent Local",
@@ -104,32 +114,84 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
     numContainers = parseInt(numContainersString, 10);
-    this.logger.debug(`starting/creating ${numContainers} broker container(s)`);
+    getTelemetryLogger().logUsage("Broker/Container Count Set", {
+      workflow: this.constructor.name,
+      image: this.imageRepo,
+      numContainers,
+    });
+    if (token.isCancellationRequested) return;
 
+    this.logger.debug(`starting/creating ${numContainers} broker container(s)`);
     const brokerConfigs: KafkaBrokerConfig[] = await this.generateBrokerConfigs(numContainers);
     const allContainerEnvs: string[][] = brokerConfigs.map((brokerConfig): string[] =>
       this.generateContainerEnv(brokerConfig.brokerNum, brokerConfigs),
     );
+    this.logAndUpdateProgress(
+      `Starting ${numContainers} ${this.resourceKind} container${numContainers > 1 ? "s" : ""}...`,
+    );
 
+    // if any of the containers fail to create or start, we'll stop early and won't wait for local
+    // resource event change
     let success: boolean = true;
     for (const brokerConfig of brokerConfigs) {
-      // get the environment variables for this broker container based on its number before starting
-      const containerEnvs: string[] = allContainerEnvs[brokerConfig.brokerNum - 1];
-      const startedContainer: ContainerInspectResponse | undefined =
-        await this.startLocalKafkaContainer(brokerConfig, containerEnvs);
-      if (!startedContainer) {
+      if (token.isCancellationRequested) {
         success = false;
         break;
       }
+      // get the environment variables for this broker container based on its number before creating
+      const containerEnvs: string[] = allContainerEnvs[brokerConfig.brokerNum - 1];
+      // create the container first
+      const container: LocalResourceContainer | undefined = await this.createKafkaContainer(
+        brokerConfig,
+        containerEnvs,
+      );
+      if (!container) {
+        window
+          .showErrorMessage(
+            `Failed to create Kafka container "${brokerConfig.containerName}".`,
+            "Open Logs",
+          )
+          .then(this.handleOpenLogsButton);
+        success = false;
+        break;
+      }
+      getTelemetryLogger().logUsage("Docker Container Created", {
+        workflow: this.constructor.name,
+        image: this.imageRepo,
+        containerName: container.name,
+      });
+      // then start the container
+      const startedContainer: ContainerInspectResponse | undefined =
+        await this.startKafkaContainer(container);
+      if (!startedContainer) {
+        window
+          .showErrorMessage(
+            `Failed to start ${this.resourceKind} container "${container.name}".`,
+            "Open Logs",
+          )
+          .then(this.handleOpenLogsButton);
+        success = false;
+        break;
+      }
+      getTelemetryLogger().logUsage("Docker Container Started", {
+        workflow: this.constructor.name,
+        image: this.imageRepo,
+        containerName: container.name,
+      });
     }
-    if (!success) {
-      return;
-    }
+    // can't wait for containers to be ready if they didn't start
+    if (!success) return;
 
-    const waitMsg = `Waiting for ${this.resourceKind} container${numContainers > 1 ? "s" : ""} to be ready...`;
-    this.logger.debug(waitMsg);
-    this.progress?.report({ message: waitMsg });
+    this.logAndUpdateProgress(
+      `Waiting for ${this.resourceKind} container${numContainers > 1 ? "s" : ""} to be ready...`,
+    );
     await this.waitForLocalResourceEventChange();
+
+    getTelemetryLogger().logUsage("Workflow Finished", {
+      workflow: this.constructor.name,
+      image: this.imageRepo,
+      start: true,
+    });
   }
 
   /** Stop `confluent-local` container(s). */
@@ -152,49 +214,15 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     });
   }
 
-  /** Start a Kafka container with the provided broker configuration and environment variables. */
-  private async startLocalKafkaContainer(
-    brokerConfig: KafkaBrokerConfig,
-    envVars: string[],
-  ): Promise<ContainerInspectResponse | undefined> {
-    const container: LocalResourceContainer | undefined = await this.createKafkaContainer(
-      brokerConfig,
-      envVars,
-    );
-    if (!container) {
-      return;
-    }
-    const startContainerMsg = `Starting container "${brokerConfig.containerName}"...`;
-    this.logger.debug(startContainerMsg);
-    this.progress?.report({ message: startContainerMsg });
-    await startContainer(container.id);
-
-    const startedContainer: ContainerInspectResponse | undefined = await getContainer(container.id);
-    if (!startedContainer) {
-      window
-        .showErrorMessage(
-          `Failed to start ${this.resourceKind} container "${brokerConfig.containerName}".`,
-          "Open Logs",
-        )
-        .then(this.handleOpenLogsButton);
-    }
-    return startedContainer;
-  }
-
   /** Create a Kafka container with the provided broker configuration and environment variables. */
   async createKafkaContainer(
     brokerConfig: KafkaBrokerConfig,
     envVars: string[],
   ): Promise<LocalResourceContainer | undefined> {
     const { containerName, ports } = brokerConfig;
-
-    const createContainerMsg = `Creating ${this.resourceKind} container "${containerName}"...`;
-    this.logger.debug(createContainerMsg);
-    this.progress?.report({ message: createContainerMsg });
+    this.logAndUpdateProgress(`Creating ${this.resourceKind} container "${containerName}"...`);
 
     const hostConfig: HostConfig = this.generateHostConfig(brokerConfig);
-
-    // create the container before starting
     const body: ContainerCreateRequest = {
       Image: this.imageRepoTag,
       Hostname: containerName,
@@ -215,13 +243,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         name: containerName,
       },
     );
-    if (!container) {
-      window
-        .showErrorMessage(`Failed to create Kafka container "${containerName}".`, "Open Logs")
-        .then(this.handleOpenLogsButton);
-      return;
-    }
-    return { id: container.Id, name: containerName };
+    return container ? { id: container.Id, name: containerName } : undefined;
   }
 
   /** Generate the broker configurations for the number of brokers specified. */
@@ -322,6 +344,14 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     }
     return envVars;
   }
+
+  /** Start the provided Kafka container and return its {@link ContainerInspectResponse}. */
+  private async startKafkaContainer(
+    container: LocalResourceContainer,
+  ): Promise<ContainerInspectResponse | undefined> {
+    await startContainer(container.id);
+    return await getContainer(container.id);
+  }
 }
 
 /** Convert an array of broker configs to a list of controller quorum voter strings. */
@@ -337,7 +367,7 @@ function brokerConfigsToRestBootstrapServers(configs: KafkaBrokerConfig[]): stri
 }
 
 /** Validate the user's input for the number of brokers/containers to start. */
-function validateBrokerInput(userInput: string): string | InputBoxValidationMessage | undefined {
+function validateBrokerInput(userInput: string): InputBoxValidationMessage | undefined {
   const num: number = parseInt(userInput, 10);
   if (isNaN(num) || num < 1 || num > 4) {
     return {
