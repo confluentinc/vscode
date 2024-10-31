@@ -44,14 +44,19 @@ export async function schemaSubjectQuickPick(
     schemaSubjects = [];
   }
 
-  // Convert to quickpick items
-  let subjectItems: vscode.QuickPickItem[] = [];
-
-  // First entry to create a new schema / subject
+  // Convert to quickpick items, first entry to create a new schema / subject followed by a separator
   const newSchemaLabel = "Create new schema / subject";
-  subjectItems.push({
-    label: newSchemaLabel,
-  });
+  let subjectItems: vscode.QuickPickItem[] = [
+    {
+      label: newSchemaLabel,
+      iconPath: new vscode.ThemeIcon("add"),
+    },
+    // TODO (shoup): revise when supporting local schema registries
+    {
+      kind: vscode.QuickPickItemKind.Separator,
+      label: "Confluent Cloud",
+    },
+  ];
 
   // Wire up all of the exsting schema registry subjects as items
   // with the description as the subject name for easy return value.
