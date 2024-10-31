@@ -2,7 +2,7 @@
   "name": "vscode-confluent",
   "type": "module",
   "displayName": "Confluent",
-  "description": "Design, build and run data streaming applications with Confluent Cloud and Apache Kafka®.",
+  "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
   "version": "0.21.0-5",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
