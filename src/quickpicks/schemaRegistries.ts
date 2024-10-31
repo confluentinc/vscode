@@ -1,45 +1,45 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("quickpicks.schemaRegistry");
-
-/** Progress wrapper for the Schema Registry quickpick to accomodate data-fetching time. */
-export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
-  return await vscode.window.withProgress(
-    {
-      location: { viewId: "confluent-schemas" },
-      title: "Loading Schema Registries...",
-    },
-    async () => {
-      return await generateSchemaRegistryQuickPick();
-    },
-  );
-}
 
 /**
  * Create a quickpick to let the user choose a Schema Registry (listed by CCloud environment
  * separators). Mainly used in the event a command was triggered through the command palette instead
  * of through the view->item->context menu.
+ *
+ * @returns The selected Schema Registry, or undefined if none was selected.
  */
-async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
   // TODO(shoup): update to support LocalSchemaRegistry
-  if (!hasCCloudAuthSession()) {
-    return undefined;
-  }
+
+  // schema registries are a coarse resource, so ensure they are loaded before proceeding
+  logger.info("Ensuring coarse resources are loaded before asking user to pick a Schema Registry");
+  const preloader = CCloudResourcePreloader.getInstance();
+  await preloader.ensureCoarseResourcesLoaded();
+  logger.info("Coarse resources loaded");
+
   // list all Schema Registries for all CCloud environments for the given connection; to be
   // separated further by environment in the quickpick menu below
-  const envGroups = await getEnvironments();
-  const ccloudSchemaRegistries: CCloudSchemaRegistry[] = envGroups
-    .map((group) => group.schemaRegistry)
-    .filter((registry) => registry !== undefined) as CCloudSchemaRegistry[];
+  const resourceManager = getResourceManager();
+  const ccloudSchemaRegistries = Array.from(
+    (await resourceManager.getCCloudSchemaRegistries()).values(),
+  );
+
   if (ccloudSchemaRegistries.length === 0) {
-    vscode.window.showInformationMessage("No Schema Registries available.");
+    let message = "No Schema Registries available.";
+
+    if (!hasCCloudAuthSession()) {
+      message += " Perhaps log into to Confluent Cloud first?";
+    }
+    vscode.window.showInformationMessage(message);
     return undefined;
   }
 
@@ -50,6 +50,24 @@ async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undef
     environmentMap.set(env.id, env);
   });
   logger.debug(`Found ${environments.length} environments`);
+
+  // Is there a selected schema registry already in the view?
+  const selectedSchemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+
+  // sort the Schema Registries by (is the selected one, environment name)
+  ccloudSchemaRegistries.sort((a, b) => {
+    if (selectedSchemaRegistry) {
+      if (a.id === selectedSchemaRegistry.id) {
+        return -1;
+      }
+      if (b.id === selectedSchemaRegistry.id) {
+        return 1;
+      }
+    }
+    const aEnvName = environmentMap.get(a.environmentId)!.name;
+    const bEnvName = environmentMap.get(b.environmentId)!.name;
+    return aEnvName!.localeCompare(bEnvName!);
+  });
 
   const schemaRegistryItems: vscode.QuickPickItem[] = [
     {
@@ -68,9 +86,12 @@ async function generateSchemaRegistryQuickPick(): Promise<SchemaRegistry | undef
       label: environment.name,
       description: registry.id,
       iconPath: new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY),
+      picked: selectedSchemaRegistry ? selectedSchemaRegistry.id === registry.id : false,
     });
     schemaRegistryMap.set(registry.id, registry);
   });
+
+  logger.info(`Found ${schemaRegistryItems.length - 1} Schema Registries, asking user to pick one`);
 
   // TODO(shoup): update to support LocalSchemaRegistry
   const selectedSchemaRegistryItem: vscode.QuickPickItem | undefined =
