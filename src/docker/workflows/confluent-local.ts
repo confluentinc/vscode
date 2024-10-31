@@ -126,7 +126,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       return;
     }
 
-    const waitMsg = `Waiting for Kafka container${numContainers > 1 ? "s" : ""} to be ready...`;
+    const waitMsg = `Waiting for ${this.resourceKind} container${numContainers > 1 ? "s" : ""} to be ready...`;
     this.logger.debug(waitMsg);
     this.progress?.report({ message: waitMsg });
     await this.waitForLocalResourceEventChange();
@@ -173,7 +173,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     if (!startedContainer) {
       window
         .showErrorMessage(
-          `Failed to start Kafka container "${brokerConfig.containerName}".`,
+          `Failed to start ${this.resourceKind} container "${brokerConfig.containerName}".`,
           "Open Logs",
         )
         .then(this.handleOpenLogsButton);
@@ -188,7 +188,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<LocalResourceContainer | undefined> {
     const { containerName, ports } = brokerConfig;
 
-    const createContainerMsg = `Creating container "${containerName}"...`;
+    const createContainerMsg = `Creating ${this.resourceKind} container "${containerName}"...`;
     this.logger.debug(createContainerMsg);
     this.progress?.report({ message: createContainerMsg });
 
