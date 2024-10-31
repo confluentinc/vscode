@@ -18,13 +18,11 @@ import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
 
-/** Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions */
-
-/* TODO
-
-  * Change package registration to "resourceExtname in CONFLUENT_SCHEMA_FILE_EXTENSIONS" (look in extension.ts for other examples -- setup context values())
-    -- would then pivot off of the language type, not the file extension, https://code.visualstudio.com/api/references/when-clause-contexts
-*/
+/** Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions.
+ *
+ * uploadNewSchema() command is registered over in ./schemas.ts, but the actual implementation is here.
+ * All other exported functions are exported for the tests in schemaUpload.test.ts.
+ */
 
 /**
  * Command backing "Upload a new schema".
@@ -52,8 +50,8 @@ export async function uploadNewSchema(item: vscode.Uri) {
     return;
   }
 
-  // If the document has errors, don't proceed with upload.
-  if (await documentHadErrors(activeEditor)) {
+  // If the document has (locally marked) errors, don't proceed with upload.
+  if (await documentHasErrors(activeEditor)) {
     logger.error("Document has errors, aborting schema upload");
     return;
   }
@@ -104,7 +102,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
     logger.info(
       `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
     );
-  } catch (e) {
+  } catch {
     // Error message already shown in registerSchema()
     return;
   }
@@ -112,22 +110,20 @@ export async function uploadNewSchema(item: vscode.Uri) {
   let registeredVersion: number | undefined;
   try {
     // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
-    // (may take a few times / pauses if the request is served by a read replica that doesn't yet know about the schema we just registered, sigh.)
-
     registeredVersion = await getNewlyRegisteredVersion(schemasApi, subject, maybeNewId);
-  } catch (e) {
+  } catch {
     // Error message already shown in getNewlyRegisteredVersion()
     return;
   }
 
   // Log + inform user of the successful schema registration, give them the option to view the schema in the schema registry.
-  const message = schemaRegistrationMessage(subject, existingVersion, registeredVersion!);
+  const successMessage = schemaRegistrationMessage(subject, existingVersion, registeredVersion!);
 
-  logger.info(message);
+  logger.info(successMessage);
 
   // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
   const promises = [
-    vscode.window.showInformationMessage(message, "View in Schema Registry"),
+    vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry.id, maybeNewId, subject),
   ];
 
@@ -143,7 +139,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
     //  via updateRegistryCacheAndFindNewSchema() which has already resolved.)
     currentSchemaRegistryChanged.fire(registry);
 
-    // get the new schema to show in the view by getting the treeitem to reveal
+    // get the new schema to pop in the view by getting the treeitem to reveal
     // the schema's item.
     schemaViewProvider.revealSchema(results[1] as Schema);
   } else {
@@ -156,7 +152,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
 /**
  * Does the document have any self-contained errors? If so, don't proceed with upload.
  */
-async function documentHadErrors(activeEditor: vscode.TextEditor): Promise<boolean> {
+async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boolean> {
   const diagnostics = vscode.languages.getDiagnostics(activeEditor.document.uri);
   const errorDiagnostics = diagnostics.filter(
     (d) => d.severity === vscode.DiagnosticSeverity.Error,
@@ -166,12 +162,12 @@ async function documentHadErrors(activeEditor: vscode.TextEditor): Promise<boole
       errorDiagnostics.length === 1
         ? "The schema document has an error."
         : "The schema document has errors.",
-      "View Errors",
+      errorDiagnostics.length === 1 ? "View Error" : "View Errors",
     );
 
-    // they picked one of the errors, so jump to it.
     if (doView) {
-      // execute command workbench.panel.markers.view.focus
+      // Focus the problems panel. We don't know of any way to further focus on
+      // this specific file's errors, so just focus the whole panel.
       vscode.commands.executeCommand("workbench.panel.markers.view.focus");
     }
     return true;
@@ -226,78 +222,67 @@ async function chooseSubject(
   return subject;
 }
 
-function parseConflictMessage(schemaType: SchemaType, message: string): string {
+/** Given the error message from a 409 conflict when trying to upload a new schema, extract
+ * the human-readable message(s) from it. Return a semicolon delimited string.
+ */
+export function parseConflictMessage(schemaType: SchemaType, message: string): string {
   // Schema registry error reporting code and formatting varies per schema type.
   // And none of it is immediately machine-readable. So we have to
   // anti-string-sling the most meaningful bits out.
 
-  let conflictMessage: string;
-  if (schemaType === SchemaType.Avro) {
-    conflictMessage = parseAvroConflictMessage(message);
-  } else if (schemaType === SchemaType.Protobuf) {
-    conflictMessage = parseProtobufConflictMessage(message);
-  } else {
-    if (schemaType === SchemaType.Json) {
-      conflictMessage = parseJsonSchemaConflictMessage(message);
-    } else {
-      logger.warn(`Unknown schema type ${schemaType} for conflict message parsing`);
-      conflictMessage = message;
-    }
+  const details = extractDetail(message);
+
+  const regex = SCHEMA_TYPE_TO_CONFLICT_REGEX.get(schemaType);
+  if (!regex) {
+    logger.warn(`No conflict regex for schema type ${schemaType}`);
+    return details;
   }
 
-  return conflictMessage;
+  const matchArray = Array.from(details.matchAll(regex));
+
+  const humanMessages: string[] = [];
+
+  if (matchArray.length > 0) {
+    for (const match of matchArray) {
+      // [0] is the whole match, [1] is the first capture group.
+      humanMessages.push(match[1]);
+    }
+  } else {
+    // Couldn't find any description blurbs, so just return the details.
+    logger.warn(`No conflict messages found in details: ${details}`);
+    humanMessages.push(details);
+  }
+
+  return humanMessages.join("; ");
 }
-function parseProtobufConflictMessage(message: string): string {
+
+/** Map schema type -> regex able to grok out the human readable message(s) within
+ * conflict messages from the schema registry, namely when an attempted new version
+ * of a schema is not backwards compatible with an existing version. Used by parseConflictMessage().
+ */
+const SCHEMA_TYPE_TO_CONFLICT_REGEX: Map<SchemaType, RegExp> = new Map([
   // Hey, sane start / end quotes!
   /*
   [{... description:"..."}, ...]
   */
+  [SchemaType.Protobuf, /description:"(.*?)"},/g],
 
-  const descriptionRegex = /description:"(.*?)"},/g;
-  return parseConflictMessageInner(descriptionRegex, message).join(";  ");
-}
+  // start and end with single quotes, but the description itself may contain single quotes, so be very
+  // thorough in matching the end delimiter.
+  [SchemaType.Avro, /description:'(.*?)', additionalInfo/g],
 
-function parseJsonSchemaConflictMessage(message: string): string {
   // Thats right, you heard right, description starts with a double quote, but ends with a single quote, at least as
   // of time of writing.
   /*
   [{... description:"The new schema ...'}, ...]
   */
-
-  // So lets at least match either end quote style in hopes it may be fixed one day, then the close brace and comma.
-  const descriptionRegex = /description:"(.*?)["']},/g;
-  return parseConflictMessageInner(descriptionRegex, message).join(";  ");
-}
-
-function parseAvroConflictMessage(message: string): string {
-  // start and end with single quotes, but the description itself may contain single quotes, so be very
-  // thorough in matching the end delimiter.
-  const descriptionRegex = /description:'(.*?)', additionalInfo/g;
-  return parseConflictMessageInner(descriptionRegex, message).join(";  ");
-}
-
-/** Use the per-schema-type-centric regex to parse out the human readable error message(s) from
- * schema registry conflict messages.
- */
-function parseConflictMessageInner(regex: RegExp, message: string): string[] {
-  const details = extractDetail(message);
-  const infoBlurbs: string[] = [];
-  const matches = details.matchAll(regex);
-  if (matches) {
-    for (const match of matches) {
-      infoBlurbs.push(match[1]);
-    }
-  } else {
-    // Couldn't find any description blurbs, so just return the details.
-    infoBlurbs.push(details);
-  }
-  return infoBlurbs;
-}
+  [SchemaType.Json, /description:"(.*?)["']},/g],
+]);
 
 /**
  * Find the last occurrence of "details: " in the message, then return everything after it.
  */
-function extractDetail(message: string): string {
+export function extractDetail(message: string): string {
   const detailIndex = message.lastIndexOf("details: ");
   if (detailIndex === -1) {
     return message;
@@ -306,7 +291,7 @@ function extractDetail(message: string): string {
 }
 
 /** Return the success message to show the user after having uploaded a new schema */
-function schemaRegistrationMessage(
+export function schemaRegistrationMessage(
   subject: string,
   existingVersion: number | undefined,
   registeredVersion: number,
@@ -315,7 +300,7 @@ function schemaRegistrationMessage(
   // that clearly delineates the different cases, then key / value rows for the details.
 
   if (existingVersion === undefined) {
-    return `Schema registered to new subject subject "${subject}"`;
+    return `Schema registered to new subject "${subject}"`;
   } else if (existingVersion === registeredVersion) {
     // was normalized and matched an existing schema version for this subject
     return `Normalized to existing version ${registeredVersion} for subject "${subject}"`;
@@ -325,6 +310,9 @@ function schemaRegistrationMessage(
   }
 }
 
+/**
+ * Given a file and / or a language id, determine the schema type of the file.
+ */
 export function determineSchemaType(
   file: vscode.Uri | null,
   languageId: string | null,
@@ -364,6 +352,9 @@ export function determineSchemaType(
   return schemaType as SchemaType;
 }
 
+/**
+ * Given a subject, learn the highest existing version number of the schemas bound to this subject, if any.
+ */
 async function getHighestRegisteredVersion(
   schemaSubjectsApi: SubjectsV1Api,
   subject: string,
@@ -395,9 +386,10 @@ async function getHighestRegisteredVersion(
   return existingVersion;
 }
 
-/** Drive the schema register route
- * @returns the schema id of the newly registered schema, which, if was normalized
- *         to an existing schema, will be the id of that existing schema.
+/** Drive the schema register route.
+ * @returns The schema id of the newly registered schema. Will either be a new id or the id of an
+ * existing schema that this one was normalized to. Alas that the schema registry doesn't return anything
+ * other than the (new|existing) schema id.
  */
 async function registerSchema(
   schemaSubjectsApi: SubjectsV1Api,
@@ -419,21 +411,21 @@ async function registerSchema(
     // See ... terrible news at https://github.com/confluentinc/schema-registry/issues/173#issuecomment-362950435
     // (FROM DARK AGES 2018)
     // otherwise we get random 415 Unsupported Media Type errors when POSTing new schemas based on if the
-    // request gets handled by 'follower node' and not the 'master' (sic).
+    // request gets handled by 'follower node' and not the 'master' (sic) if the content type
+    // isn't set to exactly application/json.
     const mainHeaders = schemaSubjectsApi["configuration"].headers!;
     const overrides = {
       headers: { ...mainHeaders, "Content-Type": "application/json" },
     };
 
     const response = await schemaSubjectsApi.register(registerRequest, overrides);
-    // May be a brand new id, may be the id of an existing schema that this one was normalized to.
     return response.id!;
   } catch (e) {
     if (e instanceof ResponseError) {
       const http_code = e.response.status;
       const body = await e.response.json();
 
-      let message: string | null = null;
+      let message: string | undefined;
       switch (http_code) {
         case 415:
           // The header override didn't do the trick!
@@ -441,8 +433,9 @@ async function registerSchema(
           break;
         case 409:
           // this schema conflicted with with prior version(s) of the schema
-          // Extract out the juicy details from the error message.
-          message = `Conflict with prior schema version:\n${parseConflictMessage(schemaType, body.message)}`;
+          // Extract out the juicy details from the error message (easier said than done due to
+          // surprising inconsistencies).
+          message = `Conflict with prior schema version: ${parseConflictMessage(schemaType, body.message)}`;
           break;
         case 422:
           if (body.error_code === 42201) {
@@ -467,7 +460,7 @@ async function registerSchema(
       vscode.window.showErrorMessage(`Error uploading schema: ${e}`);
     }
 
-    // rethrow to stop the overall process
+    // rethrow to stop the overall schema upload process
     throw e;
   }
 }
@@ -516,6 +509,11 @@ async function getNewlyRegisteredVersion(
   throw new Error(message);
 }
 
+/**
+ * Drive the preloader to update the schema registry cache and find and return the new Schema model.
+ * @returns The new schema that was just registered, including the proper id, subject, etc. A TreeItem for this schema
+ *         will have the same id as the corresponding TreeItem in the schema registry view.
+ */
 async function updateRegistryCacheAndFindNewSchema(
   registryId: string,
   newSchemaID: number,
@@ -525,7 +523,7 @@ async function updateRegistryCacheAndFindNewSchema(
   await preloader.ensureSchemasLoaded(registryId, true);
 
   // Find the schema in the list of schemas for this registry. We know that
-  // it should be present in the cache.
+  // it should be present in the cache because we have just refreshed the cache.
   const allSchemas = await getResourceManager().getSchemasForRegistry(registryId);
   const schema = allSchemas!.find((s) => s.id === `${newSchemaID}` && s.subject === boundSubject);
 
