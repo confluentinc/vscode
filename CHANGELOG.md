@@ -6,8 +6,18 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- Create new schemas + subjects or new versions of existing schemas.
+- Create new schemas + subjects or new versions of existing schemas. Editor buffer titlebar
+  "cloud upload" icon button drives the process given a file with extension ".avsc" (Avro Schema), 
+  ".proto" (Protobuf), or ".json" (JSON schema), [issue #388](https://github.com/confluentinc/vscode/issues/388).
 
+## 0.20.1
+
+### Fixed
+
+- An error notification is now shown if the wrong extension version is installed based on the
+  platform and/or architecture. [issue #317](https://github.com/confluentinc/vscode/issues/317)
+- The consume mode dropdown and timestamp values in the Message Viewer will no longer reset when
+  switching between Message Viewer tabs.
 
 ## 0.20.0
 
@@ -16,6 +26,7 @@ All notable changes to this extension will be documented in this file.
 - "Open Settings" command to quickly access the Confluent for VS Code extension settings.
 - "Copy URI" context menu item for CCloud Schema Registry items and local Kafka clusters in the
   Resources view. [issue #445](https://github.com/confluentinc/vscode/issues/445)
+- New JavaScript Producer and Python Producer project templates for generating Kafka applications.
 
 ### Changed
 

@@ -220,7 +220,10 @@ async function pathExists(path: string) {
 }
 
 async function pickTemplate(templateList: Template[]): Promise<vscode.QuickPickItem | undefined> {
-  const quickPickItems: vscode.QuickPickItem[] = templateList.map((templateItem: Template) => {
+  const sortedList = templateList.sort((a, b) => {
+    return a.spec.display_name.toLowerCase().localeCompare(b.spec.display_name.toLowerCase());
+  });
+  const quickPickItems: vscode.QuickPickItem[] = sortedList.map((templateItem: Template) => {
     const tags = templateItem.spec?.tags ? `[${templateItem.spec.tags.join(", ")}]` : "";
     return {
       label: templateItem.spec.display_name,
