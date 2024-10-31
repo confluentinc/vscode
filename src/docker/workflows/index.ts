@@ -2,6 +2,7 @@ import net from "net";
 import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerSummary } from "../../clients/docker";
 import { Logger } from "../../logging";
+import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
 import { startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
@@ -74,19 +75,14 @@ export abstract class LocalResourceWorkflow {
 
   /** Check if the this workflow's base image repo:tag exists locally, pulling it if not. */
   protected async checkForImage(): Promise<void> {
-    const checkImageMsg = `Checking for "${this.imageRepo}:${this.imageTag}"...`;
-    this.logger.debug(checkImageMsg);
-    this.progress?.report({ message: checkImageMsg });
-
+    this.logAndUpdateProgress(`Checking for "${this.imageRepo}:${this.imageTag}"...`);
     const existingImage = await imageExists(this.imageRepo, this.imageTag);
     this.logger.debug(`Image exists: ${existingImage}`, {
       imageRepo: this.imageRepo,
       imageTag: this.imageTag,
     });
     if (!existingImage) {
-      const pullImageMsg = `Pulling "${this.imageRepo}:${this.imageTag}"...`;
-      this.logger.debug(pullImageMsg);
-      this.progress?.report({ message: pullImageMsg });
+      this.logAndUpdateProgress(`Pulling "${this.imageRepo}:${this.imageTag}"...`);
       await pullImage(this.imageRepo, this.imageTag);
     }
   }
@@ -95,6 +91,10 @@ export abstract class LocalResourceWorkflow {
   /** Handle the user's selection from the "Open Logs" button on a notification. */
   handleOpenLogsButton(selection: string | undefined) {
     if (selection === "Open Logs") {
+      getTelemetryLogger().logUsage("'Open Logs' Notification Button Clicked", {
+        workflow: this.constructor.name,
+        image: this.imageRepo,
+      });
       commands.executeCommand("confluent.showOutputChannel");
     }
   }
@@ -130,6 +130,15 @@ export abstract class LocalResourceWorkflow {
       )
       .then(async (choice) => {
         if (choice === buttonLabel) {
+          getTelemetryLogger().logUsage(
+            "'Existing Containers' Warning Notification Button Clicked",
+            {
+              workflow: this.constructor.name,
+              image: this.imageRepo,
+              numContainers: containers.length,
+              button: choice,
+            },
+          );
           const promises: Promise<void>[] = [];
           containers.forEach((container) => {
             if (!container.Id) {
@@ -144,6 +153,17 @@ export abstract class LocalResourceWorkflow {
           await Promise.all(promises);
         }
       });
+    getTelemetryLogger().logUsage("'Existing Containers' Warning Notification Shown", {
+      workflow: this.constructor.name,
+      image: this.imageRepo,
+      numContainers: containers.length,
+    });
+  }
+
+  /** Log a message and display it in the user-facing progress notification for this workflow. */
+  logAndUpdateProgress(message: string, ...args: any[]) {
+    this.logger.debug(message, ...args);
+    this.progress?.report({ message: message });
   }
 }
 
