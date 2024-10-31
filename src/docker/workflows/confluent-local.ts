@@ -33,11 +33,10 @@ import { createNetwork } from "../networks";
 const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
 
 export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
+  resourceKind: string = "Kafka";
   static imageRepo = "confluentinc/confluent-local";
 
   logger = new Logger("docker.workflow.confluent-local");
-
-  networkName: string = "vscode-confluent-local-network";
 
   // ensure only one instance of this workflow can run at a time
   private static instance: ConfluentLocalWorkflow;
@@ -69,11 +68,10 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     // already handles logging + updating the progress notification
     await this.checkForImage();
 
-    const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
     const containerListRequest: ContainerListRequest = {
       all: true,
       filters: JSON.stringify({
-        ancestor: [repoTag],
+        ancestor: [this.imageRepoTag],
         label: [MANAGED_CONTAINER_LABEL],
       }),
     };
@@ -198,7 +196,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
     // create the container before starting
     const body: ContainerCreateRequest = {
-      Image: `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`,
+      Image: this.imageRepoTag,
       Hostname: containerName,
       Cmd: ["bash", "-c", "'/etc/confluent/docker/run'"],
       ExposedPorts: {
@@ -210,7 +208,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     };
 
     const container: ContainerCreateResponse | undefined = await createContainer(
-      ConfluentLocalWorkflow.imageRepo,
+      this.imageRepo,
       this.imageTag,
       {
         body,
