@@ -172,7 +172,7 @@ export abstract class LocalResourceWorkflow {
     let buttonLabel = "";
     const anyRunning = containerStates.includes("running");
     if (anyRunning) {
-      buttonLabel = ""; // doesn't actually show a button; TODO(shoup): set in downstream branch
+      buttonLabel = containers.length > 1 ? "Restart All" : "Restart";
     } else {
       buttonLabel = count > 1 ? "Start All" : "Start";
     }
