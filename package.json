@@ -187,15 +187,15 @@
         "category": "Confluent: Schema"
       },
       {
-        "command": "confluent.schemaViewer.uploadVersion",
-        "icon": "$(cloud-upload)",
-        "title": "Upload New Version to Schema Registry",
-        "category": "Confluent: Schema"
-      },
-      {
         "command": "confluent.schemas.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.upload",
+        "icon": "$(cloud-upload)",
+        "title": "Upload Schema to Schema Registry",
         "category": "Confluent: Schemas"
       },
       {
@@ -455,10 +455,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemaViewer.uploadVersion",
-          "when": "false"
-        },
-        {
           "command": "confluent.schemas.refresh",
           "when": "false"
         },
@@ -503,9 +499,9 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemaViewer.uploadVersion",
+          "command": "confluent.schemas.upload",
           "group": "navigation@3",
-          "when": "false"
+          "when": "resourceFilename =~ /.*\\.(avsc|json|proto)/"
         },
         {
           "command": "confluent.topic.consume.duplicate",
