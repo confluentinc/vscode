@@ -14,13 +14,13 @@
 
 import { mapValues } from "../runtime";
 /**
- * Configuration for local cluster
+ * Configuration when using Confluent Local and optionally a local Schema Registry.
  * @export
  * @interface LocalConfig
  */
 export interface LocalConfig {
   /**
-   *
+   * The URL of the Schema Registry running locally.
    * @type {string}
    * @memberof LocalConfig
    */
