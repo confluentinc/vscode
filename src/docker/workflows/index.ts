@@ -25,6 +25,13 @@ export abstract class LocalResourceWorkflow {
   protected abstract logger: Logger;
   protected progress?: Progress<{ message?: string; increment?: number }>;
 
+  /** Default Docker network name to use for all workflows' `.start()` logic. */
+  networkName: string = "vscode-confluent-local-network";
+
+  /** Basic label for notifications and logs to tell the user what kind of resource is being started
+   * or stopped for the given workflow. */
+  abstract resourceKind: string;
+
   /**
    * Docker image to use for this workflow.
    *
@@ -47,6 +54,16 @@ export abstract class LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void>;
 
+  // instance method to allow calling `this.imageRepo` along with the static `<WorkflowName>.imageRepo`
+  get imageRepo(): string {
+    return (this.constructor as typeof LocalResourceWorkflow).imageRepo;
+  }
+
+  /** The colon-separated `imageRepo` and `imageTag` for this workflow. */
+  get imageRepoTag(): string {
+    return `${this.imageRepo}:${this.imageTag}`;
+  }
+
   /**
    * Wait for the local resource(s) to be created/removed based on event emitters.
    *
@@ -57,23 +74,20 @@ export abstract class LocalResourceWorkflow {
 
   /** Check if the this workflow's base image repo:tag exists locally, pulling it if not. */
   protected async checkForImage(): Promise<void> {
-    // get the repo from the child instances' static property
-    const imageRepo = (this.constructor as typeof LocalResourceWorkflow).imageRepo;
-
-    const checkImageMsg = `Checking for "${imageRepo}:${this.imageTag}"...`;
+    const checkImageMsg = `Checking for "${this.imageRepo}:${this.imageTag}"...`;
     this.logger.debug(checkImageMsg);
     this.progress?.report({ message: checkImageMsg });
 
-    const existingImage = await imageExists(imageRepo, this.imageTag);
+    const existingImage = await imageExists(this.imageRepo, this.imageTag);
     this.logger.debug(`Image exists: ${existingImage}`, {
-      imageRepo,
+      imageRepo: this.imageRepo,
       imageTag: this.imageTag,
     });
     if (!existingImage) {
-      const pullImageMsg = `Pulling "${imageRepo}:${this.imageTag}"...`;
+      const pullImageMsg = `Pulling "${this.imageRepo}:${this.imageTag}"...`;
       this.logger.debug(pullImageMsg);
       this.progress?.report({ message: pullImageMsg });
-      await pullImage(imageRepo, this.imageTag);
+      await pullImage(this.imageRepo, this.imageTag);
     }
   }
 
@@ -104,14 +118,14 @@ export abstract class LocalResourceWorkflow {
     let buttonLabel = "";
     const anyRunning = containerStates.includes("running");
     if (anyRunning) {
-      buttonLabel = containers.length > 1 ? "Restart All" : "Restart";
+      buttonLabel = ""; // doesn't actually show a button; TODO(shoup): set in downstream branch
     } else {
       buttonLabel = containers.length > 1 ? "Start All" : "Start";
     }
 
     window
       .showWarningMessage(
-        "Existing container(s) found. Please remove them before starting new ones.",
+        `Existing ${this.resourceKind} container(s) found. Please remove them before starting new ones.`,
         buttonLabel,
       )
       .then(async (choice) => {
