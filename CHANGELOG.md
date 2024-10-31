@@ -6,9 +6,10 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- Create new schemas + subjects or new versions of existing schemas. Editor buffer titlebar
-  "cloud upload" icon button drives the process given a file with extension ".avsc" (Avro Schema), 
-  ".proto" (Protobuf), or ".json" (JSON schema), [issue #388](https://github.com/confluentinc/vscode/issues/388).
+- Create new schemas + subjects or new versions of existing schemas. Editor buffer titlebar "cloud
+  upload" icon button drives the process given a file with extension ".avsc" (Avro Schema), ".proto"
+  (Protobuf), or ".json" (JSON schema),
+  [issue #388](https://github.com/confluentinc/vscode/issues/388).
 
 ## 0.20.1
 
