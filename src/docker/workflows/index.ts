@@ -89,12 +89,16 @@ export abstract class LocalResourceWorkflow {
   }
 
   // TODO: maybe put this somewhere else for more general use?
-  /** Handle the user's selection from the "Open Logs" button on a notification. */
+  /** Handle the user's selection from the "Open Logs" button on an error notification. */
   handleOpenLogsButton(selection: string | undefined) {
     if (selection === "Open Logs") {
-      getTelemetryLogger().logUsage("'Open Logs' Notification Button Clicked", {
-        workflow: this.constructor.name,
-        image: this.imageRepo,
+      getTelemetryLogger().logUsage("Notification Button Clicked", {
+        extensionUserFlow: "Local Resource Management",
+        localResourceWorkflow: this.constructor.name,
+        localResourceKind: this.resourceKind,
+        dockerImage: this.imageRepoTag,
+        buttonLabel: selection,
+        notificationType: "error",
       });
       commands.executeCommand("confluent.showOutputChannel");
     }
@@ -125,21 +129,22 @@ export abstract class LocalResourceWorkflow {
     }
 
     window
-      .showWarningMessage(
+      .showErrorMessage(
         `Existing ${this.resourceKind} container(s) found. Please remove them before starting new ones.`,
         buttonLabel,
       )
       .then(async (choice) => {
         if (choice === buttonLabel) {
-          getTelemetryLogger().logUsage(
-            "'Existing Containers' Warning Notification Button Clicked",
-            {
-              workflow: this.constructor.name,
-              image: this.imageRepo,
-              numContainers: containers.length,
-              button: choice,
-            },
-          );
+          getTelemetryLogger().logUsage("Notification Button Clicked", {
+            extensionUserFlow: "Local Resource Management",
+            localResourceWorkflow: this.constructor.name,
+            localResourceKind: this.resourceKind,
+            dockerImage: this.imageRepoTag,
+            numContainers: containers.length,
+            buttonLabel: choice,
+            notificationType: "error",
+            purpose: "Existing Containers Found",
+          });
           const promises: Promise<void>[] = [];
           containers.forEach((container) => {
             if (!container.Id) {
@@ -154,9 +159,13 @@ export abstract class LocalResourceWorkflow {
           await Promise.all(promises);
         }
       });
-    getTelemetryLogger().logUsage("'Existing Containers' Warning Notification Shown", {
-      workflow: this.constructor.name,
-      image: this.imageRepo,
+    getTelemetryLogger().logUsage("Notification Shown", {
+      extensionUserFlow: "Local Resource Management",
+      localResourceWorkflow: this.constructor.name,
+      localResourceKind: this.resourceKind,
+      dockerImage: this.imageRepoTag,
+      notificationType: "error",
+      purpose: `Existing ${this.resourceKind} Containers`,
       numContainers: containers.length,
     });
   }

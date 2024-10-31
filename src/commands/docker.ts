@@ -52,9 +52,11 @@ async function runWorkflowWithProgress(start: boolean = true) {
     async (progress, token: CancellationToken) => {
       for (const workflow of subworkflows) {
         logger.debug(`running ${workflow.constructor.name} workflow`, { start });
-        getTelemetryLogger().logUsage("Local Resource Workflow Initiated", {
-          workflow: workflow.constructor.name,
-          image: workflow.imageRepo,
+        getTelemetryLogger().logUsage("Workflow Initiated", {
+          extensionUserFlow: "Local Resource Management",
+          localResourceWorkflow: workflow.constructor.name,
+          localResourceKind: workflow.resourceKind,
+          dockerImage: workflow.imageRepoTag,
           start,
         });
         if (start) {
