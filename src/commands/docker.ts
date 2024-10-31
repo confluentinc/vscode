@@ -4,6 +4,7 @@ import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { Logger } from "../logging";
+import { getTelemetryLogger } from "../telemetry/telemetryLogger";
 
 const logger = new Logger("commands.docker");
 
@@ -51,6 +52,11 @@ async function runWorkflowWithProgress(start: boolean = true) {
     async (progress, token: CancellationToken) => {
       for (const workflow of subworkflows) {
         logger.debug(`running ${workflow.constructor.name} workflow`, { start });
+        getTelemetryLogger().logUsage("Local Resource Workflow Initiated", {
+          workflow: workflow.constructor.name,
+          image: workflow.imageRepo,
+          start,
+        });
         if (start) {
           await workflow.start(token, progress);
         } else {
