@@ -225,6 +225,75 @@ async function chooseSubject(
 
   return subject;
 }
+
+function parseConflictMessage(schemaType: SchemaType, message: string): string {
+  // Schema registry error reporting code and formatting varies per schema type.
+  // And none of it is immediately machine-readable. So we have to
+  // anti-string-sling the most meaningful bits out.
+
+  let conflictMessage: string;
+  if (schemaType === SchemaType.Avro) {
+    conflictMessage = parseAvroConflictMessage(message);
+  } else if (schemaType === SchemaType.Protobuf) {
+    conflictMessage = parseProtobufConflictMessage(message);
+  } else {
+    if (schemaType === SchemaType.Json) {
+      conflictMessage = parseJsonSchemaConflictMessage(message);
+    } else {
+      logger.warn(`Unknown schema type ${schemaType} for conflict message parsing`);
+      conflictMessage = message;
+    }
+  }
+
+  return conflictMessage;
+}
+function parseProtobufConflictMessage(message: string): string {
+  // Hey, sane start / end quotes!
+  /*
+  [{... description:"..."}, ...]
+  */
+
+  const descriptionRegex = /description:"(.*?)"},/g;
+  return parseConflictMessageInner(descriptionRegex, message).join(";  ");
+}
+
+function parseJsonSchemaConflictMessage(message: string): string {
+  // Thats right, you heard right, description starts with a double quote, but ends with a single quote, at least as
+  // of time of writing.
+  /*
+  [{... description:"The new schema ...'}, ...]
+  */
+
+  // So lets at least match either end quote style in hopes it may be fixed one day, then the close brace and comma.
+  const descriptionRegex = /description:"(.*?)["']},/g;
+  return parseConflictMessageInner(descriptionRegex, message).join(";  ");
+}
+
+function parseAvroConflictMessage(message: string): string {
+  // start and end with single quotes, but the description itself may contain single quotes, so be very
+  // thorough in matching the end delimiter.
+  const descriptionRegex = /description:'(.*?)', additionalInfo/g;
+  return parseConflictMessageInner(descriptionRegex, message).join(";  ");
+}
+
+/** Use the per-schema-type-centric regex to parse out the human readable error message(s) from
+ * schema registry conflict messages.
+ */
+function parseConflictMessageInner(regex: RegExp, message: string): string[] {
+  const details = extractDetail(message);
+  const infoBlurbs: string[] = [];
+  const matches = details.matchAll(regex);
+  if (matches) {
+    for (const match of matches) {
+      infoBlurbs.push(match[1]);
+    }
+  } else {
+    // Couldn't find any description blurbs, so just return the details.
+    infoBlurbs.push(details);
+  }
+  return infoBlurbs;
+}
+
 /**
  * Find the last occurrence of "details: " in the message, then return everything after it.
  */
@@ -234,32 +303,6 @@ function extractDetail(message: string): string {
     return message;
   }
   return message.slice(detailIndex + 9);
-}
-
-function parseConflictMessage(message: string): string {
-  const details = extractDetail(message);
-
-  // Extract the "description" subsets from the details.
-  // example: description:'The field 'sdfsdf' at path '/fields/7' in the new schema has no default value and is missing in the old schema',
-  // (There may be more than one of these)
-  const infoBlurbs: string[] = [];
-
-  const descriptionRegex = /description:'(.*?)', additionalInfo/g;
-  const matches = details.matchAll(descriptionRegex);
-  // for each match, extract the description and log it.
-  if (matches) {
-    for (const match of matches) {
-      // collect the first capture group from the match
-      infoBlurbs.push(match[1]);
-    }
-  }
-
-  if (infoBlurbs.length > 0) {
-    return infoBlurbs.join(";  ");
-  } else {
-    // Couldn't find any description blurbs, so just return the details.
-    return details;
-  }
 }
 
 /** Return the success message to show the user after having uploaded a new schema */
@@ -399,7 +442,7 @@ async function registerSchema(
         case 409:
           // this schema conflicted with with prior version(s) of the schema
           // Extract out the juicy details from the error message.
-          message = `Conflict with prior schema version:\n${parseConflictMessage(body.message)}`;
+          message = `Conflict with prior schema version:\n${parseConflictMessage(schemaType, body.message)}`;
           break;
         case 422:
           if (body.error_code === 42201) {
