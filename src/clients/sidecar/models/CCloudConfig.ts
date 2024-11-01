@@ -20,7 +20,7 @@ import { mapValues } from "../runtime";
  */
 export interface CCloudConfig {
   /**
-   *
+   * The identifier of the CCloud organization to use. The user's default organization is used when absent.
    * @type {string}
    * @memberof CCloudConfig
    */
