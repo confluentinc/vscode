@@ -46,6 +46,10 @@ async function runWorkflowWithProgress(
   // how the workflow should be run
   const resources: LocalResourceKind[] =
     resourceKinds.length > 0 ? resourceKinds : await localResourcesQuickPick();
+  if (resources.length === 0) {
+    // nothing selected, or user clicked a quickpick button to adjust settings
+    return;
+  }
 
   // based on the imageRepo chosen by the user, select the appropriate workflow before running them
   const subworkflows: LocalResourceWorkflow[] = [];
