@@ -1,9 +1,9 @@
 import net from "net";
 import { CancellationToken, commands, Progress, window } from "vscode";
-import { ContainerSummary } from "../../clients/docker";
+import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
-import { startContainer } from "../containers";
+import { getContainer, startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
 /** Basic container information for a local resource. */
@@ -48,6 +48,46 @@ export abstract class LocalResourceWorkflow {
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void>;
+
+  /**
+   * Common flow for attempting to start a container by its Start a specific container for a workflow by its provided ID. If any errors occur, a notification
+   * will be shown to the user and no {@link ContainerInspectResponse} will be returned. */
+  async startContainer(
+    container: LocalResourceContainer,
+  ): Promise<ContainerInspectResponse | undefined> {
+    try {
+      await startContainer(container.id);
+      this.sendTelemetryEvent("Docker Container Started", {
+        dockerContainerName: container.name,
+      });
+    } catch (error) {
+      let errorMsg = "";
+      if (error instanceof ResponseError) {
+        // likely "... <containername+id>: Bind for 0.0.0.0:8082 failed: port is already allocated"
+        try {
+          const body = await error.response.clone().json();
+          errorMsg = body.message;
+          if (body.message.includes("port is already allocated")) {
+            const portErrorMatch = body.message.match(
+              /Bind for 0\.0\.0\.0:(\d+) failed: port is already allocated/,
+            );
+            if (portErrorMatch) {
+              const port = portErrorMatch[1];
+              errorMsg = `Port ${port} is already in use.`;
+            }
+          }
+        } catch {
+          errorMsg = error.response.statusText;
+        }
+      }
+      this.showErrorNotification(
+        `Failed to start ${this.resourceKind} container "${container.name}": ${errorMsg}`,
+      );
+      return;
+    }
+
+    return await getContainer(container.id);
+  }
 
   /** Stop and remove the local resource(s) associated with this workflow. */
   abstract stop(
@@ -149,18 +189,18 @@ export abstract class LocalResourceWorkflow {
             numContainers: containers.length,
             purpose: "Existing Containers Found",
           });
-          const promises: Promise<void>[] = [];
-          containers.forEach((container) => {
-            if (!container.Id) {
-              return;
+          for (const container of containers) {
+            if (!(container.Id && container.Names)) {
+              throw new Error(
+                `Unable to ${choice.toLowerCase()} container${plural}: container ID or name not found.`,
+              );
             }
             if (anyRunning) {
               // TODO: implement stop+start in downstream branch
             } else {
-              promises.push(startContainer(container.Id));
+              await this.startContainer({ id: container.Id, name: container.Names[0] });
             }
-          });
-          await Promise.all(promises);
+          }
         }
       });
     this.sendTelemetryEvent("Notification Shown", {

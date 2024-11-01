@@ -22,12 +22,7 @@ import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
-import {
-  createContainer,
-  getContainer,
-  getContainersForImage,
-  startContainer,
-} from "../containers";
+import { createContainer, getContainersForImage } from "../containers";
 import { createNetwork } from "../networks";
 
 const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
@@ -145,17 +140,11 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       });
       // then start the container
       const startedContainer: ContainerInspectResponse | undefined =
-        await this.startKafkaContainer(container);
+        await this.startContainer(container);
       if (!startedContainer) {
-        this.showErrorNotification(
-          `Failed to start ${this.resourceKind} container "${container.name}".`,
-        );
         success = false;
         break;
       }
-      this.sendTelemetryEvent("Docker Container Started", {
-        dockerContainerName: container.name,
-      });
     }
     // can't wait for containers to be ready if they didn't start
     if (!success) return;
@@ -313,14 +302,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       );
     }
     return envVars;
-  }
-
-  /** Start the provided Kafka container and return its {@link ContainerInspectResponse}. */
-  private async startKafkaContainer(
-    container: LocalResourceContainer,
-  ): Promise<ContainerInspectResponse | undefined> {
-    await startContainer(container.id);
-    return await getContainer(container.id);
   }
 }
 

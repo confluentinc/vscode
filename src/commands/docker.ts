@@ -15,10 +15,7 @@ async function startLocalResourcesWithProgress() {
 }
 
 /** Run the local resource workflow(s) with a progress notification. */
-export async function runWorkflowWithProgress(
-  start: boolean = true,
-  resourceKinds: LocalResourceKind[] = [],
-) {
+export async function runWorkflowWithProgress(start: boolean = true) {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     window
