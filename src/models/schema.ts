@@ -65,6 +65,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
     const label = `v${resource.version}`;
     super(label, vscode.TreeItemCollapsibleState.None);
 
+    this.id = `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
     this.contextValue = "ccloud-schema";
@@ -145,18 +146,8 @@ export function generateSchemaSubjectGroups(
       schemaGroup,
     );
     // set the icon based on subject suffix
-    if (subject.endsWith("-key")) {
-      schemaContainerItem.iconPath = new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
-    } else if (subject.endsWith("-value") || topicName) {
-      // value schema or topic record name strategy (if made it this far given a topic name)
-      // (Alas when showing all schemas in the Schemas view controller, we can't tell if the
-      //  same topic record name strategy schema is a value schema without a topic name to
-      //  compare against, so the icon chosen then will be the fallthrough OTHER_SUBJECT
-      //  and be wrong).
-      schemaContainerItem.iconPath = new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
-    } else {
-      schemaContainerItem.iconPath = new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
-    }
+    schemaContainerItem.iconPath = getSubjectIcon(subject, topicName !== undefined);
+
     // override description to show schema types + count
     schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
     if (schemaGroup.length > 1) {
@@ -166,4 +157,21 @@ export function generateSchemaSubjectGroups(
     schemaGroups.push(schemaContainerItem);
   }
   return schemaGroups;
+}
+
+/** Determine an icon for a schema subject,
+ *  possibly considering erring on VALUE_SUBJECT over OTHER_SUBJECT
+ */
+export function getSubjectIcon(subject: string, errOnValueSubject?: boolean): vscode.ThemeIcon {
+  if (subject.endsWith("-key")) {
+    return new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
+  } else if (subject.endsWith("-value") || errOnValueSubject) {
+    // value schema or topic record name strategy (the errOnValueSubject flag is used
+    // when generating schema groups for a topic, where
+    // if this schema is in the running and not a key schema, it should be considered
+    // a value schema (TopicRecordNameStrategy).)
+    return new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
+  } else {
+    return new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
+  }
 }
