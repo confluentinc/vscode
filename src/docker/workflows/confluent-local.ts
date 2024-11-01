@@ -22,7 +22,7 @@ import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
-import { createContainer, getContainer, getContainersForImage, stopContainer } from "../containers";
+import { createContainer, getContainersForImage } from "../containers";
 import { createNetwork } from "../networks";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
 
@@ -187,7 +187,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         });
         continue;
       }
-      promises.push(this.stopKafkaContainer({ id: container.Id, name: container.Names[0] }));
+      promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
     }
     await Promise.all(promises);
 
@@ -336,30 +336,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       );
     }
     return envVars;
-  }
-
-  private async stopKafkaContainer(container: LocalResourceContainer): Promise<void> {
-    // names may start with a leading slash, so try to remove it
-    const containerName = container.name.replace(/^\/+/, "");
-    // check container status before deleting
-    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
-      container.id,
-    );
-    if (!existingContainer) {
-      // assume it was cleaned up some other way
-      this.logger.warn("Container not found, skipping stop and delete steps.", {
-        id: container.id,
-        name: containerName,
-      });
-      return;
-    }
-
-    if (existingContainer.State?.Status === "running") {
-      await stopContainer(container.id);
-      this.sendTelemetryEvent("Docker Container Stopped", {
-        dockerContainerName: container.name,
-      });
-    }
   }
 }
 
