@@ -37,7 +37,11 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
     if (!hasCCloudAuthSession()) {
       message += " Perhaps log into to Confluent Cloud first?";
     }
-    vscode.window.showInformationMessage(message);
+    const login = "Log in to Confluent Cloud";
+    const selected = await vscode.window.showInformationMessage(message, login);
+    if (selected === login) {
+      vscode.commands.executeCommand("confluent.connections.create");
+    }
     return undefined;
   }
 
