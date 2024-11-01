@@ -15,6 +15,7 @@ export async function createNetwork(name: string, driver: string = "bridge"): Pr
       const body = await error.response.clone().json();
       if (body.message && body.message.includes("already exists")) {
         logger.debug(`Network "${name}" with ${driver} driver already exists`);
+        return;
       } else {
         logger.error("Error response creating network:", {
           status: error.response.status,
@@ -25,5 +26,6 @@ export async function createNetwork(name: string, driver: string = "bridge"): Pr
     } else {
       logger.error("Error creating network:", error);
     }
+    throw error;
   }
 }
