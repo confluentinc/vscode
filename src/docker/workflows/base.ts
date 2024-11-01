@@ -60,7 +60,7 @@ export abstract class LocalResourceWorkflow {
         dockerContainerName: container.name,
       });
     } catch (error) {
-      let errorMsg = "";
+      let errorMsg = error instanceof Error ? error.message : "Unknown error";
       if (error instanceof ResponseError) {
         // likely "... <containername+id>: Bind for 0.0.0.0:8082 failed: port is already allocated"
         try {
@@ -74,6 +74,8 @@ export abstract class LocalResourceWorkflow {
               const port = portErrorMatch[1];
               errorMsg = `Port ${port} is already in use.`;
             }
+          } else {
+            errorMsg = "Port is already in use.";
           }
         } catch {
           errorMsg = error.response.statusText;
