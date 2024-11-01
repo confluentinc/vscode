@@ -472,6 +472,21 @@ components:
           $ref: "#/components/schemas/UserInfo"
         errors:
           $ref: "#/components/schemas/AuthErrors"
+    BasicCredentials:
+      description: Basic authentication credentials
+      required:
+        - username
+        - password
+      type: object
+      properties:
+        username:
+          description: The username to use when connecting to the external service.
+          maxLength: 64
+          type: string
+        password:
+          description: The password to use when connecting to the external service.
+          maxLength: 64
+          type: string
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
       required:
@@ -479,6 +494,11 @@ components:
       type: object
       properties:
         organization_id:
+          description:
+            The identifier of the CCloud organization to use. The user's default organization is
+            used when absent.
+          maxLength: 36
+          minLength: 36
           type: string
     CollectionMetadata:
       type: object
@@ -522,18 +542,44 @@ components:
         sign_in_uri:
           type: string
     ConnectionSpec:
+      description: The connection details that can be set or changed.
       type: object
       properties:
         id:
+          description: The unique identifier of the connection resource.
+          maxLength: 64
+          minLength: 1
           type: string
         name:
+          description: The user-supplied name of the connection resource.
+          maxLength: 64
           type: string
         type:
-          $ref: "#/components/schemas/ConnectionType"
+          description: The type of connection resource.
+          type: string
+          allOf:
+            - $ref: "#/components/schemas/ConnectionType"
         ccloud_config:
-          $ref: "#/components/schemas/CCloudConfig"
+          description: The details for connecting to CCloud.
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/CCloudConfig"
         local_config:
-          $ref: "#/components/schemas/LocalConfig"
+          description: The details for connecting to Confluent Local.
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/LocalConfig"
+        kafka_cluster:
+          description: "The details for connecting to a CCloud, Confluent Platform,\
+            \ or Apache Kafka cluster."
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/KafkaClusterConfig"
+        schema_registry:
+          description: The details for connecting to a Schema Registry.
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/SchemaRegistryConfig"
     ConnectionStatus:
       required:
         - authentication
@@ -546,6 +592,7 @@ components:
         - LOCAL
         - PLATFORM
         - CCLOUD
+        - DIRECT
       type: string
     ConnectionsList:
       required:
@@ -668,11 +715,30 @@ components:
         - POJO
         - STRING
       type: string
+    KafkaClusterConfig:
+      description: Kafka cluster configuration.
+      required:
+        - bootstrap_servers
+      type: object
+      properties:
+        id:
+          description: "The identifier of the Kafka cluster, if known."
+          maxLength: 64
+          type: string
+        bootstrap_servers:
+          description:
+            A list of host/port pairs to use for establishing the initial connection to the Kafka
+            cluster.
+          maxLength: 256
+          minLength: 1
+          type: string
     LocalConfig:
-      description: Configuration for local cluster
+      description: Configuration when using Confluent Local and optionally a local Schema Registry.
       type: object
       properties:
         schema-registry-uri:
+          description: The URL of the Schema Registry running locally.
+          maxLength: 512
           type: string
     ObjectMetadata:
       type: object
@@ -794,6 +860,21 @@ components:
             type: string
         trust_all_certificates:
           type: boolean
+    SchemaRegistryConfig:
+      description: Schema Registry configuration.
+      required:
+        - uri
+      type: object
+      properties:
+        id:
+          description: "The identifier of the Schema Registry cluster, if known."
+          maxLength: 64
+          type: string
+        uri:
+          description: The URL of the Schema Registry.
+          maxLength: 256
+          minLength: 1
+          type: string
     SidecarAccessToken:
       type: object
       properties:
