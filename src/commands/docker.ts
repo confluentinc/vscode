@@ -4,7 +4,6 @@ import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { Logger } from "../logging";
-import { getTelemetryLogger } from "../telemetry/telemetryLogger";
 
 const logger = new Logger("commands.docker");
 
@@ -52,19 +51,34 @@ async function runWorkflowWithProgress(start: boolean = true) {
     async (progress, token: CancellationToken) => {
       for (const workflow of subworkflows) {
         logger.debug(`running ${workflow.constructor.name} workflow`, { start });
-        getTelemetryLogger().logUsage("Workflow Initiated", {
-          extensionUserFlow: "Local Resource Management",
-          localResourceWorkflow: workflow.constructor.name,
-          localResourceKind: workflow.resourceKind,
-          dockerImage: workflow.imageRepoTag,
+        workflow.sendTelemetryEvent("Workflow Initiated", {
           start,
         });
-        if (start) {
-          await workflow.start(token, progress);
-        } else {
-          await workflow.stop(token, progress);
+        try {
+          if (start) {
+            await workflow.start(token, progress);
+          } else {
+            await workflow.stop(token, progress);
+          }
+          logger.debug(`finished ${workflow.constructor.name} workflow`, { start });
+          workflow.sendTelemetryEvent("Workflow Finished", {
+            start,
+          });
+        } catch (error) {
+          logger.error(`error running ${workflow.constructor.name} workflow`, error);
+          if (error instanceof Error) {
+            workflow.sendTelemetryEvent("Workflow Errored", {
+              start,
+            });
+            window
+              .showErrorMessage(
+                `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${error.message}`,
+                "Open Logs",
+                "File Issue",
+              )
+              .then(workflow.handleErrorNotificationButtons);
+          }
         }
-        logger.debug(`finished ${workflow.constructor.name} workflow`, { start });
       }
     },
   );

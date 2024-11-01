@@ -89,18 +89,17 @@ export abstract class LocalResourceWorkflow {
   }
 
   // TODO: maybe put this somewhere else for more general use?
-  /** Handle the user's selection from the "Open Logs" button on an error notification. */
-  handleOpenLogsButton(selection: string | undefined) {
+  /** Handle the user's selection from the "Open Logs" or "File an Issue" buttons on an error notification. */
+  handleErrorNotificationButtons(selection: string | undefined) {
+    if (!selection) return;
+    this.sendTelemetryEvent("Notification Button Clicked", {
+      buttonLabel: selection,
+      notificationType: "error",
+    });
     if (selection === "Open Logs") {
-      getTelemetryLogger().logUsage("Notification Button Clicked", {
-        extensionUserFlow: "Local Resource Management",
-        localResourceWorkflow: this.constructor.name,
-        localResourceKind: this.resourceKind,
-        dockerImage: this.imageRepoTag,
-        buttonLabel: selection,
-        notificationType: "error",
-      });
       commands.executeCommand("confluent.showOutputChannel");
+    } else if (selection === "File an Issue") {
+      commands.executeCommand("confluent.support.issue");
     }
   }
 
@@ -109,12 +108,14 @@ export abstract class LocalResourceWorkflow {
    * container states and prompting the user to take action.
    */
   async handleExistingContainers(containers: ContainerSummary[]) {
+    const count = containers.length;
+    const plural = containers.length > 1 ? "s" : "";
     const containerNames: string[] = containers.map(
       (container) => container.Names?.join(", ") || "unknown",
     );
     const containerImages: string[] = containers.map((container) => container.Image || "unknown");
     const containerStates: string[] = containers.map((container) => container.State || "unknown");
-    this.logger.debug(`found ${containers.length} existing container(s)`, {
+    this.logger.debug(`found ${count} existing container${plural}`, {
       states: containerStates,
       names: containerNames,
       images: containerImages,
@@ -125,24 +126,21 @@ export abstract class LocalResourceWorkflow {
     if (anyRunning) {
       buttonLabel = ""; // doesn't actually show a button; TODO(shoup): set in downstream branch
     } else {
-      buttonLabel = containers.length > 1 ? "Start All" : "Start";
+      buttonLabel = count ? "Start All" : "Start";
     }
 
     window
       .showErrorMessage(
-        `Existing ${this.resourceKind} container(s) found. Please remove them before starting new ones.`,
+        `Existing ${this.resourceKind} container${plural} found. Please ${anyRunning ? "re" : ""}start or remove ${count > 1 ? "them" : "it"} and try again.`,
         buttonLabel,
       )
       .then(async (choice) => {
         if (choice === buttonLabel) {
-          getTelemetryLogger().logUsage("Notification Button Clicked", {
-            extensionUserFlow: "Local Resource Management",
-            localResourceWorkflow: this.constructor.name,
-            localResourceKind: this.resourceKind,
-            dockerImage: this.imageRepoTag,
-            numContainers: containers.length,
+          this.sendTelemetryEvent("Notification Button Clicked", {
+            anyContainersRunning: anyRunning,
             buttonLabel: choice,
             notificationType: "error",
+            numContainers: containers.length,
             purpose: "Existing Containers Found",
           });
           const promises: Promise<void>[] = [];
@@ -159,14 +157,10 @@ export abstract class LocalResourceWorkflow {
           await Promise.all(promises);
         }
       });
-    getTelemetryLogger().logUsage("Notification Shown", {
-      extensionUserFlow: "Local Resource Management",
-      localResourceWorkflow: this.constructor.name,
-      localResourceKind: this.resourceKind,
-      dockerImage: this.imageRepoTag,
+    this.sendTelemetryEvent("Notification Shown", {
       notificationType: "error",
-      purpose: `Existing ${this.resourceKind} Containers`,
       numContainers: containers.length,
+      purpose: `Existing ${this.resourceKind} Containers`,
     });
   }
 
@@ -174,6 +168,16 @@ export abstract class LocalResourceWorkflow {
   logAndUpdateProgress(message: string, ...args: any[]) {
     this.logger.debug(message, ...args);
     this.progress?.report({ message: message });
+  }
+
+  sendTelemetryEvent(eventName: string, properties: Record<string, any>) {
+    getTelemetryLogger().logUsage(eventName, {
+      dockerImage: this.imageRepoTag,
+      extensionUserFlow: "Local Resource Management",
+      localResourceKind: this.resourceKind,
+      localResourceWorkflow: this.constructor.name,
+      ...properties,
+    });
   }
 }
 
