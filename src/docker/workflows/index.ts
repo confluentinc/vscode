@@ -3,8 +3,10 @@ import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
+import { getLocalKafkaImageName } from "../configs";
 import { getContainer, startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
+import { ConfluentLocalWorkflow } from "./confluent-local";
 
 /** Basic container information for a local resource. */
 export interface LocalResourceContainer {
@@ -239,4 +241,19 @@ export async function findFreePort(): Promise<number> {
       server.close(() => resolve(port));
     });
   });
+}
+
+/** Determine which Kafka workflow to use based on the user-selected configuration. */
+export function getKafkaWorkflow(): LocalResourceWorkflow {
+  const imageRepo: string = getLocalKafkaImageName();
+  let workflow: LocalResourceWorkflow;
+  switch (imageRepo) {
+    case ConfluentLocalWorkflow.imageRepo:
+      workflow = ConfluentLocalWorkflow.getInstance();
+      break;
+    // TODO: add support for other images here (apache/kafka, etc.)
+    default:
+      throw new Error(`Unsupported Kafka image repo: ${imageRepo}`);
+  }
+  return workflow;
 }

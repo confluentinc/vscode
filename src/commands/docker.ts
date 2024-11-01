@@ -1,11 +1,10 @@
 import * as Sentry from "@sentry/node";
-import { CancellationToken, Disposable, ProgressLocation, Uri, env, window } from "vscode";
+import { CancellationToken, Disposable, env, ProgressLocation, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
-import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
+import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import { LocalResourceWorkflow } from "../docker/workflows";
-import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
+import { getKafkaWorkflow, LocalResourceWorkflow } from "../docker/workflows";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.docker");
@@ -122,19 +121,4 @@ export function registerDockerCommands(): Disposable[] {
       startLocalResourcesWithProgress,
     ),
   ];
-}
-
-/** Determine which Kafka workflow to use based on the user-selected configuration. */
-export function getKafkaWorkflow(): LocalResourceWorkflow {
-  const imageRepo: string = getLocalKafkaImageName();
-  let workflow: LocalResourceWorkflow;
-  switch (imageRepo) {
-    case ConfluentLocalWorkflow.imageRepo:
-      workflow = ConfluentLocalWorkflow.getInstance();
-      break;
-    // TODO: add support for other images here (apache/kafka, etc.)
-    default:
-      throw new Error(`Unsupported Kafka image repo: ${imageRepo}`);
-  }
-  return workflow;
 }
