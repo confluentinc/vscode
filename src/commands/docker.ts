@@ -56,6 +56,11 @@ async function runWorkflowWithProgress(start: boolean = true) {
   // show multi-select quickpick to allow user to choose which resources to launch and determine
   // how the workflow should be run
   const resources: QuickPickItem[] = await localResourcesQuickPick();
+  if (resources.length === 0) {
+    // nothing selected, or user clicked a quickpick button to adjust settings
+    return;
+  }
+
   const resourceLabels: string[] = resources.map((resource) => resource.label);
 
   // based on the imageRepo chosen by the user, select the appropriate workflow before running them
