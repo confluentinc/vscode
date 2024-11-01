@@ -170,20 +170,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
-    token.onCancellationRequested(() => {
-      this.logger.debug("cancellation requested, exiting stop() early");
-      getTelemetryLogger().logUsage("Notification Button Clicked", {
-        extensionUserFlow: "Local Resource Management",
-        localResourceWorkflow: this.constructor.name,
-        localResourceKind: this.resourceKind,
-        dockerImage: this.imageRepoTag,
-        buttonLabel: "Cancel",
-        start: false,
-        notificationType: "progress",
-      });
-      // early returns handled below depending on the stage of the workflow
-    });
-
     this.progress = progress;
 
     const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
@@ -212,7 +198,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         });
         continue;
       }
-      promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
+      promises.push(this.stopKafkaContainer({ id: container.Id, name: container.Names[0] }));
     }
     await Promise.all(promises);
 
@@ -224,14 +210,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       `Waiting for ${count} ${this.resourceKind} container${plural} to stop...`,
     );
     await this.waitForLocalResourceEventChange();
-
-    getTelemetryLogger().logUsage("Workflow Finished", {
-      extensionUserFlow: "Local Resource Management",
-      localResourceWorkflow: this.constructor.name,
-      localResourceKind: this.resourceKind,
-      dockerImage: this.imageRepoTag,
-      start: false,
-    });
   }
 
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener
@@ -383,7 +361,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     return await getContainer(container.id);
   }
 
-  private async stopContainer(container: LocalResourceContainer): Promise<void> {
+  private async stopKafkaContainer(container: LocalResourceContainer): Promise<void> {
     // names may start with a leading slash, so try to remove it
     const containerName = container.name.replace(/^\/+/, "");
     // check container status before deleting
@@ -401,11 +379,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
-      getTelemetryLogger().logUsage("Docker Container Stopped", {
-        extensionUserFlow: "Local Resource Management",
-        localResourceWorkflow: this.constructor.name,
-        localResourceKind: this.resourceKind,
-        dockerImage: this.imageRepoTag,
+      this.sendTelemetryEvent("Docker Container Stopped", {
         dockerContainerName: container.name,
       });
     }
