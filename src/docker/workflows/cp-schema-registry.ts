@@ -1,4 +1,4 @@
-import { CancellationToken, Progress, window } from "vscode";
+import { CancellationToken, commands, Progress, window } from "vscode";
 import { findFreePort, LocalResourceContainer, LocalResourceWorkflow } from ".";
 import {
   ContainerCreateRequest,
@@ -61,36 +61,88 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     this.imageTag = getLocalSchemaRegistryImageTag();
 
     // already handles logging + updating the progress notification
-    await this.checkForImage(ConfluentPlatformSchemaRegistryWorkflow.imageRepo, this.imageTag);
+    await this.checkForImage(this.imageRepo, this.imageTag);
+    if (token.isCancellationRequested) return;
 
-    const repoTag = `${ConfluentPlatformSchemaRegistryWorkflow.imageRepo}:${this.imageTag}`;
     const containerListRequest: ContainerListRequest = {
       all: true,
       filters: JSON.stringify({
-        ancestor: [repoTag],
+        ancestor: [this.imageRepoTag],
         label: [MANAGED_CONTAINER_LABEL],
       }),
     };
     const existingContainers: ContainerSummary[] =
       await getContainersForImage(containerListRequest);
     if (existingContainers.length > 0) {
-      this.logger.warn(`${existingContainers.length} container(s) found, skipping creation`, {
-        imageRepo: ConfluentPlatformSchemaRegistryWorkflow.imageRepo,
-        imageTag: this.imageTag,
-      });
+      // this will handle logging and notifications
       await this.handleExistingContainers(existingContainers);
       return;
     }
 
-    const startedContainer: ContainerInspectResponse | undefined =
-      await this.createAndStartSchemaRegistryContainer();
+    this.logAndUpdateProgress(`Checking for Kafka containers...`);
+    const kafkaContainers = await this.fetchAndFilterKafkaContainers();
+    if (kafkaContainers.length === 0) {
+      this.logger.error("no Kafka containers found, skipping creation");
+      const buttonLabel = "Start Local Resources";
+      window
+        .showErrorMessage(
+          "No running Kafka containers found. Please start Kafka and try again.",
+          buttonLabel,
+        )
+        .then((selection) => {
+          if (selection === buttonLabel) {
+            commands.executeCommand("confluent.docker.startLocalResources");
+            this.sendTelemetryEvent("Notification Button Clicked", {
+              buttonLabel: buttonLabel,
+              notificationType: "error",
+              purpose: "No Kafka Containers Found",
+            });
+          }
+        });
+      return;
+    }
+    // inspect the containers to get the Docker network name and boostrap server host+port combos
+    const kafkaNetworks: string[] = this.determineKafkaDockerNetworks(kafkaContainers);
+    const kafkaBootstrapServers = await this.determineKafkaBootstrapServers(kafkaContainers);
+    this.logger.debug("Kafka container(s) found", {
+      count: kafkaContainers.length,
+      bootstrapServers: kafkaBootstrapServers,
+      networks: kafkaNetworks,
+    });
+    if (token.isCancellationRequested) return;
+
+    // create the SR container
+    const container: LocalResourceContainer | undefined = await this.createSchemaRegistryContainer(
+      kafkaBootstrapServers,
+      kafkaNetworks,
+    );
+    if (!container) {
+      this.showErrorNotification(`Failed to create ${this.resourceKind} container.`);
+      return;
+    }
+    this.sendTelemetryEvent("Docker Container Created", {
+      dockerContainerName: container.name,
+    });
+    if (token.isCancellationRequested) return;
+
+    // start the SR container
+    this.logAndUpdateProgress(`Starting container "${container.name}"...`);
+    await startContainer(container.id);
+    const startedContainer: ContainerInspectResponse = await getContainer(container.id);
     if (!startedContainer) {
+      this.showErrorNotification(
+        `Failed to start ${this.resourceKind} container "${container.name}".`,
+      );
+      return;
+    }
+    this.sendTelemetryEvent("Docker Container Started", {
+      dockerContainerName: container.name,
+    });
+    if (!startedContainer || token.isCancellationRequested) {
       return;
     }
 
-    const waitMsg = `Waiting for ${this.resourceKind} container to be ready...`;
-    this.logger.debug(waitMsg);
-    this.progress?.report({ message: waitMsg });
+    this.logAndUpdateProgress(`Waiting for ${this.resourceKind} container to be ready...`);
     await this.waitForLocalResourceEventChange();
   }
 
@@ -115,9 +167,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
 
-    const stopMsg = `Stopping ${existingContainers.length} ${this.resourceKind} container(s)...`;
-    this.logger.debug(stopMsg);
-    this.progress?.report({ message: stopMsg });
+    this.logAndUpdateProgress(
+      `Stopping ${existingContainers.length} ${this.resourceKind} container(s)...`,
+    );
     const promises: Promise<void>[] = [];
     for (const container of existingContainers) {
       if (!container.Id || !container.Names) {
@@ -127,9 +179,15 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
         });
         continue;
       }
-      promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
+      promises.push(
+        this.stopSchemaRegistryContainer({ id: container.Id, name: container.Names[0] }),
+      );
     }
     await Promise.all(promises);
+
+    // only allow exiting from here since awaiting each stopContainer() call and allowing cancellation
+    // there would introduce a delay
+    if (token.isCancellationRequested) return;
 
     await this.waitForLocalResourceEventChange();
   }
@@ -142,50 +200,6 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
         resolve(void 0);
       });
     });
-  }
-
-  async createAndStartSchemaRegistryContainer(): Promise<ContainerInspectResponse | undefined> {
-    const kafkaContainers = await this.fetchAndFilterKafkaContainers();
-    if (kafkaContainers.length === 0) {
-      return;
-    }
-
-    // inspect the containers to get the Docker network name and boostrap server host+port combos
-    const kafkaNetworks: string[] = this.determineKafkaDockerNetworks(kafkaContainers);
-    const kafkaBootstrapServers = await this.determineKafkaBootstrapServers(kafkaContainers);
-
-    this.logger.debug("Kafka container(s) found", {
-      count: kafkaContainers.length,
-      bootstrapServers: kafkaBootstrapServers,
-      networks: kafkaNetworks,
-    });
-
-    // create the SR container
-    const container: LocalResourceContainer | undefined = await this.createSchemaRegistryContainer(
-      kafkaBootstrapServers,
-      kafkaNetworks,
-    );
-    if (!container) {
-      window.showErrorMessage(`Failed to create ${this.resourceKind} container.`);
-      return;
-    }
-
-    // start the SR container
-    const startContainerMsg = `Starting container "${container.name}"...`;
-    this.logger.debug(startContainerMsg);
-    this.progress?.report({ message: startContainerMsg });
-    await startContainer(container.id);
-    const startedContainer: ContainerInspectResponse | undefined = await getContainer(container.id);
-    if (!startedContainer) {
-      window
-        .showErrorMessage(
-          `Failed to start ${this.resourceKind} container "${CONTAINER_NAME}".`,
-          "Open Logs",
-        )
-        .then(this.handleOpenLogsButton);
-      return;
-    }
-    return startedContainer;
   }
 
   /** List existing Kafka broker containers by user-configurable image repo+tag, then
@@ -237,11 +251,6 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     // either there was no leader container or we couldn't find any other containers
     if (containerSummaries.length === 0) {
-      this.logger.warn("no Kafka containers found, skipping creation");
-      window.showErrorMessage(
-        "No running Kafka containers found. Please start Kafka and try again.",
-      );
-      // TODO: add button to allow starting the Kafka workflow from here
       return [];
     }
 
@@ -312,7 +321,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
   async createSchemaRegistryContainer(
     kafkaBootstrapServers: string[],
     kafkaNetworks: string[],
-  ): Promise<LocalResourceContainer | undefined> {
+  ): Promise<LocalResourceContainer> {
+    this.logAndUpdateProgress(`Creating ${this.resourceKind} container "${CONTAINER_NAME}"...`);
+
     const restProxyPort: number = await findFreePort();
     const hostConfig: HostConfig = {
       NetworkMode: kafkaNetworks[0],
@@ -337,7 +348,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       Tty: false,
     };
 
-    const container: ContainerCreateResponse | undefined = await createContainer(
+    const container: ContainerCreateResponse = await createContainer(
       ConfluentPlatformSchemaRegistryWorkflow.imageRepo,
       this.imageTag,
       {
@@ -345,10 +356,6 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
         name: CONTAINER_NAME,
       },
     );
-    if (!container) {
-      window.showErrorMessage(`Failed to create ${this.resourceKind} container.`);
-      return;
-    }
 
     // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
     // assigned REST proxy port
@@ -357,7 +364,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     return { id: container.Id, name: CONTAINER_NAME };
   }
 
-  private async stopContainer(container: LocalResourceContainer): Promise<void> {
+  private async stopSchemaRegistryContainer(container: LocalResourceContainer): Promise<void> {
     // names may start with a leading slash, so try to remove it
     const containerName = container.name.replace(/^\/+/, "");
     // check container status before deleting
@@ -375,6 +382,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
+      this.sendTelemetryEvent("Docker Container Stopped", {
+        dockerContainerName: containerName,
+      });
     }
   }
 }
