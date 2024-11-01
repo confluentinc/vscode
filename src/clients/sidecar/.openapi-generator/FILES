@@ -14,6 +14,7 @@ models/ApplyTemplateRequest.ts
 models/AuthError.ts
 models/AuthErrors.ts
 models/Authentication.ts
+models/BasicCredentials.ts
 models/CCloudConfig.ts
 models/CollectionMetadata.ts
 models/Connection.ts
@@ -28,6 +29,7 @@ models/HealthCheck.ts
 models/HealthResponse.ts
 models/JsonNode.ts
 models/JsonNodeType.ts
+models/KafkaClusterConfig.ts
 models/LocalConfig.ts
 models/ModelError.ts
 models/ObjectMetadata.ts
@@ -39,6 +41,7 @@ models/PartitionOffset.ts
 models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
+models/SchemaRegistryConfig.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts
