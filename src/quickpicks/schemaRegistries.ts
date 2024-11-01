@@ -32,13 +32,11 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
 }
 
 /**
- * Create a quickpick to let the user choose a Schema Registry (listed by CCloud environment
- * separators). Mainly used in the event a command was triggered through the command palette instead
- * of through the view->item->context menu.
+ * Create a quickpick to let the user choose a Schema Registry, named by environment.
  *
  * @returns The selected Schema Registry, or undefined if none was selected.
  */
-async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
   const localSchemaRegistries: LocalSchemaRegistry[] = [];
   let cloudSchemaRegistries: CCloudSchemaRegistry[] = [];
 
