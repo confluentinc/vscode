@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { Uri } from "vscode";
 import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -20,11 +21,13 @@ import {
   StateKafkaClusters,
   StateKafkaTopics,
   StateSchemaRegistry,
+  UriMetadataKeys,
 } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
   getResourceManager,
+  UriMetadata,
 } from "./resourceManager";
 
 describe("ResourceManager (CCloud) environment methods", function () {
@@ -683,6 +686,49 @@ describe("ResourceManager schema tests", function () {
     await rm.setSchemasForRegistry(TEST_SCHEMA_REGISTRY.id, []);
     const storedSchemas = await rm.getSchemasForRegistry(TEST_SCHEMA_REGISTRY.id);
     assert.deepStrictEqual(storedSchemas, []);
+  });
+});
+
+describe("ResourceManager URI metadata methods", function () {
+  let storageManager: StorageManager;
+
+  let schemaFileURI = Uri.parse("file:///path/to/file");
+
+  before(async () => {
+    // extension needs to be activated before storage manager can be used
+    storageManager = await getTestStorageManager();
+  });
+
+  beforeEach(async () => {
+    // fresh slate for each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  afterEach(async () => {
+    // clean up after each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  it("setURIMetadata() should correctly store URI metadata", async () => {
+    const rm = getResourceManager();
+
+    const metadata: UriMetadata = new Map();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_SCHEMA_REGISTRY.id);
+    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
+
+    await rm.setURIMetadata(schemaFileURI, metadata);
+
+    // fetch back from resource manager
+    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
+    assert.deepStrictEqual(metadata, metadataFromStorage);
+
+    // overwrite with new metadata
+    metadata.clear();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "new-registry-id");
+    await rm.setURIMetadata(schemaFileURI, metadata);
+
+    const metadataFromStorageAgain = await rm.getUriMetadata(schemaFileURI);
+    assert.deepStrictEqual(metadata, metadataFromStorageAgain);
   });
 });
 
