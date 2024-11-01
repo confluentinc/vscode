@@ -62,5 +62,6 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
     } else {
       logger.error("Error pulling image:", error);
     }
+    throw error;
   }
 }
