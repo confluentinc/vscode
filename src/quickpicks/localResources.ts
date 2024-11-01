@@ -1,7 +1,14 @@
-import { QuickPick, QuickPickItem, ThemeIcon, window } from "vscode";
+import { commands, QuickInputButton, QuickPick, QuickPickItem, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
+import {
+  getLocalKafkaImageName,
+  getLocalKafkaImageTag,
+  getLocalSchemaRegistryImageName,
+  getLocalSchemaRegistryImageTag,
+} from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { Logger } from "../logging";
+import { LOCAL_KAFKA_IMAGE } from "../preferences/constants";
 
 const logger = new Logger("quickpicks.localResources");
 
@@ -13,18 +20,24 @@ export async function localResourcesQuickPick(): Promise<LocalResourceKind[]> {
   quickpick.placeholder = "Select resource types";
   quickpick.canSelectMany = true;
 
+  const kafkaRepoTag = `${getLocalKafkaImageName()}:${getLocalKafkaImageTag()}`;
+  const schemaRegistryRepoTag = `${getLocalSchemaRegistryImageName()}:${getLocalSchemaRegistryImageTag()}`;
   quickpick.items = [
     {
       label: LocalResourceKind.Kafka,
       iconPath: new ThemeIcon(IconNames.KAFKA_CLUSTER),
+      description: kafkaRepoTag,
       detail: "A local Kafka cluster with a user-specified number of broker containers",
       picked: true,
+      buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Select Kafka Docker Image` }],
     },
     {
       label: LocalResourceKind.SchemaRegistry,
       iconPath: new ThemeIcon(IconNames.SCHEMA_REGISTRY),
+      description: schemaRegistryRepoTag,
       detail:
         "A local Schema Registry instance that can be used to manage schemas for Kafka topics",
+      // no button to change SR image until we have other candidate images
     },
   ];
   quickpick.show();
@@ -36,6 +49,16 @@ export async function localResourcesQuickPick(): Promise<LocalResourceKind[]> {
     quickpick.hide();
     return;
   });
+
+  quickpick.onDidTriggerItemButton(
+    async (event: { button: QuickInputButton; item: QuickPickItem }) => {
+      quickpick.hide();
+      if (event.button.tooltip?.includes(LocalResourceKind.Kafka)) {
+        // open Settings and focus on specific setting ID
+        commands.executeCommand("workbench.action.openSettings", LOCAL_KAFKA_IMAGE);
+      }
+    },
+  );
 
   // block until the quickpick is hidden
   await new Promise<void>((resolve) => {
