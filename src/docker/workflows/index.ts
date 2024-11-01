@@ -3,7 +3,7 @@ import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerSummary } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
-import { startContainer } from "../containers";
+import { restartContainer, startContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
 /** Basic container information for a local resource. */
@@ -130,7 +130,7 @@ export abstract class LocalResourceWorkflow {
     let buttonLabel = "";
     const anyRunning = containerStates.includes("running");
     if (anyRunning) {
-      buttonLabel = ""; // doesn't actually show a button; TODO(shoup): set in downstream branch
+      buttonLabel = containers.length > 1 ? "Restart All" : "Restart";
     } else {
       buttonLabel = count ? "Start All" : "Start";
     }
@@ -155,7 +155,7 @@ export abstract class LocalResourceWorkflow {
               return;
             }
             if (anyRunning) {
-              // TODO: implement stop+start in downstream branch
+              promises.push(restartContainer(container.Id));
             } else {
               promises.push(startContainer(container.Id));
             }
