@@ -9,8 +9,10 @@ import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
-/** Progress wrapper for the Kafka Cluster quickpick to accomodate data-fetching time. */
-export async function kafkaClusterQuickPick(
+/** Progress wrapper for the Kafka Cluster quickpick to accomodate data-fetching time.
+ * Highlights the topics view while the quickpick is awaited.
+ */
+export async function kafkaClusterQuickPickWithViewProgress(
   includeLocal: boolean = true,
   includeCCloud: boolean = true,
 ): Promise<KafkaCluster | undefined> {
@@ -20,17 +22,17 @@ export async function kafkaClusterQuickPick(
       title: "Loading Kafka clusters...",
     },
     async () => {
-      return await generateKafkaClusterQuickPick(includeLocal, includeCCloud);
+      return await kafkaClusterQuickPick(includeLocal, includeCCloud);
     },
   );
 }
 
 /**
- * Create a quickpick to let the user choose a Kafka cluster (listed by CCloud environment / "Local"
+ * Create and await a quickpick to let the user choose a Kafka cluster (listed by CCloud environment / "Local"
  * separators). Mainly used in the event a command was triggered through the command palette instead
  * of through the view->item->context menu.
  */
-async function generateKafkaClusterQuickPick(
+export async function kafkaClusterQuickPick(
   includeLocal: boolean = true,
   includeCCloud: boolean = true,
 ): Promise<KafkaCluster | undefined> {
