@@ -6,7 +6,10 @@ import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { KafkaTopic } from "../models/topic";
-import { kafkaClusterQuickPick } from "../quickpicks/kafkaClusters";
+import {
+  kafkaClusterQuickPick,
+  kafkaClusterQuickPickWithViewProgress,
+} from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { getTopicViewProvider } from "../viewProviders/topics";
@@ -52,7 +55,7 @@ async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
   const kafkaCluster: KafkaCluster | undefined =
     cluster instanceof CCloudKafkaCluster || cluster instanceof LocalKafkaCluster
       ? cluster
-      : await kafkaClusterQuickPick();
+      : await kafkaClusterQuickPickWithViewProgress();
   if (!kafkaCluster) {
     return;
   }
