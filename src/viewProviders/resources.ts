@@ -1,7 +1,15 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
+import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import { IconNames } from "../constants";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import {
+  getLocalSchemaRegistryImageName,
+  getLocalSchemaRegistryImageTag,
+  isDockerAvailable,
+} from "../docker/configs";
+import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
+import { getContainersForImage } from "../docker/containers";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
@@ -24,7 +32,7 @@ import {
   LocalSchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
-import { hasCCloudAuthSession } from "../sidecar/connections";
+import { hasCCloudAuthSession, updateLocalSchemaRegistryURI } from "../sidecar/connections";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -241,6 +249,11 @@ export async function loadLocalResources(): Promise<
     "Local Kafka clusters discoverable at port `8082` are shown here.",
   );
 
+  // before we try listing any resources (for possibly the first time), we need to check if any
+  // supported Schema Registry containers are running, then grab their REST proxy port to send to
+  // the sidecar for discovery before the GraphQL query kicks off
+  await discoverSchemaRegistry();
+
   const localResources: LocalResourceGroup[] = await getLocalResources();
   if (localResources.length > 0) {
     const connectedId = "local-container-connected";
@@ -313,4 +326,50 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
 
   // TODO: add flink compute pools here ?
   return subItems;
+}
+
+/**
+ * Discover any running Schema Registry containers and send the REST proxy port to the sidecar for
+ * discovery.
+ */
+async function discoverSchemaRegistry() {
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    return;
+  }
+
+  const imageRepo = getLocalSchemaRegistryImageName();
+  const imageTag = getLocalSchemaRegistryImageTag();
+  const repoTag = `${imageRepo}:${imageTag}`;
+  const containerListRequest: ContainerListRequest = {
+    all: true,
+    filters: JSON.stringify({
+      ancestor: [repoTag],
+      label: [MANAGED_CONTAINER_LABEL],
+      status: ["running"],
+    }),
+  };
+  const containers: ContainerSummary[] = await getContainersForImage(containerListRequest);
+  if (containers.length === 0) {
+    return;
+  }
+  // we only care about the first container
+  const container: ContainerSummary = containers.filter((c) => !!c.Ports)[0];
+  const ports: Port[] = container.Ports?.filter((p) => !!p.PublicPort) || [];
+  if (!ports || ports.length === 0) {
+    logger.debug("No ports found on Schema Registry container", { container });
+    return;
+  }
+  const schemaRegistryPort: Port | undefined = ports.find((p) => !!p.PublicPort);
+  if (!schemaRegistryPort) {
+    logger.debug("No PublicPort found on Schema Registry container", { container });
+    return;
+  }
+  const restProxyPort = schemaRegistryPort.PublicPort;
+  if (!restProxyPort) {
+    logger.debug("No REST proxy port found on Schema Registry container", { container });
+    return;
+  }
+  logger.debug("Discovered Schema Registry REST proxy port", { schemaRegistryPort });
+  await updateLocalSchemaRegistryURI(`http://localhost:${restProxyPort}`);
 }

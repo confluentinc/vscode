@@ -9,10 +9,15 @@ import {
   SystemEventsRequest,
 } from "../clients/docker";
 import { ContextValues, setContextValue } from "../context";
-import { localKafkaConnected } from "../emitters";
+import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
 import { IntervalPoller } from "../utils/timing";
-import { defaultRequestInit, getLocalKafkaImageName, isDockerAvailable } from "./configs";
+import {
+  defaultRequestInit,
+  getLocalKafkaImageName,
+  getLocalSchemaRegistryImageName,
+  isDockerAvailable,
+} from "./configs";
 import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
 
 const logger = new Logger("docker.eventListener");
@@ -275,7 +280,9 @@ export class EventListener {
 
     // first, make sure it's an image we support tracking for updates in the Resources view
     const kafkaImage = getLocalKafkaImageName();
-    const isManagedImage = imageName.startsWith(kafkaImage); // TODO(shoup): add SR here
+    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+    const isManagedImage =
+      imageName.startsWith(kafkaImage) || imageName.startsWith(schemaRegistryImage);
     if (!isManagedImage) {
       logger.debug(`ignoring container start event for image: "${imageName}"`);
       return;
@@ -290,7 +297,8 @@ export class EventListener {
 
     // then if it's an image that requires a specific log line to appear before it's fully ready, wait
     // for that log line to appear before considering the container fully started
-    const needToWaitForLog = imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO);
+    const needToWaitForLog =
+      imageName.startsWith(DEFAULT_KAFKA_IMAGE_REPO) || imageName.startsWith(schemaRegistryImage);
     if (needToWaitForLog) {
       // when the `confluent-local` container starts, it should show the following log line once it's ready:
       // "Server started, listening for requests..."
@@ -319,8 +327,10 @@ export class EventListener {
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, started);
       localKafkaConnected.fire(started);
+    } else if (imageName.startsWith(schemaRegistryImage)) {
+      await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
+      localSchemaRegistryConnected.fire(started);
     }
-    // TODO(shoup): update for Schema Registry image
   }
 
   /** Handling for an event that describes when a container is stopped. */
@@ -332,11 +342,15 @@ export class EventListener {
     logger.debug(`container 'die' event for image: ${imageName}`);
 
     const kafkaImage = getLocalKafkaImageName();
+    const schemaRegistryImage = getLocalSchemaRegistryImageName();
+
     if (imageName.startsWith(kafkaImage)) {
       await setContextValue(ContextValues.localKafkaClusterAvailable, false);
       localKafkaConnected.fire(false);
+    } else if (imageName.startsWith(schemaRegistryImage)) {
+      await setContextValue(ContextValues.localSchemaRegistryAvailable, false);
+      localSchemaRegistryConnected.fire(false);
     }
-    // TODO(shoup): update for Schema Registry image
   }
 
   /** Wait for the container to show a specific {@link ContainerStateStatusEnum} status. */
