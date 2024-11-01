@@ -2,11 +2,10 @@ import * as Sentry from "@sentry/node";
 import { CancellationToken, Disposable, env, ProgressLocation, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
-import { getLocalSchemaRegistryImageName, isDockerAvailable } from "../docker/configs";
+import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import { getKafkaWorkflow } from "../docker/workflows";
+import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
-import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import { Logger } from "../logging";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
 
@@ -62,7 +61,12 @@ async function runWorkflowWithProgress(
     }
   }
   if (resources.includes(LocalResourceKind.SchemaRegistry)) {
-    subworkflows.push(getSchemaRegistryWorkflow());
+    try {
+      subworkflows.push(getSchemaRegistryWorkflow());
+    } catch (error) {
+      logger.error("error getting Schema Registry workflow:", error);
+      return;
+    }
   }
   // add logic for looking up other resources' workflows here
 
@@ -154,17 +158,4 @@ export function registerDockerCommands(): Disposable[] {
       stopLocalResourcesWithProgress,
     ),
   ];
-}
-
-function getSchemaRegistryWorkflow(): LocalResourceWorkflow | undefined {
-  const imageRepo: string = getLocalSchemaRegistryImageName();
-  let workflow: LocalResourceWorkflow;
-  switch (imageRepo) {
-    case ConfluentPlatformSchemaRegistryWorkflow.imageRepo:
-      workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
-      break;
-    default:
-      throw new Error(`Unsupported Schema Registry image repo: ${imageRepo}`);
-  }
-  return workflow;
 }
