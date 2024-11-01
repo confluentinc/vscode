@@ -1,57 +1,103 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { Schema } from "../models/schema";
-import { getStorageManager } from "../storage";
-import { environmentQuickPick } from "./environments";
+import { Schema, SchemaType } from "../models/schema";
+import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { getResourceManager } from "../storage/resourceManager";
 
-export async function schemaQuickPick(): Promise<Schema | undefined> {
-  const cloudEnvironment = await environmentQuickPick();
-  if (!cloudEnvironment) {
-    return;
-  }
+/** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
+ * @returns nonempty string if user chose an existing subject name.
+ * @returns empty string if user gestures to create a new subject.
+ * @returns undefined if user cancelled the quickpick.
+ *
+ */
+export async function schemaSubjectQuickPick(
+  schemaRegistryId: string,
+  onlyType: SchemaType | undefined = undefined,
+): Promise<string | undefined> {
+  // ensure that the resources are loaded before trying to access them
+  const preloader = CCloudResourcePreloader.getInstance();
+  await preloader.ensureCoarseResourcesLoaded();
+  await preloader.ensureSchemasLoaded(schemaRegistryId);
 
-  const schemas: Schema[] | undefined = await getStorageManager().getWorkspaceState(
-    `${cloudEnvironment.id}.schemas`,
-  );
-  if (!schemas) {
-    vscode.window.showWarningMessage(`No schemas available for "${cloudEnvironment.name}".`);
-    return;
-  }
+  const schemas = await getResourceManager().getSchemasForRegistry(schemaRegistryId);
 
-  let schemaItems: vscode.QuickPickItem[] = [];
-  const schemaMap: Map<string, Schema> = new Map();
-  // sort by subject (ascending) and version (descending)
-  schemas.sort((a, b) => {
-    if (a.subject < b.subject) {
-      return -1;
-    } else if (a.subject > b.subject) {
-      return 1;
-    } else {
-      return b.version - a.version;
+  let schemaSubjects: string[] | undefined;
+
+  const latestVersionSchemaBySubject = new Map<string, Schema>();
+  if (schemas) {
+    // Crunch down to map of subject -> latest version'd Schema for said subject
+    for (const schema of schemas) {
+      // Skip if the caller asked for only a specific type of schema and this one doesn't match.
+      if (onlyType && schema.type !== onlyType) {
+        continue;
+      }
+      const latestVersionSchema = latestVersionSchemaBySubject.get(schema.subject);
+      if (!latestVersionSchema || schema.version > latestVersionSchema.version) {
+        latestVersionSchemaBySubject.set(schema.subject, schema);
+      }
     }
-  });
-  for (const schema of schemas) {
-    let iconPath: vscode.ThemeIcon;
-    if (schema.subject.endsWith("-key")) {
-      iconPath = new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
-    } else if (schema.subject.endsWith("-value")) {
-      iconPath = new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
-    } else {
-      iconPath = new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
-    }
-    schemaItems.push({
-      label: schema.subject,
-      description: `v${schema.version}`,
-      iconPath: iconPath,
-    });
-    schemaMap.set(schema.subject, schema);
+
+    schemaSubjects = Array.from(latestVersionSchemaBySubject.keys());
+    schemaSubjects.sort();
   }
 
-  const chosenSchema: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
-    schemaItems,
+  if (schemas === undefined) {
+    schemaSubjects = [];
+  }
+
+  // Convert to quickpick items, first entry to create a new schema / subject followed by a separator
+  const newSchemaLabel = "Create new schema / subject";
+  let subjectItems: vscode.QuickPickItem[] = [
     {
-      placeHolder: "Select a schema",
+      label: newSchemaLabel,
+      iconPath: new vscode.ThemeIcon("add"),
+    },
+    // TODO (shoup): revise when supporting local schema registries
+    {
+      kind: vscode.QuickPickItemKind.Separator,
+      label: "Confluent Cloud",
+    },
+  ];
+
+  // Wire up all of the exsting schema registry subjects as items
+  // with the description as the subject name for easy return value.
+  for (const subject of schemaSubjects!) {
+    const latestVersionSchema = latestVersionSchemaBySubject.get(subject);
+
+    subjectItems.push({
+      label: subject,
+      iconPath: getSubjectIcon(subject),
+      description: `v${latestVersionSchema?.version}`,
+    });
+  }
+
+  const chosenSubject: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
+    subjectItems,
+    {
+      placeHolder: "Select existing subject or to create a new one",
     },
   );
-  return chosenSchema ? schemaMap.get(chosenSchema.label) : undefined;
+
+  if (!chosenSubject) {
+    // User aborted.
+    return undefined;
+  }
+
+  if (chosenSubject.label === newSchemaLabel) {
+    // Chose the 'create new schema' option.
+    return "";
+  }
+
+  return chosenSubject.label;
+}
+
+/** Determine an icon for a schema subject. */
+export function getSubjectIcon(subject: string): vscode.ThemeIcon {
+  if (subject.endsWith("-key")) {
+    return new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
+  } else if (subject.endsWith("-value")) {
+    return new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
+  } else {
+    return new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
+  }
 }
