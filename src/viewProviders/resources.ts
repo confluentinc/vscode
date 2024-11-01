@@ -3,7 +3,11 @@ import * as vscode from "vscode";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import { IconNames } from "../constants";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
-import { getLocalSchemaRegistryImageName, getLocalSchemaRegistryImageTag } from "../docker/configs";
+import {
+  getLocalSchemaRegistryImageName,
+  getLocalSchemaRegistryImageTag,
+  isDockerAvailable,
+} from "../docker/configs";
 import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
 import {
@@ -320,6 +324,11 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
  * discovery.
  */
 async function discoverSchemaRegistry() {
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    return;
+  }
+
   const imageRepo = getLocalSchemaRegistryImageName();
   const imageTag = getLocalSchemaRegistryImageTag();
   const repoTag = `${imageRepo}:${imageTag}`;
