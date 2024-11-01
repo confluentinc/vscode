@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import { ImageApi, ImageInspect, ResponseError } from "../clients/docker";
 import { imageExists, pullImage } from "./images";
 
-describe.only("docker/images.ts ImageApi wrappers", () => {
+describe("docker/images.ts ImageApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
 
   let imageInspectStub: sinon.SinonStub;
