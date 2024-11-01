@@ -47,6 +47,7 @@ export abstract class LocalResourceWorkflow {
   abstract start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
+    ...args: any[]
   ): Promise<void>;
 
   /** Stop and remove the local resource(s) associated with this workflow. */
