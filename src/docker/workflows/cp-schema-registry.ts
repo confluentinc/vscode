@@ -21,8 +21,6 @@ import {
   getContainerEnvVars,
   getContainerPorts,
   getContainersForImage,
-  startContainer,
-  stopContainer,
 } from "../containers";
 
 const CONTAINER_NAME = "vscode-confluent-schema-registry";
@@ -143,20 +141,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     // start the SR container
     this.logAndUpdateProgress(`Starting container "${container.name}"...`);
-    await startContainer(container.id);
-    const startedContainer: ContainerInspectResponse = await getContainer(container.id);
-    if (!startedContainer) {
-      this.showErrorNotification(
-        `Failed to start ${this.resourceKind} container "${container.name}".`,
-      );
-      return;
-    }
-    this.sendTelemetryEvent("Docker Container Started", {
-      dockerContainerName: container.name,
-    });
-    if (!startedContainer || token.isCancellationRequested) {
-      return;
-    }
+    const startedContainer: ContainerInspectResponse | undefined =
+      await this.startContainer(container);
+    if (!startedContainer || token.isCancellationRequested) return;
 
     this.logAndUpdateProgress(`Waiting for ${this.resourceKind} container to be ready...`);
     await this.waitForLocalResourceEventChange();
@@ -195,9 +182,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
         });
         continue;
       }
-      promises.push(
-        this.stopSchemaRegistryContainer({ id: container.Id, name: container.Names[0] }),
-      );
+      promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
     }
     await Promise.all(promises);
 
@@ -381,29 +366,5 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     await updateLocalSchemaRegistryURI(`http://localhost:${restProxyPort}`);
 
     return { id: container.Id, name: CONTAINER_NAME };
-  }
-
-  private async stopSchemaRegistryContainer(container: LocalResourceContainer): Promise<void> {
-    // names may start with a leading slash, so try to remove it
-    const containerName = container.name.replace(/^\/+/, "");
-    // check container status before deleting
-    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
-      container.id,
-    );
-    if (!existingContainer) {
-      // assume it was cleaned up some other way
-      this.logger.warn("Container not found, skipping stop and delete steps.", {
-        id: container.id,
-        name: containerName,
-      });
-      return;
-    }
-
-    if (existingContainer.State?.Status === "running") {
-      await stopContainer(container.id);
-      this.sendTelemetryEvent("Docker Container Stopped", {
-        dockerContainerName: containerName,
-      });
-    }
   }
 }
