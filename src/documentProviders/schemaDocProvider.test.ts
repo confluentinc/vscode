@@ -1,6 +1,6 @@
 import assert from "assert";
 import sinon from "sinon";
-import { TEST_SCHEMA } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
 import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
 import * as sidecar from "../sidecar";
 import { SchemaDocumentProvider } from "./schema";
@@ -27,7 +27,7 @@ describe("DiffableReadOnlyDocumentProvider tests", function () {
   it("should return a schema definition from a schema URI", async () => {
     const provider = new SchemaDocumentProvider();
 
-    const uri = provider.resourceToUri(TEST_SCHEMA, TEST_SCHEMA.fileName());
+    const uri = provider.resourceToUri(TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA.fileName());
 
     const schemaResp: SchemaString = { schema: '{"foo": "bar"}', schemaType: "JSON" };
     mockClient.getSchema.resolves(schemaResp);

@@ -1,10 +1,15 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { getExtensionContext } from "../context";
-import { ccloudConnected, ccloudOrganizationChanged, localKafkaConnected } from "../emitters";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import {
+  ccloudConnected,
+  ccloudOrganizationChanged,
+  localKafkaConnected,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
-import { getLocalKafkaClusters } from "../graphql/local";
+import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
@@ -14,7 +19,11 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { CCloudSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  LocalSchemaRegistry,
+  SchemaRegistryTreeItem,
+} from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -30,8 +39,9 @@ type ResourceViewProviderData =
   | CCloudEnvironment
   | CCloudKafkaCluster
   | CCloudSchemaRegistry
-  | ContainerTreeItem<LocalKafkaCluster>
-  | LocalKafkaCluster;
+  | ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
+  | LocalKafkaCluster
+  | LocalSchemaRegistry;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
   private _onDidChangeTreeData = new vscode.EventEmitter<
@@ -76,6 +86,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       logger.debug("localKafkaConnected event fired", { connected });
       this.refresh();
     });
+    localSchemaRegistryConnected.event((connected: boolean) => {
+      logger.debug("localSchemaRegistryConnected event fired", { connected });
+      this.refresh();
+    });
   }
 
   static getInstance(): ResourceViewProvider {
@@ -90,8 +104,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       return new CCloudEnvironmentTreeItem(element);
     } else if (element instanceof LocalKafkaCluster || element instanceof CCloudKafkaCluster) {
       return new KafkaClusterTreeItem(element);
-    } else if (element instanceof CCloudSchemaRegistry) {
-      // TODO(shoup): update ^ for local SR once available
+    } else if (element instanceof LocalSchemaRegistry || element instanceof CCloudSchemaRegistry) {
       return new SchemaRegistryTreeItem(element);
     }
     // should only be left with ContainerTreeItems
@@ -207,8 +220,10 @@ export async function loadCCloudResources(
  *
  * @returns A container tree item with the local Kafka clusters as children
  */
-export async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster>> {
-  const localContainerItem = new ContainerTreeItem<LocalKafkaCluster>(
+export async function loadLocalResources(): Promise<
+  ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
+> {
+  const localContainerItem = new ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>(
     "Local",
     vscode.TreeItemCollapsibleState.None,
     [],
@@ -226,8 +241,8 @@ export async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafka
     "Local Kafka clusters discoverable at port `8082` are shown here.",
   );
 
-  const localClusters: LocalKafkaCluster[] = await getLocalKafkaClusters();
-  if (localClusters.length > 0) {
+  const localResources: LocalResourceGroup[] = await getLocalResources();
+  if (localResources.length > 0) {
     const connectedId = "local-container-connected";
     // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
     localContainerItem.id = connectedId;
@@ -235,12 +250,34 @@ export async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafka
     localContainerItem.contextValue = connectedId;
 
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+
+    // Kafka cluster(s) first
+    const localKafkaClusters: LocalKafkaCluster[] = localResources.flatMap(
+      (group): LocalKafkaCluster[] => group.kafkaClusters,
+    );
+    // indicate to the UI that we have at least one local Kafka cluster available
+    await setContextValue(ContextValues.localKafkaClusterAvailable, localResources.length > 0);
+
+    // ...then Schema Registry
+    const localSchemaRegistries: LocalSchemaRegistry[] = localResources
+      .flatMap((group: LocalResourceGroup): LocalSchemaRegistry | undefined => group.schemaRegistry)
+      .filter(
+        (schemaRegistry: LocalSchemaRegistry | undefined): schemaRegistry is LocalSchemaRegistry =>
+          schemaRegistry !== undefined,
+      );
+    // indicate to the UI that we have at least one local Schema Registry available
+    await setContextValue(
+      ContextValues.localSchemaRegistryAvailable,
+      localSchemaRegistries.length > 0,
+    );
+
+    localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
-    localContainerItem.description = localClusters.map((cluster) => cluster.uri).join(", ");
+    localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
     // TODO: this should be handled in the preloader once it (and ResourceManager) start handling
     // local resources
-    getResourceManager().setLocalKafkaClusters(localClusters);
-    localContainerItem.children = localClusters;
+    getResourceManager().setLocalKafkaClusters(localKafkaClusters);
+    localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
   }
 
   return localContainerItem;

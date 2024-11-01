@@ -55,6 +55,8 @@ export enum ContextValues {
   ccloudConnectionAvailable = "confluent.ccloudConnectionAvailable",
   /** A local connection has been made and a local Kafka cluster is available for selecting in the Topics view. */
   localKafkaClusterAvailable = "confluent.localKafkaClusterAvailable",
+  /** A local connection has been made and a local Schema Registry is available for selecting in the Schemas view. */
+  localSchemaRegistryAvailable = "confluent.localSchemaRegistryAvailable",
   /** A resource has been selected for comparison. */
   resourceSelectedForCompare = "confluent.resourceSelectedForCompare",
   /** The user clicked a Kafka cluster tree item. */
