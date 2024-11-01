@@ -63,15 +63,6 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
-    token.onCancellationRequested(() => {
-      this.logger.debug("cancellation requested, exiting start() early");
-      this.sendTelemetryEvent("Notification Button Clicked", {
-        buttonLabel: "Cancel",
-        notificationType: "progress",
-      });
-      // early returns handled below depending on the stage of the workflow
-    });
-
     this.progress = progress;
     this.imageTag = getLocalKafkaImageTag();
 

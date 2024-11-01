@@ -51,6 +51,20 @@ async function runWorkflowWithProgress(start: boolean = true) {
     },
     async (progress, token: CancellationToken) => {
       for (const workflow of subworkflows) {
+        token.onCancellationRequested(() => {
+          logger.debug("cancellation requested, exiting workflow early", {
+            start,
+            workflow: workflow.constructor.name,
+            resourceKind: workflow.resourceKind,
+          });
+          workflow.sendTelemetryEvent("Notification Button Clicked", {
+            buttonLabel: "Cancel",
+            notificationType: "progress",
+            start,
+          });
+          // early returns handled within each workflow depending on how far it got
+        });
+
         logger.debug(`running ${workflow.constructor.name} workflow`, { start });
         workflow.sendTelemetryEvent("Workflow Initiated", {
           start,
