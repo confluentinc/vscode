@@ -11,6 +11,24 @@ import { getSchemasViewProvider } from "../viewProviders/schemas";
 const logger = new Logger("quickpicks.schemaRegistry");
 
 /**
+ * Runs the schemaRegistryQuickPick with a view progress indicator
+ * on the schemas view.
+ */
+export async function schemaRegistryQuickPickWithViewProgress(): Promise<
+  SchemaRegistry | undefined
+> {
+  return await vscode.window.withProgress(
+    {
+      location: { viewId: "confluent-schemas" },
+      title: "Loading Schema Registries...",
+    },
+    async () => {
+      return await schemaRegistryQuickPick();
+    },
+  );
+}
+
+/**
  * Create a quickpick to let the user choose a Schema Registry (listed by CCloud environment
  * separators). Mainly used in the event a command was triggered through the command palette instead
  * of through the view->item->context menu.
