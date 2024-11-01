@@ -13,6 +13,12 @@
  */
 
 import { mapValues } from "../runtime";
+import type { SchemaRegistryConfig } from "./SchemaRegistryConfig";
+import {
+  SchemaRegistryConfigFromJSON,
+  SchemaRegistryConfigFromJSONTyped,
+  SchemaRegistryConfigToJSON,
+} from "./SchemaRegistryConfig";
 import type { ConnectionType } from "./ConnectionType";
 import {
   ConnectionTypeFromJSON,
@@ -27,43 +33,61 @@ import {
   CCloudConfigFromJSONTyped,
   CCloudConfigToJSON,
 } from "./CCloudConfig";
+import type { KafkaClusterConfig } from "./KafkaClusterConfig";
+import {
+  KafkaClusterConfigFromJSON,
+  KafkaClusterConfigFromJSONTyped,
+  KafkaClusterConfigToJSON,
+} from "./KafkaClusterConfig";
 
 /**
- *
+ * The connection details that can be set or changed.
  * @export
  * @interface ConnectionSpec
  */
 export interface ConnectionSpec {
   /**
-   *
+   * The unique identifier of the connection resource.
    * @type {string}
    * @memberof ConnectionSpec
    */
   id?: string;
   /**
-   *
+   * The user-supplied name of the connection resource.
    * @type {string}
    * @memberof ConnectionSpec
    */
   name?: string;
   /**
-   *
+   * The type of connection resource.
    * @type {ConnectionType}
    * @memberof ConnectionSpec
    */
   type?: ConnectionType;
   /**
-   *
+   * The details for connecting to CCloud.
    * @type {CCloudConfig}
    * @memberof ConnectionSpec
    */
   ccloud_config?: CCloudConfig;
   /**
-   *
+   * The details for connecting to Confluent Local.
    * @type {LocalConfig}
    * @memberof ConnectionSpec
    */
   local_config?: LocalConfig;
+  /**
+   * The details for connecting to a CCloud, Confluent Platform, or Apache Kafka cluster.
+   * @type {KafkaClusterConfig}
+   * @memberof ConnectionSpec
+   */
+  kafka_cluster?: KafkaClusterConfig;
+  /**
+   * The details for connecting to a Schema Registry.
+   * @type {SchemaRegistryConfig}
+   * @memberof ConnectionSpec
+   */
+  schema_registry?: SchemaRegistryConfig;
 }
 
 /**
@@ -92,6 +116,12 @@ export function ConnectionSpecFromJSONTyped(
       json["ccloud_config"] == null ? undefined : CCloudConfigFromJSON(json["ccloud_config"]),
     local_config:
       json["local_config"] == null ? undefined : LocalConfigFromJSON(json["local_config"]),
+    kafka_cluster:
+      json["kafka_cluster"] == null ? undefined : KafkaClusterConfigFromJSON(json["kafka_cluster"]),
+    schema_registry:
+      json["schema_registry"] == null
+        ? undefined
+        : SchemaRegistryConfigFromJSON(json["schema_registry"]),
   };
 }
 
@@ -105,5 +135,7 @@ export function ConnectionSpecToJSON(value?: ConnectionSpec | null): any {
     type: ConnectionTypeToJSON(value["type"]),
     ccloud_config: CCloudConfigToJSON(value["ccloud_config"]),
     local_config: LocalConfigToJSON(value["local_config"]),
+    kafka_cluster: KafkaClusterConfigToJSON(value["kafka_cluster"]),
+    schema_registry: SchemaRegistryConfigToJSON(value["schema_registry"]),
   };
 }
