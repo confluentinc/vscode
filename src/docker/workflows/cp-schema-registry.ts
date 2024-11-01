@@ -1,5 +1,5 @@
 import { CancellationToken, commands, Progress, window } from "vscode";
-import { findFreePort, LocalResourceContainer, LocalResourceWorkflow } from ".";
+import { findFreePort, getKafkaWorkflow } from ".";
 import {
   ContainerCreateRequest,
   ContainerCreateResponse,
@@ -8,7 +8,6 @@ import {
   ContainerSummary,
   HostConfig,
 } from "../../clients/docker";
-import { getKafkaWorkflow } from "../../commands/docker";
 import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
@@ -22,6 +21,7 @@ import {
   getContainerPorts,
   getContainersForImage,
 } from "../containers";
+import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
 
 const CONTAINER_NAME = "vscode-confluent-schema-registry";
 
