@@ -37,15 +37,15 @@ export async function getContainersForImage(
     } else {
       logger.error("Error listing containers:", error);
     }
+    throw error;
   }
-  return [];
 }
 
 export async function createContainer(
   imageRepo: string,
   imageTag: string,
   request: ContainerCreateOperationRequest,
-): Promise<ContainerCreateResponse | undefined> {
+): Promise<ContainerCreateResponse> {
   if (!(await imageExists(imageRepo, imageTag))) {
     await pullImage(imageRepo, imageTag);
   }
@@ -59,12 +59,10 @@ export async function createContainer(
   const init: RequestInit = defaultRequestInit();
   try {
     const response: ContainerCreateResponse = await client.containerCreate(request, init);
-    logger.info("Container created successfully", response);
+    logger.info("Container created successfully:", response);
     return response;
   } catch (error) {
     if (error instanceof ResponseError) {
-      // TODO: if port is occupied, throw a more specific error
-
       logger.error("Container creation returned error response:", {
         status: error.response.status,
         statusText: error.response.statusText,
@@ -73,10 +71,11 @@ export async function createContainer(
     } else {
       logger.error("Error creating container:", error);
     }
+    throw error;
   }
 }
 
-export async function startContainer(containerId: string) {
+export async function startContainer(containerId: string): Promise<void> {
   const client = new ContainerApi();
   const init: RequestInit = defaultRequestInit();
 
@@ -92,10 +91,11 @@ export async function startContainer(containerId: string) {
     } else {
       logger.error("Error starting container:", error);
     }
+    throw error;
   }
 }
 
-export async function getContainer(id: string): Promise<ContainerInspectResponse | undefined> {
+export async function getContainer(id: string): Promise<ContainerInspectResponse> {
   const client = new ContainerApi();
   const init: RequestInit = defaultRequestInit();
 
@@ -111,5 +111,6 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
     } else {
       logger.error("Error inspecting container:", error);
     }
+    throw error;
   }
 }
