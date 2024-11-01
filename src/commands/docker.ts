@@ -79,13 +79,9 @@ async function runWorkflowWithProgress(start: boolean = true) {
                 localResourceWorkflow: workflow.constructor.name,
               },
             });
-            window
-              .showErrorMessage(
-                `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${error.message}`,
-                "Open Logs",
-                "File Issue",
-              )
-              .then(workflow.handleErrorNotificationButtons);
+            workflow.showErrorNotification(
+              `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${error.message}`,
+            );
           }
         }
       }

@@ -89,18 +89,24 @@ export abstract class LocalResourceWorkflow {
   }
 
   // TODO: maybe put this somewhere else for more general use?
-  /** Handle the user's selection from the "Open Logs" or "File an Issue" buttons on an error notification. */
-  handleErrorNotificationButtons(selection: string | undefined) {
-    if (!selection) return;
-    this.sendTelemetryEvent("Notification Button Clicked", {
-      buttonLabel: selection,
-      notificationType: "error",
+  /** Show an error notification for this workflow with buttons to "Open Logs" or "File an Issue". */
+  showErrorNotification(message: string) {
+    const logsButton = "Open Logs";
+    const issueButton = "File an Issue";
+    window.showErrorMessage(message, logsButton, issueButton).then(async (selection) => {
+      if (!selection) return;
+
+      if (selection === logsButton) {
+        commands.executeCommand("confluent.showOutputChannel");
+      } else if (selection === issueButton) {
+        commands.executeCommand("confluent.support.issue");
+      }
+
+      this.sendTelemetryEvent("Notification Button Clicked", {
+        buttonLabel: selection,
+        notificationType: "error",
+      });
     });
-    if (selection === "Open Logs") {
-      commands.executeCommand("confluent.showOutputChannel");
-    } else if (selection === "File an Issue") {
-      commands.executeCommand("confluent.support.issue");
-    }
   }
 
   /**
