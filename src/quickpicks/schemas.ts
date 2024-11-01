@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { IconNames } from "../constants";
 import { Schema, SchemaType } from "../models/schema";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -62,8 +63,10 @@ export async function schemaSubjectQuickPick(
   // with the description as the subject name for easy return value.
   for (const subject of schemaSubjects!) {
     const latestVersionSchema = latestVersionSchemaBySubject.get(subject);
+
     subjectItems.push({
       label: subject,
+      iconPath: getSubjectIcon(subject),
       description: `v${latestVersionSchema?.version}`,
     });
   }
@@ -86,4 +89,15 @@ export async function schemaSubjectQuickPick(
   }
 
   return chosenSubject.label;
+}
+
+/** Determine an icon for a schema subject. */
+export function getSubjectIcon(subject: string): vscode.ThemeIcon {
+  if (subject.endsWith("-key")) {
+    return new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
+  } else if (subject.endsWith("-value")) {
+    return new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
+  } else {
+    return new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
+  }
 }
