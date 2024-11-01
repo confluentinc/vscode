@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { CancellationToken, Disposable, ProgressLocation, Uri, env, window } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { ResponseError } from "../clients/docker";
 import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
@@ -93,8 +94,19 @@ async function runWorkflowWithProgress(start: boolean = true) {
                 localResourceWorkflow: workflow.constructor.name,
               },
             });
+            let errorMsg: string = "";
+            if (error instanceof ResponseError) {
+              try {
+                const body = await error.response.clone().json();
+                errorMsg = body.message;
+              } catch {
+                errorMsg = error.response.statusText;
+              }
+            } else {
+              errorMsg = error.message;
+            }
             workflow.showErrorNotification(
-              `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${error.message}`,
+              `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${errorMsg}`,
             );
           }
         }
