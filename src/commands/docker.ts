@@ -3,6 +3,7 @@ import { CancellationToken, Disposable, ProgressLocation, Uri, env, window } fro
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { getLocalKafkaImageName, isDockerAvailable } from "../docker/configs";
+import { LocalResourceKind } from "../docker/constants";
 import { LocalResourceWorkflow } from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { Logger } from "../logging";
@@ -14,7 +15,10 @@ async function startLocalResourcesWithProgress() {
 }
 
 /** Run the local resource workflow(s) with a progress notification. */
-async function runWorkflowWithProgress(start: boolean = true) {
+export async function runWorkflowWithProgress(
+  start: boolean = true,
+  resourceKinds: LocalResourceKind[] = [],
+) {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     window
@@ -33,13 +37,12 @@ async function runWorkflowWithProgress(start: boolean = true) {
 
   // TODO(shoup): add multi-select quickpick to determine which resource(s) to start/stop; for now
   // just default to Kafka
-  const resources = ["Kafka"];
+  const resources: LocalResourceKind[] = [LocalResourceKind.Kafka];
 
   // based on the imageRepo chosen by the user, select the appropriate workflow before running them
   const subworkflows: LocalResourceWorkflow[] = [];
-  if (resources.includes("Kafka")) {
-    const kafkaWorkflow = getKafkaWorkflow();
-    if (kafkaWorkflow) subworkflows.push(kafkaWorkflow);
+  if (resources.includes(LocalResourceKind.Kafka)) {
+    subworkflows.push(getKafkaWorkflow());
   }
   // add logic for looking up other resources' workflows here
 
@@ -125,7 +128,7 @@ export function registerDockerCommands(): Disposable[] {
 }
 
 /** Determine which Kafka workflow to use based on the user-selected configuration. */
-export function getKafkaWorkflow(): LocalResourceWorkflow | undefined {
+export function getKafkaWorkflow(): LocalResourceWorkflow {
   const imageRepo: string = getLocalKafkaImageName();
   let workflow: LocalResourceWorkflow;
   switch (imageRepo) {
@@ -134,8 +137,7 @@ export function getKafkaWorkflow(): LocalResourceWorkflow | undefined {
       break;
     // TODO: add support for other images here (apache/kafka, etc.)
     default:
-      window.showErrorMessage(`Unsupported image repo: ${imageRepo}`);
-      return;
+      throw new Error(`Unsupported Kafka image repo: ${imageRepo}`);
   }
   return workflow;
 }

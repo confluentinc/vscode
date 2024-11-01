@@ -14,3 +14,8 @@ export const DEFAULT_KAFKA_IMAGE_TAG = "latest";
 
 /** Label to use when creating containers, to allow for easier identification later. */
 export const MANAGED_CONTAINER_LABEL = "io.confluent.vscode.managed";
+
+/** Types of resources that can be locally managed by this extension through the Docker engine API. */
+export enum LocalResourceKind {
+  Kafka = "Kafka",
+}
