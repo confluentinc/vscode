@@ -20,7 +20,6 @@ import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
-import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import {
@@ -66,11 +65,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<void> {
     token.onCancellationRequested(() => {
       this.logger.debug("cancellation requested, exiting start() early");
-      getTelemetryLogger().logUsage("Notification Button Clicked", {
-        extensionUserFlow: "Local Resource Management",
-        localResourceWorkflow: this.constructor.name,
-        localResourceKind: this.resourceKind,
-        dockerImage: this.imageRepoTag,
+      this.sendTelemetryEvent("Notification Button Clicked", {
         buttonLabel: "Cancel",
         notificationType: "progress",
       });
@@ -104,7 +99,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     if (token.isCancellationRequested) return;
 
     this.logAndUpdateProgress("Preparing for broker container creation...");
-    let numContainers: number = 1;
+    let count: number = 1;
     const numContainersString: string | undefined = await window.showInputBox({
       title: "Start Confluent Local",
       prompt: "Enter the number of Kafka brokers to start (1-4)",
@@ -117,25 +112,20 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       // early exit if the user cancels the input box
       return;
     }
-    numContainers = parseInt(numContainersString, 10);
-    getTelemetryLogger().logUsage("Input Box Filled", {
-      extensionUserFlow: "Local Resource Management",
-      localResourceWorkflow: this.constructor.name,
-      localResourceKind: this.resourceKind,
-      dockerImage: this.imageRepoTag,
+    count = parseInt(numContainersString, 10);
+    const plural = count > 1 ? "s" : "";
+    this.sendTelemetryEvent("Input Box Filled", {
+      numContainers: count,
       purpose: "Kafka Broker/Container Count",
-      numContainers,
     });
     if (token.isCancellationRequested) return;
 
-    this.logger.debug(`starting/creating ${numContainers} broker container(s)`);
-    const brokerConfigs: KafkaBrokerConfig[] = await this.generateBrokerConfigs(numContainers);
+    this.logger.debug(`starting/creating ${count} broker container${plural}`);
+    const brokerConfigs: KafkaBrokerConfig[] = await this.generateBrokerConfigs(count);
     const allContainerEnvs: string[][] = brokerConfigs.map((brokerConfig): string[] =>
       this.generateContainerEnv(brokerConfig.brokerNum, brokerConfigs),
     );
-    this.logAndUpdateProgress(
-      `Starting ${numContainers} ${this.resourceKind} container${numContainers > 1 ? "s" : ""}...`,
-    );
+    this.logAndUpdateProgress(`Starting ${count} ${this.resourceKind} container${plural}...`);
 
     // if any of the containers fail to create or start, we'll stop early and won't wait for local
     // resource event change
@@ -155,18 +145,15 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       if (!container) {
         window
           .showErrorMessage(
-            `Failed to create Kafka container "${brokerConfig.containerName}".`,
+            `Failed to create ${this.resourceKind} container "${brokerConfig.containerName}".`,
             "Open Logs",
+            "File Issue",
           )
-          .then(this.handleOpenLogsButton);
+          .then(this.handleErrorNotificationButtons);
         success = false;
         break;
       }
-      getTelemetryLogger().logUsage("Docker Container Created", {
-        extensionUserFlow: "Local Resource Management",
-        localResourceWorkflow: this.constructor.name,
-        localResourceKind: this.resourceKind,
-        dockerImage: this.imageRepoTag,
+      this.sendTelemetryEvent("Docker Container Created", {
         dockerContainerName: container.name,
       });
       // then start the container
@@ -177,34 +164,21 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
           .showErrorMessage(
             `Failed to start ${this.resourceKind} container "${container.name}".`,
             "Open Logs",
+            "File Issue",
           )
-          .then(this.handleOpenLogsButton);
+          .then(this.handleErrorNotificationButtons);
         success = false;
         break;
       }
-      getTelemetryLogger().logUsage("Docker Container Started", {
-        extensionUserFlow: "Local Resource Management",
-        localResourceWorkflow: this.constructor.name,
-        localResourceKind: this.resourceKind,
-        dockerImage: this.imageRepoTag,
+      this.sendTelemetryEvent("Docker Container Started", {
         dockerContainerName: container.name,
       });
     }
     // can't wait for containers to be ready if they didn't start
     if (!success) return;
 
-    this.logAndUpdateProgress(
-      `Waiting for ${this.resourceKind} container${numContainers > 1 ? "s" : ""} to be ready...`,
-    );
+    this.logAndUpdateProgress(`Waiting for ${this.resourceKind} container${plural} to be ready...`);
     await this.waitForLocalResourceEventChange();
-
-    getTelemetryLogger().logUsage("Workflow Finished", {
-      extensionUserFlow: "Local Resource Management",
-      localResourceWorkflow: this.constructor.name,
-      localResourceKind: this.resourceKind,
-      dockerImage: this.imageRepoTag,
-      start: true,
-    });
   }
 
   /** Stop `confluent-local` container(s). */
