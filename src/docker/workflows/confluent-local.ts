@@ -143,13 +143,9 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         containerEnvs,
       );
       if (!container) {
-        window
-          .showErrorMessage(
-            `Failed to create ${this.resourceKind} container "${brokerConfig.containerName}".`,
-            "Open Logs",
-            "File Issue",
-          )
-          .then(this.handleErrorNotificationButtons);
+        this.showErrorNotification(
+          `Failed to create ${this.resourceKind} container "${brokerConfig.containerName}".`,
+        );
         success = false;
         break;
       }
@@ -160,13 +156,9 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       const startedContainer: ContainerInspectResponse | undefined =
         await this.startKafkaContainer(container);
       if (!startedContainer) {
-        window
-          .showErrorMessage(
-            `Failed to start ${this.resourceKind} container "${container.name}".`,
-            "Open Logs",
-            "File Issue",
-          )
-          .then(this.handleErrorNotificationButtons);
+        this.showErrorNotification(
+          `Failed to start ${this.resourceKind} container "${container.name}".`,
+        );
         success = false;
         break;
       }
