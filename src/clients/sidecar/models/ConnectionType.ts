@@ -20,6 +20,7 @@ export const ConnectionType = {
   Local: "LOCAL",
   Platform: "PLATFORM",
   Ccloud: "CCLOUD",
+  Direct: "DIRECT",
 } as const;
 export type ConnectionType = (typeof ConnectionType)[keyof typeof ConnectionType];
 
