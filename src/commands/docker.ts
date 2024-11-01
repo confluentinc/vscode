@@ -4,7 +4,8 @@ import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import { getKafkaWorkflow, LocalResourceWorkflow } from "../docker/workflows";
+import { getKafkaWorkflow } from "../docker/workflows";
+import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.docker");
@@ -38,9 +39,19 @@ export async function runWorkflowWithProgress(start: boolean = true) {
   // based on the imageRepo chosen by the user, select the appropriate workflow before running them
   const subworkflows: LocalResourceWorkflow[] = [];
   if (resources.includes(LocalResourceKind.Kafka)) {
-    subworkflows.push(getKafkaWorkflow());
+    try {
+      subworkflows.push(getKafkaWorkflow());
+    } catch (error) {
+      logger.error("error getting Kafka workflow:", error);
+      return;
+    }
   }
   // add logic for looking up other resources' workflows here
+
+  if (subworkflows.length === 0) {
+    // bail early to avoid flashing an empty progress notification
+    return;
+  }
 
   logger.debug("running local resource workflow(s)", { start, resources });
   window.withProgress(
