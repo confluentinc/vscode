@@ -163,13 +163,13 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     };
     const existingContainers: ContainerSummary[] =
       await getContainersForImage(containerListRequest);
-    if (existingContainers.length === 0) {
+    const count = existingContainers.length;
+    const plural = count > 1 ? "s" : "";
+    if (count === 0) {
       return;
     }
 
-    this.logAndUpdateProgress(
-      `Stopping ${existingContainers.length} ${this.resourceKind} container(s)...`,
-    );
+    this.logAndUpdateProgress(`Stopping ${count} ${this.resourceKind} container${plural}...`);
     const promises: Promise<void>[] = [];
     for (const container of existingContainers) {
       if (!container.Id || !container.Names) {
@@ -189,6 +189,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     // there would introduce a delay
     if (token.isCancellationRequested) return;
 
+    this.logAndUpdateProgress(
+      `Waiting for ${count} ${this.resourceKind} container${plural} to stop...`,
+    );
     await this.waitForLocalResourceEventChange();
   }
 
