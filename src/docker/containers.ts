@@ -86,7 +86,7 @@ export async function startContainer(containerId: string): Promise<void> {
       logger.error("Error response starting container:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: await error.response.clone().json(),
+        body: await error.response.clone().text(),
       });
     } else {
       logger.error("Error starting container:", error);
@@ -106,7 +106,7 @@ export async function getContainer(id: string): Promise<ContainerInspectResponse
       logger.error("Error response inspecting container:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: await error.response.clone().json(),
+        body: await error.response.clone().text(),
       });
     } else {
       logger.error("Error inspecting container:", error);
