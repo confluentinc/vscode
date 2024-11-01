@@ -11,6 +11,7 @@ import {
 import { getKafkaWorkflow } from "../../commands/docker";
 import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
+import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { updateLocalSchemaRegistryURI } from "../../sidecar/connections";
 import { getLocalKafkaImageName, getLocalSchemaRegistryImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
@@ -82,18 +83,31 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     this.logAndUpdateProgress(`Checking for Kafka containers...`);
     const kafkaContainers = await this.fetchAndFilterKafkaContainers();
     if (kafkaContainers.length === 0) {
+      const kafkaWorkflow = getKafkaWorkflow();
       this.logger.error("no Kafka containers found, skipping creation");
-      const buttonLabel = "Start Local Resources";
+      const startKafkaButton = "Start Local Resources";
+      const imageSettingsButton = "Configure Image Settings";
       window
         .showErrorMessage(
-          "No running Kafka containers found. Please start Kafka and try again.",
-          buttonLabel,
+          `No running Kafka containers found for image "${kafkaWorkflow?.imageRepoTag}". Please start Kafka and try again.`,
+          startKafkaButton,
+          imageSettingsButton,
         )
         .then((selection) => {
-          if (selection === buttonLabel) {
+          if (selection === startKafkaButton) {
             commands.executeCommand("confluent.docker.startLocalResources");
             this.sendTelemetryEvent("Notification Button Clicked", {
-              buttonLabel: buttonLabel,
+              buttonLabel: startKafkaButton,
+              notificationType: "error",
+              purpose: "No Kafka Containers Found",
+            });
+          } else if (selection === imageSettingsButton) {
+            commands.executeCommand(
+              "workbench.action.openSettings",
+              `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+            );
+            this.sendTelemetryEvent("Notification Button Clicked", {
+              buttonLabel: imageSettingsButton,
               notificationType: "error",
               purpose: "No Kafka Containers Found",
             });
