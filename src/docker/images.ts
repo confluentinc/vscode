@@ -30,7 +30,7 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
         logger.error("Error response inspecting image:", {
           status: error.response.status,
           statusText: error.response.statusText,
-          body: await error.response.clone().json(),
+          body: await error.response.clone().text(),
         });
       }
     } else {
@@ -57,7 +57,7 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
       logger.error("Error response pulling image:", {
         status: error.response.status,
         statusText: error.response.statusText,
-        body: await error.response.clone().json(),
+        body: await error.response.clone().text(),
       });
     } else {
       logger.error("Error pulling image:", error);
