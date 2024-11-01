@@ -8,8 +8,24 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { ResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
+import { uploadNewSchema } from "./schemaUpload";
 
 const logger = new Logger("commands.schemas");
+
+export function registerSchemaCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
+    registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
+    registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
+    registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
+    registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
+    registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
+    registerCommandWithLogging(
+      "confluent.schemas.diffMostRecentVersions",
+      diffLatestSchemasCommand,
+    ),
+  ];
+}
 
 async function viewLocallyCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
@@ -45,11 +61,6 @@ function refreshCommand(item: any) {
 }
 
 function validateCommand(item: any) {
-  logger.info("item", item);
-  // TODO: implement this
-}
-
-function uploadVersionCommand(item: any) {
   logger.info("item", item);
   // TODO: implement this
 }
@@ -111,21 +122,6 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
       await Promise.all(promises);
     },
   );
-}
-
-export function registerSchemaCommands(): vscode.Disposable[] {
-  return [
-    registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
-    registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
-    registerCommandWithLogging("confluent.schemaViewer.uploadVersion", uploadVersionCommand),
-    registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
-    registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
-    registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
-    registerCommandWithLogging(
-      "confluent.schemas.diffMostRecentVersions",
-      diffLatestSchemasCommand,
-    ),
-  ];
 }
 
 /**
