@@ -12,8 +12,9 @@ export async function createNetwork(name: string, driver: string = "bridge"): Pr
     await networkClient.networkCreate({ networkConfig: { Name: name, Driver: driver } }, init);
   } catch (error) {
     if (error instanceof ResponseError) {
-      const body = await error.response.clone().json();
-      if (body.message && body.message.includes("already exists")) {
+      const body = await error.response.clone().text();
+      if (body.includes("already exists")) {
+        // this is fine, no need to re-throw the error
         logger.debug(`Network "${name}" with ${driver} driver already exists`);
         return;
       } else {
