@@ -3,7 +3,7 @@ import "mocha";
 import * as vscode from "vscode";
 import { TEST_SCHEMA } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
-import { Schema, SchemaType, generateSchemaSubjectGroups } from "./schema";
+import { Schema, SchemaType, generateSchemaSubjectGroups, getSubjectIcon } from "./schema";
 
 describe("Schema model methods", () => {
   it(".matchesTopicName() success / fail tests", () => {
@@ -191,4 +191,31 @@ describe("Schema helper functions", () => {
     const extraTopicIcon = extraTopicGroup!.iconPath as vscode.ThemeIcon;
     assert.equal(extraTopicIcon.id, new vscode.ThemeIcon(IconNames.OTHER_SUBJECT).id);
   });
+});
+
+describe("getSubjectIcon", () => {
+  for (const [subject, expected] of [
+    ["test-key", IconNames.KEY_SUBJECT],
+    ["test-value", IconNames.VALUE_SUBJECT],
+    ["test-other", IconNames.OTHER_SUBJECT],
+  ]) {
+    it(`should return ${expected} icon for subject '${subject}' when called w/o errOnValueSubject`, () => {
+      const icon = getSubjectIcon(subject);
+      assert.deepEqual(icon, new vscode.ThemeIcon(expected));
+    });
+  }
+
+  for (const [subject, errOnValueSubject, expected] of [
+    ["test-key", true, IconNames.KEY_SUBJECT],
+    ["test-value", true, IconNames.VALUE_SUBJECT],
+    // explicit false should return the "other" icon
+    ["test-other", false, IconNames.OTHER_SUBJECT],
+    // explicit true should prefer the "value" icon over the "other" icon
+    ["test-other", true, IconNames.VALUE_SUBJECT],
+  ]) {
+    it(`should return ${expected} icon for subject '${subject}' when called with errOnValueSubject`, () => {
+      const icon = getSubjectIcon(subject as string, errOnValueSubject as boolean);
+      assert.deepEqual(icon, new vscode.ThemeIcon(expected as IconNames));
+    });
+  }
 });
