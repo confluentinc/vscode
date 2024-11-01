@@ -7,7 +7,7 @@ import {
   getLocalSchemaRegistryImageTag,
 } from "../docker/configs";
 import { Logger } from "../logging";
-import { LOCAL_KAFKA_IMAGE } from "../preferences/constants";
+import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../preferences/constants";
 
 const logger = new Logger("quickpicks.localResources");
 
@@ -58,8 +58,11 @@ export async function localResourcesQuickPick(): Promise<QuickPickItem[]> {
     async (event: { button: QuickInputButton; item: QuickPickItem }) => {
       quickpick.hide();
       if (event.button.tooltip?.includes(KAFKA_RESOURCE_LABEL)) {
-        // open Settings and focus on specific setting ID
-        commands.executeCommand("workbench.action.openSettings", LOCAL_KAFKA_IMAGE);
+        // open Settings and filter to the Kafka image repo+tag settings
+        commands.executeCommand(
+          "workbench.action.openSettings",
+          `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+        );
       }
     },
   );
