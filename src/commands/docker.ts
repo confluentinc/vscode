@@ -12,12 +12,12 @@ import { localResourcesQuickPick } from "../quickpicks/localResources";
 
 const logger = new Logger("commands.docker");
 
-async function startLocalResourcesWithProgress() {
-  await runWorkflowWithProgress();
+async function startLocalResourcesWithProgress(resourceKinds: LocalResourceKind[] = []) {
+  await runWorkflowWithProgress(true, resourceKinds);
 }
 
-async function stopLocalResourcesWithProgress() {
-  await runWorkflowWithProgress(false);
+async function stopLocalResourcesWithProgress(resourceKinds: LocalResourceKind[] = []) {
+  await runWorkflowWithProgress(false, resourceKinds);
 }
 
 /** Prompt the user with a multi-select quickpick, allowing them to choose which resource types to

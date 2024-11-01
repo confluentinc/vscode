@@ -14,7 +14,7 @@ import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { updateLocalSchemaRegistryURI } from "../../sidecar/connections";
 import { getLocalKafkaImageName, getLocalSchemaRegistryImageTag } from "../configs";
-import { MANAGED_CONTAINER_LABEL } from "../constants";
+import { LocalResourceKind, MANAGED_CONTAINER_LABEL } from "../constants";
 import {
   createContainer,
   getContainer,
@@ -85,7 +85,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     if (kafkaContainers.length === 0) {
       const kafkaWorkflow = getKafkaWorkflow();
       this.logger.error("no Kafka containers found, skipping creation");
-      const startKafkaButton = "Start Local Resources";
+      const startKafkaButton = "Start Kafka";
       const imageSettingsButton = "Configure Image Settings";
       window
         .showErrorMessage(
@@ -95,7 +95,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
         )
         .then((selection) => {
           if (selection === startKafkaButton) {
-            commands.executeCommand("confluent.docker.startLocalResources");
+            commands.executeCommand("confluent.docker.startLocalResources", [
+              LocalResourceKind.Kafka,
+            ]);
             this.sendTelemetryEvent("Notification Button Clicked", {
               buttonLabel: startKafkaButton,
               notificationType: "error",
