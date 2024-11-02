@@ -174,7 +174,7 @@ export abstract class LocalResourceWorkflow {
     if (anyRunning) {
       buttonLabel = ""; // doesn't actually show a button; TODO(shoup): set in downstream branch
     } else {
-      buttonLabel = count ? "Start All" : "Start";
+      buttonLabel = count > 1 ? "Start All" : "Start";
     }
 
     window
@@ -193,9 +193,9 @@ export abstract class LocalResourceWorkflow {
           });
           for (const container of containers) {
             if (!(container.Id && container.Names)) {
-              throw new Error(
-                `Unable to ${choice.toLowerCase()} container${plural}: container ID or name not found.`,
-              );
+              // ID & Names not required by the OpenAPI spec, but very unlikely to be missing if we have the container
+              // https://docs.docker.com/reference/api/engine/version/v1.47/#tag/Container/operation/ContainerList
+              continue;
             }
             if (anyRunning) {
               // TODO: implement stop+start in downstream branch
