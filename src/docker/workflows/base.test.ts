@@ -16,7 +16,7 @@ class TestWorkflow extends LocalResourceWorkflow {
   async waitForLocalResourceEventChange() {}
 }
 
-describe.only("docker/workflows/base.ts LocalResourceWorkflow base methods/properties", () => {
+describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties", () => {
   let sandbox: sinon.SinonSandbox;
 
   // vscode stubs
