@@ -26,7 +26,7 @@ import { createContainer, getContainersForImage } from "../containers";
 import { createNetwork } from "../networks";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
 
-const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
+export const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";
 
 export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   resourceKind: string = "Kafka";
@@ -48,8 +48,8 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 
   /**
    * Start `confluent-local` resources locally:
-   * - Check for existing containers and exit early if found
    * - Ensure the Docker image is available
+   * - Check for existing containers and exit early if found
    * - Create a network if it doesn't exist
    * - Create the container(s) for the Kafka broker(s)
    * - Start the container(s)
@@ -195,14 +195,15 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
       Tty: false,
     };
 
-    const container: ContainerCreateResponse | undefined = await createContainer(
-      this.imageRepo,
-      this.imageTag,
-      {
+    let container: ContainerCreateResponse | undefined;
+    try {
+      container = await createContainer(this.imageRepo, this.imageTag, {
         body,
         name: containerName,
-      },
-    );
+      });
+    } catch (error) {
+      this.logger.error("Failed to create Kafka container", { error });
+    }
     return container ? { id: container.Id, name: containerName } : undefined;
   }
 
@@ -217,12 +218,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     return brokerConfigs;
   }
 
-  /**
-   * Configure the ports to use for a Kafka container.
-   *
-   * The plaintext port is configurable by the user, but the broker and controller ports are dynamically
-   * assigned based on available ports on the host machine.
-   */
+  /** Find free plaintext, broker, and controller ports to use for a Kafka container. */
   private async configurePorts(): Promise<KafkaContainerPorts> {
     const plainText: number = await findFreePort();
     const broker: number = await findFreePort();
@@ -307,19 +303,19 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
 }
 
 /** Convert an array of broker configs to a list of controller quorum voter strings. */
-function brokerConfigsToControllerQuorumVoters(configs: KafkaBrokerConfig[]): string[] {
+export function brokerConfigsToControllerQuorumVoters(configs: KafkaBrokerConfig[]): string[] {
   return configs.map(
     (config) => `${config.brokerNum}@${config.containerName}:${config.ports.controller}`,
   );
 }
 
 /** Convert an array of broker configs to a list of REST bootstrap server strings. */
-function brokerConfigsToRestBootstrapServers(configs: KafkaBrokerConfig[]): string[] {
+export function brokerConfigsToRestBootstrapServers(configs: KafkaBrokerConfig[]): string[] {
   return configs.map((config) => `${config.containerName}:${config.ports.broker}`);
 }
 
 /** Validate the user's input for the number of brokers/containers to start. */
-function validateBrokerInput(userInput: string): InputBoxValidationMessage | undefined {
+export function validateBrokerInput(userInput: string): InputBoxValidationMessage | undefined {
   const num: number = parseInt(userInput, 10);
   if (isNaN(num) || num < 1 || num > 4) {
     return {
@@ -330,13 +326,13 @@ function validateBrokerInput(userInput: string): InputBoxValidationMessage | und
   return;
 }
 
-interface KafkaContainerPorts {
+export interface KafkaContainerPorts {
   plainText: number;
   broker: number;
   controller: number;
 }
 
-interface KafkaBrokerConfig {
+export interface KafkaBrokerConfig {
   brokerNum: number;
   containerName: string;
   ports: KafkaContainerPorts;
