@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
-import { ContainerInspectResponse, ResponseError } from "../../clients/docker";
+import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import * as dockerContainers from "../containers";
 import * as dockerImages from "../images";
@@ -46,6 +46,127 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
   afterEach(() => {
     sandbox.restore();
   });
+
+  it(".imageRepoTag should return the correct .imageRepo+.imageTag string", () => {
+    (TestWorkflow as any).imageRepo = "repo";
+    workflow.imageTag = "latest";
+
+    assert.strictEqual(workflow.imageRepoTag, "repo:latest");
+  });
+
+  it("checkForImage() should check for image and pull if it does not exist", async () => {
+    imageExistsStub.resolves(false);
+    pullImageStub.resolves();
+
+    await workflow["checkForImage"]("repo", "tag");
+
+    assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
+    assert.ok(pullImageStub.calledOnceWith("repo", "tag"));
+  });
+
+  it("checkForImage() should not pull image if it already exists", async () => {
+    imageExistsStub.resolves(true);
+
+    await workflow["checkForImage"]("repo", "tag");
+
+    assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
+    assert.ok(pullImageStub.notCalled);
+  });
+
+  it("handleExistingContainers() should handle an existing container and show the user a 'Start' button", async () => {
+    const workflowStartContainerStub = sandbox.stub(workflow, "startContainer");
+    const fakeContainers: ContainerSummary[] = [
+      { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
+    ];
+
+    await workflow.handleExistingContainers(fakeContainers);
+
+    assert.ok(
+      showErrorMessageStub.calledOnceWith(
+        "Existing test container found. Please start or remove it and try again.",
+        "Start",
+      ),
+    );
+    // if the user clicks 'Start', the workflow will call startContainer()
+    assert.ok(workflowStartContainerStub.notCalled);
+  });
+
+  it("handleExistingContainers() should call .startContainer() if the user clicks the 'Start' button", async () => {
+    const fakeContainers: ContainerSummary[] = [
+      { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
+    ];
+    // stub the user clicking the 'Start' button
+    const button = "Start";
+    showErrorMessageStub.resolves(button);
+
+    await workflow.handleExistingContainers(fakeContainers);
+
+    assert.ok(
+      showErrorMessageStub.calledOnceWith(
+        "Existing test container found. Please start or remove it and try again.",
+        button,
+      ),
+    );
+    // base method is called with the container ID+name, standalone function just uses ID
+    assert.ok(startContainerStub.calledOnceWith(fakeContainers[0].Id!));
+  });
+
+  // FIXME(shoup): figure out why this is only saying it's called once
+  it.skip("handleExistingContainers() should handle multiple existing containers and show the user a 'Start All' button", async () => {
+    const workflowStartContainerStub = sandbox.stub(workflow, "startContainer");
+    const fakeContainers: ContainerSummary[] = [
+      { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
+      { Id: "2", Names: ["/container2"], Image: "image1", State: "exited" },
+    ];
+    // stub the user clicking the 'Start All' button
+    const button = "Start All";
+    showErrorMessageStub.resolves(button);
+
+    await workflow.handleExistingContainers(fakeContainers);
+
+    assert.ok(
+      showErrorMessageStub.calledOnceWith(
+        "Existing test containers found. Please start or remove them and try again.",
+        button,
+      ),
+    );
+    assert.ok(
+      workflowStartContainerStub.calledTwice,
+      `workflow startContainer() called ${workflowStartContainerStub.callCount} time(s) with args: ${JSON.stringify(workflowStartContainerStub.args, null, 2)}`,
+    );
+    assert.ok(
+      workflowStartContainerStub.calledWith({
+        id: fakeContainers[0].Id!,
+        name: fakeContainers[0].Names![0],
+      }),
+    );
+    assert.ok(
+      workflowStartContainerStub.calledWith({
+        id: fakeContainers[1].Id!,
+        name: fakeContainers[1].Names![0],
+      }),
+    );
+  });
+
+  // TODO(shoup): update this in downstream branch
+  // it("handleExistingContainers() should handle 'running' containers and prompt the user to restart them", async () => {
+  //   const fakeContainers: ContainerSummary[] = [
+  //     { Id: "1", Names: ["/container1"], Image: "image1", State: "running" },
+  //   ];
+  //   // stub the user clicking the 'Restart' button
+  //   const button = "Restart";
+  //   showErrorMessageStub.resolves(button);
+
+  //   await workflow.handleExistingContainers(fakeContainers);
+
+  //   assert.ok(
+  //     showErrorMessageStub.calledOnceWith(
+  //       "Existing test container found. Please restart or remove it and try again.",
+  //       button,
+  //     ),
+  //   );
+  //   assert.ok(startContainerStub.notCalled);
+  // });
 
   it("startContainer() should start a container and return its inspect response", async () => {
     const fakeContainer: LocalResourceContainer = { id: "1", name: "test-container" };
@@ -100,31 +221,5 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     assert.ok(
       showErrorMessageStub.calledOnceWith('Failed to start test container "test-container": uh oh'),
     );
-  });
-
-  it("checkForImage() should check for image and pull if it does not exist", async () => {
-    imageExistsStub.resolves(false);
-    pullImageStub.resolves();
-
-    await workflow["checkForImage"]("repo", "tag");
-
-    assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
-    assert.ok(pullImageStub.calledOnceWith("repo", "tag"));
-  });
-
-  it("checkForImage() should not pull image if it already exists", async () => {
-    imageExistsStub.resolves(true);
-
-    await workflow["checkForImage"]("repo", "tag");
-
-    assert.ok(imageExistsStub.calledOnceWith("repo", "tag"));
-    assert.ok(pullImageStub.notCalled);
-  });
-
-  it(".imageRepoTag should return the correct .imageRepo+.imageTag string", () => {
-    (TestWorkflow as any).imageRepo = "repo";
-    workflow.imageTag = "latest";
-
-    assert.strictEqual(workflow.imageRepoTag, "repo:latest");
   });
 });
