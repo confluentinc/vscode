@@ -40,6 +40,7 @@ import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
+import { registerDockerCommands } from "./commands/docker";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
@@ -342,6 +343,7 @@ function setupCommands(context: vscode.ExtensionContext): vscode.ExtensionContex
     ...registerTopicCommands(),
     ...registerDiffCommands(),
     ...registerExtraCommands(),
+    ...registerDockerCommands(),
   );
   logger.info("Main command disposables stored");
   return context;
