@@ -33,6 +33,7 @@ const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
+export const test = series(clean, build, testBuild, testRun);
 
 export const bundle = series(clean, build, pack);
 
@@ -515,11 +516,10 @@ export async function lint() {
   if (warnCount > 50) throw new Error("ESLint found too many warnings (maximum: 50).");
 }
 
-test.description = "Run tests using @vscode/test-cli. Use --coverage for coverage report.";
-export async function test() {
+testBuild.description =
+  "Build test files for running tests via `gulp testRun` or through the VS Code test runner. Use --coverage to enable coverage reporting.";
+export async function testBuild() {
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
-  // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
-  const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
   const testFiles = globSync(["src/**/*.test.ts", "src/testing.ts"]);
   const entryMap = Object.fromEntries(
     testFiles.map((filename) => [filename.slice(0, -extname(filename).length), filename]),
@@ -557,6 +557,14 @@ export async function test() {
   };
   const bundle = await rollup(testInput);
   await bundle.write(testOutput);
+  return 0;
+}
+
+testRun.description = "Run tests using @vscode/test-cli. Use --coverage for coverage report.";
+export async function testRun() {
+  const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
+  // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
+  const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
   await runTests({
     extensionDevelopmentPath: resolve(DESTINATION),
     extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
