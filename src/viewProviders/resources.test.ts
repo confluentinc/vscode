@@ -7,14 +7,17 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
-import { TEST_SCHEMA_REGISTRY } from "../../tests/unit/testResources/schemaRegistry";
+import {
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_LOCAL_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources/schemaRegistry";
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
 import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as auth from "../sidecar/connections";
 import * as resourceManager from "../storage/resourceManager";
 import { loadCCloudResources, loadLocalResources, ResourceViewProvider } from "./resources";
@@ -42,7 +45,7 @@ describe("ResourceViewProvider methods", () => {
   });
 
   it("getTreeItem() should return a SchemaRegistryTreeItem for a SchemaRegistry instance", () => {
-    const treeItem = provider.getTreeItem(TEST_SCHEMA_REGISTRY);
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA_REGISTRY);
     assert.ok(treeItem instanceof SchemaRegistryTreeItem);
   });
 
@@ -104,22 +107,28 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadLocalResources() should load local resources under the Local container tree item when clusters are discoverable", async () => {
-    sandbox.stub(local, "getLocalKafkaClusters").resolves([TEST_LOCAL_KAFKA_CLUSTER]);
+    const testLocalResourceGroup: local.LocalResourceGroup = {
+      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+    };
+    sandbox.stub(local, "getLocalResources").resolves([testLocalResourceGroup]);
 
-    const result: ContainerTreeItem<LocalKafkaCluster> = await loadLocalResources();
+    const result: ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry> =
+      await loadLocalResources();
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
     assert.equal(result.id, "local-container-connected");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
-    assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER]);
+    assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY]);
   });
 
   it("loadLocalResources() should return a Local placeholder when no clusters are discoverable", async () => {
-    sandbox.stub(local, "getLocalKafkaClusters").resolves([]);
+    sandbox.stub(local, "getLocalResources").resolves([]);
 
-    const result: ContainerTreeItem<LocalKafkaCluster> = await loadLocalResources();
+    const result: ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry> =
+      await loadLocalResources();
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
