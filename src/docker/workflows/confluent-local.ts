@@ -85,7 +85,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     await createNetwork(this.networkName);
     if (token.isCancellationRequested) return;
 
-    this.logAndUpdateProgress("Preparing for broker container creation...");
+    this.logAndUpdateProgress("Preparing for broker container creation; waiting on user input...");
     let count: number = 1;
     const numContainersString: string | undefined = await window.showInputBox({
       title: "Start Confluent Local",
