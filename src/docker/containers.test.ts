@@ -2,7 +2,13 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as dockerClients from "../clients/docker";
 import { MANAGED_CONTAINER_LABEL } from "./constants";
-import { createContainer, getContainer, getContainersForImage, startContainer } from "./containers";
+import {
+  createContainer,
+  getContainer,
+  getContainersForImage,
+  startContainer,
+  stopContainer,
+} from "./containers";
 import * as dockerImages from "./images";
 
 describe("docker/containers.ts ContainerApi wrappers", () => {
@@ -16,6 +22,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
   let containerListStub: sinon.SinonStub;
   let containerCreateStub: sinon.SinonStub;
   let containerStartStub: sinon.SinonStub;
+  let containerStopStub: sinon.SinonStub;
   let containerInspectStub: sinon.SinonStub;
 
   beforeEach(() => {
@@ -31,6 +38,7 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
     containerListStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerList");
     containerCreateStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerCreate");
     containerStartStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerStart");
+    containerStopStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerStop");
     containerInspectStub = sandbox.stub(dockerClients.ContainerApi.prototype, "containerInspect");
   });
 
@@ -135,6 +143,23 @@ describe("docker/containers.ts ContainerApi wrappers", () => {
 
     assert.deepStrictEqual(result, fakeResponse);
     assert.ok(containerInspectStub.calledOnce);
+  });
+
+  it("stopContainer() should return nothing after successfully stopping a container", async () => {
+    containerStopStub.resolves();
+
+    const result = await stopContainer("1");
+
+    assert.strictEqual(result, undefined);
+    assert.ok(containerStopStub.calledOnce);
+  });
+
+  it("stopContainer() should re-throw any error from .containerStop", async () => {
+    const fakeError = new Error("Error stopping container");
+    containerStopStub.rejects(fakeError);
+
+    await assert.rejects(stopContainer("1"), fakeError);
+    assert.ok(containerStopStub.calledOnce);
   });
 
   it("getContainer() should re-throw any error from .containerInspect", async () => {
