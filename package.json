@@ -402,7 +402,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr [learn more](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html) about running Kafka locally.",
+        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr start Kafka locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable)"
       },
       {
