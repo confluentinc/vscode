@@ -1,6 +1,10 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as sidecar from ".";
+import {
+  TEST_CCLOUD_CONNECTION,
+  TEST_LOCAL_CONNECTION,
+} from "../../tests/unit/testResources/connection";
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import { Connection, ConnectionsResourceApi } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_SPEC, LOCAL_CONNECTION_SPEC } from "../constants";
@@ -35,6 +39,8 @@ describe("sidecar/connections.ts", () => {
   });
 
   for (const connectionSpec of [LOCAL_CONNECTION_SPEC, CCLOUD_CONNECTION_SPEC]) {
+    const fakeConnection: Connection =
+      connectionSpec.type === "LOCAL" ? TEST_LOCAL_CONNECTION : TEST_CCLOUD_CONNECTION;
     it(`${connectionSpec.type}: tryToGetConnection() should return null if no connection exists / we get a 404 response`, async () => {
       stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.rejects({ response: { status: 404 } });
 
@@ -44,21 +50,19 @@ describe("sidecar/connections.ts", () => {
     });
 
     it(`${connectionSpec.type}: tryToGetConnection() should return a connection if it exists`, async () => {
-      const expectedConnection: Connection = { id: "test-id" } as Connection;
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(expectedConnection);
+      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(fakeConnection);
 
       const connection = await getLocalConnection();
 
-      assert.strictEqual(connection, expectedConnection);
+      assert.strictEqual(connection, fakeConnection);
     });
 
     it(`${connectionSpec.type}: tryToCreateConnection() should create and return a new connection`, async () => {
-      const expectedConnection: Connection = { id: "test-id" } as Connection;
-      stubConnectionsResourceApi.gatewayV1ConnectionsPost.resolves(expectedConnection);
+      stubConnectionsResourceApi.gatewayV1ConnectionsPost.resolves(fakeConnection);
 
       const connection = await tryToCreateConnection(connectionSpec);
 
-      assert.strictEqual(connection, expectedConnection);
+      assert.strictEqual(connection, fakeConnection);
     });
   }
 
