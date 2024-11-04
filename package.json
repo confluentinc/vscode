@@ -100,6 +100,12 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.docker.startLocalResources",
+        "icon": "$(debug-start)",
+        "title": "Start Local Resources",
+        "category": "Confluent: Docker"
+      },
+      {
         "command": "confluent.schemas.diffMostRecentVersions",
         "title": "Show Latest Changes",
         "category": "Confluent: Compare Resources"
@@ -322,6 +328,24 @@
           "type": "string",
           "default": "",
           "description": "Path to the Docker socket file."
+        },
+        "confluent.localDocker.kafkaImageRepo": {
+          "type": "string",
+          "enum": [
+            "confluentinc/confluent-local"
+          ],
+          "default": "confluentinc/confluent-local",
+          "description": "Docker image repo to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.kafkaImageTag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Docker image tag to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.kafkaRestHost": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
         }
       }
     },
@@ -378,7 +402,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr [learn more](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html) about running Kafka locally.",
+        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr start Kafka locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable)"
       },
       {
@@ -589,6 +613,11 @@
           "group": "2_copy@3"
         },
         {
+          "command": "confluent.docker.startLocalResources",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "group": "inline"
+        },
+        {
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*/",
           "group": "3_compare"
@@ -746,13 +775,14 @@
           {
             "id": "connect-local-cluster",
             "title": "Connect to Kafka",
-            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources \n[Log in](command:confluent.connections.create)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources panel \n[Confluent CLI for Local Clusters](https://docs.confluent.io/confluent-cli/current/overview.html)",
+            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.create)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
             },
             "completionEvents": [
-              "onCommand:command:confluent.connections.create"
+              "onCommand:command:confluent.connections.create",
+              "onCommand:confluent.docker.startLocalResources"
             ]
           },
           {
