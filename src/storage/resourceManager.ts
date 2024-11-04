@@ -3,6 +3,7 @@ import { Status } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { Project } from "../models/project";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -478,6 +479,17 @@ export class ResourceManager {
   /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
   async getCCloudAuthStatus(): Promise<string | undefined> {
     return await this.storage.getSecret(CCLOUD_AUTH_STATUS_KEY);
+  }
+
+  async getProjects(): Promise<Project[]> {
+    const projectObjs: Project[] = (await this.storage.getGlobalState("projects")) ?? [];
+    return projectObjs.map((project) => Project.create(project));
+  }
+
+  async addProject(project: Project) {
+    const projects = await this.getProjects();
+    projects.push(project);
+    await this.storage.setGlobalState("projects", projects);
   }
 }
 

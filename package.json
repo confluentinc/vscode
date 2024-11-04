@@ -41,7 +41,8 @@
     "templates"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.confluent.*"
+    "workspaceContains:**/*.confluent.*",
+    "workspaceContains:*.confluent.*"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -129,6 +130,12 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.projects.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh",
+        "category": "Confluent: Projects"
+      },
+      {
         "command": "confluent.resources.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -165,6 +172,7 @@
       },
       {
         "command": "confluent.scaffold",
+        "icon": "$(file-code)",
         "title": "Generate New Project",
         "category": "Confluent: Project"
       },
@@ -337,6 +345,11 @@
     "views": {
       "confluent": [
         {
+          "id": "confluent-projects",
+          "name": "Projects",
+          "visibility": "collapsed"
+        },
+        {
           "id": "confluent-resources",
           "name": "Resources"
         },
@@ -357,6 +370,10 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "confluent-projects",
+        "contents": "No projects found.\n[Generate New Project](command:confluent.scaffold)"
+      },
       {
         "view": "confluent-resources",
         "contents": "No resources found."
@@ -521,6 +538,16 @@
         }
       ],
       "view/title": [
+        {
+          "command": "confluent.scaffold",
+          "when": "view == confluent-projects",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.projects.refresh",
+          "when": "view == confluent-projects",
+          "group": "navigation@2"
+        },
         {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",

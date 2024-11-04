@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
+import * as vscode from "vscode";
 
 import { posix } from "path";
 import { unzip } from "unzipit";
@@ -7,9 +7,12 @@ import { Template, TemplateList, TemplateManifest, TemplatesApi } from "./client
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
-import { ExtensionContext, Uri, ViewColumn } from "vscode";
+import { ExtensionContext, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
+import { Project } from "./models/project";
+import { getResourceManager } from "./storage/resourceManager";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
+import { ProjectsViewProvider } from "./viewProviders/projects";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/scaffold-form";
@@ -140,6 +143,17 @@ async function applyTemplate(
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
     await extractZipContents(arrayBuffer, destination);
+
+    // store the project in the global state to populate the Projects view
+    const project = Project.create({
+      name: pickedTemplate.spec.display_name,
+      templateId: pickedTemplate.id,
+      createdAt: new Date().toISOString(),
+      fsPath: destination.path,
+    });
+    await getResourceManager().addProject(project);
+    ProjectsViewProvider.getInstance().refresh();
+
     getTelemetryLogger().logUsage("Scaffold Completed", {
       templateName: pickedTemplate.spec.display_name,
     });
@@ -151,10 +165,11 @@ async function applyTemplate(
       { title: "Open in Current Window" },
       { title: "Dismiss", isCloseAffordance: true },
     );
-    if (selection !== undefined) {
+    logger.debug(`Project generated at ${destination.path}`, { selection });
+    if (selection?.title !== "Dismiss") {
       // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
       // reusing the current one
-      const keepsExistingWindow = selection.title === "Open in New Window";
+      const keepsExistingWindow = selection?.title === "Open in New Window";
       getTelemetryLogger().logUsage("Scaffold Folder Opened", {
         templateName: pickedTemplate.spec.display_name,
         keepsExistingWindow,
@@ -192,6 +207,13 @@ async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) 
         new Uint8Array(entryBuffer),
       );
     }
+    // also write a `.confluent.version` file to the root of the project indicating the extension version
+    await vscode.workspace.fs.writeFile(
+      vscode.Uri.file(posix.join(destination.path, ".confluent.vscode-confluent.version")),
+      new TextEncoder().encode(
+        vscode.extensions.getExtension("confluentinc.vscode-confluent")?.packageJSON.version,
+      ),
+    );
   } catch (err) {
     throw new Error(`Failed to extract zip contents: ${err}`);
   }

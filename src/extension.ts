@@ -44,6 +44,7 @@ import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
+import { registerProjectCommands } from "./commands/projects";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
@@ -66,6 +67,7 @@ import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
+import { ProjectsViewProvider } from "./viewProviders/projects";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
@@ -322,6 +324,18 @@ function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionC
     logger.error("Error creating Support view provider", e);
   }
 
+  try {
+    const projectsViewProvider = ProjectsViewProvider.getInstance();
+    context.subscriptions.push(
+      registerCommandWithLogging("confluent.projects.refresh", () => {
+        projectsViewProvider.refresh();
+      }),
+    );
+    logger.info("Projects view provider created");
+  } catch (e) {
+    logger.error("Error creating Projects view provider:", e);
+  }
+
   return context;
 }
 
@@ -342,6 +356,7 @@ function setupCommands(context: vscode.ExtensionContext): vscode.ExtensionContex
     ...registerTopicCommands(),
     ...registerDiffCommands(),
     ...registerExtraCommands(),
+    ...registerProjectCommands(),
   );
   logger.info("Main command disposables stored");
   return context;
