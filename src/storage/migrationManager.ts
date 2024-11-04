@@ -15,7 +15,7 @@ export async function migrateStorageIfNeeded(manager: StorageManager): Promise<v
   // While in EA, just blow away the storage every time. We don't want to deal with migrations
   // yet, and there's nothing critical in the extension right now that depends on persisted state
   // across extension reloads.
-  await manager.clearGlobalState();
+  // await manager.clearGlobalState();
   await manager.clearWorkspaceState();
 
   // But when we do want to start migrating storage, we can use the following logic to check the
