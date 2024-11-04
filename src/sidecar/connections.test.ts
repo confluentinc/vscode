@@ -31,8 +31,6 @@ describe("sidecar/connections.ts", () => {
   });
 
   afterEach(() => {
-    // setContextValue(ContextValues.ccloudConnectionAvailable, false);
-
     sandbox.restore();
   });
 
