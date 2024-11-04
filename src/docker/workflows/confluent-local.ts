@@ -165,6 +165,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
+    this.imageTag = getLocalKafkaImageTag();
 
     this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
     const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
