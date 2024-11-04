@@ -1,5 +1,6 @@
 import {
   CancellationToken,
+  commands,
   InputBoxValidationMessage,
   InputBoxValidationSeverity,
   Progress,
@@ -19,7 +20,11 @@ import {
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
-import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_KAFKA_REST_HOST,
+} from "../../preferences/constants";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import { createContainer, getContainersForImage } from "../containers";
@@ -161,12 +166,13 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
   ): Promise<void> {
     this.progress = progress;
 
+    this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
     const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
     const containerListRequest: ContainerListRequest = {
-      all: true,
       filters: JSON.stringify({
         ancestor: [repoTag],
-        label: [MANAGED_CONTAINER_LABEL],
+        // label: [MANAGED_CONTAINER_LABEL], // TODO: determine if we want to use this label to filter
+        status: ["running"],
       }),
     };
     const existingContainers: ContainerSummary[] =
@@ -174,6 +180,20 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const count = existingContainers.length;
     const plural = count > 1 ? "s" : "";
     if (existingContainers.length === 0) {
+      // user may have a different image repo+tag configured; prompt them to check settings
+      window
+        .showErrorMessage(
+          `No ${this.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
+          "Open Settings",
+        )
+        .then((selection) => {
+          if (selection) {
+            commands.executeCommand(
+              "workbench.action.openSettings",
+              `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+            );
+          }
+        });
       return;
     }
 
