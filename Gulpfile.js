@@ -33,7 +33,7 @@ const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
-export const test = series(clean, parallel(build, testBuild), testRun);
+export const test = series(clean, build, testBuild, testRun);
 
 export const bundle = series(clean, build, pack);
 
