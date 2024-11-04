@@ -214,17 +214,26 @@ export async function loadLocalResources(): Promise<ContainerTreeItem<LocalKafka
     [],
   );
   localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
+
+  const notConnectedId = "local-container";
+  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
+  localContainerItem.id = notConnectedId;
+  // enable the "Launch Local Resources" action
+  localContainerItem.contextValue = notConnectedId;
+
   localContainerItem.description = "(Not running)";
   localContainerItem.tooltip = new vscode.MarkdownString(
     "Local Kafka clusters discoverable at port `8082` are shown here.",
   );
-  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  localContainerItem.id = "local-container";
 
   const localClusters: LocalKafkaCluster[] = await getLocalKafkaClusters();
   if (localClusters.length > 0) {
+    const connectedId = "local-container-connected";
     // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-    localContainerItem.id = "local-container-connected";
+    localContainerItem.id = connectedId;
+    // enable the "Stop Local Resources" action
+    localContainerItem.contextValue = connectedId;
+
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localClusters.map((cluster) => cluster.uri).join(", ");
