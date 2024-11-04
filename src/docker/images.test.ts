@@ -1,13 +1,13 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { ImageApi, ImageInspect, ResponseError } from "../clients/docker";
+import { ApiResponse, ImageApi, ImageInspect, ResponseError } from "../clients/docker";
 import { imageExists, pullImage } from "./images";
 
 describe("docker/images.ts ImageApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
 
   let imageInspectStub: sinon.SinonStub;
-  let imageCreateStub: sinon.SinonStub;
+  let imageCreateRawStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -17,7 +17,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     // and if we stubbed the instance, the stubs would not be applied to the new instances and the
     // tests would try to call the real methods
     imageInspectStub = sandbox.stub(ImageApi.prototype, "imageInspect");
-    imageCreateStub = sandbox.stub(ImageApi.prototype, "imageCreate");
+    imageCreateRawStub = sandbox.stub(ImageApi.prototype, "imageCreateRaw");
   });
 
   afterEach(() => {
@@ -65,20 +65,26 @@ describe("docker/images.ts ImageApi wrappers", () => {
   });
 
   it("pullImage() should return nothing after successfully pulling an image", async () => {
-    imageCreateStub.resolves();
+    const fakeRawResponse: ApiResponse<void> = {
+      raw: new Response("fake body", { status: 200, statusText: "OK" }),
+      value() {
+        return Promise.resolve(undefined);
+      },
+    };
+    imageCreateRawStub.resolves(fakeRawResponse);
 
     const result = await pullImage("repo", "tag");
 
     assert.strictEqual(result, undefined);
-    assert.ok(imageCreateStub.calledOnce);
-    assert.ok(imageCreateStub.calledWithMatch({ fromImage: "repo:tag" }));
+    assert.ok(imageCreateRawStub.calledOnce);
+    assert.ok(imageCreateRawStub.calledWithMatch({ fromImage: "repo:tag" }));
   });
 
   it("pullImage() should re-throw any error from .imageCreate", async () => {
     const fakeError = new Error("Error pulling image");
-    imageCreateStub.rejects(fakeError);
+    imageCreateRawStub.rejects(fakeError);
 
     await assert.rejects(pullImage("repo", "tag"), fakeError);
-    assert.ok(imageCreateStub.calledOnce);
+    assert.ok(imageCreateRawStub.calledOnce);
   });
 });
