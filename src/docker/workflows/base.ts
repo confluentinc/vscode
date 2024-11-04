@@ -132,7 +132,7 @@ export abstract class LocalResourceWorkflow {
   // TODO: maybe put this somewhere else for more general use?
   /** Show an error notification for this workflow with buttons to "Open Logs" or "File an Issue". */
   showErrorNotification(message: string) {
-    this.logger.error(message);
+    this.logger.error("showing error notification:", message);
     const logsButton = "Open Logs";
     const issueButton = "File an Issue";
     window.showErrorMessage(message, logsButton, issueButton).then(async (selection) => {

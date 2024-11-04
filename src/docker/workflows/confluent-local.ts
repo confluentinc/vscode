@@ -202,7 +202,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         name: containerName,
       });
     } catch (error) {
-      this.logger.error("Failed to create Kafka container", { error });
+      this.logger.error("failed to create Kafka container:", error);
     }
     return container ? { id: container.Id, name: containerName } : undefined;
   }
