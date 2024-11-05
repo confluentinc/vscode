@@ -116,6 +116,10 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
 
   // make a map of all environment IDs to environments for easy lookup below
   const environmentMap: Map<string, CCloudEnvironment> = new Map();
+  const cloudEnvironments: CCloudEnvironment[] = await getResourceManager().getCCloudEnvironments();
+  cloudEnvironments.forEach((env) => {
+    environmentMap.set(env.id, env);
+  });
 
   // sort the Schema Registries by (is the selected one, environment name)
   cloudSchemaRegistries.sort((a, b) => {
