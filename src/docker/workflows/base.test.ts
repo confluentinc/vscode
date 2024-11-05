@@ -25,6 +25,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
   // docker/containers.ts+images.ts wrapper function stubs
   let getContainerStub: sinon.SinonStub;
   let startContainerStub: sinon.SinonStub;
+  let restartContainerStub: sinon.SinonStub;
   let imageExistsStub: sinon.SinonStub;
   let pullImageStub: sinon.SinonStub;
 
@@ -37,6 +38,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
 
     getContainerStub = sandbox.stub(dockerContainers, "getContainer");
     startContainerStub = sandbox.stub(dockerContainers, "startContainer");
+    restartContainerStub = sandbox.stub(dockerContainers, "restartContainer");
     imageExistsStub = sandbox.stub(dockerImages, "imageExists");
     pullImageStub = sandbox.stub(dockerImages, "pullImage");
 
@@ -148,25 +150,25 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     );
   });
 
-  // TODO(shoup): update this in downstream branch
-  // it("handleExistingContainers() should handle 'running' containers and prompt the user to restart them", async () => {
-  //   const fakeContainers: ContainerSummary[] = [
-  //     { Id: "1", Names: ["/container1"], Image: "image1", State: "running" },
-  //   ];
-  //   // stub the user clicking the 'Restart' button
-  //   const button = "Restart";
-  //   showErrorMessageStub.resolves(button);
+  it("handleExistingContainers() should handle 'running' containers and prompt the user to restart them", async () => {
+    const fakeContainers: ContainerSummary[] = [
+      { Id: "1", Names: ["/container1"], Image: "image1", State: "running" },
+    ];
+    // stub the user clicking the 'Restart' button
+    const button = "Restart";
+    showErrorMessageStub.resolves(button);
 
-  //   await workflow.handleExistingContainers(fakeContainers);
+    await workflow.handleExistingContainers(fakeContainers);
 
-  //   assert.ok(
-  //     showErrorMessageStub.calledOnceWith(
-  //       "Existing test container found. Please restart or remove it and try again.",
-  //       button,
-  //     ),
-  //   );
-  //   assert.ok(startContainerStub.notCalled);
-  // });
+    assert.ok(
+      showErrorMessageStub.calledOnceWith(
+        "Existing test container found. Please restart or remove it and try again.",
+        button,
+      ),
+    );
+    assert.ok(startContainerStub.notCalled);
+    assert.ok(restartContainerStub.calledOnceWith(fakeContainers[0].Id!));
+  });
 
   it("startContainer() should start a container and return its inspect response", async () => {
     const fakeContainer: LocalResourceContainer = { id: "1", name: "test-container" };

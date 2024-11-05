@@ -13,6 +13,8 @@ All notable changes to this extension will be documented in this file.
 - "Start Local Resources" functionality to run `confluentinc/confluent-local` Kafka locally as a
   Docker container (or up to four containers). Available from the Resources view's "Local" item, as
   well as the command palette.
+- "Stop Local Resources" functionality to stop running `confluentinc/confluent-local` Kafka Docker
+  containers. Available from the Resources view's "Local" item, as well as the command palette.
 
 ## 0.20.1
 

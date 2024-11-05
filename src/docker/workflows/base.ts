@@ -2,7 +2,7 @@ import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
-import { getContainer, startContainer } from "../containers";
+import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
 /** Basic container information for a local resource. */
@@ -96,6 +96,32 @@ export abstract class LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void>;
 
+  /** Common flow for attempting to stop a container for a workflow. If the container is not found,
+   * a warning will be logged and no action will be taken. */
+  async stopContainer(container: LocalResourceContainer): Promise<void> {
+    // names may start with a leading slash, so try to remove it
+    const containerName = container.name.replace(/^\/+/, "");
+    // check container status before deleting
+    const existingContainer: ContainerInspectResponse | undefined = await getContainer(
+      container.id,
+    );
+    if (!existingContainer) {
+      // assume it was cleaned up some other way
+      this.logger.warn("Container not found, skipping stop and delete steps.", {
+        id: container.id,
+        name: containerName,
+      });
+      return;
+    }
+
+    if (existingContainer.State?.Status === "running") {
+      await stopContainer(container.id);
+      this.sendTelemetryEvent("Docker Container Stopped", {
+        dockerContainerName: container.name,
+      });
+    }
+  }
+
   // instance method to allow calling `this.imageRepo` along with the static `<WorkflowName>.imageRepo`
   get imageRepo(): string {
     return (this.constructor as typeof LocalResourceWorkflow).imageRepo;
@@ -172,7 +198,7 @@ export abstract class LocalResourceWorkflow {
     let buttonLabel = "";
     const anyRunning = containerStates.includes("running");
     if (anyRunning) {
-      buttonLabel = ""; // doesn't actually show a button; TODO(shoup): set in downstream branch
+      buttonLabel = containers.length > 1 ? "Restart All" : "Restart";
     } else {
       buttonLabel = count > 1 ? "Start All" : "Start";
     }
@@ -198,7 +224,7 @@ export abstract class LocalResourceWorkflow {
               continue;
             }
             if (anyRunning) {
-              // TODO: implement stop+start in downstream branch
+              await restartContainer(container.Id);
             } else {
               await this.startContainer({ id: container.Id, name: container.Names[0] });
             }
