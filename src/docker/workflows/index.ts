@@ -45,8 +45,11 @@ export function getSchemaRegistryWorkflow(): LocalResourceWorkflow {
     case ConfluentPlatformSchemaRegistryWorkflow.imageRepo:
       workflow = ConfluentPlatformSchemaRegistryWorkflow.getInstance();
       break;
-    default:
-      throw new Error(`Unsupported Schema Registry image repo: ${imageRepo}`);
+    default: {
+      const errorMsg = `Unsupported Schema Registry image repo: ${imageRepo}`;
+      window.showErrorMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
   }
   return workflow;
 }
