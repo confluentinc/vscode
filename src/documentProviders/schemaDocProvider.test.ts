@@ -33,6 +33,13 @@ describe("DiffableReadOnlyDocumentProvider tests", function () {
     mockClient.getSchema.resolves(schemaResp);
 
     const schemaDefinition = await provider.provideTextDocumentContent(uri);
+
+    assert.ok(
+      mockSidecarHandle.getSchemasV1Api.calledOnceWithExactly(
+        TEST_CCLOUD_SCHEMA.schemaRegistryId,
+        TEST_CCLOUD_SCHEMA.connectionId,
+      ),
+    );
     assert.strictEqual(schemaDefinition, JSON.stringify(JSON.parse('{"foo": "bar"}'), null, 2));
   });
 });
