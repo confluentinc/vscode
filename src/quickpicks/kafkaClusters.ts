@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getEnvironments } from "../graphql/environments";
-import { getLocalKafkaClusters } from "../graphql/local";
+import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -9,9 +9,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
-/** Progress wrapper for the Kafka Cluster quickpick to accomodate data-fetching time.
- * Highlights the topics view while the quickpick is awaited.
- */
+/** Wrapper for the Kafka Cluster quickpick to accomodate data-fetching time and display a progress indicator on the Topics view. */
 export async function kafkaClusterQuickPickWithViewProgress(
   includeLocal: boolean = true,
   includeCCloud: boolean = true,
@@ -39,7 +37,10 @@ export async function kafkaClusterQuickPick(
   // first we grab all available (local+CCloud) Kafka Clusters
   let localKafkaClusters: LocalKafkaCluster[] = [];
   if (includeLocal) {
-    localKafkaClusters = await getLocalKafkaClusters();
+    const localResources: LocalResourceGroup[] = await getLocalResources();
+    localKafkaClusters = localResources.flatMap(
+      (group): LocalKafkaCluster[] => group.kafkaClusters,
+    );
   }
   let cloudKafkaClusters: CCloudKafkaCluster[] = [];
   let cloudEnvironments: CCloudEnvironment[] = [];
