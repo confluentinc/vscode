@@ -21,7 +21,7 @@ async function stopLocalResourcesWithProgress(resourceKinds: LocalResourceKind[]
 
 /** Prompt the user with a multi-select quickpick, allowing them to choose which resource types to
  * start. Then run the local resource workflow(s) with a progress notification. */
-async function runWorkflowWithProgress(
+export async function runWorkflowWithProgress(
   start: boolean = true,
   resourceKinds: LocalResourceKind[] = [],
 ) {
