@@ -333,7 +333,7 @@ function sidecar() {
 
   return [
     virtual({
-      "ide-sidecar": `export const version = "${sidecarVersion}"; export default new URL("./${sidecarFilename}", import.meta.url).pathname;`,
+      "ide-sidecar": `export const version = "${sidecarVersion}"; export default decodeURIComponent(new URL("./${sidecarFilename}", import.meta.url).pathname);`,
     }),
     copy({
       copyOnce: true,
