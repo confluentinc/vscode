@@ -248,29 +248,20 @@ export async function loadLocalResources(): Promise<
     localContainerItem.id = connectedId;
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
-
-    localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-
-    // Kafka cluster(s) first
-    const localKafkaClusters: LocalKafkaCluster[] = localResources.flatMap(
-      (group): LocalKafkaCluster[] => group.kafkaClusters,
-    );
-    // indicate to the UI that we have at least one local Kafka cluster available
-    await setContextValue(ContextValues.localKafkaClusterAvailable, localResources.length > 0);
-
-    // ...then Schema Registry
-    const localSchemaRegistries: LocalSchemaRegistry[] = localResources
-      .flatMap((group: LocalResourceGroup): LocalSchemaRegistry | undefined => group.schemaRegistry)
-      .filter(
-        (schemaRegistry: LocalSchemaRegistry | undefined): schemaRegistry is LocalSchemaRegistry =>
-          schemaRegistry !== undefined,
-      );
-    // indicate to the UI that we have at least one local Schema Registry available
-    await setContextValue(
-      ContextValues.localSchemaRegistryAvailable,
-      localSchemaRegistries.length > 0,
-    );
-
+    // unpack the local resources to more easily update the UI elements
+    const localKafkaClusters: LocalKafkaCluster[] = [];
+    const localSchemaRegistries: LocalSchemaRegistry[] = [];
+    localResources.forEach((group) => {
+      localKafkaClusters.push(...group.kafkaClusters);
+      if (group.schemaRegistry) {
+        localSchemaRegistries.push(group.schemaRegistry);
+      }
+    });
+    // update the UI based on whether or not we have local resources available
+    await Promise.all([
+      setContextValue(ContextValues.localKafkaClusterAvailable, localResources.length > 0),
+      setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
+    ]);
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
