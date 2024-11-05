@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
+import * as vscode from "vscode";
 
 import { posix } from "path";
 import { unzip } from "unzipit";
@@ -7,7 +7,7 @@ import { Template, TemplateList, TemplateManifest, TemplatesApi } from "./client
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
-import { ExtensionContext, Uri, ViewColumn } from "vscode";
+import { ExtensionContext, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { WebviewPanelCache } from "./webview-cache";
@@ -151,7 +151,7 @@ async function applyTemplate(
       { title: "Open in Current Window" },
       { title: "Dismiss", isCloseAffordance: true },
     );
-    if (selection !== undefined) {
+    if (selection !== undefined && selection.title !== "Dismiss") {
       // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
       // reusing the current one
       const keepsExistingWindow = selection.title === "Open in New Window";
