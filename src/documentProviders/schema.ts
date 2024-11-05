@@ -8,7 +8,9 @@ export class SchemaDocumentProvider extends ResourceDocumentProvider {
   scheme = "confluent.schema";
 
   public async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
-    const schema = this.parseUriQueryBody(uri.query) as Schema;
+    const schemaObj: Schema = this.parseUriQueryBody(uri.query) as Schema;
+    // recreate the Schema instance so we can access the .connectionId getter
+    const schema = Schema.create(schemaObj);
     // fetch the schema definition from the sidecar and attempt to prettify it before displaying
     const client: SchemasV1Api = (await getSidecar()).getSchemasV1Api(
       schema.schemaRegistryId,
