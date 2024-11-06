@@ -193,7 +193,7 @@ async function setupContextValues() {
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-schema-registry",
     "local-kafka-cluster",
-    // TODO(shoup): add local-schema-registry here when implemented
+    "local-schema-registry",
   ]);
   await Promise.all([
     kafkaClusterSelected,

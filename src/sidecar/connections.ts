@@ -82,15 +82,26 @@ export async function createLocalConnection(): Promise<Connection> {
   return await tryToCreateConnection(LOCAL_CONNECTION_SPEC);
 }
 
-/** Delete the existing Confluent Cloud {@link Connection} (if it exists). */
-export async function deleteCCloudConnection(): Promise<void> {
+/** Delete the existing {@link Connection} with the given ID. */
+export async function tryToDeleteConnection(id: string): Promise<void> {
   const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
-    await client.gatewayV1ConnectionsIdDelete({ id: CCLOUD_CONNECTION_ID });
-    logger.debug("deleted existing CCloud connection");
-  } catch (e) {
-    logger.error("Error deleting connection", e);
+    await client.gatewayV1ConnectionsIdDelete({ id: id });
+    logger.debug("deleted connection:", { id });
+  } catch (error) {
+    logger.error("delete connection error:", error);
+    throw error;
   }
+}
+
+/** Delete the existing Confluent Cloud {@link Connection} (if it exists). */
+export async function deleteCCloudConnection(): Promise<void> {
+  await tryToDeleteConnection(CCLOUD_CONNECTION_ID);
+}
+
+/** Delete the existing local {@link Connection} (if it exists). */
+export async function deleteLocalConnection(): Promise<void> {
+  await tryToDeleteConnection(LOCAL_CONNECTION_ID);
 }
 
 export async function clearCurrentCCloudResources() {
@@ -128,4 +139,18 @@ export function hasCCloudAuthSession(): boolean {
     ContextValues.ccloudConnectionAvailable,
   );
   return !!isCcloudConnected;
+}
+
+// TODO(shoup): update for direct connections
+/** Delete the existing local connection, then recreate it with the new Schema Registry URI to avoid
+ * caching issues. */
+export async function updateLocalSchemaRegistryURI(uri: string): Promise<void> {
+  await deleteLocalConnection();
+  const resp: Connection = await tryToCreateConnection({
+    ...LOCAL_CONNECTION_SPEC,
+    local_config: {
+      schema_registry_uri: uri,
+    },
+  });
+  logger.debug("Updated local connection with Schema Registry URI:", resp);
 }

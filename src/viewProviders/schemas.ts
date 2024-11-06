@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
-import { ccloudConnected, currentSchemaRegistryChanged } from "../emitters";
+import {
+  ccloudConnected,
+  currentSchemaRegistryChanged,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -79,7 +83,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
     });
 
-    // TODO(shoup): check localKafkaConnected and reset this view if local SR availability changes
+    localSchemaRegistryConnected.event((connected: boolean) => {
+      if (this.schemaRegistry?.isLocal) {
+        logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
+        // any transition of local schema registry connection state should reset the tree view
+        this.reset();
+      }
+    });
 
     currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistry | null) => {
       if (!schemaRegistry) {

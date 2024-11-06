@@ -4,22 +4,27 @@ import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import { getKafkaWorkflow } from "../docker/workflows";
+import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { Logger } from "../logging";
+import { localResourcesQuickPick } from "../quickpicks/localResources";
 
 const logger = new Logger("commands.docker");
 
-async function startLocalResourcesWithProgress() {
-  await runWorkflowWithProgress();
+async function startLocalResourcesWithProgress(resourceKinds: LocalResourceKind[] = []) {
+  await runWorkflowWithProgress(true, resourceKinds);
 }
 
-async function stopLocalResourcesWithProgress() {
-  await runWorkflowWithProgress(false);
+async function stopLocalResourcesWithProgress(resourceKinds: LocalResourceKind[] = []) {
+  await runWorkflowWithProgress(false, resourceKinds);
 }
 
-/** Run the local resource workflow(s) with a progress notification. */
-export async function runWorkflowWithProgress(start: boolean = true) {
+/** Prompt the user with a multi-select quickpick, allowing them to choose which resource types to
+ * start. Then run the local resource workflow(s) with a progress notification. */
+export async function runWorkflowWithProgress(
+  start: boolean = true,
+  resourceKinds: LocalResourceKind[] = [],
+) {
   const dockerAvailable = await isDockerAvailable();
   if (!dockerAvailable) {
     window
@@ -36,9 +41,14 @@ export async function runWorkflowWithProgress(start: boolean = true) {
     return;
   }
 
-  // TODO(shoup): add multi-select quickpick to determine which resource(s) to start/stop; for now
-  // just default to Kafka
-  const resources: LocalResourceKind[] = [LocalResourceKind.Kafka];
+  // show multi-select quickpick to allow user to choose which resources to launch and determine
+  // how the workflow should be run
+  const resources: LocalResourceKind[] =
+    resourceKinds.length > 0 ? resourceKinds : await localResourcesQuickPick();
+  if (resources.length === 0) {
+    // nothing selected, or user clicked a quickpick button to adjust settings
+    return;
+  }
 
   // based on the imageRepo chosen by the user, select the appropriate workflow before running them
   const subworkflows: LocalResourceWorkflow[] = [];
@@ -47,6 +57,14 @@ export async function runWorkflowWithProgress(start: boolean = true) {
       subworkflows.push(getKafkaWorkflow());
     } catch (error) {
       logger.error("error getting Kafka workflow:", error);
+      return;
+    }
+  }
+  if (resources.includes(LocalResourceKind.SchemaRegistry)) {
+    try {
+      subworkflows.push(getSchemaRegistryWorkflow());
+    } catch (error) {
+      logger.error("error getting Schema Registry workflow:", error);
       return;
     }
   }
