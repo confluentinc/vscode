@@ -5,6 +5,7 @@ import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import * as dockerWorkflows from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
+import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import * as quickpicks from "../quickpicks/localResources";
 import { runWorkflowWithProgress } from "./docker";
 
@@ -15,10 +16,14 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let showErrorMessageStub: sinon.SinonStub;
 
   // Docker+workflow stubs
-  let getKafkaWorkflowStub: sinon.SinonStub;
   let isDockerAvailableStub: sinon.SinonStub;
-  let stubbedKafkaWorkflow: sinon.SinonStubbedInstance<ConfluentLocalWorkflow>;
   let localResourcesQuickPickStub: sinon.SinonStub;
+
+  let getKafkaWorkflowStub: sinon.SinonStub;
+  let getSchemaRegistryWorkflowStub: sinon.SinonStub;
+
+  let stubKafkaWorkflow: sinon.SinonStubbedInstance<ConfluentLocalWorkflow>;
+  let stubSchemaRegistryWorkflow: sinon.SinonStubbedInstance<ConfluentPlatformSchemaRegistryWorkflow>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -27,14 +32,23 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     // default to Docker being available for majority of tests
     isDockerAvailableStub = sandbox.stub(dockerConfigs, "isDockerAvailable").resolves(true);
-    stubbedKafkaWorkflow = sandbox.createStubInstance(ConfluentLocalWorkflow);
-    getKafkaWorkflowStub = sandbox
-      .stub(dockerWorkflows, "getKafkaWorkflow")
-      .returns(stubbedKafkaWorkflow);
-    // set default quickpick as Kafka for majority of tests
+
+    // set default quickpick selection as just the Kafka resource for majority of tests
     localResourcesQuickPickStub = sandbox
       .stub(quickpicks, "localResourcesQuickPick")
       .resolves([LocalResourceKind.Kafka]);
+
+    stubKafkaWorkflow = sandbox.createStubInstance(ConfluentLocalWorkflow);
+    getKafkaWorkflowStub = sandbox
+      .stub(dockerWorkflows, "getKafkaWorkflow")
+      .returns(stubKafkaWorkflow);
+
+    stubSchemaRegistryWorkflow = sandbox.createStubInstance(
+      ConfluentPlatformSchemaRegistryWorkflow,
+    );
+    getSchemaRegistryWorkflowStub = sandbox
+      .stub(dockerWorkflows, "getSchemaRegistryWorkflow")
+      .returns(stubSchemaRegistryWorkflow);
   });
 
   afterEach(() => {
@@ -47,52 +61,87 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     await runWorkflowWithProgress();
 
     assert.ok(showErrorMessageStub.calledOnce);
-    assert.ok(stubbedKafkaWorkflow.start.notCalled);
-    assert.ok(stubbedKafkaWorkflow.stop.notCalled);
+    assert.ok(localResourcesQuickPickStub.notCalled);
+    assert.ok(getKafkaWorkflowStub.notCalled);
+    assert.ok(getSchemaRegistryWorkflowStub.notCalled);
   });
 
-  it("should skip running a workflow for unsupported images", async () => {
+  it("should skip running a workflow for unsupported Kafka images", async () => {
     getKafkaWorkflowStub.throws(new Error("Unsupported image blah blah"));
 
     await runWorkflowWithProgress();
 
     // `docker/workflows/index.test.ts` tests the error notification for this case
-    assert.ok(stubbedKafkaWorkflow.start.notCalled);
-    assert.ok(stubbedKafkaWorkflow.stop.notCalled);
+    assert.ok(stubKafkaWorkflow.start.notCalled);
+    assert.ok(stubKafkaWorkflow.stop.notCalled);
   });
 
-  it("should show an workflow's error notification for uncaught errors in the workflow .start()", async () => {
-    stubbedKafkaWorkflow.start.rejects(new Error("uh oh"));
+  it("should skip running a workflow for unsupported Schema Registry images", async () => {
+    getSchemaRegistryWorkflowStub.throws(new Error("Unsupported image blah blah"));
 
     await runWorkflowWithProgress();
 
-    assert.ok(stubbedKafkaWorkflow.start.calledOnce);
-    assert.ok(stubbedKafkaWorkflow.stop.notCalled);
-    assert.ok(stubbedKafkaWorkflow.showErrorNotification.calledOnce);
+    // `docker/workflows/index.test.ts` tests the error notification for this case
+    assert.ok(stubSchemaRegistryWorkflow.start.notCalled);
+    assert.ok(stubSchemaRegistryWorkflow.stop.notCalled);
+  });
+
+  it("should show an workflow's error notification for uncaught errors in the workflow .start()", async () => {
+    stubKafkaWorkflow.start.rejects(new Error("uh oh"));
+
+    await runWorkflowWithProgress();
+
+    assert.ok(stubKafkaWorkflow.start.calledOnce);
+    assert.ok(stubKafkaWorkflow.stop.notCalled);
+    assert.ok(stubKafkaWorkflow.showErrorNotification.calledOnce);
   });
 
   it("should show an workflow's error notification for uncaught errors in the workflow .stop()", async () => {
-    stubbedKafkaWorkflow.stop.rejects(new Error("uh oh"));
+    stubKafkaWorkflow.stop.rejects(new Error("uh oh"));
 
     await runWorkflowWithProgress(false);
 
-    assert.ok(stubbedKafkaWorkflow.start.notCalled);
-    assert.ok(stubbedKafkaWorkflow.stop.calledOnce);
-    assert.ok(stubbedKafkaWorkflow.showErrorNotification.calledOnce);
+    assert.ok(stubKafkaWorkflow.start.notCalled);
+    assert.ok(stubKafkaWorkflow.stop.calledOnce);
+    assert.ok(stubKafkaWorkflow.showErrorNotification.calledOnce);
   });
 
   // TODO(shoup): update these in follow-on branch once multi-select quickpick is added
   it("should call the Kafka workflow's .start() method when start=true", async () => {
     await runWorkflowWithProgress();
 
-    assert.ok(stubbedKafkaWorkflow.start.calledOnce);
-    assert.ok(stubbedKafkaWorkflow.stop.notCalled);
+    assert.ok(stubKafkaWorkflow.start.calledOnce);
+    assert.ok(stubKafkaWorkflow.stop.notCalled);
   });
 
   it("should call the Kafka workflow's .stop() method when start=false", async () => {
     await runWorkflowWithProgress(false);
 
-    assert.ok(stubbedKafkaWorkflow.start.notCalled);
-    assert.ok(stubbedKafkaWorkflow.stop.calledOnce);
+    assert.ok(stubKafkaWorkflow.start.notCalled);
+    assert.ok(stubKafkaWorkflow.stop.calledOnce);
+  });
+
+  it("should call multiple workflows' .start() methods when multiple resources are selected", async () => {
+    localResourcesQuickPickStub.resolves([
+      LocalResourceKind.Kafka,
+      LocalResourceKind.SchemaRegistry,
+    ]);
+
+    await runWorkflowWithProgress();
+
+    assert.ok(stubKafkaWorkflow.start.calledOnce);
+    assert.ok(stubSchemaRegistryWorkflow.start.calledOnce);
+  });
+
+  it("should call multiple workflows' .stop() methods when multiple resources are selected and start=false", async () => {
+    localResourcesQuickPickStub.resolves([
+      LocalResourceKind.Kafka,
+      LocalResourceKind.SchemaRegistry,
+    ]);
+
+    await runWorkflowWithProgress(false);
+
+    assert.ok(stubKafkaWorkflow.stop.calledOnce);
+    assert.ok(stubSchemaRegistryWorkflow.stop.calledOnce);
   });
 });
