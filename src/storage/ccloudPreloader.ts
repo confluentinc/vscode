@@ -1,3 +1,4 @@
+import { Require } from "dataclass";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
@@ -233,7 +234,11 @@ export class CCloudResourcePreloader {
       }
 
       // Fetch from sidecar API and store into resource manager.
-      const schemas = await fetchSchemas(environment, schemaRegistry.id);
+      const schemas = await fetchSchemas(
+        schemaRegistry.id,
+        environment.connectionId,
+        environment.id,
+      );
       await rm.setSchemasForRegistry(schemaRegistry.id, schemas);
 
       // Mark this cluster as having its schemas loaded.
@@ -251,24 +256,28 @@ export class CCloudResourcePreloader {
 }
 
 /**
- * Deep read and return of all schemas in a CCloud environment + Schema Registry. Does not store into the resource manager.
- * @param sidecar Sidecar handle to use for the fetch.
- * @param environment The CCloud environment to fetch schemas from.
+ * Deep read and return of all schemas in a CCloud or local environment's Schema Registry.
+ * Does not store into the resource manager.
+ *
  * @param schemaRegistryId The Schema Registry ID to fetch schemas from (within the environment).
+ * @param connectionId The connection ID to use to fetch schemas.
+ * @param environmentId Optional: the CCloud environment ID to associate CCloud schemas with.
  * @returns An array of all the schemas in the environment's Schema Registry.
  */
 export async function fetchSchemas(
-  environment: CCloudEnvironment,
   schemaRegistryId: string,
+  connectionId: string,
+  environmentId?: string,
 ): Promise<Schema[]> {
   const sidecar = await getSidecar();
-
-  const client: SchemasV1Api = sidecar.getSchemasV1Api(schemaRegistryId, environment.connectionId);
+  const client: SchemasV1Api = sidecar.getSchemasV1Api(schemaRegistryId, connectionId);
   const schemaListRespData: ResponseSchema[] = await client.getSchemas();
   const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
     // AVRO doesn't show up in `schemaType`
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
     const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
+    // appease typescript because it doesn't want to convert `string | undefined` to `Require<string> | undefined`
+    const maybeEnvironmentId = environmentId as Require<string> | undefined;
     // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
     return Schema.create({
       id: schema.id!.toString(),
@@ -276,7 +285,7 @@ export async function fetchSchemas(
       version: schema.version!,
       type: schemaType,
       schemaRegistryId: schemaRegistryId,
-      environmentId: environment.id,
+      environmentId: maybeEnvironmentId,
     });
   });
   return schemas;

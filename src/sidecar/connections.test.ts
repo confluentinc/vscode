@@ -6,17 +6,17 @@ import {
   TEST_LOCAL_CONNECTION,
 } from "../../tests/unit/testResources/connection";
 import { getExtensionContext } from "../../tests/unit/testUtils";
-import { Connection, ConnectionsResourceApi } from "../clients/sidecar";
+import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_SPEC, LOCAL_CONNECTION_SPEC } from "../constants";
 import { ContextValues, setContextValue } from "../context";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { getResourceManager } from "../storage/resourceManager";
 import {
   clearCurrentCCloudResources,
-  deleteCCloudConnection,
   getLocalConnection,
   hasCCloudAuthSession,
   tryToCreateConnection,
+  tryToDeleteConnection,
 } from "./connections";
 
 describe("sidecar/connections.ts", () => {
@@ -64,13 +64,16 @@ describe("sidecar/connections.ts", () => {
 
       assert.strictEqual(connection, fakeConnection);
     });
+
+    it(`${connectionSpec.type}: tryToDeleteConnection() should not re-throw 404 response errors`, async () => {
+      const error = new ResponseError(new Response(null, { status: 404 }));
+      stubConnectionsResourceApi.gatewayV1ConnectionsIdDeleteRaw.rejects(error);
+
+      const promise = tryToDeleteConnection(fakeConnection.id);
+
+      await assert.doesNotReject(promise);
+    });
   }
-
-  it("deleteCCloudConnection() should delete the connection without error", async () => {
-    stubConnectionsResourceApi.gatewayV1ConnectionsIdDelete.resolves();
-
-    await assert.doesNotReject(deleteCCloudConnection());
-  });
 
   it("clearCurrentCCloudResources() should clear resources and fire events", async () => {
     // just needed for this test, otherwise we'd put this in the before() block
