@@ -14,63 +14,65 @@
 
 import { mapValues } from "../runtime";
 /**
- * Runtime describes an [OCI compliant](https://github.com/opencontainers/runtime-spec)
- * runtime.
- *
- * The runtime is invoked by the daemon via the `containerd` daemon. OCI
- * runtimes act as an interface to the Linux kernel namespaces, cgroups,
- * and SELinux.
  *
  * @export
- * @interface Runtime
+ * @interface TaskStatusContainerStatus
  */
-export interface Runtime {
+export interface TaskStatusContainerStatus {
   /**
-   * Name and, optional, path, of the OCI executable binary.
-   *
-   * If the path is omitted, the daemon searches the host's `$PATH` for the
-   * binary and uses the first result.
    *
    * @type {string}
-   * @memberof Runtime
+   * @memberof TaskStatusContainerStatus
    */
-  path?: string;
+  ContainerID?: string;
   /**
-   * List of command-line arguments to pass to the runtime when invoked.
    *
-   * @type {Array<string>}
-   * @memberof Runtime
+   * @type {number}
+   * @memberof TaskStatusContainerStatus
    */
-  runtimeArgs?: Array<string> | null;
+  PID?: number;
+  /**
+   *
+   * @type {number}
+   * @memberof TaskStatusContainerStatus
+   */
+  ExitCode?: number;
 }
 
 /**
- * Check if a given object implements the Runtime interface.
+ * Check if a given object implements the TaskStatusContainerStatus interface.
  */
-export function instanceOfRuntime(value: object): value is Runtime {
+export function instanceOfTaskStatusContainerStatus(
+  value: object,
+): value is TaskStatusContainerStatus {
   return true;
 }
 
-export function RuntimeFromJSON(json: any): Runtime {
-  return RuntimeFromJSONTyped(json, false);
+export function TaskStatusContainerStatusFromJSON(json: any): TaskStatusContainerStatus {
+  return TaskStatusContainerStatusFromJSONTyped(json, false);
 }
 
-export function RuntimeFromJSONTyped(json: any, ignoreDiscriminator: boolean): Runtime {
+export function TaskStatusContainerStatusFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): TaskStatusContainerStatus {
   if (json == null) {
     return json;
   }
   return {
-    path: json["path"] == null ? undefined : json["path"],
-    runtimeArgs: json["runtimeArgs"] == null ? undefined : json["runtimeArgs"],
+    ContainerID: json["ContainerID"] == null ? undefined : json["ContainerID"],
+    PID: json["PID"] == null ? undefined : json["PID"],
+    ExitCode: json["ExitCode"] == null ? undefined : json["ExitCode"],
   };
 }
 
-export function RuntimeToJSON(value?: Runtime | null): any {
+export function TaskStatusContainerStatusToJSON(value?: TaskStatusContainerStatus | null): any {
   if (value == null) {
     return value;
   }
   return {
-    path: value["path"],
-    runtimeArgs: value["runtimeArgs"],
+    ContainerID: value["ContainerID"],
+    PID: value["PID"],
+    ExitCode: value["ExitCode"],
   };
 }

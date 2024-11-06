@@ -14,63 +14,63 @@
 
 import { mapValues } from "../runtime";
 /**
- * Runtime describes an [OCI compliant](https://github.com/opencontainers/runtime-spec)
- * runtime.
- *
- * The runtime is invoked by the daemon via the `containerd` daemon. OCI
- * runtimes act as an interface to the Linux kernel namespaces, cgroups,
- * and SELinux.
+ * Information about the storage driver used to store the container's and
+ * image's filesystem.
  *
  * @export
- * @interface Runtime
+ * @interface GraphDriverData
  */
-export interface Runtime {
+export interface GraphDriverData {
   /**
-   * Name and, optional, path, of the OCI executable binary.
-   *
-   * If the path is omitted, the daemon searches the host's `$PATH` for the
-   * binary and uses the first result.
-   *
+   * Name of the storage driver.
    * @type {string}
-   * @memberof Runtime
+   * @memberof GraphDriverData
    */
-  path?: string;
+  Name: string;
   /**
-   * List of command-line arguments to pass to the runtime when invoked.
+   * Low-level storage metadata, provided as key/value pairs.
    *
-   * @type {Array<string>}
-   * @memberof Runtime
+   * This information is driver-specific, and depends on the storage-driver
+   * in use, and should be used for informational purposes only.
+   *
+   * @type {{ [key: string]: string; }}
+   * @memberof GraphDriverData
    */
-  runtimeArgs?: Array<string> | null;
+  Data: { [key: string]: string };
 }
 
 /**
- * Check if a given object implements the Runtime interface.
+ * Check if a given object implements the GraphDriverData interface.
  */
-export function instanceOfRuntime(value: object): value is Runtime {
+export function instanceOfGraphDriverData(value: object): value is GraphDriverData {
+  if (!("Name" in value) || value["Name"] === undefined) return false;
+  if (!("Data" in value) || value["Data"] === undefined) return false;
   return true;
 }
 
-export function RuntimeFromJSON(json: any): Runtime {
-  return RuntimeFromJSONTyped(json, false);
+export function GraphDriverDataFromJSON(json: any): GraphDriverData {
+  return GraphDriverDataFromJSONTyped(json, false);
 }
 
-export function RuntimeFromJSONTyped(json: any, ignoreDiscriminator: boolean): Runtime {
+export function GraphDriverDataFromJSONTyped(
+  json: any,
+  ignoreDiscriminator: boolean,
+): GraphDriverData {
   if (json == null) {
     return json;
   }
   return {
-    path: json["path"] == null ? undefined : json["path"],
-    runtimeArgs: json["runtimeArgs"] == null ? undefined : json["runtimeArgs"],
+    Name: json["Name"],
+    Data: json["Data"],
   };
 }
 
-export function RuntimeToJSON(value?: Runtime | null): any {
+export function GraphDriverDataToJSON(value?: GraphDriverData | null): any {
   if (value == null) {
     return value;
   }
   return {
-    path: value["path"],
-    runtimeArgs: value["runtimeArgs"],
+    Name: value["Name"],
+    Data: value["Data"],
   };
 }
