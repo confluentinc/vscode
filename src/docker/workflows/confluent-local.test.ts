@@ -1,12 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { InputBoxValidationMessage, InputBoxValidationSeverity, window, workspace } from "vscode";
 import {
-  CancellationToken,
-  InputBoxValidationMessage,
-  InputBoxValidationSeverity,
-  window,
-  workspace,
-} from "vscode";
+  TEST_BROKER_CONFIGS,
+  TEST_CANCELLATION_TOKEN,
+} from "../../../tests/unit/testResources/docker";
+import { getExtensionContext } from "../../../tests/unit/testUtils";
 import {
   ContainerCreateResponse,
   ContainerInspectResponse,
@@ -24,27 +23,8 @@ import {
   brokerConfigsToRestBootstrapServers,
   ConfluentLocalWorkflow,
   CONTAINER_NAME_PREFIX,
-  KafkaBrokerConfig,
   validateBrokerInput,
 } from "./confluent-local";
-
-const testCancellationToken: CancellationToken = {
-  isCancellationRequested: false,
-  onCancellationRequested: () => ({ dispose: () => {} }),
-};
-
-const testBrokerConfigs: KafkaBrokerConfig[] = [
-  {
-    brokerNum: 1,
-    containerName: "test-broker-1",
-    ports: { plainText: 9092, broker: 9093, controller: 9094 },
-  },
-  {
-    brokerNum: 2,
-    containerName: "test-broker-2",
-    ports: { plainText: 9095, broker: 9096, controller: 9097 },
-  },
-];
 
 describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let sandbox: sinon.SinonSandbox;
@@ -67,6 +47,10 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let startContainerStub: sinon.SinonStub;
   let stopContainerStub: sinon.SinonStub;
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
+
+  before(async () => {
+    await getExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -126,7 +110,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     createNetworkStub.resolves();
     createContainerStub.resolves({ Id: "1" } as ContainerCreateResponse);
 
-    await workflow.start(testCancellationToken);
+    await workflow.start(TEST_CANCELLATION_TOKEN);
 
     // happy path: no existing containers, user selects 1 broker
     assert.ok(checkForImageStub.calledOnce);
@@ -147,7 +131,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     const fakeContainers: ContainerSummary[] = [{ Id: "1", Names: ["container1"] }];
     getContainersForImageStub.resolves(fakeContainers);
 
-    await workflow.start(testCancellationToken);
+    await workflow.start(TEST_CANCELLATION_TOKEN);
 
     assert.ok(checkForImageStub.calledOnce);
 
@@ -166,7 +150,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   it("start() should exit early when the user exits the broker container input box", async () => {
     showInputBoxStub.resolves(undefined);
 
-    await workflow.start(testCancellationToken);
+    await workflow.start(TEST_CANCELLATION_TOKEN);
 
     assert.ok(checkForImageStub.calledOnce);
 
@@ -185,7 +169,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   it("start() should exit early and show an error notification if a container fails to be created", async () => {
     createContainerStub.rejects(new Error("uh oh"));
 
-    await workflow.start(testCancellationToken);
+    await workflow.start(TEST_CANCELLATION_TOKEN);
 
     assert.ok(checkForImageStub.calledOnce);
 
@@ -205,7 +189,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   it("start() should exit early and if a container fails to start", async () => {
     startContainerStub.resolves(undefined);
 
-    await workflow.start(testCancellationToken);
+    await workflow.start(TEST_CANCELLATION_TOKEN);
 
     assert.ok(checkForImageStub.calledOnce);
 
@@ -229,7 +213,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     const fakeContainers: ContainerSummary[] = [{ Id: containerId, Names: [containerName] }];
     getContainersForImageStub.resolves(fakeContainers);
 
-    await workflow.stop(testCancellationToken);
+    await workflow.stop(TEST_CANCELLATION_TOKEN);
 
     assert.ok(getContainersForImageStub.calledOnce);
     assert.ok(stopContainerStub.calledOnceWith({ id: containerId, name: containerName }));
@@ -239,7 +223,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   it("stop() should exit early if there are no running Kafka containers", async () => {
     getContainersForImageStub.resolves([]);
 
-    await workflow.stop(testCancellationToken);
+    await workflow.stop(TEST_CANCELLATION_TOKEN);
 
     assert.ok(getContainersForImageStub.calledOnce);
     // not the usual "Open Logs"+"File Issue" notification, just a basic error message with a button to open settings
@@ -286,9 +270,9 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   });
 
   it("generateHostConfig() should generate the correct HostConfig for a Kafka container based on the provided broker config", () => {
-    const hostConfig = workflow["generateHostConfig"](testBrokerConfigs[0]);
+    const hostConfig = workflow["generateHostConfig"](TEST_BROKER_CONFIGS[0]);
 
-    const plainTextPort = testBrokerConfigs[0].ports.plainText;
+    const plainTextPort = TEST_BROKER_CONFIGS[0].ports.plainText;
     assert.deepStrictEqual(hostConfig, {
       NetworkMode: workflow.networkName,
       PortBindings: {
@@ -301,9 +285,9 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   });
 
   it("generateHostConfig() should only expose the REST port on the first broker", () => {
-    const hostConfig = workflow["generateHostConfig"](testBrokerConfigs[1]);
+    const hostConfig = workflow["generateHostConfig"](TEST_BROKER_CONFIGS[1]);
 
-    const plainTextPort = testBrokerConfigs[1].ports.plainText;
+    const plainTextPort = TEST_BROKER_CONFIGS[1].ports.plainText;
     assert.deepStrictEqual(hostConfig, {
       NetworkMode: workflow.networkName,
       PortBindings: {
@@ -314,14 +298,14 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
   it("generateContainerEnv() should generate the correct environment variables for a broker", () => {
     const brokerNum = 1;
-    const brokerConfig = testBrokerConfigs[0];
+    const brokerConfig = TEST_BROKER_CONFIGS[0];
 
-    const envVars = workflow["generateContainerEnv"](brokerNum, testBrokerConfigs);
+    const envVars = workflow["generateContainerEnv"](brokerNum, TEST_BROKER_CONFIGS);
 
     const advertisedListeners = `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${brokerConfig.containerName}:${brokerConfig.ports.broker},PLAINTEXT_HOST://localhost:${brokerConfig.ports.plainText}`;
     const brokerId = `KAFKA_BROKER_ID=${brokerNum}`;
     const controllerQuorumVoters = `KAFKA_CONTROLLER_QUORUM_VOTERS=${brokerConfigsToControllerQuorumVoters(
-      testBrokerConfigs,
+      TEST_BROKER_CONFIGS,
     ).join(",")}`;
     const listeners = `KAFKA_LISTENERS=PLAINTEXT://${brokerConfig.containerName}:${brokerConfig.ports.broker},CONTROLLER://${brokerConfig.containerName}:${brokerConfig.ports.controller},PLAINTEXT_HOST://0.0.0.0:${brokerConfig.ports.plainText}`;
     const nodeId = `KAFKA_NODE_ID=${brokerNum}`;
@@ -340,14 +324,14 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
     // env var generation tested separately, not relevant here
     const envVars = ["KAFKA_BROKER_ID=1"];
-    const plainTextPort = testBrokerConfigs[0].ports.plainText;
+    const plainTextPort = TEST_BROKER_CONFIGS[0].ports.plainText;
 
     const result: LocalResourceContainer | undefined = await workflow.createKafkaContainer(
-      testBrokerConfigs[0],
+      TEST_BROKER_CONFIGS[0],
       envVars,
     );
 
-    const containerName = testBrokerConfigs[0].containerName;
+    const containerName = TEST_BROKER_CONFIGS[0].containerName;
     assert.ok(result);
     assert.equal(result.id, "1");
     assert.equal(result.name, containerName);
@@ -380,11 +364,11 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
 describe("docker/workflows/confluent-local.ts helper functions", () => {
   it("brokerConfigsToControllerQuorumVoters() should return the correct controller quorum voters string array", () => {
-    const result = brokerConfigsToControllerQuorumVoters(testBrokerConfigs);
+    const result = brokerConfigsToControllerQuorumVoters(TEST_BROKER_CONFIGS);
 
     assert.deepStrictEqual(result, [
-      `${testBrokerConfigs[0].brokerNum}@${testBrokerConfigs[0].containerName}:${testBrokerConfigs[0].ports.controller}`,
-      `${testBrokerConfigs[1].brokerNum}@${testBrokerConfigs[1].containerName}:${testBrokerConfigs[1].ports.controller}`,
+      `${TEST_BROKER_CONFIGS[0].brokerNum}@${TEST_BROKER_CONFIGS[0].containerName}:${TEST_BROKER_CONFIGS[0].ports.controller}`,
+      `${TEST_BROKER_CONFIGS[1].brokerNum}@${TEST_BROKER_CONFIGS[1].containerName}:${TEST_BROKER_CONFIGS[1].ports.controller}`,
     ]);
   });
 
@@ -395,11 +379,11 @@ describe("docker/workflows/confluent-local.ts helper functions", () => {
   });
 
   it("brokerConfigsToRestBootstrapServers() should return the correct REST bootstrap servers string array", () => {
-    const result = brokerConfigsToRestBootstrapServers(testBrokerConfigs);
+    const result = brokerConfigsToRestBootstrapServers(TEST_BROKER_CONFIGS);
 
     assert.deepStrictEqual(result, [
-      `${testBrokerConfigs[0].containerName}:${testBrokerConfigs[0].ports.broker}`,
-      `${testBrokerConfigs[1].containerName}:${testBrokerConfigs[1].ports.broker}`,
+      `${TEST_BROKER_CONFIGS[0].containerName}:${TEST_BROKER_CONFIGS[0].ports.broker}`,
+      `${TEST_BROKER_CONFIGS[1].containerName}:${TEST_BROKER_CONFIGS[1].ports.broker}`,
     ]);
   });
 

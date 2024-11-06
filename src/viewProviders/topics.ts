@@ -1,15 +1,16 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import { ContextValues, getContextValue, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
@@ -206,19 +207,25 @@ export async function getTopicsForCluster(
   let environmentId: string | null = null;
   let schemas: Schema[] | undefined = [];
 
+  let schemaRegistry: SchemaRegistry | null = null;
   if (cluster instanceof CCloudKafkaCluster) {
     environmentId = cluster.environmentId;
+    schemaRegistry = await resourceManager.getCCloudSchemaRegistry(environmentId);
+  } else if (
+    cluster instanceof LocalKafkaCluster &&
+    getContextValue(ContextValues.localSchemaRegistryAvailable)
+  ) {
+    schemaRegistry = await getLocalSchemaRegistryFromClusterId(cluster.id);
+  }
 
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(environmentId);
-    if (schemaRegistry) {
-      schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
-      if (schemas === undefined) {
-        logger.error("Wacky: schema registry known, but unknown schemas (should be empty array)", {
-          schemaRegistry,
-        });
-        // promote unknown to empty array as work around to what should never happen.
-        schemas = [];
-      }
+  if (schemaRegistry) {
+    schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
+    if (schemas === undefined) {
+      logger.error("Wacky: schema registry known, but unknown schemas (should be empty array)", {
+        schemaRegistry,
+      });
+      // promote unknown to empty array as work around to what should never happen.
+      schemas = [];
     }
   }
 
@@ -290,28 +297,39 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
  * @returns An array of {@link Schema} objects representing the schemas associated with the topic.
  */
 export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]> {
-  if (topic.isLocalTopic()) {
-    logger.warn("Attempt to get schemas for local topic", topic);
-    // TODO: update this once we're able to associate schemas with local topics
-    return [];
-  }
-  // look up the associated Schema Registry based on the topic's environment, then pull the schemas
   const resourceManager = getResourceManager();
 
-  const schemaRegistry: CCloudSchemaRegistry | null = await resourceManager.getCCloudSchemaRegistry(
-    topic.environmentId!,
-  );
+  // look up the associated Schema Registry based on the topic's Kafka cluster / CCloud env,
+  // then pull the schemas
+  let schemaRegistry: SchemaRegistry | null = null;
+  if (topic.isLocalTopic()) {
+    schemaRegistry = await getLocalSchemaRegistryFromClusterId(topic.clusterId);
+  } else if (topic.environmentId) {
+    // CCloud topic
+    schemaRegistry = await resourceManager.getCCloudSchemaRegistry(topic.environmentId);
+  }
+
   if (!schemaRegistry) {
     logger.warn("No Schema Registry found for topic", topic);
     return [];
   }
 
-  const schemas: Schema[] =
-    (await getResourceManager().getSchemasForRegistry(schemaRegistry.id)) || [];
+  const schemas: Schema[] = (await resourceManager.getSchemasForRegistry(schemaRegistry.id)) || [];
   if (schemas.length === 0) {
     logger.warn("No schemas found for topic", topic);
     return [];
   }
 
   return schemas;
+}
+
+export async function getLocalSchemaRegistryFromClusterId(
+  clusterId: string,
+): Promise<SchemaRegistry | null> {
+  const localResources = await getLocalResources();
+  // look up the local resource group where this Kafka cluster exists
+  const localResourceGroup = localResources.find((group) =>
+    group.kafkaClusters.some((kc) => kc.id === clusterId),
+  );
+  return localResourceGroup?.schemaRegistry || null;
 }

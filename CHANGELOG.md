@@ -10,11 +10,9 @@ All notable changes to this extension will be documented in this file.
   upload" icon button drives the process given a file with extension ".avsc" (Avro Schema), ".proto"
   (Protobuf), or ".json" (JSON schema),
   [issue #388](https://github.com/confluentinc/vscode/issues/388).
-- "Start Local Resources" functionality to run `confluentinc/confluent-local` Kafka locally as a
-  Docker container (or up to four containers). Available from the Resources view's "Local" item, as
-  well as the command palette.
-- "Stop Local Resources" functionality to stop running `confluentinc/confluent-local` Kafka Docker
-  containers. Available from the Resources view's "Local" item, as well as the command palette.
+- "Start Local Resources" / "Stop Local Resources" functionality to start and stop Confluent's Kafka
+  and Schema Registry containers via Docker engine API integration, available as actions on the
+  "Local" item in the Resources view, as well as the command palette.
 
 ## 0.20.1
 
