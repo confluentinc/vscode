@@ -31,6 +31,9 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
         logger.debug("Got authCallback URI, firing as Event", uri);
         this.fire(uri);
         break;
+      case "/consume":
+        vscode.commands.executeCommand("confluent.topic.consume.fromUri", uri);
+        break;
       default:
         logger.warn("Got unexpected URI, ignoring", uri);
     }
