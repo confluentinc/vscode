@@ -59,6 +59,27 @@ type ConfluentLocalKafkaCluster {
   uri: String!
 }
 
+type DirectConnection {
+  id: String!
+  kafkaCluster: DirectKafkaCluster
+  name: String!
+  schemaRegistry: DirectSchemaRegistry
+  type: ConnectionType!
+}
+
+type DirectKafkaCluster {
+  bootstrapServers: String!
+  connectionId: String!
+  id: String!
+  uri: String
+}
+
+type DirectSchemaRegistry {
+  connectionId: String!
+  id: String!
+  uri: String!
+}
+
 type LocalConnection {
   id: String!
   kafkaCluster: ConfluentLocalKafkaCluster
@@ -79,6 +100,8 @@ type Query {
   ccloudConnectionById(id: String!): CCloudConnection
   "Get all CCloud connections"
   ccloudConnections: [CCloudConnection]!
+  "Get all direct connections"
+  directConnections: [DirectConnection]!
   "Find CCloud Kafka clusters using a connection and various criteria"
   findCCloudKafkaClusters(
     connectionId: String!
@@ -106,6 +129,7 @@ enum CloudProvider {
 
 enum ConnectionType {
   CCLOUD
+  DIRECT
   LOCAL
   PLATFORM
 }
