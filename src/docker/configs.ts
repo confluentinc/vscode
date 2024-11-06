@@ -7,8 +7,15 @@ import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../preferences/constants";
-import { DEFAULT_KAFKA_IMAGE_REPO, DEFAULT_KAFKA_IMAGE_TAG } from "./constants";
+import {
+  DEFAULT_KAFKA_IMAGE_REPO,
+  DEFAULT_KAFKA_IMAGE_TAG,
+  DEFAULT_SCHEMA_REGISTRY_REPO,
+  DEFAULT_SCHEMA_REGISTRY_TAG,
+} from "./constants";
 
 const logger = new Logger("docker.configs");
 
@@ -40,6 +47,20 @@ export function getLocalKafkaImageName(): string {
 export function getLocalKafkaImageTag(): string {
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
   return configs.get(LOCAL_KAFKA_IMAGE_TAG, DEFAULT_KAFKA_IMAGE_TAG);
+}
+
+/** Get the local Schema Registry image name based on user settings. */
+export function getLocalSchemaRegistryImageName(): string {
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  // we are not currently exposing these settings, so we'll always use the default value
+  return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE, DEFAULT_SCHEMA_REGISTRY_REPO);
+}
+
+/** Get the local Schema Registry image tag based on user settings. */
+export function getLocalSchemaRegistryImageTag(): string {
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  // we are not currently exposing these settings, so we'll always use the default value
+  return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, DEFAULT_SCHEMA_REGISTRY_TAG);
 }
 
 /** Default request options for Docker API requests, to be used with service class methods from `src/clients/docker/*`. */

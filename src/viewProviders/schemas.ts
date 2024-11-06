@@ -1,13 +1,17 @@
 import * as vscode from "vscode";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
-import { ccloudConnected, currentSchemaRegistryChanged } from "../emitters";
+import {
+  ccloudConnected,
+  currentSchemaRegistryChanged,
+  localSchemaRegistryConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
-import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { CCloudResourcePreloader, fetchSchemas } from "../storage/ccloudPreloader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.schemas");
@@ -79,7 +83,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
     });
 
-    // TODO(shoup): check localKafkaConnected and reset this view if local SR availability changes
+    localSchemaRegistryConnected.event((connected: boolean) => {
+      if (this.schemaRegistry?.isLocal) {
+        logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
+        // any transition of local schema registry connection state should reset the tree view
+        this.reset();
+      }
+    });
 
     currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistry | null) => {
       if (!schemaRegistry) {
@@ -139,14 +149,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   async getChildren(element?: SchemasViewProviderData): Promise<SchemasViewProviderData[]> {
     // we should get the following hierarchy/structure of tree items from this method:
-    // Value Schemas (ContainerTreeItem)
     // - topic1-value (ContainerTreeItem)
     //   - schema1-V2 (Schema)
     //   - schema1-V1 (Schema)
     // - topic2-value (ContainerTreeItem)
     //   - schema2-V1 (Schema)
-    // Key Schemas (ContainerTreeItem)
-    //   ( same as above but with "-key" subject suffixes )
 
     let schemaList: SchemasViewProviderData[] = [];
 
@@ -156,29 +163,32 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
       // Schema items are leaf nodes, so we don't need to handle them here
     } else {
-      if (this.ccloudEnvironment != null && this.schemaRegistry != null) {
-        const preloader = CCloudResourcePreloader.getInstance();
-        // ensure that the resources are loaded before trying to access them
-        await preloader.ensureCoarseResourcesLoaded();
-        await preloader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
+      // TODO(james): integrate local schema caching into the preloader
+      if (this.schemaRegistry != null) {
+        let schemas: Schema[] = [];
 
-        if (this.forceDeepRefresh) {
-          // Just honored the user's request for a deep refresh.
-          this.forceDeepRefresh = false;
+        if (this.ccloudEnvironment != null) {
+          const preloader = CCloudResourcePreloader.getInstance();
+          // ensure that the resources are loaded before trying to access them
+          await preloader.ensureCoarseResourcesLoaded();
+          await preloader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
+          if (this.forceDeepRefresh) {
+            // Just honored the user's request for a deep refresh.
+            this.forceDeepRefresh = false;
+          }
+          schemas =
+            (await getResourceManager().getSchemasForRegistry(this.schemaRegistry.id)) ?? [];
+        } else {
+          // fetching local Schema Registry schemas, so we don't have an environmentId to use
+          try {
+            schemas = await fetchSchemas(this.schemaRegistry.id, this.schemaRegistry.connectionId);
+            await getResourceManager().setSchemasForRegistry(this.schemaRegistry.id, schemas);
+          } catch (error) {
+            logger.error("Failed to get schemas:", { error });
+          }
         }
-
-        const schemas = await getResourceManager().getSchemasForRegistry(this.schemaRegistry.id);
-
-        // will be undefined if the schema registry's schemas aren't in the cache (deep refresh of this one TODO?)
-        // if (schemas === undefined) {
-        // deep-read the schemas, put into resource manager.
-
-        if (!schemas || schemas.length === 0) {
-          // no schemas to display
-          return [];
-        }
-        // create the hierarchy of "Key/Value Schemas -> Subject -> Version" items
-        return generateSchemaSubjectGroups(schemas);
+        // return the hierarchy of "Key/Value Schemas -> Subject -> Version" items or return empty array
+        return schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
       }
     }
 
