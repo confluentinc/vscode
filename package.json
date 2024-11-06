@@ -292,6 +292,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.edit",
+        "title": "Configure Topic",
+        "category": "Confluent: Topics"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -533,6 +538,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.edit",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
@@ -728,6 +737,11 @@
         {
           "command": "confluent.topics.delete",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
+          "group": "topics"
+        },
+        {
+          "command": "confluent.topics.edit",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzAlterConfigs.*/",
           "group": "topics"
         },
         {
