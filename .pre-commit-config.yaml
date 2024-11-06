@@ -13,4 +13,3 @@ repos:
       - id: gitleaks
         args:
           - --verbose
-

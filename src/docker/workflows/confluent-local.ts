@@ -1,5 +1,6 @@
 import {
   CancellationToken,
+  commands,
   InputBoxValidationMessage,
   InputBoxValidationSeverity,
   Progress,
@@ -19,7 +20,12 @@ import {
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
-import { LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_KAFKA_REST_HOST,
+} from "../../preferences/constants";
+import { ResourceManager } from "../../storage/resourceManager";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import { createContainer, getContainersForImage } from "../containers";
@@ -150,6 +156,9 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     // can't wait for containers to be ready if they didn't start
     if (!success) return;
 
+    // Invalidate any prior cached data about the local Kafka cluster
+    await this.invalidateLocalKafkaCluster();
+
     this.logAndUpdateProgress(`Waiting for ${this.resourceKind} container${plural} to be ready...`);
     await this.waitForLocalResourceEventChange();
   }
@@ -160,8 +169,72 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
-    this.logger.debug("Stopping ...");
-    // TODO(shoup): implement
+    this.imageTag = getLocalKafkaImageTag();
+
+    this.logAndUpdateProgress(`Checking existing ${this.resourceKind} containers...`);
+    const repoTag = `${ConfluentLocalWorkflow.imageRepo}:${this.imageTag}`;
+    const containerListRequest: ContainerListRequest = {
+      filters: JSON.stringify({
+        ancestor: [repoTag],
+        // label: [MANAGED_CONTAINER_LABEL], // TODO: determine if we want to use this label to filter
+        status: ["running"],
+      }),
+    };
+    const existingContainers: ContainerSummary[] =
+      await getContainersForImage(containerListRequest);
+    const count = existingContainers.length;
+    const plural = count > 1 ? "s" : "";
+    if (existingContainers.length === 0) {
+      // user may have a different image repo+tag configured; prompt them to check settings
+      window
+        .showErrorMessage(
+          `No ${this.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
+          "Open Settings",
+        )
+        .then((selection) => {
+          if (selection) {
+            commands.executeCommand(
+              "workbench.action.openSettings",
+              `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+            );
+          }
+        });
+      return;
+    }
+
+    this.logAndUpdateProgress(`Stopping ${count} ${this.resourceKind} container${plural}...`);
+    const promises: Promise<void>[] = [];
+    for (const container of existingContainers) {
+      if (!container.Id || !container.Names) {
+        this.logger.error("Container missing ID or name", {
+          id: container.Id,
+          names: container.Names,
+        });
+        continue;
+      }
+      promises.push(this.stopContainer({ id: container.Id, name: container.Names[0] }));
+    }
+    await Promise.all(promises);
+
+    // only allow exiting from here since awaiting each stopContainer() call and allowing cancellation
+    // there would introduce a delay
+    if (token.isCancellationRequested) return;
+
+    this.logAndUpdateProgress(
+      `Waiting for ${count} ${this.resourceKind} container${plural} to stop...`,
+    );
+    await this.waitForLocalResourceEventChange();
+  }
+
+  /**
+   * Invalidate any prior cached data about the local Kafka cluster, either within the extension or
+   * the sidecar
+   **/
+  async invalidateLocalKafkaCluster(): Promise<void> {
+    // Invalidate any cached local topics in ResourceManager / workspace storage, so that next
+    // time we need to show them we'll do a deep fetch.
+    const rm = ResourceManager.getInstance();
+    await rm.deleteLocalTopics();
   }
 
   /** Block until we see the {@link localKafkaConnected} event fire. (Controlled by the EventListener

@@ -51,6 +51,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
 
   // vscode stubs
   let showInputBoxStub: sinon.SinonStub;
+  let showErrorMessageStub: sinon.SinonStub;
   let getConfigurationStub: sinon.SinonStub;
 
   // docker/containers.ts+networks.ts wrapper function stubs
@@ -64,12 +65,14 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let handleExistingContainersStub: sinon.SinonStub;
   let showErrorNotificationStub: sinon.SinonStub;
   let startContainerStub: sinon.SinonStub;
+  let stopContainerStub: sinon.SinonStub;
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     showInputBoxStub = sandbox.stub(window, "showInputBox").resolves("1");
+    showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
     // this should probably live in a separate test helper file
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
     getConfigurationStub.returns({
@@ -102,6 +105,8 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     // assume the container starts successfully for most tests
     const fakeStartedContainer: ContainerInspectResponse = { Id: "1" };
     startContainerStub = sandbox.stub(workflow, "startContainer").resolves(fakeStartedContainer);
+    // assume the container stops successfully for most tests
+    stopContainerStub = sandbox.stub(workflow, "stopContainer").resolves();
     // don't block on waiting for the event to resolve for most tests
     waitForLocalResourceEventChangeStub = sandbox
       .stub(workflow, "waitForLocalResourceEventChange")
@@ -217,7 +222,36 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     assert.ok(waitForLocalResourceEventChangeStub.notCalled);
   });
 
-  // TODO(shoup): add .stop() tests in follow-on branch
+  it("stop() should stop a Kafka container", async () => {
+    const containerId = "1";
+    // the container name will likely have a leading slash
+    const containerName = "/container1";
+    const fakeContainers: ContainerSummary[] = [{ Id: containerId, Names: [containerName] }];
+    getContainersForImageStub.resolves(fakeContainers);
+
+    await workflow.stop(testCancellationToken);
+
+    assert.ok(getContainersForImageStub.calledOnce);
+    assert.ok(stopContainerStub.calledOnceWith({ id: containerId, name: containerName }));
+    assert.ok(waitForLocalResourceEventChangeStub.calledOnce);
+  });
+
+  it("stop() should exit early if there are no running Kafka containers", async () => {
+    getContainersForImageStub.resolves([]);
+
+    await workflow.stop(testCancellationToken);
+
+    assert.ok(getContainersForImageStub.calledOnce);
+    // not the usual "Open Logs"+"File Issue" notification, just a basic error message with a button to open settings
+    assert.ok(
+      showErrorMessageStub.calledOnceWith(
+        `No ${workflow.resourceKind} containers found to stop. Please ensure your Kafka image repo+tag settings match currently running containers and try again.`,
+        "Open Settings",
+      ),
+    );
+    assert.ok(stopContainerStub.notCalled);
+    assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+  });
 
   it("waitForLocalResourceEventChange() should resolve when the localKafkaConnected event is emitted", async () => {
     const promise = workflow.waitForLocalResourceEventChange();

@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.21.0-10",
+  "version": "0.21.0-13",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -103,6 +103,12 @@
         "command": "confluent.docker.startLocalResources",
         "icon": "$(debug-start)",
         "title": "Start Local Resources",
+        "category": "Confluent: Docker"
+      },
+      {
+        "command": "confluent.docker.stopLocalResources",
+        "icon": "$(debug-stop)",
+        "title": "Stop Local Resources",
         "category": "Confluent: Docker"
       },
       {
@@ -388,17 +394,17 @@
       {
         "view": "confluent-schemas",
         "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.create)",
-        "when": "!confluent.ccloudConnectionAvailable"
+        "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
       },
       {
         "view": "confluent-schemas",
         "contents": "No Schema Registry selected. Click below to get started.\n[Select Schema Registry](command:confluent.resources.schema-registry.select)",
-        "when": "confluent.ccloudConnectionAvailable && !confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && !confluent.schemaRegistrySelected"
       },
       {
         "view": "confluent-schemas",
         "contents": "No schemas found.",
-        "when": "confluent.ccloudConnectionAvailable && confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
       },
       {
         "view": "confluent-topics",
@@ -615,6 +621,11 @@
         {
           "command": "confluent.docker.startLocalResources",
           "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "group": "inline"
+        },
+        {
+          "command": "confluent.docker.stopLocalResources",
+          "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
           "group": "inline"
         },
         {

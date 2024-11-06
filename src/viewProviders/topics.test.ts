@@ -2,14 +2,14 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_TOPIC,
-  TEST_SCHEMA,
-  TEST_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestStorageManager } from "../../tests/unit/testUtils";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem } from "../models/schema";
-import { KafkaTopicTreeItem } from "../models/topic";
+import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { StorageManager } from "../storage";
 import { getResourceManager } from "../storage/resourceManager";
 import { TopicViewProvider, loadTopicSchemas } from "./topics";
@@ -21,8 +21,8 @@ describe("TopicViewProvider methods", () => {
     provider = TopicViewProvider.getInstance();
   });
 
-  it("getTreeItem() should return a SchemaTreeItem for a Schema instances", () => {
-    const treeItem = provider.getTreeItem(TEST_SCHEMA);
+  it("getTreeItem() should return a SchemaTreeItem for a Schema instance", () => {
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA);
     assert.ok(treeItem instanceof SchemaTreeItem);
   });
 
@@ -35,7 +35,7 @@ describe("TopicViewProvider methods", () => {
     const container = new ContainerTreeItem<Schema>(
       "test",
       vscode.TreeItemCollapsibleState.Collapsed,
-      [TEST_SCHEMA],
+      [TEST_CCLOUD_SCHEMA],
     );
     const treeItem = provider.getTreeItem(container);
     assert.deepStrictEqual(treeItem, container);
@@ -46,12 +46,9 @@ describe("TopicViewProvider helper functions", () => {
   const topicName = "test-topic";
   const valueSubject = `${topicName}-value`;
   const preloadedSchemas: Schema[] = [
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: valueSubject, version: 1 }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: valueSubject, version: 2 }),
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    TEST_SCHEMA.copy({ subject: "other-topic", version: 1 }),
+    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 1 }),
+    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 2 }),
+    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1 }),
   ];
 
   let storageManager: StorageManager;
@@ -82,8 +79,8 @@ describe("TopicViewProvider helper functions", () => {
   it("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
     // preload Schema Registry + schemas (usually done when loading environments)
     const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistries([TEST_SCHEMA_REGISTRY]);
-    await resourceManager.setSchemasForRegistry(TEST_SCHEMA_REGISTRY.id, preloadedSchemas);
+    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
+    await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, preloadedSchemas);
     // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
     const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });
     const schemas = await loadTopicSchemas(topic);
@@ -95,9 +92,11 @@ describe("TopicViewProvider helper functions", () => {
   });
 
   it("loadTopicSchemas() should not return schemas for CCloud Kafka topics if none are available in extension state", async () => {
-    await getResourceManager().setSchemasForRegistry(TEST_SCHEMA_REGISTRY.id, preloadedSchemas);
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });
+    await getResourceManager().setSchemasForRegistry(
+      TEST_CCLOUD_SCHEMA_REGISTRY.id,
+      preloadedSchemas,
+    );
+    const topic = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: topicName });
     const schemas = await loadTopicSchemas(topic);
     assert.ok(Array.isArray(schemas));
     assert.equal(schemas.length, 0);

@@ -390,6 +390,14 @@ export class ResourceManager {
     return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
   }
 
+  /**
+   * Delete all local topics from workspace state, such as when we notice that the local cluster has been deleted.
+   * or we just started up a new local cluster.
+   */
+  async deleteLocalTopics(): Promise<void> {
+    return await this.storage.deleteWorkspaceState(StateKafkaTopics.LOCAL);
+  }
+
   /** Return the use-with-storage StateKafkaTopics key for this type of cluster.
    *
    * (not private only for testing)
