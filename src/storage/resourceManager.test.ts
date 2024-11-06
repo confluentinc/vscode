@@ -27,6 +27,7 @@ import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
   getResourceManager,
+  ResourceManager,
   UriMetadata,
 } from "./resourceManager";
 
@@ -712,6 +713,7 @@ describe("ResourceManager schema tests", function () {
 
 describe("ResourceManager URI metadata methods", function () {
   let storageManager: StorageManager;
+  let rm: ResourceManager;
 
   let schemaFileURI = Uri.parse("file:///path/to/file");
 
@@ -723,6 +725,7 @@ describe("ResourceManager URI metadata methods", function () {
   beforeEach(async () => {
     // fresh slate for each test
     await storageManager.clearWorkspaceState();
+    rm = getResourceManager();
   });
 
   afterEach(async () => {
@@ -731,10 +734,8 @@ describe("ResourceManager URI metadata methods", function () {
   });
 
   it("setURIMetadata() should correctly store URI metadata", async () => {
-    const rm = getResourceManager();
-
     const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_SCHEMA_REGISTRY.id);
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
     metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
 
     await rm.setURIMetadata(schemaFileURI, metadata);
@@ -750,6 +751,207 @@ describe("ResourceManager URI metadata methods", function () {
 
     const metadataFromStorageAgain = await rm.getUriMetadata(schemaFileURI);
     assert.deepStrictEqual(metadata, metadataFromStorageAgain);
+
+    // Separate URI should be stored separately.
+    const otherSchemaFileURI = Uri.parse("file:///path/to/other-file");
+    const otherMetadata: UriMetadata = new Map();
+    otherMetadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "other-registry-id");
+    otherMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-abc-value");
+    await rm.setURIMetadata(otherSchemaFileURI, otherMetadata);
+
+    // fetch this other metadata back from resource manager, should be fine.
+    const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
+    assert.deepStrictEqual(
+      otherMetadata,
+      otherMetadataFromStorage,
+      "other metadata should be stored",
+    );
+
+    // The first metadata should still be there unaffected by this second file uri key.
+    const metadataFromStorageAfterOther = await rm.getUriMetadata(schemaFileURI);
+    assert.deepStrictEqual(
+      metadata,
+      metadataFromStorageAfterOther,
+      "first metadata should still be stored",
+    );
+  });
+
+  it("mergeURIMetadata() should correctly merge URI metadata", async () => {
+    const metadata: UriMetadata = new Map();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+
+    await rm.setURIMetadata(schemaFileURI, metadata);
+
+    const newMetadata: UriMetadata = new Map();
+    newMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
+
+    const mergeReturn = await rm.mergeURIMetadata(schemaFileURI, newMetadata);
+
+    const mergedMetadata: UriMetadata = new Map([...metadata, ...newMetadata]);
+
+    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
+    assert.deepStrictEqual(mergedMetadata, metadataFromStorage);
+  });
+
+  it("MergeURIMetadata() should correctly merge against prior unset metadata", async () => {
+    const metadata: UriMetadata = new Map();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+
+    // Merge against empty is same as set.
+    const merged = await rm.mergeURIMetadata(schemaFileURI, metadata);
+    assert.deepStrictEqual(merged, metadata);
+
+    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
+    assert.deepStrictEqual(metadata, metadataFromStorage);
+  });
+
+  it("mergeURIMetadataValue() should set individual keys properly", async () => {
+    // Set first key.
+    await rm.mergeURIMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_REGISTRY_ID,
+      TEST_CCLOUD_SCHEMA_REGISTRY.id,
+    );
+
+    // Set second key.
+    const afterSecondAssignment = await rm.mergeURIMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_SUBJECT,
+      "test-ccloud-topic-xyz-value",
+    );
+
+    // Fetch back and verify.
+
+    const fromStorage = await rm.getUriMetadata(schemaFileURI);
+
+    // Verify results.
+    const expected: UriMetadata = new Map();
+    expected.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+    expected.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
+
+    assert.deepStrictEqual(fromStorage, expected);
+    assert.deepStrictEqual(afterSecondAssignment, expected);
+  });
+
+  it("getURIMetadata() should return undefined if no metadata is found", async () => {
+    const metadata = await rm.getUriMetadata(schemaFileURI);
+    assert.strictEqual(metadata, undefined);
+  });
+
+  it("getUriuMetadataValue() should return single value properly", async () => {
+    const metadata: UriMetadata = new Map();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
+
+    await rm.setURIMetadata(schemaFileURI, metadata);
+
+    const registryId = await rm.getUriMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_REGISTRY_ID,
+    );
+    assert.strictEqual(registryId, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+  });
+
+  it("getUriMetadataValue() should return undefined if key is not found", async () => {
+    const metadata: UriMetadata = new Map();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+
+    await rm.setURIMetadata(schemaFileURI, metadata);
+
+    const missingValue = await rm.getUriMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_SUBJECT,
+    );
+    assert.strictEqual(missingValue, undefined);
+  });
+
+  it("clearURIMetadataValues() should clear individual keys properly", async () => {
+    // Set first key.
+    await rm.mergeURIMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_REGISTRY_ID,
+      TEST_CCLOUD_SCHEMA_REGISTRY.id,
+    );
+
+    // Set second key.
+    await rm.mergeURIMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_SUBJECT,
+      "test-ccloud-topic-xyz-value",
+    );
+
+    // Clear the first key.
+    await rm.clearURIMetadataValues(schemaFileURI, UriMetadataKeys.SCHEMA_REGISTRY_ID);
+
+    // Fetch back and verify.
+
+    const fromStorage = await rm.getUriMetadata(schemaFileURI);
+
+    // Verify results.
+    const expected: UriMetadata = new Map();
+    expected.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
+
+    assert.deepStrictEqual(fromStorage, expected);
+
+    // clear the second key, should return undefined since nothing retained anymore.
+    const results = await rm.clearURIMetadataValues(schemaFileURI, UriMetadataKeys.SCHEMA_SUBJECT);
+    assert.deepStrictEqual(results, undefined);
+  });
+
+  it("clearURIMetadataValues() should clear multiple keys properly", async () => {
+    // Set first key.
+    await rm.mergeURIMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_REGISTRY_ID,
+      TEST_CCLOUD_SCHEMA_REGISTRY.id,
+    );
+
+    // Set second key.
+    await rm.mergeURIMetadataValue(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_SUBJECT,
+      "test-ccloud-topic-xyz-value",
+    );
+
+    // Clear both keys.
+    const returnData = await rm.clearURIMetadataValues(
+      schemaFileURI,
+      UriMetadataKeys.SCHEMA_REGISTRY_ID,
+      UriMetadataKeys.SCHEMA_SUBJECT,
+    );
+    assert.deepStrictEqual(undefined, returnData, "Expected return data to be undefined");
+
+    // Fetch back and verify.
+    const fromStorage = await rm.getUriMetadata(schemaFileURI);
+
+    // Verify results.
+    assert.deepStrictEqual(undefined, fromStorage, "Expected from storage to be undefined");
+  });
+
+  it("deleteURIMetadata() should correctly delete URI metadata", async () => {
+    const metadata: UriMetadata = new Map();
+    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
+    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
+
+    await rm.setURIMetadata(schemaFileURI, metadata);
+
+    // set second file URI metadata also.
+    const otherSchemaFileURI = Uri.parse("file:///path/to/other-file");
+    const otherMetadata: UriMetadata = new Map();
+    otherMetadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "other-registry-id");
+    otherMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-abc-value");
+    await rm.setURIMetadata(otherSchemaFileURI, otherMetadata);
+
+    // delete the first metadata
+    await rm.deleteURIMetadata(schemaFileURI);
+
+    // fetch first back from resource manager, expect undefined.
+    const metadataFromStorageAfterDelete = await rm.getUriMetadata(schemaFileURI);
+    assert.deepStrictEqual(metadataFromStorageAfterDelete, undefined);
+
+    // fetch second back, expect it to still be there.
+    const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
+    assert.deepStrictEqual(otherMetadata, otherMetadataFromStorage);
   });
 });
 

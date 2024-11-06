@@ -517,8 +517,10 @@ export class ResourceManager {
 
   /** Merge new values into any preexisting extension URI metadata. Use when needing to further
    * annotate a possibly preexisting URI.
+   *
+   * @returns The new metadata for the URI after the merge.
    */
-  async mergeURIMetadata(uri: Uri, metadata: UriMetadata): Promise<void> {
+  async mergeURIMetadata(uri: Uri, metadata: UriMetadata): Promise<UriMetadata> {
     const allMetadata =
       (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
       new Map<string, UriMetadata>();
@@ -532,24 +534,50 @@ export class ResourceManager {
     allMetadata.set(uri.toString(), existingMetadata);
 
     await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
+
+    return existingMetadata;
   }
 
-  /** Merge a single new URI metadata value into preexisting metadata. See {@link mergeURIMetadata} */
-  async mergeURIMetadataValue(uri: Uri, key: UriMetadataKeys, value: string): Promise<void> {
+  /** Merge a single new URI metadata value into preexisting metadata. See {@link mergeURIMetadata}
+   *
+   * @returns The new complete set of metadata for the URI after the merge.
+   */
+  async mergeURIMetadataValue(uri: Uri, key: UriMetadataKeys, value: string): Promise<UriMetadata> {
     const metadata = new Map<UriMetadataKeys, string>();
     metadata.set(key, value);
-    await this.mergeURIMetadata(uri, metadata);
+    return await this.mergeURIMetadata(uri, metadata);
   }
 
-  /** Clear one or more metadata values from a URI */
-  async clearURIMetadataValues(uri: Uri, ...keys: UriMetadataKeys[]): Promise<void> {
+  /** Get all of the extension metadata annotations for the given URI. */
+  async getUriMetadata(uri: Uri): Promise<UriMetadata | undefined> {
     const allMetadata =
       (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
       new Map<string, UriMetadata>();
 
-    const existingMetadata = allMetadata.get(uri.toString());
+    return allMetadata.get(uri.toString());
+  }
+  /** Get a single extension metadata value for a URI. Use when a codepath will only be
+   * interested in this single value. See {@link getUriMetadata} for when needing many values.
+   */
+  async getUriMetadataValue(uri: Uri, key: UriMetadataKeys): Promise<string | undefined> {
+    const metadata = await this.getUriMetadata(uri);
+    return metadata?.get(key);
+  }
+
+  /** Clear one or more metadata values from a URI.
+   * @returns The new metadata for the URI after the clear(s), or undefined if the URI has no metadata remaining.
+   */
+  async clearURIMetadataValues(
+    uri: Uri,
+    ...keys: UriMetadataKeys[]
+  ): Promise<UriMetadata | undefined> {
+    const allMetadata =
+      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
+      new Map<string, UriMetadata>();
+
+    let existingMetadata = allMetadata.get(uri.toString());
     if (existingMetadata === undefined) {
-      return;
+      return undefined;
     }
 
     for (const key of keys) {
@@ -557,13 +585,17 @@ export class ResourceManager {
     }
 
     if (existingMetadata.size === 0) {
-      // all gone, remove the whole entry.
+      // all gone, remove the whole entry. Future calls
+      // to getUriMetadata() will return undefined.
       allMetadata.delete(uri.toString());
+      existingMetadata = undefined;
     } else {
       allMetadata.set(uri.toString(), existingMetadata);
     }
 
     await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
+
+    return existingMetadata;
   }
 
   /** Forget all extension metadata for a URI. Useful if knowing that the URI was just destroyed. */
@@ -575,23 +607,6 @@ export class ResourceManager {
     allMetadata.delete(uri.toString());
 
     await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
-  }
-
-  /** Get all of the extension metadata annotations for the given URI. */
-  async getUriMetadata(uri: Uri): Promise<UriMetadata | undefined> {
-    const allMetadata =
-      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
-      new Map<string, UriMetadata>();
-
-    return allMetadata.get(uri.toString());
-  }
-
-  /** Get a single extension metadata value for a URI. Use when a codepath will only be
-   * interested in this single value. See {@link getUriMetadata} for when needing many values.
-   */
-  async getUriMetadataValue(uri: Uri, key: UriMetadataKeys): Promise<string | undefined> {
-    const metadata = await this.getUriMetadata(uri);
-    return metadata?.get(key);
   }
 }
 
