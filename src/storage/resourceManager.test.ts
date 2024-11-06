@@ -787,10 +787,11 @@ describe("ResourceManager URI metadata methods", function () {
 
     const mergeReturn = await rm.mergeURIMetadata(schemaFileURI, newMetadata);
 
-    const mergedMetadata: UriMetadata = new Map([...metadata, ...newMetadata]);
+    const expected: UriMetadata = new Map([...metadata, ...newMetadata]);
+    assert.deepStrictEqual(expected, mergeReturn);
 
     const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(mergedMetadata, metadataFromStorage);
+    assert.deepStrictEqual(expected, metadataFromStorage);
   });
 
   it("MergeURIMetadata() should correctly merge against prior unset metadata", async () => {
