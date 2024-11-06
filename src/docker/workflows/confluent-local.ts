@@ -8,7 +8,6 @@ import {
   workspace,
   WorkspaceConfiguration,
 } from "vscode";
-import { findFreePort } from ".";
 import {
   ContainerCreateRequest,
   ContainerCreateResponse,
@@ -30,6 +29,7 @@ import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import { createContainer, getContainersForImage } from "../containers";
 import { createNetwork } from "../networks";
+import { findFreePort } from "../ports";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
 
 export const CONTAINER_NAME_PREFIX = "vscode-confluent-local-broker";

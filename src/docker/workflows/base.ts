@@ -2,6 +2,7 @@ import { CancellationToken, commands, Progress, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
+import { DEFAULT_DOCKER_NETWORK } from "../constants";
 import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
@@ -26,7 +27,7 @@ export abstract class LocalResourceWorkflow {
   protected progress?: Progress<{ message?: string; increment?: number }>;
 
   /** Default Docker network name to use for all workflows' `.start()` logic. */
-  networkName: string = "vscode-confluent-local-network";
+  networkName: string = DEFAULT_DOCKER_NETWORK;
 
   /** Basic label for notifications and logs to tell the user what kind of resource is being started
    * or stopped for the given workflow. */
@@ -46,6 +47,7 @@ export abstract class LocalResourceWorkflow {
   abstract start(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
+    ...args: any[]
   ): Promise<void>;
 
   /**

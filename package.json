@@ -393,7 +393,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.create)",
+        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
       },
       {
@@ -620,7 +620,7 @@
         },
         {
           "command": "confluent.docker.startLocalResources",
-          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !confluent.localKafkaClusterAvailable",
+          "when": "view == confluent-resources && viewItem =~ /local-container.*/ && !(confluent.localKafkaClusterAvailable && confluent.localSchemaRegistryAvailable)",
           "group": "inline"
         },
         {
