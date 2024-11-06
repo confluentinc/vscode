@@ -117,8 +117,8 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
     // inspect the containers to get the Docker network name and boostrap server host+port combos
-    const kafkaNetworks: string[] = this.determineKafkaDockerNetworks(kafkaContainers);
-    const kafkaBootstrapServers = await this.determineKafkaBootstrapServers(kafkaContainers);
+    const kafkaNetworks: string[] = determineKafkaDockerNetworks(kafkaContainers);
+    const kafkaBootstrapServers = await determineKafkaBootstrapServers(kafkaContainers);
     this.logger.debug("Kafka container(s) found", {
       count: kafkaContainers.length,
       bootstrapServers: kafkaBootstrapServers,
@@ -280,53 +280,10 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     return kafkaContainers;
   }
 
-  /** Determine the Docker network name for the Kafka containers. */
-  determineKafkaDockerNetworks(kafkaContainers: ContainerInspectResponse[]): string[] {
-    const kafkaNetworks: string[] = [];
-    kafkaContainers.forEach((container) => {
-      if (!container.NetworkSettings?.Networks) {
-        return;
-      }
-      for (const networkName of Object.keys(container.NetworkSettings.Networks)) {
-        if (kafkaNetworks.includes(networkName)) {
-          continue;
-        }
-        kafkaNetworks.push(networkName);
-      }
-    });
-    return kafkaNetworks;
-  }
-
-  /** Determine the bootstrap servers from the Kafka container environment variables. */
-  async determineKafkaBootstrapServers(
-    kafkaContainers: ContainerInspectResponse[],
-  ): Promise<string[]> {
-    const bootstrapServers: string[] = [];
-
-    // parse the KAFKA_LISTENERS env vars to get the bootstrap servers
-    kafkaContainers.forEach((container: ContainerInspectResponse) => {
-      const envVars: Record<string, string> = getContainerEnvVars(container);
-      if (!envVars || !envVars.KAFKA_LISTENERS) {
-        return;
-      }
-      // e.g. PLAINTEXT://:9092,CONTROLLER://:9093 and maybe PLAINTEXT_HOST://:9094
-      const listeners: string[] = envVars.KAFKA_LISTENERS.split(",");
-      for (const listener of listeners) {
-        if (!listener.startsWith("PLAINTEXT://")) {
-          continue;
-        }
-        const bootstrapServer = listener.split("//")[1];
-        bootstrapServers.push(bootstrapServer);
-      }
-    });
-
-    return bootstrapServers;
-  }
-
   async createSchemaRegistryContainer(
     kafkaBootstrapServers: string[],
     kafkaNetworks: string[],
-  ): Promise<LocalResourceContainer> {
+  ): Promise<LocalResourceContainer | undefined> {
     this.logAndUpdateProgress(`Creating ${this.resourceKind} container "${CONTAINER_NAME}"...`);
 
     const restProxyPort: number = await findFreePort();
@@ -353,14 +310,20 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       Tty: false,
     };
 
-    const container: ContainerCreateResponse = await createContainer(
-      ConfluentPlatformSchemaRegistryWorkflow.imageRepo,
-      this.imageTag,
-      {
-        body,
-        name: CONTAINER_NAME,
-      },
-    );
+    let container: ContainerCreateResponse | undefined;
+    try {
+      container = await createContainer(
+        ConfluentPlatformSchemaRegistryWorkflow.imageRepo,
+        this.imageTag,
+        {
+          body,
+          name: CONTAINER_NAME,
+        },
+      );
+    } catch (error) {
+      this.logger.error("Failed to create container:", { error });
+      return;
+    }
 
     // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
     // assigned REST proxy port
@@ -368,4 +331,45 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     return { id: container.Id, name: CONTAINER_NAME };
   }
+}
+
+/** Determine the Docker network name for the Kafka containers. */
+function determineKafkaDockerNetworks(kafkaContainers: ContainerInspectResponse[]): string[] {
+  const kafkaNetworks: string[] = [];
+  kafkaContainers.forEach((container) => {
+    if (!container.NetworkSettings?.Networks) {
+      return;
+    }
+    for (const networkName of Object.keys(container.NetworkSettings.Networks)) {
+      if (kafkaNetworks.includes(networkName)) {
+        continue;
+      }
+      kafkaNetworks.push(networkName);
+    }
+  });
+  return kafkaNetworks;
+}
+
+/** Determine the bootstrap servers from the Kafka container environment variables. */
+function determineKafkaBootstrapServers(kafkaContainers: ContainerInspectResponse[]): string[] {
+  const bootstrapServers: string[] = [];
+
+  // parse the KAFKA_LISTENERS env vars to get the bootstrap servers
+  kafkaContainers.forEach((container: ContainerInspectResponse) => {
+    const envVars: Record<string, string> = getContainerEnvVars(container);
+    if (!envVars || !envVars.KAFKA_LISTENERS) {
+      return;
+    }
+    // e.g. PLAINTEXT://:9092,CONTROLLER://:9093 and maybe PLAINTEXT_HOST://:9094
+    const listeners: string[] = envVars.KAFKA_LISTENERS.split(",");
+    for (const listener of listeners) {
+      if (!listener.startsWith("PLAINTEXT://")) {
+        continue;
+      }
+      const bootstrapServer = listener.split("//")[1];
+      bootstrapServers.push(bootstrapServer);
+    }
+  });
+
+  return bootstrapServers;
 }
