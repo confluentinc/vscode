@@ -102,15 +102,12 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
           validate_only: validateOnly,
         },
       } as UpdateKafkaTopicConfigBatchRequest);
-      // if (!validateOnly) submitSuccess = true;
-      formError = "hello there was a problem";
-      console.log("formErrors", formError);
+      if (!validateOnly) submitSuccess = true;
     } catch (err) {
       if (err instanceof ResponseError) {
-        const errorBody: { message: string } = await err.response.json();
-        console.error("MAde it ERROR = ", typeof err, errorBody.message);
-        formError = errorBody.message;
-        console.log("formError", formError);
+        const errorBody = await err.response.json();
+        console.error("MAdE it ERROR = ", typeof err, err.response.status, errorBody.message);
+        if (err.response.status === 400) formError = errorBody.message;
       }
       submitSuccess = false;
     }

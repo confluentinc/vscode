@@ -14,7 +14,7 @@
       <h1>Configure Topic</h1>
       <p>Some helpful text that will encourage users to properly configure the topic.</p>
       <template data-if="this.errorMessage()">
-        <div class="errors" data-text="this.errorMessage()"></div>
+        <div class="info error" data-text="this.errorMessage()"></div>
         </template>
       <template data-if="!this.success()">
       <form data-on-submit="this.handleSubmit(event)">
@@ -22,7 +22,7 @@
           <label for="cleanup-policy" class="label">Cleanup Policy</label>
           <select
             id="cleanup-policy"
-            class="input"
+            class="input dropdown"
             name="cleanup.policy"
             data-prop-value="this.cleanupPolicy()"
             data-on-change="this.validateChange(event)"
@@ -80,11 +80,11 @@
             <span>The maximum message size that can be appended to this topic, in bytes.</span>
           </div>
         </div>
-        <input class="button" type="submit" value="Save" /><button type="button" class="button secondary">Cancel</button>
+        <input class="button" type="submit" value="Save" />
       </form>
       </template>
       <template data-if="this.success()">
-        <div class="info">Topic configuration saved successfully.</div>
+        <div class="info success">Changes saved successfully.</div>
       </template>
     </main>
 
@@ -153,6 +153,13 @@
         color: var(--vscode-descriptionForeground);
         font-weight: 700;
         font-style: italic;
+      }
+
+      .success {
+        color: var(--vscode-statusBar-foreground);
+      }
+      .error {
+        color: var(--vscode-errorForeground);
       }
     </style>
   </body>
