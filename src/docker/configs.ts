@@ -1,7 +1,7 @@
 import { normalize } from "path";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
 import { workspace, WorkspaceConfiguration } from "vscode";
-import { SystemApi } from "../clients/docker";
+import { ResponseError, SystemApi } from "../clients/docker";
 import { Logger } from "../logging";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
@@ -97,7 +97,13 @@ export async function isDockerAvailable(): Promise<boolean> {
     logger.debug("docker ping response:", resp);
     return true;
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof ResponseError) {
+      logger.debug("docker ping error response:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: await error.response.clone().text(),
+      });
+    } else if (error instanceof Error) {
       logger.debug("can't ping docker:", {
         error: error.message,
       });

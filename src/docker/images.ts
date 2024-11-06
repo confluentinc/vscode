@@ -51,11 +51,10 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
     // use the `imageCreateRaw` method to get the raw response text, because otherwise we get a void response
     const resp = await client.imageCreateRaw({ fromImage: repoTag }, init);
     // wait for all the "Pulling..."/"Already exists" type messages to be finished
-    const body = await resp.raw.clone().text();
+    await resp.raw.clone().text();
     logger.debug(`Pulled "${repoTag}" image:`, {
       status: resp.raw.status,
       statusText: resp.raw.statusText,
-      body,
     });
     getTelemetryLogger().logUsage("Docker Image Pulled", {
       dockerImage: repoTag,
