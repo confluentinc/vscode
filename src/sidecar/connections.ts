@@ -89,6 +89,10 @@ export async function tryToDeleteConnection(id: string): Promise<void> {
     await client.gatewayV1ConnectionsIdDelete({ id: id });
     logger.debug("deleted connection:", { id });
   } catch (error) {
+    if (error instanceof ResponseError && error.response.status === 404) {
+      logger.debug("no connection found to delete:", { id });
+      return;
+    }
     logger.error("delete connection error:", error);
     throw error;
   }
