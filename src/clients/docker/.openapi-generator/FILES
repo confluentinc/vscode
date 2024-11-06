@@ -41,7 +41,6 @@ models/ContainerCreateResponse.ts
 models/ContainerInspectResponse.ts
 models/ContainerPruneResponse.ts
 models/ContainerState.ts
-models/ContainerStatus.ts
 models/ContainerSummary.ts
 models/ContainerSummaryHostConfig.ts
 models/ContainerSummaryNetworkSettings.ts
@@ -50,14 +49,11 @@ models/ContainerUpdateRequest.ts
 models/ContainerUpdateResponse.ts
 models/ContainerWaitExitError.ts
 models/ContainerWaitResponse.ts
-models/ContainerdInfo.ts
-models/ContainerdInfoNamespaces.ts
 models/CreateImageInfo.ts
 models/DeviceMapping.ts
 models/DeviceRequest.ts
 models/DistributionInspect.ts
 models/Driver.ts
-models/DriverData.ts
 models/EndpointIPAMConfig.ts
 models/EndpointPortConfig.ts
 models/EndpointSettings.ts
@@ -75,6 +71,7 @@ models/FilesystemChange.ts
 models/GenericResourcesInner.ts
 models/GenericResourcesInnerDiscreteResourceSpec.ts
 models/GenericResourcesInnerNamedResourceSpec.ts
+models/GraphDriverData.ts
 models/Health.ts
 models/HealthConfig.ts
 models/HealthcheckResult.ts
@@ -90,11 +87,6 @@ models/ImageID.ts
 models/ImageInspect.ts
 models/ImageInspectMetadata.ts
 models/ImageInspectRootFS.ts
-models/ImageManifestSummary.ts
-models/ImageManifestSummaryAttestationData.ts
-models/ImageManifestSummaryImageData.ts
-models/ImageManifestSummaryImageDataSize.ts
-models/ImageManifestSummarySize.ts
 models/ImagePruneResponse.ts
 models/ImageSearchResponseItem.ts
 models/ImageSummary.ts
@@ -147,7 +139,6 @@ models/PluginSettings.ts
 models/PluginsInfo.ts
 models/Port.ts
 models/PortBinding.ts
-models/PortStatus.ts
 models/ProcessConfig.ts
 models/ProgressDetail.ts
 models/PushImageInfo.ts
@@ -207,10 +198,8 @@ models/TaskSpecContainerSpecConfigsInner.ts
 models/TaskSpecContainerSpecConfigsInnerFile.ts
 models/TaskSpecContainerSpecDNSConfig.ts
 models/TaskSpecContainerSpecPrivileges.ts
-models/TaskSpecContainerSpecPrivilegesAppArmor.ts
 models/TaskSpecContainerSpecPrivilegesCredentialSpec.ts
 models/TaskSpecContainerSpecPrivilegesSELinuxContext.ts
-models/TaskSpecContainerSpecPrivilegesSeccomp.ts
 models/TaskSpecContainerSpecSecretsInner.ts
 models/TaskSpecContainerSpecSecretsInnerFile.ts
 models/TaskSpecLogDriver.ts
@@ -223,6 +212,7 @@ models/TaskSpecResources.ts
 models/TaskSpecRestartPolicy.ts
 models/TaskState.ts
 models/TaskStatus.ts
+models/TaskStatusContainerStatus.ts
 models/ThrottleDevice.ts
 models/UnlockKeyResponse.ts
 models/Volume.ts
