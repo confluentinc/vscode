@@ -24,7 +24,10 @@ import {
 import { findFreePort } from "../ports";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
 
-const CONTAINER_NAME = "vscode-confluent-schema-registry";
+export const CONTAINER_NAME = "vscode-confluent-schema-registry";
+
+export const START_KAFKA_BUTTON = "Start Kafka";
+export const IMAGE_SETTINGS_BUTTON = "Configure Image Settings";
 
 export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkflow {
   resourceKind: string = "Schema Registry";
@@ -84,31 +87,29 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     if (kafkaContainers.length === 0) {
       const kafkaWorkflow = getKafkaWorkflow();
       this.logger.error("no Kafka containers found, skipping creation");
-      const startKafkaButton = "Start Kafka";
-      const imageSettingsButton = "Configure Image Settings";
       window
         .showErrorMessage(
           `No running Kafka containers found for image "${kafkaWorkflow?.imageRepoTag}". Please start Kafka and try again.`,
-          startKafkaButton,
-          imageSettingsButton,
+          START_KAFKA_BUTTON,
+          IMAGE_SETTINGS_BUTTON,
         )
         .then((selection) => {
-          if (selection === startKafkaButton) {
+          if (selection === START_KAFKA_BUTTON) {
             commands.executeCommand("confluent.docker.startLocalResources", [
               LocalResourceKind.Kafka,
             ]);
             this.sendTelemetryEvent("Notification Button Clicked", {
-              buttonLabel: startKafkaButton,
+              buttonLabel: START_KAFKA_BUTTON,
               notificationType: "error",
               purpose: "No Kafka Containers Found",
             });
-          } else if (selection === imageSettingsButton) {
+          } else if (selection === IMAGE_SETTINGS_BUTTON) {
             commands.executeCommand(
               "workbench.action.openSettings",
               `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
             );
             this.sendTelemetryEvent("Notification Button Clicked", {
-              buttonLabel: imageSettingsButton,
+              buttonLabel: IMAGE_SETTINGS_BUTTON,
               notificationType: "error",
               purpose: "No Kafka Containers Found",
             });
@@ -219,6 +220,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     const kafkaImageRepo: string = getLocalKafkaImageName();
     const kafkaImageTag: string = kafkaWorkflow.imageTag;
 
+    // TODO(shoup): update this for direct connections
     // TEMPORARY: this will go away once we start working with direct connections
     // ---
     // first, look for a container with the Kafka REST proxy port exposed (8082),
@@ -230,6 +232,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       }),
     };
     const leaderContainers: ContainerSummary[] = await getContainersForImage(leaderListRequest);
+    this.logger.debug(`found ${leaderContainers.length} Kafka "leader" container(s)`);
 
     const containerSummaries: ContainerSummary[] = [];
     if (leaderContainers.length > 0) {
@@ -251,10 +254,14 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       const summaries: ContainerSummary[] = await getContainersForImage(
         containerListFiltersRequest,
       );
+      this.logger.debug(
+        `found ${summaries.length} Kafka container(s) associated with leader container`,
+      );
       containerSummaries.push(...summaries);
     }
 
-    // either there was no leader container or we couldn't find any other containers
+    // either there was no leader container or we couldn't find any other containers, but if there
+    // was a leader, we should have at least one container here
     if (containerSummaries.length === 0) {
       return [];
     }
@@ -334,7 +341,9 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 }
 
 /** Determine the Docker network name for the Kafka containers. */
-function determineKafkaDockerNetworks(kafkaContainers: ContainerInspectResponse[]): string[] {
+export function determineKafkaDockerNetworks(
+  kafkaContainers: ContainerInspectResponse[],
+): string[] {
   const kafkaNetworks: string[] = [];
   kafkaContainers.forEach((container) => {
     if (!container.NetworkSettings?.Networks) {
@@ -351,7 +360,9 @@ function determineKafkaDockerNetworks(kafkaContainers: ContainerInspectResponse[
 }
 
 /** Determine the bootstrap servers from the Kafka container environment variables. */
-function determineKafkaBootstrapServers(kafkaContainers: ContainerInspectResponse[]): string[] {
+export function determineKafkaBootstrapServers(
+  kafkaContainers: ContainerInspectResponse[],
+): string[] {
   const bootstrapServers: string[] = [];
 
   // parse the KAFKA_LISTENERS env vars to get the bootstrap servers
