@@ -268,6 +268,13 @@
         "enablement": "activeWebviewPanelId == message-viewer"
       },
       {
+        "command": "confluent.topic.consume.fromUri",
+        "icon": "$(link)",
+        "title": "Open Message Viewer from Link",
+        "category": "Confluent: Topic",
+        "enablement": "false"
+      },
+      {
         "command": "confluent.topics.create",
         "icon": "$(plus)",
         "title": "Create Topic",
