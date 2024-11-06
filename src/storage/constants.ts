@@ -25,6 +25,22 @@ export enum StateDiffs {
   SELECTED_RESOURCE = "diffs.selectedResource",
 }
 
+/** Single enum to hold all of the keys the extension uses
+ * within the workspace storage. */
+export enum WorkspaceStorageKeys {
+  // Eventually migrate all of these to the State* enums above
+  // into this enum here for consistency.
+
+  /** URI annotation facility, setURIMetadata() and the like.*/
+  URI_METADATA = "uriMetadata",
+}
+
+/** Keys for use within URI Metadata dicts */
+export enum UriMetadataKeys {
+  SCHEMA_REGISTRY_ID = "schemaRegistryId",
+  SCHEMA_SUBJECT = "schemaSubject",
+}
+
 // SECRET STORAGE KEYS
 // NOTE: these aren't actually storing any secrets, just used for cross-workspace event handling
 

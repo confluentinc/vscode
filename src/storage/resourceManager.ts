@@ -1,3 +1,4 @@
+import { Uri } from "vscode";
 import { StorageManager, getStorageManager } from ".";
 import { Status } from "../clients/sidecar";
 import { Logger } from "../logging";
@@ -14,6 +15,8 @@ import {
   StateKafkaTopics,
   StateSchemaRegistry,
   StateSchemas,
+  UriMetadataKeys,
+  WorkspaceStorageKeys,
 } from "./constants";
 
 const logger = new Logger("storage.resourceManager");
@@ -35,6 +38,12 @@ export type CCloudSchemaRegistryByEnv = Map<string, CCloudSchemaRegistry>;
 
 /** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
 export type CCloudSchemaBySchemaRegistry = Map<string, Schema[]>;
+
+/** Single URI's confluent-extension-centric metadata */
+export type UriMetadata = Map<UriMetadataKeys, string>;
+
+/** Map of string of uri for a file -> dict of its confluent-extension-centric metadata */
+export type AllUriMetadata = Map<string, UriMetadata>;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
@@ -486,6 +495,118 @@ export class ResourceManager {
   /** Get the latest CCloud auth status from the sidecar, controlled by the auth poller. */
   async getCCloudAuthStatus(): Promise<string | undefined> {
     return await this.storage.getSecret(CCLOUD_AUTH_STATUS_KEY);
+  }
+
+  // Scratch storage for relating key/values to URIs, for files or otherwise.
+
+  /** Wholly reset this URI's extension metadata. Rewrites, does not merge.
+   * Should only be used when having just created a new file and needing to
+   * set multiple metadata values at once.
+   *
+   * See {@link mergeURIMetadata} for when needing to further annotate a possibly preexisting URI.
+   */
+  async setURIMetadata(uri: Uri, metadata: UriMetadata): Promise<void> {
+    const allMetadata =
+      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
+      new Map<string, UriMetadata>();
+
+    allMetadata.set(uri.toString(), metadata);
+
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
+  }
+
+  /** Merge new values into any preexisting extension URI metadata. Use when needing to further
+   * annotate a possibly preexisting URI.
+   *
+   * @returns The new metadata for the URI after the merge.
+   */
+  async mergeURIMetadata(uri: Uri, metadata: UriMetadata): Promise<UriMetadata> {
+    const allMetadata =
+      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
+      new Map<string, UriMetadata>();
+
+    const existingMetadata = allMetadata.get(uri.toString()) ?? new Map<UriMetadataKeys, string>();
+
+    for (const [key, value] of metadata) {
+      existingMetadata.set(key, value);
+    }
+
+    allMetadata.set(uri.toString(), existingMetadata);
+
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
+
+    return existingMetadata;
+  }
+
+  /** Merge a single new URI metadata value into preexisting metadata. See {@link mergeURIMetadata}
+   *
+   * @returns The new complete set of metadata for the URI after the merge.
+   */
+  async mergeURIMetadataValue(uri: Uri, key: UriMetadataKeys, value: string): Promise<UriMetadata> {
+    const metadata = new Map<UriMetadataKeys, string>();
+    metadata.set(key, value);
+    return await this.mergeURIMetadata(uri, metadata);
+  }
+
+  /** Get all of the extension metadata annotations for the given URI. */
+  async getUriMetadata(uri: Uri): Promise<UriMetadata | undefined> {
+    const allMetadata =
+      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
+      new Map<string, UriMetadata>();
+
+    return allMetadata.get(uri.toString());
+  }
+  /** Get a single extension metadata value for a URI. Use when a codepath will only be
+   * interested in this single value. See {@link getUriMetadata} for when needing many values.
+   */
+  async getUriMetadataValue(uri: Uri, key: UriMetadataKeys): Promise<string | undefined> {
+    const metadata = await this.getUriMetadata(uri);
+    return metadata?.get(key);
+  }
+
+  /** Clear one or more metadata values from a URI.
+   * @returns The new metadata for the URI after the clear(s), or undefined if the URI has no metadata remaining.
+   */
+  async clearURIMetadataValues(
+    uri: Uri,
+    ...keys: UriMetadataKeys[]
+  ): Promise<UriMetadata | undefined> {
+    const allMetadata =
+      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
+      new Map<string, UriMetadata>();
+
+    let existingMetadata = allMetadata.get(uri.toString());
+    if (existingMetadata === undefined) {
+      return undefined;
+    }
+
+    for (const key of keys) {
+      existingMetadata.delete(key);
+    }
+
+    if (existingMetadata.size === 0) {
+      // all gone, remove the whole entry. Future calls
+      // to getUriMetadata() will return undefined.
+      allMetadata.delete(uri.toString());
+      existingMetadata = undefined;
+    } else {
+      allMetadata.set(uri.toString(), existingMetadata);
+    }
+
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
+
+    return existingMetadata;
+  }
+
+  /** Forget all extension metadata for a URI. Useful if knowing that the URI was just destroyed. */
+  async deleteURIMetadata(uri: Uri): Promise<void> {
+    const allMetadata =
+      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
+      new Map<string, UriMetadata>();
+
+    allMetadata.delete(uri.toString());
+
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
   }
 }
 
