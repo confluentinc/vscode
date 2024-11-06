@@ -2,8 +2,10 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { window } from "vscode";
 import * as dockerConfigs from "../docker/configs";
+import { LocalResourceKind } from "../docker/constants";
 import * as dockerWorkflows from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
+import * as quickpicks from "../quickpicks/localResources";
 import { runWorkflowWithProgress } from "./docker";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
@@ -16,6 +18,7 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let getKafkaWorkflowStub: sinon.SinonStub;
   let isDockerAvailableStub: sinon.SinonStub;
   let stubbedKafkaWorkflow: sinon.SinonStubbedInstance<ConfluentLocalWorkflow>;
+  let localResourcesQuickPickStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -28,6 +31,10 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     getKafkaWorkflowStub = sandbox
       .stub(dockerWorkflows, "getKafkaWorkflow")
       .returns(stubbedKafkaWorkflow);
+    // set default quickpick as Kafka for majority of tests
+    localResourcesQuickPickStub = sandbox
+      .stub(quickpicks, "localResourcesQuickPick")
+      .resolves([LocalResourceKind.Kafka]);
   });
 
   afterEach(() => {
