@@ -98,7 +98,7 @@ export async function isDockerAvailable(): Promise<boolean> {
     return true;
   } catch (error) {
     if (error instanceof ResponseError) {
-      logger.debug("docker ping error response:", {
+      logger.error("docker ping error response:", {
         status: error.response.status,
         statusText: error.response.statusText,
         data: await error.response.clone().text(),
