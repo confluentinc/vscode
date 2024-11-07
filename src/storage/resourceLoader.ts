@@ -9,10 +9,10 @@ import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 import { getResourceManager } from "./resourceManager";
 
-const logger = new Logger("storage.ccloudPreloader");
+const logger = new Logger("storage.resourceLoader");
 /**
- * Singleton class responsible for preloading Confluent Cloud resources into the resource manager.
- * View providers and/or other consumers of CCloud resources stored in the resource manager should
+ * Singleton class responsible for loading / caching resources into the resource manager.
+ * View providers and/or other consumers of resources stored in the resource manager should
  * call {@link ensureCoarseResourcesLoaded} to ensure that the resources are cached before attempting to
  * access them from the resource manager.
  *
@@ -25,8 +25,8 @@ const logger = new Logger("storage.ccloudPreloader");
  * only after when the coarse resources have been loaded. Because there may be "many" schemas in a schema registry,
  * this is considered a 'fine grained resource' and is not loaded until requested.
  */
-export class CCloudResourcePreloader {
-  private static instance: CCloudResourcePreloader | null = null;
+export class ResourceLoader {
+  private static instance: ResourceLoader | null = null;
 
   /** Have the course resources been cached already? */
   private coarseLoadingComplete: boolean = false;
@@ -43,11 +43,11 @@ export class CCloudResourcePreloader {
    */
   private schemaRegistryCacheStates: Map<string, boolean | Promise<void>> = new Map();
 
-  public static getInstance(): CCloudResourcePreloader {
-    if (!CCloudResourcePreloader.instance) {
-      CCloudResourcePreloader.instance = new CCloudResourcePreloader();
+  public static getInstance(): ResourceLoader {
+    if (!ResourceLoader.instance) {
+      ResourceLoader.instance = new ResourceLoader();
     }
-    return CCloudResourcePreloader.instance;
+    return ResourceLoader.instance;
   }
 
   private constructor() {
@@ -62,6 +62,9 @@ export class CCloudResourcePreloader {
         await this.ensureCoarseResourcesLoaded();
       }
     });
+
+    // TODO: something similar for docker events re/local resources?
+    // TODO: discuss with @shoup over 'coarse' resources vs localness -- this was all originally ccloud.
   }
 
   /**
@@ -150,8 +153,6 @@ export class CCloudResourcePreloader {
       schemaRegistries.forEach((schemaRegistry) => {
         this.schemaRegistryCacheStates.set(schemaRegistry.id, false);
       });
-
-      // TODO: add flink compute pools here?
 
       // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.
       this.coarseLoadingComplete = true;

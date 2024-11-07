@@ -13,7 +13,7 @@ import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/s
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -182,7 +182,7 @@ export async function getTopicsForCluster(
     // Ensure all of the needed ccloud preloading is complete before referencing
     // resource manager ccloud resources, namely the schema registry and its schemas.
 
-    const preloader = CCloudResourcePreloader.getInstance();
+    const preloader = ResourceLoader.getInstance();
 
     // Honor forceRefresh, in case they, say, _just_ created the schema registry.
     await preloader.ensureCoarseResourcesLoaded(forceRefresh);
