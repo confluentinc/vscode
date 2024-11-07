@@ -60,7 +60,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   let stopContainerStub: sinon.SinonStub;
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
-  let updateLocalSchemaRegistryURI: sinon.SinonStub;
+  let updateLocalConnectionStub: sinon.SinonStub;
 
   before(async () => {
     await getExtensionContext();
@@ -116,7 +116,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       .stub(workflow, "waitForLocalResourceEventChange")
       .resolves();
 
-    updateLocalSchemaRegistryURI = sandbox.stub(connections, "updateLocalSchemaRegistryURI");
+    updateLocalConnectionStub = sandbox.stub(connections, "updateLocalConnection");
   });
 
   afterEach(() => {
@@ -146,7 +146,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     assert.ok(startContainerStub.calledOnce);
     assert.ok(workflowShowErrorNotificationStub.notCalled);
 
-    assert.ok(updateLocalSchemaRegistryURI.calledOnce);
+    assert.ok(updateLocalConnectionStub.calledOnce);
 
     assert.ok(waitForLocalResourceEventChangeStub.calledOnce);
   });
