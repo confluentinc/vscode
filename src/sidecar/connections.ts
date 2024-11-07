@@ -16,6 +16,7 @@ import {
 import { ContextValues, getContextValue } from "../context";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
+import { getStorageManager } from "../storage";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("sidecar.connections");
@@ -146,15 +147,29 @@ export function hasCCloudAuthSession(): boolean {
 }
 
 // TODO(shoup): update for direct connections
-/** Delete the existing local connection, then recreate it with the new Schema Registry URI to avoid
- * caching issues. */
-export async function updateLocalSchemaRegistryURI(uri: string): Promise<void> {
+/** Delete and recreate the local connection, pulling the latest schema_registry_uri from secret storage. */
+export async function updateLocalConnection(): Promise<Connection> {
+  let spec: ConnectionSpec = LOCAL_CONNECTION_SPEC;
+
+  // update the schema registry URI if we know it and it's available
+  const schemaRegistryUri: string | undefined =
+    await getStorageManager().getSecret("schema_registry_uri");
+  if (schemaRegistryUri) {
+    spec = {
+      ...LOCAL_CONNECTION_SPEC,
+      local_config: {
+        schema_registry_uri: schemaRegistryUri,
+      },
+    };
+  }
+
   await deleteLocalConnection();
-  const resp: Connection = await tryToCreateConnection({
-    ...LOCAL_CONNECTION_SPEC,
-    local_config: {
-      schema_registry_uri: uri,
-    },
-  });
+  return await tryToCreateConnection(spec);
+}
+
+/** Store the newest Schema Registry URI in secret storage and refresh the local connection. */
+export async function updateLocalSchemaRegistryURI(uri: string): Promise<void> {
+  await getStorageManager().setSecret("schema_registry_uri", uri);
+  const resp: Connection = await updateLocalConnection();
   logger.debug("Updated local connection with Schema Registry URI:", resp);
 }
