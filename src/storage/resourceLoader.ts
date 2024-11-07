@@ -3,7 +3,6 @@ import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistr
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
 import { Schema, SchemaType } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
