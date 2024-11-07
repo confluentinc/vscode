@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
+import { registerCommandWithLogging } from "../commands";
 import { ContextValues, getContextValue, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
@@ -25,6 +26,10 @@ const logger = new Logger("viewProviders.topics");
 type TopicViewProviderData = KafkaTopic | ContainerTreeItem<Schema> | Schema;
 
 export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProviderData> {
+  /** Disposables belonging to this provider to be added to the extension context during activation,
+   * cleaned up on extension deactivation. */
+  disposables: vscode.Disposable[] = [];
+
   private _onDidChangeTreeData: vscode.EventEmitter<TopicViewProviderData | undefined | void> =
     new vscode.EventEmitter<TopicViewProviderData | undefined | void>();
   readonly onDidChangeTreeData: vscode.Event<TopicViewProviderData | undefined | void> =
@@ -61,49 +66,17 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
-    ccloudConnected.event((connected: boolean) => {
-      if (this.kafkaCluster?.isCCloud) {
-        // any transition of CCloud connection state should reset the tree view if we're focused on
-        // a CCloud Kafka Cluster
-        logger.debug(
-          "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
-          { connected },
-        );
-        this.reset();
-      }
-    });
-    localKafkaConnected.event((connected: boolean) => {
-      if (this.kafkaCluster?.isLocal) {
-        // any transition of local resource availability should reset the tree view if we're focused
-        // on a local Kafka cluster
-        logger.debug(
-          "Resetting topics view due to localKafkaConnected event and currently focused on a local cluster",
-          { connected },
-        );
-        this.reset();
-      }
-    });
-    currentKafkaClusterChanged.event(async (cluster: KafkaCluster | null) => {
-      if (!cluster) {
-        logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting.");
-        this.reset();
-      } else {
-        setContextValue(ContextValues.kafkaClusterSelected, true);
-        this.kafkaCluster = cluster;
-        // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
-        if (cluster.isLocal) {
-          // just show "Local" since we don't have a name for the local cluster(s)
-          this.treeView.description = "Local";
-        } else {
-          const parentEnvironment: CCloudEnvironment | null =
-            await getResourceManager().getCCloudEnvironment(
-              (this.kafkaCluster as CCloudKafkaCluster).environmentId,
-            );
-          this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
-        }
-        this.refresh();
-      }
-    });
+    const refreshCommand: vscode.Disposable = registerCommandWithLogging(
+      "confluent.topics.refresh",
+      () => {
+        // Force a deep refresh (of ccloud resouces) from sidecar.
+        this.refresh(true);
+      },
+    );
+
+    const listeners: vscode.Disposable[] = this.setEventListeners();
+
+    this.disposables.push(this.treeView, refreshCommand, ...listeners);
   }
 
   static getInstance(): TopicViewProvider {
@@ -161,6 +134,61 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       this.forceDeepRefresh = false;
     }
     return topicItems;
+  }
+
+  /** Set up event listeners for this view provider. */
+  setEventListeners(): vscode.Disposable[] {
+    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
+      if (this.kafkaCluster?.isCCloud) {
+        // any transition of CCloud connection state should reset the tree view if we're focused on
+        // a CCloud Kafka Cluster
+        logger.debug(
+          "Resetting topics view due to ccloudConnected event and currently focused on a CCloud cluster",
+          { connected },
+        );
+        this.reset();
+      }
+    });
+
+    const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
+      (connected: boolean) => {
+        if (this.kafkaCluster?.isLocal) {
+          // any transition of local resource availability should reset the tree view if we're focused
+          // on a local Kafka cluster
+          logger.debug(
+            "Resetting topics view due to localKafkaConnected event and currently focused on a local cluster",
+            { connected },
+          );
+          this.reset();
+        }
+      },
+    );
+
+    const currentKafkaClusterChangedSub: vscode.Disposable = currentKafkaClusterChanged.event(
+      async (cluster: KafkaCluster | null) => {
+        if (!cluster) {
+          logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting.");
+          this.reset();
+        } else {
+          setContextValue(ContextValues.kafkaClusterSelected, true);
+          this.kafkaCluster = cluster;
+          // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
+          if (cluster.isLocal) {
+            // just show "Local" since we don't have a name for the local cluster(s)
+            this.treeView.description = "Local";
+          } else {
+            const parentEnvironment: CCloudEnvironment | null =
+              await getResourceManager().getCCloudEnvironment(
+                (this.kafkaCluster as CCloudKafkaCluster).environmentId,
+              );
+            this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
+          }
+          this.refresh();
+        }
+      },
+    );
+
+    return [ccloudConnectedSub, localKafkaConnectedSub, currentKafkaClusterChangedSub];
   }
 }
 
