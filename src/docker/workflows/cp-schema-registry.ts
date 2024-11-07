@@ -11,7 +11,7 @@ import {
 import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
-import { updateLocalSchemaRegistryURI } from "../../sidecar/connections";
+import { updateLocalConnection } from "../../sidecar/connections";
 import {
   getLocalKafkaImageName,
   getLocalKafkaImageTag,
@@ -338,7 +338,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
     // assigned REST proxy port
-    await updateLocalSchemaRegistryURI(`http://localhost:${restProxyPort}`);
+    await updateLocalConnection(`http://localhost:${restProxyPort}`);
 
     return { id: container.Id, name: CONTAINER_NAME };
   }
