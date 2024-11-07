@@ -32,7 +32,7 @@ export function getSocketPath(): string {
   } else {
     path = path ? path : DEFAULT_UNIX_SOCKET_PATH;
   }
-  logger.debug("using docker socket path:", { socketPath: path });
+  logger.trace("using docker socket path:", { socketPath: path });
 
   return path;
 }

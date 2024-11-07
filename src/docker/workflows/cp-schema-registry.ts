@@ -11,8 +11,12 @@ import {
 import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
-import { updateLocalSchemaRegistryURI } from "../../sidecar/connections";
-import { getLocalKafkaImageName, getLocalSchemaRegistryImageTag } from "../configs";
+import { updateLocalConnection } from "../../sidecar/connections";
+import {
+  getLocalKafkaImageName,
+  getLocalKafkaImageTag,
+  getLocalSchemaRegistryImageTag,
+} from "../configs";
 import { LocalResourceKind, MANAGED_CONTAINER_LABEL } from "../constants";
 import {
   createContainer,
@@ -218,7 +222,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     }
 
     const kafkaImageRepo: string = getLocalKafkaImageName();
-    const kafkaImageTag: string = kafkaWorkflow.imageTag;
+    const kafkaImageTag: string = getLocalKafkaImageTag();
 
     // TODO(shoup): update this for direct connections
     // TEMPORARY: this will go away once we start working with direct connections
@@ -334,7 +338,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
 
     // inform the sidecar that it needs to look for the Schema Registry container at the dynamically
     // assigned REST proxy port
-    await updateLocalSchemaRegistryURI(`http://localhost:${restProxyPort}`);
+    await updateLocalConnection(`http://localhost:${restProxyPort}`);
 
     return { id: container.Id, name: CONTAINER_NAME };
   }

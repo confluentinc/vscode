@@ -1,5 +1,6 @@
 import { AuthenticationSession, authentication } from "vscode";
 import { getSidecar } from ".";
+import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import {
   Connection,
   ConnectionSpec,
@@ -14,6 +15,13 @@ import {
   LOCAL_CONNECTION_SPEC,
 } from "../constants";
 import { ContextValues, getContextValue } from "../context";
+import {
+  getLocalSchemaRegistryImageName,
+  getLocalSchemaRegistryImageTag,
+  isDockerAvailable,
+} from "../docker/configs";
+import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
+import { getContainersForImage } from "../docker/containers";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
@@ -145,16 +153,75 @@ export function hasCCloudAuthSession(): boolean {
   return !!isCcloudConnected;
 }
 
-// TODO(shoup): update for direct connections
-/** Delete the existing local connection, then recreate it with the new Schema Registry URI to avoid
- * caching issues. */
-export async function updateLocalSchemaRegistryURI(uri: string): Promise<void> {
-  await deleteLocalConnection();
-  const resp: Connection = await tryToCreateConnection({
-    ...LOCAL_CONNECTION_SPEC,
-    local_config: {
-      schema_registry_uri: uri,
-    },
-  });
-  logger.debug("Updated local connection with Schema Registry URI:", resp);
+/**
+ * Discover any supported locally-running resources and update the local connection with the
+ * relevant resource configs (for now, just Schema Registry containers, but in the future will
+ * include Kafka and other resources).
+ */
+export async function updateLocalConnection(schemaRegistryUri?: string): Promise<void> {
+  let spec: ConnectionSpec = LOCAL_CONNECTION_SPEC;
+
+  // TODO(shoup): look up Kafka containers here once direct connections are used
+
+  schemaRegistryUri = schemaRegistryUri ?? (await discoverSchemaRegistry());
+  if (schemaRegistryUri) {
+    spec = {
+      ...LOCAL_CONNECTION_SPEC,
+      local_config: {
+        ...LOCAL_CONNECTION_SPEC.local_config,
+        schema_registry_uri: schemaRegistryUri,
+      },
+    };
+  }
+
+  const currentLocalConnection: Connection | null = await getLocalConnection();
+  // inform sidecar if the spec has changed (whether this is a new spec or if we're changing configs)
+  if (JSON.stringify(spec) !== JSON.stringify(currentLocalConnection?.spec)) {
+    await deleteLocalConnection();
+    await tryToCreateConnection(spec);
+  }
+}
+
+// TODO(shoup): this may need to move into a different file for general resource discovery
+/** Discover any running Schema Registry containers and return the URI to include the REST proxy port. */
+async function discoverSchemaRegistry(): Promise<string | undefined> {
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    return;
+  }
+
+  const imageRepo = getLocalSchemaRegistryImageName();
+  const imageTag = getLocalSchemaRegistryImageTag();
+  const repoTag = `${imageRepo}:${imageTag}`;
+  const containerListRequest: ContainerListRequest = {
+    all: true,
+    filters: JSON.stringify({
+      ancestor: [repoTag],
+      label: [MANAGED_CONTAINER_LABEL],
+      status: ["running"],
+    }),
+  };
+  const containers: ContainerSummary[] = await getContainersForImage(containerListRequest);
+  if (containers.length === 0) {
+    return;
+  }
+  // we only care about the first container
+  const container: ContainerSummary = containers.filter((c) => !!c.Ports)[0];
+  const ports: Port[] = container.Ports?.filter((p) => !!p.PublicPort) || [];
+  if (!ports || ports.length === 0) {
+    logger.debug("No ports found on Schema Registry container", { container });
+    return;
+  }
+  const schemaRegistryPort: Port | undefined = ports.find((p) => !!p.PublicPort);
+  if (!schemaRegistryPort) {
+    logger.debug("No PublicPort found on Schema Registry container", { container });
+    return;
+  }
+  const restProxyPort = schemaRegistryPort.PublicPort;
+  if (!restProxyPort) {
+    logger.debug("No REST proxy port found on Schema Registry container", { container });
+    return;
+  }
+  logger.debug("Discovered Schema Registry REST proxy port", { schemaRegistryPort });
+  return `http://localhost:${restProxyPort}`;
 }
