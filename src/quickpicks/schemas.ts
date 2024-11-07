@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
-import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
@@ -14,7 +14,7 @@ export async function schemaSubjectQuickPick(
   onlyType: SchemaType | undefined = undefined,
 ): Promise<string | undefined> {
   // ensure that the resources are loaded before trying to access them
-  const preloader = CCloudResourcePreloader.getInstance();
+  const preloader = ResourceLoader.getInstance();
   await preloader.ensureCoarseResourcesLoaded();
   await preloader.ensureSchemasLoaded(schemaRegistryId);
 
