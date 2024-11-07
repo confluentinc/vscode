@@ -9,7 +9,7 @@ import {
   SchemaRegistry,
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections";
-import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { ResourceLoader } from "../storage/resourceLoader";
 import { CCloudSchemaRegistryByEnv, getResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
@@ -41,7 +41,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   let cloudSchemaRegistries: CCloudSchemaRegistry[] = [];
 
   // schema registries are a coarse resource, so ensure they are loaded before proceeding
-  const preloader = CCloudResourcePreloader.getInstance();
+  const preloader = ResourceLoader.getInstance();
   await preloader.ensureCoarseResourcesLoaded();
 
   // first we grab all available (local+CCloud) Schema Registries

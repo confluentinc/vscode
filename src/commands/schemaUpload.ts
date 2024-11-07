@@ -12,7 +12,7 @@ import { Schema, SchemaType } from "../models/schema";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 import { schemaSubjectQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
-import { CCloudResourcePreloader } from "../storage/ccloudPreloader";
+import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
@@ -517,7 +517,7 @@ async function updateRegistryCacheAndFindNewSchema(
   newSchemaID: number,
   boundSubject: string,
 ): Promise<Schema> {
-  const preloader = CCloudResourcePreloader.getInstance();
+  const preloader = ResourceLoader.getInstance();
   await preloader.ensureSchemasLoaded(registryId, true);
 
   // Find the schema in the list of schemas for this registry. We know that
