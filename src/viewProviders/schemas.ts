@@ -11,7 +11,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
-import { CCloudResourcePreloader, fetchSchemas } from "../storage/ccloudPreloader";
+import { ResourceLoader, fetchSchemas } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.schemas");
@@ -50,7 +50,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     } else {
       // Otherwise at least inform the preloader to purge the cache for this schema registry
       // (if currently cached).
-      const preloader = CCloudResourcePreloader.getInstance();
+      const preloader = ResourceLoader.getInstance();
       preloader.purgeSchemas(schemaRegistryId);
     }
   }
@@ -168,7 +168,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         let schemas: Schema[] = [];
 
         if (this.ccloudEnvironment != null) {
-          const preloader = CCloudResourcePreloader.getInstance();
+          const preloader = ResourceLoader.getInstance();
           // ensure that the resources are loaded before trying to access them
           await preloader.ensureCoarseResourcesLoaded();
           await preloader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);

@@ -62,8 +62,8 @@ import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
-import { CCloudResourcePreloader } from "./storage/ccloudPreloader";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
+import { ResourceLoader } from "./storage/resourceLoader";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -124,7 +124,7 @@ async function _activateExtension(
   registerProjectGenerationCommand(context);
 
   // Construct the singleton, let it register its event listener.
-  CCloudResourcePreloader.getInstance();
+  ResourceLoader.getInstance();
 
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
