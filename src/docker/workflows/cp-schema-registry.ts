@@ -12,7 +12,11 @@ import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { updateLocalSchemaRegistryURI } from "../../sidecar/connections";
-import { getLocalKafkaImageName, getLocalSchemaRegistryImageTag } from "../configs";
+import {
+  getLocalKafkaImageName,
+  getLocalKafkaImageTag,
+  getLocalSchemaRegistryImageTag,
+} from "../configs";
 import { LocalResourceKind, MANAGED_CONTAINER_LABEL } from "../constants";
 import {
   createContainer,
@@ -218,7 +222,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     }
 
     const kafkaImageRepo: string = getLocalKafkaImageName();
-    const kafkaImageTag: string = kafkaWorkflow.imageTag;
+    const kafkaImageTag: string = getLocalKafkaImageTag();
 
     // TODO(shoup): update this for direct connections
     // TEMPORARY: this will go away once we start working with direct connections
