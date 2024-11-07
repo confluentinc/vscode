@@ -261,6 +261,20 @@
         "enablement": "activeWebviewPanelId == message-viewer"
       },
       {
+        "command": "confluent.topic.consume.getUri",
+        "icon": "$(link)",
+        "title": "Copy Link to Message Viewer",
+        "category": "Confluent: Topic",
+        "enablement": "activeWebviewPanelId == message-viewer"
+      },
+      {
+        "command": "confluent.topic.consume.fromUri",
+        "icon": "$(link)",
+        "title": "Open Message Viewer from Link",
+        "category": "Confluent: Topic",
+        "enablement": "false"
+      },
+      {
         "command": "confluent.topics.create",
         "icon": "$(plus)",
         "title": "Create Topic",
@@ -539,7 +553,12 @@
         },
         {
           "command": "confluent.topic.consume.duplicate",
-          "group": "navigation",
+          "group": "navigation@1",
+          "when": "activeWebviewPanelId == message-viewer"
+        },
+        {
+          "command": "confluent.topic.consume.getUri",
+          "group": "navigation@2",
           "when": "activeWebviewPanelId == message-viewer"
         }
       ],

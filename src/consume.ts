@@ -4,6 +4,7 @@ import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
 import {
   commands,
+  env,
   ExtensionContext,
   Uri,
   ViewColumn,
@@ -23,6 +24,7 @@ import {
   type SimpleConsumeMultiPartitionResponse,
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
+import { getExtensionContext } from "./context";
 import { Logger } from "./logging";
 import { type KafkaTopic } from "./models/topic";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
@@ -30,6 +32,7 @@ import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
+import { getResourceManager } from "./storage/resourceManager";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -50,6 +53,7 @@ export function activateMessageViewer(context: ExtensionContext) {
   viewer with the same topic. Otherwise, we use webview panel cache to only keep
   a single active message browser per topic. */
   let activeTopic: KafkaTopic | null = null;
+  let activeConfig: MessageViewerConfig | null = null;
   const cache = new WebviewPanelCache();
 
   // commands
@@ -57,7 +61,7 @@ export function activateMessageViewer(context: ExtensionContext) {
     // the consume command is available in topic tree view's item actions
     registerCommandWithLogging(
       "confluent.topic.consume",
-      async (topic?: KafkaTopic, duplicate = false) => {
+      async (topic?: KafkaTopic, duplicate = false, config = MessageViewerConfig.create()) => {
         if (topic == null) {
           const cluster = await kafkaClusterQuickPick(true, true);
           if (cluster == null) return;
@@ -72,6 +76,7 @@ export function activateMessageViewer(context: ExtensionContext) {
 
         // this panel going to be active, so setting its topic to the currently active
         activeTopic = topic;
+        activeConfig = config;
         const [panel, cached] = cache.findOrCreate(
           {
             id: `${topic.clusterId}/${topic.name}`,
@@ -88,11 +93,21 @@ export function activateMessageViewer(context: ExtensionContext) {
           panel.reveal();
         } else {
           panel.onDidChangeViewState((e) => {
-            // whenever we switch between panels, override active topic
-            if (e.webviewPanel.active) activeTopic = topic;
+            // whenever we switch between panels, override active topic and config
+            if (e.webviewPanel.active) {
+              activeTopic = topic;
+              activeConfig = config;
+            }
           });
 
-          messageViewerStartPollingCommand(panel, topic, sidecar, schedule);
+          messageViewerStartPollingCommand(
+            panel,
+            config,
+            (value) => (activeConfig = config = value),
+            topic,
+            sidecar,
+            schedule,
+          );
         }
       },
     ),
@@ -100,6 +115,61 @@ export function activateMessageViewer(context: ExtensionContext) {
       if (activeTopic != null) {
         commands.executeCommand("confluent.topic.consume", activeTopic, true);
       }
+    }),
+    registerCommandWithLogging("confluent.topic.consume.getUri", async () => {
+      if (activeTopic == null || activeConfig == null) return;
+      const query = activeConfig.toQuery();
+      if (activeTopic.isLocalTopic()) {
+        query.set("origin", "local");
+      } else {
+        query.set("origin", "ccloud");
+        query.set("envId", activeTopic.environmentId!);
+      }
+      query.set("clusterId", activeTopic.clusterId);
+      query.set("topicName", activeTopic.name);
+      const context = getExtensionContext();
+      const uri = Uri.from({
+        scheme: "vscode",
+        authority: context.extension.id,
+        path: "/consume",
+        query: query.toString(),
+      });
+      await env.clipboard.writeText(uri.toString());
+    }),
+    registerCommandWithLogging("confluent.topic.consume.fromUri", async (uri: Uri) => {
+      const params = new URLSearchParams(uri.query);
+      const origin = params.get("origin");
+      const envId = params.get("envId");
+      const clusterId = params.get("clusterId");
+      const topicName = params.get("topicName");
+      if (clusterId == null || topicName == null) {
+        return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
+      }
+      const rm = getResourceManager();
+      let cluster;
+      if (origin === "ccloud") {
+        if (envId == null) {
+          return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
+        }
+        cluster = await rm.getCCloudKafkaCluster(envId, clusterId);
+      } else if (origin === "local") {
+        cluster = await rm.getLocalKafkaCluster(clusterId);
+      } else {
+        return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
+      }
+      if (cluster == null) {
+        return window.showErrorMessage("Unable to open Message Viewer: cluster not found");
+      }
+      const topics = await rm.getTopicsForCluster(cluster);
+      if (topics == null) {
+        return window.showErrorMessage("Unable to open Message Viewer: can't load topics");
+      }
+      const topic = topics.find((topic) => topic.name === topicName);
+      if (topic == null) {
+        return window.showErrorMessage("Unable to open Message Viewer: topic not found");
+      }
+      const config = MessageViewerConfig.fromQuery(params);
+      commands.executeCommand("confluent.topic.consume", topic, true, config);
     }),
   );
 }
@@ -120,6 +190,8 @@ const DEFAULT_CONSUME_PARAMS = {
 
 function messageViewerStartPollingCommand(
   panel: WebviewPanel,
+  config: MessageViewerConfig,
+  onConfigChange: (config: MessageViewerConfig) => void,
   topic: KafkaTopic,
   sidecar: SidecarHandle,
   schedule: <T>(cb: () => Promise<T>, signal?: AbortSignal) => Promise<T>,
@@ -150,22 +222,29 @@ function messageViewerStartPollingCommand(
   const state = os.signal<"running" | "paused">("running");
   const timer = os.signal(Timer.create());
   /** Consume mode: are we consuming from the beginning, expecting the newest messages, or targeting a timestamp. */
-  const mode = os.signal<"beginning" | "latest" | "timestamp">("beginning");
+  const mode = os.signal<"beginning" | "latest" | "timestamp">(config.consumeMode);
+
+  // TODO build params object from config
   /** Parameters used by Consume API. */
-  const params = os.signal<SimpleConsumeMultiPartitionRequest>({
-    ...DEFAULT_CONSUME_PARAMS,
-    from_beginning: true,
-  });
+  const params = os.signal<SimpleConsumeMultiPartitionRequest>(
+    config.consumeMode === "latest"
+      ? DEFAULT_CONSUME_PARAMS
+      : config.consumeMode === "timestamp" && config.consumeTimestamp != null
+        ? { ...DEFAULT_CONSUME_PARAMS, timestamp: config.consumeTimestamp }
+        : { ...DEFAULT_CONSUME_PARAMS, from_beginning: true },
+  );
   /** List of currently consumed partitions. `null` for all partitions. */
-  const partitionConsumed = os.signal<number[] | null>(null);
+  const partitionConsumed = os.signal<number[] | null>(config.partitionConsumed);
   /** List of currently filtered partitions. `null` for all consumed partitions. */
-  const partitionFilter = os.signal<number[] | null>(null);
+  const partitionFilter = os.signal<number[] | null>(config.partitionFilter);
   /** Filter by range of timestamps. `null` for all consumed messages. */
-  const timestampFilter = os.signal<[number, number] | null>(null);
+  const timestampFilter = os.signal<[number, number] | null>(config.timestampFilter);
   /** Filter by substring text query. Persists bitset instead of computing it. */
-  const textFilter = os.signal<{ bitset: BitSet; regexp: RegExp; query: string } | null>(null);
+  const textFilter = os.signal<{ bitset: BitSet; regexp: RegExp; query: string } | null>(
+    config.textFilter != null ? getTextFilterParams(config.textFilter, config.messageLimit) : null,
+  );
   /** The stream instance that holds consumed messages and index them by timestamp and partition. */
-  const stream = os.signal(new Stream(DEFAULT_RECORDS_CAPACITY));
+  const stream = os.signal(new Stream(config.messageLimit));
   /**
    * A boolean that indicates if the stream reached its capacity.
    * Continuing consumption after this means overriding oldest messages.
@@ -352,6 +431,21 @@ function messageViewerStartPollingCommand(
   function dropQueue() {
     queue = [];
   }
+
+  os.watch(() => {
+    // update config structure and send it back to the parent scope
+    onConfigChange(
+      config.copy({
+        consumeMode: mode(),
+        consumeTimestamp: params().timestamp,
+        messageLimit: stream().capacity,
+        partitionConsumed: partitionConsumed(),
+        partitionFilter: partitionFilter(),
+        timestampFilter: timestampFilter(),
+        textFilter: textFilter()?.query ?? null,
+      }),
+    );
+  });
 
   os.watch(async (signal) => {
     /* Cannot proceed any further if state got paused by the user or other
@@ -589,21 +683,13 @@ function messageViewerStartPollingCommand(
         if (body.search != null) {
           const { capacity, messages } = stream();
           const values = messages.values;
-          const bitset = new BitSet(capacity);
-          const escaped = body.search
-            .trim()
-            // escape characters used by regexp itself
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-            // 1. make existing whitespaces in query optional
-            // 2. add optional whitespaces at word boundaries
-            .replace(/\s+|\b/g, "\\s*");
-          const regexp = new RegExp(escaped, "i");
+          const filter = getTextFilterParams(body.search, capacity);
           for (let i = 0; i < values.length; i++) {
-            if (includesSubstring(values[i], regexp)) {
-              bitset.set(i);
+            if (includesSubstring(values[i], filter.regexp)) {
+              filter.bitset.set(i);
             }
           }
-          textFilter({ bitset, regexp, query: body.search });
+          textFilter(filter);
         } else {
           textFilter(null);
         }
@@ -720,6 +806,19 @@ function getParams(
       : { ...DEFAULT_CONSUME_PARAMS, max_poll_records };
 }
 
+function getTextFilterParams(query: string, capacity: number) {
+  const bitset = new BitSet(capacity);
+  const escaped = query
+    .trim()
+    // escape characters used by regexp itself
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    // 1. make existing whitespaces in query optional
+    // 2. add optional whitespaces at word boundaries
+    .replace(/\s+|\b/g, "\\s*");
+  const regexp = new RegExp(escaped, "i");
+  return { bitset, regexp, query };
+}
+
 /** Compute partition offsets for the next consume request, based on response of the previous one. */
 function getOffsets(
   params: SimpleConsumeMultiPartitionRequest,
@@ -771,6 +870,102 @@ function prepare(
   const { partition_id, offset, timestamp, headers } = message;
 
   return { partition_id, offset, timestamp, headers, key, value };
+}
+
+/**
+ * Represents static snapshot of message viewer state that can be serialized.
+ * Provides static method to deserialize the snapshot from a URI's query.
+ */
+class MessageViewerConfig extends Data {
+  consumeMode: "beginning" | "latest" | "timestamp" = "beginning";
+  consumeTimestamp: number | null = null;
+  partitionConsumed: number[] | null = null;
+  messageLimit: number = DEFAULT_RECORDS_CAPACITY;
+  partitionFilter: number[] | null = null;
+  timestampFilter: [number, number] | null = null;
+  textFilter: string | null = null;
+
+  static fromQuery(params: URLSearchParams) {
+    let value: string | null;
+    let config: Partial<MessageViewerConfig> = {};
+
+    value = params.get("consumeMode");
+    if (value != null && ["beginning", "latest", "timestamp"].includes(value)) {
+      config.consumeMode = value as "beginning" | "latest" | "timestamp";
+    }
+
+    value = params.get("consumeTimestamp");
+    if (value != null) {
+      const parsed = parseInt(value, 10);
+      if (!Number.isNaN(parsed)) {
+        config.consumeTimestamp = parsed;
+      }
+    }
+
+    value = params.get("partitionConsumed");
+    if (value != null) {
+      try {
+        const parsed = JSON.parse(`[${value}]`) as unknown[];
+        if (parsed.every((v): v is number => typeof v === "number")) {
+          config.partitionConsumed = parsed;
+        }
+      } catch {
+        // do nothing, fallback to default
+      }
+    }
+
+    value = params.get("messageLimit");
+    if (value != null) {
+      const parsed = parseInt(value, 10);
+      if (!Number.isNaN(parsed) && [1_000_000, 100_000, 10_000, 1_000, 100].includes(parsed)) {
+        config.messageLimit = parsed;
+      }
+    }
+
+    value = params.get("partitionFilter");
+    if (value != null) {
+      try {
+        const parsed = JSON.parse(`[${value}]`) as unknown[];
+        if (parsed.every((v): v is number => typeof v === "number")) {
+          config.partitionFilter = parsed;
+        }
+      } catch {
+        // do nothing, fallback to default
+      }
+    }
+
+    value = params.get("timestampFilter");
+    if (value != null) {
+      try {
+        const parsed = JSON.parse(`[${value}]`) as unknown[];
+        if (parsed.length === 2 && parsed.every((v): v is number => typeof v === "number")) {
+          config.timestampFilter = parsed as [number, number];
+        }
+      } catch {
+        // do nothing, fallback to default
+      }
+    }
+
+    value = params.get("textFilter");
+    if (value != null) {
+      config.textFilter = value;
+    }
+
+    return MessageViewerConfig.create(config);
+  }
+
+  toQuery(): URLSearchParams {
+    const params = new URLSearchParams();
+
+    for (let key in this) {
+      const value = this[key];
+      if (value != null) {
+        params.set(key, value.toString());
+      }
+    }
+
+    return params;
+  }
 }
 
 /**
