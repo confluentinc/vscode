@@ -11,6 +11,7 @@ import {
 import { ContextValues, setContextValue } from "../context";
 import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
+import { updateLocalConnection } from "../sidecar/connections";
 import { IntervalPoller } from "../utils/timing";
 import {
   defaultRequestInit,
@@ -331,6 +332,8 @@ export class EventListener {
       await setContextValue(ContextValues.localSchemaRegistryAvailable, started);
       localSchemaRegistryConnected.fire(started);
     }
+    // delete+recreate the local connection to purge any previous clusters from the sidecar cache
+    await updateLocalConnection();
   }
 
   /** Handling for an event that describes when a container is stopped. */
