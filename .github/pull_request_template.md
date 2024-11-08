@@ -14,6 +14,10 @@
 
 Please check if your PR fulfills the following (if applicable):
 
+##### Standards
+
+- [ ] All new disposables (event listeners, views, channels, etc.) collected as  for eventual cleanup?
+
 ##### Tests
 
 - [ ] Added new

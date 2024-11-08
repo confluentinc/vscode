@@ -206,7 +206,8 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
    * EventListener in `src/docker/eventListener.ts` whenever a supported container starts or dies.) */
   async waitForLocalResourceEventChange(): Promise<void> {
     await new Promise((resolve) => {
-      localSchemaRegistryConnected.event(() => {
+      const listener = localSchemaRegistryConnected.event(() => {
+        listener.dispose();
         resolve(void 0);
       });
     });
