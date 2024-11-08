@@ -198,20 +198,20 @@ export async function getTopicsForCluster(
   const resourceManager = getResourceManager();
 
   if (cluster instanceof CCloudKafkaCluster) {
-    // Ensure all of the needed ccloud preloading is complete before referencing
+    // Ensure all of the needed ccloud loading is complete before referencing
     // resource manager ccloud resources, namely the schema registry and its schemas.
 
-    const preloader = ResourceLoader.getInstance();
+    const loader = ResourceLoader.getInstance(cluster.connectionId);
 
     // Honor forceRefresh, in case they, say, _just_ created the schema registry.
-    await preloader.ensureCoarseResourcesLoaded(forceRefresh);
+    await loader.ensureCoarseResourcesLoaded(forceRefresh);
 
     // Get the schema registry id for the cluster's environment
     const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
 
     if (schemaRegistry) {
       // Ensure the schemas are loaded for the schema registry, honoring the forceRefresh flag.
-      await preloader.ensureSchemasLoaded(schemaRegistry.id, forceRefresh);
+      await loader.ensureSchemasLoaded(schemaRegistry.id, forceRefresh);
     }
   }
 
