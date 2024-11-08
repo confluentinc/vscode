@@ -23,6 +23,10 @@ const logger = new Logger("viewProviders.schemas");
 type SchemasViewProviderData = ContainerTreeItem<Schema> | Schema;
 
 export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewProviderData> {
+  /** Disposables belonging to this provider to be added to the extension context during activation,
+   * cleaned up on extension deactivation. */
+  disposables: vscode.Disposable[] = [];
+
   private _onDidChangeTreeData: vscode.EventEmitter<SchemasViewProviderData | undefined | void> =
     new vscode.EventEmitter<SchemasViewProviderData | undefined | void>();
   readonly onDidChangeTreeData: vscode.Event<SchemasViewProviderData | undefined | void> =
@@ -37,27 +41,6 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
-  }
-
-  /** Deep refesh + repaint the view if it is showing the given registry id. Otherwise, hint
-   * the preloader to purge the cache for this schema registry (if currently cached), so that next
-   * time it is shown, it will be deep-fetched.
-   */
-  refreshIfShowingRegistry(schemaRegistryId: string): void {
-    // if the schema registry is the one being shown, deep refresh the view
-    if (this.schemaRegistry?.id === schemaRegistryId) {
-      this.refresh(true);
-    } else {
-      // Otherwise at least inform the preloader to purge the cache for this schema registry
-      // (if currently cached).
-      const preloader = ResourceLoader.getInstance();
-      preloader.purgeSchemas(schemaRegistryId);
-    }
-  }
-
-  /** Try to reveal this particular schema, if present */
-  revealSchema(schema: Schema): void {
-    this.treeView.reveal(schema, { focus: true, select: true, expand: true });
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
@@ -75,43 +58,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
 
-    ccloudConnected.event((connected: boolean) => {
-      if (this.schemaRegistry?.isCCloud) {
-        logger.debug("ccloudConnected event fired, resetting", { connected });
-        // any transition of CCloud connection state should reset the tree view
-        this.reset();
-      }
-    });
+    const listeners: vscode.Disposable[] = this.setEventListeners();
 
-    localSchemaRegistryConnected.event((connected: boolean) => {
-      if (this.schemaRegistry?.isLocal) {
-        logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
-        // any transition of local schema registry connection state should reset the tree view
-        this.reset();
-      }
-    });
-
-    currentSchemaRegistryChanged.event(async (schemaRegistry: SchemaRegistry | null) => {
-      if (!schemaRegistry) {
-        this.reset();
-      } else {
-        setContextValue(ContextValues.schemaRegistrySelected, true);
-        this.schemaRegistry = schemaRegistry;
-        // update the tree view title to show the currently focused Schema Registry and repopulate the tree
-        if (this.schemaRegistry.isLocal) {
-          // just show "Local" since we don't have a name for the local SR instance
-          this.treeView.description = "Local";
-        } else {
-          const environment: CCloudEnvironment | null =
-            await getResourceManager().getCCloudEnvironment(
-              (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
-            );
-          this.ccloudEnvironment = environment;
-          this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
-        }
-        this.refresh();
-      }
-    });
+    this.disposables = [this.treeView, ...listeners];
   }
 
   static getInstance(): SchemasViewProvider {
@@ -193,6 +142,74 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     }
 
     return schemaList;
+  }
+
+  /** Set up event listeners for this view provider. */
+  setEventListeners(): vscode.Disposable[] {
+    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
+      if (this.schemaRegistry?.isCCloud) {
+        logger.debug("ccloudConnected event fired, resetting", { connected });
+        // any transition of CCloud connection state should reset the tree view
+        this.reset();
+      }
+    });
+
+    const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
+      (connected: boolean) => {
+        if (this.schemaRegistry?.isLocal) {
+          logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
+          // any transition of local schema registry connection state should reset the tree view
+          this.reset();
+        }
+      },
+    );
+
+    const currentSchemaRegistryChangedSub: vscode.Disposable = currentSchemaRegistryChanged.event(
+      async (schemaRegistry: SchemaRegistry | null) => {
+        if (!schemaRegistry) {
+          this.reset();
+        } else {
+          setContextValue(ContextValues.schemaRegistrySelected, true);
+          this.schemaRegistry = schemaRegistry;
+          // update the tree view title to show the currently focused Schema Registry and repopulate the tree
+          if (this.schemaRegistry.isLocal) {
+            // just show "Local" since we don't have a name for the local SR instance
+            this.treeView.description = "Local";
+          } else {
+            const environment: CCloudEnvironment | null =
+              await getResourceManager().getCCloudEnvironment(
+                (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
+              );
+            this.ccloudEnvironment = environment;
+            this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
+          }
+          this.refresh();
+        }
+      },
+    );
+
+    return [ccloudConnectedSub, localSchemaRegistryConnectedSub, currentSchemaRegistryChangedSub];
+  }
+
+  /** Deep refesh + repaint the view if it is showing the given registry id. Otherwise, hint
+   * the preloader to purge the cache for this schema registry (if currently cached), so that next
+   * time it is shown, it will be deep-fetched.
+   */
+  refreshIfShowingRegistry(schemaRegistryId: string): void {
+    // if the schema registry is the one being shown, deep refresh the view
+    if (this.schemaRegistry?.id === schemaRegistryId) {
+      this.refresh(true);
+    } else {
+      // Otherwise at least inform the preloader to purge the cache for this schema registry
+      // (if currently cached).
+      const preloader = ResourceLoader.getInstance();
+      preloader.purgeSchemas(schemaRegistryId);
+    }
+  }
+
+  /** Try to reveal this particular schema, if present */
+  revealSchema(schema: Schema): void {
+    this.treeView.reveal(schema, { focus: true, select: true, expand: true });
   }
 }
 
