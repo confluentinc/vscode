@@ -1,14 +1,14 @@
 import { chromium } from "@playwright/test";
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { getExtensionContext, getTestStorageManager } from "../tests/unit/testUtils";
-import { ConfluentCloudAuthProvider, getAuthProvider } from "./authProvider";
-import { Connection } from "./clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "./constants";
-import { getSidecar } from "./sidecar";
-import { createCCloudConnection, deleteCCloudConnection } from "./sidecar/connections";
-import { StorageManager } from "./storage";
-import { getUriHandler, UriEventHandler } from "./uriHandler";
+import { getExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { Connection } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
+import { getSidecar } from "../sidecar";
+import { createCCloudConnection, deleteCCloudConnection } from "../sidecar/connections";
+import { StorageManager } from "../storage";
+import { getUriHandler, UriEventHandler } from "../uriHandler";
+import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
 
 const AUTH_CALLBACK_URI = vscode.Uri.parse("vscode://confluentinc.vscode-confluent/authCallback");
 

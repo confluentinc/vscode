@@ -1,29 +1,29 @@
 import * as vscode from "vscode";
-import { Connection } from "./clients/sidecar";
-import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "./constants";
-import { ContextValues, getExtensionContext, setContextValue } from "./context";
-import { ccloudAuthSessionInvalidated, ccloudConnected } from "./emitters";
-import { ExtensionContextNotSetError } from "./errors";
-import { Logger } from "./logging";
-import { fetchPreferences } from "./preferences/updates";
-import { openExternal, pollCCloudConnectionAuth } from "./sidecar/authStatusPolling";
+import { Connection } from "../clients/sidecar";
+import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
+import { ExtensionContextNotSetError } from "../errors";
+import { Logger } from "../logging";
+import { fetchPreferences } from "../preferences/updates";
 import {
   clearCurrentCCloudResources,
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
-} from "./sidecar/connections";
-import { getStorageManager } from "./storage";
+} from "../sidecar/connections";
+import { getStorageManager } from "../storage";
 import {
   AUTH_COMPLETED_KEY,
   AUTH_SESSION_EXISTS_KEY,
   CCLOUD_AUTH_STATUS_KEY,
-} from "./storage/constants";
-import { getResourceManager } from "./storage/resourceManager";
-import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
-import { getUriHandler } from "./uriHandler";
+} from "../storage/constants";
+import { getResourceManager } from "../storage/resourceManager";
+import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
+import { getUriHandler } from "../uriHandler";
+import { openExternal, pollCCloudConnectionAuth } from "./ccloudPolling";
 
-const logger = new Logger("authProvider");
+const logger = new Logger("authn.ccloudProvider");
 
 export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
   /** Disposables belonging to this provider to be added to the extension context during activation,

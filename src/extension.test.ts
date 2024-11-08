@@ -3,7 +3,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { getAndActivateExtension, getExtensionContext } from "../tests/unit/testUtils";
-import { ConfluentCloudAuthProvider } from "./authProvider";
+import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { ExtensionContextNotSetError } from "./errors";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
