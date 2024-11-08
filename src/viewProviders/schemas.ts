@@ -192,22 +192,6 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     return [ccloudConnectedSub, localSchemaRegistryConnectedSub, currentSchemaRegistryChangedSub];
   }
 
-  /** Deep refesh + repaint the view if it is showing the given registry. Otherwise, hint
-   * the preloader to purge the cache for this schema registry (if currently cached), so that next
-   * time it is shown, it will be deep-fetched.
-   */
-  refreshIfShowingRegistry(schemaRegistry: SchemaRegistry): void {
-    // if the schema registry is the one being shown, deep refresh the view
-    if (this.schemaRegistry?.id === schemaRegistry.id) {
-      this.refresh(true);
-    } else {
-      // Otherwise at least inform the resource loader to purge the cache for this schema registry
-      // (if currently cached).
-      const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-      loader.purgeSchemas(schemaRegistry.id);
-    }
-  }
-
   /** Try to reveal this particular schema, if present */
   revealSchema(schema: Schema): void {
     this.treeView.reveal(schema, { focus: true, select: true, expand: true });
