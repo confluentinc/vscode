@@ -338,4 +338,6 @@ function setupDocumentProviders(): vscode.Disposable[] {
 // This method is called when your extension is deactivated or when VSCode is shutting down
 export function deactivate() {
   getTelemetryLogger().dispose();
+
+  logger.info("Extension deactivated");
 }
