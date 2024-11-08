@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
-import { registerCommandWithLogging } from "../commands";
 import { IconNames } from "../constants";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import {
@@ -74,18 +73,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     // update the tree view as needed (e.g. displaying the current connection label in the title)
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
 
-    const refreshCommand: vscode.Disposable = registerCommandWithLogging(
-      "confluent.resources.refresh",
-      () => {
-        // Force a deep refresh (of ccloud resouces) from sidecar.
-        this.refresh(true);
-      },
-    );
-
     const listeners = this.setEventListeners();
 
-    // dispose of the tree view, commands, and listeners when the extension is deactivated
-    this.disposables.push(this.treeView, refreshCommand, ...listeners);
+    // dispose of the tree view and listeners when the extension is deactivated
+    this.disposables.push(this.treeView, ...listeners);
   }
 
   static getInstance(): ResourceViewProvider {

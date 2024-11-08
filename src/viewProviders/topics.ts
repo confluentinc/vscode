@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { registerCommandWithLogging } from "../commands";
 import { ContextValues, getContextValue, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
@@ -66,17 +65,9 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     // update the tree view as needed (e.g. displaying the current Kafka cluster name in the title)
     this.treeView = vscode.window.createTreeView("confluent-topics", { treeDataProvider: this });
 
-    const refreshCommand: vscode.Disposable = registerCommandWithLogging(
-      "confluent.topics.refresh",
-      () => {
-        // Force a deep refresh (of ccloud resouces) from sidecar.
-        this.refresh(true);
-      },
-    );
-
     const listeners: vscode.Disposable[] = this.setEventListeners();
 
-    this.disposables.push(this.treeView, refreshCommand, ...listeners);
+    this.disposables.push(this.treeView, ...listeners);
   }
 
   static getInstance(): TopicViewProvider {

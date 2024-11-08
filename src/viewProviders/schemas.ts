@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { registerCommandWithLogging } from "../commands";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import {
   ccloudConnected,
@@ -59,17 +58,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
 
-    const refreshCommand: vscode.Disposable = registerCommandWithLogging(
-      "confluent.schemas.refresh",
-      () => {
-        // Force a deep refresh (of ccloud resouces) from sidecar.
-        this.refresh(true);
-      },
-    );
-
     const listeners: vscode.Disposable[] = this.setEventListeners();
 
-    this.disposables = [this.treeView, refreshCommand, ...listeners];
+    this.disposables = [this.treeView, ...listeners];
   }
 
   static getInstance(): SchemasViewProvider {
