@@ -23,7 +23,7 @@ import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
 import { openExternal, pollCCloudConnectionAuth } from "./ccloudPolling";
 
-const logger = new Logger("authProvider");
+const logger = new Logger("authn.ccloudProvider");
 
 export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
   /** Disposables belonging to this provider to be added to the extension context during activation,

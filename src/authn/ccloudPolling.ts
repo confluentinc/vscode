@@ -7,7 +7,7 @@ import { getCCloudAuthSession, getCCloudConnection } from "../sidecar/connection
 import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
 
-const logger = new Logger("sidecar.authStatusPolling");
+const logger = new Logger("authn.ccloudPolling");
 
 // TODO(shoup): the majority of this auth checking/prompting logic below should move into the auth provider
 
