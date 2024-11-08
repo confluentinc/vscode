@@ -137,6 +137,9 @@ async function _activateExtension(
     ...supportViewProvider.disposables,
   ];
   logger.info("View providers initialized");
+  // explicitly "reset" the Topics & Schemas views so no resources linger during reactivation/update
+  topicViewProvider.reset();
+  schemasViewProvider.reset();
 
   // register refresh commands for our primary resource view providers, which will fetch their
   // associated data from the sidecar instead of relying on any preloaded/cached data in ext. state
