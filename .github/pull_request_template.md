@@ -14,10 +14,6 @@
 
 Please check if your PR fulfills the following (if applicable):
 
-##### Standards
-
-- [ ] All new disposables (event listeners, views, channels, etc.) collected as  for eventual cleanup?
-
 ##### Tests
 
 - [ ] Added new
@@ -26,6 +22,7 @@ Please check if your PR fulfills the following (if applicable):
 
 ##### Other
 
+- [ ] All new disposables (event listeners, views, channels, etc.) collected as  for eventual cleanup?
 <!-- prettier-ignore -->
 - [ ] Does anything in this PR need to be mentioned in the user-facing [CHANGELOG](https://github.com/confluentinc/vscode/blob/main/CHANGELOG.md) or [README](https://github.com/confluentinc/vscode/blob/main/public/README.md)?
 - [ ] Have you validated this change locally by [packaging](https://github.com/confluentinc/vscode/blob/main/README.md#packaging-steps) and installing the extension `.vsix` file?

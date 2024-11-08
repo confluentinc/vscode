@@ -9,6 +9,7 @@ import {
 import { currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
 import { Schema, SchemaType } from "../models/schema";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 import { schemaSubjectQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
@@ -64,7 +65,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
   }
 
   // Ask the user to choose a subject to bind the schema to.
-  const subject = await chooseSubject(registry.id, schemaType);
+  const subject = await chooseSubject(registry, schemaType);
   if (!subject) {
     logger.info("No subject chosen, aborting schema upload");
     vscode.window.showInformationMessage("Schema upload aborted.");
@@ -124,7 +125,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
   // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
   const promises = [
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
-    updateRegistryCacheAndFindNewSchema(registry.id, maybeNewId, subject),
+    updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject),
   ];
 
   const results = await Promise.all(promises);
@@ -180,12 +181,12 @@ async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boole
  * Guide the user through chosing a subject to bind the schema to.
  */
 async function chooseSubject(
-  registryId: string,
+  registry: SchemaRegistry,
   schemaType: SchemaType,
 ): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registryId, schemaType);
+  let subject = await schemaSubjectQuickPick(registry, schemaType);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.
@@ -508,21 +509,21 @@ async function getNewlyRegisteredVersion(
 }
 
 /**
- * Drive the preloader to update the schema registry cache and find and return the new Schema model.
+ * Drive the loader to update the schema registry cache and find and return the new Schema model.
  * @returns The new schema that was just registered, including the proper id, subject, etc. A TreeItem for this schema
  *         will have the same id as the corresponding TreeItem in the schema registry view.
  */
 async function updateRegistryCacheAndFindNewSchema(
-  registryId: string,
+  registry: SchemaRegistry,
   newSchemaID: number,
   boundSubject: string,
 ): Promise<Schema> {
-  const preloader = ResourceLoader.getInstance();
-  await preloader.ensureSchemasLoaded(registryId, true);
+  const loader = ResourceLoader.getInstance(registry.connectionId);
+  await loader.ensureSchemasLoaded(registry.id, true);
 
   // Find the schema in the list of schemas for this registry. We know that
   // it should be present in the cache because we have just refreshed the cache.
-  const allSchemas = await getResourceManager().getSchemasForRegistry(registryId);
+  const allSchemas = await getResourceManager().getSchemasForRegistry(registry.id);
   const schema = allSchemas!.find((s) => s.id === `${newSchemaID}` && s.subject === boundSubject);
 
   return schema!;

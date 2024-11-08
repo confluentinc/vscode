@@ -112,15 +112,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
       // Schema items are leaf nodes, so we don't need to handle them here
     } else {
-      // TODO(james): integrate local schema caching into the preloader
+      // TODO(james): integrate local schema caching into the loader.
+      // (James: Easier said that done, but is gonna happen.)
       if (this.schemaRegistry != null) {
         let schemas: Schema[] = [];
 
         if (this.ccloudEnvironment != null) {
-          const preloader = ResourceLoader.getInstance();
+          const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
           // ensure that the resources are loaded before trying to access them
-          await preloader.ensureCoarseResourcesLoaded();
-          await preloader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
+          await loader.ensureCoarseResourcesLoaded();
+          await loader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
           if (this.forceDeepRefresh) {
             // Just honored the user's request for a deep refresh.
             this.forceDeepRefresh = false;
@@ -189,22 +190,6 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     );
 
     return [ccloudConnectedSub, localSchemaRegistryConnectedSub, currentSchemaRegistryChangedSub];
-  }
-
-  /** Deep refesh + repaint the view if it is showing the given registry id. Otherwise, hint
-   * the preloader to purge the cache for this schema registry (if currently cached), so that next
-   * time it is shown, it will be deep-fetched.
-   */
-  refreshIfShowingRegistry(schemaRegistryId: string): void {
-    // if the schema registry is the one being shown, deep refresh the view
-    if (this.schemaRegistry?.id === schemaRegistryId) {
-      this.refresh(true);
-    } else {
-      // Otherwise at least inform the preloader to purge the cache for this schema registry
-      // (if currently cached).
-      const preloader = ResourceLoader.getInstance();
-      preloader.purgeSchemas(schemaRegistryId);
-    }
   }
 
   /** Try to reveal this particular schema, if present */
