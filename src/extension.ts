@@ -13,8 +13,8 @@ if (process.env.SENTRY_DSN) {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV,
     release: process.env.SENTRY_RELEASE,
-    tracesSampleRate: 1.0, //  Capture 100% of the transactions
-    profilesSampleRate: 1.0,
+    tracesSampleRate: 0,
+    profilesSampleRate: 0,
     integrations: [
       SentryCore.thirdPartyErrorFilterIntegration({
         filterKeys: ["confluent-vscode-extension-sentry-do-not-use"],
