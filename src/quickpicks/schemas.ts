@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -10,15 +11,15 @@ import { getResourceManager } from "../storage/resourceManager";
  *
  */
 export async function schemaSubjectQuickPick(
-  schemaRegistryId: string,
+  schemaRegistry: SchemaRegistry,
   onlyType: SchemaType | undefined = undefined,
 ): Promise<string | undefined> {
   // ensure that the resources are loaded before trying to access them
-  const preloader = ResourceLoader.getInstance();
-  await preloader.ensureCoarseResourcesLoaded();
-  await preloader.ensureSchemasLoaded(schemaRegistryId);
+  const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
+  await loader.ensureCoarseResourcesLoaded();
+  await loader.ensureSchemasLoaded(schemaRegistry.id);
 
-  const schemas = await getResourceManager().getSchemasForRegistry(schemaRegistryId);
+  const schemas = await getResourceManager().getSchemasForRegistry(schemaRegistry.id);
 
   let schemaSubjects: string[] | undefined;
 
