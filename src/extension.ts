@@ -83,7 +83,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
     context = await _activateExtension(context);
     logger.info("Extension fully activated");
   } catch (e) {
-    logger.error("Error activating extension", e);
+    logger.error("Error activating extension:", e);
+    // if the extension is failing to activate for whatever reason, we need to know about it to fix it
+    Sentry.captureException(e);
     throw e;
   }
   // XXX: used for testing; do not remove
@@ -104,20 +106,80 @@ async function _activateExtension(
   // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
   setExtensionContext(context);
 
-  context = await setupDebugHelpers(context);
-  await setupContextValues();
+  // register the log output channels and debugging commands before anything else, in case we need
+  // to reset global/workspace state or there's a problem further down with extension activation
+  context.subscriptions.push(outputChannel, sidecarOutputChannel, ...registerDebugCommands());
+  // automatically display and focus the Confluent extension output channel in development mode
+  // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
+  // host window during debugging
+  if (process.env.LOGGING_MODE === "development") {
+    vscode.commands.executeCommand("confluent.showOutputChannel");
+  }
 
-  const configListener: vscode.Disposable = await setupPreferences();
-  context.subscriptions.push(configListener);
+  // configure the StorageManager for extension access to secrets and global/workspace states, and
+  // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
+  await Promise.all([setupStorage(), setupContextValues()]);
+  logger.info("Storage and context values initialized");
 
-  // these two need to be in order because they depend on each other
-  context = await setupStorage(context);
-  const authProviderDisposables = await setupAuthProvider();
-  context.subscriptions.push(...authProviderDisposables);
+  // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
+  const settingsListener: vscode.Disposable = await setupPreferences();
+  context.subscriptions.push(settingsListener);
 
-  context = setupViewProviders(context);
-  context = setupCommands(context);
-  context = await setupDocumentProviders(context);
+  // set up the different view providers
+  const resourceViewProvider = ResourceViewProvider.getInstance();
+  const topicViewProvider = TopicViewProvider.getInstance();
+  const schemasViewProvider = SchemasViewProvider.getInstance();
+  const supportViewProvider = new SupportViewProvider();
+  const viewProviderDisposables: vscode.Disposable[] = [
+    ...resourceViewProvider.disposables,
+    ...topicViewProvider.disposables,
+    ...schemasViewProvider.disposables,
+    ...supportViewProvider.disposables,
+  ];
+  logger.info("View providers initialized");
+
+  // register refresh commands for our primary resource view providers, which will fetch their
+  // associated data from the sidecar instead of relying on any preloaded/cached data in ext. state
+  const refreshCommands: vscode.Disposable[] = [
+    registerCommandWithLogging("confluent.resources.refresh", () => {
+      resourceViewProvider.refresh(true);
+    }),
+    registerCommandWithLogging("confluent.topics.refresh", () => {
+      topicViewProvider.refresh(true);
+    }),
+    registerCommandWithLogging("confluent.schemas.refresh", () => {
+      schemasViewProvider.refresh(true);
+    }),
+  ];
+
+  // register all the commands (apart from the view providers' refresh commands, which are handled above)
+  const registeredCommands: vscode.Disposable[] = [
+    ...refreshCommands,
+    ...registerConnectionCommands(),
+    ...registerOrganizationCommands(),
+    ...registerKafkaClusterCommands(),
+    ...registerEnvironmentCommands(),
+    ...registerSchemaRegistryCommands(),
+    ...registerSchemaCommands(),
+    ...registerSupportCommands(),
+    ...registerTopicCommands(),
+    ...registerDiffCommands(),
+    ...registerExtraCommands(),
+    ...registerDockerCommands(),
+  ];
+  logger.info("Commands registered");
+
+  const uriHandler: vscode.Disposable = vscode.window.registerUriHandler(getUriHandler());
+  const authProviderDisposables: vscode.Disposable[] = await setupAuthProvider();
+  const documentProviders: vscode.Disposable[] = setupDocumentProviders();
+
+  context.subscriptions.push(
+    uriHandler,
+    ...authProviderDisposables,
+    ...viewProviderDisposables,
+    ...registeredCommands,
+    ...documentProviders,
+  );
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
@@ -129,24 +191,7 @@ async function _activateExtension(
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
 
-  return context;
-}
-
-async function setupDebugHelpers(
-  context: vscode.ExtensionContext,
-): Promise<vscode.ExtensionContext> {
-  context.subscriptions.push(outputChannel, sidecarOutputChannel);
-  logger.info("Output channel disposables added");
-  // set up debugging commands before anything else, in case we need to reset global/workspace state
-  // or there's a problem further down with extension activation
-  context.subscriptions.push(...registerDebugCommands());
-  logger.info("Debug command disposables added");
-  // automatically display and focus the Confluent extension output channel in development mode
-  // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
-  // host window during debugging
-  if (process.env.LOGGING_MODE === "development") {
-    await vscode.commands.executeCommand("confluent.showOutputChannel");
-  }
+  // XXX: used for testing; do not remove
   return context;
 }
 
@@ -207,19 +252,10 @@ async function setupContextValues() {
   ]);
 }
 
-async function setupStorage(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
-  // initialize singleton storage manager instance so other parts of the extension can access the
-  // globalState, workspaceState, and secrets without needing to pass the extension context around
-  const manager = StorageManager.getInstance();
-  // Handle any storage migrations that need to happen before the extension can proceed.
-  await migrateStorageIfNeeded(manager);
-  logger.info("Storage manager initialized and migrations completed");
-  return context;
-}
-
 /**
  * Pass initial {@link vscode.WorkspaceConfiguration} settings to the sidecar's Preferences API on
  * startup to ensure the sidecar is in sync with the extension's settings before other requests are made.
+ * @returns A {@link vscode.Disposable} for the extension settings listener
  */
 async function setupPreferences(): Promise<vscode.Disposable> {
   // pass initial configs to the sidecar on startup
@@ -227,14 +263,25 @@ async function setupPreferences(): Promise<vscode.Disposable> {
   const pemPaths: string[] = configs.get(SSL_PEM_PATHS, []);
   const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
   await updatePreferences({ tls_pem_paths: pemPaths, trust_all_certificates: trustAllCerts });
-
-  const listener: vscode.Disposable = createConfigChangeListener();
-  return listener;
+  logger.info("Initial preferences passed to sidecar");
+  return createConfigChangeListener();
 }
 
-async function setupAuthProvider(): Promise<vscode.Disposable[]> {
-  const disposables: vscode.Disposable[] = [];
+/** Initialize the StorageManager singleton instance and handle any necessary migrations. */
+async function setupStorage(): Promise<void> {
+  const manager = StorageManager.getInstance();
+  // Handle any storage migrations that need to happen before the extension can proceed.
+  await migrateStorageIfNeeded(manager);
+  logger.info("Storage manager initialized and migrations completed");
+}
 
+/**
+ * Register the Confluent Cloud authentication provider with the VS Code authentication API, set up
+ * the initial connection state context values, and attempt to get a session to trigger the initial
+ * auth badge for signing in.
+ * @returns A {@link vscode.Disposable} for the auth provider
+ */
+async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   const provider: ConfluentCloudAuthProvider = getAuthProvider();
   const providerDisposable = vscode.authentication.registerAuthenticationProvider(
     AUTH_PROVIDER_ID,
@@ -244,9 +291,6 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
       supportsMultipleAccounts: false, // this is the default, but just to be explicit
     },
   );
-
-  const uriHandlerDisposable = vscode.window.registerUriHandler(getUriHandler());
-  disposables.push(providerDisposable, uriHandlerDisposable);
 
   // set the initial connection states of our main views; these will be adjusted by the following:
   // - ccloudConnectionAvailable: `true/false` if the auth provider has a valid CCloud connection
@@ -272,101 +316,23 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
     });
   }
 
+  logger.info("Confluent Cloud auth provider registered");
+  return [providerDisposable, ...provider.disposables];
+}
+
+/** Set up the document providers for custom URI schemes. */
+function setupDocumentProviders(): vscode.Disposable[] {
+  const disposables: vscode.Disposable[] = [];
+  // any document providers set here must provide their own `scheme` to register with
+  const providerClasses = [SchemaDocumentProvider];
+  for (const providerClass of providerClasses) {
+    const provider = new providerClass();
+    disposables.push(
+      vscode.workspace.registerTextDocumentContentProvider(provider.scheme, provider),
+    );
+  }
+  logger.info("Document providers registered");
   return disposables;
-}
-
-function setupViewProviders(context: vscode.ExtensionContext): vscode.ExtensionContext {
-  logger.info("Creating view providers...");
-
-  try {
-    const resourceViewProvider = ResourceViewProvider.getInstance();
-    context.subscriptions.push(
-      registerCommandWithLogging("confluent.resources.refresh", () => {
-        // Force a deep refresh (of ccloud resouces) from sidecar.
-        resourceViewProvider.refresh(true);
-      }),
-    );
-    logger.info("Resource view provider created");
-  } catch (e) {
-    logger.error("Error creating Resource view provider", e);
-  }
-
-  try {
-    const topicViewProvider = TopicViewProvider.getInstance();
-    context.subscriptions.push(
-      registerCommandWithLogging("confluent.topics.refresh", () => {
-        // Force a deep refresh of the topic data for its current cluster from sidecar.
-        topicViewProvider.refresh(true);
-      }),
-    );
-    logger.info("Topics view provider created");
-  } catch (e) {
-    logger.error("Error creating Topics view provider", e);
-  }
-
-  try {
-    const schemasViewProvider = SchemasViewProvider.getInstance();
-    context.subscriptions.push(
-      registerCommandWithLogging("confluent.schemas.refresh", () => {
-        // ask for a deep refresh of the schemas for the selected schema registry
-        schemasViewProvider.refresh(true);
-      }),
-    );
-    logger.info("Schemas view provider created");
-  } catch (e) {
-    logger.error("Error creating Schemas view provider", e);
-  }
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const supportViewProvider = new SupportViewProvider();
-    logger.info("Support view provider created");
-  } catch (e) {
-    logger.error("Error creating Support view provider", e);
-  }
-
-  return context;
-}
-
-/**
- * This function is just for making sure the commands are disposed of properly when the extension is
- * deactivated. {@link registerCommandWithLogging()} is already handling the command registration to VSCode.
- */
-function setupCommands(context: vscode.ExtensionContext): vscode.ExtensionContext {
-  logger.info("Storing main command disposables...");
-  context.subscriptions.push(
-    ...registerConnectionCommands(),
-    ...registerOrganizationCommands(),
-    ...registerKafkaClusterCommands(),
-    ...registerEnvironmentCommands(),
-    ...registerSchemaRegistryCommands(),
-    ...registerSchemaCommands(),
-    ...registerSupportCommands(),
-    ...registerTopicCommands(),
-    ...registerDiffCommands(),
-    ...registerExtraCommands(),
-    ...registerDockerCommands(),
-  );
-  logger.info("Main command disposables stored");
-  return context;
-}
-
-async function setupDocumentProviders(
-  context: vscode.ExtensionContext,
-): Promise<vscode.ExtensionContext> {
-  try {
-    const providerClasses = [SchemaDocumentProvider];
-    for (const providerClass of providerClasses) {
-      const provider = new providerClass();
-      context.subscriptions.push(
-        vscode.workspace.registerTextDocumentContentProvider(provider.scheme, provider),
-      );
-    }
-    logger.info("Schema viewer registered");
-  } catch (e) {
-    logger.error("Error registering schema viewer", e);
-  }
-  return context;
 }
 
 // This method is called when your extension is deactivated or when VSCode is shutting down
