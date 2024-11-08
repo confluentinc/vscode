@@ -35,7 +35,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
 }
 
-import { ConfluentCloudAuthProvider, getAuthProvider } from "./authProvider";
+import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";

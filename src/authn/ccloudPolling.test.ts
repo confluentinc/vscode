@@ -6,6 +6,7 @@ import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connectio
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import { Connection, Status } from "../clients/sidecar";
 import { nonInvalidTokenStatus } from "../emitters";
+import * as connections from "../sidecar/connections";
 import {
   AUTH_PROMPT_TRACKER,
   checkAuthExpiration,
@@ -13,8 +14,7 @@ import {
   REAUTH_BUTTON_TEXT,
   REMIND_BUTTON_TEXT,
   watchCCloudConnectionStatus,
-} from "./authStatusPolling";
-import * as connections from "./connections";
+} from "./ccloudPolling";
 
 configDotenv();
 

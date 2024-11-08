@@ -3,9 +3,9 @@ import { AuthErrors, Connection, Status } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
+import { getCCloudAuthSession, getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
 import { IntervalPoller } from "../utils/timing";
-import { getCCloudAuthSession, getCCloudConnection } from "./connections";
 
 const logger = new Logger("sidecar.authStatusPolling");
 
