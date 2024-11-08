@@ -26,6 +26,10 @@ import { getUriHandler } from "./uriHandler";
 const logger = new Logger("authProvider");
 
 export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
+  /** Disposables belonging to this provider to be added to the extension context during activation,
+   * cleaned up on extension deactivation. */
+  disposables: vscode.Disposable[] = [];
+
   // tells VS Code which sessions have been added, removed, or changed for this extension instance
   // NOTE: does not trigger cross-workspace events
   private _onDidChangeSessions =
@@ -49,63 +53,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new ExtensionContextNotSetError("ConfluentCloudAuthProvider");
     }
 
-    const resourceManager = getResourceManager();
-    // watch for changes in the stored auth session that may occur from other workspaces/windows
-    // NOTE: the onDidChangeSessions event does not appear cross-workspace, so this needs to stay
-    context.secrets.onDidChange(async ({ key }: vscode.SecretStorageChangeEvent) => {
-      logger.debug("authProvider: secrets.onDidChange event", { key });
-      switch (key) {
-        case AUTH_SESSION_EXISTS_KEY: {
-          // another workspace noticed a change in the auth status, so we need to update our internal
-          // state and notify any listeners in this extension instance
-          await this.handleSessionSecretChange();
-          break;
-        }
-        case AUTH_COMPLETED_KEY: {
-          // the user has completed the auth flow in some way, whether in this window or another --
-          // (e.g they started the auth flow in one window and another handled the callback URI) --
-          // so we need to notify any listeners in this extension instance that the auth flow has
-          // completed to resolve any promises that may still be waiting
-          const success: boolean = await resourceManager.getAuthFlowCompleted();
-          this._onAuthFlowCompletedSuccessfully.fire(success);
+    const listeners: vscode.Disposable[] = this.setEventListeners(context);
 
-          if (!success) {
-            // fetch+log current sidecar preferences to help debug any auth issues
-            try {
-              const preferences = await fetchPreferences();
-              logger.debug(
-                `authProvider: ${AUTH_COMPLETED_KEY} changed due to unsuccessful auth; current sidecar preferences: `,
-                { preferences },
-              );
-            } catch {
-              // fetchPreferences() will log the error before re-throwing; no need to do anything here
-            }
-          }
-
-          break;
-        }
-        default:
-          logger.warn("authProvider: secrets.onDidChange event not handled", { key });
-      }
-    });
-    // general listener for the URI handling event, which is used to resolve any auth flow promises
-    // and will trigger the secrets.onDidChange event described above
-    getUriHandler().event(async (uri: vscode.Uri) => {
-      if (uri.path === "/authCallback") {
-        const queryParams = new URLSearchParams(uri.query);
-        const success: boolean = queryParams.get("success") === "true";
-        logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", {
-          success,
-        });
-        await resourceManager.setAuthFlowCompleted(success);
-      }
-    });
-    // if any other part of the extension notices that our current CCloud connection transitions from
-    // VALID_TOKEN to INVALID_TOKEN/NO_TOKEN, we need to remove the session and stop polling
-    ccloudAuthSessionInvalidated.event(async () => {
-      logger.debug("ccloudAuthSessionInvalidated event fired");
-      await this.removeSession(CCLOUD_CONNECTION_ID);
-    });
+    this.disposables.push(...listeners);
   }
 
   static getInstance(): ConfluentCloudAuthProvider {
@@ -286,6 +236,78 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     ccloudConnected.fire(false);
   }
 
+  /**
+   * Set up event listeners for this provider.
+   */
+  setEventListeners(context: vscode.ExtensionContext): vscode.Disposable[] {
+    const resourceManager = getResourceManager();
+
+    // watch for changes in the stored auth session that may occur from other workspaces/windows
+    // NOTE: the onDidChangeSessions event does not appear cross-workspace, so this needs to stay
+    const secretsOnDidChangeSub: vscode.Disposable = context.secrets.onDidChange(
+      async ({ key }: vscode.SecretStorageChangeEvent) => {
+        logger.debug("authProvider: secrets.onDidChange event", { key });
+        switch (key) {
+          case AUTH_SESSION_EXISTS_KEY: {
+            // another workspace noticed a change in the auth status, so we need to update our internal
+            // state and notify any listeners in this extension instance
+            await this.handleSessionSecretChange();
+            break;
+          }
+          case AUTH_COMPLETED_KEY: {
+            // the user has completed the auth flow in some way, whether in this window or another --
+            // (e.g they started the auth flow in one window and another handled the callback URI) --
+            // so we need to notify any listeners in this extension instance that the auth flow has
+            // completed to resolve any promises that may still be waiting
+            const success: boolean = await resourceManager.getAuthFlowCompleted();
+            this._onAuthFlowCompletedSuccessfully.fire(success);
+
+            if (!success) {
+              // fetch+log current sidecar preferences to help debug any auth issues
+              try {
+                const preferences = await fetchPreferences();
+                logger.debug(
+                  `authProvider: ${AUTH_COMPLETED_KEY} changed due to unsuccessful auth; current sidecar preferences: `,
+                  { preferences },
+                );
+              } catch {
+                // fetchPreferences() will log the error before re-throwing; no need to do anything here
+              }
+            }
+
+            break;
+          }
+          default:
+            logger.warn("authProvider: secrets.onDidChange event not handled", { key });
+        }
+      },
+    );
+
+    // general listener for the URI handling event, which is used to resolve any auth flow promises
+    // and will trigger the secrets.onDidChange event described above
+    const uriHandlerSub: vscode.Disposable = getUriHandler().event(async (uri: vscode.Uri) => {
+      if (uri.path === "/authCallback") {
+        const queryParams = new URLSearchParams(uri.query);
+        const success: boolean = queryParams.get("success") === "true";
+        logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", {
+          success,
+        });
+        await resourceManager.setAuthFlowCompleted(success);
+      }
+    });
+
+    // if any other part of the extension notices that our current CCloud connection transitions from
+    // VALID_TOKEN to INVALID_TOKEN/NO_TOKEN, we need to remove the session and stop polling
+    const ccloudAuthSessionInvalidatedSub: vscode.Disposable = ccloudAuthSessionInvalidated.event(
+      async () => {
+        logger.debug("ccloudAuthSessionInvalidated event fired");
+        await this.removeSession(CCLOUD_CONNECTION_ID);
+      },
+    );
+
+    return [secretsOnDidChangeSub, uriHandlerSub, ccloudAuthSessionInvalidatedSub];
+  }
+
   async browserAuthFlow(uri: string) {
     await vscode.window.withProgress(
       {
@@ -311,8 +333,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     return new Promise<void>((resolve, reject) => {
       // this will only fire if the auth flow didn't initially start from the Accounts action, or
       // if it was done in another window entirely -- see
-      this._onAuthFlowCompletedSuccessfully.event((success: boolean) => {
+      const sub = this._onAuthFlowCompletedSuccessfully.event((success: boolean) => {
         logger.debug("handling _onAuthFlowCompletedSuccessfully event", { success });
+        sub.dispose();
         if (success) {
           resolve();
         } else {
