@@ -22,6 +22,10 @@ All notable changes to this extension will be documented in this file.
   [#476](https://github.com/confluentinc/vscode/issues/476)
   [#520](https://github.com/confluentinc/vscode/issues/520)
 
+## 0.20.2
+
+(Reduced telemetry configs, no user-facing changes.)
+
 ## 0.20.1
 
 ### Fixed
