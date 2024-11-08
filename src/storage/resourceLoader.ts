@@ -1,4 +1,5 @@
 import { Require } from "dataclass";
+import { Disposable } from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
@@ -19,6 +20,10 @@ export function constructResourceLoaderSingletons(): void {
 export abstract class ResourceLoader {
   /** What kind of resources does this loader manage? Human readable string. */
   public abstract kind: string;
+
+  /** Disposables belonging to this singleton to be added to the extension context during activation,
+   * cleaned up on extension deactivation. */
+  disposables: Disposable[] = [];
 
   /** Have the course resources been cached already? */
   protected coarseLoadingComplete: boolean = false;
@@ -44,11 +49,20 @@ export abstract class ResourceLoader {
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
 
-  /** Go back to initial state, not having cached anything. */
-  protected reset(): void {
-    this.coarseLoadingComplete = false;
-    this.currentlyCoarseLoadingPromise = null;
-    this.schemaRegistryCacheStates.clear();
+  private constructor() {
+    // When the ccloud connection state changes, reset the preloader's state.
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
+      this.reset();
+
+      if (connected) {
+        // Start the coarse preloading process if we think we have a ccloud connection.
+        await this.ensureCoarseResourcesLoaded();
+      }
+    });
+
+    // TODO: something similar for docker events re/local resources?
+
+    this.disposables.push(ccloudConnectedSub);
   }
 
   // Coarse resource-related methods.
@@ -152,6 +166,13 @@ export abstract class ResourceLoader {
 
   /** Load the schemas for this single Schema Registry into the resource manager. */
   protected abstract doLoadSchemas(schemaRegistryId: string): Promise<void>;
+
+  /** Go back to initial state, not having cached anything. */
+  protected reset(): void {
+    this.coarseLoadingComplete = false;
+    this.currentlyCoarseLoadingPromise = null;
+    this.schemaRegistryCacheStates.clear();
+  }
 }
 
 /**

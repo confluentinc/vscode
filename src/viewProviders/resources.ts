@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { randomUUID } from "crypto";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
@@ -44,6 +45,10 @@ type ResourceViewProviderData =
   | LocalSchemaRegistry;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
+  /** Disposables belonging to this provider to be added to the extension context during activation,
+   * cleaned up on extension deactivation. */
+  disposables: vscode.Disposable[] = [];
+
   private _onDidChangeTreeData = new vscode.EventEmitter<
     ResourceViewProviderData | undefined | void
   >();
@@ -58,7 +63,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
-
   private static instance: ResourceViewProvider | null = null;
   private constructor() {
     if (!getExtensionContext()) {
@@ -70,26 +74,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     // update the tree view as needed (e.g. displaying the current connection label in the title)
     this.treeView = vscode.window.createTreeView("confluent-resources", { treeDataProvider: this });
 
-    ccloudConnected.event((connected: boolean) => {
-      logger.debug("ccloudConnected event fired", { connected });
-      // No need to force a deep refresh when the connection status changes because the
-      // loader will have already begun loading resources due to also observing this event.
-      this.refresh();
-    });
+    const listeners = this.setEventListeners();
 
-    ccloudOrganizationChanged.event(() => {
-      // Force a deep refresh of ccloud resources when the organization changes.
-      this.refresh(true);
-    });
-
-    localKafkaConnected.event((connected: boolean) => {
-      logger.debug("localKafkaConnected event fired", { connected });
-      this.refresh();
-    });
-    localSchemaRegistryConnected.event((connected: boolean) => {
-      logger.debug("localSchemaRegistryConnected event fired", { connected });
-      this.refresh();
-    });
+    // dispose of the tree view and listeners when the extension is deactivated
+    this.disposables.push(this.treeView, ...listeners);
   }
 
   static getInstance(): ResourceViewProvider {
@@ -138,6 +126,42 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     return resourceItems;
+  }
+
+  /** Set up event listeners for this view provider. */
+  setEventListeners(): vscode.Disposable[] {
+    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
+      logger.debug("ccloudConnected event fired", { connected });
+      // No need to force a deep refresh when the connection status changes because the
+      // preloader will have already begun loading resources due to also observing this event.
+      this.refresh();
+    });
+
+    const ccloudOrganizationChangedSub: vscode.Disposable = ccloudOrganizationChanged.event(() => {
+      // Force a deep refresh of ccloud resources when the organization changes.
+      this.refresh(true);
+    });
+
+    const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
+      (connected: boolean) => {
+        logger.debug("localKafkaConnected event fired", { connected });
+        this.refresh();
+      },
+    );
+
+    const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
+      (connected: boolean) => {
+        logger.debug("localSchemaRegistryConnected event fired", { connected });
+        this.refresh();
+      },
+    );
+
+    return [
+      ccloudConnectedSub,
+      ccloudOrganizationChangedSub,
+      localKafkaConnectedSub,
+      localSchemaRegistryConnectedSub,
+    ];
   }
 }
 
@@ -198,14 +222,14 @@ export async function loadCCloudResources(
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
     // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-    cloudContainerItem.id = "ccloud-container-connected";
+    cloudContainerItem.id = randomUUID();
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.children = ccloudEnvironments;
   } else {
     // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-    cloudContainerItem.id = "ccloud-container";
+    cloudContainerItem.id = randomUUID();
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
     cloudContainerItem.description = "(No connection)";
@@ -232,7 +256,7 @@ export async function loadLocalResources(): Promise<
 
   const notConnectedId = "local-container";
   // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  localContainerItem.id = notConnectedId;
+  localContainerItem.id = randomUUID();
   // enable the "Launch Local Resources" action
   localContainerItem.contextValue = notConnectedId;
 
@@ -250,7 +274,7 @@ export async function loadLocalResources(): Promise<
   if (localResources.length > 0) {
     const connectedId = "local-container-connected";
     // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-    localContainerItem.id = connectedId;
+    localContainerItem.id = randomUUID();
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
     // unpack the local resources to more easily update the UI elements
