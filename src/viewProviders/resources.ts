@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { randomUUID } from "crypto";
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import {
   ccloudConnected,
@@ -193,14 +193,14 @@ export async function loadCCloudResources(
   cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
   if (hasCCloudAuthSession()) {
-    const preloader = ResourceLoader.getInstance();
-    // TODO: have this cached in the resource manager via the preloader
+    const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
+    // TODO: have this cached in the resource manager via the loader
     const currentOrg = await getCurrentOrganization();
 
     let ccloudEnvironments: CCloudEnvironment[] = [];
     try {
-      // Ensure all of the preloading is complete before referencing resource manager CCloud resources.
-      await preloader.ensureCoarseResourcesLoaded(forceDeepRefresh);
+      // Ensure all of the loading is complete before referencing resource manager CCloud resources.
+      await loader.ensureCoarseResourcesLoaded(forceDeepRefresh);
       const resourceManager = getResourceManager();
       ccloudEnvironments = await resourceManager.getCCloudEnvironments();
     } catch (e) {
@@ -294,7 +294,7 @@ export async function loadLocalResources(): Promise<
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
-    // TODO: this should be handled in the preloader once it (and ResourceManager) start handling
+    // TODO: this should be handled in the loader once it (and ResourceManager) start handling
     // local resources
     getResourceManager().setLocalKafkaClusters(localKafkaClusters);
     localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
@@ -315,8 +315,8 @@ export async function loadLocalResources(): Promise<
 async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
-  // Ensure all of the preloading is complete before referencing resource manager ccloud resources.
-  await ResourceLoader.getInstance().ensureCoarseResourcesLoaded();
+  // Ensure all of the loading is complete before referencing resource manager ccloud resources.
+  await ResourceLoader.getInstance(CCLOUD_CONNECTION_ID).ensureCoarseResourcesLoaded();
 
   const rm = getResourceManager();
   // Get the Kafka clusters for this environment. Will at worst be an empty array.
