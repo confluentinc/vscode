@@ -61,7 +61,7 @@ export abstract class ResourceLoader {
 
   // Coarse resource-related methods.
 
-  protected abstract deleteStaticResources(): void;
+  protected abstract deleteCoarseResources(): void;
 
   protected abstract doLoadCoarseResources(): Promise<void>;
 
@@ -92,7 +92,7 @@ export abstract class ResourceLoader {
     if (forceDeepRefresh) {
       logger.info(`Deep refreshing ${this.kind} resources.`);
       this.reset();
-      this.deleteStaticResources();
+      this.deleteCoarseResources();
     }
 
     // If the resources are already loaded, nothing to wait on.
@@ -212,7 +212,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     ResourceLoader.disposables.push(ccloudConnectedSub);
   }
 
-  protected deleteStaticResources(): void {
+  protected deleteCoarseResources(): void {
     getResourceManager().deleteCCloudResources();
   }
 
