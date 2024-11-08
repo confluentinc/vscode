@@ -15,10 +15,13 @@
       <p>Some helpful text that will encourage users to properly configure the topic.</p>
       <template data-if="this.errorMessage()">
         <div class="info error" data-text="this.errorMessage()"></div>
-        </template>
-      <template data-if="!this.success()">
+      </template>
+      <template data-if="this.success()">
+        <div class="info success">Data updated successfully. You may close this tab.</div>
+      </template>
       <form data-on-submit="this.handleSubmit(event)">
-        <div class="dropdown-container">
+        <div class="input-container">
+          <div>
           <label for="cleanup-policy" class="label">Cleanup Policy</label>
           <select
             id="cleanup-policy"
@@ -30,10 +33,13 @@
             <option value="delete">Delete</option>
             <option value="compact">Compact</option>
             <option value="compact,delete">Compact, Delete</option>
+              <option value="invaliddatahere">None</option>
           </select>
-          <span>Choose the retention policy to use on old log segments. Delete discards old segments when their retention time or size limit has been reached. Compact saves the last value for each unique key written to the topic.</span>
+            </div>
+            <span class="description">Choose the retention policy to use on old log segments. Delete discards old segments when their retention time or size limit has been reached. Compact saves the last value for each unique key written to the topic.</span>
           </div>
-          <div class="dropdown-container fixed-min-width">
+          <div class="input-container">
+            <div>
             <label for="retention-size" class="label">Retention Size</label>
             <select
               class="input"
@@ -45,11 +51,14 @@
               <option value="1048576">1 MB</option>
               <option value="1073741824">1 GB</option>
               <option value="1099511627776">1 TB</option>
+              <option value="invaliddatahere">None</option>
               <option value="-1">Infinite</option>
             </select>
-            <span>The maximum size a partition can grow to before it is discarded to free up space.</span>
+            </div>
+            <span class="description">The maximum size a partition can grow to before it is discarded to free up space.</span>
           </div>
-          <div class="dropdown-container fixed-min-width">
+          <div class="input-container">
+            <div>
             <label for="retention-ms" class="label">Retention Time</label>
             <select
               class="input"
@@ -63,11 +72,14 @@
               <option value="604800000">1 Week</option>
               <option value="2592000000">1 Month</option>
               <option value="31536000000">1 Year (365 days)</option>
+              <option value="invaliddatahere">None</option>
               <option value="-1">Infinite</option>
             </select>
-            <span>The amount of time to retain data.</span>
+            </div>
+            <span class="description">The amount of time to retain data.</span>
           </div>
-          <div class="dropdown-container fixed-min-width">
+          <div class="input-container">
+            <div>
             <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
             <input
               class="input"
@@ -77,17 +89,13 @@
               data-prop-value="this.maxMessageBytes()"
               data-on-change="this.validateChange(event)"
             />
-            <span>The maximum message size that can be appended to this topic, in bytes.</span>
+            </div>
+            <span class="description">The maximum message size that can be appended to this topic, in bytes.</span>
           </div>
         </div>
         <input class="button" type="submit" value="Save" />
       </form>
-      </template>
-      <template data-if="this.success()">
-        <div class="info success">Changes saved successfully.</div>
-      </template>
     </main>
-
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
     <style nonce="${nonce}">
@@ -131,6 +139,13 @@
           padding-bottom: 5px;
         }
       }
+      .input-container > * {
+        min-width: 8rem;
+      }
+      .input-container > * > * {
+        width: 100%;
+      }
+  
       input:not([type="submit"]),
       .dropdown > * {
         width: 250px;
@@ -154,12 +169,14 @@
         font-weight: 700;
         font-style: italic;
       }
-
       .success {
         color: var(--vscode-statusBar-foreground);
       }
       .error {
         color: var(--vscode-errorForeground);
+      }
+      input.error {
+        border: 1px solid var(--vscode-errorForeground);
       }
     </style>
   </body>
