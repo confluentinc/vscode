@@ -16,7 +16,7 @@ const logger = new Logger("storage.resourceLoader");
 
 /** Construct the singleton resource loaders so they may register their event listeners. */
 export function constructResourceLoaderSingletons(): vscode.Disposable[] {
-  CCLoudResourceLoader.getInstance();
+  CCloudResourceLoader.getInstance();
 
   return ResourceLoader.getDisposables();
 }
@@ -53,13 +53,13 @@ export abstract class ResourceLoader {
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
   public static getInstance(connectionId: string): ResourceLoader {
     if (connectionId === CCLOUD_CONNECTION_ID) {
-      return CCLoudResourceLoader.getInstance();
+      return CCloudResourceLoader.getInstance();
     }
 
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
 
-  private constructor() {
+  protected constructor() {
     // When the ccloud connection state changes, reset the preloader's state.
     const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
       this.reset();
@@ -200,16 +200,16 @@ export abstract class ResourceLoader {
  * only after when the coarse resources have been loaded. Because there may be "many" schemas in a schema registry,
  * this is considered a 'fine grained resource' and is not loaded until requested.
  */
-export class CCLoudResourceLoader extends ResourceLoader {
+export class CCloudResourceLoader extends ResourceLoader {
   kind = "CCloud";
 
-  private static instance: CCLoudResourceLoader | null = null;
+  private static instance: CCloudResourceLoader | null = null;
 
   public static getInstance(): ResourceLoader {
-    if (!CCLoudResourceLoader.instance) {
-      CCLoudResourceLoader.instance = new CCLoudResourceLoader();
+    if (!CCloudResourceLoader.instance) {
+      CCloudResourceLoader.instance = new CCloudResourceLoader();
     }
-    return CCLoudResourceLoader.instance;
+    return CCloudResourceLoader.instance;
   }
 
   private constructor() {
