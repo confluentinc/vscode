@@ -136,7 +136,7 @@ export abstract class ResourceLoader {
   }
 
   /** Ensure that this single Schema Registry's schemas have been loaded. */
-  public async ensureSchemasLoaded(
+  private async ensureSchemasLoaded(
     schemaRegistry: SchemaRegistry,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
