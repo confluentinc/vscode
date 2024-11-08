@@ -14,6 +14,14 @@ All notable changes to this extension will be documented in this file.
   and Schema Registry containers via Docker engine API integration, available as actions on the
   "Local" item in the Resources view, as well as the command palette.
 
+### Fixed
+
+- Updating the extension while it is active should no longer require reloading VS Code to avoid
+  "already registered"-related errors from appearing (on extension reactivation). (Note: this will
+  not be visible when updating from <0.20.x to this release, but will be visible in future updates.)
+  [#476](https://github.com/confluentinc/vscode/issues/476)
+  [#520](https://github.com/confluentinc/vscode/issues/520)
+
 ## 0.20.1
 
 ### Fixed
