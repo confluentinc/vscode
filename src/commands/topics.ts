@@ -80,13 +80,11 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   }
 
   // Form validation and submission logic
-  let formError: string | null = null;
-  let submitSuccess: boolean = false;
   async function validateOrUpdateConfig(
     topic: KafkaTopic,
     data: { [key: string]: unknown },
     validateOnly: boolean = true,
-  ) {
+  ): Promise<{ success: boolean; message: string | null }> {
     const client = (await getSidecar()).getConfigsV3Api(topic.clusterId, topic.connectionId);
     const configArray = Object.entries(data).map(([name, value]) => ({
       name,
@@ -102,27 +100,27 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
           validate_only: validateOnly,
         },
       } as UpdateKafkaTopicConfigBatchRequest);
-      if (!validateOnly) submitSuccess = true;
+      return { success: true, message: validateOnly ? null : "Success!" };
     } catch (err) {
+      let formError = "An unknown error occurred";
       if (err instanceof ResponseError) {
         const errorBody = await err.response.json();
         console.error("MAdE it ERROR = ", typeof err, err.response.status, errorBody.message);
         if (err.response.status === 400) formError = errorBody.message;
       }
-      submitSuccess = false;
+      return { success: false, message: formError };
     }
   }
+  // let submitSuccess: null | { success: boolean; message: string } = null; // { success: true, message: "Success" };
 
   // Message processing to communicate with the webview
-  const processMessage = (...[type, body]: Parameters<MessageSender>) => {
+  const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
-      case "GetSubmitSuccess":
-        return submitSuccess satisfies MessageResponse<"GetSubmitSuccess">;
-      case "GetConfig": {
-        const config = topicConfigRemoteItems;
-        console.log("GetConfig", config);
-        return config satisfies MessageResponse<"GetConfig">;
-      }
+      // case "GetConfig": {
+      //   const config = topicConfigRemoteItems;
+      //   console.log("GetConfig", config);
+      //   return config satisfies MessageResponse<"GetConfig">;
+      // }
       case "GetCleanupPolicy": {
         console.log(
           "GetCleanupPolicy",
@@ -157,16 +155,18 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       }
       case "ValidateConfigValue": {
         console.log("ValidateConfigValue", body);
-        validateOrUpdateConfig(topic, body);
-        return null satisfies MessageResponse<"ValidateConfigValue">;
+        return (await validateOrUpdateConfig(
+          topic,
+          body,
+        )) satisfies MessageResponse<"ValidateConfigValue">;
       }
-      case "GetFormError":
-        console.log("GetFormError", body);
-        return formError satisfies MessageResponse<"GetFormError">;
       case "Submit":
         console.log("Submit", body);
-        validateOrUpdateConfig(topic, body.data, body.validateOnly);
-        return null satisfies MessageResponse<"Submit">;
+        return (await validateOrUpdateConfig(
+          topic,
+          body,
+          false, // validateOnly
+        )) satisfies MessageResponse<"Submit">;
     }
   };
   const disposable = handleWebviewMessage(editConfigForm.webview, processMessage);

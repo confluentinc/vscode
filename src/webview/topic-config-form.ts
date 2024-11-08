@@ -2,8 +2,10 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { type TopicConfigDataList } from "../clients/kafkaRest";
+// import { type TopicConfigDataList } from "../clients/kafkaRest";
 
+/** Instantiate the Inertial scope, document root,
+ * and a "view model", an intermediary between the view (UI: .html) and the model (data: topics.ts) */
 addEventListener("DOMContentLoaded", () => {
   const os = ObservableScope(queueMicrotask);
   const ui = document.querySelector("main")!;
@@ -12,6 +14,8 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 class ConfigFormViewModel extends ViewModel {
+  private previousValues: { [key: string]: string } = {};
+
   cleanupPolicy = this.resolve(async () => {
     return await post("GetCleanupPolicy", {});
   }, ""); // cc default "delete"
@@ -26,62 +30,111 @@ class ConfigFormViewModel extends ViewModel {
 
   maxMessageBytes = this.resolve(async () => {
     return await post("GetMaxMessageBytes", {});
-  }, ""); //cc defaultValue: 1 * 1000, should be text field number
+  }, ""); //cc defaultValue: 1 * 1000, FIXME text field but number
 
-  errorMessage = this.resolve(async () => {
-    return await post("GetFormError", {});
-  }, null);
+  errorMessage = this.signal("");
+  success = this.signal(false);
 
+  /** Validate changes one input at a time on blur or ui change
+   * Checks that the change is valid using the API
+   * If the change is valid, update the value in the view model
+   * If the change is invalid, highlight input, add error msg
+   */
   async validateChange(event: Event) {
     console.log("validateChange", event);
     const input = event.target as HTMLInputElement;
-    await post("ValidateConfigValue", { [input.name]: input.value });
-    this.errorMessage(await post("GetFormError", {}));
-    switch (input.name) {
-      case "cleanup.policy":
-        this.cleanupPolicy(input.value);
-        break;
-      case "retention.bytes":
-        this.retentionSize(input.value);
-        break;
-      case "retention.ms":
-        this.retentionMs(input.value);
-        break;
-      case "max.message.bytes":
-        this.maxMessageBytes(input.value);
-        break;
-      default:
-        console.warn(`Unhandled key: ${input.name}`); // FIXME
+    input.classList.remove("error");
+    const res = await post("ValidateConfigValue", {
+      [input.name]: input.value,
+    });
+
+    if (res.success) {
+      console.log("success", res);
+      this.updateValue(input.name, input.value);
+    } else {
+      this.errorMessage(res.message ?? "Unknown error occurred");
+      // this.revertValue(input.name); // FIXME
+      input.classList.add("error");
+      console.log("error", res);
     }
   }
 
-  success = this.resolve(async () => {
-    return await post("GetSubmitSuccess", {});
-  }, false);
+  revertValue(name: string) {
+    // FIXME does this even work?
+    const previousValue = this.previousValues[name];
+    if (previousValue !== undefined) {
+      switch (name) {
+        case "cleanup.policy":
+          this.cleanupPolicy(previousValue);
+          break;
+        case "retention.bytes":
+          this.retentionSize(previousValue);
+          break;
+        case "retention.ms":
+          this.retentionMs(previousValue);
+          break;
+        case "max.message.bytes":
+          this.maxMessageBytes(previousValue);
+          break;
+        default:
+          console.warn(`Unhandled key: ${name}`);
+      }
+    }
+  }
 
+  updateValue(name: string, value: string) {
+    switch (name) {
+      case "cleanup.policy":
+        this.cleanupPolicy(value);
+        break;
+      case "retention.bytes":
+        this.retentionSize(value);
+        break;
+      case "retention.ms":
+        this.retentionMs(value);
+        break;
+      case "max.message.bytes":
+        this.maxMessageBytes(value);
+        break;
+      default:
+        console.warn(`Unhandled key: ${name}`); // FIXME
+    }
+  }
+
+  /** Submit all form data updates to the API
+   * If the API returns success, show a success message
+   * If the API returns an error, show the error message at the top of the form
+   * We can't individually highlight errors easily because the API doesn't return the field name, just strings
+   */
   async handleSubmit(event: Event) {
     event.preventDefault();
+    this.success(false);
+    this.errorMessage("");
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     console.log("formData:", formData, "data", data);
-    await post("Submit", { data, validateOnly: false });
-    this.success(await post("GetSubmitSuccess", {}));
-    // FIXME if it's successful, show something else or close the form
+    const result = await post("Submit", data);
+    if (result !== undefined) {
+      if (result.success) this.success(true);
+      else this.errorMessage(result.message ?? "Unknown error occurred");
+    }
   }
 }
-export function post(type: "GetSubmitSuccess", body: any): Promise<boolean>;
+
 export function post(type: "GetRetentionSize", body: any): Promise<string>;
 export function post(type: "GetRetentionMs", body: any): Promise<string>;
 export function post(type: "GetMaxMessageBytes", body: any): Promise<string>;
 export function post(type: "GetCleanupPolicy", body: any): Promise<string>;
-export function post(type: "ValidateConfigValue", body: { [key: string]: unknown }): Promise<null>;
-export function post(type: "GetFormError", body: any): Promise<string | null>;
-export function post(type: "GetConfig", body: any): Promise<TopicConfigDataList | null>;
+export function post(
+  type: "ValidateConfigValue",
+  body: { [key: string]: unknown },
+): Promise<{ success: boolean; message: string | null }>;
+// export function post(type: "GetConfig", body: any): Promise<TopicConfigDataList | null>;
 export function post(
   type: "Submit",
-  body: { data: { [key: string]: unknown }; validateOnly: boolean },
-): Promise<unknown>;
+  body: { [key: string]: unknown },
+): Promise<{ success: boolean; message: string | null }>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
