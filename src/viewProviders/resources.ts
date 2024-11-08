@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { randomUUID } from "crypto";
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
@@ -221,14 +222,14 @@ export async function loadCCloudResources(
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
     // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-    cloudContainerItem.id = "ccloud-container-connected";
+    cloudContainerItem.id = randomUUID();
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.children = ccloudEnvironments;
   } else {
     // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-    cloudContainerItem.id = "ccloud-container";
+    cloudContainerItem.id = randomUUID();
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
     cloudContainerItem.description = "(No connection)";
@@ -255,7 +256,7 @@ export async function loadLocalResources(): Promise<
 
   const notConnectedId = "local-container";
   // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  localContainerItem.id = notConnectedId;
+  localContainerItem.id = randomUUID();
   // enable the "Launch Local Resources" action
   localContainerItem.contextValue = notConnectedId;
 
@@ -273,7 +274,7 @@ export async function loadLocalResources(): Promise<
   if (localResources.length > 0) {
     const connectedId = "local-container-connected";
     // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-    localContainerItem.id = connectedId;
+    localContainerItem.id = randomUUID();
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
     // unpack the local resources to more easily update the UI elements
