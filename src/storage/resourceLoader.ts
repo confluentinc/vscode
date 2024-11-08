@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 import { Require } from "dataclass";
 import { Disposable } from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
@@ -13,17 +15,25 @@ import { getResourceManager } from "./resourceManager";
 const logger = new Logger("storage.resourceLoader");
 
 /** Construct the singleton resource loaders so they may register their event listeners. */
-export function constructResourceLoaderSingletons(): void {
+export function constructResourceLoaderSingletons(): vscode.Disposable[] {
   CCLoudResourceLoader.getInstance();
+
+  return ResourceLoader.getDisposables();
 }
 
 export abstract class ResourceLoader {
   /** What kind of resources does this loader manage? Human readable string. */
   public abstract kind: string;
 
-  /** Disposables belonging to this singleton to be added to the extension context during activation,
-   * cleaned up on extension deactivation. */
-  disposables: Disposable[] = [];
+  /** Disposables belonging to all instances of ResourceLoader to be added to the extension
+   * context during activation, cleaned up on extension deactivation.
+   * */
+  protected static disposables: Disposable[] = [];
+
+  /**  Return all known long lived disposables for extension cleanup. */
+  public static getDisposables(): Disposable[] {
+    return ResourceLoader.disposables;
+  }
 
   /** Have the course resources been cached already? */
   protected coarseLoadingComplete: boolean = false;
@@ -62,7 +72,7 @@ export abstract class ResourceLoader {
 
     // TODO: something similar for docker events re/local resources?
 
-    this.disposables.push(ccloudConnectedSub);
+    ResourceLoader.disposables.push(ccloudConnectedSub);
   }
 
   // Coarse resource-related methods.

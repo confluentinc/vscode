@@ -188,8 +188,8 @@ async function _activateExtension(
   activateMessageViewer(context);
   registerProjectGenerationCommand(context);
 
-  // Construct the singletons, let it register its event listener.
-  constructResourceLoaderSingletons();
+  // Construct the singletons, let them register their event listeners.
+  context.subscriptions.push(...constructResourceLoaderSingletons());
 
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
