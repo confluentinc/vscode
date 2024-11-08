@@ -1,4 +1,5 @@
 import { Require } from "dataclass";
+import { Disposable } from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
@@ -27,6 +28,10 @@ const logger = new Logger("storage.resourceLoader");
 export class ResourceLoader {
   private static instance: ResourceLoader | null = null;
 
+  /** Disposables belonging to this singleton to be added to the extension context during activation,
+   * cleaned up on extension deactivation. */
+  disposables: Disposable[] = [];
+
   /** Have the course resources been cached already? */
   private coarseLoadingComplete: boolean = false;
 
@@ -51,7 +56,7 @@ export class ResourceLoader {
 
   private constructor() {
     // When the ccloud connection state changes, reset the preloader's state.
-    ccloudConnected.event(async (connected: boolean) => {
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
       this.coarseLoadingComplete = false;
       this.currentlyCoarseLoadingPromise = null;
       this.schemaRegistryCacheStates.clear();
@@ -64,6 +69,8 @@ export class ResourceLoader {
 
     // TODO: something similar for docker events re/local resources?
     // TODO: discuss with @shoup over 'coarse' resources vs localness -- this was all originally ccloud.
+
+    this.disposables.push(ccloudConnectedSub);
   }
 
   /**

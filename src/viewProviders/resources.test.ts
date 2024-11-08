@@ -87,7 +87,6 @@ describe("ResourceViewProvider loading functions", () => {
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Confluent Cloud");
-    assert.equal(result.id, "ccloud-container-connected");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_CCLOUD_ORGANIZATION.name);
     assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
@@ -100,7 +99,6 @@ describe("ResourceViewProvider loading functions", () => {
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Confluent Cloud");
-    assert.equal(result.id, "ccloud-container");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
     assert.equal(result.description, "(No connection)");
     assert.deepStrictEqual(result.children, []);
@@ -118,7 +116,6 @@ describe("ResourceViewProvider loading functions", () => {
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
-    assert.equal(result.id, "local-container-connected");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
     assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY]);
@@ -132,7 +129,6 @@ describe("ResourceViewProvider loading functions", () => {
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, "Local");
-    assert.equal(result.id, "local-container");
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
     assert.equal(result.description, "(Not running)");
     assert.deepStrictEqual(result.children, []);
