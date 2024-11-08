@@ -59,22 +59,6 @@ export abstract class ResourceLoader {
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
 
-  protected constructor() {
-    // When the ccloud connection state changes, reset the preloader's state.
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
-      this.reset();
-
-      if (connected) {
-        // Start the coarse preloading process if we think we have a ccloud connection.
-        await this.ensureCoarseResourcesLoaded();
-      }
-    });
-
-    // TODO: something similar for docker events re/local resources?
-
-    ResourceLoader.disposables.push(ccloudConnectedSub);
-  }
-
   // Coarse resource-related methods.
 
   protected abstract deleteStaticResources(): void;
@@ -214,8 +198,9 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   private constructor() {
     super();
+
     // When the ccloud connection state changes, reset the loader's state.
-    ccloudConnected.event(async (connected: boolean) => {
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
       this.reset();
 
       if (connected) {
@@ -223,6 +208,8 @@ export class CCloudResourceLoader extends ResourceLoader {
         await this.ensureCoarseResourcesLoaded();
       }
     });
+
+    ResourceLoader.disposables.push(ccloudConnectedSub);
   }
 
   protected deleteStaticResources(): void {
