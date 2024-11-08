@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -41,8 +41,8 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   let cloudSchemaRegistries: CCloudSchemaRegistry[] = [];
 
   // schema registries are a coarse resource, so ensure they are loaded before proceeding
-  const preloader = ResourceLoader.getInstance();
-  await preloader.ensureCoarseResourcesLoaded();
+  const ccloudLoader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
+  await ccloudLoader.ensureCoarseResourcesLoaded();
 
   // first we grab all available (local+CCloud) Schema Registries
   let localGroups: LocalResourceGroup[] = [];
