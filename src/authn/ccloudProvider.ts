@@ -378,9 +378,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
     return new Promise<void>((_, reject) =>
       token.onCancellationRequested(async () => {
-        // TODO(shoup): remove this once we're managing a persistent connection and transitioning
-        // between NO_TOKEN->VALID_TOKEN->NO_TOKEN instead of creating/deleting connections
-        await deleteCCloudConnection();
         reject();
       }),
     );
