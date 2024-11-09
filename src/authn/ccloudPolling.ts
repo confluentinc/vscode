@@ -9,8 +9,6 @@ import { IntervalPoller } from "../utils/timing";
 
 const logger = new Logger("authn.ccloudPolling");
 
-// TODO(shoup): the majority of this auth checking/prompting logic below should move into the auth provider
-
 /*
  * Module-level constants regarding reauthentication and auth expiration warnings.
  */
@@ -92,26 +90,34 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
     pollCCloudConnectionAuth.useSlowFrequency();
   }
 
+  // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
+  // warn the user to reauth; also handle if the session has already expired
+  const sessionExpired: boolean = await checkAuthExpiration(connection);
+  if (sessionExpired) {
+    // don't bother looking for errors if the session has already expired, the result is going to be
+    // the same: the user needs to reauthenticate
+    return;
+  }
+
   // if we get any kind of `.status.authentication.errors`, throw an error notification so the user
   // can try to reauthenticate
   checkAuthErrors(connection);
-
-  // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
-  // warn the user to reauth
-  await checkAuthExpiration(connection);
 }
 
 /**
- * Checks if the existing CCloud {@link Connection} auth status is expiring soon (or has already
+ * Checks if the existing CCloud {@link Connection} auth session is expiring soon (or has already
  * expired) and prompts the user to reauthenticate if necessary.
+ * If the auth session expired, we'll show an error notification to the user to reauthenticate.
+ * If the auth session is about to expire, we'll show a warning notification to the user to reauthenticate soon.
+ * @returns `true` if the auth session has already expired, `false` otherwise
  */
-export async function checkAuthExpiration(connection: Connection) {
+export async function checkAuthExpiration(connection: Connection): Promise<boolean> {
   const expiration: Date | undefined = connection.status.authentication.requires_authentication_at;
   if (!expiration) {
     // the user hasn't authenticated yet (or the auth status may be INVALID_TOKEN) and we may not
     // have an expiration date yet, so we can't check if it's about to expire
     AUTH_PROMPT_TRACKER.reauthWarningPromptOpen = false;
-    return;
+    return false;
   }
 
   const signInUri = connection.metadata.sign_in_uri!;
@@ -132,7 +138,7 @@ export async function checkAuthExpiration(connection: Connection) {
     // Reset our reauth warning prompt state so we can re-prompt if we fall into another
     // reauth warning window later
     AUTH_PROMPT_TRACKER.reauthWarningPromptOpen = false;
-    return;
+    return false;
   }
 
   // If we haven't prompted the user to authenticate, earliestReauthWarning will be 0 / Jan 1 1970,
@@ -147,7 +153,7 @@ export async function checkAuthExpiration(connection: Connection) {
       "user dismissed reauth warning, waiting until next check to prompt again",
       logBody,
     );
-    return;
+    return false;
   }
 
   // if we go this far, the user either hasn't been warned yet or they dismissed the warning and it's
@@ -159,6 +165,7 @@ export async function checkAuthExpiration(connection: Connection) {
       logBody,
     );
     await handleExpiredAuth(expirationString);
+    return true;
   } else {
     if (!AUTH_PROMPT_TRACKER.reauthWarningPromptOpen) {
       logger.warn(
@@ -168,6 +175,7 @@ export async function checkAuthExpiration(connection: Connection) {
       handleUpcomingAuthExpiration(signInUri, expirationString, minutesUntilExpiration);
     }
   }
+  return false;
 }
 
 /**
@@ -243,15 +251,16 @@ async function handleExpiredAuth(expirationString: string) {
     });
 }
 
-/**
- * Check the {@link Connection} for any auth-related errors and prompt the user to reauthenticate if
- * necessary.
- */
+/** Check the {@link Connection} for any auth-related errors and prompt the user to reauthenticate. */
 export function checkAuthErrors(connection: Connection) {
   const errors: AuthErrors | undefined = connection.status.authentication.errors;
   if (!errors) {
     return;
   }
+
+  // tell the auth provider that the session is invalid so it can prompt the user to log in again
+  // and clear out the sidebar resources (but not delete the connection)
+  ccloudAuthSessionInvalidated.fire();
 
   logger.error("errors returned while checking auth status", {
     connectionId: connection.spec.id,

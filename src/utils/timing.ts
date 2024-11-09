@@ -102,7 +102,7 @@ export class IntervalPoller {
    * Will not take any action if the poller is already running at the fast frequency.
    */
   public useFastFrequency() {
-    logger.debug(`${this.name}: using fast frequency polling interval`, {
+    logger.trace(`${this.name}: using fast frequency polling interval`, {
       fastFrequency: `${this.fastFrequency}ms`,
       slowFrequency: `${this.slowFrequency}ms`,
     });
@@ -116,7 +116,7 @@ export class IntervalPoller {
    * Will not take any action if the poller is already running at the slow frequency.
    */
   public useSlowFrequency() {
-    logger.debug(`${this.name}: using slow frequency polling interval`, {
+    logger.trace(`${this.name}: using slow frequency polling interval`, {
       fastFrequency: `${this.fastFrequency}ms`,
       slowFrequency: `${this.slowFrequency}ms`,
     });
