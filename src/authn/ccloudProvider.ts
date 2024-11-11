@@ -364,6 +364,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       async () => {
         logger.debug("ccloudAuthSessionInvalidated event fired");
         // don't delete the actual CCloud connection, just remove it from the authentication provider
+        // so we can continue to use the same sign_in_uri until the user explicitly signs out
         await this.handleSessionRemoved(true);
         ccloudConnected.fire(false);
       },
