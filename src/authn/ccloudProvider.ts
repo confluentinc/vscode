@@ -25,6 +25,39 @@ import { openExternal, pollCCloudConnectionAuth } from "./ccloudPolling";
 
 const logger = new Logger("authn.ccloudProvider");
 
+/**
+ * Authentication provider for Confluent Cloud, which handles syncing connection/auth states with the
+ * sidecar.
+ *
+ * Main responsibilities:
+ * - {@linkcode createSession()}: Create a CCloud {@link Connection} with the sidecar if one doesn't
+ *  already exist, then start the browser-based authentication flow. For connections that exist
+ *  already, we reuse the `sign_in_uri` from the {@link Connection}'s `metadata`.
+ * - {@linkcode getSessions()}: Whenever `vscode.authentication.getSession()` is called with our
+ *  `AUTH_PROVIDER_ID`, this method will be called to get the current session. We don't use `scopes`
+ *  at all here, since the sidecar manages all connection->access token and scope information.
+ * - {@linkcode removeSession()}: Deletes the connection from the sidecar and update the provider's
+ *  internal state. This is only called after a user chooses to "Sign out" from the Accounts menu
+ *  and continues past the confirmation dialog that appears.
+ *
+ * There are also some event listeners configured to handle changes in the auth state between the
+ * extension instance and the sidecar, as well as between different workspaces:
+ * - one for monitoring changes in the SecretStore, which is used to notify the extension when the
+ * user has completed the auth flow and resolve any promises
+ * - one for handling the URI handling event, which is used to resolve any auth flow promises and
+ * will trigger the `secrets.onDidChange` listener
+ * - one for handling the `ccloudAuthSessionInvalidated` event, which is used to remove the session
+ * from the provider's internal state and stop polling for auth status (but not delete the connection)
+ *
+ * In general, once a user successfully authenticates for the first time, we will continue to reuse
+ * that connection until they sign out. This is to avoid inconsistencies in `sign_in_uri` usage, so
+ * after the initial transition from `NO_TOKEN` to `VALID_TOKEN`, any time the user may need to
+ * reauthenticate will be with the same connection (and thus the same `sign_in_uri`). (E.g. after
+ * token expiration or any other errors with the existing session that the sidecar cannot recover
+ * from.) These will be transitions between `VALID_TOKEN` and `FAILED`/`INVALID_TOKEN` states. The
+ * only way we get back to `NO_TOKEN` is by deleting the connection entirely and recreating a new one
+ * (with a new `sign_in_uri`), which should only be done by the user signing out.
+ */
 export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider {
   /** Disposables belonging to this provider to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
@@ -75,6 +108,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     logger.debug("createSession()");
     let connection: Connection;
 
+    // we should only ever have to create a connection when a user is signing in for the first
+    // time or if they explicitly logged out and the connection is deleted -- see `.removeSession().
     const existingConnection: Connection | null = await getCCloudConnection();
     if (!existingConnection) {
       connection = await createCCloudConnection();
