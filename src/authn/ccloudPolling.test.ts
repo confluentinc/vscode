@@ -148,7 +148,7 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
     assertAuthExpiredPromptOpened();
   });
 
-  it("checkAuthExpiration() should handle undefined `requires_authentication_at`", async () => {
+  it("should handle undefined `requires_authentication_at`", async () => {
     // no expiration time available, e.g. auth flow hasn't completed yet
     try {
       await checkAuthExpiration(createFakeConnection(undefined));
