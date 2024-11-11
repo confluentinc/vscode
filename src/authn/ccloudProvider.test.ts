@@ -133,6 +133,20 @@ describe("ConfluentCloudAuthProvider", () => {
     getCCloudConnectionStub.resolves(null);
     const deleteConnectionStub = sandbox.stub(connections, "deleteCCloudConnection").resolves();
 
+    authProvider["_session"] = null;
+    await authProvider.removeSession("sessionId");
+
+    assert.ok(deleteConnectionStub.notCalled);
+    assert.ok(handleSessionRemovedStub.notCalled);
+  });
+
+  it("removeSession() should only update the provider's internal state when no connection exists but the provider is still tracking a session internally", async () => {
+    const handleSessionRemovedStub = sandbox.stub().resolves();
+    authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
+    getCCloudConnectionStub.resolves(null);
+    const deleteConnectionStub = sandbox.stub(connections, "deleteCCloudConnection").resolves();
+
+    authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
     await authProvider.removeSession("sessionId");
 
     assert.ok(deleteConnectionStub.notCalled);
