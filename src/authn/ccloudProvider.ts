@@ -462,7 +462,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     await clearCurrentCCloudResources();
     pollCCloudConnectionAuth.stop();
     if (!this._session) {
-      logger.error("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
+      logger.debug("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
     } else {
       this._onDidChangeSessions.fire({
         added: [],
