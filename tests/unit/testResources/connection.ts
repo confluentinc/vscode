@@ -8,7 +8,7 @@ import {
 import { SIDECAR_PORT } from "../../../src/sidecar/constants";
 import { TEST_CCLOUD_ORGANIZATION } from "./organization";
 
-const TEST_CCLOUD_USER: UserInfo = {
+export const TEST_CCLOUD_USER: UserInfo = {
   id: "test-user-id",
   username: "test-user",
   first_name: "Test",
@@ -18,12 +18,14 @@ const TEST_CCLOUD_USER: UserInfo = {
 };
 const TEST_AUTH_EXPIRATION = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
+/** A basic CCloud {@link Connection} with `NO_TOKEN` auth status. */
 export const TEST_CCLOUD_CONNECTION: Connection = {
   api_version: "gateway/v1",
   kind: "Connection",
   id: CCLOUD_CONNECTION_ID,
   metadata: {
     self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${CCLOUD_CONNECTION_ID}`,
+    sign_in_uri: `http://login.confluent.io/login?...`,
   },
   spec: {
     ...CCLOUD_CONNECTION_SPEC,
@@ -39,6 +41,7 @@ export const TEST_CCLOUD_CONNECTION: Connection = {
   },
 };
 
+/** A CCloud {@link Connection} with `VALID_TOKEN` auth status and user info. */
 export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = {
   ...TEST_CCLOUD_CONNECTION,
   status: {
