@@ -40,8 +40,11 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
 
-  const localSchemaRegistries = registriesByConnectionID.get(LOCAL_CONNECTION_ID)!;
-  const ccloudSchemaRegistries = registriesByConnectionID.get(CCLOUD_CONNECTION_ID)!;
+  const localSchemaRegistries: LocalSchemaRegistry[] =
+    registriesByConnectionID.get(LOCAL_CONNECTION_ID)!;
+  const ccloudSchemaRegistries: CCloudSchemaRegistry[] = registriesByConnectionID.get(
+    CCLOUD_CONNECTION_ID,
+  )! as CCloudSchemaRegistry[];
 
   if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
     vscode.window.showInformationMessage("No Schema Registries available.");
@@ -86,7 +89,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   // Likewise with the CCloud Schema Registries.
   if (ccloudSchemaRegistries.length > 0) {
     await populateCCloudSchemaRegistries(
-      ccloudSchemaRegistries as CCloudSchemaRegistry[],
+      ccloudSchemaRegistries,
       selectedSchemaRegistry,
       quickPickItems,
       labelToSchemaRegistry,
