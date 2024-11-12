@@ -13,7 +13,7 @@ import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/s
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { ResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader, ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -197,22 +197,28 @@ export async function getTopicsForCluster(
 ): Promise<KafkaTopic[]> {
   const resourceManager = getResourceManager();
 
-  if (cluster instanceof CCloudKafkaCluster) {
-    // Ensure all of the needed ccloud loading is complete before referencing
-    // resource manager ccloud resources, namely the schema registry and its schemas.
+  const loader = ResourceLoader.getInstance(cluster.connectionId);
 
-    const loader = ResourceLoader.getInstance(cluster.connectionId);
-
+  if (loader instanceof CCloudResourceLoader) {
     // Honor forceRefresh, in case they, say, _just_ created the schema registry.
-    await loader.ensureCoarseResourcesLoaded(forceRefresh);
+    await (loader as CCloudResourceLoader).ensureCoarseResourcesLoaded(forceRefresh);
+  }
 
-    // Get the schema registry id for the cluster's environment
-    const schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
+  // XXX TODO JLR improve this via new loader method that returns schema registry
+  // given a kafka cluster reference.
+  let schemaRegistry: SchemaRegistry | null = null;
+  if (cluster instanceof CCloudKafkaCluster) {
+    schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
+  } else if (
+    cluster instanceof LocalKafkaCluster &&
+    getContextValue(ContextValues.localSchemaRegistryAvailable)
+  ) {
+    schemaRegistry = await getLocalSchemaRegistryFromClusterId(cluster.id);
+  }
 
-    if (schemaRegistry) {
-      // Ensure the schemas are loaded for the schema registry, honoring the forceRefresh flag.
-      await loader.ensureSchemasLoaded(schemaRegistry.id, forceRefresh);
-    }
+  let schemas: Schema[] = [];
+  if (schemaRegistry) {
+    schemas = await loader.getSchemasForRegistry(schemaRegistry, forceRefresh);
   }
 
   let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
@@ -224,29 +230,6 @@ export async function getTopicsForCluster(
 
   // Otherwise make a deep fetch, cache in resource manager, and return.
   let environmentId: string | null = null;
-  let schemas: Schema[] | undefined = [];
-
-  let schemaRegistry: SchemaRegistry | null = null;
-  if (cluster instanceof CCloudKafkaCluster) {
-    environmentId = cluster.environmentId;
-    schemaRegistry = await resourceManager.getCCloudSchemaRegistry(environmentId);
-  } else if (
-    cluster instanceof LocalKafkaCluster &&
-    getContextValue(ContextValues.localSchemaRegistryAvailable)
-  ) {
-    schemaRegistry = await getLocalSchemaRegistryFromClusterId(cluster.id);
-  }
-
-  if (schemaRegistry) {
-    schemas = await resourceManager.getSchemasForRegistry(schemaRegistry.id);
-    if (schemas === undefined) {
-      logger.error("Wacky: schema registry known, but unknown schemas (should be empty array)", {
-        schemaRegistry,
-      });
-      // promote unknown to empty array as work around to what should never happen.
-      schemas = [];
-    }
-  }
 
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
@@ -273,7 +256,7 @@ export async function getTopicsForCluster(
 
   // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
-    const hasMatchingSchema: boolean = schemas!.some((schema) =>
+    const hasMatchingSchema: boolean = schemas.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
 

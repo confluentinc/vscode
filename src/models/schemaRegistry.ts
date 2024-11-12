@@ -3,24 +3,27 @@ import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
 
-export class LocalSchemaRegistry extends Data {
-  readonly connectionId = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
-
+export abstract class SchemaRegistry extends Data {
+  abstract readonly connectionId: string;
+  abstract readonly isLocal: boolean;
+  abstract readonly isCCloud: boolean;
   id!: Enforced<string>;
   uri!: Enforced<string>;
 }
 
-export class CCloudSchemaRegistry extends Data {
+export class LocalSchemaRegistry extends SchemaRegistry {
+  readonly connectionId = LOCAL_CONNECTION_ID;
+  readonly isLocal: boolean = true;
+  readonly isCCloud: boolean = false;
+}
+
+export class CCloudSchemaRegistry extends SchemaRegistry {
   readonly connectionId = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
   readonly isCCloud: boolean = true;
 
-  id!: Enforced<string>;
   provider!: Enforced<string>;
   region!: Enforced<string>;
-  uri!: Enforced<string>;
   // added separately from sidecar responses
   environmentId!: Enforced<string>;
 
@@ -28,8 +31,6 @@ export class CCloudSchemaRegistry extends Data {
     return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas`;
   }
 }
-
-export type SchemaRegistry = CCloudSchemaRegistry | LocalSchemaRegistry;
 
 // Tree item representing a Schema Registry in the Resources view
 export class SchemaRegistryTreeItem extends vscode.TreeItem {
@@ -57,6 +58,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
   }
 }
 
+// todo easy peasy make this a method of SchemaRegistry family.
 function createSchemaRegistryTooltip(resource: SchemaRegistry): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString();
   if (resource.isCCloud) {

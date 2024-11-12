@@ -3,33 +3,39 @@ import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
 
-/** Main class representing a local Kafka cluster */
-export class LocalKafkaCluster extends Data {
-  readonly connectionId: string = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
+/** Base class for all KafkaClusters, be they local or be they CCloud */
+export abstract class KafkaCluster extends Data {
+  abstract readonly connectionId: string;
+  abstract readonly isLocal: boolean;
+  abstract readonly isCCloud: boolean;
+
+  abstract name: string;
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
   uri!: Enforced<string>;
+}
+
+/** A local Kafka cluster */
+export class LocalKafkaCluster extends KafkaCluster {
+  readonly connectionId: string = LOCAL_CONNECTION_ID;
+  readonly isLocal: boolean = true;
+  readonly isCCloud: boolean = false;
 
   // this is solely for display purposes so we don't have to check whether a resource is either a
   // LocalKafkaCluster or CCloudKafkaCluster when generating a label for a tree/quickpick/etc item
   readonly name: string = "Local";
 }
 
-/** Main class representing a CCloud Kafka cluster */
-export class CCloudKafkaCluster extends Data {
+/** A CCloud Kafka cluster */
+export class CCloudKafkaCluster extends KafkaCluster {
   readonly connectionId: string = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
   readonly isCCloud: boolean = true;
 
-  id!: Enforced<string>;
   name!: Enforced<string>;
   provider!: Enforced<string>;
   region!: Enforced<string>;
-  bootstrapServers!: Enforced<string>;
-  uri!: Enforced<string>;
   // added separately from sidecar responses
   environmentId!: Enforced<string>;
 
@@ -37,8 +43,6 @@ export class CCloudKafkaCluster extends Data {
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.id}`;
   }
 }
-
-export type KafkaCluster = LocalKafkaCluster | CCloudKafkaCluster;
 
 // Main class controlling the representation of a Kafka cluster as a tree item.
 export class KafkaClusterTreeItem extends vscode.TreeItem {
@@ -66,6 +70,7 @@ export class KafkaClusterTreeItem extends vscode.TreeItem {
   }
 }
 
+// todo make this a method of KafkaCluster family.
 function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString();
   if (resource.isCCloud) {
