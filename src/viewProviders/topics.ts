@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { ContextValues, getContextValue, getExtensionContext, setContextValue } from "../context";
+import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
-import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
@@ -195,8 +194,6 @@ export async function getTopicsForCluster(
   cluster: KafkaCluster,
   forceRefresh: boolean = false,
 ): Promise<KafkaTopic[]> {
-  const resourceManager = getResourceManager();
-
   const loader = ResourceLoader.getInstance(cluster.connectionId);
 
   if (loader instanceof CCloudResourceLoader) {
@@ -204,16 +201,20 @@ export async function getTopicsForCluster(
     await (loader as CCloudResourceLoader).ensureCoarseResourcesLoaded(forceRefresh);
   }
 
-  // XXX TODO JLR improve this via new loader method that returns schema registry
-  // given a kafka cluster reference.
-  let schemaRegistry: SchemaRegistry | null = null;
-  if (cluster instanceof CCloudKafkaCluster) {
-    schemaRegistry = await resourceManager.getCCloudSchemaRegistry(cluster.environmentId);
-  } else if (
-    cluster instanceof LocalKafkaCluster &&
-    getContextValue(ContextValues.localSchemaRegistryAvailable)
-  ) {
-    schemaRegistry = await getLocalSchemaRegistryFromClusterId(cluster.id);
+  // Otherwise make a deep fetch, cache in resource manager, and return.
+  let environmentId: string | null = null;
+  let schemaRegistry: SchemaRegistry | undefined;
+
+  const allRegistries = await loader.getSchemaRegistries();
+  if (cluster.isLocal && allRegistries.length === 1) {
+    // if local topic, then would be the only registry.
+    schemaRegistry = allRegistries[0];
+  } else if (cluster.isCCloud) {
+    environmentId = (cluster as CCloudKafkaCluster).environmentId;
+    // CCloud topic, find the one associated with the topic's environment
+    schemaRegistry = allRegistries.find(
+      (sr) => (sr as CCloudSchemaRegistry).environmentId === environmentId,
+    );
   }
 
   let schemas: Schema[] = [];
@@ -221,15 +222,14 @@ export async function getTopicsForCluster(
     schemas = await loader.getSchemasForRegistry(schemaRegistry, forceRefresh);
   }
 
+  // TODO(james): implement topic loading via ResourceLoader
+  const resourceManager = getResourceManager();
   let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
   if (cachedTopics !== undefined && !forceRefresh) {
     // Cache hit.
     logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
     return cachedTopics;
   }
-
-  // Otherwise make a deep fetch, cache in resource manager, and return.
-  let environmentId: string | null = null;
 
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
@@ -275,8 +275,6 @@ export async function getTopicsForCluster(
   });
 
   logger.debug(`Deep fetched ${topics.length} topics for cluster ${cluster.id}`);
-  await resourceManager.setTopicsForCluster(cluster, topics);
-
   return topics;
 }
 
@@ -330,15 +328,4 @@ export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]
   }
 
   return schemas;
-}
-
-export async function getLocalSchemaRegistryFromClusterId(
-  clusterId: string,
-): Promise<SchemaRegistry | null> {
-  const localResources = await getLocalResources();
-  // look up the local resource group where this Kafka cluster exists
-  const localResourceGroup = localResources.find((group) =>
-    group.kafkaClusters.some((kc) => kc.id === clusterId),
-  );
-  return localResourceGroup?.schemaRegistry || null;
 }
