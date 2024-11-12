@@ -204,8 +204,6 @@ export async function getTopicsForCluster(
     await (loader as CCloudResourceLoader).ensureCoarseResourcesLoaded(forceRefresh);
   }
 
-  const schemas: Schema[] = [];
-
   // XXX TODO JLR improve this via new loader method that returns schema registry
   // given a kafka cluster reference.
   let schemaRegistry: SchemaRegistry | null = null;
@@ -218,8 +216,9 @@ export async function getTopicsForCluster(
     schemaRegistry = await getLocalSchemaRegistryFromClusterId(cluster.id);
   }
 
+  let schemas: Schema[] = [];
   if (schemaRegistry) {
-    schemas.push(...((await loader.getSchemasForRegistry(schemaRegistry, forceRefresh)) || []));
+    schemas = await loader.getSchemasForRegistry(schemaRegistry, forceRefresh);
   }
 
   let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
@@ -257,7 +256,7 @@ export async function getTopicsForCluster(
 
   // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
   const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
-    const hasMatchingSchema: boolean = schemas!.some((schema) =>
+    const hasMatchingSchema: boolean = schemas.some((schema) =>
       schema.matchesTopicName(topic.topic_name),
     );
 

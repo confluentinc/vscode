@@ -194,7 +194,10 @@ async function populateCCloudSchemaRegistries(
     quickPickItems.push({
       label: environment.name,
       description: schemaRegistry.id,
-      iconPath: new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY),
+      iconPath:
+        selectedSchemaRegistry?.id === schemaRegistry.id
+          ? new vscode.ThemeIcon(IconNames.CURRENT_RESOURCE)
+          : new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY),
     });
     schemaRegistryNameMap.set(environment.name, schemaRegistry);
   });
