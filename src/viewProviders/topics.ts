@@ -194,6 +194,9 @@ export async function getTopicsForCluster(
   cluster: KafkaCluster,
   forceRefresh: boolean = false,
 ): Promise<KafkaTopic[]> {
+  // XXX JLR respell a lot of this to use the ResourceLoader API only,
+  // https://github.com/confluentinc/vscode/issues/570
+
   const loader = ResourceLoader.getInstance(cluster.connectionId);
 
   if (loader instanceof CCloudResourceLoader) {
