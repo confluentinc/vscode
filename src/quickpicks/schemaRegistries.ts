@@ -7,7 +7,6 @@ import {
   LocalSchemaRegistry,
   SchemaRegistry,
 } from "../models/schemaRegistry";
-import { getSidecar } from "../sidecar";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -112,14 +111,10 @@ async function getRegistriesByConnectionID(): Promise<Map<string, SchemaRegistry
   const localLoader = ResourceLoader.getInstance(LOCAL_CONNECTION_ID);
   const ccloudLoader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
 
-  // Use the same sidecar handle for both loaders. Saves multiple interior calls to getSidecar(),
-  // each will have to do a healthcheck round trip.
-  const sidecarHandle = await getSidecar();
-
   // Get all possible Schema Registries: local and CCloud.
   const [localRegistries, ccloudRegistries] = await Promise.all([
-    localLoader.getSchemaRegistries(sidecarHandle),
-    ccloudLoader.getSchemaRegistries(sidecarHandle),
+    localLoader.getSchemaRegistries(),
+    ccloudLoader.getSchemaRegistries(),
   ]);
 
   const registriesByConnectionID: Map<string, SchemaRegistry[]> = new Map();

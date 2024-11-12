@@ -14,7 +14,7 @@ import {
   LocalSchemaRegistry,
   SchemaRegistry,
 } from "../models/schemaRegistry";
-import { getSidecar, SidecarHandle } from "../sidecar";
+import { getSidecar } from "../sidecar";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { getResourceManager } from "./resourceManager";
 
@@ -77,7 +77,7 @@ export abstract class ResourceLoader {
    * Get all schema registries known to the connection. Optionally accepts an existing SidecarHandle
    * to use if need be if provided.
    */
-  public abstract getSchemaRegistries(sidecarHandle?: SidecarHandle): Promise<SchemaRegistry[]>;
+  public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
 
   // Schema registry methods.
 
@@ -188,10 +188,7 @@ export class CCloudResourceLoader extends ResourceLoader {
    * They do not include topics within a cluster or schemas within a schema registry, which are fetched
    * and cached more closely to when they are needed.
    */
-  public async ensureCoarseResourcesLoaded(
-    forceDeepRefresh: boolean = false,
-    sidecarHandle: SidecarHandle | undefined = undefined,
-  ): Promise<void> {
+  public async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
     // TODO make this private, fix all the callers via ensuring there's an adequate
     // ResourceLoader API covering the use case end-user code is directly calling
     // ensureCoarseResourcesLoaded().
@@ -217,7 +214,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
     // This caller is the first to request the preload, so do the work in the foreground,
     // but also store the promise so that any other concurrent callers can await it.
-    this.currentlyCoarseLoadingPromise = this.doLoadCoarseResources(sidecarHandle);
+    this.currentlyCoarseLoadingPromise = this.doLoadCoarseResources();
     await this.currentlyCoarseLoadingPromise;
   }
 
@@ -230,16 +227,14 @@ export class CCloudResourceLoader extends ResourceLoader {
    *   - Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
    *   - Schema Registries (ResourceManager.getCCloudSchemaRegistries())
    */
-  protected async doLoadCoarseResources(sidecarHandle: SidecarHandle | undefined): Promise<void> {
+  protected async doLoadCoarseResources(): Promise<void> {
     // Start loading the ccloud-related resources from sidecar API into the resource manager for local caching.
     // If the loading fails at any time (including, say, the user logs out of CCloud while in progress), then
     // an exception will be thrown and the loadingComplete flag will remain false.
     try {
       const resourceManager = getResourceManager();
 
-      if (!sidecarHandle) {
-        sidecarHandle = await getSidecar();
-      }
+      const sidecarHandle = await getSidecar();
 
       // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
       const envGroups = await getEnvironments(sidecarHandle);
@@ -315,12 +310,12 @@ export class CCloudResourceLoader extends ResourceLoader {
     }
   }
 
-  public async getSchemaRegistries(sidecarHandle?: SidecarHandle): Promise<CCloudSchemaRegistry[]> {
+  public async getSchemaRegistries(): Promise<CCloudSchemaRegistry[]> {
     if (!hasCCloudAuthSession()) {
       return [];
     }
 
-    await this.ensureCoarseResourcesLoaded(false, sidecarHandle);
+    await this.ensureCoarseResourcesLoaded(false);
     // TODO: redapt this resource manager API to just return the array directly.
     const registryByEnvId = await getResourceManager().getCCloudSchemaRegistries();
 
@@ -330,11 +325,10 @@ export class CCloudResourceLoader extends ResourceLoader {
   public async getSchemasForRegistry(
     schemaRegistry: SchemaRegistry,
     forceDeepRefresh?: boolean,
-    sidecarHandle?: SidecarHandle,
   ): Promise<Schema[]> {
     // Ensure coarse resources (envs, clusters, schema registries) are cached.
     // We need to be aware of the schema registry ids before next step will work.
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh, sidecarHandle);
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
 
     // Ensure this schema registry's schemas are cached.
     await this.ensureSchemasLoaded(schemaRegistry, forceDeepRefresh);
@@ -420,10 +414,8 @@ class LocalResourceLoader extends ResourceLoader {
     super();
   }
 
-  public async getSchemaRegistries(
-    sidecarHandle: SidecarHandle | undefined = undefined,
-  ): Promise<LocalSchemaRegistry[]> {
-    const localGroups = await getLocalResources(sidecarHandle);
+  public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {
+    const localGroups = await getLocalResources();
 
     return localGroups
       .filter((group) => group.schemaRegistry !== undefined)
@@ -438,9 +430,8 @@ class LocalResourceLoader extends ResourceLoader {
     schemaRegistry: SchemaRegistry,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceDeepRefresh: boolean = false,
-    sidecarHandle: SidecarHandle | undefined = undefined,
   ): Promise<Schema[]> {
-    return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined, sidecarHandle);
+    return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined);
   }
 
   /** Purge schemas from this registry from cache.
@@ -465,11 +456,8 @@ export async function fetchSchemas(
   schemaRegistryId: string,
   connectionId: string,
   environmentId: string | undefined = undefined,
-  sidecarHandle: SidecarHandle | undefined = undefined,
 ): Promise<Schema[]> {
-  if (!sidecarHandle) {
-    sidecarHandle = await getSidecar();
-  }
+  const sidecarHandle = await getSidecar();
   const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(schemaRegistryId, connectionId);
   const schemaListRespData: ResponseSchema[] = await client.getSchemas();
   const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
