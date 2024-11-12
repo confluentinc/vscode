@@ -21,6 +21,9 @@ All notable changes to this extension will be documented in this file.
   not be visible when updating from <0.20.x to this release, but will be visible in future updates.)
   [#476](https://github.com/confluentinc/vscode/issues/476)
   [#520](https://github.com/confluentinc/vscode/issues/520)
+- When a CCloud connection expires, the extension will now properly clear the views in the sidebar,
+  and the associated error notification's "Log in to Confluent Cloud" button will now work as
+  expected. [#565](https://github.com/confluentinc/vscode/issues/565)
 
 ## 0.20.2
 

@@ -23,6 +23,7 @@ import {
 import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
+import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 
@@ -41,20 +42,11 @@ export async function tryToGetConnection(
   try {
     connection = await client.gatewayV1ConnectionsIdGet({ id: id });
   } catch (error) {
-    if (error instanceof ResponseError) {
-      if (error.response.status === 404) {
-        logger.debug("No connection found", { connectionId: id });
-      } else {
-        logger.error("Error response fetching existing connection:", {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          body: JSON.stringify(error.response.body),
-          connectionId: id,
-        });
-      }
+    if (error instanceof ResponseError && error.response.status === 404) {
+      logger.debug("No connection found", { connectionId: id });
     } else {
       // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
-      logger.error("Error fetching connection", { error, connectionId: id });
+      logResponseError(error, "fetching connection", { connectionId: id }, true);
     }
   }
   return connection;
@@ -83,7 +75,7 @@ export async function tryToCreateConnection(spec: ConnectionSpec): Promise<Conne
     logger.debug("created new connection:", { type: spec.type });
     return connection;
   } catch (error) {
-    logger.error("create connection error:", error);
+    logResponseError(error, "creating connection", { connectionId: spec.id! }, true);
     throw error;
   }
 }
@@ -109,7 +101,7 @@ export async function tryToDeleteConnection(id: string): Promise<void> {
       logger.debug("no connection found to delete:", { id });
       return;
     }
-    logger.error("delete connection error:", error);
+    logResponseError(error, "deleting connection", { connectionId: id }, true);
     throw error;
   }
 }
