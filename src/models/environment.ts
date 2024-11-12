@@ -1,22 +1,61 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
 
-// Main class representing CCloud environments, matching key/value pairs returned
-// by the `confluent environment list` command.
-export class CCloudEnvironment extends Data {
-  readonly connectionId: string = CCLOUD_CONNECTION_ID;
+/**
+ * Base class between local and ccloud environments, and possibly
+ * direct connections in the future.
+ *
+ * An environment is a distinct collection of resources, namely
+ * Kafka clusters, a possible Schema Registry, and perhaps more
+ * things in the future such as Flink clusters.
+ *
+ */
+export abstract class Environment extends Data {
+  abstract readonly connectionId: string;
+  abstract readonly isLocal: boolean;
+  abstract readonly isCCloud: boolean;
 
   id!: Enforced<string>;
   name!: Enforced<string>;
+
+  /**
+   * Has at least one Kafka cluster or Schema Registry.
+   *
+   * CCloud environemts may have neither (yet), but we still want to show
+   * them in the tree.
+   */
+  abstract hasClusters: boolean;
+
+  // It would seem natural for the Environment to have a list of clusters,
+  // optional schema registry, and so on, but this hasn't grown to be
+  // the case yet.
+}
+
+// Main class representing CCloud environments, matching key/value pairs returned
+// by the `confluent environment list` command.
+export class CCloudEnvironment extends Environment {
+  readonly connectionId: string = CCLOUD_CONNECTION_ID;
+  readonly isLocal: boolean = false;
+  readonly isCCloud: boolean = true;
+
   streamGovernancePackage!: Enforced<string>;
-  /** Has at least one Kafka cluster or Schema Registry */
   hasClusters!: Enforced<boolean>;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
   }
+}
+
+/** Class representing the local resource group. */
+export class LocalEnvironment extends Environment {
+  readonly connectionId: string = LOCAL_CONNECTION_ID;
+  readonly isLocal: boolean = true;
+  readonly isCCloud: boolean = false;
+
+  // If we have a local connection, we have at least one Kafka cluster.
+  readonly hasClusters: boolean = true;
 }
 
 // Tree item representing a CCloud environment on top an instance of CloudEnvironment

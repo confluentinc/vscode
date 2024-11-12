@@ -1,4 +1,4 @@
-import { AuthenticationSession, authentication } from "vscode";
+import { authentication, AuthenticationSession } from "vscode";
 import { getSidecar } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import {
@@ -32,7 +32,8 @@ const logger = new Logger("sidecar.connections");
 /** Get the existing {@link Connection} (if it exists). */
 export async function tryToGetConnection(id: string): Promise<Connection | null> {
   let connection: Connection | null = null;
-  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+  const sidecarHandle = await getSidecar();
+  const client: ConnectionsResourceApi = sidecarHandle.getConnectionsResourceApi();
   try {
     connection = await client.gatewayV1ConnectionsIdGet({ id: id });
   } catch (error) {

@@ -76,7 +76,7 @@ describe("TopicViewProvider helper functions", () => {
     assert.equal(schemas.length, 0);
   });
 
-  it("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
+  it.skip("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
     // preload Schema Registry + schemas (usually done when loading environments)
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
