@@ -1,5 +1,5 @@
-import { AuthenticationSession, authentication } from "vscode";
-import { getSidecar } from ".";
+import { authentication, AuthenticationSession } from "vscode";
+import { getSidecar, SidecarHandle } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import {
   Connection,
@@ -30,9 +30,15 @@ import { getResourceManager } from "../storage/resourceManager";
 const logger = new Logger("sidecar.connections");
 
 /** Get the existing {@link Connection} (if it exists). */
-export async function tryToGetConnection(id: string): Promise<Connection | null> {
+export async function tryToGetConnection(
+  id: string,
+  sidecarHandle: SidecarHandle | undefined = undefined,
+): Promise<Connection | null> {
   let connection: Connection | null = null;
-  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+  if (!sidecarHandle) {
+    sidecarHandle = await getSidecar();
+  }
+  const client: ConnectionsResourceApi = sidecarHandle.getConnectionsResourceApi();
   try {
     connection = await client.gatewayV1ConnectionsIdGet({ id: id });
   } catch (error) {
@@ -52,8 +58,10 @@ export async function getCCloudConnection(): Promise<Connection | null> {
 }
 
 /** Get the local {@link Connection} (if it exists). */
-export async function getLocalConnection(): Promise<Connection | null> {
-  return await tryToGetConnection(LOCAL_CONNECTION_ID);
+export async function getLocalConnection(
+  sidecarHandle: SidecarHandle | undefined = undefined,
+): Promise<Connection | null> {
+  return await tryToGetConnection(LOCAL_CONNECTION_ID, sidecarHandle);
 }
 
 /** Create a new {@link Connection} with the given {@link ConnectionSpec}. */

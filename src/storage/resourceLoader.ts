@@ -3,13 +3,19 @@ import * as vscode from "vscode";
 import { Require } from "dataclass";
 import { Disposable } from "vscode";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { Schema, SchemaType } from "../models/schema";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  LocalSchemaRegistry,
+  SchemaRegistry,
+} from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
+import { hasCCloudAuthSession } from "../sidecar/connections";
 import { getResourceManager } from "./resourceManager";
 
 const logger = new Logger("storage.resourceLoader");
@@ -17,17 +23,35 @@ const logger = new Logger("storage.resourceLoader");
 /** Construct the singleton resource loaders so they may register their event listeners. */
 export function constructResourceLoaderSingletons(): vscode.Disposable[] {
   CCloudResourceLoader.getInstance();
+  LocalResourceLoader.getInstance();
 
   return ResourceLoader.getDisposables();
 }
 
+/** Human readable characterization of the backing technology resources were loaded from */
+export enum ResouceLoaderType {
+  CCloud = "Confluent Cloud",
+  Local = "Local",
+}
+
+/**
+ * Class family for dealing with loading (and perhaps caching) information
+ * about resources (kafka clusters, schema registries, etc). View providers
+ * or quickpicks or other consumers of resources should go through this
+ * API to make things simple and consistent across CCloud, local, or direct
+ * connection clusters.
+ */
 export abstract class ResourceLoader {
-  /** What kind of resources does this loader manage? Human readable string. */
-  public abstract kind: string;
+  /**
+   * What kind of resources does this loader manage? Human readable string, often
+   * used by quickpick separator labels.
+   */
+  public abstract kind: ResouceLoaderType;
 
   /** Disposables belonging to all instances of ResourceLoader to be added to the extension
    * context during activation, cleaned up on extension deactivation.
-   * */
+   * TODO: Reconsider when we have less-permanant direct connections also.
+   */
   protected static disposables: Disposable[] = [];
 
   /**  Return all known long lived disposables for extension cleanup. */
@@ -35,11 +59,84 @@ export abstract class ResourceLoader {
     return ResourceLoader.disposables;
   }
 
+  /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
+  public static getInstance(connectionId: string): ResourceLoader {
+    if (connectionId === CCLOUD_CONNECTION_ID) {
+      return CCloudResourceLoader.getInstance();
+    } else if (connectionId === LOCAL_CONNECTION_ID) {
+      logger.info("returning LocalResourceLoader");
+      return LocalResourceLoader.getInstance();
+    }
+
+    throw new Error(`Unknown connectionId ${connectionId}`);
+  }
+
+  // Schema registry methods
+
+  /**
+   * Get all schema registries known to the connection. Optionally accepts an existing SidecarHandle
+   * to use if need be if provided.
+   */
+  public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
+
+  // Schema registry methods.
+
+  /**
+   * Fetch the schemas from the given schema registry.
+   * @param schemaRegistry The schema registry to fetch schemas from.
+   * @param forceDeepRefresh If true, will ignore any cached schemas and fetch anew.
+   * @returns An array of schemas in the schema registry. Throws an error if the schemas could not be fetched.
+   * */
+  public abstract getSchemasForRegistry(
+    schemaRegistry: SchemaRegistry,
+    forceDeepRefresh?: boolean,
+  ): Promise<Schema[]>;
+
+  /**
+   * Indicate to purge this schema registry's cache of schemas, if the
+   * loader implementation caches.
+   * This is useful when a schema is known to has been added or removed, but the
+   * registry isn't currently being displayed in the view.
+   * (So that when it does get displayed, it will fetch the schemas anew).
+   */
+  public abstract purgeSchemas(schemaRegistryId: string): void;
+}
+
+/**
+ * Singleton class responsible for loading / caching CCLoud resources into the resource manager.
+ * View providers and/or other consumers of resources stored in the resource manager should
+ * call {@link ensureCoarseResourcesLoaded} to ensure that the resources are cached before attempting to
+ * access them from the resource manager.
+ *
+ * Handles loading the following "coarse" resources via ${link ensureCoarseResourcesLoaded}:
+ *  - CCloud Environments (ResourceManager.getCCloudEnvironments())
+ *  - CCloud Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
+ *  - CCloud Schema Registries (ResourceManager.getCCloudSchemaRegistries())
+ *
+ * Also handles loading the schemas for a single Schema Registry via {@link ensureSchemasLoaded}, but
+ * only after when the coarse resources have been loaded. Because there may be "many" schemas in a schema registry,
+ * this is considered a 'fine grained resource' and is not loaded until requested.
+ */
+export class CCloudResourceLoader extends ResourceLoader {
+  // XXX todo only exported for transition period before all existing callers to what should
+  // become private methods like ensureCoarseResourcesLoaded are revised.
+
+  kind = ResouceLoaderType.CCloud;
+
+  private static instance: CCloudResourceLoader | null = null;
+
+  public static getInstance(): ResourceLoader {
+    if (!CCloudResourceLoader.instance) {
+      CCloudResourceLoader.instance = new CCloudResourceLoader();
+    }
+    return CCloudResourceLoader.instance;
+  }
+
   /** Have the course resources been cached already? */
-  protected coarseLoadingComplete: boolean = false;
+  private coarseLoadingComplete: boolean = false;
 
   /** If in progress of loading the coarse resources, the promise doing so. */
-  protected currentlyCoarseLoadingPromise: Promise<void> | null = null;
+  private currentlyCoarseLoadingPromise: Promise<void> | null = null;
 
   /**
    * Known state of resource manager cache for each schema registry's schemas by schema registry id:
@@ -48,22 +145,27 @@ export abstract class ResourceLoader {
    *  * True: Fully cached. Go ahead and make use of resourceManager.getCCloudSchemasForCluster(id)
    *  * Promise<void>: in progress of fetching, join awaiting this promise to know when it's safe to use resourceManager.getCCloudSchemasForCluster(id).
    */
-  protected schemaRegistryCacheStates: Map<string, boolean | Promise<void>> = new Map();
+  private schemaRegistryCacheStates: Map<string, boolean | Promise<void>> = new Map();
 
-  /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
-  public static getInstance(connectionId: string): ResourceLoader {
-    if (connectionId === CCLOUD_CONNECTION_ID) {
-      return CCloudResourceLoader.getInstance();
-    }
+  private constructor() {
+    super();
 
-    throw new Error(`Unknown connectionId ${connectionId}`);
+    // When the ccloud connection state changes, reset the loader's state.
+    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
+      this.reset();
+
+      if (connected) {
+        // Start the coarse preloading process if we think we have a ccloud connection.
+        await this.ensureCoarseResourcesLoaded();
+      }
+    });
+
+    ResourceLoader.disposables.push(ccloudConnectedSub);
   }
 
-  // Coarse resource-related methods.
-
-  protected abstract deleteCoarseResources(): void;
-
-  protected abstract doLoadCoarseResources(): Promise<void>;
+  protected deleteCoarseResources(): void {
+    getResourceManager().deleteCCloudResources();
+  }
 
   /**
    * Promise ensuring that the "coarse" ccloud resources are cached into the resource manager.
@@ -87,6 +189,11 @@ export abstract class ResourceLoader {
    * and cached more closely to when they are needed.
    */
   public async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
+    // TODO make this private, fix all the callers via ensuring there's an adequate
+    // ResourceLoader API covering the use case end-user code is directly calling
+    // ensureCoarseResourcesLoaded().
+    // Issue https://github.com/confluentinc/vscode/issues/568
+
     // If caller requested a deep refresh, reset the loader's state so that we fall through to
     // re-fetching the coarse resources.
     if (forceDeepRefresh) {
@@ -111,111 +218,6 @@ export abstract class ResourceLoader {
     await this.currentlyCoarseLoadingPromise;
   }
 
-  // Schema registry related 'fine grained' methods.
-
-  /**
-   * Mark this schema registry cache as stale, such as when known that a schema has been added or removed,
-   * but the registry isn't currently being displayed
-   */
-  public purgeSchemas(schemaRegistryId: string): void {
-    this.schemaRegistryCacheStates.set(schemaRegistryId, false);
-  }
-
-  /** Ensure that this single Schema Registry's schemas have been loaded. */
-  public async ensureSchemasLoaded(
-    schemaRegistryId: string,
-    forceDeepRefresh: boolean = false,
-  ): Promise<void> {
-    if (forceDeepRefresh) {
-      // If the caller wants to force a deep refresh, then reset this Schema Registry's state to not having
-      // fetched the schemas yet, so that we'll ignore any prior cached schemas and fetch them anew.
-      this.schemaRegistryCacheStates.set(schemaRegistryId, false);
-    }
-
-    const schemaRegistryCacheState = this.schemaRegistryCacheStates.get(schemaRegistryId);
-
-    // Ensure is a valid Schema Registry id. See doLoadResources() for initial setting
-    // of these keys.
-    if (schemaRegistryCacheState === undefined) {
-      throw new Error(`Schema registry with id ${schemaRegistryId} is unknown to the loader.`);
-    }
-
-    // If schemas for this Schema Registry are already loaded, nothing to wait on.
-    if (schemaRegistryCacheState === true) {
-      return;
-    }
-
-    // If in progress of loading, have the caller await the promise that is currently loading the schemas.
-    if (schemaRegistryCacheState instanceof Promise) {
-      return schemaRegistryCacheState;
-    }
-
-    // This caller is the first to request the preload of the schemas in this registry,
-    // so do the work in the foreground, but also store the promise so that any other
-    // concurrent callers can await it.
-    const schemaLoadingPromise = this.doLoadSchemas(schemaRegistryId);
-    this.schemaRegistryCacheStates.set(schemaRegistryId, schemaLoadingPromise);
-    await schemaLoadingPromise;
-  }
-
-  /** Load the schemas for this single Schema Registry into the resource manager. */
-  protected abstract doLoadSchemas(schemaRegistryId: string): Promise<void>;
-
-  /** Go back to initial state, not having cached anything. */
-  protected reset(): void {
-    this.coarseLoadingComplete = false;
-    this.currentlyCoarseLoadingPromise = null;
-    this.schemaRegistryCacheStates.clear();
-  }
-}
-
-/**
- * Singleton class responsible for loading / caching CCLoud resources into the resource manager.
- * View providers and/or other consumers of resources stored in the resource manager should
- * call {@link ensureCoarseResourcesLoaded} to ensure that the resources are cached before attempting to
- * access them from the resource manager.
- *
- * Handles loading the following "coarse" resources via ${link ensureCoarseResourcesLoaded}:
- *  - CCloud Environments (ResourceManager.getCCloudEnvironments())
- *  - CCloud Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
- *  - CCloud Schema Registries (ResourceManager.getCCloudSchemaRegistries())
- *
- * Also handles loading the schemas for a single Schema Registry via {@link ensureSchemasLoaded}, but
- * only after when the coarse resources have been loaded. Because there may be "many" schemas in a schema registry,
- * this is considered a 'fine grained resource' and is not loaded until requested.
- */
-export class CCloudResourceLoader extends ResourceLoader {
-  kind = "CCloud";
-
-  private static instance: CCloudResourceLoader | null = null;
-
-  public static getInstance(): ResourceLoader {
-    if (!CCloudResourceLoader.instance) {
-      CCloudResourceLoader.instance = new CCloudResourceLoader();
-    }
-    return CCloudResourceLoader.instance;
-  }
-
-  private constructor() {
-    super();
-
-    // When the ccloud connection state changes, reset the loader's state.
-    const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
-      this.reset();
-
-      if (connected) {
-        // Start the coarse preloading process if we think we have a ccloud connection.
-        await this.ensureCoarseResourcesLoaded();
-      }
-    });
-
-    ResourceLoader.disposables.push(ccloudConnectedSub);
-  }
-
-  protected deleteCoarseResources(): void {
-    getResourceManager().deleteCCloudResources();
-  }
-
   /**
    * Load the {@link CCloudEnvironment}s and their direct children (Kafka clusters, schema registry) into
    * the resource manager.
@@ -232,8 +234,10 @@ export class CCloudResourceLoader extends ResourceLoader {
     try {
       const resourceManager = getResourceManager();
 
+      const sidecarHandle = await getSidecar();
+
       // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
-      const envGroups = await getEnvironments();
+      const envGroups = await getEnvironments(sidecarHandle);
 
       // Queue up to store the environments in the resource manager
       const environments = envGroups.map((envGroup) => envGroup.environment);
@@ -272,47 +276,170 @@ export class CCloudResourceLoader extends ResourceLoader {
     }
   }
 
-  protected async doLoadSchemas(schemaRegistryId: string): Promise<void> {
+  protected async doLoadSchemas(schemaRegistry: SchemaRegistry): Promise<void> {
     try {
-      logger.info("Deep loading schemas for Schema Registry", {
-        schemaRegistryId,
-      });
+      logger.info(`Deep loading schemas for CCloud Schema Registry ${schemaRegistry.id}`);
       const rm = getResourceManager();
-      // Need to fetch the Schema Registry to get the environment.
-      const schemaRegistry = await rm.getCCloudSchemaRegistryById(schemaRegistryId);
 
-      if (!schemaRegistry) {
-        throw new Error(
-          `Schema Registry with id ${schemaRegistryId} is unknown to the resource manager.`,
-        );
-      }
-
-      const environment = await rm.getCCloudEnvironment(schemaRegistry.environmentId);
+      const ccloudSchemaRegistry: CCloudSchemaRegistry = schemaRegistry as CCloudSchemaRegistry;
+      const environment = await rm.getCCloudEnvironment(ccloudSchemaRegistry.environmentId);
       if (!environment) {
         throw new Error(
-          `Environment with id ${schemaRegistry.environmentId} is unknown to the resource manager.`,
+          `Environment with id ${ccloudSchemaRegistry.environmentId} is unknown to the resource manager.`,
         );
       }
 
       // Fetch from sidecar API and store into resource manager.
       const schemas = await fetchSchemas(
-        schemaRegistry.id,
+        ccloudSchemaRegistry.id,
         environment.connectionId,
         environment.id,
       );
       await rm.setSchemasForRegistry(schemaRegistry.id, schemas);
 
       // Mark this cluster as having its schemas loaded.
-      this.schemaRegistryCacheStates.set(schemaRegistryId, true);
+      this.schemaRegistryCacheStates.set(schemaRegistry.id, true);
     } catch (error) {
       // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
       logger.error("Error while preloading CCloud schemas", { error });
 
       // Forget the current promise, make next call to ensureSchemasLoaded() start from scratch.
-      this.schemaRegistryCacheStates.set(schemaRegistryId, false);
+      this.schemaRegistryCacheStates.set(schemaRegistry.id, false);
 
       throw error;
     }
+  }
+
+  public async getSchemaRegistries(): Promise<CCloudSchemaRegistry[]> {
+    if (!hasCCloudAuthSession()) {
+      return [];
+    }
+
+    await this.ensureCoarseResourcesLoaded(false);
+    // TODO: redapt this resource manager API to just return the array directly.
+    const registryByEnvId = await getResourceManager().getCCloudSchemaRegistries();
+
+    return Array.from(registryByEnvId.values());
+  }
+
+  public async getSchemasForRegistry(
+    schemaRegistry: SchemaRegistry,
+    forceDeepRefresh?: boolean,
+  ): Promise<Schema[]> {
+    // Ensure coarse resources (envs, clusters, schema registries) are cached.
+    // We need to be aware of the schema registry ids before next step will work.
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+
+    // Ensure this schema registry's schemas are cached.
+    await this.ensureSchemasLoaded(schemaRegistry, forceDeepRefresh);
+
+    const schemas = await getResourceManager().getSchemasForRegistry(schemaRegistry.id);
+    if (!schemas) {
+      throw new Error(`Schemas for schema registry ${schemaRegistry.id} are not loaded.`);
+    }
+
+    return schemas;
+  }
+
+  /**
+   * Mark this schema registry cache as stale, such as when known that a schema has been added or removed,
+   * but the registry isn't currently being displayed
+   */
+  public purgeSchemas(schemaRegistryId: string): void {
+    this.schemaRegistryCacheStates.set(schemaRegistryId, false);
+  }
+
+  /** Ensure that this single Schema Registry's schemas have been loaded. */
+  private async ensureSchemasLoaded(
+    schemaRegistry: SchemaRegistry,
+    forceDeepRefresh: boolean = false,
+  ): Promise<void> {
+    if (forceDeepRefresh) {
+      // If the caller wants to force a deep refresh, then reset this Schema Registry's state to not having
+      // fetched the schemas yet, so that we'll ignore any prior cached schemas and fetch them anew.
+      this.schemaRegistryCacheStates.set(schemaRegistry.id, false);
+    }
+
+    const schemaRegistryCacheState = this.schemaRegistryCacheStates.get(schemaRegistry.id);
+
+    // Ensure is a valid Schema Registry id. See doLoadResources() for initial setting
+    // of these keys.
+    if (schemaRegistryCacheState === undefined) {
+      throw new Error(`Schema registry with id ${schemaRegistry.id} is unknown to the loader.`);
+    }
+
+    // If schemas for this Schema Registry are already loaded, nothing to wait on.
+    if (schemaRegistryCacheState === true) {
+      return;
+    }
+
+    // If in progress of loading, have the caller await the promise that is currently loading the schemas.
+    if (schemaRegistryCacheState instanceof Promise) {
+      return schemaRegistryCacheState;
+    }
+
+    // This caller is the first to request the preload of the schemas in this registry,
+    // so do the work in the foreground, but also store the promise so that any other
+    // concurrent callers can await it.
+    const schemaLoadingPromise = this.doLoadSchemas(schemaRegistry);
+    this.schemaRegistryCacheStates.set(schemaRegistry.id, schemaLoadingPromise);
+    await schemaLoadingPromise;
+  }
+
+  /** Go back to initial state, not having cached anything. */
+  private reset(): void {
+    this.coarseLoadingComplete = false;
+    this.currentlyCoarseLoadingPromise = null;
+    this.schemaRegistryCacheStates.clear();
+  }
+}
+
+/**
+ * ResourceLoader implementation atop the LOCAL "cluster".
+ * Does no caching at all. Directly fetches from the local sidecar API
+ * each time a resource is requested.
+ */
+class LocalResourceLoader extends ResourceLoader {
+  kind = ResouceLoaderType.Local;
+
+  private static instance: LocalResourceLoader | null = null;
+  public static getInstance(): ResourceLoader {
+    if (!LocalResourceLoader.instance) {
+      LocalResourceLoader.instance = new LocalResourceLoader();
+    }
+    return LocalResourceLoader.instance;
+  }
+
+  private constructor() {
+    super();
+  }
+
+  public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {
+    const localGroups = await getLocalResources();
+
+    return localGroups
+      .filter((group) => group.schemaRegistry !== undefined)
+      .map((group) => group.schemaRegistry!);
+  }
+
+  /**
+   * Fetch schemas from local schema registry.
+   * Simple, pass through to deep fetch every time.
+   */
+  public async getSchemasForRegistry(
+    schemaRegistry: SchemaRegistry,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forceDeepRefresh: boolean = false,
+  ): Promise<Schema[]> {
+    return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined);
+  }
+
+  /** Purge schemas from this registry from cache.
+   * Simple, we don't cache anything in this loader!
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public purgeSchemas(schemaRegistryId: string): void {
+    // no-op
   }
 }
 
@@ -328,10 +455,10 @@ export class CCloudResourceLoader extends ResourceLoader {
 export async function fetchSchemas(
   schemaRegistryId: string,
   connectionId: string,
-  environmentId?: string,
+  environmentId: string | undefined = undefined,
 ): Promise<Schema[]> {
-  const sidecar = await getSidecar();
-  const client: SchemasV1Api = sidecar.getSchemasV1Api(schemaRegistryId, connectionId);
+  const sidecarHandle = await getSidecar();
+  const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(schemaRegistryId, connectionId);
   const schemaListRespData: ResponseSchema[] = await client.getSchemas();
   const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
     // AVRO doesn't show up in `schemaType`

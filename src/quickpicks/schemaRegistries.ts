@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { getLocalResources, LocalResourceGroup } from "../graphql/local";
+import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import {
@@ -10,7 +9,7 @@ import {
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { ResourceLoader } from "../storage/resourceLoader";
-import { CCloudSchemaRegistryByEnv, getResourceManager } from "../storage/resourceManager";
+import { getResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("quickpicks.schemaRegistry");
@@ -32,44 +31,19 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
 }
 
 /**
- * Create a quickpick to let the user choose a Schema Registry, named by environment.
+ * Execute a quickpick to let the user choose a Schema Registry, named by (ccloud or local) environment.
+ * If the user has selected a schema registry in the schemas view, it will be the default selection.
  *
  * @returns The selected Schema Registry, or undefined if none was selected.
  */
 export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
-  const localSchemaRegistries: LocalSchemaRegistry[] = [];
-  let cloudSchemaRegistries: CCloudSchemaRegistry[] = [];
+  const registriesByConnectionID: Map<string, SchemaRegistry[]> =
+    await getRegistriesByConnectionID();
 
-  // schema registries are a coarse resource, so ensure they are loaded before proceeding
-  const ccloudLoader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
-  await ccloudLoader.ensureCoarseResourcesLoaded();
+  const localSchemaRegistries = registriesByConnectionID.get(LOCAL_CONNECTION_ID)!;
+  const ccloudSchemaRegistries = registriesByConnectionID.get(CCLOUD_CONNECTION_ID)!;
 
-  // first we grab all available (local+CCloud) Schema Registries
-  let localGroups: LocalResourceGroup[] = [];
-  let cloudGroups: CCloudSchemaRegistryByEnv | null = new Map<string, CCloudSchemaRegistry>();
-  [localGroups, cloudGroups] = await Promise.all([
-    getLocalResources(),
-    getResourceManager().getCCloudSchemaRegistries(),
-  ]);
-  localGroups.forEach((group) => {
-    if (group.schemaRegistry) {
-      localSchemaRegistries.push(group.schemaRegistry);
-    }
-  });
-
-  // list all Schema Registries for all CCloud environments for the given connection; to be separated
-  // further by environment in the quickpick menu below
-  let cloudEnvironmentIds: string[] = [];
-  if (hasCCloudAuthSession()) {
-    cloudGroups.forEach((schemaRegistry, envId) => {
-      cloudEnvironmentIds.push(envId);
-      cloudSchemaRegistries.push(schemaRegistry);
-    });
-  }
-
-  let availableSchemaRegistries: SchemaRegistry[] = [];
-  availableSchemaRegistries.push(...localSchemaRegistries, ...cloudSchemaRegistries);
-  if (availableSchemaRegistries.length === 0) {
+  if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
     vscode.window.showInformationMessage("No Schema Registries available.");
     if (!hasCCloudAuthSession()) {
       const login = "Log in to Confluent Cloud";
@@ -82,26 +56,89 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
         });
     }
     return undefined;
+  } else {
+    logger.debug(
+      `Generating schema registry quickpick with ${localSchemaRegistries.length} local and ${ccloudSchemaRegistries.length} ccloud schema registries.`,
+    );
   }
 
-  // Is there a selected Schema Registry already focused in the Schemas view?
+  // Is there a selected Schema Registry already focused in the Schemas view? It should
+  // be the one that's selected / presented first in the quickpick.
+  // TODO determine how to use this best now in the face of local + ccloud schema registries.
   const selectedSchemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
 
   // convert all available Schema Registries to quick pick items
-  let quickPickItems: vscode.QuickPickItem[] = [];
-  // and map the SR URI to the Schema Registries themselves since we need to pass the ID
-  // through to follow-on commands, but users will be more familiar with the names
-  // (for ease of looking up both local & CCloud clusters, we're using `name:id` as the key format
-  // that will match the label:description format of the quick pick items below)
-  const schemaRegistryNameMap: Map<string, SchemaRegistry> = new Map();
+  const quickPickItems: vscode.QuickPickItem[] = [];
 
+  /** Map of the quickpick labels to the original schema registry so that we can return a SchemaRegistry. */
+  const labelToSchemaRegistry: Map<string, SchemaRegistry> = new Map();
+
+  // Populate quickPickItems, schemaRegistryNameMap with the local Schema Registry + the possible selected registry.
   if (localSchemaRegistries.length > 0) {
-    // add a single separator
-    quickPickItems.push({
-      kind: vscode.QuickPickItemKind.Separator,
-      label: "Local",
-    });
+    populateLocalSchemaRegistries(
+      localSchemaRegistries,
+      selectedSchemaRegistry,
+      quickPickItems,
+      labelToSchemaRegistry,
+    );
   }
+
+  // Likewise with the CCloud Schema Registries.
+  if (ccloudSchemaRegistries.length > 0) {
+    await populateCCloudSchemaRegistries(
+      ccloudSchemaRegistries as CCloudSchemaRegistry[],
+      selectedSchemaRegistry,
+      quickPickItems,
+      labelToSchemaRegistry,
+    );
+  }
+
+  // TODO: consider how to handle getting the selected schema registry to be first. Maybe.
+
+  // prompt the user to select a Schema Registry
+  const chosenSchemaRegistry: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
+    quickPickItems,
+    {
+      placeHolder: "Select a Schema Registry",
+      ignoreFocusOut: true,
+    },
+  );
+  return chosenSchemaRegistry ? labelToSchemaRegistry.get(chosenSchemaRegistry.label) : undefined;
+}
+
+/** Collect all of the schema registeries by the connection id (ccloud, local, etc.) */
+async function getRegistriesByConnectionID(): Promise<Map<string, SchemaRegistry[]>> {
+  const localLoader = ResourceLoader.getInstance(LOCAL_CONNECTION_ID);
+  const ccloudLoader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
+
+  // Get all possible Schema Registries: local and CCloud.
+  const [localRegistries, ccloudRegistries] = await Promise.all([
+    localLoader.getSchemaRegistries(),
+    ccloudLoader.getSchemaRegistries(),
+  ]);
+
+  const registriesByConnectionID: Map<string, SchemaRegistry[]> = new Map();
+  registriesByConnectionID.set(LOCAL_CONNECTION_ID, localRegistries);
+  registriesByConnectionID.set(CCLOUD_CONNECTION_ID, ccloudRegistries);
+  return registriesByConnectionID;
+}
+
+/** Populate the quick pick items with the local Schema Registries.
+ * The `description` of each pushed QuickPickItem is the Schema Registry ID.
+ */
+function populateLocalSchemaRegistries(
+  localSchemaRegistries: SchemaRegistry[],
+  selectedSchemaRegistry: SchemaRegistry | null,
+  quickPickItems: vscode.QuickPickItem[],
+  schemaRegistryNameMap: Map<string, SchemaRegistry>,
+): void {
+  // add a single separator
+  quickPickItems.push({
+    kind: vscode.QuickPickItemKind.Separator,
+    label: "Local",
+  });
+
+  // Will most likely be a single local Schema Registry, but the API is designed to support multiple.
   localSchemaRegistries.forEach((schemaRegistry: LocalSchemaRegistry) => {
     quickPickItems.push({
       label: schemaRegistry.uri,
@@ -113,49 +150,44 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
     });
     schemaRegistryNameMap.set(schemaRegistry.uri, schemaRegistry);
   });
+}
 
+/** Populate quickPickItems, schemaRegistryNameMap given CCloud Schema Registries + the current selected one, if any.
+ *  The `description` of each pushed QuickPickItem is the Schema Registry ID.
+ */
+async function populateCCloudSchemaRegistries(
+  ccloudSchemaRegistries: CCloudSchemaRegistry[],
+  selectedSchemaRegistry: SchemaRegistry | null,
+  quickPickItems: vscode.QuickPickItem[],
+  schemaRegistryNameMap: Map<string, SchemaRegistry>,
+): Promise<void> {
   // make a map of all environment IDs to environments for easy lookup below
   const environmentMap: Map<string, CCloudEnvironment> = new Map();
+  // XXX TODO needs loader API to do this.
   const cloudEnvironments: CCloudEnvironment[] = await getResourceManager().getCCloudEnvironments();
   cloudEnvironments.forEach((env) => {
     environmentMap.set(env.id, env);
   });
 
-  // sort the Schema Registries by (is the selected one, environment name)
-  cloudSchemaRegistries.sort((a, b) => {
-    if (selectedSchemaRegistry) {
-      if (a.id === selectedSchemaRegistry.id) {
-        return -1;
-      }
-      if (b.id === selectedSchemaRegistry.id) {
-        return 1;
-      }
-    }
+  // sort the Schema Registries by the env name
+  ccloudSchemaRegistries.sort((a, b) => {
     const aEnvName = environmentMap.get(a.environmentId)!.name;
     const bEnvName = environmentMap.get(b.environmentId)!.name;
     return aEnvName!.localeCompare(bEnvName!);
   });
-  logger.debug(`Found ${cloudEnvironmentIds.length} environments`);
 
-  if (cloudSchemaRegistries.length > 0) {
-    // show a top-level separator for CCloud Schema Registries (unlike the Kafka cluster quickpick,
-    // we don't need to split by CCloud environments since each Schema Registry is tied to a single
-    // environment)
-    quickPickItems.push({
-      kind: vscode.QuickPickItemKind.Separator,
-      label: `Confluent Cloud`,
-    });
-  }
-  cloudSchemaRegistries.forEach((schemaRegistry: CCloudSchemaRegistry) => {
+  // show a top-level separator for CCloud Schema Registries (unlike the Kafka cluster quickpick,
+  // we don't need to split by CCloud environments since each Schema Registry is tied to a single
+  // environment)
+  quickPickItems.push({
+    kind: vscode.QuickPickItemKind.Separator,
+    label: `Confluent Cloud`,
+  });
+
+  ccloudSchemaRegistries.forEach((schemaRegistry: CCloudSchemaRegistry) => {
     const environment: CCloudEnvironment | undefined = environmentMap.get(
       schemaRegistry.environmentId,
-    );
-    if (!environment) {
-      logger.warn(
-        `No environment found for Schema Registry envId "${schemaRegistry.environmentId}"`,
-      );
-      return;
-    }
+    )!;
     quickPickItems.push({
       label: environment.name,
       description: schemaRegistry.id,
@@ -163,14 +195,4 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
     });
     schemaRegistryNameMap.set(environment.name, schemaRegistry);
   });
-
-  // prompt the user to select a Schema Registry
-  const chosenSchemaRegistry: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
-    quickPickItems,
-    {
-      placeHolder: "Select a Schema Registry",
-      ignoreFocusOut: true,
-    },
-  );
-  return chosenSchemaRegistry ? schemaRegistryNameMap.get(chosenSchemaRegistry.label) : undefined;
 }
