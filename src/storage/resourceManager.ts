@@ -24,17 +24,17 @@ const logger = new Logger("storage.resourceManager");
 /** Type for storing {@link CCloudKafkaCluster}s in extension state, where the parent {@link CCloudEnvironment} ID is the key. */
 export type CCloudKafkaClustersByEnv = Map<string, CCloudKafkaCluster[]>;
 
-/** Type for storing {@link KafkaTopic}s in extension state, where the parent {@link KafkaCluster} ID is the key. */
-export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
-
 /**
- * Type for storing {@link CCloudSchemaRegistry}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
+ * Type for storing {@link SchemaRegistry}s in extension state, where the parent {@link CCloudEnvironment} ID is the key.
  * @remarks If we ever have to deal with situations where multiple Schema Registries are
  * available under a single parent resource, this type will either need to be updated or a new type
  * will need to be created. For now, we're leaning into the fact that CCloud environments only have
  * one Schema Registry apiece.
  */
 export type CCloudSchemaRegistryByEnv = Map<string, CCloudSchemaRegistry>;
+
+/** Type for storing {@link KafkaTopic}s in extension state, where the parent {@link KafkaCluster} ID is the key. */
+export type TopicsByKafkaCluster = Map<string, KafkaTopic[]>;
 
 /** Type for storing {@link Schema}s in extension state, where the parent {@link CCloudSchemaRegistry} ID is the key. */
 export type CCloudSchemaBySchemaRegistry = Map<string, Schema[]>;

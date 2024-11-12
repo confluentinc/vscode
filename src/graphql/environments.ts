@@ -20,6 +20,7 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
   let envGroups: CCloudEnvironmentGroup[] = [];
 
   const sidecar = await getSidecar();
+
   const query = graphql(`
     query environments($id: String!) {
       ccloudConnectionById(id: $id) {

@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
  * @returns nonempty string if user chose an existing subject name.
@@ -14,12 +13,8 @@ export async function schemaSubjectQuickPick(
   schemaRegistry: SchemaRegistry,
   onlyType: SchemaType | undefined = undefined,
 ): Promise<string | undefined> {
-  // ensure that the resources are loaded before trying to access them
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-  await loader.ensureCoarseResourcesLoaded();
-  await loader.ensureSchemasLoaded(schemaRegistry.id);
-
-  const schemas = await getResourceManager().getSchemasForRegistry(schemaRegistry.id);
+  const schemas = await loader.getSchemasForRegistry(schemaRegistry);
 
   let schemaSubjects: string[] | undefined;
 
@@ -52,10 +47,10 @@ export async function schemaSubjectQuickPick(
       label: newSchemaLabel,
       iconPath: new vscode.ThemeIcon("add"),
     },
-    // TODO (shoup): revise when supporting local schema registries
     {
       kind: vscode.QuickPickItemKind.Separator,
-      label: "Confluent Cloud",
+      // TODO: Perhaps also mix in the 'environment' name here, esp. if ccloud-y or in future direct connect?
+      label: loader.kind,
     },
   ];
 
