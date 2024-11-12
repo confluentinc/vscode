@@ -64,7 +64,6 @@ export abstract class ResourceLoader {
     if (connectionId === CCLOUD_CONNECTION_ID) {
       return CCloudResourceLoader.getInstance();
     } else if (connectionId === LOCAL_CONNECTION_ID) {
-      logger.info("returning LocalResourceLoader");
       return LocalResourceLoader.getInstance();
     }
 
@@ -234,10 +233,8 @@ export class CCloudResourceLoader extends ResourceLoader {
     try {
       const resourceManager = getResourceManager();
 
-      const sidecarHandle = await getSidecar();
-
       // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
-      const envGroups = await getEnvironments(sidecarHandle);
+      const envGroups = await getEnvironments();
 
       // Queue up to store the environments in the resource manager
       const environments = envGroups.map((envGroup) => envGroup.environment);

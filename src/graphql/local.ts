@@ -3,7 +3,7 @@ import { LOCAL_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
-import { getSidecar, SidecarHandle } from "../sidecar";
+import { getSidecar } from "../sidecar";
 import { createLocalConnection, getLocalConnection } from "../sidecar/connections";
 
 const logger = new Logger("graphql.local");
@@ -14,12 +14,8 @@ export interface LocalResourceGroup {
   // TODO: Add Flink compute pool as cluster type eventually
 }
 
-export async function getLocalResources(
-  sidecar: SidecarHandle | undefined = undefined,
-): Promise<LocalResourceGroup[]> {
-  if (!sidecar) {
-    sidecar = await getSidecar();
-  }
+export async function getLocalResources(): Promise<LocalResourceGroup[]> {
+  const sidecar = await getSidecar();
 
   let localResources: LocalResourceGroup[] = [];
 

@@ -3,7 +3,7 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
-import { getSidecar, SidecarHandle } from "../sidecar";
+import { getSidecar } from "../sidecar";
 
 export interface CCloudEnvironmentGroup {
   environment: CCloudEnvironment;
@@ -16,14 +16,10 @@ export interface CCloudEnvironmentGroup {
  * Fetches {@link CCloudEnvironmentGroup}s based on a connection ID, sorted by {@link CCloudEnvironment} name.
  * @remarks Nested `kafkaClusters` are also sorted by name.
  */
-export async function getEnvironments(
-  sidecar: SidecarHandle | undefined = undefined,
-): Promise<CCloudEnvironmentGroup[]> {
+export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
   let envGroups: CCloudEnvironmentGroup[] = [];
 
-  if (!sidecar) {
-    sidecar = await getSidecar();
-  }
+  const sidecar = await getSidecar();
 
   const query = graphql(`
     query environments($id: String!) {
