@@ -14,7 +14,6 @@ import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 import { schemaSubjectQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
 import { ResourceLoader } from "../storage/resourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
@@ -84,6 +83,10 @@ export async function uploadNewSchema(item: vscode.Uri) {
   // (Alas, the return result from binding the schema to the subject doesn't include the binding's version number, so
   //  we have to look it up separately.)
   const existingVersion = await getHighestRegisteredVersion(schemaSubjectsApi, subject);
+
+  logger.info(
+    `Uploading schema to subject "${subject}" in registry "${registry.id}". Existing version: ${existingVersion}`,
+  );
 
   /** ID given to the uploaded schema. May have been a preexisting id if this schema body had been registered previously. */
   let maybeNewId: number | undefined;
@@ -364,6 +367,7 @@ async function getHighestRegisteredVersion(
   // tell if we're uploading a new schema or a new version of an existing schema.
   let existingVersion: number | undefined;
   try {
+    // XXX Shoup: middlewares logging a long nasty if the schema is not found. Squelch?
     const existingVersions = await schemaSubjectsApi.listVersions({ subject: subject });
     if (existingVersions.length > 0) {
       // Ensure sorted
@@ -519,11 +523,11 @@ async function updateRegistryCacheAndFindNewSchema(
   boundSubject: string,
 ): Promise<Schema> {
   const loader = ResourceLoader.getInstance(registry.connectionId);
-  await loader.ensureSchemasLoaded(registry.id, true);
+
+  const allSchemas = await loader.getSchemasForRegistry(registry, true);
 
   // Find the schema in the list of schemas for this registry. We know that
   // it should be present in the cache because we have just refreshed the cache.
-  const allSchemas = await getResourceManager().getSchemasForRegistry(registry.id);
   const schema = allSchemas!.find((s) => s.id === `${newSchemaID}` && s.subject === boundSubject);
 
   return schema!;
