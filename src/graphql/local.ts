@@ -15,6 +15,8 @@ export interface LocalResourceGroup {
 }
 
 export async function getLocalResources(): Promise<LocalResourceGroup[]> {
+  const sidecar = await getSidecar();
+
   let localResources: LocalResourceGroup[] = [];
 
   // this is a bit odd, but we need to have a local "connection" to the sidecar before we can query
@@ -46,8 +48,6 @@ export async function getLocalResources(): Promise<LocalResourceGroup[]> {
       }
     }
   `);
-
-  const sidecar = await getSidecar();
 
   let response;
   try {
