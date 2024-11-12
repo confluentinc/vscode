@@ -26,7 +26,7 @@ import {
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
-import { ResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader, ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
@@ -193,7 +193,7 @@ export async function loadCCloudResources(
   cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
   if (hasCCloudAuthSession()) {
-    const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID);
+    const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID) as CCloudResourceLoader;
     // TODO: have this cached in the resource manager via the loader
     const currentOrg = await getCurrentOrganization();
 
@@ -316,7 +316,9 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
   // Ensure all of the loading is complete before referencing resource manager ccloud resources.
-  await ResourceLoader.getInstance(CCLOUD_CONNECTION_ID).ensureCoarseResourcesLoaded();
+  await (
+    ResourceLoader.getInstance(CCLOUD_CONNECTION_ID) as CCloudResourceLoader
+  ).ensureCoarseResourcesLoaded();
 
   const rm = getResourceManager();
   // Get the Kafka clusters for this environment. Will at worst be an empty array.

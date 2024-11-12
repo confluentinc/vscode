@@ -11,7 +11,7 @@ import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
-import { ResourceLoader, fetchSchemas } from "../storage/resourceLoader";
+import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.schemas");
@@ -112,30 +112,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
       // Schema items are leaf nodes, so we don't need to handle them here
     } else {
-      // TODO(james): integrate local schema caching into the loader.
-      // (James: Easier said that done, but is gonna happen.)
       if (this.schemaRegistry != null) {
-        let schemas: Schema[] = [];
-
-        if (this.ccloudEnvironment != null) {
-          const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
-          // ensure that the resources are loaded before trying to access them
-          await loader.ensureCoarseResourcesLoaded();
-          await loader.ensureSchemasLoaded(this.schemaRegistry.id, this.forceDeepRefresh);
-          if (this.forceDeepRefresh) {
-            // Just honored the user's request for a deep refresh.
-            this.forceDeepRefresh = false;
-          }
-          schemas =
-            (await getResourceManager().getSchemasForRegistry(this.schemaRegistry.id)) ?? [];
-        } else {
-          // fetching local Schema Registry schemas, so we don't have an environmentId to use
-          try {
-            schemas = await fetchSchemas(this.schemaRegistry.id, this.schemaRegistry.connectionId);
-            await getResourceManager().setSchemasForRegistry(this.schemaRegistry.id, schemas);
-          } catch (error) {
-            logger.error("Failed to get schemas:", { error });
-          }
+        const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+        const schemas =
+          (await loader.getSchemasForRegistry(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
+        if (this.forceDeepRefresh) {
+          // Just honored the user's request for a deep refresh.
+          this.forceDeepRefresh = false;
         }
         // return the hierarchy of "Key/Value Schemas -> Subject -> Version" items or return empty array
         return schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
