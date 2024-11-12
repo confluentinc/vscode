@@ -13,7 +13,7 @@ import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/s
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { ResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader, ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -199,12 +199,14 @@ export async function getTopicsForCluster(
 
   const loader = ResourceLoader.getInstance(cluster.connectionId);
 
-  // Honor forceRefresh, in case they, say, _just_ created the schema registry.
-  await loader.ensureCoarseResourcesLoaded(forceRefresh);
+  if (loader instanceof CCloudResourceLoader) {
+    // Honor forceRefresh, in case they, say, _just_ created the schema registry.
+    await (loader as CCloudResourceLoader).ensureCoarseResourcesLoaded(forceRefresh);
+  }
 
   const schemas: Schema[] = [];
 
-  // XXX JLR improve this via new loader method that returns schema registry
+  // XXX TODO JLR improve this via new loader method that returns schema registry
   // given a kafka cluster reference.
   let schemaRegistry: SchemaRegistry | null = null;
   if (cluster instanceof CCloudKafkaCluster) {

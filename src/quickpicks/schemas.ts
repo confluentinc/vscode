@@ -47,10 +47,10 @@ export async function schemaSubjectQuickPick(
       label: newSchemaLabel,
       iconPath: new vscode.ThemeIcon("add"),
     },
-    // TODO (shoup): revise when supporting local schema registries
     {
       kind: vscode.QuickPickItemKind.Separator,
-      label: "Confluent Cloud",
+      // TODO: Perhaps also mix in the 'environment' name here, esp. if ccloud-y or in future direct connect?
+      label: loader.kind,
     },
   ];
 
