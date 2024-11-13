@@ -8,7 +8,7 @@ import {
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_SPEC, LOCAL_CONNECTION_SPEC } from "../constants";
-import { ContextValues, setContextValue } from "../context";
+import { ContextValues, setContextValue } from "../context/values";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { getResourceManager } from "../storage/resourceManager";
 import {

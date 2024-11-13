@@ -1,7 +1,7 @@
 import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ContextValues, setContextValue } from "../context";
+import { ContextValues, setContextValue } from "../context/values";
 import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";

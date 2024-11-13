@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { getExtensionContext } from "../context";
+import { getExtensionContext } from "../context/extension";
 import { ExtensionContextNotSetError } from "../errors";
 
 export class StorageManager {
