@@ -1,14 +1,9 @@
-import { type ExtensionContext, commands } from "vscode";
+// This is a local cache of the context values since there is no `getContext` command exposed by the
 
-let context: ExtensionContext;
+import { commands } from "vscode";
 
-export function setExtensionContext(value: ExtensionContext) {
-  context = value;
-}
-
-export function getExtensionContext(): ExtensionContext {
-  return context;
-}
+// VS Code API.
+const contextValues: Record<string, any> = {};
 
 /**
  * Sets the context value and updates the VS Code UI.
@@ -64,7 +59,3 @@ export enum ContextValues {
   /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
 }
-
-// This is a local cache of the context values since there is no `getContext` command exposed by the
-// VS Code API.
-const contextValues: Record<string, any> = {};
