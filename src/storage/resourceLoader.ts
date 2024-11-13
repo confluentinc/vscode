@@ -85,6 +85,15 @@ export abstract class ResourceLoader {
     forceDeepRefresh?: boolean,
   ): Promise<KafkaTopic[]>;
 
+  /**
+   * Return the appropriate schema registry to use, if any, for the given cluster.
+   * @param cluster The {@link KafkaCluster} to get the schema registry for.
+   * @returns The {@link SchemaRegistry} for the cluster, if any.
+   */
+  public abstract getSchemaRegistryForCluster(
+    cluster: KafkaCluster,
+  ): Promise<SchemaRegistry | undefined>;
+
   // Schema registry methods
 
   /**
@@ -92,6 +101,24 @@ export abstract class ResourceLoader {
    * to use if need be if provided.
    */
   public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
+
+  /**
+   * Get the possible schemas for a cluster's schema registry.
+   *
+   * @param cluster The {@link KafkaCluster} to get the schemas for. Will return empty array if there is
+   * no schema registry for the cluster, or if the schema registry has no schemas.
+   */
+  public async getSchemasForCluster(
+    cluster: KafkaCluster,
+    forceDeepRefresh: boolean = false,
+  ): Promise<Schema[]> {
+    const schemaRegistry = await this.getSchemaRegistryForCluster(cluster);
+    if (!schemaRegistry) {
+      return [];
+    }
+
+    return await this.getSchemasForRegistry(schemaRegistry, forceDeepRefresh);
+  }
 
   // Schema registry methods.
 
@@ -322,6 +349,14 @@ export class CCloudResourceLoader extends ResourceLoader {
     }
   }
 
+  /**
+   * Get all of the known schema registries in the accessible CCloud environments.
+   *
+   * Ensures that the coarse resources are loaded before returning the schema registries from
+   * the resource manager cache.
+   *
+   * If there is no CCloud auth session, returns an empty array.
+   **/
   public async getSchemaRegistries(): Promise<CCloudSchemaRegistry[]> {
     if (!hasCCloudAuthSession()) {
       return [];
@@ -342,11 +377,12 @@ export class CCloudResourceLoader extends ResourceLoader {
     cluster: CCloudKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<KafkaTopic[]> {
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-
     if (!cluster.isCCloud) {
+      // Programming error.
       throw new Error(`Cluster ${cluster.id} is not a CCloud cluster.`);
     }
+
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
 
     const resourceManager = getResourceManager();
     let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
@@ -358,21 +394,12 @@ export class CCloudResourceLoader extends ResourceLoader {
 
     // Do a deep fetch, cache the results, then return them.
 
-    // Need both the schemas and the topics, then correlate them. Can fetch the topics and schemas concurrently, though!
-
-    // lambda to take care of the two steps needed for getting schemas.
-    const getSchemas = async () => {
-      const schemaRegistry = await this.getSchemaRegistryForEnvironment(cluster.environmentId);
-      if (!schemaRegistry) {
-        return [];
-      }
-
-      return await this.getSchemasForRegistry(schemaRegistry, forceDeepRefresh);
-    };
-
-    // OK, get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
+    // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
     // but the topics are always a deep fetch.
-    const [schemas, responseTopics] = await Promise.all([getSchemas(), fetchTopics(cluster)]);
+    const [schemas, responseTopics] = await Promise.all([
+      this.getSchemasForCluster(cluster, forceDeepRefresh),
+      fetchTopics(cluster),
+    ]);
 
     // now correlate the topics with the schemas.
     const topics = correlateTopicsWithSchemas(
@@ -387,12 +414,12 @@ export class CCloudResourceLoader extends ResourceLoader {
     return topics;
   }
 
-  private async getSchemaRegistryForEnvironment(
-    environmentId: string,
+  public async getSchemaRegistryForCluster(
+    cluster: CCloudKafkaCluster,
   ): Promise<CCloudSchemaRegistry | undefined> {
     const schemaRegistries = await this.getSchemaRegistries();
     return schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
+      (schemaRegistry) => schemaRegistry.environmentId === cluster.environmentId,
     );
   }
 
@@ -502,23 +529,20 @@ class LocalResourceLoader extends ResourceLoader {
     // set up to do the schema and topic fetch concurrently.
 
     // A quick lambda to fetch the schemas or return empty [] if no schema registry.
-    const getSchemas = async () => {
-      const schemaRegistry = await this.getSchemaRegistry();
-
-      if (!schemaRegistry) {
-        return [];
-      }
-
-      return await this.getSchemasForRegistry(schemaRegistry);
-    };
 
     // Deep fetch the schemas and the topics concurrently.
-    const [schemas, responseTopics] = await Promise.all([getSchemas(), fetchTopics(cluster)]);
+    const [schemas, responseTopics] = await Promise.all([
+      this.getSchemasForCluster(cluster),
+      fetchTopics(cluster),
+    ]);
 
     return correlateTopicsWithSchemas(cluster, responseTopics as TopicData[], schemas as Schema[]);
   }
 
-  private async getSchemaRegistry(): Promise<LocalSchemaRegistry | undefined> {
+  public async getSchemaRegistryForCluster(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    cluster: LocalKafkaCluster,
+  ): Promise<LocalSchemaRegistry | undefined> {
     const allRegistries = await this.getSchemaRegistries();
     if (allRegistries.length === 0) {
       return undefined;
