@@ -1,6 +1,4 @@
 import * as vscode from "vscode";
-import { toKafkaTopicOperations } from "../authz/types";
-import { ResponseError, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { ContextValues, getExtensionContext, setContextValue } from "../context";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
@@ -11,8 +9,7 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
-import { getSidecar } from "../sidecar";
-import { CCloudResourceLoader, ResourceLoader } from "../storage/resourceLoader";
+import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
@@ -194,91 +191,19 @@ export async function getTopicsForCluster(
   cluster: KafkaCluster,
   forceRefresh: boolean = false,
 ): Promise<KafkaTopic[]> {
-  // XXX JLR respell a lot of this to use the ResourceLoader API only,
-  // https://github.com/confluentinc/vscode/issues/570
-
   const loader = ResourceLoader.getInstance(cluster.connectionId);
 
-  if (loader instanceof CCloudResourceLoader) {
-    // Honor forceRefresh, in case they, say, _just_ created the schema registry.
-    await (loader as CCloudResourceLoader).ensureCoarseResourcesLoaded(forceRefresh);
-  }
-
-  // Otherwise make a deep fetch, cache in resource manager, and return.
-  let environmentId: string | null = null;
-  let schemaRegistry: SchemaRegistry | undefined;
-
-  const allRegistries = await loader.getSchemaRegistries();
-  if (cluster.isLocal && allRegistries.length === 1) {
-    // if local topic, then would be the only registry.
-    schemaRegistry = allRegistries[0];
-  } else if (cluster.isCCloud) {
-    environmentId = (cluster as CCloudKafkaCluster).environmentId;
-    // CCloud topic, find the one associated with the topic's environment
-    schemaRegistry = allRegistries.find(
-      (sr) => (sr as CCloudSchemaRegistry).environmentId === environmentId,
-    );
-  }
-
-  let schemas: Schema[] = [];
-  if (schemaRegistry) {
-    schemas = await loader.getSchemasForRegistry(schemaRegistry, forceRefresh);
-  }
-
-  // TODO(james): implement topic loading via ResourceLoader
-  const resourceManager = getResourceManager();
-  let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
-  if (cachedTopics !== undefined && !forceRefresh) {
-    // Cache hit.
-    logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
-    return cachedTopics;
-  }
-
-  const sidecar = await getSidecar();
-  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  let topicsResp: TopicDataList;
-
   try {
-    topicsResp = await client.listKafkaTopics({
-      cluster_id: cluster.id,
-      includeAuthorizedOperations: true,
-    });
-  } catch (error) {
-    if (error instanceof ResponseError) {
-      const body = await error.response.json();
-
+    return loader.getTopicsForCluster(cluster, forceRefresh);
+  } catch (err) {
+    logger.error("Error fetching topics for cluster", cluster, err);
+    if (err instanceof TopicFetchError) {
       vscode.window.showErrorMessage(
-        `Failed to list topics for cluster "${cluster.name}": ${JSON.stringify(body)}`,
+        `Failed to list topics for cluster "${cluster.name}": ${err.message}`,
       );
-    } else {
-      logger.error("Failed to list Kafka topics: ", error);
     }
-    // short circuit return, do NOT cache result on error. Ensure we try again on next refresh.
     return [];
   }
-
-  // Promote each from-response TopicData representation in topicsResp to an internal KafkaTopic object
-  const topics: KafkaTopic[] = topicsResp.data.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
-      schema.matchesTopicName(topic.topic_name),
-    );
-
-    return KafkaTopic.create({
-      name: topic.topic_name,
-      is_internal: topic.is_internal,
-      replication_factor: topic.replication_factor,
-      partition_count: topic.partitions_count,
-      partitions: topic.partitions,
-      configs: topic.configs,
-      clusterId: cluster.id,
-      environmentId: environmentId,
-      hasSchema: hasMatchingSchema,
-      operations: toKafkaTopicOperations(topic.authorized_operations!),
-    });
-  });
-
-  logger.debug(`Deep fetched ${topics.length} topics for cluster ${cluster.id}`);
-  return topics;
 }
 
 /**
