@@ -89,6 +89,10 @@ export function defaultRequestInit(): RequestInit {
 /**
  * Check if Docker is available by attempting to ping the API.
  * @see https://docs.docker.com/reference/api/engine/version/v1.47/#tag/System/operation/SystemPing
+ *
+ * If `showNotification` is true, a notification will be shown to the user with hints on how to
+ * resolve the issue. Callers should **not** set this to `true` if the function is called from a
+ * background process or a non-interactive command.
  */
 export async function isDockerAvailable(showNotification: boolean = false): Promise<boolean> {
   const client = new SystemApi();
@@ -98,7 +102,7 @@ export async function isDockerAvailable(showNotification: boolean = false): Prom
     logger.debug("docker ping response:", resp);
     return true;
   } catch (error) {
-    logResponseError(error, "docker ping", {});
+    logResponseError(error, "docker ping");
     if (showNotification) {
       await showDockerUnavailableErrorNotification(error);
     }
