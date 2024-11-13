@@ -251,7 +251,6 @@ export abstract class LocalResourceWorkflow {
       dockerImage: this.imageRepoTag,
       extensionUserFlow: "Local Resource Management",
       localResourceKind: this.resourceKind,
-      localResourceWorkflow: this.constructor.name,
       ...properties,
     });
   }
