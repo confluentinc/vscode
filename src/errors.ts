@@ -26,7 +26,7 @@ type ResponseError =
 export async function logResponseError(
   e: unknown,
   message: string,
-  extra: Record<string, string>,
+  extra: Record<string, string> = {},
   sendTelemetry: boolean = false,
 ): Promise<void> {
   let errorMessage: string = "";
