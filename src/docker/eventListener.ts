@@ -236,7 +236,15 @@ export class EventListener {
         break;
       }
 
-      yield valueString;
+      // we may get multiple events in a single string, so split them up and handle each one
+      const valueStrings = valueString.trim().split("\n");
+      for (const smallerValueString of valueStrings) {
+        if (!smallerValueString) {
+          // skip empty strings
+          continue;
+        }
+        yield smallerValueString;
+      }
     }
   }
 
