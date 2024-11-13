@@ -10,7 +10,7 @@ import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema, SchemaType } from "../models/schema";
 import {
   CCloudSchemaRegistry,
@@ -335,7 +335,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   }
 
   /**
-   * Return the topics present in the cluster. Will also correlate with schemas
+   * Return the topics present in the {@link CCloudKafkaCluster}. Will also correlate with schemas
    * in the schema registry for the cluster, if any.
    */
   public async getTopicsForCluster(
@@ -375,7 +375,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     const [schemas, responseTopics] = await Promise.all([getSchemas(), fetchTopics(cluster)]);
 
     // now correlate the topics with the schemas.
-    const topics = correlateTopicsWtihSchemas(
+    const topics = correlateTopicsWithSchemas(
       cluster,
       responseTopics as TopicData[],
       schemas as Schema[],
@@ -489,10 +489,16 @@ class LocalResourceLoader extends ResourceLoader {
   }
 
   /**
-   * Return the topics present in the cluster. Will also correlate with schemas
+   * Return the topics present in the {@link LocalKafkaCluster}. Will also correlate with schemas
    * in the schema registry for the cluster, if any.
    */
-  public async getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[]> {
+  public async getTopicsForCluster(cluster: LocalKafkaCluster): Promise<KafkaTopic[]> {
+    if (!cluster.isLocal) {
+      throw new Error(
+        `Cluster ${cluster.id} is not a local cluster, yet is passed to LocalResourceLoader.`,
+      );
+    }
+
     // set up to do the schema and topic fetch concurrently.
 
     // A quick lambda to fetch the schemas or return empty [] if no schema registry.
@@ -509,7 +515,7 @@ class LocalResourceLoader extends ResourceLoader {
     // Deep fetch the schemas and the topics concurrently.
     const [schemas, responseTopics] = await Promise.all([getSchemas(), fetchTopics(cluster)]);
 
-    return correlateTopicsWtihSchemas(cluster, responseTopics as TopicData[], schemas as Schema[]);
+    return correlateTopicsWithSchemas(cluster, responseTopics as TopicData[], schemas as Schema[]);
   }
 
   private async getSchemaRegistry(): Promise<LocalSchemaRegistry | undefined> {
@@ -594,9 +600,8 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 /**
  * Promote each from-response TopicData representation in topicsResp to an model KafkaTopic object,
  * including whether or not it has a matching schema.
- * @param schemas
  */
-export function correlateTopicsWtihSchemas(
+export function correlateTopicsWithSchemas(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
   schemas: Schema[],
