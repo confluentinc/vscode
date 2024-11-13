@@ -13,11 +13,11 @@
     <main class="container">
       <h1>Configure Topic</h1>
       <p>Some helpful text that will encourage users to properly configure the topic. Close this tab to cancel changes.</p>
-      <template data-if="this.errorMessage()">
-        <div class="info error" data-text="this.errorMessage()"></div>
+      <template data-if="this.errorOnSubmit()">
+        <p class="error" data-text="this.errorOnSubmit()"></p>
       </template>
       <template data-if="this.success()">
-        <div class="info success">Data updated successfully. You may close this tab or make additional changes.</div>
+        <p class="success">Data updated successfully. You may close this tab or make additional changes.</p>
       </template>
       <h2>Topic: <span data-text="this.topicName()"></span></h2>
       <form data-on-submit="this.handleSubmit(event)">
@@ -94,7 +94,7 @@
             <span class="description">The maximum message size that can be appended to this topic, in bytes.</span>
           </div>
         </div>
-        <input class="button" type="submit" value="Save" /><input class="button secondary" type="button" value="Clear changes (FIXME)" />
+        <input class="button primary" type="submit" value="Save changes" data-attr-disabled="!this.hasChanges() || this.validationError()" /><input class="button secondary" type="button" value="Reset changes" data-on-click="this.resetChanges()" data-attr-disabled="!this.hasChanges()"/>
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
@@ -146,7 +146,9 @@
       .input-container > * > * {
         width: 100%;
       }
-  
+      input:disabled {
+        cursor: not-allowed;
+      }
       input:not([type="submit"]),
       .dropdown > * {
         width: 250px;
@@ -169,6 +171,7 @@
         color: var(--vscode-descriptionForeground);
         font-weight: 700;
         font-style: italic;
+        font-size: small;
       }
       .success {
         color: var(--vscode-statusBar-foreground);

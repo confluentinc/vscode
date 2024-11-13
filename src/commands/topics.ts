@@ -111,7 +111,6 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       return { success: false, message: formError };
     }
   }
-  // let submitSuccess: null | { success: boolean; message: string } = null; // { success: true, message: "Success" };
 
   // Message processing to communicate with the webview
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {

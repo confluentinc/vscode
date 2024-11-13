@@ -2,7 +2,6 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-// import { type TopicConfigDataList } from "../clients/kafkaRest";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: topics.ts) */
@@ -17,6 +16,7 @@ class ConfigFormViewModel extends ViewModel {
   topicName = this.resolve(async () => {
     return await post("GetTopicName", {});
   }, "");
+  // Individual form fields that keep up-to-date with user changes
   cleanupPolicy = this.resolve(async () => {
     return await post("GetCleanupPolicy", {});
   }, ""); // cc default "delete"
@@ -33,7 +33,25 @@ class ConfigFormViewModel extends ViewModel {
     return await post("GetMaxMessageBytes", {});
   }, ""); //cc defaultValue: 1 * 1000, FIXME text field but number
 
-  errorMessage = this.signal("");
+  // Initial values of form fields in POJO, used to check if changes have been made & restore on clear action
+  // FIXME still wrong since it doesnt update on clear
+  initialValues = {
+    cleanupPolicy: this.cleanupPolicy(),
+    retentionSize: this.retentionSize(),
+    retentionMs: this.retentionMs(),
+    maxMessageBytes: this.maxMessageBytes(),
+  };
+
+  hasChanges = this.derive(() => {
+    return (
+      this.cleanupPolicy() !== this.initialValues.cleanupPolicy ||
+      this.retentionSize() !== this.initialValues.retentionSize ||
+      this.retentionMs() !== this.initialValues.retentionMs ||
+      this.maxMessageBytes() !== this.initialValues.maxMessageBytes
+    );
+  });
+  validationError = this.signal("");
+  errorOnSubmit = this.signal("");
   success = this.signal(false);
 
   /** Validate changes one input at a time on blur or ui change
@@ -52,35 +70,28 @@ class ConfigFormViewModel extends ViewModel {
     if (res.success) {
       console.log("success", res);
       this.updateValue(input.name, input.value);
+      this.validationError("");
+      const errorElement = input.previousElementSibling;
+      if (errorElement && errorElement.classList.contains("error")) {
+        errorElement.remove();
+      }
     } else {
-      this.errorMessage(res.message ?? "Unknown error occurred");
-      // this.revertValue(input.name); // FIXME
+      this.validationError(res.message ?? "Unknown error occurred");
       input.classList.add("error");
+      const errorElement = document.createElement("div");
+      errorElement.className = "info error";
+      errorElement.textContent = this.validationError();
+      input.insertAdjacentElement("beforebegin", errorElement);
       console.log("error", res);
     }
   }
 
-  revertValue(name: string) {
-    // FIXME does this even work?
-    const previousValue = this.previousValues[name];
-    if (previousValue !== undefined) {
-      switch (name) {
-        case "cleanup.policy":
-          this.cleanupPolicy(previousValue);
-          break;
-        case "retention.bytes":
-          this.retentionSize(previousValue);
-          break;
-        case "retention.ms":
-          this.retentionMs(previousValue);
-          break;
-        case "max.message.bytes":
-          this.maxMessageBytes(previousValue);
-          break;
-        default:
-          console.warn(`Unhandled key: ${name}`);
-      }
-    }
+  async resetChanges() {
+    this.validationError("");
+    this.cleanupPolicy(await post("GetCleanupPolicy", {}));
+    this.retentionSize(await post("GetRetentionSize", {}));
+    this.retentionMs(await post("GetRetentionMs", {}));
+    this.maxMessageBytes(await post("GetMaxMessageBytes", {}));
   }
 
   updateValue(name: string, value: string) {
@@ -98,7 +109,7 @@ class ConfigFormViewModel extends ViewModel {
         this.maxMessageBytes(value);
         break;
       default:
-        console.warn(`Unhandled key: ${name}`); // FIXME
+        console.warn(`Unhandled key: ${name}`);
     }
   }
 
@@ -110,7 +121,7 @@ class ConfigFormViewModel extends ViewModel {
   async handleSubmit(event: Event) {
     event.preventDefault();
     this.success(false);
-    this.errorMessage("");
+    this.errorOnSubmit("");
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
@@ -118,7 +129,7 @@ class ConfigFormViewModel extends ViewModel {
     const result = await post("Submit", data);
     if (result !== undefined) {
       if (result.success) this.success(true);
-      else this.errorMessage(result.message ?? "Unknown error occurred");
+      else this.errorOnSubmit(result.message ?? "Unknown error occurred");
     }
   }
 }
@@ -132,7 +143,6 @@ export function post(
   type: "ValidateConfigValue",
   body: { [key: string]: unknown },
 ): Promise<{ success: boolean; message: string | null }>;
-// export function post(type: "GetConfig", body: any): Promise<TopicConfigDataList | null>;
 export function post(
   type: "Submit",
   body: { [key: string]: unknown },
