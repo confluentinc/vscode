@@ -1,7 +1,8 @@
 import { normalize } from "path";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
-import { workspace, WorkspaceConfiguration } from "vscode";
+import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
+import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
@@ -88,26 +89,72 @@ export function defaultRequestInit(): RequestInit {
 /**
  * Check if Docker is available by attempting to ping the API.
  * @see https://docs.docker.com/reference/api/engine/version/v1.47/#tag/System/operation/SystemPing
+ *
+ * If `showNotification` is true, a notification will be shown to the user with hints on how to
+ * resolve the issue. Callers should **not** set this to `true` if the function is called from a
+ * background process or a non-interactive command.
  */
-export async function isDockerAvailable(): Promise<boolean> {
+export async function isDockerAvailable(showNotification: boolean = false): Promise<boolean> {
   const client = new SystemApi();
   const init: RequestInit = defaultRequestInit();
   try {
-    const resp = await client.systemPing(init);
+    const resp: string = await client.systemPing(init);
     logger.debug("docker ping response:", resp);
     return true;
   } catch (error) {
-    if (error instanceof ResponseError) {
-      logger.error("docker ping error response:", {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: await error.response.clone().text(),
-      });
-    } else if (error instanceof Error) {
-      logger.debug("can't ping docker:", {
-        error: error.message,
-      });
+    logResponseError(error, "docker ping");
+    if (showNotification) {
+      await showDockerUnavailableErrorNotification(error);
     }
   }
   return false;
+}
+
+/** Show a notification after getting an error while attempting to ping the Docker engine API. */
+export async function showDockerUnavailableErrorNotification(error: unknown): Promise<void> {
+  let notificationMessage: string = "";
+
+  // buttons to show in the notification; if left as empty strings, they won't appear at all
+  let primaryButton: string = "";
+  let secondaryButton: string = "";
+
+  if (error instanceof ResponseError) {
+    let errorMessage: string;
+    try {
+      // e.g. {"message":"client version 1.47 is too new. Maximum supported API version is 1.43"}
+      errorMessage = (await error.response.clone().json()).message;
+    } catch {
+      errorMessage = await error.response.clone().text();
+    }
+    primaryButton = "Show Logs";
+    secondaryButton = "File Issue";
+    notificationMessage = `Error ${error.response.status}: ${errorMessage}`;
+  } else {
+    // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
+    primaryButton = "Install Docker";
+    secondaryButton = "Show Logs";
+    notificationMessage = "Please install Docker and try again once it's running.";
+  }
+
+  window
+    .showErrorMessage(
+      "Docker is not available: " + notificationMessage,
+      primaryButton,
+      secondaryButton,
+    )
+    .then((selection) => {
+      switch (selection) {
+        case "Install Docker": {
+          const uri = Uri.parse("https://docs.docker.com/engine/install/");
+          env.openExternal(uri);
+          break;
+        }
+        case "Show Logs":
+          commands.executeCommand("confluent.showOutputChannel");
+          break;
+        case "File Issue":
+          commands.executeCommand("confluent.support.issue");
+          break;
+      }
+    });
 }
