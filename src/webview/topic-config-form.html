@@ -12,12 +12,12 @@
   <body>
     <main class="container">
       <h1>Configure Topic</h1>
-      <p>Some helpful text that will encourage users to properly configure the topic.</p>
+      <p>Some helpful text that will encourage users to properly configure the topic. Close this tab to cancel changes.</p>
       <template data-if="this.errorMessage()">
         <div class="info error" data-text="this.errorMessage()"></div>
       </template>
       <template data-if="this.success()">
-        <div class="info success">Data updated successfully. You may close this tab.</div>
+        <div class="info success">Data updated successfully. You may close this tab or make additional changes.</div>
       </template>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
@@ -93,7 +93,7 @@
             <span class="description">The maximum message size that can be appended to this topic, in bytes.</span>
           </div>
         </div>
-        <input class="button" type="submit" value="Save" />
+        <input class="button" type="submit" value="Save" /><input class="button secondary" type="button" value="Clear changes (FIXME)" />
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
