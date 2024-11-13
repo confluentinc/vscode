@@ -2,18 +2,22 @@ import * as vscode from "vscode";
 
 import { Require } from "dataclass";
 import { Disposable } from "vscode";
+import { toKafkaTopicOperations } from "../authz/types";
+import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
+import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema, SchemaType } from "../models/schema";
 import {
   CCloudSchemaRegistry,
   LocalSchemaRegistry,
   SchemaRegistry,
 } from "../models/schemaRegistry";
+import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { getResourceManager } from "./resourceManager";
@@ -69,6 +73,17 @@ export abstract class ResourceLoader {
 
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
+
+  // Kafka cluster methods
+
+  /**
+   * Return the topics present in the cluster. Will also correlate with schemas
+   * in the schema registry for the cluster, if any.
+   */
+  public abstract getTopicsForCluster(
+    cluster: KafkaCluster,
+    forceDeepRefresh?: boolean,
+  ): Promise<KafkaTopic[]>;
 
   // Schema registry methods
 
@@ -319,6 +334,68 @@ export class CCloudResourceLoader extends ResourceLoader {
     return Array.from(registryByEnvId.values());
   }
 
+  /**
+   * Return the topics present in the {@link CCloudKafkaCluster}. Will also correlate with schemas
+   * in the schema registry for the cluster, if any.
+   */
+  public async getTopicsForCluster(
+    cluster: CCloudKafkaCluster,
+    forceDeepRefresh: boolean = false,
+  ): Promise<KafkaTopic[]> {
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+
+    if (!cluster.isCCloud) {
+      throw new Error(`Cluster ${cluster.id} is not a CCloud cluster.`);
+    }
+
+    const resourceManager = getResourceManager();
+    let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
+    if (cachedTopics !== undefined && !forceDeepRefresh) {
+      // Cache hit.
+      logger.info(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
+      return cachedTopics;
+    }
+
+    // Do a deep fetch, cache the results, then return them.
+
+    // Need both the schemas and the topics, then correlate them. Can fetch the topics and schemas concurrently, though!
+
+    // lambda to take care of the two steps needed for getting schemas.
+    const getSchemas = async () => {
+      const schemaRegistry = await this.getSchemaRegistryForEnvironment(cluster.environmentId);
+      if (!schemaRegistry) {
+        return [];
+      }
+
+      return await this.getSchemasForRegistry(schemaRegistry, forceDeepRefresh);
+    };
+
+    // OK, get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
+    // but the topics are always a deep fetch.
+    const [schemas, responseTopics] = await Promise.all([getSchemas(), fetchTopics(cluster)]);
+
+    // now correlate the topics with the schemas.
+    const topics = correlateTopicsWithSchemas(
+      cluster,
+      responseTopics as TopicData[],
+      schemas as Schema[],
+    );
+
+    // Cache the correlated topics for this cluster.
+    await resourceManager.setTopicsForCluster(cluster, topics);
+
+    return topics;
+  }
+
+  private async getSchemaRegistryForEnvironment(
+    environmentId: string,
+  ): Promise<CCloudSchemaRegistry | undefined> {
+    const schemaRegistries = await this.getSchemaRegistries();
+    return schemaRegistries.find(
+      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
+    );
+  }
+
   public async getSchemasForRegistry(
     schemaRegistry: SchemaRegistry,
     forceDeepRefresh?: boolean,
@@ -411,6 +488,52 @@ class LocalResourceLoader extends ResourceLoader {
     super();
   }
 
+  /**
+   * Return the topics present in the {@link LocalKafkaCluster}. Will also correlate with schemas
+   * in the schema registry for the cluster, if any.
+   */
+  public async getTopicsForCluster(cluster: LocalKafkaCluster): Promise<KafkaTopic[]> {
+    if (!cluster.isLocal) {
+      throw new Error(
+        `Cluster ${cluster.id} is not a local cluster, yet is passed to LocalResourceLoader.`,
+      );
+    }
+
+    // set up to do the schema and topic fetch concurrently.
+
+    // A quick lambda to fetch the schemas or return empty [] if no schema registry.
+    const getSchemas = async () => {
+      const schemaRegistry = await this.getSchemaRegistry();
+
+      if (!schemaRegistry) {
+        return [];
+      }
+
+      return await this.getSchemasForRegistry(schemaRegistry);
+    };
+
+    // Deep fetch the schemas and the topics concurrently.
+    const [schemas, responseTopics] = await Promise.all([getSchemas(), fetchTopics(cluster)]);
+
+    return correlateTopicsWithSchemas(cluster, responseTopics as TopicData[], schemas as Schema[]);
+  }
+
+  private async getSchemaRegistry(): Promise<LocalSchemaRegistry | undefined> {
+    const allRegistries = await this.getSchemaRegistries();
+    if (allRegistries.length === 0) {
+      return undefined;
+    } else {
+      // local environment should only have at most one schema registry
+      if (allRegistries.length > 1) {
+        logger.warn(
+          "Local environment has more than one schema registry! Using first one",
+          allRegistries.length,
+        );
+      }
+      return allRegistries[0];
+    }
+  }
+
   public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {
     const localGroups = await getLocalResources();
 
@@ -438,6 +561,71 @@ class LocalResourceLoader extends ResourceLoader {
   public purgeSchemas(schemaRegistryId: string): void {
     // no-op
   }
+}
+
+export class TopicFetchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TopicFetchError";
+  }
+}
+
+/**
+ * Deep read and return of all topics in a Kafka cluster.
+ */
+export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
+  const sidecar = await getSidecar();
+  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
+  let topicsResp: TopicDataList;
+
+  try {
+    topicsResp = await client.listKafkaTopics({
+      cluster_id: cluster.id,
+      includeAuthorizedOperations: true,
+    });
+  } catch (error) {
+    if (error instanceof ResponseError) {
+      // XXX todo improve this, raise a more specific error type.
+      const body = await error.response.json();
+
+      throw new TopicFetchError(JSON.stringify(body));
+    } else {
+      throw new TopicFetchError(JSON.stringify(error));
+    }
+  }
+
+  return topicsResp.data;
+}
+
+/**
+ * Promote each from-response TopicData representation in topicsResp to an model KafkaTopic object,
+ * including whether or not it has a matching schema.
+ */
+export function correlateTopicsWithSchemas(
+  cluster: KafkaCluster,
+  topicsRespTopics: TopicData[],
+  schemas: Schema[],
+): KafkaTopic[] {
+  const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
+    const hasMatchingSchema: boolean = schemas.some((schema) =>
+      schema.matchesTopicName(topic.topic_name),
+    );
+
+    return KafkaTopic.create({
+      name: topic.topic_name,
+      is_internal: topic.is_internal,
+      replication_factor: topic.replication_factor,
+      partition_count: topic.partitions_count,
+      partitions: topic.partitions,
+      configs: topic.configs,
+      clusterId: cluster.id,
+      environmentId: cluster instanceof CCloudKafkaCluster ? cluster.environmentId : undefined,
+      hasSchema: hasMatchingSchema,
+      operations: toKafkaTopicOperations(topic.authorized_operations!),
+    });
+  });
+
+  return topics;
 }
 
 /**
