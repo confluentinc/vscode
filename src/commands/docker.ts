@@ -82,7 +82,6 @@ export async function runWorkflowWithProgress(
         token.onCancellationRequested(() => {
           logger.debug("cancellation requested, exiting workflow early", {
             start,
-            workflow: workflow.constructor.name,
             resourceKind: workflow.resourceKind,
           });
           workflow.sendTelemetryEvent("Notification Button Clicked", {
@@ -93,7 +92,7 @@ export async function runWorkflowWithProgress(
           // early returns handled within each workflow depending on how far it got
         });
 
-        logger.debug(`running ${workflow.constructor.name} workflow`, { start });
+        logger.debug(`running ${workflow.resourceKind} workflow`, { start });
         workflow.sendTelemetryEvent("Workflow Initiated", {
           start,
         });
@@ -103,12 +102,12 @@ export async function runWorkflowWithProgress(
           } else {
             await workflow.stop(token, progress);
           }
-          logger.debug(`finished ${workflow.constructor.name} workflow`, { start });
+          logger.debug(`finished ${workflow.resourceKind} workflow`, { start });
           workflow.sendTelemetryEvent("Workflow Finished", {
             start,
           });
         } catch (error) {
-          logger.error(`error running ${workflow.constructor.name} workflow`, error);
+          logger.error(`error running ${workflow.resourceKind} workflow`, error);
           if (error instanceof Error) {
             workflow.sendTelemetryEvent("Workflow Errored", {
               start,
@@ -118,7 +117,6 @@ export async function runWorkflowWithProgress(
                 dockerImage: workflow.imageRepoTag,
                 extensionUserFlow: "Local Resource Management",
                 localResourceKind: workflow.resourceKind,
-                localResourceWorkflow: workflow.constructor.name,
               },
             });
             let errorMsg: string = "";
