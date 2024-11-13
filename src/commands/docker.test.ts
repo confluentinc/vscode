@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window } from "vscode";
 import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import * as dockerWorkflows from "../docker/workflows";
@@ -11,9 +10,6 @@ import { runWorkflowWithProgress } from "./docker";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
-
-  // vscode stubs
-  let showErrorMessageStub: sinon.SinonStub;
 
   // Docker+workflow stubs
   let isDockerAvailableStub: sinon.SinonStub;
@@ -27,8 +23,6 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
 
     // default to Docker being available for majority of tests
     isDockerAvailableStub = sandbox.stub(dockerConfigs, "isDockerAvailable").resolves(true);
@@ -55,12 +49,11 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
     sandbox.restore();
   });
 
-  it("should show a basic error notification if Docker is not available", async () => {
+  it("should exit early if Docker is not available", async () => {
     isDockerAvailableStub.resolves(false);
 
     await runWorkflowWithProgress();
 
-    assert.ok(showErrorMessageStub.calledOnce);
     assert.ok(localResourcesQuickPickStub.notCalled);
     assert.ok(getKafkaWorkflowStub.notCalled);
     assert.ok(getSchemaRegistryWorkflowStub.notCalled);
