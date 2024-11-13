@@ -598,8 +598,8 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 }
 
 /**
- * Promote each from-response TopicData representation in topicsResp to an model KafkaTopic object,
- * including whether or not it has a matching schema.
+ * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
+ * and set whether or not each topic has a matching schema.
  */
 export function correlateTopicsWithSchemas(
   cluster: KafkaCluster,
