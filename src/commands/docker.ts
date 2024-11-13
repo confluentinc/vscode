@@ -1,13 +1,5 @@
 import * as Sentry from "@sentry/node";
-import {
-  CancellationToken,
-  commands,
-  Disposable,
-  env,
-  ProgressLocation,
-  Uri,
-  window,
-} from "vscode";
+import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
@@ -39,24 +31,8 @@ export async function runWorkflowWithProgress(
   start: boolean = true,
   resourceKinds: LocalResourceKind[] = [],
 ) {
-  const dockerAvailable = await isDockerAvailable();
+  const dockerAvailable = await isDockerAvailable(true);
   if (!dockerAvailable) {
-    const installLinkButton = "Install Docker";
-    const openLogsButton = "Open Logs";
-    window
-      .showErrorMessage(
-        "Unable to launch local resources because Docker is not available. Please install Docker and try again once it's running.",
-        installLinkButton,
-        openLogsButton,
-      )
-      .then((selection) => {
-        if (selection === installLinkButton) {
-          const uri = Uri.parse("https://docs.docker.com/engine/install/");
-          env.openExternal(uri);
-        } else if (selection === openLogsButton) {
-          commands.executeCommand("confluent.showOutputChannel");
-        }
-      });
     return;
   }
 
