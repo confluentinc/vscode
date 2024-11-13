@@ -116,11 +116,10 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   // Message processing to communicate with the webview
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
-      // case "GetConfig": {
-      //   const config = topicConfigRemoteItems;
-      //   console.log("GetConfig", config);
-      //   return config satisfies MessageResponse<"GetConfig">;
-      // }
+      case "GetTopicName": {
+        console.log("GetTopicName", topic.name);
+        return topic.name satisfies MessageResponse<"GetTopicName">;
+      }
       case "GetCleanupPolicy": {
         console.log(
           "GetCleanupPolicy",

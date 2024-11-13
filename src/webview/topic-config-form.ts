@@ -14,8 +14,9 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 class ConfigFormViewModel extends ViewModel {
-  private previousValues: { [key: string]: string } = {};
-
+  topicName = this.resolve(async () => {
+    return await post("GetTopicName", {});
+  }, "");
   cleanupPolicy = this.resolve(async () => {
     return await post("GetCleanupPolicy", {});
   }, ""); // cc default "delete"
@@ -122,6 +123,7 @@ class ConfigFormViewModel extends ViewModel {
   }
 }
 
+export function post(type: "GetTopicName", body: any): Promise<string>;
 export function post(type: "GetRetentionSize", body: any): Promise<string>;
 export function post(type: "GetRetentionMs", body: any): Promise<string>;
 export function post(type: "GetMaxMessageBytes", body: any): Promise<string>;
