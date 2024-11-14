@@ -1,4 +1,4 @@
-import { CancellationToken, commands, Progress, window } from "vscode";
+import { CancellationToken, commands, Progress, ProgressLocation, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
@@ -181,63 +181,69 @@ export abstract class LocalResourceWorkflow {
 
   /**
    * Handle when a workflow detects existing containers based on its image repo+tag by checking the
-   * container states and prompting the user to take action.
+   * container states and auto-(re)starting them. This acts as a mini-workflow within the main one
+   * by showing a progress notification while the containers are started/restarted.
    */
   async handleExistingContainers(containers: ContainerSummary[]) {
-    const count = containers.length;
     const plural = containers.length > 1 ? "s" : "";
     const containerNames: string[] = containers.map(
       (container) => container.Names?.join(", ") || "unknown",
     );
     const containerImages: string[] = containers.map((container) => container.Image || "unknown");
     const containerStates: string[] = containers.map((container) => container.State || "unknown");
-    this.logger.debug(`found ${count} existing container${plural}`, {
+    this.logger.debug(`found ${containers.length} existing container${plural}`, {
       states: containerStates,
       names: containerNames,
       images: containerImages,
     });
-    // if any are in RUNNING state, ask to restart, otherwise ask to start
-    let buttonLabel = "";
-    const anyRunning = containerStates.includes("running");
-    if (anyRunning) {
-      buttonLabel = containers.length > 1 ? "Restart All" : "Restart";
-    } else {
-      buttonLabel = count > 1 ? "Start All" : "Start";
-    }
 
-    window
-      .showErrorMessage(
-        `Existing ${this.resourceKind} container${plural} found. Please ${anyRunning ? "re" : ""}start or remove ${count > 1 ? "them" : "it"} and try again.`,
-        buttonLabel,
-      )
-      .then(async (choice) => {
-        if (choice === buttonLabel) {
+    const anyRunning: boolean = containers.some((container) => container.State === "running");
+    window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        title: "Local",
+        cancellable: true,
+      },
+      async (progress, token: CancellationToken) => {
+        token.onCancellationRequested(() => {
+          this.logger.debug("cancellation requested, exiting workflow early");
           this.sendTelemetryEvent("Notification Button Clicked", {
-            anyContainersRunning: anyRunning,
-            buttonLabel: choice,
-            notificationType: "error",
-            numContainers: containers.length,
-            purpose: "Existing Containers Found",
+            buttonLabel: "Cancel",
+            notificationType: "progress",
+            purpose: `Existing ${this.resourceKind} Containers Detected`,
           });
-          for (const container of containers) {
-            if (!(container.Id && container.Names)) {
-              // ID & Names not required by the OpenAPI spec, but very unlikely to be missing if we have the container
-              // https://docs.docker.com/reference/api/engine/version/v1.47/#tag/Container/operation/ContainerList
-              continue;
-            }
-            if (anyRunning) {
-              await restartContainer(container.Id);
-            } else {
-              await this.startContainer({ id: container.Id, name: container.Names[0] });
-            }
+        });
+
+        this.progress = progress;
+        const actionLabel = anyRunning ? "Restarting..." : "Starting...";
+        this.logAndUpdateProgress(
+          `Found ${containers.length} existing ${this.resourceKind} container${plural}. ${actionLabel}`,
+        );
+
+        for (const container of containers) {
+          if (!(container.Id && container.Names)) {
+            // ID & Names not required by the OpenAPI spec, but very unlikely to be missing if we have the container
+            // https://docs.docker.com/reference/api/engine/version/v1.47/#tag/Container/operation/ContainerList
+            this.logger.warn("missing container ID or name; can't start/restart container", {
+              container,
+            });
+            continue;
+          }
+          // if any are in RUNNING state, auto-restart, otherwise auto-start
+          if (container.State === "running") {
+            await restartContainer(container.Id);
+          } else {
+            await this.startContainer({ id: container.Id, name: container.Names[0] });
           }
         }
-      });
-    this.sendTelemetryEvent("Notification Shown", {
-      notificationType: "error",
-      numContainers: containers.length,
-      purpose: `Existing ${this.resourceKind} Containers`,
-    });
+
+        this.logAndUpdateProgress(
+          `Waiting for ${this.resourceKind} container${plural} to be ready...`,
+        );
+        // resolve and close this progress notification once the workflow gives the all-clear
+        await this.waitForLocalResourceEventChange();
+      },
+    );
   }
 
   /** Log a message and display it in the user-facing progress notification for this workflow. */
@@ -251,7 +257,6 @@ export abstract class LocalResourceWorkflow {
       dockerImage: this.imageRepoTag,
       extensionUserFlow: "Local Resource Management",
       localResourceKind: this.resourceKind,
-      localResourceWorkflow: this.constructor.name,
       ...properties,
     });
   }

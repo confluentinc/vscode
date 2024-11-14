@@ -340,6 +340,28 @@ describe("docker/eventListener.ts EventListener methods", function () {
     assert.deepStrictEqual(events, []);
   });
 
+  it("readValuesFromStream() should properly split and yield multiple values from a ReadableStream", async function () {
+    const stream: ReadableStream<Uint8Array> = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
+        // and an empty string to ensure it isn't yielded
+        controller.enqueue(new TextEncoder().encode(""));
+        controller.close();
+      },
+    });
+
+    const events = [];
+    for await (const event of eventListener.readValuesFromStream(stream)) {
+      events.push(event);
+    }
+
+    assert.deepStrictEqual(events, [
+      JSON.stringify(TEST_CONTAINER_EVENT),
+      JSON.stringify(TEST_CONTAINER_EVENT),
+    ]);
+  });
+
   it("handleEvent() should handle a container event", async function () {
     const handleContainerEventStub = sandbox.stub(eventListener, "handleContainerEvent").resolves();
 
