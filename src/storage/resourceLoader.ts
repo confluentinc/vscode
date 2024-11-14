@@ -571,10 +571,7 @@ class LocalResourceLoader extends ResourceLoader {
     return correlateTopicsWithSchemas(cluster, responseTopics as TopicData[], schemas as Schema[]);
   }
 
-  public async getSchemaRegistryForCluster(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    cluster: LocalKafkaCluster,
-  ): Promise<LocalSchemaRegistry | undefined> {
+  public async getSchemaRegistryForCluster(): Promise<LocalSchemaRegistry | undefined> {
     const allRegistries = await this.getSchemaRegistries();
     if (allRegistries.length === 0) {
       return undefined;
