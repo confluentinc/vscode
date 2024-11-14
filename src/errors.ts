@@ -76,6 +76,6 @@ export function captureException(
   const extraContext = context ? context : {};
   // merge our observability context first, then allow overrides with anything passed by the caller
   const errorContext: Record<string, any> = { extra: { ...obsContext }, ...extraContext };
-  logger.error("capturing exception before sending to Sentry", errorContext);
+  logger.debug("capturing exception before sending to Sentry", errorContext);
   Sentry.captureException(error, errorContext);
 }
