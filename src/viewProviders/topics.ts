@@ -217,6 +217,6 @@ export async function getTopicsForCluster(
 export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTreeItem<Schema>[]> {
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
-  const schemas = await loader.getSchemasForTopicRegistry(topic);
+  const schemas = await loader.getSchemasForTopicEnvironment(topic);
   return generateSchemaSubjectGroups(schemas, topic.name);
 }

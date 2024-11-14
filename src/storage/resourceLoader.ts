@@ -133,10 +133,10 @@ export abstract class ResourceLoader {
   ): Promise<Schema[]>;
 
   /**
-   * Get the schemas associated with a given Kafka topic's cluster's schema registry.
+   * Get the schemas associated with a given Kafka topic's environment's schema registry.
    * This returns _all_ of the schemas in the registry, not just those possibly associated with the topic.
    **/
-  public abstract getSchemasForTopicRegistry(
+  public abstract getSchemasForTopicEnvironment(
     topic: KafkaTopic,
     forceDeepRefresh?: boolean,
   ): Promise<Schema[]>;
@@ -448,7 +448,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     return schemas;
   }
 
-  public async getSchemasForTopicRegistry(
+  public async getSchemasForTopicEnvironment(
     topic: KafkaTopic,
     forceDeepRefresh?: boolean,
   ): Promise<Schema[]> {
@@ -610,7 +610,7 @@ class LocalResourceLoader extends ResourceLoader {
     return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined);
   }
 
-  public async getSchemasForTopicRegistry(): Promise<Schema[]> {
+  public async getSchemasForTopicEnvironment(): Promise<Schema[]> {
     const schemaRegistries = await this.getSchemaRegistries();
     if (schemaRegistries.length === 0) {
       return [];
