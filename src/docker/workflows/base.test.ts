@@ -75,7 +75,7 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     assert.ok(pullImageStub.notCalled);
   });
 
-  it("handleExistingContainers() should handle an existing container and show the user a 'Start' button", async () => {
+  it("handleExistingContainers() should handle an existing container and automatically start it if it isn't running", async () => {
     const workflowStartContainerStub = sandbox.stub(workflow, "startContainer");
     const fakeContainers: ContainerSummary[] = [
       { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
@@ -84,54 +84,22 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     await workflow.handleExistingContainers(fakeContainers);
 
     assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        "Existing test container found. Please start or remove it and try again.",
-        "Start",
-      ),
+      workflowStartContainerStub.calledOnceWith({
+        id: fakeContainers[0].Id!,
+        name: fakeContainers[0].Names![0],
+      }),
     );
-    // if the user clicks 'Start', the workflow will call startContainer()
-    assert.ok(workflowStartContainerStub.notCalled);
   });
 
-  it("handleExistingContainers() should call .startContainer() if the user clicks the 'Start' button", async () => {
-    const fakeContainers: ContainerSummary[] = [
-      { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
-    ];
-    // stub the user clicking the 'Start' button
-    const button = "Start";
-    showErrorMessageStub.resolves(button);
-
-    await workflow.handleExistingContainers(fakeContainers);
-
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        "Existing test container found. Please start or remove it and try again.",
-        button,
-      ),
-    );
-    // base method is called with the container ID+name, standalone function just uses ID
-    assert.ok(startContainerStub.calledOnceWith(fakeContainers[0].Id!));
-  });
-
-  // FIXME(shoup): figure out why this is only saying it's called once
-  it.skip("handleExistingContainers() should handle multiple existing containers and show the user a 'Start All' button", async () => {
+  it("handleExistingContainers() should handle multiple existing containers and automatically start them all", async () => {
     const workflowStartContainerStub = sandbox.stub(workflow, "startContainer");
     const fakeContainers: ContainerSummary[] = [
       { Id: "1", Names: ["/container1"], Image: "image1", State: "exited" },
       { Id: "2", Names: ["/container2"], Image: "image1", State: "exited" },
     ];
-    // stub the user clicking the 'Start All' button
-    const button = "Start All";
-    showErrorMessageStub.resolves(button);
 
     await workflow.handleExistingContainers(fakeContainers);
 
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        "Existing test containers found. Please start or remove them and try again.",
-        button,
-      ),
-    );
     assert.ok(
       workflowStartContainerStub.calledTwice,
       `workflow startContainer() called ${workflowStartContainerStub.callCount} time(s) with args: ${JSON.stringify(workflowStartContainerStub.args, null, 2)}`,
@@ -150,23 +118,13 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     );
   });
 
-  it("handleExistingContainers() should handle 'running' containers and prompt the user to restart them", async () => {
+  it("handleExistingContainers() should handle 'running' containers auto-restart them", async () => {
     const fakeContainers: ContainerSummary[] = [
       { Id: "1", Names: ["/container1"], Image: "image1", State: "running" },
     ];
-    // stub the user clicking the 'Restart' button
-    const button = "Restart";
-    showErrorMessageStub.resolves(button);
 
     await workflow.handleExistingContainers(fakeContainers);
 
-    assert.ok(
-      showErrorMessageStub.calledOnceWith(
-        "Existing test container found. Please restart or remove it and try again.",
-        button,
-      ),
-    );
-    assert.ok(startContainerStub.notCalled);
     assert.ok(restartContainerStub.calledOnceWith(fakeContainers[0].Id!));
   });
 
