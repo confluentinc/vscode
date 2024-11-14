@@ -21,6 +21,7 @@ import { SidecarHandle } from "./sidecarHandle";
 
 import { normalize } from "path";
 import { Tail } from "tail";
+import { observabilityContext } from "../context/observability";
 
 /**
  * Output channel for viewing sidecar logs.
@@ -314,6 +315,7 @@ export class SidecarManager {
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
    **/
   private async startSidecar(callnum: number): Promise<string> {
+    observabilityContext.sidecarStartCount++;
     return new Promise<string>((resolve, reject) => {
       (async () => {
         const logPrefix = `startSidecar(${callnum})`;
