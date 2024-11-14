@@ -34,6 +34,9 @@ const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
 export const test = series(clean, build, testBuild, testRun);
+export const liveTest = series(clean, build, testBuild);
+liveTest.description =
+  "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
 
 export const bundle = series(clean, build, pack);
 
