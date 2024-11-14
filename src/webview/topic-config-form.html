@@ -11,7 +11,7 @@
   </head>
   <body>
     <main class="container">
-      <h1>Configure Topic</h1>
+      <h1>Configure Topic: <span data-text="this.topicName()"></span></h1>
       <p>Some helpful text that will encourage users to properly configure the topic. Close this tab to cancel changes.</p>
       <template data-if="this.errorOnSubmit()">
         <p class="error" data-text="this.errorOnSubmit()"></p>
@@ -19,7 +19,6 @@
       <template data-if="this.success()">
         <p class="success">Data updated successfully. You may close this tab or make additional changes.</p>
       </template>
-      <h2>Topic: <span data-text="this.topicName()"></span></h2>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
           <div>
@@ -37,7 +36,7 @@
               <option value="invaliddatahere">None</option>
           </select>
             </div>
-            <span class="description">Choose the retention policy to use on old log segments. Delete discards old segments when their retention time or size limit has been reached. Compact saves the last value for each unique key written to the topic.</span>
+            <span class="description">The retention policy to use on old log segments. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy">More info.</a></span>
           </div>
           <div class="input-container">
             <div>
@@ -56,7 +55,7 @@
               <option value="-1">Infinite</option>
             </select>
             </div>
-            <span class="description">The maximum size a partition can grow to before it is discarded to free up space.</span>
+            <span class="description">The maximum size a partition can grow to before it is discarded to free up space. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes">More info.</a></span>
           </div>
           <div class="input-container">
             <div>
@@ -77,7 +76,7 @@
               <option value="-1">Infinite</option>
             </select>
             </div>
-            <span class="description">The amount of time to retain data.</span>
+            <span class="description">The amount of time to retain data. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms">More info.</a></span>
           </div>
           <div class="input-container">
             <div>
@@ -92,10 +91,12 @@
               data-on-change="this.handleChange(event)"
             />
             </div>
-            <span class="description">The maximum message size that can be appended to this topic, in bytes.</span>
+            <span class="description">The maximum message size that can be appended to this topic, in bytes. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes">More info.</a></span>
           </div>
         </div>
+        <div class="flex-row">
         <input class="button primary" type="submit" value="Save changes" data-attr-disabled="!this.hasChanges() || this.hasValidationErrors()" /><input class="button secondary" type="button" value="Reset changes" data-on-click="this.resetChanges()" data-attr-disabled="!this.hasChanges()"/>
+        </div>
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
@@ -104,6 +105,7 @@
       body {
         max-width: 1000px;
         font-size: 14px;
+        margin: 0 auto;
       }
       .container {
         padding: 60px 80px;
@@ -114,11 +116,12 @@
       .container > * {
         margin: unset;
       }
+      .flex-row {
+        display: flex;
+        gap: 16px;
+      }
       h1 {
         font-size: 26px;
-      }
-      h2 {
-        font-size: 16px;
       }
       form {
         display: flex;
@@ -129,7 +132,7 @@
       }
       .input-container {
         display: flex;
-        align-items: center;
+        align-items: end;
         gap: 16px;
         width: 100%;
         font-weight: 500;
@@ -144,16 +147,19 @@
       .input-container > * {
         min-width: 8rem;
       }
+      .input-container > *:first-child {
+        flex-basis: 35%;
+      }
+      .input-container > *:nth-child(2) {
+        flex-basis: 65%;
+      }
       .input-container > * > * {
         width: 100%;
       }
       input:disabled {
         cursor: not-allowed;
       }
-      input:not([type="submit"]),
-      .dropdown > * {
-        width: 250px;
-      }
+
       .dropdown {
         display: flex;
         flex-direction: column;
@@ -164,6 +170,12 @@
         font-weight: 700;
         color: var(--vscode-descriptionForeground);
         font-size: 12px;
+      }
+      .description::before {
+          /* FIXME add error message here? */
+          font-size: small;
+          color: var(--vscode-errorForeground);
+          padding-right: 1em;
       }
       .dropdown > label > vscode-dropdown {
         width: 100%;
