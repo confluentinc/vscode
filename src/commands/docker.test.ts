@@ -6,7 +6,7 @@ import * as dockerWorkflows from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import * as quickpicks from "../quickpicks/localResources";
-import { runWorkflowWithProgress } from "./docker";
+import { orderWorkflows, runWorkflowWithProgress } from "./docker";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -136,5 +136,59 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     assert.ok(stubKafkaWorkflow.stop.calledOnce);
     assert.ok(stubSchemaRegistryWorkflow.stop.calledOnce);
+  });
+});
+
+describe("commands/docker.ts orderWorkflows()", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let stubKafkaWorkflow: sinon.SinonStubbedInstance<ConfluentLocalWorkflow>;
+  let stubSchemaRegistryWorkflow: sinon.SinonStubbedInstance<ConfluentPlatformSchemaRegistryWorkflow>;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    // we could just call the singletons since we aren't dealing with any methods, but better to
+    // be on the safe side and let sinon handle the cleanup/restoration
+    stubKafkaWorkflow = sandbox.createStubInstance(ConfluentLocalWorkflow);
+    stubSchemaRegistryWorkflow = sandbox.createStubInstance(
+      ConfluentPlatformSchemaRegistryWorkflow,
+    );
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return the workflows with Kafka first when start=true and Kafka is included", () => {
+    const workflows = [stubSchemaRegistryWorkflow, stubKafkaWorkflow];
+    const orderedWorkflows = orderWorkflows(workflows, true);
+
+    assert.strictEqual(orderedWorkflows[0].resourceKind, stubKafkaWorkflow.resourceKind);
+    assert.strictEqual(orderedWorkflows[1].resourceKind, stubSchemaRegistryWorkflow.resourceKind);
+  });
+
+  it("should return the workflows with Kafka last when start=false and Kafka is included", () => {
+    const workflows = [stubKafkaWorkflow, stubSchemaRegistryWorkflow];
+    const orderedWorkflows = orderWorkflows(workflows, false);
+
+    assert.strictEqual(orderedWorkflows[0].resourceKind, stubSchemaRegistryWorkflow.resourceKind);
+    assert.strictEqual(orderedWorkflows[1].resourceKind, stubKafkaWorkflow.resourceKind);
+  });
+
+  it("should not sort workflows if there is only one workflow provided", () => {
+    const workflows = [stubKafkaWorkflow];
+    const orderedWorkflows = orderWorkflows(workflows, true);
+
+    assert.equal(orderedWorkflows.length, 1);
+    assert.strictEqual(orderedWorkflows[0].resourceKind, stubKafkaWorkflow.resourceKind);
+  });
+
+  // TODO(shoup): maybe update this once we include Flink and other resources
+  it("should not sort workflows if Kafka is not included", () => {
+    const workflows = [stubSchemaRegistryWorkflow];
+    const orderedWorkflows = orderWorkflows(workflows, true);
+
+    assert.equal(orderedWorkflows.length, 1);
+    assert.strictEqual(orderedWorkflows[0].resourceKind, stubSchemaRegistryWorkflow.resourceKind);
   });
 });
