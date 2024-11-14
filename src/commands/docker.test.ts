@@ -6,7 +6,9 @@ import * as dockerWorkflows from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import * as quickpicks from "../quickpicks/localResources";
-import { orderWorkflows, runWorkflowWithProgress } from "./docker";
+import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
+import { window, workspace } from "vscode";
+import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_REST_HOST } from "../preferences/constants";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -190,5 +192,69 @@ describe("commands/docker.ts orderWorkflows()", () => {
 
     assert.equal(orderedWorkflows.length, 1);
     assert.strictEqual(orderedWorkflows[0].resourceKind, stubSchemaRegistryWorkflow.resourceKind);
+  });
+});
+
+describe("commands/docker.ts addDockerPath()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let showOpenDialogStub: sinon.SinonStub;
+  let getConfigurationStub: sinon.SinonStub;
+  let updateConfigStub: sinon.SinonStub;
+  let showErrorMessageStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    showOpenDialogStub = sandbox.stub(window, "showOpenDialog");
+    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    getConfigurationStub.returns({
+      get: sandbox.stub().callsFake((key: string) => {
+        if (key === "docker.paths") {
+          return dockerConfigs.DEFAULT_UNIX_SOCKET_PATH;
+        }
+      }),
+    });
+    showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should add a valid Dockerfile path to the configuration", async () => {
+    const mockUri = { fsPath: "/path/to/Dockerfile" };
+    showOpenDialogStub.resolves([mockUri]);
+
+    await addDockerPath();
+
+    assert.ok(updateConfigStub.calledOnce);
+    assert.deepStrictEqual(updateConfigStub.firstCall.args, [
+      "docker.paths",
+      [mockUri.fsPath],
+      true,
+    ]);
+    assert.ok(showErrorMessageStub.notCalled);
+  });
+
+  it("should show an error message if the selected file is not a Dockerfile", async () => {
+    const mockUri = { fsPath: "/path/to/NotDockerfile.txt" };
+    showOpenDialogStub.resolves([mockUri]);
+
+    await addDockerPath();
+
+    assert.ok(updateConfigStub.notCalled);
+    assert.ok(showErrorMessageStub.calledOnce);
+    assert.strictEqual(
+      showErrorMessageStub.firstCall.args[0],
+      "Dockerfile path not added. Please select a Dockerfile.",
+    );
+  });
+
+  it("should not update configuration if no file is selected", async () => {
+    showOpenDialogStub.resolves(undefined);
+
+    await addDockerPath();
+
+    assert.ok(updateConfigStub.notCalled);
+    assert.ok(showErrorMessageStub.notCalled);
   });
 });

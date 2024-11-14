@@ -1,5 +1,13 @@
 import * as Sentry from "@sentry/node";
-import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
+import {
+  CancellationToken,
+  Disposable,
+  ProgressLocation,
+  Uri,
+  window,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
@@ -143,6 +151,37 @@ export async function runWorkflowWithProgress(
   );
 }
 
+/** Show the Open File dialog to let the user pick a docker file and store it in the extension configs. */
+export async function addDockerPath() {
+  const newDockerUris: Uri[] | undefined = await window.showOpenDialog({
+    openLabel: "Select",
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      Dockerfile: ["Dockerfile"],
+    },
+  });
+
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+
+  const paths: string[] = configs.get<string[]>("docker.paths", []);
+
+  if (newDockerUris && newDockerUris.length > 0) {
+    const newDockerPath: string = newDockerUris[0].fsPath;
+    if (newDockerPath.endsWith("Dockerfile")) {
+      paths.push(newDockerPath);
+      configs.update("docker.paths", paths, true);
+      // no notification here since the setting will update in real-time when an item is added
+    } else {
+      // shouldn't be possible to get here since we restrict the file types in the dialog, but we
+      // should include this because we can't do any kind of validation in the config itself for
+      // array types
+      window.showErrorMessage("Dockerfile path not added. Please select a Dockerfile.");
+    }
+  }
+}
+
 export function registerDockerCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
@@ -153,7 +192,17 @@ export function registerDockerCommands(): Disposable[] {
       "confluent.docker.stopLocalResources",
       stopLocalResourcesWithProgress,
     ),
+    registerCommandWithLogging("confluent.docker.socketPath", addDockerPath),
   ];
+}
+
+/** Get the path(s) of the file(s) based on the user's configuration. */
+export function getDockerPaths(): string[] {
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  const paths: string[] = configs.get<string[]>("docker.paths", []);
+  // filter out paths that are empty strings or don't end with Dockerfile since the user can manually edit
+  // the setting if they don't go through the `addDockerPath` command
+  return paths.filter((path) => path && path.endsWith("Dockerfile"));
 }
 
 /**
