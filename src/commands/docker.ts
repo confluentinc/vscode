@@ -70,6 +70,9 @@ export async function runWorkflowWithProgress(
     return;
   }
 
+  // ensure Kafka is started first / stopped last
+  const orderedWorkflows: LocalResourceWorkflow[] = orderWorkflows(subworkflows, start);
+
   logger.debug("running local resource workflow(s)", { start, resources });
   window.withProgress(
     {
@@ -78,7 +81,7 @@ export async function runWorkflowWithProgress(
       cancellable: true,
     },
     async (progress, token: CancellationToken) => {
-      for (const workflow of subworkflows) {
+      for (const workflow of orderedWorkflows) {
         token.onCancellationRequested(() => {
           logger.debug("cancellation requested, exiting workflow early", {
             start,
@@ -151,4 +154,40 @@ export function registerDockerCommands(): Disposable[] {
       stopLocalResourcesWithProgress,
     ),
   ];
+}
+
+/**
+ * Ensure multiple workflows are started/stopped in the correct order.
+ *
+ * This primarily means:
+ * - if Kafka is included in the list of resources to *start* it should be started before other
+ *  resources that may depend on it (e.g. Schema Registry)
+ * - if Kafka is included in the list of resources to *stop*, it should be stopped after other
+ *  resources that depend on it
+ */
+export function orderWorkflows(
+  workflows: LocalResourceWorkflow[],
+  start: boolean,
+): LocalResourceWorkflow[] {
+  if (workflows.length === 1) {
+    // no need to sort if there's only one workflow
+    return workflows;
+  }
+
+  const kafkaWorkflow: LocalResourceWorkflow | undefined = workflows.find(
+    (workflow) => workflow.resourceKind === LocalResourceKind.Kafka,
+  );
+  if (!kafkaWorkflow) {
+    // no ordering required yet
+    // TODO(shoup): maybe update this once we include Flink and other resources
+    return workflows;
+  }
+
+  // remove Kafka from the list of workflows to sort
+  const kafkaDependentWorkflows = workflows.filter((workflow) => workflow !== kafkaWorkflow);
+
+  // if Kafka is included, it should be started first / stopped last
+  return start
+    ? [kafkaWorkflow, ...kafkaDependentWorkflows]
+    : [...kafkaDependentWorkflows, kafkaWorkflow];
 }
