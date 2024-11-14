@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { AuthErrors, Connection, Status } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
 import { getCCloudAuthSession, getCCloudConnection } from "../sidecar/connections";
@@ -76,6 +77,8 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
   });
 
   const authStatus: Status = connection.status.authentication.status;
+  observabilityContext.ccloudAuthLastSeenStatus = authStatus;
+
   await getResourceManager().setCCloudAuthStatus(authStatus);
   if (authStatus === "INVALID_TOKEN") {
     // poll faster to try and get to a non-transient status as quickly as possible since it's going
