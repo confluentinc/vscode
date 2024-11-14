@@ -1,8 +1,12 @@
 import { ProgressOptions, ThemeColor, ThemeIcon, window } from "vscode";
-import { KafkaTopic } from "../models/topic";
-import { getSchemasForTopicEnv, getTopicsForCluster } from "../viewProviders/topics";
-import { KafkaCluster } from "../models/kafkaCluster";
 import { IconNames } from "../constants";
+import { Logger } from "../logging";
+import { KafkaCluster } from "../models/kafkaCluster";
+import { Schema } from "../models/schema";
+import { KafkaTopic } from "../models/topic";
+import { ResourceLoader } from "../storage/resourceLoader";
+
+const logger = new Logger("quickpicks.topics");
 
 export async function topicQuickPick(cluster: KafkaCluster): Promise<KafkaTopic | undefined> {
   const options: ProgressOptions = {
@@ -10,13 +14,22 @@ export async function topicQuickPick(cluster: KafkaCluster): Promise<KafkaTopic 
     title: "Loading topics...",
   };
   return window.withProgress(options, async () => {
-    const topics: KafkaTopic[] = await getTopicsForCluster(cluster, true);
-    if (topics.length === 0) {
-      window.showInformationMessage("No topics found in the cluster " + cluster.name);
-      return;
-    }
+    const loader = ResourceLoader.getInstance(cluster.connectionId);
 
-    const schemas = await getSchemasForTopicEnv(topics[0]);
+    // I ... guess we always want to force a refresh here?
+    // (was how @shoup did it in the original code)
+    const forceRefresh = true;
+
+    const [schemas, topics]: [Schema[], KafkaTopic[]] = await Promise.all([
+      loader.getSchemasForCluster(cluster, forceRefresh),
+      loader.getTopicsForCluster(cluster, forceRefresh),
+    ]);
+
+    logger.debug(
+      `Loaded ${schemas.length} schemas and ${topics.length} topics for cluster ${cluster.name}`,
+    );
+
+    // Poor person's subject -> topic name mapping, only TopicNameStrategy.
     const subjectSet = new Set(
       schemas.map((schema) => schema.subject.replace(/-key$|-value$/, "")),
     );
