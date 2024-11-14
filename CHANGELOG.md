@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.21.0
+
 ### Added
 
 - Create new schemas + subjects or new versions of existing schemas. Editor buffer titlebar "cloud
