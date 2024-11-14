@@ -109,7 +109,7 @@ class ConfigFormViewModel extends ViewModel {
         this.maxMessageBytes(value);
         break;
       default:
-        console.warn(`Unhandled key: ${name}`); // this won't happen but makes TS happy
+        console.warn(`Unhandled key: ${name}`); // this can't happen but we must have a default case
     }
   }
 
