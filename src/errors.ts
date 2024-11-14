@@ -1,9 +1,11 @@
 import * as Sentry from "@sentry/node";
 
+import { ExclusiveEventHintOrCaptureContext } from "@sentry/core/build/types/utils/prepareEvent";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
+import { observabilityContext } from "./context/observability";
 import { Logger } from "./logging";
 
 const logger = new Logger("errors");
@@ -57,4 +59,23 @@ export async function logResponseError(
       extra: { ...errorContext, ...extra },
     });
   }
+}
+
+/**
+ * Wrapper around the Sentry {@link Sentry.captureException} to include our extension instance's
+ * {@link observabilityContext} in the event context, along with any additionally provided context.
+ *
+ * See {@link ExclusiveEventHintOrCaptureContext} for more information on the `context` parameter.
+ */
+export function captureException(
+  error: unknown,
+  context: ExclusiveEventHintOrCaptureContext | undefined,
+): void {
+  // TODO: check telemetry settings here?
+  const obsContext: Record<string, any> = observabilityContext.toRecord();
+  const extraContext = context ? context : {};
+  // merge our observability context first, then allow overrides with anything passed by the caller
+  const errorContext: Record<string, any> = { extra: { ...obsContext }, ...extraContext };
+  logger.error("capturing exception before sending to Sentry", errorContext);
+  Sentry.captureException(error, errorContext);
 }
