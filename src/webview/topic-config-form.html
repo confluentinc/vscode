@@ -20,6 +20,7 @@
         <p class="success">Data updated successfully. You may close this tab or make additional changes.</p>
       </template>
       <h2>Topic: <span data-text="this.topicName()"></span></h2>
+      <button class="button secondary">View all configs as a file (future feature?)</button>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
           <div>
@@ -29,7 +30,7 @@
             class="input dropdown"
             name="cleanup.policy"
             data-prop-value="this.cleanupPolicy()"
-            data-on-change="this.validateChange(event)"
+            data-on-change="this.handleChange(event)"
           >
             <option value="delete">Delete</option>
             <option value="compact">Compact</option>
@@ -47,7 +48,7 @@
               id="retention-size"
               name="retention.bytes"
               data-prop-value="this.retentionSize()"
-              data-on-change="this.validateChange(event)"
+              data-on-change="this.handleChange(event)"
             >
               <option value="1048576">1 MB</option>
               <option value="1073741824">1 GB</option>
@@ -66,7 +67,7 @@
               id="retention-ms"
               name="retention.ms"
               data-prop-value="this.retentionMs()"
-              data-on-change="this.validateChange(event)"
+              data-on-change="this.handleChange(event)"
             >
               <option value="3600000">1 Hour</option>
               <option value="86400000">1 Day</option>
@@ -86,9 +87,10 @@
               class="input"
               id="max-message-bytes"
               name="max.message.bytes"
-              type="text"
+              type="number"
+              min="0"
               data-prop-value="this.maxMessageBytes()"
-              data-on-change="this.validateChange(event)"
+              data-on-change="this.handleChange(event)"
             />
             </div>
             <span class="description">The maximum message size that can be appended to this topic, in bytes.</span>
@@ -179,7 +181,7 @@
       .error {
         color: var(--vscode-errorForeground);
       }
-      input.error {
+      .input.error {
         border: 1px solid var(--vscode-errorForeground);
       }
     </style>
