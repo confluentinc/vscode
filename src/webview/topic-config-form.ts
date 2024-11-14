@@ -35,13 +35,13 @@ class ConfigFormViewModel extends ViewModel {
   }, "");
 
   hasChanges = this.signal(false);
-  validationError = this.signal("");
+  hasValidationErrors = this.signal(document.querySelectorAll(".input.error").length > 0);
   errorOnSubmit = this.signal("");
   success = this.signal(false);
 
   handleChange(event: Event) {
-    const input = event.target as HTMLInputElement;
     this.hasChanges(true);
+    const input = event.target as HTMLInputElement;
     this.updateLocalValue(input.name, input.value);
     this.validateChange(event);
   }
@@ -57,24 +57,22 @@ class ConfigFormViewModel extends ViewModel {
       [input.name]: input.value,
     });
     if (res.success) {
-      this.validationError("");
       input.classList.remove("error");
       const errorMsgElement = input.previousElementSibling;
       if (errorMsgElement && errorMsgElement.classList.contains("error")) {
         errorMsgElement.remove();
       }
     } else {
-      this.validationError(res.message ?? "Unknown error occurred");
       input.classList.add("error");
       const errorMsgElement = document.createElement("div");
       errorMsgElement.className = "info error";
-      errorMsgElement.textContent = this.validationError();
+      errorMsgElement.textContent = res.message ?? "Unknown error occurred";
       input.insertAdjacentElement("beforebegin", errorMsgElement);
     }
+    this.hasValidationErrors(document.querySelectorAll(".input.error").length > 0);
   }
 
   resetFormErrors() {
-    this.validationError("");
     this.errorOnSubmit("");
     const errorInputs = document.querySelectorAll(".input.error");
     errorInputs.forEach((input) => {
@@ -84,6 +82,7 @@ class ConfigFormViewModel extends ViewModel {
         errorMsgElement.remove();
       }
     });
+    this.hasValidationErrors(false);
   }
 
   async resetChanges() {
@@ -110,7 +109,7 @@ class ConfigFormViewModel extends ViewModel {
         this.maxMessageBytes(value);
         break;
       default:
-        console.warn(`Unhandled key: ${name}`);
+        console.warn(`Unhandled key: ${name}`); // this won't happen but makes TS happy
     }
   }
 

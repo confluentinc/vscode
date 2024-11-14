@@ -96,7 +96,7 @@
             <span class="description">The maximum message size that can be appended to this topic, in bytes.</span>
           </div>
         </div>
-        <input class="button primary" type="submit" value="Save changes" data-attr-disabled="!this.hasChanges() || this.validationError()" /><input class="button secondary" type="button" value="Reset changes" data-on-click="this.resetChanges()" data-attr-disabled="!this.hasChanges()"/>
+        <input class="button primary" type="submit" value="Save changes" data-attr-disabled="!this.hasChanges() || this.hasValidationErrors()" /><input class="button secondary" type="button" value="Reset changes" data-on-click="this.resetChanges()" data-attr-disabled="!this.hasChanges()"/>
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
