@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.21.0
+
 ### Added
 
 - Create new schemas + subjects or new versions of existing schemas. Editor buffer titlebar "cloud
@@ -13,6 +15,8 @@ All notable changes to this extension will be documented in this file.
 - "Start Local Resources" / "Stop Local Resources" functionality to start and stop Confluent's Kafka
   and Schema Registry containers via Docker engine API integration, available as actions on the
   "Local" item in the Resources view, as well as the command palette.
+- Ability to create shareable, reusable links to Message Viewer for outside of VS Code or picking up
+  where you left off.
 
 ### Fixed
 
