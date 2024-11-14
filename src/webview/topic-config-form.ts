@@ -16,85 +16,86 @@ class ConfigFormViewModel extends ViewModel {
   topicName = this.resolve(async () => {
     return await post("GetTopicName", {});
   }, "");
-  // Individual form fields that keep up-to-date with user changes
+
+  // Individual form fields that keep up-to-date with user changes in HTML
   cleanupPolicy = this.resolve(async () => {
     return await post("GetCleanupPolicy", {});
-  }, ""); // cc default "delete"
+  }, "");
 
   retentionSize = this.resolve(async () => {
     return await post("GetRetentionSize", {});
-  }, ""); // cc default -1
+  }, "");
 
   retentionMs = this.resolve(async () => {
     return await post("GetRetentionMs", {});
-  }, ""); //cc default = (7, 'days').asMilliseconds(),
+  }, "");
 
   maxMessageBytes = this.resolve(async () => {
     return await post("GetMaxMessageBytes", {});
-  }, ""); //cc defaultValue: 1 * 1000, FIXME text field but number
+  }, "");
 
-  // Initial values of form fields in POJO, used to check if changes have been made & restore on clear action
-  // FIXME still wrong since it doesnt update on clear
-  initialValues = {
-    cleanupPolicy: this.cleanupPolicy(),
-    retentionSize: this.retentionSize(),
-    retentionMs: this.retentionMs(),
-    maxMessageBytes: this.maxMessageBytes(),
-  };
-
-  hasChanges = this.derive(() => {
-    return (
-      this.cleanupPolicy() !== this.initialValues.cleanupPolicy ||
-      this.retentionSize() !== this.initialValues.retentionSize ||
-      this.retentionMs() !== this.initialValues.retentionMs ||
-      this.maxMessageBytes() !== this.initialValues.maxMessageBytes
-    );
-  });
+  hasChanges = this.signal(false);
   validationError = this.signal("");
   errorOnSubmit = this.signal("");
   success = this.signal(false);
 
+  handleChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.hasChanges(true);
+    this.updateLocalValue(input.name, input.value);
+    this.validateChange(event);
+  }
+
   /** Validate changes one input at a time on blur or ui change
    * Checks that the change is valid using the API
-   * If the change is valid, update the value in the view model
-   * If the change is invalid, highlight input, add error msg
+   * If the change is valid, remove any existing errors
+   * If the change is invalid, highlight input + add error msg
    */
   async validateChange(event: Event) {
-    console.log("validateChange", event);
     const input = event.target as HTMLInputElement;
-    input.classList.remove("error");
     const res = await post("ValidateConfigValue", {
       [input.name]: input.value,
     });
-
     if (res.success) {
-      console.log("success", res);
-      this.updateValue(input.name, input.value);
       this.validationError("");
-      const errorElement = input.previousElementSibling;
-      if (errorElement && errorElement.classList.contains("error")) {
-        errorElement.remove();
+      input.classList.remove("error");
+      const errorMsgElement = input.previousElementSibling;
+      if (errorMsgElement && errorMsgElement.classList.contains("error")) {
+        errorMsgElement.remove();
       }
     } else {
       this.validationError(res.message ?? "Unknown error occurred");
       input.classList.add("error");
-      const errorElement = document.createElement("div");
-      errorElement.className = "info error";
-      errorElement.textContent = this.validationError();
-      input.insertAdjacentElement("beforebegin", errorElement);
-      console.log("error", res);
+      const errorMsgElement = document.createElement("div");
+      errorMsgElement.className = "info error";
+      errorMsgElement.textContent = this.validationError();
+      input.insertAdjacentElement("beforebegin", errorMsgElement);
     }
   }
 
-  async resetChanges() {
+  resetFormErrors() {
     this.validationError("");
+    this.errorOnSubmit("");
+    const errorInputs = document.querySelectorAll(".input.error");
+    errorInputs.forEach((input) => {
+      input.classList.remove("error");
+      const errorMsgElement = input.previousElementSibling;
+      if (errorMsgElement && errorMsgElement.classList.contains("error")) {
+        errorMsgElement.remove();
+      }
+    });
+  }
+
+  async resetChanges() {
+    this.hasChanges(false);
+    this.resetFormErrors();
     this.cleanupPolicy(await post("GetCleanupPolicy", {}));
     this.retentionSize(await post("GetRetentionSize", {}));
     this.retentionMs(await post("GetRetentionMs", {}));
     this.maxMessageBytes(await post("GetMaxMessageBytes", {}));
   }
 
-  updateValue(name: string, value: string) {
+  updateLocalValue(name: string, value: string) {
     switch (name) {
       case "cleanup.policy":
         this.cleanupPolicy(value);
@@ -125,7 +126,6 @@ class ConfigFormViewModel extends ViewModel {
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-    console.log("formData:", formData, "data", data);
     const result = await post("Submit", data);
     if (result !== undefined) {
       if (result.success) this.success(true);

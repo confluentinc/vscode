@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import * as Sentry from "@sentry/node";
+import { Logger } from "../logging";
 import { registerCommandWithLogging } from ".";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getTopicViewProvider } from "../viewProviders/topics";
@@ -9,6 +11,8 @@ import { getSidecar } from "../sidecar";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import { post } from "../webview/topic-config-form";
 import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
+
+const logger = new Logger("topics");
 
 /** Copy the Kafka Cluster ID from the Topics tree provider nav action. */
 async function copyKafkaClusterId() {
@@ -58,8 +62,8 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       topic_name: topic.name,
     });
   } catch (err) {
-    // FIXME better errors
-    console.error("Failed to retrieve topic configs list", err);
+    logger.error("Failed to retrieve topic configs list", err);
+    Sentry.captureException(err);
     vscode.window.showErrorMessage("Failed to retrieve topic configs");
     return;
   }
@@ -103,10 +107,13 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       return { success: true, message: validateOnly ? null : "Success!" };
     } catch (err) {
       let formError = "An unknown error occurred";
-      if (err instanceof ResponseError) {
+      if (err instanceof ResponseError && err.response.status === 400) {
         const errorBody = await err.response.json();
-        console.error("MAdE it ERROR = ", typeof err, err.response.status, errorBody.message);
-        if (err.response.status === 400) formError = errorBody.message;
+        formError = errorBody.message;
+      } else {
+        logger.error("Failed to update topic config", err);
+        Sentry.captureException(err);
+        if (err instanceof Error && err.message) formError = err.message;
       }
       return { success: false, message: formError };
     }
@@ -116,50 +123,35 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "GetTopicName": {
-        console.log("GetTopicName", topic.name);
         return topic.name satisfies MessageResponse<"GetTopicName">;
       }
       case "GetCleanupPolicy": {
-        console.log(
-          "GetCleanupPolicy",
-          topicConfigRemoteItems.data.find((item) => item.name === "cleanup.policy")?.value,
-        );
+        // cc default "delete"
         return (topicConfigRemoteItems.data.find((item) => item.name === "cleanup.policy")?.value ??
           "delete") satisfies MessageResponse<"GetCleanupPolicy">;
       }
       case "GetRetentionSize": {
-        console.log(
-          "GetRetentionSize",
-          topicConfigRemoteItems.data.find((item) => item.name === "retention.bytes")?.value,
-        );
+        // cc default -1
         return (topicConfigRemoteItems.data.find((item) => item.name === "retention.bytes")
           ?.value ?? "-1") satisfies MessageResponse<"GetRetentionSize">;
       }
       case "GetRetentionMs": {
-        console.log(
-          "GetRetentionMs",
-          topicConfigRemoteItems.data.find((item) => item.name === "retention.ms")?.value,
-        );
+        //cc default = (7, 'days').asMilliseconds(),
         return (topicConfigRemoteItems.data.find((item) => item.name === "retention.ms")?.value ??
           "-1") satisfies MessageResponse<"GetRetentionMs">;
       }
       case "GetMaxMessageBytes": {
-        console.log(
-          "GetMaxMessageBytes",
-          topicConfigRemoteItems.data.find((item) => item.name === "max.message.bytes")?.value,
-        );
+        //cc defaultValue: 1 * 1000
         return (topicConfigRemoteItems.data.find((item) => item.name === "max.message.bytes")
           ?.value ?? "1000") satisfies MessageResponse<"GetMaxMessageBytes">;
       }
       case "ValidateConfigValue": {
-        console.log("ValidateConfigValue", body);
         return (await validateOrUpdateConfig(
           topic,
           body,
         )) satisfies MessageResponse<"ValidateConfigValue">;
       }
       case "Submit":
-        console.log("Submit", body);
         return (await validateOrUpdateConfig(
           topic,
           body,
