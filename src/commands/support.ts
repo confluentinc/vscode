@@ -20,14 +20,20 @@ function feedbackCommand() {
  * and adds an expanded section for our extension data based on the current {@link observabilityContext}
  */
 function issueCommand() {
-  const extensionMarkdown = `
-<details open="true">
+  let extensionMarkdown = "";
+
+  const contextTable = observabilityContext.toMarkdownTable();
+  if (contextTable) {
+    // if we get a non-empty string, add it as a new collapsible section
+    extensionMarkdown = `
+<details>
 <summary>Confluent Extension + Sidecar Data</summary>
 
-${observabilityContext.toMarkdownTable()}
+${contextTable}
 
 </details>
 `;
+  }
 
   vscode.commands.executeCommand("vscode.openIssueReporter", {
     extensionId: "confluentinc.vscode-confluent",
