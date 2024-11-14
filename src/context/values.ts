@@ -1,7 +1,6 @@
-// This is a local cache of the context values since there is no `getContext` command exposed by the
-
 import { commands } from "vscode";
 
+// This is a local cache of the context values since there is no `getContext` command exposed by the
 // VS Code API.
 const contextValues: Record<string, any> = {};
 
