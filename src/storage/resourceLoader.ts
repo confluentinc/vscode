@@ -174,7 +174,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   private static instance: CCloudResourceLoader | null = null;
 
-  public static getInstance(): ResourceLoader {
+  public static getInstance(): CCloudResourceLoader {
     if (!CCloudResourceLoader.instance) {
       CCloudResourceLoader.instance = new CCloudResourceLoader();
     }
@@ -246,7 +246,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     // If caller requested a deep refresh, reset the loader's state so that we fall through to
     // re-fetching the coarse resources.
     if (forceDeepRefresh) {
-      logger.info(`Deep refreshing ${this.kind} resources.`);
+      logger.debug(`Deep refreshing ${this.kind} resources.`);
       this.reset();
       this.deleteCoarseResources();
     }
@@ -325,7 +325,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   protected async doLoadSchemas(schemaRegistry: SchemaRegistry): Promise<void> {
     try {
-      logger.info(`Deep loading schemas for CCloud Schema Registry ${schemaRegistry.id}`);
+      logger.debug(`Deep loading schemas for CCloud Schema Registry ${schemaRegistry.id}`);
       const rm = getResourceManager();
 
       const ccloudSchemaRegistry: CCloudSchemaRegistry = schemaRegistry as CCloudSchemaRegistry;
@@ -392,7 +392,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     let cachedTopics = await resourceManager.getTopicsForCluster(cluster);
     if (cachedTopics !== undefined && !forceDeepRefresh) {
       // Cache hit.
-      logger.info(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
+      logger.debug(`Returning ${cachedTopics.length} cached topics for cluster ${cluster.id}`);
       return cachedTopics;
     }
 

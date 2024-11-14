@@ -11,6 +11,7 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { StorageManager } from "../storage";
+import { CCloudResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 import { TopicViewProvider, loadTopicSchemas } from "./topics";
 
@@ -52,6 +53,7 @@ describe("TopicViewProvider helper functions", () => {
   ];
 
   let storageManager: StorageManager;
+  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
 
   before(async () => {
     storageManager = await getTestStorageManager();
@@ -60,6 +62,10 @@ describe("TopicViewProvider helper functions", () => {
   beforeEach(async () => {
     // fresh slate for each test
     await storageManager.clearWorkspaceState();
+
+    // Set the ccloud loader up to think it has
+    // already loaded the resources. Bypass private-ness.
+    ccloudResourceLoader["coarseLoadingComplete"] = true;
   });
 
   afterEach(async () => {
@@ -68,8 +74,14 @@ describe("TopicViewProvider helper functions", () => {
   });
 
   // TODO: update this once local schemas are supported
-  it("loadTopicSchemas() should not return schemas for local Kafka topics", async () => {
+  it("loadTopicSchemas() should not return schemas for topics w/o any known related schemas", async () => {
     // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+
+    // TODO: This actually tries to talk out through to docker / local schema registry now.
+    // We should stub out the interaction methods, probably for a specific local schema registry.
+    // test suite. Right now, this would fail if you have docker running, local schema registry
+    // running, and with the right subject ('test-topic-value') in the local schema registry.
+
     const topic = TEST_LOCAL_KAFKA_TOPIC.copy({ name: topicName });
     const schemas = await loadTopicSchemas(topic);
     assert.ok(Array.isArray(schemas));
@@ -81,9 +93,14 @@ describe("TopicViewProvider helper functions", () => {
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, preloadedSchemas);
+    // set the loader-level cache state to true as if we had already loaded the schemas
+    ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
+
     // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
     const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });
+    // Should return a nonempty ContainerTreeItem describing the schema group.
     const schemas = await loadTopicSchemas(topic);
+
     assert.ok(Array.isArray(schemas));
     // more specific testing is in `src/models/schema.test.ts` for the `generateSchemaSubjectGroups()`
     // function, but for here we just care about getting one schema subject container item back
@@ -96,7 +113,11 @@ describe("TopicViewProvider helper functions", () => {
       TEST_CCLOUD_SCHEMA_REGISTRY.id,
       preloadedSchemas,
     );
+    // set the loader-level cache state to true as if we had already loaded the schemas
+    ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
+
     const topic = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: topicName });
+
     const schemas = await loadTopicSchemas(topic);
     assert.ok(Array.isArray(schemas));
     assert.equal(schemas.length, 0);
