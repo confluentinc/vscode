@@ -2,7 +2,8 @@ import * as Sentry from "@sentry/node";
 import { randomUUID } from "crypto";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
-import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import { getExtensionContext } from "../context/extension";
+import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,

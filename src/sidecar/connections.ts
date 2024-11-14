@@ -14,7 +14,7 @@ import {
   LOCAL_CONNECTION_ID,
   LOCAL_CONNECTION_SPEC,
 } from "../constants";
-import { ContextValues, getContextValue } from "../context";
+import { ContextValues, getContextValue } from "../context/values";
 import {
   getLocalSchemaRegistryImageName,
   getLocalSchemaRegistryImageTag,

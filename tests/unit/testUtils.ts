@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { setExtensionContext } from "../../src/context";
+import { setExtensionContext } from "../../src/context/extension";
 import { StorageManager } from "../../src/storage";
 
 const EXTENSION_ID = "confluentinc.vscode-confluent";

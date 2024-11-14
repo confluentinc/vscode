@@ -8,7 +8,7 @@ import {
   SystemApi,
   SystemEventsRequest,
 } from "../clients/docker";
-import { ContextValues, setContextValue } from "../context";
+import { ContextValues, setContextValue } from "../context/values";
 import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
 import { updateLocalConnection } from "../sidecar/connections";
