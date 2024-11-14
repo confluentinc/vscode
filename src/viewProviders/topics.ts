@@ -8,7 +8,6 @@ import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -216,45 +215,8 @@ export async function getTopicsForCluster(
  * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
  */
 export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTreeItem<Schema>[]> {
-  const schemas = await getSchemasForTopicEnv(topic);
-  return generateSchemaSubjectGroups(schemas, topic.name);
-}
-
-/**
- * Get the schemas associated with a given Kafka topic.
- * @param topic The Kafka topic to get schemas for.
- * @returns An array of {@link Schema} objects representing the schemas associated with the topic.
- */
-export async function getSchemasForTopicEnv(topic: KafkaTopic): Promise<Schema[]> {
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
-  const allRegistries = await loader.getSchemaRegistries();
-
-  let schemaRegistry: SchemaRegistry | undefined;
-
-  // if local topic, then would be the only registry.
-  if (topic.isLocalTopic() && allRegistries.length === 1) {
-    schemaRegistry = allRegistries[0];
-  } else if (!topic.isLocalTopic()) {
-    // CCloud topic, find the one associated with the topic's environment
-    schemaRegistry = allRegistries.find(
-      (sr) => (sr as CCloudSchemaRegistry).environmentId === topic.environmentId,
-    );
-  }
-
-  // look up the associated Schema Registry based on the topic's Kafka cluster / CCloud env,
-  // then pull the schemas
-
-  if (!schemaRegistry) {
-    logger.warn("No Schema Registry found for topic", topic);
-    return [];
-  }
-
-  const schemas: Schema[] = await loader.getSchemasForRegistry(schemaRegistry);
-  if (schemas.length === 0) {
-    logger.warn("No schemas found for topic", topic);
-    return [];
-  }
-
-  return schemas;
+  const schemas = await loader.getSchemasForTopicRegistry(topic);
+  return generateSchemaSubjectGroups(schemas, topic.name);
 }
