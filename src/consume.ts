@@ -24,15 +24,15 @@ import {
   type SimpleConsumeMultiPartitionResponse,
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
-import { getExtensionContext } from "./context";
+import { getExtensionContext } from "./context/extension";
 import { Logger } from "./logging";
 import { type KafkaTopic } from "./models/topic";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
-import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { getResourceManager } from "./storage/resourceManager";
+import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";

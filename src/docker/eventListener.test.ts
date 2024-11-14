@@ -7,7 +7,7 @@ import {
   EventMessage,
   SystemApi,
 } from "../clients/docker";
-import * as context from "../context";
+import * as contextValues from "../context/values";
 import { localKafkaConnected } from "../emitters";
 import * as configs from "./configs";
 import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
@@ -227,7 +227,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // don't actually go into the handleEvent() logic for this test
     const handleEventStub = sandbox.stub(eventListener, "handleEvent").resolves();
     // stub the setContextValue and localKafkaConnected.fire methods so we can assert that they're called
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     // start the poller, which calls into `listenForEvents()` immediately
@@ -268,7 +268,10 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // we'll get the event returned, but then catch the error and inform the UI that the local
     // resources are no longer reachable/available
     assert.ok(
-      setContextValueStub.calledOnceWith(context.ContextValues.localKafkaClusterAvailable, false),
+      setContextValueStub.calledOnceWith(
+        contextValues.ContextValues.localKafkaClusterAvailable,
+        false,
+      ),
       `setContextValue() called ${setContextValueStub.callCount} times with ${JSON.stringify(setContextValueStub.args)}`,
     );
     assert.ok(
@@ -338,6 +341,28 @@ describe("docker/eventListener.ts EventListener methods", function () {
     }
 
     assert.deepStrictEqual(events, []);
+  });
+
+  it("readValuesFromStream() should properly split and yield multiple values from a ReadableStream", async function () {
+    const stream: ReadableStream<Uint8Array> = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
+        controller.enqueue(new TextEncoder().encode(JSON.stringify(TEST_CONTAINER_EVENT)));
+        // and an empty string to ensure it isn't yielded
+        controller.enqueue(new TextEncoder().encode(""));
+        controller.close();
+      },
+    });
+
+    const events = [];
+    for await (const event of eventListener.readValuesFromStream(stream)) {
+      events.push(event);
+    }
+
+    assert.deepStrictEqual(events, [
+      JSON.stringify(TEST_CONTAINER_EVENT),
+      JSON.stringify(TEST_CONTAINER_EVENT),
+    ]);
   });
 
   it("handleEvent() should handle a container event", async function () {
@@ -439,7 +464,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
       .stub(eventListener, "waitForContainerLog")
       .resolves(true);
     // stub the setContextValue and localKafkaConnected.fire methods so we can assert that they're called
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     await eventListener.handleContainerStartEvent(TEST_CONTAINER_EVENT);
@@ -447,7 +472,10 @@ describe("docker/eventListener.ts EventListener methods", function () {
     assert.ok(waitForContainerRunningStub.calledOnce);
     assert.ok(waitForServerStartedLogStub.calledOnce);
     assert.ok(
-      setContextValueStub.calledOnceWith(context.ContextValues.localKafkaClusterAvailable, true),
+      setContextValueStub.calledOnceWith(
+        contextValues.ContextValues.localKafkaClusterAvailable,
+        true,
+      ),
     );
     assert.ok(localKafkaConnectedFireStub.calledOnceWith(true));
   });
@@ -460,7 +488,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     const waitForServerStartedLogStub = sandbox
       .stub(eventListener, "waitForContainerLog")
       .resolves(true);
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     // considering we're filtering for the 'confluent-local' image in the request to systemEventsRaw(),
@@ -484,7 +512,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
     const waitForServerStartedLogStub = sandbox
       .stub(eventListener, "waitForContainerLog")
       .resolves(true);
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     await eventListener.handleContainerStartEvent({ ...TEST_CONTAINER_EVENT, id: undefined });
@@ -500,13 +528,16 @@ describe("docker/eventListener.ts EventListener methods", function () {
       ...TEST_CONTAINER_EVENT,
       status: "die",
     };
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     await eventListener.handleContainerDieEvent(event);
 
     assert.ok(
-      setContextValueStub.calledOnceWith(context.ContextValues.localKafkaClusterAvailable, false),
+      setContextValueStub.calledOnceWith(
+        contextValues.ContextValues.localKafkaClusterAvailable,
+        false,
+      ),
     );
     assert.ok(localKafkaConnectedFireStub.calledOnceWith(false));
   });
@@ -517,7 +548,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
       status: "die",
       Actor: { Attributes: { image: "not-confluent-local" } },
     };
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     await eventListener.handleContainerDieEvent(event);
@@ -532,7 +563,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
       status: "die",
       Actor: undefined,
     };
-    const setContextValueStub = sandbox.stub(context, "setContextValue").resolves();
+    const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
 
     await eventListener.handleContainerDieEvent(event);

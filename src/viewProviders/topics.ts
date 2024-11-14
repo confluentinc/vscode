@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { ContextValues, getExtensionContext, setContextValue } from "../context";
+import { getExtensionContext } from "../context/extension";
+import { ContextValues, setContextValue } from "../context/values";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
