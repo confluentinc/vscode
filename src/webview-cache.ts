@@ -1,6 +1,6 @@
-import * as vscode from "vscode";
 import { randomBytes } from "crypto";
-import { getExtensionContext } from "./context";
+import * as vscode from "vscode";
+import { getExtensionContext } from "./context/extension";
 
 type TemplateFunction = (ctx: {
   cspSource: string;

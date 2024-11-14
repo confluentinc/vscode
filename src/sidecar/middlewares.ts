@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Middleware, RequestContext, ResponseContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { getExtensionContext } from "../context";
+import { getExtensionContext } from "../context/extension";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
 import { CCLOUD_AUTH_STATUS_KEY } from "../storage/constants";

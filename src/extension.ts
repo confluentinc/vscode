@@ -51,7 +51,9 @@ import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
 import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
-import { ContextValues, setContextValue, setExtensionContext } from "./context";
+import { setExtensionContext } from "./context/extension";
+import { observabilityContext } from "./context/observability";
+import { ContextValues, setContextValue } from "./context/values";
 import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
@@ -78,10 +80,14 @@ const logger = new Logger("extension");
 // defined in package.json
 // ref: https://code.visualstudio.com/api/references/activation-events
 export async function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
+  observabilityContext.extensionVersion = context.extension.packageJSON.version;
+  observabilityContext.extensionActivated = false;
+
   logger.info(`Extension ${context.extension.id}" activate() triggered.`);
   try {
     context = await _activateExtension(context);
     logger.info("Extension fully activated");
+    observabilityContext.extensionActivated = true;
   } catch (e) {
     logger.error("Error activating extension:", e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it

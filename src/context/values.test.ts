@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { commands } from "vscode";
-import { ContextValues, getContextValue, setContextValue } from "./context";
+import { ContextValues, getContextValue, setContextValue } from "./values";
 
 describe("ContextValue functions", () => {
   let sandbox: sinon.SinonSandbox;
