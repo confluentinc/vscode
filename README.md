@@ -70,6 +70,8 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 
 #### Schemas
 
+##### View
+
 The **Schemas** view displays all the schemas available for the current Confluent Cloud
 environment's Schema Registry. Schemas are also shown in the **Topics** view by expanding a topic
 item if they match using either `TopicNameStrategy` or `TopicRecordNameStrategy`
@@ -78,6 +80,17 @@ and the user has the appropriate permissions.
 
 Schema definitions can be viewed by expanding the schema subject to see a specific schema version,
 then clicking the **View Schema** icon.
+
+##### Create / Evolve
+
+You can create new schemas or update schemas and subject-bindings by creating or opening an `.avsc`,
+`.proto`, or `.json` file, then using the **Cloud Upload** icon in the upper-right of the buffer
+titlebar to begin the process of selecting a schema registry and subject to bind to. You can either
+bind to new subjects or provide a revised/evolved schema for an existing subject to establish a new
+version.
+
+Search the marketplace for extensions to validate your Avro, JSON schema, or
+Protobuf syntax as needed.
 
 #### Support
 
