@@ -1,13 +1,22 @@
 import * as Sentry from "@sentry/node";
-import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
+import {
+  CancellationToken,
+  Disposable,
+  ProgressLocation,
+  Uri,
+  window,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
-import { isDockerAvailable } from "../docker/configs";
+import { isDockerAvailable, getSocketPath } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { Logger } from "../logging";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 
 const logger = new Logger("commands.docker");
 
@@ -143,6 +152,37 @@ export async function runWorkflowWithProgress(
   );
 }
 
+/** Show the Open File dialog to let the user pick a docker file and store it in the extension configs. */
+export async function addDockerPath() {
+  const newDockerUris: Uri[] | undefined = await window.showOpenDialog({
+    openLabel: "Select",
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    filters: {
+      docker_socket: ["sock", "docker_engine"],
+    },
+  });
+
+  if (!newDockerUris || newDockerUris.length === 0) {
+    return;
+  }
+
+  const path: Uri = newDockerUris[0];
+
+  if (path.fsPath.endsWith("sock") || path.fsPath.endsWith("docker_engine")) {
+    const configs: WorkspaceConfiguration = workspace.getConfiguration();
+
+    //getting the paths instead of searching their env for it
+
+    configs.update(LOCAL_DOCKER_SOCKET_PATH, path.fsPath, true);
+  } else {
+    window.showErrorMessage(
+      "Docker socket path not added. Please select a .sock or a docker_engine file.",
+    );
+  }
+}
+
 export function registerDockerCommands(): Disposable[] {
   return [
     registerCommandWithLogging(
@@ -153,7 +193,17 @@ export function registerDockerCommands(): Disposable[] {
       "confluent.docker.stopLocalResources",
       stopLocalResourcesWithProgress,
     ),
+    registerCommandWithLogging("confluent.docker.setSocketPath", addDockerPath),
   ];
+}
+
+/** Get the path(s) of the file(s) based on the user's configuration. */
+export function getDockerPaths(): string[] {
+  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  const paths: string[] = configs.get<string[]>("docker.paths", []);
+  // filter out paths that are empty strings or don't end with Dockerfile since the user can manually edit
+  // the setting if they don't go through the `addDockerPath` command
+  return paths.filter((path) => path && path.endsWith("Dockerfile"));
 }
 
 /**
