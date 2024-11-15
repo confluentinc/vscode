@@ -150,7 +150,7 @@ blocks:
               gh auth status
               Write-Host "Uploading $vsix to the release $version"
               gh release upload $version $vsix --clobber
-          epilogue: *taskEpilogue
+      epilogue: *taskEpilogue
 
   - name: "Upload VSIX files to GitHub"
     run:
