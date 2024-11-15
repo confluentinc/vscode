@@ -171,6 +171,11 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       `Successfully logged in to Confluent Cloud as ${authenticatedConnection.status.authentication.user?.username}`,
     );
     logger.debug("createSession() successfully authenticated with Confluent Cloud");
+    // update the auth status in the secret store so other workspaces can be notified of the change
+    // and the middleware doesn't get an outdated status before the poller can update it
+    await getResourceManager().setCCloudAuthStatus(
+      authenticatedConnection.status.authentication.status,
+    );
     const session = convertToAuthSession(authenticatedConnection);
     await this.handleSessionCreated(session, true);
     ccloudConnected.fire(true);
@@ -296,7 +301,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       return;
     }
 
-    await deleteCCloudConnection();
+    // tell the sidecar to delete the connection and update the auth status "secret" in storage
+    // to prevent any last-minute requests from passing through the middleware
+    await Promise.all([
+      deleteCCloudConnection(),
+      getStorageManager().deleteSecret(CCLOUD_AUTH_STATUS_KEY),
+    ]);
     await this.handleSessionRemoved(true);
     ccloudConnected.fire(false);
   }
@@ -460,8 +470,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // the following calls are all workspace-scoped
     logger.debug("handleSessionRemoved()", { updateSecret });
     this.updateContextValue(false);
-    await clearCurrentCCloudResources();
     pollCCloudConnectionAuth.stop();
+    await clearCurrentCCloudResources();
     if (!this._session) {
       logger.debug("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
     } else {
