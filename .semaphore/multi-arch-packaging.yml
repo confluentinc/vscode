@@ -36,7 +36,7 @@ blocks:
       agent:
         machine:
           type: s1-prod-macos-13-5-amd64
-      prologue:
+      prologue: &taskPrologue
         commands_file: scripts/package_vsix_prologue.sh
       env_vars:
         # From https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions:
@@ -46,11 +46,11 @@ blocks:
           value: darwin-x64
         - name: SIDECAR_OS_ARCH
           value: macos-amd64
-      jobs:
-        - name: "Package VSIX (MacOS AMD64)"
+      jobs: &taskJobs
+        - name: "Package VSIX"
           commands:
             - npx gulp bundle
-      epilogue:
+      epilogue: &taskEpilogue
         on_pass:
           commands_file: scripts/package_vsix_epilogue.sh
 
@@ -60,20 +60,14 @@ blocks:
       agent:
         machine:
           type: s1-prod-macos-13-5-arm64
-      prologue:
-        commands_file: scripts/package_vsix_prologue.sh
       env_vars:
         - name: TARGET
           value: darwin-arm64
         - name: SIDECAR_OS_ARCH
           value: macos-arm64
-      jobs:
-        - name: "Package VSIX (MacOS ARM64)"
-          commands:
-            - npx gulp bundle
-      epilogue:
-        on_pass:
-          commands_file: scripts/package_vsix_epilogue.sh
+      prologue: *taskPrologue
+      jobs: *taskJobs
+      epilogue: *taskEpilogue
 
   - name: "Package VSIX (Linux AMD64)"
     dependencies: []
@@ -81,20 +75,14 @@ blocks:
       agent:
         machine:
           type: s1-prod-ubuntu20-04-amd64-1
-      prologue:
-        commands_file: scripts/package_vsix_prologue.sh
       env_vars:
         - name: TARGET
           value: linux-x64
         - name: SIDECAR_OS_ARCH
           value: linux-amd64
-      jobs:
-        - name: "Package VSIX (Linux AMD64)"
-          commands:
-            - npx gulp bundle
-      epilogue:
-        on_pass:
-          commands_file: scripts/package_vsix_epilogue.sh
+      prologue: *taskPrologue
+      jobs: *taskJobs
+      epilogue: *taskEpilogue
 
   - name: "Package VSIX (Linux ARM64)"
     dependencies: []
@@ -102,20 +90,67 @@ blocks:
       agent:
         machine:
           type: s1-prod-ubuntu20-04-arm64-1
-      prologue:
-        commands_file: scripts/package_vsix_prologue.sh
       env_vars:
         - name: TARGET
           value: linux-arm64
         - name: SIDECAR_OS_ARCH
           value: linux-arm64
+      prologue: *taskPrologue
+      jobs: *taskJobs
+      epilogue: *taskEpilogue
+
+  - name: "Package VSIX (Windows AMD64)"
+    dependencies: []
+    task: 
+      agent:
+        machine:
+          type: s1-prod-windows
+      env_vars:
+        - name: TARGET
+          value: win32-x64
+        - name: WINDOWS
+          value: "true"
+      prologue:
+        commands:
+          - checkout
+          - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+          - $Env:PATH += ";C:\Program Files\Git\bin"
+          - $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+          - vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+          # Ensure npm and npx are available
+          - npm --version
+          - npx --version
+          - choco install gh -y
+          - $Env:PATH += ";C:\Program Files\GitHub CLI\"
+          - gh --version
+          - |
+            $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
+            gh config set prompt disabled
+            gh auth login
+            gh auth status
+          - npm ci --include=dev
       jobs:
-        - name: "Package VSIX (Linux ARM64)"
+        - name: "Package VSIX (Windows AMD64)"
           commands:
+            # Download ide-sidecar third party notices to include in the VSIX
+            - |
+              $IDE_SIDECAR_VERSION = Get-Content .versions/ide-sidecar.txt
+              gh release download $IDE_SIDECAR_VERSION --repo confluentinc/ide-sidecar --pattern=THIRD_PARTY_NOTICES.txt --output THIRD_PARTY_NOTICES_IDE_SIDECAR.txt --clobber
+            # Build the VSIX
             - npx gulp bundle
-      epilogue:
-        on_pass:
-          commands_file: scripts/package_vsix_epilogue.sh
+            # Upload the VSIX to the GitHub release
+            - |
+              $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
+              $version = "v$($packageJson.version)";
+              $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+              try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
+              $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
+              gh config set prompt disabled
+              gh auth login
+              gh auth status
+              Write-Host "Uploading $vsix to the release $version"
+              gh release upload $version $vsix --clobber
+          epilogue: *taskEpilogue
 
   - name: "Upload VSIX files to GitHub"
     run:
@@ -125,6 +160,7 @@ blocks:
       - "Package VSIX (MacOS ARM64)"
       - "Package VSIX (Linux AMD64)"
       - "Package VSIX (Linux ARM64)"
+      - "Package VSIX (Windows AMD64)"
     task:
       prologue:
         commands:
@@ -133,9 +169,3 @@ blocks:
         - name: "Upload VSIX files to GitHub"
           commands:
             - make upload-vsix-files-to-gh-releases
-
-promotions:
-  - name: Windows Packaging and Upload
-    pipeline_file: windows-packaging.yml
-    auto_promote:
-      when: "result = 'passed' and branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
