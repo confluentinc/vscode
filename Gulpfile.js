@@ -143,7 +143,13 @@ export function build(done) {
     context: "globalThis",
   };
   /** @type {import("rollup").OutputOptions} */
-  const extOutput = { dir: DESTINATION, format: "cjs", sourcemap: true, exports: "named" };
+  const extOutput = {
+    dir: DESTINATION,
+    format: "cjs",
+    sourcemap: true,
+    sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
+    exports: "named",
+  };
 
   /** @type {import("rollup").RollupOptions} */
   const webInput = {
@@ -209,7 +215,7 @@ function getSentryReleaseVersion() {
     // add "dirty" to the revision instead of sha if there are uncommmited changes
     const isDirty =
       spawnSync("git", ["diff", "--quiet"], { stdio: "pipe", shell: IS_WINDOWS }).status !== 0;
-    if (isDirty) revision = "dirty";
+    if (isDirty) revision = "shouptest10";
     else {
       revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
         stdio: "pipe",
