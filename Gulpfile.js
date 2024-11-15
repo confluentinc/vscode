@@ -143,7 +143,13 @@ export function build(done) {
     context: "globalThis",
   };
   /** @type {import("rollup").OutputOptions} */
-  const extOutput = { dir: DESTINATION, format: "cjs", sourcemap: true, exports: "named" };
+  const extOutput = {
+    dir: DESTINATION,
+    format: "cjs",
+    sourcemap: true,
+    sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
+    exports: "named",
+  };
 
   /** @type {import("rollup").RollupOptions} */
   const webInput = {
