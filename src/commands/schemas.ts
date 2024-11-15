@@ -6,7 +6,7 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { ResourceManager } from "../storage/resourceManager";
+import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadNewSchema } from "./schemaUpload";
 
@@ -144,33 +144,22 @@ async function loadOrCreateSchemaViewer(schema: Schema) {
  * May return two schemas if the topic has both key and value schemas.
  */
 export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schema[]> {
-  // These two checks indicate programming errors, not a user or external system contents issues ...
   if (!topic.hasSchema) {
     throw new Error(`Asked to get schemas for topic "${topic.name}" believed to not have schemas.`);
   }
 
-  // local topics, at time of writing, won't have any related schemas, 'cause we don't support any form
-  // of local schema registry (yet). But when supporting local schema registry will probably need a different
-  // way to get schemas than these ccloud-infected methods, so raise an error here as a reminder to revisit
-  // this code when local schema registry support is added.
-  if (topic.isLocalTopic()) {
-    throw new Error(
-      `Asked to get schemas for local topic "${topic.name}", but local topics should not have schemas.`,
-    );
-  }
+  const loader = ResourceLoader.getInstance(topic.connectionId);
 
-  const rm = ResourceManager.getInstance();
-
-  const schemaRegistry = await rm.getCCloudSchemaRegistry(topic.environmentId!);
-  if (schemaRegistry === null) {
+  const schemaRegistry = await loader.getSchemaRegistryForEnvironment(topic);
+  if (!schemaRegistry) {
     throw new CannotLoadSchemasError(
       `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,
     );
   }
 
-  const allSchemas = await rm.getSchemasForRegistry(schemaRegistry.id);
+  const allSchemas = await loader.getSchemasForRegistry(schemaRegistry);
 
-  if (allSchemas === undefined || allSchemas.length === 0) {
+  if (allSchemas.length === 0) {
     throw new CannotLoadSchemasError(
       `Schema registry "${schemaRegistry.id}" had no schemas, but we expected it to have some for topic "${topic.name}"`,
     );

@@ -1,11 +1,10 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { getEnvironments } from "../graphql/environments";
-import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { hasCCloudAuthSession } from "../sidecar/connections";
+import { CCloudResourceLoader, LocalResourceLoader } from "../storage/resourceLoader";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
@@ -35,22 +34,24 @@ export async function kafkaClusterQuickPick(
   includeCCloud: boolean = true,
 ): Promise<KafkaCluster | undefined> {
   // first we grab all available (local+CCloud) Kafka Clusters
-  let localKafkaClusters: LocalKafkaCluster[] = [];
+
+  const localKafkaClusters: LocalKafkaCluster[] = [];
   if (includeLocal) {
-    const localResources: LocalResourceGroup[] = await getLocalResources();
-    localKafkaClusters = localResources.flatMap(
-      (group): LocalKafkaCluster[] => group.kafkaClusters,
-    );
+    const localLoader = LocalResourceLoader.getInstance();
+    localKafkaClusters.push(...(await localLoader.getKafkaClustersForEnvironment()));
   }
-  let cloudKafkaClusters: CCloudKafkaCluster[] = [];
-  let cloudEnvironments: CCloudEnvironment[] = [];
+
+  const cloudKafkaClusters: CCloudKafkaCluster[] = [];
+  const cloudEnvironments: CCloudEnvironment[] = [];
   if (includeCCloud) {
     // list all Kafka clusters for all CCloud environments for the given connection; to be separated
     // further by environment in the quickpick menu below
     if (hasCCloudAuthSession()) {
-      const envGroups = await getEnvironments();
-      cloudEnvironments = envGroups.map((group) => group.environment);
-      cloudKafkaClusters = envGroups.map((group) => group.kafkaClusters).flat();
+      const ccloudLoader = CCloudResourceLoader.getInstance();
+      cloudEnvironments.push(...(await ccloudLoader.getEnvironments()));
+      for (const env of cloudEnvironments) {
+        cloudKafkaClusters.push(...(await ccloudLoader.getKafkaClustersForEnvironment(env)));
+      }
     }
   }
   // TODO: it would be nice to have an `await Promise.all()` here to speed up the process, but we
