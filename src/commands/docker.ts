@@ -10,7 +10,7 @@ import {
 } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
-import { isDockerAvailable } from "../docker/configs";
+import { isDockerAvailable, getSocketPath } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
@@ -159,13 +159,15 @@ export async function addDockerPath() {
     canSelectFolders: false,
     canSelectMany: false,
     filters: {
+      // is this the right filter? openDialogOptions are not fully listed https://code.visualstudio.com/api/references/vscode-api#OpenDialogOptions
       Dockerfile: ["Dockerfile"],
     },
   });
 
   const configs: WorkspaceConfiguration = workspace.getConfiguration();
 
-  const paths: string[] = configs.get<string[]>("docker.paths", []);
+  //getting the paths instead of searching their env for it
+  const paths: string[] = getDockerPaths();
 
   if (newDockerUris && newDockerUris.length > 0) {
     const newDockerPath: string = newDockerUris[0].fsPath;
