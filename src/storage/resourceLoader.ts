@@ -201,7 +201,9 @@ export class CCloudResourceLoader extends ResourceLoader {
    */
   private schemaRegistryCacheStates: Map<string, boolean | Promise<void>> = new Map();
 
-  private constructor() {
+  // Singleton class. Use getInstance() to get the singleton instance.
+  // (Only public for testing / signon mocking purposes.)
+  constructor() {
     super();
 
     // When the ccloud connection state changes, reset the loader's state.
@@ -576,7 +578,9 @@ export class LocalResourceLoader extends ResourceLoader {
     return LocalResourceLoader.instance;
   }
 
-  private constructor() {
+  // singleton class, get instance via getInstance()
+  // (construct only public for testing / signon mocking purposes.)
+  constructor() {
     super();
   }
 

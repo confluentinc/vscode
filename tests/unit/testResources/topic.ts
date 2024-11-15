@@ -24,5 +24,5 @@ export const TEST_CCLOUD_KAFKA_TOPIC = KafkaTopic.create({
   clusterId: TEST_CCLOUD_KAFKA_CLUSTER.id,
   environmentId: TEST_CCLOUD_KAFKA_CLUSTER.environmentId,
   operations: [...KAFKA_TOPIC_OPERATIONS],
-  hasSchema: true,
+  hasSchema: false,
 });

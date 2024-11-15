@@ -25,7 +25,7 @@ export class Schema extends Data implements EnvironmentResource {
   type!: SchemaType;
   // added separately from the response data, used for follow-on API calls
   schemaRegistryId!: Enforced<string>;
-  environmentId!: Enforced<string | undefined>;
+  environmentId!: Enforced<string> | undefined;
 
   /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
