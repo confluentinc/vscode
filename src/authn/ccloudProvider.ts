@@ -301,7 +301,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       return;
     }
 
-    // tell the sidecar to delete the connection, then update the auth state in the secret store
+    // tell the sidecar to delete the connection and update the auth status "secret" in storage
     // to prevent any last-minute requests from passing through the middleware
     await Promise.all([
       deleteCCloudConnection(),
@@ -450,7 +450,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       removed: [],
       changed: [],
     });
-    logger.debug("starting the poller for CCloud connection status");
     pollCCloudConnectionAuth.start();
     this.updateContextValue(true);
 
@@ -471,7 +470,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // the following calls are all workspace-scoped
     logger.debug("handleSessionRemoved()", { updateSecret });
     this.updateContextValue(false);
-    logger.debug("stopping the poller for CCloud connection status");
     pollCCloudConnectionAuth.stop();
     await clearCurrentCCloudResources();
     if (!this._session) {
