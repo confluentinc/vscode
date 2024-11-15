@@ -84,9 +84,10 @@ then clicking the **View Schema** icon.
 ##### Create / Evolve
 
 New or updated schemas and subject-bindings can be made simply by creating or opening an `.avsc`,
-`.proto`, or `.json` file, then using the 'cloud upload' icon in the upper-right of the buffer
-titlebar to begin the process of selecting what schema registry and subject name to bind to. You can
-bind to new subjects or provide a new evolved schema version for an existing subject.
+`.proto`, or `.json` file, then using the **Cloud Upload** icon in the upper-right of the buffer
+titlebar to begin the process of selecting a schema registry and subject to bind to. You can either
+bind to new subjects or provide a revised/evolved schema for an existing subject to establish a new
+version.
 
 We recommend searching the marketplace for extensions to validate your Avro, JSON schema, or
 Protobuf syntax as needed.
