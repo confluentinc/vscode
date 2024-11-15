@@ -1,15 +1,18 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { EnvironmentResource } from "./interfaces";
 import { CustomMarkdownString } from "./main";
 
 /** Base class for all KafkaClusters, be they local or be they CCloud */
-export abstract class KafkaCluster extends Data {
+export abstract class KafkaCluster extends Data implements EnvironmentResource {
   abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
 
   abstract name: string;
+
+  abstract environmentId: string | undefined;
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
@@ -21,6 +24,7 @@ export class LocalKafkaCluster extends KafkaCluster {
   readonly connectionId: string = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
   readonly isCCloud: boolean = false;
+  readonly environmentId: undefined = undefined;
 
   // this is solely for display purposes so we don't have to check whether a resource is either a
   // LocalKafkaCluster or CCloudKafkaCluster when generating a label for a tree/quickpick/etc item
@@ -36,6 +40,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
   name!: Enforced<string>;
   provider!: Enforced<string>;
   region!: Enforced<string>;
+
   // added separately from sidecar responses
   environmentId!: Enforced<string>;
 
