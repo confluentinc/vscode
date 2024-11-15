@@ -10,6 +10,7 @@ import * as Sentry from "@sentry/node";
  */
 if (process.env.SENTRY_DSN) {
   Sentry.init({
+    // debug: true, // enable for local "prod" debugging with dev console
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV,
     release: process.env.SENTRY_RELEASE,
@@ -18,7 +19,7 @@ if (process.env.SENTRY_DSN) {
     integrations: [
       SentryCore.thirdPartyErrorFilterIntegration({
         filterKeys: ["confluent-vscode-extension-sentry-do-not-use"],
-        behaviour: "drop-error-if-contains-third-party-frames",
+        behaviour: "drop-error-if-exclusively-contains-third-party-frames",
       }),
       Sentry.rewriteFramesIntegration(),
     ],
