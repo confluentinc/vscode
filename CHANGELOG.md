@@ -6,7 +6,14 @@ All notable changes to this extension will be documented in this file.
 
 ## 0.21.1
 
-(Updated telemetry configs, no user-facing changes.)
+### Added
+
+- Documentation in the README for uploading new/updated schemas to local and Confluent Cloud Schema
+  Registry instances.
+
+### Changed
+
+- (Updated telemetry configs, no user-facing changes.)
 
 ## 0.21.0
 
