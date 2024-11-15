@@ -16,6 +16,7 @@ import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { Logger } from "../logging";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 
 const logger = new Logger("commands.docker");
 
@@ -159,28 +160,26 @@ export async function addDockerPath() {
     canSelectFolders: false,
     canSelectMany: false,
     filters: {
-      // is this the right filter? openDialogOptions are not fully listed https://code.visualstudio.com/api/references/vscode-api#OpenDialogOptions
-      Dockerfile: ["Dockerfile"],
+      docker_socket: ["sock", "docker_engine"],
     },
   });
 
-  const configs: WorkspaceConfiguration = workspace.getConfiguration();
+  if (!newDockerUris || newDockerUris.length === 0) {
+    return;
+  }
 
-  //getting the paths instead of searching their env for it
-  const paths: string[] = getDockerPaths();
+  const path: Uri = newDockerUris[0];
 
-  if (newDockerUris && newDockerUris.length > 0) {
-    const newDockerPath: string = newDockerUris[0].fsPath;
-    if (newDockerPath.endsWith("Dockerfile")) {
-      paths.push(newDockerPath);
-      configs.update("docker.paths", paths, true);
-      // no notification here since the setting will update in real-time when an item is added
-    } else {
-      // shouldn't be possible to get here since we restrict the file types in the dialog, but we
-      // should include this because we can't do any kind of validation in the config itself for
-      // array types
-      window.showErrorMessage("Dockerfile path not added. Please select a Dockerfile.");
-    }
+  if (path.fsPath.endsWith("sock") || path.fsPath.endsWith("docker_engine")) {
+    const configs: WorkspaceConfiguration = workspace.getConfiguration();
+
+    //getting the paths instead of searching their env for it
+
+    configs.update(LOCAL_DOCKER_SOCKET_PATH, path.fsPath, true);
+  } else {
+    window.showErrorMessage(
+      "Docker socket path not added. Please select a .sock or a docker_engine file.",
+    );
   }
 }
 
@@ -194,7 +193,7 @@ export function registerDockerCommands(): Disposable[] {
       "confluent.docker.stopLocalResources",
       stopLocalResourcesWithProgress,
     ),
-    registerCommandWithLogging("confluent.docker.socketPath", addDockerPath),
+    registerCommandWithLogging("confluent.docker.setSocketPath", addDockerPath),
   ];
 }
 

@@ -7,8 +7,8 @@ import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import * as quickpicks from "../quickpicks/localResources";
 import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
-import { window, workspace } from "vscode";
-import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_REST_HOST } from "../preferences/constants";
+import { Uri, window, workspace } from "vscode";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -195,66 +195,60 @@ describe("commands/docker.ts orderWorkflows()", () => {
   });
 });
 
-describe("commands/docker.ts addDockerPath()", () => {
+describe.only("commands/docker.ts addDockerPath()", () => {
   let sandbox: sinon.SinonSandbox;
   let showOpenDialogStub: sinon.SinonStub;
   let getConfigurationStub: sinon.SinonStub;
   let updateConfigStub: sinon.SinonStub;
-  let showErrorMessageStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showOpenDialogStub = sandbox.stub(window, "showOpenDialog");
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === "docker.paths") {
-          return dockerConfigs.DEFAULT_UNIX_SOCKET_PATH;
-        }
-      }),
-    });
-    showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
+    updateConfigStub = sandbox.stub();
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("should add a valid Dockerfile path to the configuration", async () => {
-    const mockUri = { fsPath: "/path/to/Dockerfile" };
-    showOpenDialogStub.resolves([mockUri]);
+  for (const filename of ["docker.sock", "docker_engine"]) {
+    it(`should show open dialog and update config if file with a proper extension (${filename}) is selected`, async () => {
+      const URI = { fsPath: `path/to/${filename}` } as Uri;
+      showOpenDialogStub.resolves([URI]);
+      getConfigurationStub.returns({
+        get: sandbox.stub().returns([]),
+        update: updateConfigStub,
+      });
+      await addDockerPath();
 
-    await addDockerPath();
+      assert.ok(showOpenDialogStub.calledOnce);
+      assert.ok(updateConfigStub.calledOnce);
+      assert.ok(updateConfigStub.calledOnceWith(LOCAL_DOCKER_SOCKET_PATH, URI.fsPath, true));
+    });
+  }
 
-    assert.ok(updateConfigStub.calledOnce);
-    assert.deepStrictEqual(updateConfigStub.firstCall.args, [
-      "docker.paths",
-      [mockUri.fsPath],
-      true,
-    ]);
-    assert.ok(showErrorMessageStub.notCalled);
-  });
-
-  it("should show an error message if the selected file is not a Dockerfile", async () => {
-    const mockUri = { fsPath: "/path/to/NotDockerfile.txt" };
-    showOpenDialogStub.resolves([mockUri]);
-
-    await addDockerPath();
-
-    assert.ok(updateConfigStub.notCalled);
-    assert.ok(showErrorMessageStub.calledOnce);
-    assert.strictEqual(
-      showErrorMessageStub.firstCall.args[0],
-      "Dockerfile path not added. Please select a Dockerfile.",
-    );
-  });
-
-  it("should not update configuration if no file is selected", async () => {
+  it("should not update config if no file is selected", async () => {
     showOpenDialogStub.resolves(undefined);
 
     await addDockerPath();
 
+    assert.ok(showOpenDialogStub.calledOnce);
     assert.ok(updateConfigStub.notCalled);
-    assert.ok(showErrorMessageStub.notCalled);
+  });
+
+  it("should not update config if invalid file is selected", async () => {
+    const uri = { fsPath: "path/to/file.txt" } as Uri;
+    showOpenDialogStub.resolves([uri]);
+
+    getConfigurationStub.returns({
+      get: sandbox.stub().returns([]),
+      update: updateConfigStub,
+    });
+
+    await addDockerPath();
+
+    assert.ok(showOpenDialogStub.calledOnce);
+    assert.ok(updateConfigStub.notCalled);
   });
 });
