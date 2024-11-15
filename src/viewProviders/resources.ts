@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { randomUUID } from "crypto";
 import * as vscode from "vscode";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { IconNames } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
@@ -27,7 +27,7 @@ import {
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
-import { CCloudResourceLoader, ResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
@@ -194,16 +194,13 @@ export async function loadCCloudResources(
   cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
 
   if (hasCCloudAuthSession()) {
-    const loader = ResourceLoader.getInstance(CCLOUD_CONNECTION_ID) as CCloudResourceLoader;
+    const loader = CCloudResourceLoader.getInstance();
     // TODO: have this cached in the resource manager via the loader
     const currentOrg = await getCurrentOrganization();
 
-    let ccloudEnvironments: CCloudEnvironment[] = [];
+    const ccloudEnvironments: CCloudEnvironment[] = [];
     try {
-      // Ensure all of the loading is complete before referencing resource manager CCloud resources.
-      await loader.ensureCoarseResourcesLoaded(forceDeepRefresh);
-      const resourceManager = getResourceManager();
-      ccloudEnvironments = await resourceManager.getCCloudEnvironments();
+      ccloudEnvironments.push(...(await loader.getEnvironments(forceDeepRefresh)));
     } catch (e) {
       // if we fail to load CCloud environments, we need to get as much information as possible as to
       // what went wrong since the user is effectively locked out of the CCloud resources for this org
@@ -218,6 +215,7 @@ export async function loadCCloudResources(
         }
       });
     }
+
     cloudContainerItem.collapsibleState =
       ccloudEnvironments.length > 0
         ? vscode.TreeItemCollapsibleState.Expanded
@@ -316,20 +314,13 @@ export async function loadLocalResources(): Promise<
 async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
-  // Ensure all of the loading is complete before referencing resource manager ccloud resources.
-  await (
-    ResourceLoader.getInstance(CCLOUD_CONNECTION_ID) as CCloudResourceLoader
-  ).ensureCoarseResourcesLoaded();
+  const loader = CCloudResourceLoader.getInstance();
 
-  const rm = getResourceManager();
-  // Get the Kafka clusters for this environment. Will at worst be an empty array.
-  const kafkaClusters = await rm.getCCloudKafkaClustersForEnvironment(environment.id);
-  subItems.push(...kafkaClusters);
+  // Get the Kafka clusters for this environment. At worst be an empty array.
+  subItems.push(...(await loader.getKafkaClustersForEnvironment(environment)));
 
   // Schema registry?
-  const schemaRegistry: CCloudSchemaRegistry | null = await rm.getCCloudSchemaRegistry(
-    environment.id,
-  );
+  const schemaRegistry = await loader.getSchemaRegistryForEnvironment(environment);
   if (schemaRegistry) {
     subItems.push(schemaRegistry);
   }

@@ -10,6 +10,8 @@ import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
+import { CCloudEnvironment, Environment, LocalEnvironment } from "../models/environment";
+import { EnvironmentResource } from "../models/interfaces";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema, SchemaType } from "../models/schema";
 import {
@@ -73,7 +75,23 @@ export abstract class ResourceLoader {
     throw new Error(`Unknown connectionId ${connectionId}`);
   }
 
+  // Environment methods
+
+  /**
+   * Get the accessible environments from the connection.
+   * @param forceDeepRefresh Ignore any previously cached resources and fetch anew?
+   */
+  public abstract getEnvironments(forceDeepRefresh?: boolean): Promise<Environment[]>;
+
   // Kafka cluster methods
+
+  /**
+   * Get the kafka clusters in the given environment.
+   */
+  public abstract getKafkaClustersForEnvironment(
+    environmentable: EnvironmentResource,
+    forceDeepRefresh?: boolean,
+  ): Promise<KafkaCluster[]>;
 
   /**
    * Return the topics present in the cluster. Will also correlate with schemas
@@ -84,15 +102,6 @@ export abstract class ResourceLoader {
     forceDeepRefresh?: boolean,
   ): Promise<KafkaTopic[]>;
 
-  /**
-   * Return the appropriate schema registry to use, if any, for the given cluster.
-   * @param cluster The {@link KafkaCluster} to get the schema registry for.
-   * @returns The {@link SchemaRegistry} for the cluster, if any.
-   */
-  public abstract getSchemaRegistryForCluster(
-    cluster: KafkaCluster,
-  ): Promise<SchemaRegistry | undefined>;
-
   // Schema registry methods
 
   /**
@@ -102,24 +111,32 @@ export abstract class ResourceLoader {
   public abstract getSchemaRegistries(): Promise<SchemaRegistry[]>;
 
   /**
-   * Get the possible schemas for a cluster's schema registry.
-   *
-   * @param cluster The {@link KafkaCluster} to get the schemas for. Will return empty array if there is
-   * no schema registry for the cluster, or if the schema registry has no schemas.
+   * Return the appropriate schema registry to use, if any, for the given object's environment.
+   * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry for.
+   * @returns The {@link SchemaRegistry} for the resource's environment, if any.
    */
-  public async getSchemasForCluster(
-    cluster: KafkaCluster,
+  public abstract getSchemaRegistryForEnvironment(
+    environmentable: EnvironmentResource,
+  ): Promise<SchemaRegistry | undefined>;
+
+  /**
+   * Get the possible schemas for an environment's schema registry.
+   *
+   * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry's
+   * schemas from. Will return empty array if there is no schema registry for the environment,
+   * or if said schema registry has no schemas.
+   */
+  public async getSchemasForEnvironment(
+    environmentable: EnvironmentResource,
     forceDeepRefresh: boolean = false,
   ): Promise<Schema[]> {
-    const schemaRegistry = await this.getSchemaRegistryForCluster(cluster);
+    const schemaRegistry = await this.getSchemaRegistryForEnvironment(environmentable);
     if (!schemaRegistry) {
       return [];
     }
 
     return await this.getSchemasForRegistry(schemaRegistry, forceDeepRefresh);
   }
-
-  // Schema registry methods.
 
   /**
    * Fetch the schemas from the given schema registry.
@@ -129,15 +146,6 @@ export abstract class ResourceLoader {
    * */
   public abstract getSchemasForRegistry(
     schemaRegistry: SchemaRegistry,
-    forceDeepRefresh?: boolean,
-  ): Promise<Schema[]>;
-
-  /**
-   * Get the schemas associated with a given Kafka topic's environment's schema registry.
-   * This returns _all_ of the schemas in the registry, not just those possibly associated with the topic.
-   **/
-  public abstract getSchemasForTopicEnvironment(
-    topic: KafkaTopic,
     forceDeepRefresh?: boolean,
   ): Promise<Schema[]>;
 
@@ -167,9 +175,6 @@ export abstract class ResourceLoader {
  * this is considered a 'fine grained resource' and is not loaded until requested.
  */
 export class CCloudResourceLoader extends ResourceLoader {
-  // XXX todo only exported for transition period before all existing callers to what should
-  // become private methods like ensureCoarseResourcesLoaded are revised.
-
   kind = ResouceLoaderType.CCloud;
 
   private static instance: CCloudResourceLoader | null = null;
@@ -196,7 +201,9 @@ export class CCloudResourceLoader extends ResourceLoader {
    */
   private schemaRegistryCacheStates: Map<string, boolean | Promise<void>> = new Map();
 
-  private constructor() {
+  // Singleton class. Use getInstance() to get the singleton instance.
+  // (Only public for testing / signon mocking purposes.)
+  constructor() {
     super();
 
     // When the ccloud connection state changes, reset the loader's state.
@@ -237,7 +244,7 @@ export class CCloudResourceLoader extends ResourceLoader {
    * They do not include topics within a cluster or schemas within a schema registry, which are fetched
    * and cached more closely to when they are needed.
    */
-  public async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
+  private async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
     // TODO make this private, fix all the callers via ensuring there's an adequate
     // ResourceLoader API covering the use case end-user code is directly calling
     // ensureCoarseResourcesLoaded().
@@ -358,6 +365,16 @@ export class CCloudResourceLoader extends ResourceLoader {
   }
 
   /**
+   * Fetch the CCloud environments accessible from the current CCloud auth session.
+   * @param forceDeepRefresh Should we ignore any cached resources and fetch anew?
+   * @returns
+   */
+  public async getEnvironments(forceDeepRefresh: boolean = false): Promise<CCloudEnvironment[]> {
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+    return await getResourceManager().getCCloudEnvironments();
+  }
+
+  /**
    * Get all of the known schema registries in the accessible CCloud environments.
    *
    * Ensures that the coarse resources are loaded before returning the schema registries from
@@ -371,6 +388,24 @@ export class CCloudResourceLoader extends ResourceLoader {
     const registryByEnvId = await getResourceManager().getCCloudSchemaRegistries();
 
     return Array.from(registryByEnvId.values());
+  }
+
+  /**
+   * Get the CCLoud kafka clusters in the given environment.
+   */
+  public async getKafkaClustersForEnvironment(
+    environmentable: EnvironmentResource,
+    forceDeepRefresh?: boolean,
+  ): Promise<CCloudKafkaCluster[]> {
+    if (environmentable.environmentId === undefined) {
+      throw new Error(
+        `${environmentable} Does not have an environmentId associated with it. Cannot fetch clusters.`,
+      );
+    }
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+    return await getResourceManager().getCCloudKafkaClustersForEnvironment(
+      environmentable.environmentId,
+    );
   }
 
   /**
@@ -401,7 +436,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
     // but the topics are always a deep fetch.
     const [schemas, responseTopics] = await Promise.all([
-      this.getSchemasForCluster(cluster, forceDeepRefresh),
+      this.getSchemasForEnvironment(cluster, forceDeepRefresh),
       fetchTopics(cluster),
     ]);
 
@@ -418,19 +453,45 @@ export class CCloudResourceLoader extends ResourceLoader {
     return topics;
   }
 
-  public async getSchemaRegistryForCluster(
-    cluster: CCloudKafkaCluster,
+  public async getSchemaRegistryForEnvironment(
+    environmentable: EnvironmentResource,
   ): Promise<CCloudSchemaRegistry | undefined> {
     await this.ensureCoarseResourcesLoaded();
 
     const schemaRegistries = await this.getSchemaRegistries();
     return schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === cluster.environmentId,
+      (schemaRegistry) => schemaRegistry.environmentId === environmentable.environmentId,
     );
   }
 
+  public async getSchemasForEnvironment(
+    environmentable: EnvironmentResource,
+    forceDeepRefresh?: boolean,
+  ): Promise<Schema[]> {
+    // Guard against programming error. Only resources from ccloud should get this far.
+    if (environmentable.environmentId === undefined) {
+      throw new Error(
+        `${environmentable} Does not have an environmentId associated with it. Cannot fetch schemas.`,
+      );
+    }
+
+    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
+
+    const schemaRegistries = await this.getSchemaRegistries();
+    const registry = schemaRegistries.find(
+      (schemaRegistry) => schemaRegistry.environmentId === environmentable.environmentId,
+    );
+
+    if (!registry) {
+      // No schema registry for this topic's environment, so no schemas.
+      return [];
+    }
+
+    return this.getSchemasForRegistry(registry, forceDeepRefresh);
+  }
+
   public async getSchemasForRegistry(
-    schemaRegistry: SchemaRegistry,
+    schemaRegistry: CCloudSchemaRegistry,
     forceDeepRefresh?: boolean,
   ): Promise<Schema[]> {
     // Ensure coarse resources (envs, clusters, schema registries) are cached.
@@ -448,32 +509,6 @@ export class CCloudResourceLoader extends ResourceLoader {
     return schemas;
   }
 
-  public async getSchemasForTopicEnvironment(
-    topic: KafkaTopic,
-    forceDeepRefresh?: boolean,
-  ): Promise<Schema[]> {
-    // Guard against programming error. Only topics from ccloud should get this far.
-    if (topic.environmentId === undefined) {
-      throw new Error(
-        `Topic ${topic.name} does not have an environmentId associated with it (not a CCLoud topic?). Cannot fetch schemas.`,
-      );
-    }
-
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-
-    const schemaRegistries = await this.getSchemaRegistries();
-    const registry = schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === topic.environmentId,
-    );
-
-    if (!registry) {
-      // No schema registry for this topic's environment, so no schemas.
-      return [];
-    }
-
-    return this.getSchemasForRegistry(registry, forceDeepRefresh);
-  }
-
   /**
    * Mark this schema registry cache as stale, such as when known that a schema has been added or removed,
    * but the registry isn't currently being displayed
@@ -484,7 +519,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   /** Ensure that this single Schema Registry's schemas have been loaded. */
   private async ensureSchemasLoaded(
-    schemaRegistry: SchemaRegistry,
+    schemaRegistry: CCloudSchemaRegistry,
     forceDeepRefresh: boolean = false,
   ): Promise<void> {
     if (forceDeepRefresh) {
@@ -532,19 +567,45 @@ export class CCloudResourceLoader extends ResourceLoader {
  * Does no caching at all. Directly fetches from the local sidecar API
  * each time a resource is requested.
  */
-class LocalResourceLoader extends ResourceLoader {
+export class LocalResourceLoader extends ResourceLoader {
   kind = ResouceLoaderType.Local;
 
   private static instance: LocalResourceLoader | null = null;
-  public static getInstance(): ResourceLoader {
+  public static getInstance(): LocalResourceLoader {
     if (!LocalResourceLoader.instance) {
       LocalResourceLoader.instance = new LocalResourceLoader();
     }
     return LocalResourceLoader.instance;
   }
 
-  private constructor() {
+  // singleton class, get instance via getInstance()
+  // (construct only public for testing / signon mocking purposes.)
+  constructor() {
     super();
+  }
+
+  public async getEnvironments(): Promise<Environment[]> {
+    // todo: resolve the impedance mismatch between
+    // LocalResourceGroup vs LocalEnvironment. Perhaps have getLocalResources
+    // return something closer to an evolved LocalEnvironment?
+    const localResourceGroups = await getLocalResources();
+    if (localResourceGroups.length === 0) {
+      return [];
+    } else {
+      // respell as a single LocalEnvironment
+      return [
+        LocalEnvironment.create({
+          id: "local",
+          name: "Local",
+          hasClusters: true,
+        }),
+      ];
+    }
+  }
+
+  public async getKafkaClustersForEnvironment(): Promise<LocalKafkaCluster[]> {
+    const localGroups = await getLocalResources();
+    return localGroups.flatMap((group) => group.kafkaClusters);
   }
 
   /**
@@ -558,20 +619,24 @@ class LocalResourceLoader extends ResourceLoader {
       );
     }
 
-    // set up to do the schema and topic fetch concurrently.
-
-    // A quick lambda to fetch the schemas or return empty [] if no schema registry.
-
     // Deep fetch the schemas and the topics concurrently.
-    const [schemas, responseTopics] = await Promise.all([
-      this.getSchemasForCluster(cluster),
+    const [schemas, responseTopics]: [Schema[], TopicData[]] = await Promise.all([
+      this.getSchemasForEnvironment(),
       fetchTopics(cluster),
     ]);
 
-    return correlateTopicsWithSchemas(cluster, responseTopics as TopicData[], schemas as Schema[]);
+    return correlateTopicsWithSchemas(cluster, responseTopics, schemas);
   }
 
-  public async getSchemaRegistryForCluster(): Promise<LocalSchemaRegistry | undefined> {
+  public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {
+    const localGroups = await getLocalResources();
+
+    return localGroups
+      .filter((group) => group.schemaRegistry !== undefined)
+      .map((group) => group.schemaRegistry!);
+  }
+
+  public async getSchemaRegistryForEnvironment(): Promise<LocalSchemaRegistry | undefined> {
     const allRegistries = await this.getSchemaRegistries();
     if (allRegistries.length === 0) {
       return undefined;
@@ -587,27 +652,7 @@ class LocalResourceLoader extends ResourceLoader {
     }
   }
 
-  public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {
-    const localGroups = await getLocalResources();
-
-    return localGroups
-      .filter((group) => group.schemaRegistry !== undefined)
-      .map((group) => group.schemaRegistry!);
-  }
-
-  /**
-   * Fetch schemas from local schema registry.
-   * Simple, pass through to deep fetch every time.
-   */
-  public async getSchemasForRegistry(
-    schemaRegistry: SchemaRegistry,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    forceDeepRefresh: boolean = false,
-  ): Promise<Schema[]> {
-    return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined);
-  }
-
-  public async getSchemasForTopicEnvironment(): Promise<Schema[]> {
+  public async getSchemasForEnvironment(): Promise<Schema[]> {
     const schemaRegistries = await this.getSchemaRegistries();
     if (schemaRegistries.length === 0) {
       return [];
@@ -616,11 +661,18 @@ class LocalResourceLoader extends ResourceLoader {
     return fetchSchemas(schemaRegistries[0].id, LOCAL_CONNECTION_ID, undefined);
   }
 
+  /**
+   * Fetch schemas from local schema registry.
+   * Simple, pass through to deep fetch every time.
+   */
+  public async getSchemasForRegistry(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
+    return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined);
+  }
+
   /** Purge schemas from this registry from cache.
    * Simple, we don't cache anything in this loader!
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public purgeSchemas(schemaRegistryId: string): void {
+  public purgeSchemas(): void {
     // no-op
   }
 }
@@ -712,7 +764,7 @@ export async function fetchSchemas(
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
     const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
     // appease typescript because it doesn't want to convert `string | undefined` to `Require<string> | undefined`
-    const maybeEnvironmentId = environmentId as Require<string> | undefined;
+    const maybeEnvironmentId = environmentId as Require<string | undefined>;
     // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
     return Schema.create({
       id: schema.id!.toString(),

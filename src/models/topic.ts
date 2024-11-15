@@ -2,9 +2,11 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../authz/types";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { EnvironmentResource } from "./interfaces";
 import { CustomMarkdownString } from "./main";
+
 /** Main class representing Kafka topic */
-export class KafkaTopic extends Data {
+export class KafkaTopic extends Data implements EnvironmentResource {
   name!: Enforced<string>;
   replication_factor!: Enforced<number>;
   partition_count!: Enforced<number>;
@@ -17,8 +19,8 @@ export class KafkaTopic extends Data {
   is_internal!: Enforced<boolean>;
 
   clusterId!: Enforced<string>;
-  /** CCloud env id. If null, implies a "local cluster" topic. */
-  environmentId: string | null = null;
+  /** CCloud env id. If undefined, implies a "local cluster" topic. */
+  environmentId: string | undefined = undefined;
   hasSchema: boolean = false;
 
   /** Operations the user is authzd to perform on the topic */
@@ -40,8 +42,8 @@ export class KafkaTopic extends Data {
 
   /** Is this a local cluster topic (if not, then is ccloud)? */
   isLocalTopic(): boolean {
-    // as indicated by the (ccloud) environmentId being null
-    return this.environmentId == null;
+    // as indicated by the (ccloud) environmentId being undefined
+    return this.environmentId === undefined;
   }
 
   get connectionId(): string {

@@ -1,6 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { EnvironmentResource } from "./interfaces";
 import { CustomMarkdownString } from "./main";
 
 /**
@@ -12,13 +13,18 @@ import { CustomMarkdownString } from "./main";
  * things in the future such as Flink clusters.
  *
  */
-export abstract class Environment extends Data {
+export abstract class Environment extends Data implements EnvironmentResource {
   abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
 
   id!: Enforced<string>;
   name!: Enforced<string>;
+
+  // Fulfill the EnvironmentResource interface
+  get environmentId(): string | undefined {
+    return this.id;
+  }
 
   /**
    * Has at least one Kafka cluster or Schema Registry.
@@ -33,8 +39,7 @@ export abstract class Environment extends Data {
   // the case yet.
 }
 
-// Main class representing CCloud environments, matching key/value pairs returned
-// by the `confluent environment list` command.
+/** Representation of a group of resources in CCLoud */
 export class CCloudEnvironment extends Environment {
   readonly connectionId: string = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
@@ -48,7 +53,7 @@ export class CCloudEnvironment extends Environment {
   }
 }
 
-/** Class representing the local resource group. */
+/** Class representing the local / Docker resource group. */
 export class LocalEnvironment extends Environment {
   readonly connectionId: string = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
