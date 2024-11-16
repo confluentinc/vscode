@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
@@ -26,6 +25,7 @@ import {
 import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
+import { captureException } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
@@ -539,7 +539,7 @@ function messageViewerStartPollingCommand(
             }
             default: {
               reportable = { message: "Something went wrong." };
-              Sentry.captureException(error, { extra: { status, payload } });
+              captureException(error, { extra: { status, payload } });
               window
                 .showErrorMessage("Error response while consuming messages.", "Open Logs")
                 .then((action) => {
