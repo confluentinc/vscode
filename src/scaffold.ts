@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 
 import { posix } from "path";
@@ -9,6 +8,7 @@ import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
+import { captureException } from "./errors";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -167,7 +167,7 @@ async function applyTemplate(
     }
   } catch (e) {
     logger.error("Failed to apply template", e);
-    Sentry.captureException(e);
+    captureException(e, { extra: { templateName: pickedTemplate.spec.display_name } });
     const action = await vscode.window.showErrorMessage(
       "There was an error while generating the project. Try again or file an issue.",
       { title: "Try again" },
