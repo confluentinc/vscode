@@ -470,8 +470,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // the following calls are all workspace-scoped
     logger.debug("handleSessionRemoved()", { updateSecret });
     this.updateContextValue(false);
-    pollCCloudConnectionAuth.stop();
     await clearCurrentCCloudResources();
+    pollCCloudConnectionAuth.stop();
     if (!this._session) {
       logger.debug("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
     } else {
