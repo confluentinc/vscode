@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Reauthenticating with CCloud and immediately clicking on items/actions in the sidebar will no
+  longer appear to (temporarily) invalidate the CCloud session.
+
 ## 0.21.1
 
 ### Added
