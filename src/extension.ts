@@ -58,6 +58,7 @@ import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
 import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { captureException } from "./errors";
 import { Logger, outputChannel } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
@@ -93,7 +94,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
   } catch (e) {
     logger.error("Error activating extension:", e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
-    Sentry.captureException(e);
+    captureException(e);
     throw e;
   }
   // XXX: used for testing; do not remove
