@@ -74,8 +74,13 @@ export function captureException(
   // TODO: check telemetry settings here?
   const obsContext: Record<string, any> = observabilityContext.toRecord();
   const extraContext = context ? context : {};
-  // merge our observability context first, then allow overrides with anything passed by the caller
-  const errorContext: Record<string, any> = { extra: { ...obsContext }, ...extraContext };
+  // ensure observability context keys always make it into the Sentry event under `extra`, even if
+  // the caller provided their own `extra` data in `context`
+  const { extra: extraFromContext = {}, ...restExtraContext } = extraContext as any;
+  const errorContext: Record<string, any> = {
+    extra: { ...obsContext, ...extraFromContext },
+    ...restExtraContext,
+  };
   logger.debug("capturing exception before sending to Sentry", errorContext);
   Sentry.captureException(error, errorContext);
 }
