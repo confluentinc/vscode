@@ -2,7 +2,6 @@ import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { resolve } from "path";
-import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
 
 export async function run() {
   const mocha = new Mocha({
@@ -42,7 +41,5 @@ export async function run() {
 function globalBeforeAll() {
   console.log("Global test suite setup");
 
-  // Ensure the resource loaders are constructed and registered before running tests.
-
-  constructResourceLoaderSingletons();
+  // Nothing for now. Just a hook for the future.
 }
