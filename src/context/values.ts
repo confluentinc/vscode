@@ -57,4 +57,9 @@ export enum ContextValues {
   kafkaClusterSelected = "confluent.kafkaClusterSelected",
   /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
+  /**
+   * EXPERIMENTAL: Are direct connections enabled at all?
+   * (This should go away once the `confluent.experimental.enableDirectConnections` setting is removed.)
+   */
+  directConnectionsEnabled = "confluent.directConnectionsEnabled",
 }
