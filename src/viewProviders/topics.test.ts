@@ -11,7 +11,7 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { StorageManager } from "../storage";
-import { CCloudResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 import { TopicViewProvider, loadTopicSchemas } from "./topics";
 

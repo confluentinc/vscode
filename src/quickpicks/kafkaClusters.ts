@@ -4,7 +4,8 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { hasCCloudAuthSession } from "../sidecar/connections";
-import { CCloudResourceLoader, LocalResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
+import { LocalResourceLoader } from "../storage/localResourceLoader";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 

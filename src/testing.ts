@@ -1,7 +1,8 @@
+import { writeFile } from "fs/promises";
+import { globSync } from "glob";
 import Mocha from "mocha";
 import { resolve } from "path";
-import { globSync } from "glob";
-import { writeFile } from "fs/promises";
+import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
 
 export async function run() {
   const mocha = new Mocha({
@@ -16,6 +17,7 @@ export async function run() {
       },
     },
   });
+
   const testsRoot = resolve(__dirname, ".");
   const files = globSync("./**/*.test.js", { cwd: testsRoot });
   for (const f of files) mocha.addFile(resolve(testsRoot, f));
@@ -25,6 +27,9 @@ export async function run() {
     mocha.fgrep(process.env.FGREP);
   }
 
+  mocha.suite.beforeAll("Global suite setup", globalBeforeAll);
+  // mocha.suite.beforeEach("Global individual setup", globalBeforeEach);
+
   const failures = await new Promise<number>((resolve) => mocha.run(resolve));
   if (failures > 0) throw new Error(`${failures} tests failed.`);
   // @ts-expect-error __coverage__ is what istanbul uses for storing coverage data
@@ -32,4 +37,12 @@ export async function run() {
   if (coverageData != null) {
     await writeFile("./coverage.json", JSON.stringify(coverageData));
   }
+}
+
+function globalBeforeAll() {
+  console.log("Global test suite setup");
+
+  // Ensure the resource loaders are constructed and registered before running tests.
+
+  constructResourceLoaderSingletons();
 }
