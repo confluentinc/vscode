@@ -7,11 +7,18 @@ import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_TOPIC,
+  TEST_LOCAL_SCHEMA,
+  TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { ResourceManager } from "../storage/resourceManager";
+import {
+  CCloudResourceLoader,
+  LocalResourceLoader,
+  ResourceLoader,
+} from "../storage/resourceLoader";
 import {
   CannotLoadSchemasError,
   diffLatestSchemasCommand,
@@ -77,105 +84,140 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   });
 });
 
-describe("commands/schemas.ts getLatestSchemasForTopic tests", function () {
-  let sandbox: sinon.SinonSandbox;
-  let resourceManagerStub: sinon.SinonStub;
-  let resourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+// Run one set of tests for the local resource loader and another for the CCloud resource loader
+describe(
+  "commands/schemas.ts getLatestSchemasForTopic vs local registry tests",
+  generateGetLatestSchemasForTopicTests(
+    LocalResourceLoader,
+    TEST_LOCAL_KAFKA_TOPIC,
+    TEST_LOCAL_SCHEMA,
+    TEST_LOCAL_SCHEMA_REGISTRY,
+  ),
+);
 
-  beforeEach(function () {
-    sandbox = sinon.createSandbox();
-    resourceManagerStub = sandbox.stub(ResourceManager, "getInstance");
-    resourceManager = sandbox.createStubInstance(ResourceManager);
-    resourceManagerStub.returns(resourceManager);
-  });
+describe(
+  "commands/schemas.ts getLatestSchemasForTopic vs CCLoud registry tests",
+  generateGetLatestSchemasForTopicTests(
+    CCloudResourceLoader,
+    TEST_CCLOUD_KAFKA_TOPIC,
+    TEST_CCLOUD_SCHEMA,
+    TEST_CCLOUD_SCHEMA_REGISTRY,
+  ),
+);
 
-  afterEach(function () {
-    sandbox.restore();
-  });
+/** Generic function used to generate same tests over getLatestSchemasForTopic() for varying ResourceLoaders */
+function generateGetLatestSchemasForTopicTests<
+  ResourceLoaderType extends ResourceLoader,
+  SchemaRegistryType extends SchemaRegistry,
+>(
+  resourceLoaderClass: Constructor<ResourceLoaderType>,
+  baseTopic: KafkaTopic,
+  testSchema: Schema,
+  baseSchemaRegistry: SchemaRegistryType,
+): () => void {
+  return function () {
+    let sandbox: sinon.SinonSandbox;
+    let resourceLoaderStub: sinon.SinonStub;
+    let resourceLoader: sinon.SinonStubbedInstance<ResourceLoaderType>;
+    let testTopic: KafkaTopic;
 
-  it("hates topics without schemas", async function () {
-    await assert.rejects(
-      async () => {
-        await getLatestSchemasForTopic(
-          KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, hasSchema: false }),
-        );
-      },
-      raisedErrorMatcher(/Asked to get schemas for topic "test-topic" believed to not have schema/),
-    );
-  });
+    beforeEach(function () {
+      sandbox = sinon.createSandbox();
+      resourceLoaderStub = sandbox.stub(ResourceLoader, "getInstance");
+      resourceLoader = sandbox.createStubInstance(resourceLoaderClass);
+      resourceLoaderStub.returns(resourceLoader);
 
-  it("hates local topics (at this time)", async function () {
-    await assert.rejects(
-      async () => {
-        await getLatestSchemasForTopic(
-          KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, hasSchema: true }),
-        );
-      },
-      raisedErrorMatcher(/Asked to get schemas for local topic "test-topic"/),
-    );
-  });
+      // Ensure that testTopic smells like it has a schema and is named "test-topic", the default expectation of these tests.
+      testTopic = KafkaTopic.create({ ...baseTopic, hasSchema: true, name: "test-topic" });
+    });
 
-  it("hates topics without schema registry", async function () {
-    // mock resourceManager.getCCloudSchemaRegistry() to return null
-    resourceManager.getCCloudSchemaRegistry.resolves(null);
-    await assert.rejects(
-      async () => {
-        await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-      },
-      raisedCannotLoadSchemasErrorMatcher(
-        /Could not determine schema registry for topic "test-topic" believed to have related schemas/,
-      ),
-    );
-  });
+    afterEach(function () {
+      sandbox.restore();
+    });
 
-  it("hates empty schema registry", async function () {
-    resourceManager.getCCloudSchemaRegistry.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
-    resourceManager.getSchemasForRegistry.resolves([]);
-    await assert.rejects(
-      async () => {
-        await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-      },
-      raisedCannotLoadSchemasErrorMatcher(
-        /Schema registry .* had no schemas, but we expected it to have some for topic "test-topic"/,
-      ),
-    );
-  });
+    it("hates topics without schemas", async function () {
+      await assert.rejects(
+        async () => {
+          await getLatestSchemasForTopic(KafkaTopic.create({ ...testTopic, hasSchema: false }));
+        },
+        raisedErrorMatcher(
+          /Asked to get schemas for topic "test-topic" believed to not have schema/,
+        ),
+      );
+    });
 
-  it("hates when no schemas match topic", async function () {
-    resourceManager.getCCloudSchemaRegistry.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
-    resourceManager.getSchemasForRegistry.resolves([
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "some-other-topic-value" }),
-    ]);
-    await assert.rejects(
-      async () => {
-        await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-      },
-      raisedCannotLoadSchemasErrorMatcher(/No schemas found for topic "test-topic"/),
-    );
-  });
+    it("hates topics without schema registry", async function () {
+      // mock resourceLoader.getCCloudSchemaRegistry() to return undefined, no schema registry
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(undefined);
+      await assert.rejects(
+        async () => {
+          await getLatestSchemasForTopic(testTopic);
+        },
+        raisedCannotLoadSchemasErrorMatcher(
+          /Could not determine schema registry for topic "test-topic" believed to have related schemas/,
+        ),
+      );
+    });
 
-  it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
-    resourceManager.getCCloudSchemaRegistry.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
-    resourceManager.getSchemasForRegistry.resolves([
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "test-topic-value", version: 1 }),
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "test-topic-value", version: 2 }),
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "test-topic-key", version: 1 }),
-    ]);
+    it("hates empty schema registry", async function () {
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
+      resourceLoader.getSchemasForRegistry.resolves([]);
+      await assert.rejects(
+        async () => {
+          await getLatestSchemasForTopic(testTopic);
+        },
+        raisedCannotLoadSchemasErrorMatcher(
+          /Schema registry .* had no schemas, but we expected it to have some for topic "test-topic"/,
+        ),
+      );
+    });
 
-    const fetchedLatestSchemas = await getLatestSchemasForTopic(TEST_CCLOUD_KAFKA_TOPIC);
-    assert.strictEqual(fetchedLatestSchemas.length, 2);
+    it("hates when no schemas match topic", async function () {
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
+      resourceLoader.getSchemasForRegistry.resolves([
+        Schema.create({ ...testSchema, subject: "some-other-topic-value" }),
+      ]);
+      await assert.rejects(
+        async () => {
+          await getLatestSchemasForTopic(testTopic);
+        },
+        raisedCannotLoadSchemasErrorMatcher(/No schemas found for topic "test-topic"/),
+      );
+    });
 
-    const expectedSubjectToVersion = new Map([
-      ["test-topic-value", 2],
-      ["test-topic-key", 1],
-    ]);
+    it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
+      resourceLoader.getSchemasForRegistry.resolves([
+        Schema.create({ ...testSchema, subject: "test-topic-value", version: 1 }),
+        Schema.create({ ...testSchema, subject: "test-topic-value", version: 2 }),
+        Schema.create({ ...testSchema, subject: "test-topic-key", version: 1 }),
+      ]);
 
-    for (const schema of fetchedLatestSchemas) {
-      assert.strictEqual(schema.version, expectedSubjectToVersion.get(schema.subject));
-      expectedSubjectToVersion.delete(schema.subject);
-    }
-  });
-});
+      const fetchedLatestSchemas = await getLatestSchemasForTopic(testTopic);
+      assert.strictEqual(fetchedLatestSchemas.length, 2);
+
+      const expectedSubjectToVersion = new Map([
+        ["test-topic-value", 2],
+        ["test-topic-key", 1],
+      ]);
+
+      for (const schema of fetchedLatestSchemas) {
+        assert.strictEqual(schema.version, expectedSubjectToVersion.get(schema.subject));
+        expectedSubjectToVersion.delete(schema.subject);
+      }
+    });
+  };
+}
+
+/**
+ * Generic interface for types with a constructor function (i.e. a real class)
+ *
+ * Needed to constrain to types that have constructors as a requirement
+ * for generic typing over types to be fed into sandbox.createStubInstance()
+ */
+interface Constructor<T> {
+  new (...args: any[]): T;
+}
 
 /** Function generator that returns a matcher function that checks if the error message matches the given regex
  *  and that the exception is an instance of Error (and only Error, not a subclass)

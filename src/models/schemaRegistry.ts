@@ -7,6 +7,8 @@ export abstract class SchemaRegistry extends Data {
   abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
+  abstract environmentId: string | undefined;
+
   id!: Enforced<string>;
   uri!: Enforced<string>;
 }
@@ -15,6 +17,7 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionId = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
   readonly isCCloud: boolean = false;
+  readonly environmentId: undefined = undefined;
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {

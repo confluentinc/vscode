@@ -125,7 +125,9 @@ describe("KafkaTopicTreeItem constructor", () => {
   });
 
   it("has schema implications", () => {
-    const schemaTopicTreeItem = new KafkaTopicTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
+    const schemaTopicTreeItem = new KafkaTopicTreeItem(
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, hasSchema: true }),
+    );
     const icon = schemaTopicTreeItem.iconPath;
     assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
     assert.strictEqual((icon as vscode.ThemeIcon).id, IconNames.TOPIC);
@@ -137,7 +139,9 @@ describe("KafkaTopicTreeItem constructor", () => {
   });
 
   it("no schema implications", () => {
-    const noSchemaTopicTreeItem = new KafkaTopicTreeItem(TEST_LOCAL_KAFKA_TOPIC);
+    const noSchemaTopicTreeItem = new KafkaTopicTreeItem(
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, hasSchema: false }),
+    );
     const icon = noSchemaTopicTreeItem.iconPath;
     assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
     assert.strictEqual((icon as vscode.ThemeIcon).id, IconNames.TOPIC_WITHOUT_SCHEMA);

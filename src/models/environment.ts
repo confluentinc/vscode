@@ -13,7 +13,6 @@ import { CustomMarkdownString } from "./main";
  *
  */
 export abstract class Environment extends Data {
-  abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
 
@@ -33,8 +32,7 @@ export abstract class Environment extends Data {
   // the case yet.
 }
 
-// Main class representing CCloud environments, matching key/value pairs returned
-// by the `confluent environment list` command.
+/** Representation of a group of resources in CCLoud */
 export class CCloudEnvironment extends Environment {
   readonly connectionId: string = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
@@ -48,7 +46,7 @@ export class CCloudEnvironment extends Environment {
   }
 }
 
-/** Class representing the local resource group. */
+/** Class representing the local / Docker resource group. */
 export class LocalEnvironment extends Environment {
   readonly connectionId: string = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
