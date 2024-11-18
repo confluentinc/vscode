@@ -55,6 +55,7 @@ import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { ContextValues, setContextValue } from "./context/values";
+import { DirectConnectionManager } from "./direct";
 import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
@@ -196,6 +197,9 @@ async function _activateExtension(
 
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
+
+  const directConnectionManager = DirectConnectionManager.getInstance();
+  context.subscriptions.push(...directConnectionManager.disposables);
 
   // XXX: used for testing; do not remove
   return context;
