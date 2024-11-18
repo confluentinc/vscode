@@ -7,7 +7,6 @@ export abstract class SchemaRegistry extends Data {
   abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
-  abstract environmentId: string | undefined;
 
   id!: Enforced<string>;
   uri!: Enforced<string>;
