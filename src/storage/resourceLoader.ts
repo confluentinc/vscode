@@ -11,7 +11,6 @@ import { getEnvironments } from "../graphql/environments";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { CCloudEnvironment, Environment, LocalEnvironment } from "../models/environment";
-import { EnvironmentResource } from "../models/interfaces";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema, SchemaType } from "../models/schema";
 import {
@@ -88,8 +87,8 @@ export abstract class ResourceLoader {
   /**
    * Get the kafka clusters in the given environment.
    */
-  public abstract getKafkaClustersForEnvironment(
-    environmentable: EnvironmentResource,
+  public abstract getKafkaClustersForEnvironmentId(
+    environmentId: string,
     forceDeepRefresh?: boolean,
   ): Promise<KafkaCluster[]>;
 
@@ -115,8 +114,8 @@ export abstract class ResourceLoader {
    * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry for.
    * @returns The {@link SchemaRegistry} for the resource's environment, if any.
    */
-  public abstract getSchemaRegistryForEnvironment(
-    environmentable: EnvironmentResource,
+  public abstract getSchemaRegistryForEnvironmentId(
+    environmentId: string | undefined,
   ): Promise<SchemaRegistry | undefined>;
 
   /**
@@ -126,11 +125,11 @@ export abstract class ResourceLoader {
    * schemas from. Will return empty array if there is no schema registry for the environment,
    * or if said schema registry has no schemas.
    */
-  public async getSchemasForEnvironment(
-    environmentable: EnvironmentResource,
+  public async getSchemasForEnvironmentId(
+    environmentId: string | undefined,
     forceDeepRefresh: boolean = false,
   ): Promise<Schema[]> {
-    const schemaRegistry = await this.getSchemaRegistryForEnvironment(environmentable);
+    const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(environmentId);
     if (!schemaRegistry) {
       return [];
     }
@@ -391,21 +390,17 @@ export class CCloudResourceLoader extends ResourceLoader {
   }
 
   /**
-   * Get the CCLoud kafka clusters in the given environment.
+   * Get the CCLoud kafka clusters in the given environment ID.
    */
-  public async getKafkaClustersForEnvironment(
-    environmentable: EnvironmentResource,
+  public async getKafkaClustersForEnvironmentId(
+    environmentId: string,
     forceDeepRefresh?: boolean,
   ): Promise<CCloudKafkaCluster[]> {
-    if (environmentable.environmentId === undefined) {
-      throw new Error(
-        `${environmentable} Does not have an environmentId associated with it. Cannot fetch clusters.`,
-      );
+    if (environmentId === undefined) {
+      throw new Error(`Cannot fetch clusters w/o an environmentId.`);
     }
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-    return await getResourceManager().getCCloudKafkaClustersForEnvironment(
-      environmentable.environmentId,
-    );
+    return await getResourceManager().getCCloudKafkaClustersForEnvironment(environmentId);
   }
 
   /**
@@ -436,7 +431,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
     // but the topics are always a deep fetch.
     const [schemas, responseTopics] = await Promise.all([
-      this.getSchemasForEnvironment(cluster, forceDeepRefresh),
+      this.getSchemasForEnvironmentId(cluster.environmentId, forceDeepRefresh),
       fetchTopics(cluster),
     ]);
 
@@ -453,33 +448,31 @@ export class CCloudResourceLoader extends ResourceLoader {
     return topics;
   }
 
-  public async getSchemaRegistryForEnvironment(
-    environmentable: EnvironmentResource,
+  public async getSchemaRegistryForEnvironmentId(
+    environmentId: string,
   ): Promise<CCloudSchemaRegistry | undefined> {
     await this.ensureCoarseResourcesLoaded();
 
     const schemaRegistries = await this.getSchemaRegistries();
     return schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === environmentable.environmentId,
+      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
     );
   }
 
-  public async getSchemasForEnvironment(
-    environmentable: EnvironmentResource,
+  public async getSchemasForEnvironmentId(
+    environmentId: string,
     forceDeepRefresh?: boolean,
   ): Promise<Schema[]> {
     // Guard against programming error. Only resources from ccloud should get this far.
-    if (environmentable.environmentId === undefined) {
-      throw new Error(
-        `${environmentable} Does not have an environmentId associated with it. Cannot fetch schemas.`,
-      );
+    if (environmentId === undefined) {
+      throw new Error(`Cannot fetch schemas w/o an environmentId.`);
     }
 
     await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
 
     const schemaRegistries = await this.getSchemaRegistries();
     const registry = schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === environmentable.environmentId,
+      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
     );
 
     if (!registry) {
@@ -580,7 +573,7 @@ export class LocalResourceLoader extends ResourceLoader {
 
   // singleton class, get instance via getInstance()
   // (construct only public for testing / signon mocking purposes.)
-  constructor() {
+  private constructor() {
     super();
   }
 
@@ -603,7 +596,7 @@ export class LocalResourceLoader extends ResourceLoader {
     }
   }
 
-  public async getKafkaClustersForEnvironment(): Promise<LocalKafkaCluster[]> {
+  public async getKafkaClustersForEnvironmentId(): Promise<LocalKafkaCluster[]> {
     const localGroups = await getLocalResources();
     return localGroups.flatMap((group) => group.kafkaClusters);
   }
@@ -621,7 +614,7 @@ export class LocalResourceLoader extends ResourceLoader {
 
     // Deep fetch the schemas and the topics concurrently.
     const [schemas, responseTopics]: [Schema[], TopicData[]] = await Promise.all([
-      this.getSchemasForEnvironment(),
+      this.getSchemasForEnvironmentId(),
       fetchTopics(cluster),
     ]);
 
@@ -636,7 +629,7 @@ export class LocalResourceLoader extends ResourceLoader {
       .map((group) => group.schemaRegistry!);
   }
 
-  public async getSchemaRegistryForEnvironment(): Promise<LocalSchemaRegistry | undefined> {
+  public async getSchemaRegistryForEnvironmentId(): Promise<LocalSchemaRegistry | undefined> {
     const allRegistries = await this.getSchemaRegistries();
     if (allRegistries.length === 0) {
       return undefined;
@@ -652,7 +645,7 @@ export class LocalResourceLoader extends ResourceLoader {
     }
   }
 
-  public async getSchemasForEnvironment(): Promise<Schema[]> {
+  public async getSchemasForEnvironmentId(): Promise<Schema[]> {
     const schemaRegistries = await this.getSchemaRegistries();
     if (schemaRegistries.length === 0) {
       return [];

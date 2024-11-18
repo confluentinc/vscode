@@ -38,7 +38,7 @@ export async function kafkaClusterQuickPick(
   const localKafkaClusters: LocalKafkaCluster[] = [];
   if (includeLocal) {
     const localLoader = LocalResourceLoader.getInstance();
-    localKafkaClusters.push(...(await localLoader.getKafkaClustersForEnvironment()));
+    localKafkaClusters.push(...(await localLoader.getKafkaClustersForEnvironmentId()));
   }
 
   const cloudKafkaClusters: CCloudKafkaCluster[] = [];
@@ -50,7 +50,7 @@ export async function kafkaClusterQuickPick(
       const ccloudLoader = CCloudResourceLoader.getInstance();
       cloudEnvironments.push(...(await ccloudLoader.getEnvironments()));
       for (const env of cloudEnvironments) {
-        cloudKafkaClusters.push(...(await ccloudLoader.getKafkaClustersForEnvironment(env)));
+        cloudKafkaClusters.push(...(await ccloudLoader.getKafkaClustersForEnvironmentId(env.id)));
       }
     }
   }

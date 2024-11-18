@@ -1,11 +1,10 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { EnvironmentResource } from "./interfaces";
 import { CustomMarkdownString } from "./main";
 
 /** Base class for all KafkaClusters, be they local or be they CCloud */
-export abstract class KafkaCluster extends Data implements EnvironmentResource {
+export abstract class KafkaCluster extends Data {
   abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;

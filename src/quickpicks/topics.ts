@@ -20,7 +20,7 @@ export async function topicQuickPick(
     const loader = ResourceLoader.getInstance(cluster.connectionId);
 
     const [schemas, topics]: [Schema[], KafkaTopic[]] = await Promise.all([
-      loader.getSchemasForEnvironment(cluster, forceRefresh),
+      loader.getSchemasForEnvironmentId(cluster.environmentId, forceRefresh),
       loader.getTopicsForCluster(cluster, forceRefresh),
     ]);
 

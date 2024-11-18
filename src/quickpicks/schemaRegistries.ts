@@ -2,7 +2,11 @@ import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  LocalSchemaRegistry,
+  SchemaRegistry,
+} from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -36,8 +40,9 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
 
-  const localSchemaRegistries: SchemaRegistry[] =
-    registriesByConnectionID.get(LOCAL_CONNECTION_ID)!;
+  const localSchemaRegistries: LocalSchemaRegistry[] = registriesByConnectionID.get(
+    LOCAL_CONNECTION_ID,
+  )! as LocalSchemaRegistry[];
   const ccloudSchemaRegistries: CCloudSchemaRegistry[] = registriesByConnectionID.get(
     CCLOUD_CONNECTION_ID,
   )! as CCloudSchemaRegistry[];
@@ -126,7 +131,7 @@ async function getRegistriesByConnectionID(): Promise<Map<string, SchemaRegistry
  * The `description` of each pushed QuickPickItem is the Schema Registry ID.
  */
 function populateLocalSchemaRegistries(
-  localSchemaRegistries: SchemaRegistry[],
+  localSchemaRegistries: LocalSchemaRegistry[],
   selectedSchemaRegistry: SchemaRegistry | null,
   quickPickItems: vscode.QuickPickItem[],
   schemaRegistryNameMap: Map<string, SchemaRegistry>,

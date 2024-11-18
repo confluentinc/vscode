@@ -150,7 +150,7 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
 
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironment(topic);
+  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(topic.environmentId);
   if (!schemaRegistry) {
     throw new CannotLoadSchemasError(
       `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,

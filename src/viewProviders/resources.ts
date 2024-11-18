@@ -317,10 +317,10 @@ async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const loader = CCloudResourceLoader.getInstance();
 
   // Get the Kafka clusters for this environment. At worst be an empty array.
-  subItems.push(...(await loader.getKafkaClustersForEnvironment(environment)));
+  subItems.push(...(await loader.getKafkaClustersForEnvironmentId(environment.id)));
 
   // Schema registry?
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironment(environment);
+  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(environment.id);
   if (schemaRegistry) {
     subItems.push(schemaRegistry);
   }

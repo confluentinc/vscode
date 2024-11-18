@@ -1,7 +1,6 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { EnvironmentResource } from "./interfaces";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
 
 export enum SchemaType {
@@ -18,7 +17,7 @@ const extensionMap: { [key in SchemaType]: string } = {
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
-export class Schema extends Data implements EnvironmentResource {
+export class Schema extends Data {
   id!: Enforced<string>;
   subject!: Enforced<string>;
   version!: Enforced<number>;

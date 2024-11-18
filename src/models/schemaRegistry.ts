@@ -1,10 +1,9 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { EnvironmentResource } from "./interfaces";
 import { CustomMarkdownString } from "./main";
 
-export abstract class SchemaRegistry extends Data implements EnvironmentResource {
+export abstract class SchemaRegistry extends Data {
   abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;

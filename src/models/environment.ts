@@ -1,7 +1,6 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { EnvironmentResource } from "./interfaces";
 import { CustomMarkdownString } from "./main";
 
 /**
@@ -13,18 +12,12 @@ import { CustomMarkdownString } from "./main";
  * things in the future such as Flink clusters.
  *
  */
-export abstract class Environment extends Data implements EnvironmentResource {
-  abstract readonly connectionId: string;
+export abstract class Environment extends Data {
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
 
   id!: Enforced<string>;
   name!: Enforced<string>;
-
-  // Fulfill the EnvironmentResource interface
-  get environmentId(): string | undefined {
-    return this.id;
-  }
 
   /**
    * Has at least one Kafka cluster or Schema Registry.

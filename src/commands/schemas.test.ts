@@ -148,7 +148,7 @@ function generateGetLatestSchemasForTopicTests<
 
     it("hates topics without schema registry", async function () {
       // mock resourceLoader.getCCloudSchemaRegistry() to return undefined, no schema registry
-      resourceLoader.getSchemaRegistryForEnvironment.resolves(undefined);
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(undefined);
       await assert.rejects(
         async () => {
           await getLatestSchemasForTopic(testTopic);
@@ -160,7 +160,7 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     it("hates empty schema registry", async function () {
-      resourceLoader.getSchemaRegistryForEnvironment.resolves(baseSchemaRegistry);
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
       resourceLoader.getSchemasForRegistry.resolves([]);
       await assert.rejects(
         async () => {
@@ -173,7 +173,7 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     it("hates when no schemas match topic", async function () {
-      resourceLoader.getSchemaRegistryForEnvironment.resolves(baseSchemaRegistry);
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
       resourceLoader.getSchemasForRegistry.resolves([
         Schema.create({ ...testSchema, subject: "some-other-topic-value" }),
       ]);
@@ -186,7 +186,7 @@ function generateGetLatestSchemasForTopicTests<
     });
 
     it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
-      resourceLoader.getSchemaRegistryForEnvironment.resolves(baseSchemaRegistry);
+      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
       resourceLoader.getSchemasForRegistry.resolves([
         Schema.create({ ...testSchema, subject: "test-topic-value", version: 1 }),
         Schema.create({ ...testSchema, subject: "test-topic-value", version: 2 }),
