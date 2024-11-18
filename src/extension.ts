@@ -66,7 +66,7 @@ import { sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { constructResourceLoaderSingletons } from "./storage/resourceLoader";
+import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
