@@ -27,7 +27,7 @@ import {
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
-import { CCloudResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
