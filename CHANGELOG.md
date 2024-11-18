@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.21.2
+
 ### Fixed
 
 - Reauthenticating with CCloud and immediately clicking on items/actions in the sidebar will no
