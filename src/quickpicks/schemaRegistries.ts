@@ -40,8 +40,9 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
 
-  const localSchemaRegistries: LocalSchemaRegistry[] =
-    registriesByConnectionID.get(LOCAL_CONNECTION_ID)!;
+  const localSchemaRegistries: LocalSchemaRegistry[] = registriesByConnectionID.get(
+    LOCAL_CONNECTION_ID,
+  )! as LocalSchemaRegistry[];
   const ccloudSchemaRegistries: CCloudSchemaRegistry[] = registriesByConnectionID.get(
     CCLOUD_CONNECTION_ID,
   )! as CCloudSchemaRegistry[];
@@ -130,7 +131,7 @@ async function getRegistriesByConnectionID(): Promise<Map<string, SchemaRegistry
  * The `description` of each pushed QuickPickItem is the Schema Registry ID.
  */
 function populateLocalSchemaRegistries(
-  localSchemaRegistries: SchemaRegistry[],
+  localSchemaRegistries: LocalSchemaRegistry[],
   selectedSchemaRegistry: SchemaRegistry | null,
   quickPickItems: vscode.QuickPickItem[],
   schemaRegistryNameMap: Map<string, SchemaRegistry>,
@@ -142,7 +143,7 @@ function populateLocalSchemaRegistries(
   });
 
   // Will most likely be a single local Schema Registry, but the API is designed to support multiple.
-  localSchemaRegistries.forEach((schemaRegistry: LocalSchemaRegistry) => {
+  localSchemaRegistries.forEach((schemaRegistry: SchemaRegistry) => {
     quickPickItems.push({
       label: schemaRegistry.uri,
       description: schemaRegistry.id,
