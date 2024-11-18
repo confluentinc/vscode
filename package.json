@@ -366,6 +366,14 @@
           "type": "string",
           "default": "localhost",
           "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
+        },
+        "confluent.experimental.enableDirectConnections": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable direct connections to Kafka and Schema Registry resources.",
+          "tags": [
+            "experimental"
+          ]
         }
       }
     },
