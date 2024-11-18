@@ -4,6 +4,24 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.21.2
+
+### Fixed
+
+- Reauthenticating with CCloud and immediately clicking on items/actions in the sidebar will no
+  longer appear to (temporarily) invalidate the CCloud session.
+
+## 0.21.1
+
+### Added
+
+- Documentation in the README for uploading new/updated schemas to local and Confluent Cloud Schema
+  Registry instances.
+
+### Changed
+
+- (Updated telemetry configs, no user-facing changes.)
+
 ## 0.21.0
 
 ### Added
