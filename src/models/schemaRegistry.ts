@@ -16,7 +16,6 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionId = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
   readonly isCCloud: boolean = false;
-  readonly environmentId: undefined = undefined;
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
