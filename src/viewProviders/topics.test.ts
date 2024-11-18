@@ -11,7 +11,8 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { StorageManager } from "../storage";
-import { CCloudResourceLoader } from "../storage/resourceLoader";
+import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
+import { constructResourceLoaderSingletons } from "../storage/resourceLoaderInitialization";
 import { getResourceManager } from "../storage/resourceManager";
 import { TopicViewProvider, loadTopicSchemas } from "./topics";
 
@@ -57,15 +58,12 @@ describe("TopicViewProvider helper functions", () => {
 
   before(async () => {
     storageManager = await getTestStorageManager();
+    constructResourceLoaderSingletons();
   });
 
   beforeEach(async () => {
     // fresh slate for each test
     await storageManager.clearWorkspaceState();
-
-    // Set the ccloud loader up to think it has
-    // already loaded the resources. Bypass private-ness.
-    ccloudResourceLoader["coarseLoadingComplete"] = true;
   });
 
   afterEach(async () => {
@@ -95,6 +93,8 @@ describe("TopicViewProvider helper functions", () => {
     await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, preloadedSchemas);
     // set the loader-level cache state to true as if we had already loaded the schemas
     ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
+    // and the coarse resources
+    ccloudResourceLoader["coarseLoadingComplete"] = true;
 
     // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
     const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });

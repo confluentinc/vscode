@@ -14,11 +14,9 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import {
-  CCloudResourceLoader,
-  LocalResourceLoader,
-  ResourceLoader,
-} from "../storage/resourceLoader";
+import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
+import { LocalResourceLoader } from "../storage/localResourceLoader";
+import { ResourceLoader } from "../storage/resourceLoader";
 import {
   CannotLoadSchemasError,
   diffLatestSchemasCommand,
