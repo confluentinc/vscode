@@ -321,15 +321,28 @@
     "configuration": {
       "title": "Confluent",
       "properties": {
+        "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
+        },
+        "confluent.experimental.enableDirectConnections": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable direct connections to Kafka and Schema Registry resources.",
+          "tags": [
+            "experimental"
+          ]
+        },
         "confluent.debugging.showSidecarExceptions": {
           "type": "boolean",
           "default": false,
           "description": "Alert on sidecar process exceptions"
         },
-        "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
+        "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
+          "default": false,
+          "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
         },
         "confluent.ssl.pemPaths": {
           "type": "array",
@@ -338,11 +351,6 @@
           },
           "default": [],
           "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent/Kafka resources. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)"
-        },
-        "confluent.debugging.sslTls.serverCertificateVerificationDisabled": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka connections or resources.\n\n---\n\n⚠️ **WARNING**: This setting may allow a Man-in-the-Middle attack on the network connection between the Confluent extension and Confluent Cloud, which can lead to loss of sensitive data like credentials and PII. **_This should only be used for debugging purposes in non-production environments._**"
         },
         "confluent.localDocker.socketPath": {
           "type": "string",
@@ -361,19 +369,6 @@
           "type": "string",
           "default": "latest",
           "description": "Docker image tag to use when starting a local Kafka container"
-        },
-        "confluent.localDocker.kafkaRestHost": {
-          "type": "string",
-          "default": "localhost",
-          "description": "Host to use for the Kafka REST Proxy when starting a local Kafka cluster"
-        },
-        "confluent.experimental.enableDirectConnections": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable direct connections to Kafka and Schema Registry resources.",
-          "tags": [
-            "experimental"
-          ]
         }
       }
     },
