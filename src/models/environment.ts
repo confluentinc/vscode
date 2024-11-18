@@ -13,6 +13,7 @@ import { CustomMarkdownString } from "./main";
  *
  */
 export abstract class Environment extends Data {
+  abstract readonly connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
 
