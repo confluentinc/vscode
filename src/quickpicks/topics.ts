@@ -8,7 +8,10 @@ import { ResourceLoader } from "../storage/resourceLoader";
 
 const logger = new Logger("quickpicks.topics");
 
-export async function topicQuickPick(cluster: KafkaCluster): Promise<KafkaTopic | undefined> {
+export async function topicQuickPick(
+  cluster: KafkaCluster,
+  forceRefresh: boolean = false,
+): Promise<KafkaTopic | undefined> {
   const options: ProgressOptions = {
     location: { viewId: "confluent-topics" },
     title: "Loading topics...",
@@ -16,12 +19,8 @@ export async function topicQuickPick(cluster: KafkaCluster): Promise<KafkaTopic 
   return window.withProgress(options, async () => {
     const loader = ResourceLoader.getInstance(cluster.connectionId);
 
-    // I ... guess we always want to force a refresh here?
-    // (was how @shoup did it in the original code)
-    const forceRefresh = true;
-
     const [schemas, topics]: [Schema[], KafkaTopic[]] = await Promise.all([
-      loader.getSchemasForCluster(cluster, forceRefresh),
+      loader.getSchemasForEnvironmentId(cluster.environmentId, forceRefresh),
       loader.getTopicsForCluster(cluster, forceRefresh),
     ]);
 
