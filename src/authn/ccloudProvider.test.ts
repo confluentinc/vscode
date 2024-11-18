@@ -13,7 +13,11 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getSidecar } from "../sidecar";
 import * as connections from "../sidecar/connections";
 import { getStorageManager, StorageManager } from "../storage";
-import { AUTH_COMPLETED_KEY, AUTH_SESSION_EXISTS_KEY } from "../storage/constants";
+import {
+  AUTH_COMPLETED_KEY,
+  AUTH_SESSION_EXISTS_KEY,
+  CCLOUD_AUTH_STATUS_KEY,
+} from "../storage/constants";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { pollCCloudConnectionAuth } from "./ccloudPolling";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
@@ -90,6 +94,20 @@ describe("ConfluentCloudAuthProvider", () => {
     assert.ok(browserAuthFlowStub.called);
   });
 
+  it("createSession() should update the auth status secret on successful authentication", async () => {
+    const setSecretStub = sandbox.stub(getStorageManager(), "setSecret").resolves();
+    getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+
+    await authProvider.createSession();
+
+    assert.ok(
+      setSecretStub.calledWith(
+        CCLOUD_AUTH_STATUS_KEY,
+        TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
+      ),
+    );
+  });
+
   it("getSessions() should treat connections with a NO_TOKEN/FAILED auth status as nonexistent", async () => {
     getCCloudConnectionStub.resolves(TEST_CCLOUD_CONNECTION);
 
@@ -115,15 +133,17 @@ describe("ConfluentCloudAuthProvider", () => {
     assert.deepStrictEqual(sessions[0], TEST_CCLOUD_AUTH_SESSION);
   });
 
-  it("removeSession() should delete an existing connection", async () => {
+  it("removeSession() should delete an existing connection and the auth status secret", async () => {
     const handleSessionRemovedStub = sandbox.stub().resolves();
     authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     const deleteConnectionStub = sandbox.stub(connections, "deleteCCloudConnection").resolves();
+    const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
 
     await authProvider.removeSession("sessionId");
 
     assert.ok(deleteConnectionStub.called);
+    assert.ok(deleteSecretStub.calledWith(CCLOUD_AUTH_STATUS_KEY));
     assert.ok(handleSessionRemovedStub.calledWith(true));
   });
 

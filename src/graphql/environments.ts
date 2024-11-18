@@ -53,7 +53,10 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
     return envGroups;
   }
 
-  environments.forEach((env: any) => {
+  environments.forEach((env) => {
+    if (!env) {
+      return;
+    }
     const envGroup: CCloudEnvironmentGroup = {
       environment: CCloudEnvironment.create({
         id: env.id,
