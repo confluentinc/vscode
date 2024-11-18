@@ -12,12 +12,12 @@
   <body>
     <main class="container">
       <h1>Configure Topic: <span data-text="this.topicName()"></span></h1>
-      <p>Some helpful text that will encourage users to properly configure the topic. Close this tab to cancel changes.</p>
+      <p>
+        Some helpful text that will encourage users to properly configure the topic. TODO LINK to
+        configure advanced options, visit Confluent Cloud. Close this tab to cancel changes.
+      </p>
       <template data-if="this.errorOnSubmit()">
         <p class="error" data-text="this.errorOnSubmit()"></p>
-      </template>
-      <template data-if="this.success()">
-        <p class="success">Data updated successfully. You may close this tab or make additional changes.</p>
       </template>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
@@ -87,6 +87,7 @@
               name="max.message.bytes"
               type="number"
               min="0"
+              max="20971520"
               data-prop-value="this.maxMessageBytes()"
               data-on-change="this.handleChange(event)"
             />
@@ -95,8 +96,24 @@
           </div>
         </div>
         <div class="flex-row">
-        <input class="button primary" type="submit" value="Save changes" data-attr-disabled="!this.hasChanges() || this.hasValidationErrors()" /><input class="button secondary" type="button" value="Reset changes" data-on-click="this.resetChanges()" data-attr-disabled="!this.hasChanges()"/>
+          <input
+            class="button ghost"
+            type="button"
+            value="Reset changes"
+            data-on-click="this.resetChanges()"
+            data-attr-disabled="!this.hasChanges()"
+          /><input
+            class="button primary"
+            type="submit"
+            value="Save changes"
+            data-attr-disabled="!this.hasChanges() || this.hasValidationErrors()"
+          />
         </div>
+        <template data-if="this.success()">
+          <p class="success">
+            Data updated successfully. You may close this tab or make additional changes.
+          </p>
+        </template>
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
@@ -194,6 +211,15 @@
       }
       .input.error {
         border: 1px solid var(--vscode-errorForeground);
+      }
+      .button.ghost {
+        background-color: transparent;
+        border: none;
+        color: var(--vscode-button-secondaryForeground);
+        padding: 5px 0;
+      }
+      .button.ghost:hover {
+        color: var(--vscode-button-background);
       }
     </style>
   </body>

@@ -40,6 +40,7 @@ class ConfigFormViewModel extends ViewModel {
   success = this.signal(false);
 
   handleChange(event: Event) {
+    this.success(false);
     this.hasChanges(true);
     const input = event.target as HTMLInputElement;
     this.updateLocalValue(input.name, input.value);
