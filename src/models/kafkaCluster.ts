@@ -11,6 +11,8 @@ export abstract class KafkaCluster extends Data {
 
   abstract name: string;
 
+  abstract environmentId: string | undefined;
+
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
   uri!: Enforced<string>;
@@ -21,6 +23,7 @@ export class LocalKafkaCluster extends KafkaCluster {
   readonly connectionId: string = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
   readonly isCCloud: boolean = false;
+  readonly environmentId: undefined = undefined;
 
   // this is solely for display purposes so we don't have to check whether a resource is either a
   // LocalKafkaCluster or CCloudKafkaCluster when generating a label for a tree/quickpick/etc item
@@ -36,6 +39,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
   name!: Enforced<string>;
   provider!: Enforced<string>;
   region!: Enforced<string>;
+
   // added separately from sidecar responses
   environmentId!: Enforced<string>;
 

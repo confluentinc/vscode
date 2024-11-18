@@ -24,7 +24,7 @@ export class Schema extends Data {
   type!: SchemaType;
   // added separately from the response data, used for follow-on API calls
   schemaRegistryId!: Enforced<string>;
-  environmentId?: Enforced<string>;
+  environmentId!: Enforced<string> | undefined;
 
   /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
