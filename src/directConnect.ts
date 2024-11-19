@@ -1,14 +1,20 @@
-import { ExtensionContext, ViewColumn } from "vscode";
-import { registerCommandWithLogging } from "./commands";
-import { WebviewPanelCache } from "./webview-cache";
-import connectionFormTemplate from "./webview/direct-connect-form.html";
 import { randomUUID } from "crypto";
-import { post } from "./webview/direct-connect-form";
+import { ExtensionContext, ViewColumn } from "vscode";
+import { KafkaClusterConfig, SchemaRegistryConfig } from "./clients/sidecar";
+import { registerCommandWithLogging } from "./commands";
+import { DirectConnectionManager } from "./directConnectManager";
+import { Logger } from "./logging";
+import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
+import { post } from "./webview/direct-connect-form";
+import connectionFormTemplate from "./webview/direct-connect-form.html";
+
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
+
+const logger = new Logger("direct");
 
 export const registerDirectConnectionCommand = (context: ExtensionContext) => {
   const directConnectionCommand = registerCommandWithLogging("confluent.connections.direct", () =>
@@ -52,6 +58,35 @@ export function openDirectConnectionForm(): void {
     // return result;
   }
 
+  async function createConnection(
+    body: any,
+  ): Promise<{ success: boolean; message: string | null }> {
+    logger.debug("creating connection from form data:", body);
+
+    // TODO: extract `connection-type` from body and send as telemetry event
+
+    let kafkaConfig: KafkaClusterConfig | undefined = undefined;
+    if (body["bootstrap-servers"]) {
+      kafkaConfig = {
+        bootstrap_servers: body["bootstrap-servers"],
+      };
+    }
+
+    let schemaRegistryConfig: SchemaRegistryConfig | undefined = undefined;
+    if (body["schema-registry-url"]) {
+      schemaRegistryConfig = {
+        uri: body["schema-registry-url"],
+      };
+    }
+
+    const manager = DirectConnectionManager.getInstance();
+    return await manager.createConnection(
+      kafkaConfig,
+      schemaRegistryConfig,
+      body["connection-label"],
+    );
+  }
+
   /**
    * on submit
    * save info in VSCODE Storage/state - name/id (generate it)
@@ -60,12 +95,12 @@ export function openDirectConnectionForm(): void {
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "ValidateInput": {
-        return null satisfies MessageResponse<"ValidateInput">;
+        return { success: true, message: null } satisfies MessageResponse<"ValidateInput">;
       }
       case "TestConnection":
         return (await testConnect(body)) satisfies MessageResponse<"TestConnection">;
       case "Submit":
-        return null satisfies MessageResponse<"Submit">;
+        return (await createConnection(body)) satisfies MessageResponse<"Submit">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
