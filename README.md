@@ -89,8 +89,8 @@ titlebar to begin the process of selecting a schema registry and subject to bind
 bind to new subjects or provide a revised/evolved schema for an existing subject to establish a new
 version.
 
-Search the marketplace for extensions to validate your Avro, JSON schema, or
-Protobuf syntax as needed.
+Search the marketplace for extensions to validate your Avro, JSON schema, or Protobuf syntax as
+needed.
 
 #### Support
 

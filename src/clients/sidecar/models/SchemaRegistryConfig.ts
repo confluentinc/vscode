@@ -31,6 +31,12 @@ export interface SchemaRegistryConfig {
    * @memberof SchemaRegistryConfig
    */
   uri: string;
+  /**
+   * The credentials for the Schema Registry, or null if no authentication is required
+   * @type {object}
+   * @memberof SchemaRegistryConfig
+   */
+  credentials?: object | null;
 }
 
 /**
@@ -55,6 +61,7 @@ export function SchemaRegistryConfigFromJSONTyped(
   return {
     id: json["id"] == null ? undefined : json["id"],
     uri: json["uri"],
+    credentials: json["credentials"] == null ? undefined : json["credentials"],
   };
 }
 
@@ -65,5 +72,6 @@ export function SchemaRegistryConfigToJSON(value?: SchemaRegistryConfig | null):
   return {
     id: value["id"],
     uri: value["uri"],
+    credentials: value["credentials"],
   };
 }
