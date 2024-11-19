@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { CancellationToken, Disposable, ProgressLocation, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
@@ -6,6 +5,7 @@ import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
+import { captureException } from "../errors";
 import { Logger } from "../logging";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
 
@@ -115,7 +115,7 @@ export async function runWorkflowWithProgress(
             workflow.sendTelemetryEvent("Workflow Errored", {
               start,
             });
-            Sentry.captureException(error, {
+            captureException(error, {
               tags: {
                 dockerImage: workflow.imageRepoTag,
                 extensionUserFlow: "Local Resource Management",

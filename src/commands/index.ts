@@ -1,5 +1,5 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
+import { captureException } from "../errors";
 import { Logger } from "../logging";
 import { getTelemetryLogger } from "../telemetry/telemetryLogger";
 
@@ -18,7 +18,7 @@ export function registerCommandWithLogging(
       logger.error(msg, e);
       if (e instanceof Error) {
         // capture error with Sentry (only enabled in production builds)
-        Sentry.captureException(e, { tags: { command: commandName } });
+        captureException(e, { tags: { command: commandName } });
         // also show error notification to the user
         vscode.window.showErrorMessage(`${msg} ${e.message}`, "Open Logs").then(async (action) => {
           if (action !== undefined) {

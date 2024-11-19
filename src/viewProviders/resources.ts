@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { randomUUID } from "crypto";
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
@@ -10,7 +9,7 @@ import {
   localKafkaConnected,
   localSchemaRegistryConnected,
 } from "../emitters";
-import { ExtensionContextNotSetError } from "../errors";
+import { captureException, ExtensionContextNotSetError } from "../errors";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
@@ -206,7 +205,7 @@ export async function loadCCloudResources(
       // what went wrong since the user is effectively locked out of the CCloud resources for this org
       const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
       logger.error(msg, e);
-      Sentry.captureException(e);
+      captureException(e);
       vscode.window.showErrorMessage(msg, "Open Logs", "File Issue").then(async (action) => {
         if (action === "Open Logs") {
           vscode.commands.executeCommand("confluent.showOutputChannel");
