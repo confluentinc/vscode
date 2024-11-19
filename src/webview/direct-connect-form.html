@@ -33,6 +33,34 @@
           <span class="description">An easy to remember name to reference this connection in the future</span>
         </div>
         <fieldset>
+          <legend></legend>
+          <div class="input-container">
+            <div>
+              <label class="label">Connection Type</label>
+              <div>
+                <input type="radio" id="confluent-cloud" name="connection-type" value="Confluent Cloud" data-on-change="null">
+                <label for="confluent-cloud">Confluent Cloud</label>
+              </div>
+              <div>
+                <input type="radio" id="confluent-platform" name="connection-type" value="Confluent Platform" data-on-change="null">
+                <label for="confluent-platform">Confluent Platform</label>
+              </div>
+              <div>
+                <input type="radio" id="apache-kafka" name="connection-type" value="Apache Kafka" data-on-change="null">
+                <label for="apache-kafka">Apache Kafka</label>
+              </div>
+              <div>
+                <input type="radio" id="local" name="connection-type" value="Local" data-on-change="null">
+                <label for="local">Local</label>
+              </div>
+              <div>
+                <input type="radio" id="other" name="connection-type" value="Other" data-on-change="null">
+                <label for="other">Other</label>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
           <legend>Kafka Broker</legend>
           <div class="input-container">
             <div>
@@ -105,7 +133,7 @@
       </template>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
-    <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
+    <script type="module" nonce="${nonce}" src="${path('direct-connect-form.js')}"></script>
     <style nonce="${nonce}">
       body {
         max-width: 1000px;
