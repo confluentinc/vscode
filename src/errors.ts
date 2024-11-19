@@ -105,6 +105,5 @@ export function captureException(
     };
   }
 
-  logger.debug("capturing exception before sending to Sentry", errorContext);
   Sentry.captureException(e, errorContext);
 }
