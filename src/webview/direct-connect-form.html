@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; font-src ${cspSource}; style-src 'nonce-${nonce}'; style-src-attr 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval';"
+    />
+    <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Set up a Direct Connection</h1>
+      <p>Some helpful text that will encourage users to properly fill this in. Close this tab to cancel changes.</p>
+      <template data-if="this.errorMessage()">
+        <div class="info error" data-text="this.errorMessage()"></div>
+      </template>
+
+      <form data-on-submit="this.handleSubmit(event)">
+        <div class="input-container">
+          <div>
+            <label for="connection-label" class="label">Connection Label</label>
+            <input
+              class="input"
+              id="connection-label"
+              name="connection-label"
+              type="text"
+              data-prop-value="null"
+              data-on-change="null"
+            />
+          </div>
+          <span class="description">An easy to remember name to reference this connection in the future</span>
+        </div>
+        <fieldset>
+          <legend></legend>
+          <div class="input-container">
+            <div>
+              <label class="label">Connection Type</label>
+              <div>
+                <input type="radio" id="confluent-cloud" name="connection-type" value="Confluent Cloud" data-on-change="null">
+                <label for="confluent-cloud">Confluent Cloud</label>
+              </div>
+              <div>
+                <input type="radio" id="confluent-platform" name="connection-type" value="Confluent Platform" data-on-change="null">
+                <label for="confluent-platform">Confluent Platform</label>
+              </div>
+              <div>
+                <input type="radio" id="apache-kafka" name="connection-type" value="Apache Kafka" data-on-change="null">
+                <label for="apache-kafka">Apache Kafka</label>
+              </div>
+              <div>
+                <input type="radio" id="local" name="connection-type" value="Local" data-on-change="null">
+                <label for="local">Local</label>
+              </div>
+              <div>
+                <input type="radio" id="other" name="connection-type" value="Other" data-on-change="null">
+                <label for="other">Other</label>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Kafka Broker</legend>
+          <div class="input-container">
+            <div>
+              <label for="bootstrap-servers" class="label">Bootstrap Servers</label>
+              <input
+                class="input"
+                id="bootstrap-servers"
+                name="bootstrap-servers"
+                type="text"
+                data-prop-value="null"
+                data-on-change="null"
+              />
+            </div>
+            <span class="description">A list of host/port pairs to use for establishing the initial connection to the Kafka cluster</span>
+          </div>
+          <div class="input-container">
+            <div>
+              <label for="security-protocol" class="label">Security Protocol</label>
+              <select
+                id="security-protocol"
+                class="input dropdown"
+                name="security-protocol"
+                data-prop-value="null"
+                data-on-change="null"
+              >
+                <option value="PLAINTEXT">PLAINTEXT</option>
+                <option value="SASL_PLAINTEXT">SASL_PLAINTEXT</option>
+                <option value="SASL_SSL">SASL_SSL</option>
+              </select>
+            </div>
+            <span class="description">The security protocol to use when connecting to the Kafka cluster</span>
+          </div>
+          <div class="input-container">
+            <div>
+              <label for="sasl-mechanism" class="label">SASL Mechanism</label>
+              <select
+                id="sasl-mechanism"
+                class="input dropdown"
+                name="sasl-mechanism"
+                data-prop-value="null"
+                data-on-change="null"
+              >
+              </select>
+            </div>
+            <span class="description">The SASL mechanism to use for authentication</span>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Schema Registry (optional)</legend>
+          <div class="input-container">
+            <div>
+              <label for="schema-registry-url" class="label">Schema Registry URL</label>
+              <input
+                class="input"
+                id="schema-registry-url"
+                name="schema-registry-url"
+                type="text"
+                data-prop-value="null"
+                data-on-change="null"
+              />
+            </div>
+            <span class="description">The URL of the Schema Registry to use for serialization</span>
+        </fieldset>
+        </div>
+        <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" />
+        <input class="button" type="submit" value="Save"/>
+      </form>
+      <template data-if="this.success()">
+        <div class="info success">Connection added. View & interact with your connection in the resources sidebar.</div>
+      </template>
+    </main>
+    <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
+    <script type="module" nonce="${nonce}" src="${path('direct-connect-form.js')}"></script>
+    <style nonce="${nonce}">
+      body {
+        max-width: 1000px;
+        font-size: 14px;
+      }
+      .container {
+        padding: 60px 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .container > * {
+        margin: unset;
+      }
+      h1 {
+        font-size: 26px;
+      }
+      h2 {
+        font-size: 16px;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        gap: 20px;
+        margin-top: 26px;
+      }
+      .input-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        font-weight: 500;
+      }
+      @media screen and (max-width: 1000px) {
+        .input-container {
+          flex-wrap: wrap;
+          gap: 8px;
+          padding-bottom: 5px;
+        }
+      }
+      .input-container > * {
+        min-width: 8rem;
+      }
+      .input-container > * > * {
+        width: 100%;
+      }
+  
+      input:not([type="submit"]),
+      .dropdown > * {
+        width: 250px;
+      }
+      .dropdown {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        align-items: start;
+      }
+      .description {
+        font-weight: 700;
+        color: var(--vscode-descriptionForeground);
+        font-size: 12px;
+      }
+      .dropdown > label > vscode-dropdown {
+        width: 100%;
+      }
+      .info {
+        color: var(--vscode-descriptionForeground);
+        font-weight: 700;
+        font-style: italic;
+      }
+      .success {
+        color: var(--vscode-statusBar-foreground);
+      }
+      .error {
+        color: var(--vscode-errorForeground);
+      }
+      input.error {
+        border: 1px solid var(--vscode-errorForeground);
+      }
+    </style>
+  </body>
+</html>
