@@ -16,13 +16,7 @@ import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/k
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import {
-  StateEnvironments,
-  StateKafkaClusters,
-  StateKafkaTopics,
-  StateSchemaRegistry,
-  UriMetadataKeys,
-} from "./constants";
+import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
@@ -58,7 +52,7 @@ describe("ResourceManager (CCloud) environment methods", function () {
     await getResourceManager().setCCloudEnvironments(environments);
     // verify the environments were stored correctly by checking through the StorageManager instead of the ResourceManager
     let storedEnvironments: CCloudEnvironment[] | undefined =
-      await storageManager.getWorkspaceState(StateEnvironments.CCLOUD);
+      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
     assert.ok(storedEnvironments);
     assert.deepStrictEqual(storedEnvironments, environments);
   });
@@ -99,7 +93,9 @@ describe("ResourceManager (CCloud) environment methods", function () {
     await resourceManager.setCCloudEnvironments(environments);
     await resourceManager.deleteCCloudEnvironments();
     // verify the environments were deleted correctly
-    const missingEnvironments = await storageManager.getWorkspaceState(StateEnvironments.CCLOUD);
+    const missingEnvironments = await storageManager.getWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS,
+    );
     assert.deepStrictEqual(missingEnvironments, undefined);
   });
 });
@@ -135,7 +131,7 @@ describe("ResourceManager Kafka cluster methods", function () {
     await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
     // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
     let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(StateKafkaClusters.CCLOUD);
+      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
     assert.ok(storedClustersByEnv);
     assert.ok(storedClustersByEnv instanceof Map);
     assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
@@ -156,7 +152,7 @@ describe("ResourceManager Kafka cluster methods", function () {
     await getResourceManager().setCCloudKafkaClusters(newClusters);
     // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
     let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(StateKafkaClusters.CCLOUD);
+      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
     assert.ok(storedClustersByEnv);
     // make sure both environments exist and the first wasn't overwritten
     assert.deepStrictEqual(storedClustersByEnv.get(newEnvironmentId), newClusters);
@@ -170,7 +166,7 @@ describe("ResourceManager Kafka cluster methods", function () {
     await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
     // verify the clusters were not duplicated
     let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(StateKafkaClusters.CCLOUD);
+      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
     assert.ok(storedClustersByEnv);
     assert.ok(storedClustersByEnv instanceof Map);
     assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
@@ -253,7 +249,9 @@ describe("ResourceManager Kafka cluster methods", function () {
     await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     await resourceManager.deleteCCloudKafkaClusters();
     // verify the clusters were deleted correctly
-    const missingClusters = await storageManager.getWorkspaceState(StateKafkaClusters.CCLOUD);
+    const missingClusters = await storageManager.getWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
+    );
     assert.deepStrictEqual(missingClusters, undefined);
   });
 
@@ -261,7 +259,7 @@ describe("ResourceManager Kafka cluster methods", function () {
     await getResourceManager().setLocalKafkaClusters(localClusters);
     // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
     let storedClusters: LocalKafkaCluster[] | undefined = await storageManager.getWorkspaceState(
-      StateKafkaClusters.LOCAL,
+      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
     );
     assert.ok(storedClusters);
     assert.deepStrictEqual(storedClusters, localClusters);
@@ -308,7 +306,9 @@ describe("ResourceManager Kafka cluster methods", function () {
     await resourceManager.setLocalKafkaClusters(localClusters);
     await resourceManager.deleteLocalKafkaClusters();
     // verify the clusters were deleted correctly
-    const missingClusters = await storageManager.getWorkspaceState(StateKafkaClusters.LOCAL);
+    const missingClusters = await storageManager.getWorkspaceState(
+      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
+    );
     assert.deepStrictEqual(missingClusters, undefined);
   });
 });
@@ -424,7 +424,9 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.deleteCCloudSchemaRegistries();
     // verify the Schema Registry was deleted correctly
-    const missingClusters = await storageManager.getWorkspaceState(StateSchemaRegistry.CCLOUD);
+    const missingClusters = await storageManager.getWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
+    );
     assert.deepStrictEqual(missingClusters, undefined);
   });
 });
@@ -635,13 +637,13 @@ describe("ResourceManager Kafka topic methods", function () {
 
     assert.equal(
       manager.topicKeyForCluster(TEST_CCLOUD_KAFKA_CLUSTER),
-      StateKafkaTopics.CCLOUD,
+      WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS,
       "Expected cloud cluster to map to StateKafkaTopics.CCLOUD",
     );
 
     assert.equal(
       manager.topicKeyForCluster(TEST_LOCAL_KAFKA_CLUSTER),
-      StateKafkaTopics.LOCAL,
+      WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS,
       "Expected local cluster to map to StateKafkaTopics.LOCAL",
     );
   });

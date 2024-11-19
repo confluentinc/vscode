@@ -6,7 +6,7 @@ import { SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { Schema } from "../models/schema";
 import { getStorageManager } from "../storage";
-import { StateDiffs } from "../storage/constants";
+import { WorkspaceStorageKeys } from "../storage/constants";
 
 const logger = new Logger("commands.diffs");
 
@@ -16,7 +16,7 @@ async function selectForCompareCommand(item: any) {
   }
   const uri: vscode.Uri = convertItemToUri(item);
   logger.debug("Selected item for compare", uri);
-  await getStorageManager().setWorkspaceState(StateDiffs.SELECTED_RESOURCE, uri);
+  await getStorageManager().setWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI, uri);
   // allows the "Compare with Selected" command to be used
   await setContextValue(ContextValues.resourceSelectedForCompare, true);
 }
@@ -29,7 +29,7 @@ async function compareWithSelectedCommand(item: any) {
   logger.debug("Comparing with selected item", uri2);
 
   const uri1: vscode.Uri | undefined = await getStorageManager().getWorkspaceState(
-    StateDiffs.SELECTED_RESOURCE,
+    WorkspaceStorageKeys.DIFF_BASE_URI,
   );
   if (!uri1) {
     logger.error("No resource selected for compare; this shouldn't happen", uri2);

@@ -1,35 +1,27 @@
-// Global/Workspace state keys
-export enum StateEnvironments {
-  CCLOUD = "environments.ccloud",
-}
-
-export enum StateKafkaClusters {
-  LOCAL = "kafkaClusters.local",
-  CCLOUD = "kafkaClusters.ccloud",
-}
-
-export enum StateKafkaTopics {
-  LOCAL = "kafkaTopics.local",
-  CCLOUD = "kafkaTopics.ccloud",
-}
-
-export enum StateSchemaRegistry {
-  CCLOUD = "schemaRegistries.ccloud",
-}
-
-export enum StateSchemas {
-  CCLOUD = "schemas.ccloud",
-}
-
-export enum StateDiffs {
-  SELECTED_RESOURCE = "diffs.selectedResource",
-}
-
-/** Single enum to hold all of the keys the extension uses
- * within the workspace storage. */
+/** Workspace state keys. A single enum to hold all of the keys the extension uses
+ * to cache data within the workspace storage via ResourceManager + StorageManager. */
 export enum WorkspaceStorageKeys {
-  // Eventually migrate all of these to the State* enums above
-  // into this enum here for consistency.
+  /** Environments found in ccloud */
+  CCLOUD_ENVIRONMENTS = "ccloudEnvironments",
+
+  /** Kafka clusters found in CCLoud */
+  CCLOUD_KAFKA_CLUSTERS = "ccloudKafkaClusters",
+  /** Kafka clusters found from local, should be removed in #637 */
+  LOCAL_KAFKA_CLUSTERS = "localKafkaClusters",
+
+  /** CCloud Kafka topics */
+  CCLOUD_KAFKA_TOPICS = "ccloudKafkaTopics",
+  /** Local Kafka topics, should be removed in #638 */
+  LOCAL_KAFKA_TOPICS = "localKafkaTopics",
+
+  /** CCloud schema registries */
+  CCLOUD_SCHEMA_REGISTRIES = "ccloudSchemaRegistries",
+
+  /** CCLoud schema bindings (not the schema documents themselves) */
+  CCLOUD_SCHEMAS = "ccloudSchemas",
+
+  /** What (Schema) URI was chosen first to diff against? */
+  DIFF_BASE_URI = "diffs.selectedResource",
 
   /** URI annotation facility, setURIMetadata() and the like.*/
   URI_METADATA = "uriMetadata",
