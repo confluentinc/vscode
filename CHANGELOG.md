@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+- Correct schema upload success message when the uploaded schema was normalized to a preexisting
+version which wasn't the most recent existing version for the subject, 
+[issue #642](https://github.com/confluentinc/vscode/issues/642).
+
 ## 0.21.2
 
 ### Fixed

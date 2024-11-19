@@ -33,6 +33,31 @@
           <span class="description">An easy to remember name to reference this connection in the future</span>
         </div>
         <fieldset>
+          <legend>Platform/System Type</legend>
+          <div class="input-container">
+            <div>
+              <input type="radio" id="confluent-platform" name="platform" value="Confluent Platform" />
+              <label for="confluent-platform">Confluent Platform</label>
+            </div>
+            <div>
+              <input type="radio" id="apache-kafka" name="platform" value="Apache Kafka" />
+              <label for="apache-kafka">Apache Kafka</label>
+            </div>
+            <div>
+              <input type="radio" id="confluent-cloud" name="platform" value="Confluent Cloud" />
+              <label for="confluent-cloud">Confluent Cloud</label>
+            </div>
+            <div>
+              <input type="radio" id="local" name="platform" value="Local" />
+              <label for="local">Local</label>
+            </div>
+            <div>
+              <input type="radio" id="other" name="platform" value="Other" checked required/>
+              <label for="other">Other (specify)</label>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset>
           <legend>Kafka Broker</legend>
           <div class="input-container">
             <div>
@@ -42,42 +67,12 @@
                 id="bootstrap-servers"
                 name="bootstrap-servers"
                 type="text"
-                data-prop-value="null"
-                data-on-change="null"
+                data-prop-value=""
+                data-on-change="this.validateChanges(event)"
+                required
               />
             </div>
-            <span class="description">A list of host/port pairs to use for establishing the initial connection to the Kafka cluster</span>
-          </div>
-          <div class="input-container">
-            <div>
-              <label for="security-protocol" class="label">Security Protocol</label>
-              <select
-                id="security-protocol"
-                class="input dropdown"
-                name="security-protocol"
-                data-prop-value="null"
-                data-on-change="null"
-              >
-                <option value="PLAINTEXT">PLAINTEXT</option>
-                <option value="SASL_PLAINTEXT">SASL_PLAINTEXT</option>
-                <option value="SASL_SSL">SASL_SSL</option>
-              </select>
-            </div>
-            <span class="description">The security protocol to use when connecting to the Kafka cluster</span>
-          </div>
-          <div class="input-container">
-            <div>
-              <label for="sasl-mechanism" class="label">SASL Mechanism</label>
-              <select
-                id="sasl-mechanism"
-                class="input dropdown"
-                name="sasl-mechanism"
-                data-prop-value="null"
-                data-on-change="null"
-              >
-              </select>
-            </div>
-            <span class="description">The SASL mechanism to use for authentication</span>
+            <span class="description">A comma-separated list of host/port pairs to use for establishing the initial connection to the Kafka cluster</span>
           </div>
         </fieldset>
         <fieldset>
@@ -89,9 +84,9 @@
                 class="input"
                 id="schema-registry-url"
                 name="schema-registry-url"
-                type="text"
-                data-prop-value="null"
-                data-on-change="null"
+                type="url"
+                data-prop-value=""
+                data-on-change="this.validateChanges(event)"
               />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
@@ -105,7 +100,7 @@
       </template>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
-    <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
+    <script type="module" nonce="${nonce}" src="${path('direct-connect-form.js')}"></script>
     <style nonce="${nonce}">
       body {
         max-width: 1000px;
