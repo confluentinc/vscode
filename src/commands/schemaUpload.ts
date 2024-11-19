@@ -297,20 +297,18 @@ export function extractDetail(message: string): string {
 /** Return the success message to show the user after having uploaded a new schema */
 export function schemaRegistrationMessage(
   subject: string,
-  existingVersion: number | undefined,
-  registeredVersion: number,
+  maxExistingVersion: number | undefined,
+  newlyRegisteredVersion: number,
 ): string {
-  // todo: make this return markdown and to not induce pain for the reader. Use a header
-  // that clearly delineates the different cases, then key / value rows for the details.
-
-  if (existingVersion === undefined) {
+  if (maxExistingVersion === undefined) {
     return `Schema registered to new subject "${subject}"`;
-  } else if (existingVersion === registeredVersion) {
+  } else if (maxExistingVersion >= newlyRegisteredVersion) {
     // was normalized and matched an existing schema version for this subject
-    return `Normalized to existing version ${registeredVersion} for subject "${subject}"`;
+    return `Normalized to existing version ${newlyRegisteredVersion} for subject "${subject}"`;
   } else {
-    // This was a new version of an existing subject.
-    return `New version ${registeredVersion} registered to existing subject "${subject}"`;
+    // This was a new version of an existing subject. The newly registered version is higher than
+    // the highest preexisting version.
+    return `New version ${newlyRegisteredVersion} registered to existing subject "${subject}"`;
   }
 }
 
