@@ -6,7 +6,9 @@ import * as dockerWorkflows from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import * as quickpicks from "../quickpicks/localResources";
-import { orderWorkflows, runWorkflowWithProgress } from "./docker";
+import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
+import { Uri, window, workspace } from "vscode";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -190,5 +192,63 @@ describe("commands/docker.ts orderWorkflows()", () => {
 
     assert.equal(orderedWorkflows.length, 1);
     assert.strictEqual(orderedWorkflows[0].resourceKind, stubSchemaRegistryWorkflow.resourceKind);
+  });
+});
+
+describe("commands/docker.ts addDockerPath()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let showOpenDialogStub: sinon.SinonStub;
+  let getConfigurationStub: sinon.SinonStub;
+  let updateConfigStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    showOpenDialogStub = sandbox.stub(window, "showOpenDialog");
+    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    updateConfigStub = sandbox.stub();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  for (const filename of ["docker.sock", "docker_engine"]) {
+    it(`should show open dialog and update config if file with a proper extension (${filename}) is selected`, async () => {
+      const URI = { fsPath: `path/to/${filename}` } as Uri;
+      showOpenDialogStub.resolves([URI]);
+      getConfigurationStub.returns({
+        get: sandbox.stub().returns([]),
+        update: updateConfigStub,
+      });
+      await addDockerPath();
+
+      assert.ok(showOpenDialogStub.calledOnce);
+      assert.ok(updateConfigStub.calledOnce);
+      assert.ok(updateConfigStub.calledOnceWith(LOCAL_DOCKER_SOCKET_PATH, URI.fsPath, true));
+    });
+  }
+
+  it("should not update config if no file is selected", async () => {
+    showOpenDialogStub.resolves(undefined);
+
+    await addDockerPath();
+
+    assert.ok(showOpenDialogStub.calledOnce);
+    assert.ok(updateConfigStub.notCalled);
+  });
+
+  it("should not update config if invalid file is selected", async () => {
+    const uri = { fsPath: "path/to/file.txt" } as Uri;
+    showOpenDialogStub.resolves([uri]);
+
+    getConfigurationStub.returns({
+      get: sandbox.stub().returns([]),
+      update: updateConfigStub,
+    });
+
+    await addDockerPath();
+
+    assert.ok(showOpenDialogStub.calledOnce);
+    assert.ok(updateConfigStub.notCalled);
   });
 });
