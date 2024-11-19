@@ -1,12 +1,15 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from "./ApiKeyAndSecret";
 export * from "./ApplyTemplateRequest";
 export * from "./AuthError";
 export * from "./AuthErrors";
 export * from "./Authentication";
 export * from "./BasicCredentials";
 export * from "./CCloudConfig";
+export * from "./CCloudStatus";
 export * from "./CollectionMetadata";
+export * from "./ConnectedState";
 export * from "./Connection";
 export * from "./ConnectionMetadata";
 export * from "./ConnectionSpec";
@@ -20,6 +23,7 @@ export * from "./HealthResponse";
 export * from "./JsonNode";
 export * from "./JsonNodeType";
 export * from "./KafkaClusterConfig";
+export * from "./KafkaClusterStatus";
 export * from "./LocalConfig";
 export * from "./ModelError";
 export * from "./ObjectMetadata";
@@ -32,6 +36,7 @@ export * from "./Preferences";
 export * from "./PreferencesMetadata";
 export * from "./PreferencesSpec";
 export * from "./SchemaRegistryConfig";
+export * from "./SchemaRegistryStatus";
 export * from "./SidecarAccessToken";
 export * from "./SidecarVersionResponse";
 export * from "./SimpleConsumeMultiPartitionRequest";

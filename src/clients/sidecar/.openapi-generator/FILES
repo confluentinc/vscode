@@ -10,13 +10,16 @@ apis/TemplatesApi.ts
 apis/VersionResourceApi.ts
 apis/index.ts
 index.ts
+models/ApiKeyAndSecret.ts
 models/ApplyTemplateRequest.ts
 models/AuthError.ts
 models/AuthErrors.ts
 models/Authentication.ts
 models/BasicCredentials.ts
 models/CCloudConfig.ts
+models/CCloudStatus.ts
 models/CollectionMetadata.ts
+models/ConnectedState.ts
 models/Connection.ts
 models/ConnectionMetadata.ts
 models/ConnectionSpec.ts
@@ -30,6 +33,7 @@ models/HealthResponse.ts
 models/JsonNode.ts
 models/JsonNodeType.ts
 models/KafkaClusterConfig.ts
+models/KafkaClusterStatus.ts
 models/LocalConfig.ts
 models/ModelError.ts
 models/ObjectMetadata.ts
@@ -42,6 +46,7 @@ models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
 models/SchemaRegistryConfig.ts
+models/SchemaRegistryStatus.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts
