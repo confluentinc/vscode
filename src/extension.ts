@@ -56,10 +56,16 @@ import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
+import { registerDirectConnectionCommand } from "./directConnect";
+import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
-import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
+import {
+  ENABLE_DIRECT_CONNECTIONS,
+  SSL_PEM_PATHS,
+  SSL_VERIFY_SERVER_CERT_DISABLED,
+} from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
@@ -195,6 +201,7 @@ async function _activateExtension(
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
   registerProjectGenerationCommand(context);
+  registerDirectConnectionCommand(context);
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());
@@ -202,12 +209,21 @@ async function _activateExtension(
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
 
+  const directConnectionManager = DirectConnectionManager.getInstance();
+  context.subscriptions.push(...directConnectionManager.disposables);
+
   // XXX: used for testing; do not remove
   return context;
 }
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
+  // EXPERIMENTAL: set default value for direct connection enablement
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  const directConnectionsEnabled = setContextValue(
+    ContextValues.directConnectionsEnabled,
+    config.get(ENABLE_DIRECT_CONNECTIONS, false),
+  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
@@ -252,6 +268,7 @@ async function setupContextValues() {
     "local-schema-registry",
   ]);
   await Promise.all([
+    directConnectionsEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
     diffResources,
