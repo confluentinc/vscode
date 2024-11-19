@@ -13,7 +13,7 @@ import {
 } from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
-import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_REST_HOST } from "../../preferences/constants";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../../preferences/constants";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import * as dockerContainers from "../containers";
 import * as dockerNetworks from "../networks";
@@ -62,8 +62,6 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     getConfigurationStub.returns({
       get: sandbox.stub().callsFake((key: string) => {
         switch (key) {
-          case LOCAL_KAFKA_REST_HOST:
-            return "localhost";
           case LOCAL_DOCKER_SOCKET_PATH:
             return DEFAULT_UNIX_SOCKET_PATH;
         }

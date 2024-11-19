@@ -5,8 +5,6 @@ import {
   InputBoxValidationSeverity,
   Progress,
   window,
-  workspace,
-  WorkspaceConfiguration,
 } from "vscode";
 import {
   ContainerCreateRequest,
@@ -19,11 +17,7 @@ import {
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
-import {
-  LOCAL_KAFKA_IMAGE,
-  LOCAL_KAFKA_IMAGE_TAG,
-  LOCAL_KAFKA_REST_HOST,
-} from "../../preferences/constants";
+import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { ResourceManager } from "../../storage/resourceManager";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
@@ -341,16 +335,12 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     const controllerQuorumVoters: string[] = brokerConfigsToControllerQuorumVoters(brokerConfigs);
     const restBootstrapServers: string[] = brokerConfigsToRestBootstrapServers(brokerConfigs);
 
-    const config: WorkspaceConfiguration = workspace.getConfiguration();
-    // TODO: determine if this needs to be configurable (i.e. for WSL)
-    const kafkaRestHost: string = config.get(LOCAL_KAFKA_REST_HOST, "localhost");
-
     // containerName matches hostname, see `body` up in `createKafkaContainer()`
     const containerName: string = brokerConfig.containerName;
     const ports: KafkaContainerPorts = brokerConfig.ports;
 
     const envVars = [
-      `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${containerName}:${ports.broker},PLAINTEXT_HOST://${kafkaRestHost}:${ports.plainText}`,
+      `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://${containerName}:${ports.broker},PLAINTEXT_HOST://localhost:${ports.plainText}`,
       `KAFKA_BROKER_ID=${brokerNum}`,
       "KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
       `KAFKA_CONTROLLER_QUORUM_VOTERS=${controllerQuorumVoters.join(",")}`,
