@@ -82,12 +82,16 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 
   checkMissingAuthorizedOperations(resource: KafkaTopic): KafkaTopicOperation[] {
     // operations we support via view/item actions that require authorization
-    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE"];
+    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE", "ALTER_CONFIGS"];
 
     for (const op of interestingAuthz) {
       if (resource.operations.includes(op)) {
         // Convert to "authzRead", "authzDelete", etc. for context flags to hang context-sensitive commands off of (see package.json)
-        const operationTitleCase = op.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+        const operationTitleCase = op
+          .toLowerCase()
+          .replace(/_/g, " ") // replace underscores with spaces
+          .replace(/^\w|\s\w/g, (c) => c.toUpperCase()) // convert to title case
+          .replace(/\s/g, ""); // remove spaces
         this.contextValue += `-authz${operationTitleCase}`;
       }
     }
