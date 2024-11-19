@@ -103,7 +103,8 @@ export class DirectConnectionManager {
       }
     }
 
-    // await this.secrets.store(connectionId, JSON.stringify(connection));
+    // TODO: implement this once we're storing connections as secrets
+    // await this.secrets.store( ... );
 
     // TODO: refresh Resources view
 
