@@ -65,8 +65,7 @@ class DirectConnectFormViewModel extends ViewModel {
     }
   }
 
-  /** Submit all form data to the extension
-   */
+  /** Submit all form data to the extension */
   async handleSubmit(event: Event) {
     event.preventDefault();
     this.success(false);
@@ -75,11 +74,12 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     console.log("formData:", formData, "data", data);
-    // const result = await post("Submit", data);
-    // if (result !== undefined) {
-    //   if (result.success) this.success(true);
-    //   else this.errorMessage(result.message ?? "Unknown error occurred");
-    // }
+    // send up to the extension
+    const result = await post("Submit", data);
+    if (result !== undefined) {
+      if (result.success) this.success(true);
+      else this.errorMessage(result.message ?? "Unknown error occurred");
+    }
   }
 }
 
