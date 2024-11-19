@@ -26,7 +26,9 @@ const logger = new Logger("direct");
  * Singleton class responsible for the following:
  * - watching for changes in the {@link ENABLE_DIRECT_CONNECTIONS} experimental setting and adjusting
  *   associated context value(s) to enable/disable actions
- * - creating, managing, and deleting direct connections as secrets
+ * - creating connections via input from the webview form and updating the Resources view
+ * - fetching connections from persistent storage and deconflicting with the sidecar
+ * - deleting connections through actions on the Resources view
  */
 export class DirectConnectionManager {
   /** Disposables belonging to this class to be added to the extension context during activation,
