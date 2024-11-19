@@ -10,11 +10,6 @@ import { KafkaTopic } from "../models/topic";
 import {
   AUTH_COMPLETED_KEY,
   CCLOUD_AUTH_STATUS_KEY,
-  StateEnvironments,
-  StateKafkaClusters,
-  StateKafkaTopics,
-  StateSchemaRegistry,
-  StateSchemas,
   UriMetadataKeys,
   WorkspaceStorageKeys,
 } from "./constants";
@@ -84,7 +79,7 @@ export class ResourceManager {
    * Set the list of available CCloud environments in extension state.
    */
   async setCCloudEnvironments(environments: CCloudEnvironment[]): Promise<void> {
-    await this.storage.setWorkspaceState(StateEnvironments.CCLOUD, environments);
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS, environments);
   }
 
   /**
@@ -94,7 +89,9 @@ export class ResourceManager {
   async getCCloudEnvironments(): Promise<CCloudEnvironment[]> {
     // Will be deserialized plain JSON objects, not instances of CCloudEnvironment.
     const plain_json_environments: CCloudEnvironment[] =
-      (await this.storage.getWorkspaceState<CCloudEnvironment[]>(StateEnvironments.CCLOUD)) ?? [];
+      (await this.storage.getWorkspaceState<CCloudEnvironment[]>(
+        WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS,
+      )) ?? [];
 
     // Promote each member to be an instance of CCloudEnvironment
     return plain_json_environments.map((env) => CCloudEnvironment.create(env));
@@ -114,7 +111,7 @@ export class ResourceManager {
    * Delete the list of available CCloud environments from extension state
    */
   async deleteCCloudEnvironments(): Promise<void> {
-    await this.storage.deleteWorkspaceState(StateEnvironments.CCLOUD);
+    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
   }
 
   // KAFKA CLUSTERS
@@ -141,7 +138,10 @@ export class ResourceManager {
       // replace any existing clusters for the environment with the new clusters
       existingEnvClusters.set(envId, newClusters);
     }
-    await this.storage.setWorkspaceState(StateKafkaClusters.CCLOUD, existingEnvClusters);
+    await this.storage.setWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
+      existingEnvClusters,
+    );
   }
 
   /**
@@ -150,7 +150,7 @@ export class ResourceManager {
    */
   async getCCloudKafkaClusters(): Promise<CCloudKafkaClustersByEnv> {
     const plainJsonClustersByEnv: CCloudKafkaClustersByEnv =
-      (await this.storage.getWorkspaceState(StateKafkaClusters.CCLOUD)) ??
+      (await this.storage.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS)) ??
       new Map<string, CCloudKafkaCluster[]>();
 
     // Promote each member in the map to be a true instance of CCloudKafkaCluster
@@ -198,11 +198,11 @@ export class ResourceManager {
    */
   async deleteCCloudKafkaClusters(environment?: string): Promise<void> {
     if (!environment) {
-      return await this.storage.deleteWorkspaceState(StateKafkaClusters.CCLOUD);
+      return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
     }
     const clusters = await this.getCCloudKafkaClusters();
     clusters.delete(environment);
-    await this.storage.setWorkspaceState(StateKafkaClusters.CCLOUD, clusters);
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS, clusters);
   }
 
   /**
@@ -210,7 +210,7 @@ export class ResourceManager {
    * @param clusters The list of local Kafka clusters to set
    */
   async setLocalKafkaClusters(clusters: LocalKafkaCluster[]): Promise<void> {
-    await this.storage.setWorkspaceState(StateKafkaClusters.LOCAL, clusters);
+    await this.storage.setWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS, clusters);
   }
 
   /**
@@ -219,7 +219,9 @@ export class ResourceManager {
    */
   async getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
     const plainJsonLocalClusters =
-      (await this.storage.getWorkspaceState<LocalKafkaCluster[]>(StateKafkaClusters.LOCAL)) ?? [];
+      (await this.storage.getWorkspaceState<LocalKafkaCluster[]>(
+        WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
+      )) ?? [];
 
     // Promote each member to be an instance of LocalKafkaCluster, return.
     return plainJsonLocalClusters.map((cluster) => LocalKafkaCluster.create(cluster));
@@ -239,7 +241,7 @@ export class ResourceManager {
    * Delete the list of available local Kafka clusters from extension state.
    */
   async deleteLocalKafkaClusters(): Promise<void> {
-    await this.storage.deleteWorkspaceState(StateKafkaClusters.LOCAL);
+    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS);
   }
 
   /** Get the cluster for this topic. May return either a ccloud or local cluster */
@@ -259,7 +261,10 @@ export class ResourceManager {
     clusters.forEach((cluster) => {
       clustersByEnv.set(cluster.environmentId, cluster);
     });
-    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, clustersByEnv);
+    await this.storage.setWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
+      clustersByEnv,
+    );
   }
 
   /**
@@ -268,7 +273,7 @@ export class ResourceManager {
    */
   async getCCloudSchemaRegistries(): Promise<CCloudSchemaRegistryByEnv> {
     const clustersByEnvPlainJSON: CCloudSchemaRegistryByEnv | undefined =
-      await this.storage.getWorkspaceState(StateSchemaRegistry.CCLOUD);
+      await this.storage.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES);
 
     if (clustersByEnvPlainJSON) {
       // Promote each member to be an instance of SchemaRegistry
@@ -316,11 +321,14 @@ export class ResourceManager {
    */
   async deleteCCloudSchemaRegistries(environment?: string): Promise<void> {
     if (!environment) {
-      return await this.storage.deleteWorkspaceState(StateSchemaRegistry.CCLOUD);
+      return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES);
     }
     const schemaRegistriesByEnv = await this.getCCloudSchemaRegistries();
     schemaRegistriesByEnv.delete(environment);
-    await this.storage.setWorkspaceState(StateSchemaRegistry.CCLOUD, schemaRegistriesByEnv);
+    await this.storage.setWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
+      schemaRegistriesByEnv,
+    );
   }
 
   // TOPICS
@@ -387,7 +395,7 @@ export class ResourceManager {
    * Delete all ccloud topics from workspace state, such as when user logs out from ccloud.
    */
   async deleteCCloudTopics(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(StateKafkaTopics.CCLOUD);
+    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS);
   }
 
   /**
@@ -395,18 +403,18 @@ export class ResourceManager {
    * or we just started up a new local cluster.
    */
   async deleteLocalTopics(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(StateKafkaTopics.LOCAL);
+    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS);
   }
 
   /** Return the use-with-storage StateKafkaTopics key for this type of cluster.
    *
    * (not private only for testing)
    */
-  topicKeyForCluster(cluster: KafkaCluster): StateKafkaTopics {
+  topicKeyForCluster(cluster: KafkaCluster): WorkspaceStorageKeys {
     if (cluster instanceof CCloudKafkaCluster) {
-      return StateKafkaTopics.CCLOUD;
+      return WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS;
     } else if (cluster instanceof LocalKafkaCluster) {
-      return StateKafkaTopics.LOCAL;
+      return WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS;
     } else {
       logger.warn("Unknown cluster type", cluster);
       throw new Error("Unknown cluster type");
@@ -431,7 +439,10 @@ export class ResourceManager {
     existingSchemasBySchemaRegistry.set(schemaRegistryId, schemas);
 
     // And repersist.
-    await this.storage.setWorkspaceState(StateSchemas.CCLOUD, existingSchemasBySchemaRegistry);
+    await this.storage.setWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_SCHEMAS,
+      existingSchemasBySchemaRegistry,
+    );
   }
 
   /**
@@ -457,7 +468,7 @@ export class ResourceManager {
    */
   private async getSchemaMap(): Promise<CCloudSchemaBySchemaRegistry> {
     const schemaObjectsBySchemaRegistry: CCloudSchemaBySchemaRegistry | undefined =
-      await this.storage.getWorkspaceState(StateSchemas.CCLOUD);
+      await this.storage.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMAS);
     if (schemaObjectsBySchemaRegistry === undefined) {
       return new Map<string, Schema[]>();
     }
@@ -466,7 +477,7 @@ export class ResourceManager {
 
   /** Forget about all of the CCLoud schemas. */
   private async deleteCCloudSchemas(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(StateSchemas.CCLOUD);
+    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMAS);
   }
 
   // AUTH PROVIDER
