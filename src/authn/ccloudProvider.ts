@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { Connection } from "../clients/sidecar";
 import { AUTH_PROVIDER_ID, CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
+import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError, logResponseError } from "../errors";
@@ -180,6 +181,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     const session = convertToAuthSession(authenticatedConnection);
     await this.handleSessionCreated(session, true);
     ccloudConnected.fire(true);
+
+    observabilityContext.ccloudAuthCompleted = true;
+    observabilityContext.ccloudAuthExpiration =
+      authenticatedConnection.status.authentication.requires_authentication_at;
+    observabilityContext.ccloudSignInCount++;
+
     return session;
   }
 
@@ -310,6 +317,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     ]);
     await this.handleSessionRemoved(true);
     ccloudConnected.fire(false);
+    observabilityContext.ccloudSignOutCount++;
   }
 
   /**
