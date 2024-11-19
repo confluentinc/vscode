@@ -100,6 +100,12 @@
         "category": "Confluent: Debug Tools"
       },
       {
+        "command": "confluent.docker.setSocketPath",
+        "icon": "$(key)",
+        "title": "Set Docker Socket Path",
+        "category": "Confluent: Docker"
+      },
+      {
         "command": "confluent.docker.startLocalResources",
         "icon": "$(debug-start)",
         "title": "Start Local Resources",
@@ -355,7 +361,7 @@
         "confluent.localDocker.socketPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the Docker socket file."
+          "markdownDescription": "Path to the Docker socket file.  (You can also use the [\"Set Docker Socket Path\" command](command:confluent.docker.setSocketPath).)"
         },
         "confluent.localDocker.kafkaImageRepo": {
           "type": "string",
