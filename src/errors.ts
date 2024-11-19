@@ -64,21 +64,29 @@ export async function logResponseError(
  * Wrapper around the {@link Sentry.captureException} to include our extension instance's
  * {@link observabilityContext} in the event context, along with any additionally provided context.
  *
- * If a {@link ResponseError} is provided as the `error`, the response status code and any associated
- * `x-connection-id` header will be included in the event context under `contexts.response`.
- *
  * See {@link Sentry.captureException}'s `ExclusiveEventHintOrCaptureContext` for more information
  * on the `context` parameter.
+ *
+ * NOTE: If a {@link ResponseError} is provided as the `error`, the response status code and any
+ * associated `x-connection-id` header will be included in the event context under `contexts.response`.
  */
-export function captureException(e: unknown, context: any = {}): void {
-  // TODO: check telemetry settings here?
+export function captureException(e: unknown, context = {}): void {
+  const errorContext = enrichErrorContext(e, context);
+  Sentry.captureException(e, errorContext);
+}
+
+// split from `captureException` for easier testing
+export function enrichErrorContext(
+  e: unknown,
+  context: Record<string, any> = {},
+): Record<string, any> {
   const obsContext: Record<string, any> = observabilityContext.toRecord();
   let errorContext: Record<string, any> = { extra: { ...obsContext } };
 
-  if (context && context.data.extra) {
+  if (context && context.extra) {
     // ensure observability context keys always make it into the Sentry event under `extra`, even if
     // the caller provided their own `extra` data in `context`
-    const { extra: extraFromContext = {}, ...restExtraContext } = context as Record<string, any>;
+    const { extra: extraFromContext = {}, ...restExtraContext } = context;
     errorContext = {
       extra: { ...obsContext, ...extraFromContext },
       ...restExtraContext,
@@ -100,6 +108,5 @@ export function captureException(e: unknown, context: any = {}): void {
       },
     };
   }
-
-  Sentry.captureException(e, errorContext);
+  return errorContext;
 }
