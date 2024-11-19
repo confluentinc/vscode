@@ -71,8 +71,8 @@ export class DirectConnectionManager {
   }
 
   async createConnection(
-    kafkaClusterConfig: KafkaClusterConfig,
-    schemaRegistryConfig: SchemaRegistryConfig,
+    kafkaClusterConfig: KafkaClusterConfig | undefined,
+    schemaRegistryConfig: SchemaRegistryConfig | undefined,
     name?: string,
   ) {
     const connectionId = randomUUID();
@@ -80,20 +80,32 @@ export class DirectConnectionManager {
       id: connectionId,
       name: name ?? "New Connection",
       type: ConnectionType.Direct,
-      kafka_cluster: kafkaClusterConfig,
-      schema_registry: schemaRegistryConfig,
     };
 
-    let connection: Connection;
-    try {
-      connection = await tryToCreateConnection(spec);
-      await this.secrets.store(connectionId, JSON.stringify(connection));
-    } catch (error) {
-      logger.error("Failed to create direct connection:", { error });
-      return;
+    if (kafkaClusterConfig) {
+      spec.kafka_cluster = kafkaClusterConfig;
+    }
+    if (schemaRegistryConfig) {
+      spec.schema_registry = schemaRegistryConfig;
     }
 
+    let connection: Connection | null = null;
+    let success: boolean = false;
+    try {
+      connection = await tryToCreateConnection(spec);
+    } catch (error) {
+      logger.error("Failed to create direct connection:", { error });
+      if (error instanceof Error) {
+        // TODO: check for ResponseError and extract message
+        return { success: false, message: error.message };
+      }
+    }
+
+    // await this.secrets.store(connectionId, JSON.stringify(connection));
+
     // TODO: refresh Resources view
+
+    return { success, message: JSON.stringify(connection) };
   }
 
   async getConnections() {
