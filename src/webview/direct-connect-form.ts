@@ -15,36 +15,18 @@ addEventListener("DOMContentLoaded", () => {
 class DirectConnectFormViewModel extends ViewModel {
   errorMessage = this.signal("");
   success = this.signal(false);
+  platformType = this.signal<PlatformOptions>("Other");
+  otherPlatform = this.signal("");
+  requireSpecify = this.derive(() => this.platformType() === "Other");
 
-  /** Validate changes one input at a time on blur or ui change
-   * Checks that the change is valid using the API
-   * If the change is valid, update the value in the view model
-   * If the change is invalid, highlight input, add error msg
-   */
-  async validateChanges(event: Event) {
-    console.log("validateChanges", event);
+  updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
-    input.classList.remove("error");
-    console.log("validate", event);
-    // const res = await post("ValidateInput", {
-    //   [input.name]: input.value,
-    // });
-
-    // if (res.success) {
-    //   console.log("success", res);
-    //   this.updateValue(input.name, input.value);
-    // } else {
-    //   this.errorMessage(res.message ?? "Unknown error occurred");
-    //   // this.revertValue(input.name); // FIXME
-    //   input.classList.add("error");
-    //   console.log("error", res);
-    // }
-  }
-
-  updateValue(name: string, value: string) {
-    switch (name) {
+    switch (input.name) {
+      case "platform":
+        this.platformType(input.value as PlatformOptions);
+        break;
       default:
-        console.warn(`Unhandled key: ${name}`); // FIXME
+        console.warn(`Unhandled key: ${input.name}`); // FIXME
     }
   }
 
@@ -56,17 +38,17 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     console.log("formData:", formData, "data", data);
-    const result = await post("TestConnection", data);
-    if (result.success) {
-      console.log("success", result);
-    } else {
-      this.errorMessage(result.message ?? "Unknown error occurred");
-      console.log("error", result);
-    }
+    // TODO not implemented yet
+    // const result = await post("TestConnection", data);
+    // if (result.success) {
+    //   console.log("success", result);
+    // } else {
+    //   this.errorMessage(result.message ?? "Unknown error occurred");
+    //   console.log("error", result);
+    // }
   }
 
-  /** Submit all form data to the extension
-   */
+  /** Submit all form data to the extension */
   async handleSubmit(event: Event) {
     event.preventDefault();
     this.success(false);
@@ -84,10 +66,6 @@ class DirectConnectFormViewModel extends ViewModel {
 }
 
 export function post(
-  type: "ValidateInput",
-  body: { [key: string]: unknown },
-): Promise<{ success: boolean; message: string | null }>;
-export function post(
   type: "TestConnection",
   body: { [key: string]: unknown },
 ): Promise<{ success: boolean; message: string | null }>;
@@ -98,3 +76,10 @@ export function post(
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
+
+type PlatformOptions =
+  | "Apache Kafka"
+  | "Confluent Cloud"
+  | "Confluent Platform"
+  | "Local"
+  | "Other";

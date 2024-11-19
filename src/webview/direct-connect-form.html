@@ -11,8 +11,8 @@
   </head>
   <body>
     <main class="container">
-      <h1>Set up a Direct Connection</h1>
-      <p>Some helpful text that will encourage users to properly fill this in. Close this tab to cancel changes.</p>
+      <h1>Create a new connection (⚠️<em>experimental</em>⚠️)</h1>
+      <p>Form currently <strong>only supports connections with no authentication required</strong>, but more auth types are coming soon. Close this tab to cancel changes.</p>
       <template data-if="this.errorMessage()">
         <div class="info error" data-text="this.errorMessage()"></div>
       </template>
@@ -25,49 +25,20 @@
               id="connection-label"
               name="connection-label"
               type="text"
-              data-prop-value="null"
-              data-on-change="null"
             />
           </div>
           <span class="description">An easy to remember name to reference this connection in the future</span>
         </div>
         <fieldset>
-          <legend>Platform/System Type</legend>
-          <div class="input-container">
-            <div>
-              <input type="radio" id="confluent-platform" name="platform" value="Confluent Platform" />
-              <label for="confluent-platform">Confluent Platform</label>
-            </div>
-            <div>
-              <input type="radio" id="apache-kafka" name="platform" value="Apache Kafka" />
-              <label for="apache-kafka">Apache Kafka</label>
-            </div>
-            <div>
-              <input type="radio" id="confluent-cloud" name="platform" value="Confluent Cloud" />
-              <label for="confluent-cloud">Confluent Cloud</label>
-            </div>
-            <div>
-              <input type="radio" id="local" name="platform" value="Local" />
-              <label for="local">Local</label>
-            </div>
-            <div>
-              <input type="radio" id="other" name="platform" value="Other" checked required/>
-              <label for="other">Other (specify)</label>
-            </div>
-          </div>
-        </fieldset>
-        <fieldset>
           <legend>Kafka Broker</legend>
           <div class="input-container">
             <div>
-              <label for="bootstrap-servers" class="label">Bootstrap Servers</label>
+              <label for="bootstrap-servers" class="label">Bootstrap Server(s)</label>
               <input
                 class="input"
                 id="bootstrap-servers"
                 name="bootstrap-servers"
                 type="text"
-                data-prop-value=""
-                data-on-change="this.validateChanges(event)"
                 required
               />
             </div>
@@ -84,14 +55,43 @@
                 id="schema-registry-url"
                 name="schema-registry-url"
                 type="url"
-                data-prop-value=""
-                data-on-change="this.validateChanges(event)"
               />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
         </fieldset>
+        <fieldset class="input-container">
+          <legend>Which connection system or platform are you using?</legend>
+          <div class="radio-container">
+            <div>
+              <input type="radio" id="apache-kafka" name="platform" value="Apache Kafka" data-on-click="this.updateValue(event)" />
+              <label for="apache-kafka">Apache Kafka</label>
+            </div>
+            <div>
+              <input type="radio" id="confluent-cloud" name="platform" value="Confluent Cloud" data-on-click="this.updateValue(event)"/>
+              <label for="confluent-cloud">Confluent Cloud</label>
+            </div>
+            <div>
+              <input type="radio" id="confluent-platform" name="platform" value="Confluent Platform" data-on-click="this.updateValue(event)"/>
+              <label for="confluent-platform">Confluent Platform</label>
+            </div>
+            <div>
+              <input type="radio" id="local" name="platform" value="Local" data-on-change="this.updateValue(event)"/>
+              <label for="local">Local</label>
+            </div>
+            <div>
+              <input type="radio" id="other" name="platform" value="Other" checked required data-on-click="this.updateValue(event)"/>
+              <label for="other">Other (specify)</label>
+              <input
+                class="input"
+                id="other"
+                name="other-platform"
+                type="text"
+              />
+            </div>
+          </div>
+        </fieldset>
         </div>
-        <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" />
+        <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
         <input class="button" type="submit" value="Save"/>
       </form>
       <template data-if="this.success()">
@@ -147,8 +147,15 @@
       .input-container > * > * {
         width: 100%;
       }
-  
-      input:not([type="submit"]),
+      fieldset {
+        width: 100%;
+        border-width: 1px;
+      }
+      legend {
+        font-size: 12px;
+        margin-bottom: 0.5rem;
+      }
+      input:not([type="submit"]):not([type="radio"]),
       .dropdown > * {
         width: 250px;
       }
