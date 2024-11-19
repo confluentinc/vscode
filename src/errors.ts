@@ -83,16 +83,17 @@ export function enrichErrorContext(
   const obsContext: Record<string, any> = observabilityContext.toRecord();
   let errorContext: Record<string, any> = { extra: { ...obsContext } };
 
-  if (context && context.extra) {
+  // merge `extra` from the provided `context` with the observability context
+  const { extra: extraFromContext = {}, ...otherContext } = context;
+  if (extraFromContext) {
     // ensure observability context keys always make it into the Sentry event under `extra`, even if
     // the caller provided their own `extra` data in `context`
-    const { extra: extraFromContext = {}, ...restExtraContext } = context;
     errorContext = {
       extra: { ...obsContext, ...extraFromContext },
-      ...restExtraContext,
     };
   }
 
+  // add any `ResponseError`-specific context
   if ((e as any).response) {
     const errorResponse = (e as ResponseError).response;
     errorContext = {
@@ -108,5 +109,7 @@ export function enrichErrorContext(
       },
     };
   }
-  return errorContext;
+
+  // merge any other context provided by the caller
+  return { ...errorContext, ...otherContext };
 }
