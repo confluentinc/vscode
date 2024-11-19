@@ -4,16 +4,11 @@ import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constan
 import { CustomMarkdownString } from "./main";
 
 /**
- * Base class between local and ccloud environments, and possibly
- * direct connections in the future.
- *
- * An environment is a distinct collection of resources, namely
- * Kafka clusters, a possible Schema Registry, and perhaps more
- * things in the future such as Flink clusters.
- *
+ * Base class for an environment, which is a distinct collection of resources, primarily Kafka
+ * clusters, possible Schema Registry, and perhaps more things in the future such as Flink clusters.
  */
 export abstract class Environment extends Data {
-  abstract readonly connectionId: string;
+  abstract connectionId: string | undefined;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
 
@@ -38,6 +33,7 @@ export class CCloudEnvironment extends Environment {
   readonly connectionId: string = CCLOUD_CONNECTION_ID;
   readonly isLocal: boolean = false;
   readonly isCCloud: boolean = true;
+  readonly isDirect: boolean = false;
 
   streamGovernancePackage!: Enforced<string>;
   hasClusters!: Enforced<boolean>;
@@ -52,9 +48,19 @@ export class LocalEnvironment extends Environment {
   readonly connectionId: string = LOCAL_CONNECTION_ID;
   readonly isLocal: boolean = true;
   readonly isCCloud: boolean = false;
+  readonly isDirect: boolean = false;
 
   // If we have a local connection, we have at least one Kafka cluster.
   readonly hasClusters: boolean = true;
+}
+
+export class DirectConnectionEnvironment extends Environment {
+  readonly isLocal: boolean = false;
+  readonly isCCloud: boolean = false;
+  readonly isDirect: boolean = true;
+
+  connectionId!: Enforced<string>;
+  hasClusters!: Enforced<boolean>;
 }
 
 // Tree item representing a CCloud environment on top an instance of CloudEnvironment
