@@ -83,13 +83,24 @@ describe("commands/schemaUpload.ts schemaRegistrationMessage tests", function ()
     );
   });
 
-  it("normalized to existing version message is correct", () => {
+  it("normalized to existing version message is correct when normalized to most recent version", () => {
     const subject = "MyTopic-value";
     const version = 1;
     const message = schemaRegistrationMessage(subject, version, version);
     assert.strictEqual(
       message,
       `Normalized to existing version ${version} for subject "${subject}"`,
+    );
+  });
+
+  it("normalized to existing version message is correct when normalized to older version", () => {
+    const subject = "MyTopic-value";
+    const thisVersion = 1;
+    const maxVersion = 2;
+    const message = schemaRegistrationMessage(subject, maxVersion, thisVersion);
+    assert.strictEqual(
+      message,
+      `Normalized to existing version ${thisVersion} for subject "${subject}"`,
     );
   });
 });
