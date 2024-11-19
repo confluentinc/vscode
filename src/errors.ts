@@ -1,6 +1,4 @@
 import * as Sentry from "@sentry/node";
-
-import { ExclusiveEventHintOrCaptureContext } from "@sentry/core/build/types/utils/prepareEvent";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
@@ -69,12 +67,10 @@ export async function logResponseError(
  * If a {@link ResponseError} is provided as the `error`, the response status code and any associated
  * `x-connection-id` header will be included in the event context under `contexts.response`.
  *
- * See {@link ExclusiveEventHintOrCaptureContext} for more information on the `context` parameter.
+ * See {@link Sentry.captureException}'s `ExclusiveEventHintOrCaptureContext` for more information
+ * on the `context` parameter.
  */
-export function captureException(
-  e: unknown,
-  context: ExclusiveEventHintOrCaptureContext = {},
-): void {
+export function captureException(e: unknown, context: any = {}): void {
   // TODO: check telemetry settings here?
   const obsContext: Record<string, any> = observabilityContext.toRecord();
   let errorContext: Record<string, any> = { extra: { ...obsContext } };
