@@ -16,17 +16,15 @@
       <template data-if="this.errorMessage()">
         <div class="info error" data-text="this.errorMessage()"></div>
       </template>
-      <template data-if="this.success()">
-        <div class="info success">Data updated successfully. You may close this tab or make additional changes.</div>
-      </template>
+
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
           <div>
-            <label for="connection-name" class="label">Connection Label</label>
+            <label for="connection-label" class="label">Connection Label</label>
             <input
               class="input"
-              id="connection-name"
-              name="connection-name"
+              id="connection-label"
+              name="connection-label"
               type="text"
               data-prop-value="null"
               data-on-change="null"
@@ -99,9 +97,12 @@
             <span class="description">The URL of the Schema Registry to use for serialization</span>
         </fieldset>
         </div>
-        <input class="button" type="button" value="Test Connection" data-on-click="this.validateChanges(event)" />
+        <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" />
         <input class="button" type="submit" value="Save"/>
       </form>
+      <template data-if="this.success()">
+        <div class="info success">Connection added. View & interact with your connection in the resources sidebar.</div>
+      </template>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
