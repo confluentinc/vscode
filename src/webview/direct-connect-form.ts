@@ -48,10 +48,24 @@ class DirectConnectFormViewModel extends ViewModel {
     }
   }
 
-  /** Submit all form data updates to the API
-   * If the API returns success, show a success message
-   * If the API returns an error, show the error message at the top of the form
-   * We can't individually highlight errors easily because the API doesn't return the field name, just strings
+  async testConnection(event: Event) {
+    event.preventDefault();
+    this.success(false);
+    this.errorMessage("");
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    console.log("formData:", formData, "data", data);
+    const result = await post("TestConnection", data);
+    if (result.success) {
+      console.log("success", result);
+    } else {
+      this.errorMessage(result.message ?? "Unknown error occurred");
+      console.log("error", result);
+    }
+  }
+
+  /** Submit all form data to the extension
    */
   async handleSubmit(event: Event) {
     event.preventDefault();
@@ -71,6 +85,10 @@ class DirectConnectFormViewModel extends ViewModel {
 
 export function post(
   type: "ValidateInput",
+  body: { [key: string]: unknown },
+): Promise<{ success: boolean; message: string | null }>;
+export function post(
+  type: "TestConnection",
   body: { [key: string]: unknown },
 ): Promise<{ success: boolean; message: string | null }>;
 export function post(
