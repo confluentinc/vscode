@@ -112,7 +112,7 @@ export class DirectConnectionManager {
     // TODO: implement this
   }
 
-  async deleteLocalConnection(id: string) {
+  async deleteConnection(id: string) {
     // TODO: implement this
   }
 }
