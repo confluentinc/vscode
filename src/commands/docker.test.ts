@@ -195,7 +195,7 @@ describe("commands/docker.ts orderWorkflows()", () => {
   });
 });
 
-describe.only("commands/docker.ts addDockerPath()", () => {
+describe("commands/docker.ts addDockerPath()", () => {
   let sandbox: sinon.SinonSandbox;
   let showOpenDialogStub: sinon.SinonStub;
   let getConfigurationStub: sinon.SinonStub;
