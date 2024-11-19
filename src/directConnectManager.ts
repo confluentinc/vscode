@@ -11,6 +11,7 @@ import {
   ConnectionSpec,
   ConnectionType,
   KafkaClusterConfig,
+  ResponseError,
   SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
@@ -95,12 +96,17 @@ export class DirectConnectionManager {
     let success: boolean = false;
     try {
       connection = await tryToCreateConnection(spec);
+      success = true;
     } catch (error) {
       logger.error("Failed to create direct connection:", { error });
-      if (error instanceof Error) {
-        // TODO: check for ResponseError and extract message
-        return { success: false, message: error.message };
+      let errorMessage = "";
+      if (error instanceof ResponseError) {
+        const errorBody = await error.response.clone().json();
+        errorMessage = JSON.stringify(errorBody);
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
+      return { success: false, message: errorMessage };
     }
 
     // TODO: implement this once we're storing connections as secrets
