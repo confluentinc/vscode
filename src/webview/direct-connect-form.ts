@@ -53,7 +53,11 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     console.log("formData:", formData, "data", data);
-    return await post("Submit", data);
+    const result = await post("Submit", data);
+    this.success(result.success);
+    if (!result.success) {
+      this.errorMessage(result.message ?? "Unknown error occurred");
+    }
   }
 }
 
