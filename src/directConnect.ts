@@ -50,7 +50,8 @@ export function openDirectConnectionForm(): void {
   async function createConnection(
     body: any,
   ): Promise<{ success: boolean; message: string | null }> {
-    logger.debug("creating connection from form data:", body);
+    // XXX: only enable for local debugging:
+    // logger.debug("creating connection from form data:", body);
 
     // TODO: extract `connection-type` from body and send as telemetry event
 
@@ -69,11 +70,7 @@ export function openDirectConnectionForm(): void {
     }
 
     const manager = DirectConnectionManager.getInstance();
-    return await manager.createConnection(
-      kafkaConfig,
-      schemaRegistryConfig,
-      body["connection-label"],
-    );
+    return await manager.createConnection(kafkaConfig, schemaRegistryConfig, body["name"]);
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
