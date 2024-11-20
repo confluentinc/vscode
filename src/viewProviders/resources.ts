@@ -127,6 +127,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
         return await getCCloudEnvironmentChildren(element);
+      } else if (element instanceof DirectEnvironment) {
+        const children = [element.kafkaCluster, element.schemaRegistry].filter(
+          (child) => child !== undefined,
+        );
+        return children as DirectResources[];
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
