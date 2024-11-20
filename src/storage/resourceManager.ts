@@ -675,7 +675,7 @@ export class ResourceManager {
       return new Map<string, ConnectionSpec>();
     }
     const connections: Map<string, ConnectionSpec> = JSON.parse(connectionsString);
-    const connectionsById: DirectConnectionsById = new Map(Array.from(connections));
+    const connectionsById: DirectConnectionsById = new Map(Object.entries(connections));
     logger.debug("Direct connections found in extension state", connectionsById);
     return connectionsById;
   }
@@ -692,7 +692,10 @@ export class ResourceManager {
   async addDirectConnection(connection: ConnectionSpec): Promise<void> {
     const connectionIds: DirectConnectionsById = await this.getDirectConnections();
     connectionIds.set(connection.id!, connection);
-    await this.storage.setSecret(DIRECT_CONNECTIONS, JSON.stringify(connectionIds));
+    await this.storage.setSecret(
+      DIRECT_CONNECTIONS,
+      JSON.stringify(Object.fromEntries(connectionIds)),
+    );
   }
 
   async deleteDirectConnection(id: string): Promise<void> {
