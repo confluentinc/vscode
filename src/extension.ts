@@ -81,7 +81,6 @@ import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { registerDirectConnectionCommand } from "./directConnect";
 
 const logger = new Logger("extension");
 
