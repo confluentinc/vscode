@@ -708,7 +708,7 @@
         {
           "command": "confluent.connections.direct",
           "when": "viewItem == resources-direct-container && confluent.directConnectionsEnabled",
-          "group": "navigation@1"
+          "group": "inline@1"
         },
         {
           "command": "confluent.organizations.use",
