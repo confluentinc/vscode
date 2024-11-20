@@ -665,23 +665,18 @@ export class ResourceManager {
     });
   }
 
-  // DIRECT CONNECTIONS
+  // DIRECT CONNECTIONS - entirely handled through SecretStorage
 
-  // TODO(shoup): move methods from .*GlobalState to .*Secret
   /** Look up the connectionId:ConnectionSpec map for any existing `DIRECT` connections. */
   async getDirectConnections(): Promise<DirectConnectionsById> {
-    const connectionsString: string | undefined =
-      await this.storage.getGlobalState(DIRECT_CONNECTIONS);
+    const connectionsString: string | undefined = await this.storage.getSecret(DIRECT_CONNECTIONS);
     if (!connectionsString) {
       logger.debug("No direct connections found in extension state");
       return new Map<string, ConnectionSpec>();
     }
     const connections: Map<string, ConnectionSpec> = JSON.parse(connectionsString);
     const connectionsById: DirectConnectionsById = new Map(Array.from(connections));
-    logger.debug(
-      "Direct connections found in extension state",
-      JSON.stringify(Object.entries(connectionsById)),
-    );
+    logger.debug("Direct connections found in extension state", connectionsById);
     return connectionsById;
   }
 
@@ -697,17 +692,17 @@ export class ResourceManager {
   async addDirectConnection(connection: ConnectionSpec): Promise<void> {
     const connectionIds: DirectConnectionsById = await this.getDirectConnections();
     connectionIds.set(connection.id!, connection);
-    await this.storage.setGlobalState(DIRECT_CONNECTIONS, JSON.stringify(connectionIds));
+    await this.storage.setSecret(DIRECT_CONNECTIONS, JSON.stringify(connectionIds));
   }
 
   async deleteDirectConnection(id: string): Promise<void> {
     const connections: DirectConnectionsById = await this.getDirectConnections();
     connections.delete(id);
-    await this.storage.setGlobalState(DIRECT_CONNECTIONS, JSON.stringify(connections));
+    await this.storage.setSecret(DIRECT_CONNECTIONS, JSON.stringify(connections));
   }
 
   async deleteDirectConnections(): Promise<void> {
-    await this.storage.deleteGlobalState(DIRECT_CONNECTIONS);
+    await this.storage.deleteSecret(DIRECT_CONNECTIONS);
   }
 }
 

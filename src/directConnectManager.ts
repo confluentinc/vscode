@@ -1,11 +1,5 @@
 import { randomUUID } from "crypto";
-import {
-  ConfigurationChangeEvent,
-  Disposable,
-  SecretStorage,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import {
   Connection,
   ConnectionSpec,
@@ -20,7 +14,6 @@ import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { tryToCreateConnection } from "./sidecar/connections";
-import { getResourceManager } from "./storage/resourceManager";
 
 const logger = new Logger("direct");
 
@@ -31,13 +24,12 @@ const logger = new Logger("direct");
  * - creating connections via input from the webview form and updating the Resources view
  * - fetching connections from persistent storage and deconflicting with the sidecar
  * - deleting connections through actions on the Resources view
+ * - firing events when the connection list changes or a specific connection is updated/deleted
  */
 export class DirectConnectionManager {
   /** Disposables belonging to this class to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
   disposables: Disposable[] = [];
-
-  private secrets: SecretStorage;
 
   // singleton instance to prevent multiple listeners and single source of connection management
   private static instance: DirectConnectionManager;
@@ -47,7 +39,6 @@ export class DirectConnectionManager {
       // need access to SecretStorage to manage connection secrets
       throw new ExtensionContextNotSetError("DirectConnectionManager");
     }
-    this.secrets = context.secrets;
     const listeners = this.setEventListeners();
     this.disposables.push(...listeners);
   }
@@ -98,6 +89,7 @@ export class DirectConnectionManager {
     try {
       connection = await tryToCreateConnection(spec);
       success = true;
+      logger.debug("Successfully created direct connection:", { connection });
     } catch (error) {
       logger.error("Failed to create direct connection:", { error });
       let errorMessage = "";
@@ -110,9 +102,10 @@ export class DirectConnectionManager {
       return { success: false, message: errorMessage };
     }
 
-    await getResourceManager().addDirectConnection(spec);
+    // TODO(shoup): enable this in follow-on branch
+    // await getResourceManager().addDirectConnection(spec);
 
-    // TODO: refresh Resources view
+    // TODO(shoup): refresh Resources view in follow-on branch
 
     return { success, message: JSON.stringify(connection) };
   }
