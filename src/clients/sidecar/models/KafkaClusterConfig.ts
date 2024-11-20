@@ -31,6 +31,24 @@ export interface KafkaClusterConfig {
    * @memberof KafkaClusterConfig
    */
   bootstrap_servers: string;
+  /**
+   * The credentials for the Kafka cluster, or null if no authentication is required
+   * @type {object}
+   * @memberof KafkaClusterConfig
+   */
+  credentials?: object | null;
+  /**
+   * Whether to communicate with the Kafka cluster over TLS/SSL. Defaults to 'true', but set to 'false' when the Kafka cluster does not support TLS/SSL.
+   * @type {boolean}
+   * @memberof KafkaClusterConfig
+   */
+  ssl?: boolean | null;
+  /**
+   * Whether to verify the Kafka cluster certificates. Defaults to 'true', but set to 'false' when the Kafka cluster has self-signed certificates.
+   * @type {boolean}
+   * @memberof KafkaClusterConfig
+   */
+  verify_ssl_certificates?: boolean | null;
 }
 
 /**
@@ -55,6 +73,10 @@ export function KafkaClusterConfigFromJSONTyped(
   return {
     id: json["id"] == null ? undefined : json["id"],
     bootstrap_servers: json["bootstrap_servers"],
+    credentials: json["credentials"] == null ? undefined : json["credentials"],
+    ssl: json["ssl"] == null ? undefined : json["ssl"],
+    verify_ssl_certificates:
+      json["verify_ssl_certificates"] == null ? undefined : json["verify_ssl_certificates"],
   };
 }
 
@@ -65,5 +87,8 @@ export function KafkaClusterConfigToJSON(value?: KafkaClusterConfig | null): any
   return {
     id: value["id"],
     bootstrap_servers: value["bootstrap_servers"],
+    credentials: value["credentials"],
+    ssl: value["ssl"],
+    verify_ssl_certificates: value["verify_ssl_certificates"],
   };
 }
