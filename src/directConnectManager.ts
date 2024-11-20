@@ -2,7 +2,9 @@ import { randomUUID } from "crypto";
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import {
   Connection,
+  ConnectionsList,
   ConnectionSpec,
+  ConnectionsResourceApi,
   ConnectionType,
   KafkaClusterConfig,
   ResponseError,
@@ -13,8 +15,9 @@ import { ContextValues, setContextValue } from "./context/values";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
+import { getSidecar } from "./sidecar";
 import { tryToCreateConnection } from "./sidecar/connections";
-import { getResourceManager } from "./storage/resourceManager";
+import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { getResourceViewProvider } from "./viewProviders/resources";
 
 const logger = new Logger("direct");
@@ -119,5 +122,33 @@ export class DirectConnectionManager {
 
   async deleteConnection(id: string) {
     // TODO: implement this
+  }
+
+  /** Compare the known connections between our SecretStorage and the sidecar, then make updates as needed. */
+  async reconcileSidecarConnections() {
+    const sidecar = await getSidecar();
+    const client: ConnectionsResourceApi = sidecar.getConnectionsResourceApi();
+
+    const [sidecarConnections, storedConnections]: [ConnectionsList, DirectConnectionsById] =
+      await Promise.all([
+        client.gatewayV1ConnectionsGet(),
+        getResourceManager().getDirectConnections(),
+      ]);
+    const sidecarDirectConnections: Connection[] = sidecarConnections.data.filter(
+      (connection: Connection) => connection.spec.type === ConnectionType.Direct,
+    );
+    logger.debug(
+      `looked up existing direct connections -> sidecar: ${sidecarDirectConnections.length}, stored: ${Object.keys(storedConnections).length}`,
+    );
+
+    // if there are any stored connections that the sidecar doesn't know about, create them
+    const newConnectionPromises: Promise<Connection>[] = [];
+    for (const [id, connection] of Object.entries(storedConnections)) {
+      if (!sidecarDirectConnections.find((conn) => conn.spec.id === id)) {
+        logger.debug("telling sidecar about stored connection:", { id });
+        newConnectionPromises.push(tryToCreateConnection(connection.spec));
+      }
+    }
+    await Promise.all(newConnectionPromises);
   }
 }
