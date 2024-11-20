@@ -75,6 +75,7 @@ import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { registerDirectConnectionCommand } from "./directConnect";
 
 const logger = new Logger("extension");
 
@@ -195,6 +196,7 @@ async function _activateExtension(
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
   registerProjectGenerationCommand(context);
+  registerDirectConnectionCommand(context);
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());
