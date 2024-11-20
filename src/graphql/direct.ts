@@ -16,7 +16,6 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         id
         kafkaCluster {
           id
-          name
           bootstrapServers
           uri
         }
