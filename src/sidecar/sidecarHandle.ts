@@ -33,7 +33,6 @@ import {
   SIDECAR_BASE_URL,
   SIDECAR_CONNECTION_ID_HEADER,
   SIDECAR_PROCESS_ID_HEADER,
-  TOPIC_NAME_HEADER,
 } from "./constants";
 import {
   CCloudAuthStatusMiddleware,
@@ -230,14 +229,13 @@ export class SidecarHandle {
    * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link RecordsV3Api} client instance with a
    * preconfigured {@link KafkaRestConfiguration}.
    */
-  public getRecordsV3Api(clusterId: string, connectionId: string, topicName: string): RecordsV3Api {
+  public getRecordsV3Api(clusterId: string, connectionId: string): RecordsV3Api {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
         ...this.defaultClientConfigParams.headers,
         [CLUSTER_ID_HEADER]: clusterId,
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
-        [TOPIC_NAME_HEADER]: topicName,
       },
     });
     return new RecordsV3Api(config);
