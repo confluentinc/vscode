@@ -1,6 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
-import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { DirectKafkaCluster } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
@@ -54,10 +53,11 @@ export class DirectEnvironment extends Environment {
   readonly isLocal: boolean = false;
 
   connectionId!: Enforced<string>; // dynamically assigned at connection creation time
-  connectionType!: Enforced<ConnectionType>;
+  id: Enforced<string> = this.connectionId;
+
+  connectionType?: string;
   kafkaCluster?: DirectKafkaCluster | undefined;
   schemaRegistry?: DirectSchemaRegistry | undefined;
-  id: Enforced<string> = this.connectionId;
 
   get hasClusters(): boolean {
     return !!(this.kafkaCluster || this.schemaRegistry);
@@ -75,11 +75,12 @@ export class LocalEnvironment extends Environment {
   readonly hasClusters: boolean = true;
 }
 
-// Tree item representing a CCloud environment on top an instance of CloudEnvironment
-export class CCloudEnvironmentTreeItem extends vscode.TreeItem {
-  resource: CCloudEnvironment;
+// Tree item representing one of the above Environment subclasses
+// TODO: update this for LocalEnvironment
+export class EnvironmentTreeItem extends vscode.TreeItem {
+  resource: CCloudEnvironment | DirectEnvironment;
 
-  constructor(resource: CCloudEnvironment) {
+  constructor(resource: CCloudEnvironment | DirectEnvironment) {
     // If has interior clusters, is collapsed and can be expanded.
     const collapseState = resource.hasClusters
       ? vscode.TreeItemCollapsibleState.Collapsed
@@ -89,34 +90,16 @@ export class CCloudEnvironmentTreeItem extends vscode.TreeItem {
 
     // internal properties
     this.resource = resource;
-    this.contextValue = "ccloud-environment";
+    if (this.resource.isCCloud) {
+      this.contextValue = "ccloud-environment";
+    } else if (this.resource.isDirect) {
+      this.contextValue = "direct-environment";
+    }
 
     // user-facing properties
     this.description = this.resource.id;
+    // TODO: figure out an icon for Local/Direct?
     this.iconPath = new vscode.ThemeIcon(IconNames.CCLOUD_ENVIRONMENT);
-    this.tooltip = createEnvironmentTooltip(this.resource);
-  }
-}
-
-export class DirectEnvironmentTreeItem extends vscode.TreeItem {
-  resource: DirectEnvironment;
-
-  constructor(resource: DirectEnvironment) {
-    // If has interior clusters, is collapsed and can be expanded.
-    const collapseState = resource.hasClusters
-      ? vscode.TreeItemCollapsibleState.Collapsed
-      : vscode.TreeItemCollapsibleState.None;
-
-    super(resource.name, collapseState);
-
-    // internal properties
-    this.resource = resource;
-    this.contextValue = "direct-environment";
-
-    // user-facing properties
-    this.description = this.resource.id;
-    // TODO: change icons based on connection type
-    this.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
 }
