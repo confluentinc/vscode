@@ -14,6 +14,8 @@ import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { tryToCreateConnection } from "./sidecar/connections";
+import { getResourceManager } from "./storage/resourceManager";
+import { getResourceViewProvider } from "./viewProviders/resources";
 
 const logger = new Logger("direct");
 
@@ -104,10 +106,10 @@ export class DirectConnectionManager {
       return { success: false, message: errorMessage };
     }
 
-    // TODO(shoup): enable this in follow-on branch
-    // await getResourceManager().addDirectConnection(spec);
-
-    // TODO(shoup): refresh Resources view in follow-on branch
+    // save the new connection in secret storage
+    await getResourceManager().addDirectConnection(spec);
+    // refresh the Resources view to load the new connection
+    getResourceViewProvider().refresh();
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success, message: JSON.stringify(connection) };
