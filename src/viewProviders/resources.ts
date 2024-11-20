@@ -29,6 +29,7 @@ import {
   LocalSchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
+import { ENABLE_DIRECT_CONNECTIONS } from "../preferences/constants";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -130,11 +131,28 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[] = await Promise.all([
-        loadCCloudResources(this.forceDeepRefresh),
-        loadLocalResources(),
-        loadDirectConnectResources(),
-      ]);
+      const resources: ResourceViewProviderData[] = [];
+
+      // EXPERIMENTAL: check if direct connections are enabled in extension settings
+      const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+      const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
+      if (directConnectionsEnabled) {
+        resources.push(
+          ...(await Promise.all([
+            loadCCloudResources(this.forceDeepRefresh),
+            loadLocalResources(),
+            loadDirectConnectResources(),
+          ])),
+        );
+      } else {
+        resources.push(
+          ...(await Promise.all([
+            loadCCloudResources(this.forceDeepRefresh),
+            loadLocalResources(),
+          ])),
+        );
+      }
+
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
