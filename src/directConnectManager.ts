@@ -20,6 +20,7 @@ import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { tryToCreateConnection } from "./sidecar/connections";
+import { getResourceManager } from "./storage/resourceManager";
 
 const logger = new Logger("direct");
 
@@ -109,8 +110,7 @@ export class DirectConnectionManager {
       return { success: false, message: errorMessage };
     }
 
-    // TODO: implement this once we're storing connections as secrets
-    // await this.secrets.store( ... );
+    await getResourceManager().addDirectConnection(spec);
 
     // TODO: refresh Resources view
 
