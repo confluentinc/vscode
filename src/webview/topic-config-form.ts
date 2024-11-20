@@ -17,6 +17,15 @@ class ConfigFormViewModel extends ViewModel {
     return await post("GetTopicName", {});
   }, "");
 
+  cCloudLink = this.resolve(async () => {
+    return await post("GetCCloudLink", {});
+  }, "");
+
+  settingsLink = this.derive(() => {
+    if (this.cCloudLink().length === 0) return;
+    return `${this.cCloudLink().replace("/overview", "/settings")}`;
+  });
+
   // Individual form fields that keep up-to-date with user changes in HTML
   cleanupPolicy = this.resolve(async () => {
     return await post("GetCleanupPolicy", {});
@@ -135,6 +144,7 @@ class ConfigFormViewModel extends ViewModel {
 }
 
 export function post(type: "GetTopicName", body: any): Promise<string>;
+export function post(type: "GetCCloudLink", body: any): Promise<string>;
 export function post(type: "GetRetentionSize", body: any): Promise<string>;
 export function post(type: "GetRetentionMs", body: any): Promise<string>;
 export function post(type: "GetMaxMessageBytes", body: any): Promise<string>;

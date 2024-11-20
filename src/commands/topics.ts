@@ -125,6 +125,9 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       case "GetTopicName": {
         return topic.name satisfies MessageResponse<"GetTopicName">;
       }
+      case "GetCCloudLink": {
+        return topic.ccloudUrl satisfies MessageResponse<"GetCCloudLink">;
+      }
       case "GetCleanupPolicy": {
         // cc default "delete"
         return (topicConfigRemoteItems.data.find((item) => item.name === "cleanup.policy")?.value ??

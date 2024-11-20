@@ -13,9 +13,10 @@
     <main class="container">
       <h1>Configure Topic: <span data-text="this.topicName()"></span></h1>
       <p>
-        Some helpful text that will encourage users to properly configure the topic. TODO LINK to
-        configure advanced options, visit Confluent Cloud. Close this tab to cancel changes.
-      </p>
+        Some helpful text that will encourage users to properly configure the topic. Close this tab to cancel changes.</p>
+        <template data-if="this.cCloudLink()">
+          <p>To configure advanced options, <a data-attr-href="this.settingsLink()">visit settings in Confluent Cloud.</a></p>
+        </template>
       <template data-if="this.errorOnSubmit()">
         <p class="error" data-text="this.errorOnSubmit()"></p>
       </template>
