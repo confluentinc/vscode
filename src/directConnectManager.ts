@@ -21,6 +21,7 @@ import { Logger } from "./logging";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { tryToCreateConnection } from "./sidecar/connections";
 import { getResourceManager } from "./storage/resourceManager";
+import { getResourceViewProvider } from "./viewProviders/resources";
 
 const logger = new Logger("direct");
 
@@ -110,9 +111,10 @@ export class DirectConnectionManager {
       return { success: false, message: errorMessage };
     }
 
+    // save the new connection in secret storage
     await getResourceManager().addDirectConnection(spec);
-
-    // TODO: refresh Resources view
+    // refresh the Resources view to load the new connection
+    getResourceViewProvider().refresh();
 
     return { success, message: JSON.stringify(connection) };
   }
