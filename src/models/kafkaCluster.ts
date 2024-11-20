@@ -3,11 +3,12 @@ import * as vscode from "vscode";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
 
-/** Base class for all KafkaClusters, be they local or be they CCloud */
+/** Base class for all KafkaClusters */
 export abstract class KafkaCluster extends Data {
   abstract readonly connectionId: string;
-  abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
+  abstract readonly isDirect: boolean;
+  abstract readonly isLocal: boolean;
 
   abstract name: string;
 
@@ -15,26 +16,15 @@ export abstract class KafkaCluster extends Data {
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
-  uri!: Enforced<string>;
-}
-
-/** A local Kafka cluster */
-export class LocalKafkaCluster extends KafkaCluster {
-  readonly connectionId: string = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
-  readonly environmentId: undefined = undefined;
-
-  // this is solely for display purposes so we don't have to check whether a resource is either a
-  // LocalKafkaCluster or CCloudKafkaCluster when generating a label for a tree/quickpick/etc item
-  readonly name: string = "Local";
+  uri?: string;
 }
 
 /** A CCloud Kafka cluster */
 export class CCloudKafkaCluster extends KafkaCluster {
   readonly connectionId: string = CCLOUD_CONNECTION_ID;
-  readonly isLocal: boolean = false;
   readonly isCCloud: boolean = true;
+  readonly isDirect: boolean = true;
+  readonly isLocal: boolean = false;
 
   name!: Enforced<string>;
   provider!: Enforced<string>;
@@ -46,6 +36,34 @@ export class CCloudKafkaCluster extends KafkaCluster {
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.id}`;
   }
+}
+
+export class DirectKafkaCluster extends KafkaCluster {
+  readonly isCCloud: boolean = false;
+  readonly isDirect: boolean = true;
+  readonly isLocal: boolean = false;
+
+  name!: Enforced<string>;
+  connectionId!: Enforced<string>; // dynamically assigned at connection creation time
+
+  // we only support one Kafka cluster and one Schema Registry per connection, so we can treat the
+  // connection ID as the environment ID
+  get environmentId(): string {
+    return this.connectionId;
+  }
+}
+
+/** A local Kafka cluster */
+export class LocalKafkaCluster extends KafkaCluster {
+  readonly connectionId: string = LOCAL_CONNECTION_ID;
+  readonly isCCloud: boolean = false;
+  readonly isDirect: boolean = false;
+  readonly isLocal: boolean = true;
+  readonly environmentId: undefined = undefined;
+
+  // this is solely for display purposes so we don't have to check whether a resource is either a
+  // LocalKafkaCluster or CCloudKafkaCluster when generating a label for a tree/quickpick/etc item
+  readonly name: string = "Local";
 }
 
 // Main class controlling the representation of a Kafka cluster as a tree item.
@@ -91,7 +109,7 @@ function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownStrin
       .appendMarkdown(
         `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
       );
-  } else {
+  } else if (resource.isLocal) {
     const localCluster = resource as LocalKafkaCluster;
     tooltip
       .appendMarkdown(`#### $(${IconNames.KAFKA_CLUSTER}) Local Kafka Cluster`)
@@ -99,6 +117,14 @@ function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownStrin
       .appendMarkdown(`ID: \`${localCluster.id}\`\n\n`)
       .appendMarkdown(`Bootstrap Servers: \`${localCluster.bootstrapServers}\`\n\n`)
       .appendMarkdown(`URI: \`${localCluster.uri}\``);
+  } else {
+    const directCluster = resource as DirectKafkaCluster;
+    tooltip
+      .appendMarkdown(`#### $(${IconNames.KAFKA_CLUSTER}) Direct Kafka Cluster`)
+      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`ID: \`${directCluster.id}\`\n\n`)
+      .appendMarkdown(`Name: \`${directCluster.name}\`\n\n`)
+      .appendMarkdown(`Bootstrap Servers: \`${directCluster.bootstrapServers}\``);
   }
   return tooltip;
 }
