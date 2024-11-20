@@ -13,66 +13,67 @@
  */
 
 import { mapValues } from "../runtime";
-import type { Status } from "./Status";
-import { StatusFromJSON, StatusFromJSONTyped, StatusToJSON } from "./Status";
 import type { AuthErrors } from "./AuthErrors";
 import { AuthErrorsFromJSON, AuthErrorsFromJSONTyped, AuthErrorsToJSON } from "./AuthErrors";
+import type { ConnectedState } from "./ConnectedState";
+import {
+  ConnectedStateFromJSON,
+  ConnectedStateFromJSONTyped,
+  ConnectedStateToJSON,
+} from "./ConnectedState";
 import type { UserInfo } from "./UserInfo";
 import { UserInfoFromJSON, UserInfoFromJSONTyped, UserInfoToJSON } from "./UserInfo";
 
 /**
- * The authentication-related status (deprecated).
+ * The status related to CCloud.
  * @export
- * @interface Authentication
+ * @interface CCloudStatus
  */
-export interface Authentication {
+export interface CCloudStatus {
   /**
-   *
-   * @type {Status}
-   * @memberof Authentication
+   * The state of the connection to CCloud.
+   * @type {ConnectedState}
+   * @memberof CCloudStatus
    */
-  status: Status;
+  state: ConnectedState;
   /**
-   *
+   * If the connection's auth context holds a valid token, this attribute holds the time at which the user must re-authenticate because, for instance, the refresh token reached the end of its absolute lifetime.
    * @type {Date}
-   * @memberof Authentication
+   * @memberof CCloudStatus
    */
   requires_authentication_at?: Date;
   /**
-   *
+   * Information about the authenticated principal, if known.
    * @type {UserInfo}
-   * @memberof Authentication
+   * @memberof CCloudStatus
    */
   user?: UserInfo;
   /**
-   *
+   * Errors related to the connection to the Kafka cluster.
    * @type {AuthErrors}
-   * @memberof Authentication
+   * @memberof CCloudStatus
    */
   errors?: AuthErrors;
 }
 
 /**
- * Check if a given object implements the Authentication interface.
+ * Check if a given object implements the CCloudStatus interface.
  */
-export function instanceOfAuthentication(value: object): value is Authentication {
-  if (!("status" in value) || value["status"] === undefined) return false;
+export function instanceOfCCloudStatus(value: object): value is CCloudStatus {
+  if (!("state" in value) || value["state"] === undefined) return false;
   return true;
 }
 
-export function AuthenticationFromJSON(json: any): Authentication {
-  return AuthenticationFromJSONTyped(json, false);
+export function CCloudStatusFromJSON(json: any): CCloudStatus {
+  return CCloudStatusFromJSONTyped(json, false);
 }
 
-export function AuthenticationFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): Authentication {
+export function CCloudStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): CCloudStatus {
   if (json == null) {
     return json;
   }
   return {
-    status: StatusFromJSON(json["status"]),
+    state: ConnectedStateFromJSON(json["state"]),
     requires_authentication_at:
       json["requires_authentication_at"] == null
         ? undefined
@@ -82,12 +83,12 @@ export function AuthenticationFromJSONTyped(
   };
 }
 
-export function AuthenticationToJSON(value?: Authentication | null): any {
+export function CCloudStatusToJSON(value?: CCloudStatus | null): any {
   if (value == null) {
     return value;
   }
   return {
-    status: StatusToJSON(value["status"]),
+    state: ConnectedStateToJSON(value["state"]),
     requires_authentication_at:
       value["requires_authentication_at"] == null
         ? undefined
