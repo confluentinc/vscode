@@ -458,7 +458,7 @@
         },
         {
           "command": "confluent.connections.direct",
-          "when": "true"
+          "when": "false"
         },
         {
           "command": "confluent.copyOrganizationId",
