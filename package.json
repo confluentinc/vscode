@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.22.0-18",
+  "version": "0.22.0-22",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -56,6 +56,11 @@
         "command": "confluent.connections.create",
         "icon": "$(plus)",
         "title": "Log in to Confluent Cloud",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.direct",
+        "title": "Direct connection",
         "category": "Confluent: Connections"
       },
       {
@@ -456,6 +461,10 @@
         {
           "command": "confluent.connections.create",
           "when": "!confluent.ccloudConnectionAvailable"
+        },
+        {
+          "command": "confluent.connections.direct",
+          "when": "false"
         },
         {
           "command": "confluent.copyOrganizationId",
@@ -936,6 +945,7 @@
     "@sentry/rollup-plugin": "^2.21.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "async-mutex": "^0.5.0",
     "d3": "^7.9.0",
     "dataclass": "^3.0.0-beta.1",
     "gql.tada": "^1.8.3",
