@@ -55,9 +55,11 @@ export class DirectEnvironment extends Environment {
   connectionId!: Enforced<string>; // dynamically assigned at connection creation time
   id: Enforced<string> = this.connectionId;
 
-  connectionType?: string;
   kafkaCluster?: DirectKafkaCluster | undefined;
   schemaRegistry?: DirectSchemaRegistry | undefined;
+
+  // we only get `DIRECT` back from the GQL query but should change this based on what the user chose
+  connectionType?: string;
 
   get hasClusters(): boolean {
     return !!(this.kafkaCluster || this.schemaRegistry);
