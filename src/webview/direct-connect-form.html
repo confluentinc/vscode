@@ -11,7 +11,7 @@
   </head>
   <body>
     <main class="container">
-      <h1>Create a new connection (⚠️<em>experimental</em>⚠️)</h1>
+      <h1>Create a new connection (⚠️ experimental)</h1>
       <p>Form currently <strong>only supports connections with no authentication required</strong>, but more auth types are coming soon. Close this tab to cancel changes.</p>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
@@ -90,7 +90,7 @@
         </fieldset>
         </div>
         <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
-        <input class="button" type="submit" value="Save"/>
+        <input class="button" type="submit" value="Save" data-attr-disabled="this.success()"/>
         <template data-if="this.errorMessage()">
           <div class="info error" data-text="this.errorMessage()"></div>
         </template>
@@ -130,7 +130,7 @@
       }
       .input-container {
         display: flex;
-        align-items: center;
+        align-items: end;
         gap: 16px;
         width: 100%;
         font-weight: 500;
@@ -142,7 +142,7 @@
           padding-bottom: 5px;
         }
       }
-      .input-container > * {
+      .input-container > input {
         min-width: 8rem;
       }
       .input-container > * > * {
@@ -159,6 +159,10 @@
       input:not([type="submit"]):not([type="radio"]),
       .dropdown > * {
         width: 250px;
+      }
+      input:disabled {
+        background-color: var(--vscode-disabledForeground);
+        cursor: not-allowed;
       }
       .dropdown {
         display: flex;

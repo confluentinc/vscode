@@ -17,8 +17,6 @@ class DirectConnectFormViewModel extends ViewModel {
   errorMessage = this.signal("");
   success = this.signal(false);
   platformType = this.signal<PlatformOptions>("Other");
-  otherPlatform = this.signal("");
-  requireSpecify = this.derive(() => this.platformType() === "Other");
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -27,7 +25,7 @@ class DirectConnectFormViewModel extends ViewModel {
         this.platformType(input.value as PlatformOptions);
         break;
       default:
-        console.warn(`Unhandled key: ${input.name}`); // FIXME
+        console.warn(`Unhandled key: ${input.name}`);
     }
   }
 
@@ -52,8 +50,6 @@ class DirectConnectFormViewModel extends ViewModel {
   /** Submit all form data to the extension */
   async handleSubmit(event: Event) {
     event.preventDefault();
-    this.success(false);
-    this.errorMessage("");
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
