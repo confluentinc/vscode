@@ -433,6 +433,30 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
 components:
   schemas:
+    ApiKeyAndSecret:
+      description: Basic authentication credentials
+      required:
+        - api_key
+        - api_secret
+      type: object
+      properties:
+        api_key:
+          description: The API key to use when connecting to the external service.
+          maxLength: 64
+          minLength: 1
+          type: string
+        api_secret:
+          description: The API secret to use when connecting to the external service.
+          maxLength: 64
+          minLength: 1
+          type: string
+          allOf:
+            - $ref: "#/components/schemas/ApiSecret"
+    ApiSecret:
+      description: A user-provided API secret that is always masked in responses
+      maxLength: 64
+      minLength: 1
+      type: string
     ApplyTemplateRequest:
       required:
         - options
@@ -460,6 +484,7 @@ components:
         token_refresh:
           $ref: "#/components/schemas/AuthError"
     Authentication:
+      description: The authentication-related status (deprecated).
       required:
         - status
       type: object
@@ -482,11 +507,15 @@ components:
         username:
           description: The username to use when connecting to the external service.
           maxLength: 64
+          minLength: 1
           type: string
         password:
           description: The password to use when connecting to the external service.
           maxLength: 64
+          minLength: 1
           type: string
+          allOf:
+            - $ref: "#/components/schemas/Password"
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
       required:
@@ -500,6 +529,34 @@ components:
           maxLength: 36
           minLength: 36
           type: string
+    CCloudStatus:
+      description: The status related to CCloud.
+      required:
+        - state
+      type: object
+      properties:
+        state:
+          description: The state of the connection to CCloud.
+          type: string
+          allOf:
+            - $ref: "#/components/schemas/ConnectedState"
+        requires_authentication_at:
+          description: "If the connection's auth context holds a valid token, this\
+            \ attribute holds the time at which the user must re-authenticate because,\
+            \ for instance, the refresh token reached the end of its absolute lifetime."
+          type: string
+          allOf:
+            - $ref: "#/components/schemas/Instant"
+        user:
+          description: "Information about the authenticated principal, if known."
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/UserInfo"
+        errors:
+          description: Errors related to the connection to the Kafka cluster.
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/AuthErrors"
     CollectionMetadata:
       type: object
       properties:
@@ -510,6 +567,14 @@ components:
         total_size:
           format: int32
           type: integer
+    ConnectedState:
+      enum:
+        - NONE
+        - ATTEMPTING
+        - SUCCESS
+        - EXPIRED
+        - FAILED
+      type: string
     Connection:
       required:
         - api_version
@@ -585,6 +650,12 @@ components:
         - authentication
       type: object
       properties:
+        ccloud:
+          $ref: "#/components/schemas/CCloudStatus"
+        kafka_cluster:
+          $ref: "#/components/schemas/KafkaClusterStatus"
+        schema_registry:
+          $ref: "#/components/schemas/SchemaRegistryStatus"
         authentication:
           $ref: "#/components/schemas/Authentication"
     ConnectionType:
@@ -612,6 +683,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Connection"
+    Credentials:
+      type: object
     Error:
       description: Describes a particular error encountered while performing an operation.
       type: object
@@ -732,6 +805,51 @@ components:
           maxLength: 256
           minLength: 1
           type: string
+        credentials:
+          description: "The credentials for the Kafka cluster, or null if no authentication\
+            \ is required"
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Credentials"
+          oneOf:
+            - $ref: "#/components/schemas/BasicCredentials"
+            - $ref: "#/components/schemas/ApiKeyAndSecret"
+          nullable: true
+        ssl:
+          description: "Whether to communicate with the Kafka cluster over TLS/SSL.\
+            \ Defaults to 'true', but set to 'false' when the Kafka cluster does not\
+            \ support TLS/SSL."
+          default: true
+          type: boolean
+          nullable: true
+        verify_ssl_certificates:
+          description: "Whether to verify the Kafka cluster certificates. Defaults\
+            \ to 'true', but set to 'false' when the Kafka cluster has self-signed\
+            \ certificates."
+          default: true
+          type: boolean
+          nullable: true
+    KafkaClusterStatus:
+      description: The status related to the specified Kafka cluster.
+      required:
+        - state
+      type: object
+      properties:
+        state:
+          description: The state of the connection to the Kafka cluster.
+          type: string
+          allOf:
+            - $ref: "#/components/schemas/ConnectedState"
+        user:
+          description: "Information about the authenticated principal, if known."
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/UserInfo"
+        errors:
+          description: Errors related to the connection to the Kafka cluster.
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/AuthErrors"
     LocalConfig:
       description: Configuration when using Confluent Local and optionally a local Schema Registry.
       type: object
@@ -829,6 +947,11 @@ components:
         offset:
           format: int64
           type: integer
+    Password:
+      description: A user-provided password that is always masked in responses
+      maxLength: 64
+      minLength: 1
+      type: string
     Preferences:
       required:
         - api_version
@@ -875,6 +998,37 @@ components:
           maxLength: 256
           minLength: 1
           type: string
+        credentials:
+          description: "The credentials for the Schema Registry, or null if no authentication\
+            \ is required"
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Credentials"
+          oneOf:
+            - $ref: "#/components/schemas/BasicCredentials"
+            - $ref: "#/components/schemas/ApiKeyAndSecret"
+          nullable: true
+    SchemaRegistryStatus:
+      description: The status related to the specified Schema Registry.
+      required:
+        - state
+      type: object
+      properties:
+        state:
+          description: The state of the connection to the Schema Registry.
+          type: string
+          allOf:
+            - $ref: "#/components/schemas/ConnectedState"
+        user:
+          description: "Information about the authenticated principal, if known."
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/UserInfo"
+        errors:
+          description: Errors related to the connection to the Schema Registry.
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/AuthErrors"
     SidecarAccessToken:
       type: object
       properties:
