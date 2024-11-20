@@ -15,6 +15,12 @@ const extensionMap: { [key in SchemaType]: string } = {
   [SchemaType.Protobuf]: "proto",
 };
 
+const languageTypes: { [key in SchemaType]: string[] } = {
+  [SchemaType.Avro]: ["avroavsc", "json"],
+  [SchemaType.Json]: ["json"],
+  [SchemaType.Protobuf]: ["proto"],
+};
+
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
 export class Schema extends Data {
@@ -40,8 +46,17 @@ export class Schema extends Data {
     }
   }
 
+  /** Get the proper file extension */
   fileExtension(): string {
     return extensionMap[this.type];
+  }
+
+  /**
+   * Get possible language types for this kind of extension in priority order.
+   * Used to try to rendezvous on a language type that the user might have installed.
+   */
+  languageTypes(): string[] {
+    return languageTypes[this.type];
   }
 
   fileName(): string {
@@ -59,12 +74,17 @@ export class Schema extends Data {
     return this.environmentId == null;
   }
 
+  /** Is this a CCloud-resident schema, as opposed to local or perhaps direct-connection? */
+  isCCloudSchema(): boolean {
+    return this.environmentId != null;
+  }
+
   get connectionId(): string {
     return this.isLocalSchema() ? LOCAL_CONNECTION_ID : CCLOUD_CONNECTION_ID;
   }
 }
 
-// Tree item representing a CCloud Schema Registry schema
+// Tree item representing a Schema Registry schema
 export class SchemaTreeItem extends vscode.TreeItem {
   resource: Schema;
 
@@ -75,7 +95,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.id = `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
-    this.contextValue = "ccloud-schema";
+    this.contextValue = resource.isCCloudSchema() ? "ccloud-schema" : "schema";
 
     // user-facing properties
     this.description = resource.id.toString();

@@ -1,6 +1,9 @@
+import * as os from "os";
 import * as vscode from "vscode";
+
+import path from "path";
 import { registerCommandWithLogging } from ".";
-import { SchemaDocumentProvider } from "../documentProviders/schema";
+import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
@@ -17,6 +20,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
+    registerCommandWithLogging("confluent.schemas.evolve", evolveSchema),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
@@ -45,7 +49,7 @@ async function viewLocallyCommand(schema: Schema) {
 
 /** Copy the Schema Registry ID from the Schemas tree provider nav action. */
 async function copySchemaRegistryId() {
-  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  const schemaRegistry: SchemaRegistry | undefined = getSchemasViewProvider().schemaRegistry;
   if (!schemaRegistry) {
     return;
   }
@@ -125,18 +129,66 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
 }
 
 /**
+ * Command run against a schema to:
+ *  1. Download to a temp file
+ *  2. Associate that URL with the schema registry and subject
+ *  3. Open the file in a new editor tab
+ * */
+async function evolveSchema(schema: Schema) {
+  if (!(schema instanceof Schema)) {
+    logger.error("evolveSchema called with invalid argument type", schema);
+    return;
+  }
+
+  const schemaBody = await fetchSchemaBody(schema);
+
+  // Get an temp URI for the schema, including embedding info about the schema itself in the URI.
+  // within the query string.
+
+  const tempFileName = schema.fileName();
+  const tempFilePath = path.join(os.tmpdir(), tempFileName);
+  const tempFileUri = vscode.Uri.file(tempFilePath).with({
+    query: encodeURIComponent(JSON.stringify(schema)),
+  });
+
+  // Write the schema to the temp file.
+  await vscode.workspace.fs.writeFile(tempFileUri, Buffer.from(schemaBody, "utf8"));
+
+  // Now open the temp file in a new editor tab.
+  const editor = await vscode.window.showTextDocument(tempFileUri, { preview: false });
+  await setEditorLanguageForSchema(editor, schema);
+}
+
+/**
  * Convert a {@link Schema} to a URI and render via the {@link SchemaDocumentProvider} as a read-
  * only document in a new editor tab.
  */
-async function loadOrCreateSchemaViewer(schema: Schema) {
+async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEditor> {
   const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
   const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
-  // VSCode may "throw" an error from `workbench.*.main.js` like `Unknown language: avsc` if the
-  // workspace doesn't have an extension that supports the "avsc" extension/language (or similar).
-  // There isn't anything we can do to suppress those errors (like wrapping the line below in try/catch),
-  // but they don't show up to the user unless they look at the "Window" output channel.
-  vscode.languages.setTextDocumentLanguage(textDoc.document, schema.fileExtension());
+
+  await setEditorLanguageForSchema(textDoc, schema);
+
   return textDoc;
+}
+
+/** Possibly set the language of the editor's document based on the schema. W */
+async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, schema: Schema) {
+  const installedLanguages = await vscode.languages.getLanguages();
+  logger.info("Available languages", installedLanguages);
+  logger.info("Schema languages", schema.languageTypes());
+
+  for (const language of schema.languageTypes()) {
+    if (installedLanguages.indexOf(language) !== -1) {
+      vscode.languages.setTextDocumentLanguage(textDoc.document, language);
+      logger.info(`Set document language to ${language} for schema ${schema.subject}`);
+      return;
+    } else {
+      logger.warn(`Language ${language} not installed for schema ${schema.subject}`);
+    }
+  }
+
+  logger.warn("Could not find a matching language for schema ${schema.subject}");
 }
 
 /**

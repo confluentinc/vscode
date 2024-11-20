@@ -10,6 +10,10 @@ export abstract class SchemaRegistry extends Data {
 
   id!: Enforced<string>;
   uri!: Enforced<string>;
+
+  toString(): string {
+    return `(SR ${this.id} from connection ${this.connectionId})`;
+  }
 }
 
 export class LocalSchemaRegistry extends SchemaRegistry {

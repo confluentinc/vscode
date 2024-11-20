@@ -217,6 +217,12 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.evolve",
+        "icon": "$(plus)",
+        "title": "Evolve Schema",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.copySchemaRegistryId",
         "title": "Copy Schema Registry ID",
         "category": "Confluent: Schemas"
@@ -512,6 +518,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.evolve",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.refresh",
           "when": "false"
         },
@@ -703,12 +713,17 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem == ccloud-schema",
+          "when": "view == confluent-schemas && viewItem =~ /.*-schema/",
           "group": "4_copy@1"
         },
         {
+          "command": "confluent.schemas.evolve",
+          "when": "view == confluent-schemas  && viewItem =~ /.*-schema/",
+          "group": "inline@2"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem == ccloud-schema",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema/",
           "group": "inline@1"
         },
         {

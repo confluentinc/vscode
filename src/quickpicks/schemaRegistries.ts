@@ -36,7 +36,9 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  *
  * @returns The selected Schema Registry, or undefined if none was selected.
  */
-export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+export async function schemaRegistryQuickPick(
+  defaultRegistryId: string | undefined = undefined,
+): Promise<SchemaRegistry | undefined> {
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
 
@@ -46,6 +48,11 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   const ccloudSchemaRegistries: CCloudSchemaRegistry[] = registriesByConnectionID.get(
     CCLOUD_CONNECTION_ID,
   )! as CCloudSchemaRegistry[];
+
+  const allSchemaRegistries: SchemaRegistry[] = [
+    ...localSchemaRegistries,
+    ...ccloudSchemaRegistries,
+  ];
 
   if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
     vscode.window.showInformationMessage("No Schema Registries available.");
@@ -66,10 +73,43 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
     );
   }
 
-  // Is there a selected Schema Registry already focused in the Schemas view? It should
-  // be the one that's selected / presented first in the quickpick.
-  // TODO determine how to use this best now in the face of local + ccloud schema registries.
-  const selectedSchemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  // Determine the default to select, if any. First err on side of the SR with the default environment ID,
+  // otherwise see if the schemas view provider has a selected schema registry.
+  let selectedSchemaRegistry: SchemaRegistry | undefined;
+  if (defaultRegistryId) {
+    selectedSchemaRegistry = allSchemaRegistries.find((sr) => sr.id === defaultRegistryId);
+  }
+  if (!selectedSchemaRegistry) {
+    selectedSchemaRegistry = getSchemasViewProvider().schemaRegistry;
+  }
+  logger.info(`Defaulting to schema registry with ID ${defaultRegistryId}`, {
+    selectedSchemaRegistry,
+  });
+
+  // re-sort each schema registry list to let the selected one be first, if present in this list
+  // so that ultimately we can show the selected one first in the quickpick.
+  for (const schemaRegistryList of [
+    localSchemaRegistries,
+    ccloudSchemaRegistries,
+  ] as SchemaRegistry[][]) {
+    const selectedSchemaRegistryIndex: number = schemaRegistryList.findIndex(
+      (sr) => sr.id === selectedSchemaRegistry?.id,
+    );
+    if (selectedSchemaRegistryIndex !== -1) {
+      // pop it out and push as element 0
+      logger.info(
+        `Moving selected schema registry at index ${selectedSchemaRegistryIndex} to top of list.`,
+      );
+      const selectedSchemaRegistry = schemaRegistryList.splice(selectedSchemaRegistryIndex, 1)[0];
+      schemaRegistryList.unshift(selectedSchemaRegistry);
+
+      logger.info(`Schema registry list after moving: ${schemaRegistryList}`);
+    } else {
+      logger.info(
+        `Selected schema registry ${selectedSchemaRegistry?.id} not found in list ${schemaRegistryList}.`,
+      );
+    }
+  }
 
   // convert all available Schema Registries to quick pick items
   const quickPickItems: vscode.QuickPickItem[] = [];
@@ -77,27 +117,35 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   /** Map of the quickpick labels to the original schema registry so that we can return a SchemaRegistry. */
   const labelToSchemaRegistry: Map<string, SchemaRegistry> = new Map();
 
+  const localQuickPickItems: vscode.QuickPickItem[] = [];
   // Populate quickPickItems, schemaRegistryNameMap with the local Schema Registry + the possible selected registry.
   if (localSchemaRegistries.length > 0) {
     populateLocalSchemaRegistries(
       localSchemaRegistries,
       selectedSchemaRegistry,
-      quickPickItems,
+      localQuickPickItems,
       labelToSchemaRegistry,
     );
   }
 
   // Likewise with the CCloud Schema Registries.
+  const ccloudQuickPickItems: vscode.QuickPickItem[] = [];
   if (ccloudSchemaRegistries.length > 0) {
     await populateCCloudSchemaRegistries(
       ccloudSchemaRegistries,
       selectedSchemaRegistry,
-      quickPickItems,
+      ccloudQuickPickItems,
       labelToSchemaRegistry,
     );
   }
 
-  // TODO: consider how to handle getting the selected schema registry to be first. Maybe.
+  // Add the local and CCloud Schema Registries to the quick pick items, in order based on which
+  // one has the selected schema registry.
+  if (selectedSchemaRegistry?.isLocal) {
+    quickPickItems.push(...localQuickPickItems, ...ccloudQuickPickItems);
+  } else {
+    quickPickItems.push(...ccloudQuickPickItems, ...localQuickPickItems);
+  }
 
   // prompt the user to select a Schema Registry
   const chosenSchemaRegistry: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
@@ -132,7 +180,7 @@ async function getRegistriesByConnectionID(): Promise<Map<string, SchemaRegistry
  */
 function populateLocalSchemaRegistries(
   localSchemaRegistries: LocalSchemaRegistry[],
-  selectedSchemaRegistry: SchemaRegistry | null,
+  selectedSchemaRegistry: SchemaRegistry | undefined,
   quickPickItems: vscode.QuickPickItem[],
   schemaRegistryNameMap: Map<string, SchemaRegistry>,
 ): void {
@@ -161,7 +209,7 @@ function populateLocalSchemaRegistries(
  */
 async function populateCCloudSchemaRegistries(
   ccloudSchemaRegistries: CCloudSchemaRegistry[],
-  selectedSchemaRegistry: SchemaRegistry | null,
+  selectedSchemaRegistry: SchemaRegistry | undefined,
   quickPickItems: vscode.QuickPickItem[],
   schemaRegistryNameMap: Map<string, SchemaRegistry>,
 ): Promise<void> {
