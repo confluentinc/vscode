@@ -15,11 +15,7 @@ import { getDirectResources } from "../graphql/direct";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
-import {
-  CCloudEnvironment,
-  CCloudEnvironmentTreeItem,
-  DirectEnvironment,
-} from "../models/environment";
+import { CCloudEnvironment, DirectEnvironment, EnvironmentTreeItem } from "../models/environment";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -100,8 +96,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
-    if (element instanceof CCloudEnvironment) {
-      return new CCloudEnvironmentTreeItem(element);
+    if (element instanceof CCloudEnvironment || element instanceof DirectEnvironment) {
+      return new EnvironmentTreeItem(element);
     } else if (
       element instanceof LocalKafkaCluster ||
       element instanceof CCloudKafkaCluster ||
