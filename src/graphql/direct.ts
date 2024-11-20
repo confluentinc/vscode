@@ -14,6 +14,8 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
     query directConnections {
       directConnections {
         id
+        name
+        type
         kafkaCluster {
           id
           bootstrapServers
@@ -41,17 +43,10 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
       if (!connection) {
         return;
       }
-      const directEnv = DirectEnvironment.create({
-        connectionId: connection.id,
-        id: connection.id,
-        // FIXME: for some reason, the gql-tada introspection is saying `name` & `type` don't exist
-        // for the connection object even though they're marked as required in the GraphQL schema
-        name: (connection as any).name ?? "Direct Connection",
-        connectionType: (connection as any).type ?? "DIRECT",
-      });
 
+      let kafkaCluster: DirectKafkaCluster | undefined;
       if (connection.kafkaCluster) {
-        directEnv.kafkaCluster = DirectKafkaCluster.create({
+        kafkaCluster = DirectKafkaCluster.create({
           id: connection.kafkaCluster.id,
           name: "Kafka Cluster",
           bootstrapServers: connection.kafkaCluster.bootstrapServers,
@@ -60,13 +55,22 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         });
       }
 
+      let schemaRegistry: DirectSchemaRegistry | undefined;
       if (connection.schemaRegistry) {
-        directEnv.schemaRegistry = DirectSchemaRegistry.create({
+        schemaRegistry = DirectSchemaRegistry.create({
           id: connection.schemaRegistry.id,
           uri: connection.schemaRegistry.uri,
           connectionId: connection.id,
         });
       }
+
+      const directEnv = DirectEnvironment.create({
+        connectionId: connection.id,
+        id: connection.id,
+        name: connection.name,
+        kafkaCluster,
+        schemaRegistry,
+      });
       directResources.push(directEnv);
     });
   }
