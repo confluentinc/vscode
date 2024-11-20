@@ -56,16 +56,16 @@ export function openDirectConnectionForm(): void {
     // TODO: extract `connection-type` from body and send as telemetry event
 
     let kafkaConfig: KafkaClusterConfig | undefined = undefined;
-    if (body["bootstrap-servers"]) {
+    if (body["bootstrap_servers"]) {
       kafkaConfig = {
-        bootstrap_servers: body["bootstrap-servers"],
+        bootstrap_servers: body["bootstrap_servers"],
       };
     }
 
     let schemaRegistryConfig: SchemaRegistryConfig | undefined = undefined;
-    if (body["schema-registry-url"]) {
+    if (body["uri"]) {
       schemaRegistryConfig = {
-        uri: body["schema-registry-url"],
+        uri: body["uri"],
       };
     }
 
