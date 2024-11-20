@@ -13,17 +13,14 @@
     <main class="container">
       <h1>Create a new connection (⚠️<em>experimental</em>⚠️)</h1>
       <p>Form currently <strong>only supports connections with no authentication required</strong>, but more auth types are coming soon. Close this tab to cancel changes.</p>
-      <template data-if="this.errorMessage()">
-        <div class="info error" data-text="this.errorMessage()"></div>
-      </template>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
           <div>
-            <label for="connection-label" class="label">Connection Label (optional)</label>
+            <label for="name" class="label">Connection Label (optional)</label>
             <input
               class="input"
-              id="connection-label"
-              name="connection-label"
+              id="name"
+              name="name"
               type="text"
             />
           </div>
@@ -33,11 +30,11 @@
           <legend>Kafka Broker</legend>
           <div class="input-container">
             <div>
-              <label for="bootstrap-servers" class="label">Bootstrap Server(s)</label>
+              <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
               <input
                 class="input"
-                id="bootstrap-servers"
-                name="bootstrap-servers"
+                id="bootstrap_servers"
+                name="bootstrap_servers"
                 type="text"
                 required
               />
@@ -49,11 +46,11 @@
           <legend>Schema Registry (optional)</legend>
           <div class="input-container">
             <div>
-              <label for="schema-registry-url" class="label">Schema Registry URL</label>
+              <label for="uri" class="label">Schema Registry URL</label>
               <input
                 class="input"
-                id="schema-registry-url"
-                name="schema-registry-url"
+                id="uri"
+                name="uri"
                 type="url"
               />
             </div>
@@ -63,15 +60,15 @@
           <legend>Which connection system or platform are you using?</legend>
           <div class="radio-container">
             <div>
-              <input type="radio" id="apache-kafka" name="platform" value="Apache Kafka" data-on-click="this.updateValue(event)" />
+              <input type="radio" id="apache-kafka" name="platform" value="Apache Kafka" data-on-change="this.updateValue(event)" />
               <label for="apache-kafka">Apache Kafka</label>
             </div>
             <div>
-              <input type="radio" id="confluent-cloud" name="platform" value="Confluent Cloud" data-on-click="this.updateValue(event)"/>
+              <input type="radio" id="confluent-cloud" name="platform" value="Confluent Cloud" data-on-change="this.updateValue(event)"/>
               <label for="confluent-cloud">Confluent Cloud</label>
             </div>
             <div>
-              <input type="radio" id="confluent-platform" name="platform" value="Confluent Platform" data-on-click="this.updateValue(event)"/>
+              <input type="radio" id="confluent-platform" name="platform" value="Confluent Platform" data-on-change="this.updateValue(event)"/>
               <label for="confluent-platform">Confluent Platform</label>
             </div>
             <div>
@@ -79,13 +76,14 @@
               <label for="local">Local</label>
             </div>
             <div>
-              <input type="radio" id="other" name="platform" value="Other" checked required data-on-click="this.updateValue(event)"/>
+              <input type="radio" id="other" name="platform" value="Other" checked required data-on-change="this.updateValue(event)"/>
               <label for="other">Other (specify)</label>
               <input
                 class="input"
                 id="other"
                 name="other-platform"
                 type="text"
+                data-attr-required="this.platformType() === 'Other' ? true : false"
               />
             </div>
           </div>
@@ -93,10 +91,13 @@
         </div>
         <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
         <input class="button" type="submit" value="Save"/>
+        <template data-if="this.errorMessage()">
+          <div class="info error" data-text="this.errorMessage()"></div>
+        </template>
+        <template data-if="this.success() === true">
+          <div class="info success">Connection added. Close this tab and view & interact with your connection in the resources sidebar.</div>
+        </template>
       </form>
-      <template data-if="this.success()">
-        <div class="info success">Connection added. View & interact with your connection in the resources sidebar.</div>
-      </template>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('direct-connect-form.js')}"></script>
