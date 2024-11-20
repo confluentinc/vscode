@@ -59,6 +59,11 @@
         "category": "Confluent: Connections"
       },
       {
+        "command": "confluent.connections.direct",
+        "title": "Direct connection",
+        "category": "Confluent: Connections"
+      },
+      {
         "command": "confluent.connections.addSSLPemPath",
         "icon": "$(key)",
         "title": "Add SSL/TLS PEM Path",
@@ -450,6 +455,10 @@
         {
           "command": "confluent.connections.create",
           "when": "!confluent.ccloudConnectionAvailable"
+        },
+        {
+          "command": "confluent.connections.direct",
+          "when": "false"
         },
         {
           "command": "confluent.copyOrganizationId",
