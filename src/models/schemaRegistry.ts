@@ -4,24 +4,20 @@ import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constan
 import { CustomMarkdownString } from "./main";
 
 export abstract class SchemaRegistry extends Data {
-  abstract readonly connectionId: string;
+  abstract connectionId: string;
   abstract readonly isLocal: boolean;
   abstract readonly isCCloud: boolean;
+  abstract readonly isDirect: boolean;
 
   id!: Enforced<string>;
   uri!: Enforced<string>;
 }
 
-export class LocalSchemaRegistry extends SchemaRegistry {
-  readonly connectionId = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
-}
-
 export class CCloudSchemaRegistry extends SchemaRegistry {
   readonly connectionId = CCLOUD_CONNECTION_ID;
-  readonly isLocal: boolean = false;
   readonly isCCloud: boolean = true;
+  readonly isDirect: boolean = false;
+  readonly isLocal: boolean = false;
 
   provider!: Enforced<string>;
   region!: Enforced<string>;
@@ -31,6 +27,21 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas`;
   }
+}
+
+export class DirectSchemaRegistry extends SchemaRegistry {
+  readonly isCCloud: boolean = false;
+  readonly isDirect: boolean = true;
+  readonly isLocal: boolean = false;
+
+  connectionId!: Enforced<string>; // dynamically assigned at connection creation time
+}
+
+export class LocalSchemaRegistry extends SchemaRegistry {
+  readonly connectionId = LOCAL_CONNECTION_ID;
+  readonly isCCloud: boolean = false;
+  readonly isDirect: boolean = false;
+  readonly isLocal: boolean = true;
 }
 
 // Tree item representing a Schema Registry in the Resources view
