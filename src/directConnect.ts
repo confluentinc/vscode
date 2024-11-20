@@ -45,16 +45,6 @@ export function openDirectConnectionForm(): void {
   async function testConnect(body: any): Promise<{ success: boolean; message: string | null }> {
     console.log(body);
     throw new Error("Not implemented");
-    // if (result.success) {
-    //   console.log("success", result);
-    //   // this.updateValue(input.name, input.value);
-    // } else {
-    //   // this.errorMessage(res.message ?? "Unknown error occurred");
-    //   // this.revertValue(input.name); // FIXME
-    //   // input.classList.add("error");
-    //   console.log("error", result);
-    // }
-    // return result;
   }
 
   async function createConnection(
@@ -86,11 +76,6 @@ export function openDirectConnectionForm(): void {
     );
   }
 
-  /**
-   * on submit
-   * save info in VSCODE Storage/state - name/id (generate it)
-   * send to backend
-   */
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "TestConnection":
