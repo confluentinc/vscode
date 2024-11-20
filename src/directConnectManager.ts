@@ -61,6 +61,8 @@ export class DirectConnectionManager {
           const enabled = configs.get(ENABLE_DIRECT_CONNECTIONS, false);
           logger.debug(`"${ENABLE_DIRECT_CONNECTIONS}" config changed`, { enabled });
           setContextValue(ContextValues.directConnectionsEnabled, enabled);
+          // toggle "Other" container visibility in the Resources view
+          getResourceViewProvider().refresh();
         }
       },
     );
