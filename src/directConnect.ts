@@ -20,7 +20,7 @@ export const registerDirectConnectionCommand = (context: ExtensionContext) => {
 const directConnectWebviewCache = new WebviewPanelCache();
 
 export function openDirectConnectionForm(): void {
-  // Set up the webview, checking for existing form for this topic
+  // Set up the webview, checking for existing form for this connection
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
     { id: randomUUID(), multiple: false, template: connectionFormTemplate }, // TODO change the UUID handling when we start allowing Edit
     "direct-connect-form",
