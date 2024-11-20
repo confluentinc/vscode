@@ -13,12 +13,30 @@
  */
 
 import { mapValues } from "../runtime";
+import type { SchemaRegistryStatus } from "./SchemaRegistryStatus";
+import {
+  SchemaRegistryStatusFromJSON,
+  SchemaRegistryStatusFromJSONTyped,
+  SchemaRegistryStatusToJSON,
+} from "./SchemaRegistryStatus";
 import type { Authentication } from "./Authentication";
 import {
   AuthenticationFromJSON,
   AuthenticationFromJSONTyped,
   AuthenticationToJSON,
 } from "./Authentication";
+import type { CCloudStatus } from "./CCloudStatus";
+import {
+  CCloudStatusFromJSON,
+  CCloudStatusFromJSONTyped,
+  CCloudStatusToJSON,
+} from "./CCloudStatus";
+import type { KafkaClusterStatus } from "./KafkaClusterStatus";
+import {
+  KafkaClusterStatusFromJSON,
+  KafkaClusterStatusFromJSONTyped,
+  KafkaClusterStatusToJSON,
+} from "./KafkaClusterStatus";
 
 /**
  *
@@ -26,6 +44,24 @@ import {
  * @interface ConnectionStatus
  */
 export interface ConnectionStatus {
+  /**
+   *
+   * @type {CCloudStatus}
+   * @memberof ConnectionStatus
+   */
+  ccloud?: CCloudStatus;
+  /**
+   *
+   * @type {KafkaClusterStatus}
+   * @memberof ConnectionStatus
+   */
+  kafka_cluster?: KafkaClusterStatus;
+  /**
+   *
+   * @type {SchemaRegistryStatus}
+   * @memberof ConnectionStatus
+   */
+  schema_registry?: SchemaRegistryStatus;
   /**
    *
    * @type {Authentication}
@@ -54,6 +90,13 @@ export function ConnectionStatusFromJSONTyped(
     return json;
   }
   return {
+    ccloud: json["ccloud"] == null ? undefined : CCloudStatusFromJSON(json["ccloud"]),
+    kafka_cluster:
+      json["kafka_cluster"] == null ? undefined : KafkaClusterStatusFromJSON(json["kafka_cluster"]),
+    schema_registry:
+      json["schema_registry"] == null
+        ? undefined
+        : SchemaRegistryStatusFromJSON(json["schema_registry"]),
     authentication: AuthenticationFromJSON(json["authentication"]),
   };
 }
@@ -63,6 +106,9 @@ export function ConnectionStatusToJSON(value?: ConnectionStatus | null): any {
     return value;
   }
   return {
+    ccloud: CCloudStatusToJSON(value["ccloud"]),
+    kafka_cluster: KafkaClusterStatusToJSON(value["kafka_cluster"]),
+    schema_registry: SchemaRegistryStatusToJSON(value["schema_registry"]),
     authentication: AuthenticationToJSON(value["authentication"]),
   };
 }
