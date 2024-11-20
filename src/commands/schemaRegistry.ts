@@ -1,19 +1,13 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentSchemaRegistryChanged } from "../emitters";
-import {
-  CCloudSchemaRegistry,
-  LocalSchemaRegistry,
-  SchemaRegistry,
-} from "../models/schemaRegistry";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPickWithViewProgress } from "../quickpicks/schemaRegistries";
 
 async function selectSchemaRegistryCommand(item?: SchemaRegistry) {
   // ensure whatever was passed in is a SchemaRegistry instance; if not, prompt the user to pick one
   const schemaRegistry =
-    item instanceof CCloudSchemaRegistry || item instanceof LocalSchemaRegistry
-      ? item
-      : await schemaRegistryQuickPickWithViewProgress();
+    item instanceof SchemaRegistry ? item : await schemaRegistryQuickPickWithViewProgress();
   if (!schemaRegistry) {
     return;
   }
