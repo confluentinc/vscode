@@ -13,6 +13,9 @@ export const SIDECAR_CONNECTION_ID_HEADER: string = "x-connection-id";
 /** Header used to specify a given (Kafka, Schema Registry, etc) cluster ID, if applicable */
 export const CLUSTER_ID_HEADER: string = "x-cluster-id";
 
+/** Header used to specify a given topic name, if applicable */
+export const TOPIC_NAME_HEADER: string = "topic_name";
+
 /** Enable the middleware that emits debug logs for every request to / response from the sidecar. */
 export const ENABLE_REQUEST_RESPONSE_LOGGING: boolean =
   process.env.ENABLE_REQUEST_RESPONSE_LOGGING === "true";
