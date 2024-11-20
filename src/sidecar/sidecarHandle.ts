@@ -285,15 +285,20 @@ export class SidecarHandle {
    */
   public async query<Result, Variables>(
     query: TadaDocumentNode<Result, Variables>,
-    connectionId: string,
+    connectionId?: string,
     // Mark second parameter as optional if Variables is an empty object type
     // The signature looks odd, but it's the only way to make optional param by condition
     ...[variables]: Variables extends Record<any, never> ? [never?] : [Variables]
   ): Promise<Result> {
-    const headers = new Headers({
-      ...this.defaultClientConfigParams.headers,
-      [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
-    });
+    let headers: Headers;
+    if (connectionId) {
+      headers = new Headers({
+        ...this.defaultClientConfigParams.headers,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      });
+    } else {
+      headers = new Headers(this.defaultClientConfigParams.headers);
+    }
 
     const response = await fetch(`${SIDECAR_BASE_URL}/gateway/v1/graphql`, {
       method: "POST",
