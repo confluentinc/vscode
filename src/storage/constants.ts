@@ -48,3 +48,6 @@ export const AUTH_SESSION_EXISTS_KEY = "authSessionExists";
 
 /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
 export const CCLOUD_AUTH_STATUS_KEY = "ccloudAuthStatus";
+
+/** Secret Storage key to look up a map of connection id:ConnectionSpec */
+export const DIRECT_CONNECTIONS = "directConnections";

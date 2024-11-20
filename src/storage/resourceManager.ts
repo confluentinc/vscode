@@ -1,7 +1,7 @@
 import { Mutex } from "async-mutex";
 import { Uri } from "vscode";
 import { StorageManager, getStorageManager } from ".";
-import { Status } from "../clients/sidecar";
+import { ConnectionSpec, Status } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -11,6 +11,7 @@ import { KafkaTopic } from "../models/topic";
 import {
   AUTH_COMPLETED_KEY,
   CCLOUD_AUTH_STATUS_KEY,
+  DIRECT_CONNECTIONS,
   UriMetadataKeys,
   WorkspaceStorageKeys,
 } from "./constants";
@@ -40,6 +41,9 @@ export type UriMetadata = Map<UriMetadataKeys, string>;
 
 /** Map of string of uri for a file -> dict of its confluent-extension-centric metadata */
 export type AllUriMetadata = Map<string, UriMetadata>;
+
+/** Map of connection id to ConnectionSpec; only used for `DIRECT` connections. */
+export type DirectConnectionsById = Map<string, ConnectionSpec>;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
@@ -659,6 +663,51 @@ export class ResourceManager {
 
       await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
     });
+  }
+
+  // DIRECT CONNECTIONS
+
+  // TODO(shoup): move methods from .*GlobalState to .*Secret
+  /** Look up the connectionId:ConnectionSpec map for any existing `DIRECT` connections. */
+  async getDirectConnections(): Promise<DirectConnectionsById> {
+    const connectionsString: string | undefined =
+      await this.storage.getGlobalState(DIRECT_CONNECTIONS);
+    if (!connectionsString) {
+      logger.debug("No direct connections found in extension state");
+      return new Map<string, ConnectionSpec>();
+    }
+    const connections: Map<string, ConnectionSpec> = JSON.parse(connectionsString);
+    const connectionsById: DirectConnectionsById = new Map(Array.from(connections));
+    logger.debug(
+      "Direct connections found in extension state",
+      JSON.stringify(Object.entries(connectionsById)),
+    );
+    return connectionsById;
+  }
+
+  async getDirectConnection(id: string): Promise<ConnectionSpec | null> {
+    const connections: DirectConnectionsById = await this.getDirectConnections();
+    return connections.get(id) ?? null;
+  }
+
+  /**
+   * Add a direct connection to the extension state by looking up the existing
+   * {@link DirectConnectionsById} map and adding/overwriting the `connection` by its `id`.
+   */
+  async addDirectConnection(connection: ConnectionSpec): Promise<void> {
+    const connectionIds: DirectConnectionsById = await this.getDirectConnections();
+    connectionIds.set(connection.id!, connection);
+    await this.storage.setGlobalState(DIRECT_CONNECTIONS, JSON.stringify(connectionIds));
+  }
+
+  async deleteDirectConnection(id: string): Promise<void> {
+    const connections: DirectConnectionsById = await this.getDirectConnections();
+    connections.delete(id);
+    await this.storage.setGlobalState(DIRECT_CONNECTIONS, JSON.stringify(connections));
+  }
+
+  async deleteDirectConnections(): Promise<void> {
+    await this.storage.deleteGlobalState(DIRECT_CONNECTIONS);
   }
 }
 

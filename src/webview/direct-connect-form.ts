@@ -1,8 +1,8 @@
 import { ObservableScope } from "inertial";
+import { instanceOfKafkaClusterConfig } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { instanceOfKafkaClusterConfig } from "../clients/sidecar";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
