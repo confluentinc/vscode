@@ -33,21 +33,20 @@ export enum UriMetadataKeys {
   SCHEMA_SUBJECT = "schemaSubject",
 }
 
-// SECRET STORAGE KEYS
-// NOTE: these aren't actually storing any secrets, just used for cross-workspace event handling
+export enum SecretStorageKeys {
+  /**
+   * Indicate the outcome of the last CCloud authentication attempt.
+   * Used by the `ConfluentCloudAuthProvider` to resolve promises that are waiting for the user's
+   * browser-based authentication flow to complete after handling a URI callback from the sidecar.
+   */
+  AUTH_COMPLETED = "authCompleted",
+  /** Only used as a way to kick off cross-workspace events for the authentication provider. Only
+   * ever set to "true" or deleted. */
+  AUTH_SESSION_EXISTS = "authSessionExists",
 
-/**
- * Indicate the outcome of the last CCloud authentication attempt.
- * Used by the `ConfluentCloudAuthProvider` to resolve promises that are waiting for the user's
- * browser-based authentication flow to complete after handling a URI callback from the sidecar.
- */
-export const AUTH_COMPLETED_KEY = "authCompleted";
-/** Only used as a way to kick off cross-workspace events foir the authentication provider. Only\
- * ever set to "true" or deleted. */
-export const AUTH_SESSION_EXISTS_KEY = "authSessionExists";
+  /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
+  CCLOUD_AUTH_STATUS = "ccloudAuthStatus",
 
-/** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
-export const CCLOUD_AUTH_STATUS_KEY = "ccloudAuthStatus";
-
-/** Secret Storage key to look up a map of connection id:ConnectionSpec */
-export const DIRECT_CONNECTIONS = "directConnections";
+  /** A map of connection id:ConnectionSpec */
+  DIRECT_CONNECTIONS = "directConnections",
+}
