@@ -57,17 +57,9 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
     if (!env) {
       return;
     }
-    const envGroup: CCloudEnvironmentGroup = {
-      environment: CCloudEnvironment.create({
-        id: env.id,
-        name: env.name,
-        streamGovernancePackage: env.governancePackage,
-        hasClusters: env.kafkaClusters.length > 0 || env.schemaRegistry !== null,
-      }),
-      kafkaClusters: [],
-      schemaRegistry: undefined,
-    };
+
     // parse Kafka clusters and sort by name
+    let kafkaClusters: CCloudKafkaCluster[] = [];
     if (env.kafkaClusters) {
       const envKafkaClusters = env.kafkaClusters.map((cluster: any) =>
         CCloudKafkaCluster.create({
@@ -76,15 +68,28 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
         }),
       );
       envKafkaClusters.sort((a: KafkaCluster, b: KafkaCluster) => a.name.localeCompare(b.name));
-      envGroup.kafkaClusters = envKafkaClusters;
+      kafkaClusters.push(...envKafkaClusters);
     }
+
     // parse Schema Registry
+    let schemaRegistry: CCloudSchemaRegistry | undefined;
     if (env.schemaRegistry) {
-      envGroup.schemaRegistry = CCloudSchemaRegistry.create({
+      schemaRegistry = CCloudSchemaRegistry.create({
         ...env.schemaRegistry,
         environmentId: env.id,
       });
     }
+
+    const envGroup: CCloudEnvironmentGroup = {
+      environment: CCloudEnvironment.create({
+        id: env.id,
+        name: env.name,
+        streamGovernancePackage: env.governancePackage,
+      }),
+      kafkaClusters,
+      schemaRegistry,
+    };
+
     envGroups.push(envGroup);
   });
 
