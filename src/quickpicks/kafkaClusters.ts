@@ -69,7 +69,7 @@ export async function kafkaClusterQuickPick(
         .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
         .then((selected) => {
           if (selected === login) {
-            vscode.commands.executeCommand("confluent.connections.create");
+            vscode.commands.executeCommand("confluent.connections.ccloud.logIn");
           }
         });
     }
