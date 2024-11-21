@@ -34,7 +34,6 @@ export class LocalResourceLoader extends ResourceLoader {
   }
 
   // singleton class, get instance via getInstance()
-  // (construct only public for testing / signon mocking purposes.)
   private constructor() {
     super();
   }

@@ -62,6 +62,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
           id: connection.schemaRegistry.id,
           uri: connection.schemaRegistry.uri,
           connectionId: connection.id as ConnectionId,
+          environmentId: connection.id,
         });
       }
 

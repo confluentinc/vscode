@@ -277,7 +277,7 @@ export class ResourceManager {
 
   /** Get the cluster for this topic. May return either a ccloud or local cluster */
   async getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | null> {
-    if (topic.isLocalTopic()) {
+    if (topic.isLocal) {
       return this.getLocalKafkaCluster(topic.clusterId);
     } else {
       return this.getCCloudKafkaCluster(topic.environmentId!, topic.clusterId);
