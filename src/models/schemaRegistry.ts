@@ -1,27 +1,20 @@
-import { Data, type Require as Enforced } from "dataclass";
-import * as vscode from "vscode";
+import { type Require as Enforced } from "dataclass";
+import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
+import { ResourceBase } from "./resource";
 
-export abstract class SchemaRegistry extends Data {
-  abstract readonly connectionId: string;
-  abstract readonly isLocal: boolean;
-  abstract readonly isCCloud: boolean;
+export abstract class SchemaRegistry extends ResourceBase {
+  iconName: IconNames = IconNames.SCHEMA_REGISTRY;
 
   id!: Enforced<string>;
   uri!: Enforced<string>;
 }
 
-export class LocalSchemaRegistry extends SchemaRegistry {
-  readonly connectionId = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
-}
-
 export class CCloudSchemaRegistry extends SchemaRegistry {
   readonly connectionId = CCLOUD_CONNECTION_ID;
-  readonly isLocal: boolean = false;
-  readonly isCCloud: boolean = true;
+  readonly connectionType: ConnectionType = "CCLOUD";
 
   provider!: Enforced<string>;
   region!: Enforced<string>;
@@ -33,21 +26,31 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   }
 }
 
-// Tree item representing a Schema Registry in the Resources view
-export class SchemaRegistryTreeItem extends vscode.TreeItem {
+export class DirectSchemaRegistry extends SchemaRegistry {
+  // `connectionId` dynamically assigned at connection creation time
+  readonly connectionType: ConnectionType = "DIRECT";
+}
+
+export class LocalSchemaRegistry extends SchemaRegistry {
+  readonly connectionId = LOCAL_CONNECTION_ID;
+  readonly connectionType: ConnectionType = "LOCAL";
+}
+
+/** The representation of a {@link SchemaRegistry} as a {@link vscode.TreeItem} in the VS Code UI. */
+export class SchemaRegistryTreeItem extends TreeItem {
   resource: SchemaRegistry;
 
   constructor(resource: SchemaRegistry) {
     const label = "Schema Registry";
-    super(label, vscode.TreeItemCollapsibleState.None);
+    super(label, TreeItemCollapsibleState.None);
 
     // internal properties
     this.resource = resource;
-    this.contextValue = this.resource.isLocal ? "local-schema-registry" : "ccloud-schema-registry";
+    this.contextValue = `${this.resource.contextPrefix}-schema-registry`;
 
     // user-facing properties
     this.description = this.resource.id;
-    this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY);
+    this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createSchemaRegistryTooltip(this.resource);
 
     // set primary click action to select this cluster as the current one, focusing it in the Schemas view
@@ -60,7 +63,7 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
 }
 
 // todo easy peasy make this a method of SchemaRegistry family.
-function createSchemaRegistryTooltip(resource: SchemaRegistry): vscode.MarkdownString {
+function createSchemaRegistryTooltip(resource: SchemaRegistry): MarkdownString {
   const tooltip = new CustomMarkdownString();
   if (resource.isCCloud) {
     const ccloudSchemaRegistry = resource as CCloudSchemaRegistry;
@@ -76,12 +79,12 @@ function createSchemaRegistryTooltip(resource: SchemaRegistry): vscode.MarkdownS
         `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudSchemaRegistry.ccloudUrl})`,
       );
   } else {
-    const localSchemaRegistry = resource as LocalSchemaRegistry;
+    const localPrefix = resource.isLocal ? "Local " : "";
     tooltip
-      .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Local Schema Registry`)
+      .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) ${localPrefix}Schema Registry`)
       .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${localSchemaRegistry.id}\`\n\n`)
-      .appendMarkdown(`URI: \`${localSchemaRegistry.uri}\``);
+      .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
+      .appendMarkdown(`URI: \`${resource.uri}\``);
   }
   return tooltip;
 }

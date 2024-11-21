@@ -52,7 +52,8 @@ export class LocalResourceLoader extends ResourceLoader {
         LocalEnvironment.create({
           id: "local",
           name: "Local",
-          hasClusters: true,
+          kafkaClusters: localResourceGroups[0].kafkaClusters,
+          schemaRegistry: localResourceGroups[0].schemaRegistry,
         }),
       ];
     }

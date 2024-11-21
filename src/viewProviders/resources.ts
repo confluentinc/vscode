@@ -11,26 +11,42 @@ import {
   localSchemaRegistryConnected,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { getDirectResources } from "../graphql/direct";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
-import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
+import {
+  CCloudEnvironment,
+  DirectEnvironment,
+  Environment,
+  EnvironmentTreeItem,
+} from "../models/environment";
 import {
   CCloudKafkaCluster,
+  DirectKafkaCluster,
+  KafkaCluster,
   KafkaClusterTreeItem,
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import {
   CCloudSchemaRegistry,
+  DirectSchemaRegistry,
   LocalSchemaRegistry,
+  SchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
+import { ENABLE_DIRECT_CONNECTIONS } from "../preferences/constants";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
+
+type CCloudResources = CCloudEnvironment | CCloudKafkaCluster | CCloudSchemaRegistry;
+// TODO: add LocalEnvironment here?
+type LocalResources = LocalKafkaCluster | LocalSchemaRegistry;
+type DirectResources = DirectEnvironment | DirectKafkaCluster | DirectSchemaRegistry;
 
 /**
  * The types managed by the {@link ResourceViewProvider}, which are converted to their appropriate tree item
@@ -38,12 +54,11 @@ const logger = new Logger("viewProviders.resources");
  */
 type ResourceViewProviderData =
   | ContainerTreeItem<CCloudEnvironment>
-  | CCloudEnvironment
-  | CCloudKafkaCluster
-  | CCloudSchemaRegistry
+  | CCloudResources
   | ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
-  | LocalKafkaCluster
-  | LocalSchemaRegistry;
+  | LocalResources
+  | ContainerTreeItem<DirectEnvironment>
+  | DirectResources;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -89,11 +104,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
-    if (element instanceof CCloudEnvironment) {
-      return new CCloudEnvironmentTreeItem(element);
-    } else if (element instanceof LocalKafkaCluster || element instanceof CCloudKafkaCluster) {
+    if (element instanceof Environment) {
+      return new EnvironmentTreeItem(element);
+    } else if (element instanceof KafkaCluster) {
       return new KafkaClusterTreeItem(element);
-    } else if (element instanceof LocalSchemaRegistry || element instanceof CCloudSchemaRegistry) {
+    } else if (element instanceof SchemaRegistry) {
       return new SchemaRegistryTreeItem(element);
     }
     // should only be left with ContainerTreeItems
@@ -111,14 +126,38 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
         return await getCCloudEnvironmentChildren(element);
+      } else if (element instanceof DirectEnvironment) {
+        const children: DirectResources[] = [];
+        if (element.kafkaClusters)
+          children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
+        if (element.schemaRegistry) children.push(element.schemaRegistry);
+        return children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[] = await Promise.all([
-        loadCCloudResources(this.forceDeepRefresh),
-        loadLocalResources(),
-      ]);
+      const resources: ResourceViewProviderData[] = [];
+
+      // EXPERIMENTAL: check if direct connections are enabled in extension settings
+      const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+      const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
+      if (directConnectionsEnabled) {
+        resources.push(
+          ...(await Promise.all([
+            loadCCloudResources(this.forceDeepRefresh),
+            loadLocalResources(),
+            loadDirectConnectResources(),
+          ])),
+        );
+      } else {
+        resources.push(
+          ...(await Promise.all([
+            loadCCloudResources(this.forceDeepRefresh),
+            loadLocalResources(),
+          ])),
+        );
+      }
+
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
@@ -192,6 +231,8 @@ export async function loadCCloudResources(
     [],
   );
   cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
+  // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
+  cloudContainerItem.id = randomUUID();
 
   if (hasCCloudAuthSession()) {
     const loader = CCloudResourceLoader.getInstance();
@@ -220,15 +261,11 @@ export async function loadCCloudResources(
       ccloudEnvironments.length > 0
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None;
-    // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-    cloudContainerItem.id = randomUUID();
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.children = ccloudEnvironments;
   } else {
-    // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-    cloudContainerItem.id = randomUUID();
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
     cloudContainerItem.description = "(No connection)";
@@ -272,8 +309,6 @@ export async function loadLocalResources(): Promise<
   const localResources: LocalResourceGroup[] = await getLocalResources();
   if (localResources.length > 0) {
     const connectedId = "local-container-connected";
-    // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-    localContainerItem.id = randomUUID();
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
     // unpack the local resources to more easily update the UI elements
@@ -300,6 +335,32 @@ export async function loadLocalResources(): Promise<
   }
 
   return localContainerItem;
+}
+
+export async function loadDirectConnectResources(): Promise<ContainerTreeItem<DirectEnvironment>> {
+  const directContainerItem = new ContainerTreeItem<DirectEnvironment>(
+    "Other",
+    vscode.TreeItemCollapsibleState.None,
+    [],
+  );
+  directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
+
+  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
+  directContainerItem.id = randomUUID();
+
+  // top-level container before each direct "environment" (connection)
+  directContainerItem.contextValue = "resources-direct-container";
+  directContainerItem.description = "(No connections)";
+
+  // fetch all direct connections and their resources; each connection will be treated the same as a
+  // CCloud environment (connection ID and environment ID are the same)
+  directContainerItem.children = await getDirectResources();
+  if (directContainerItem.children.length > 0) {
+    directContainerItem.description = `(${directContainerItem.children.length})`;
+    directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+  }
+
+  return directContainerItem;
 }
 
 /**

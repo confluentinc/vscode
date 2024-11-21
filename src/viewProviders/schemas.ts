@@ -8,7 +8,7 @@ import {
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
@@ -45,8 +45,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
-  /** The parent of the focused Schema Registry, if it came from CCloud.  */
-  public ccloudEnvironment: CCloudEnvironment | null = null;
+  /** The parent of the focused Schema Registry.  */
+  public environment: Environment | null = null;
   /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
   public schemaRegistry: SchemaRegistry | null = null;
 
@@ -75,7 +75,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   reset(): void {
     setContextValue(ContextValues.schemaRegistrySelected, false);
     this.schemaRegistry = null;
-    this.ccloudEnvironment = null;
+    this.environment = null;
     this.treeView.description = "";
     this.refresh();
   }
@@ -160,13 +160,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
           if (this.schemaRegistry.isLocal) {
             // just show "Local" since we don't have a name for the local SR instance
             this.treeView.description = "Local";
-          } else {
-            const environment: CCloudEnvironment | null =
-              await getResourceManager().getCCloudEnvironment(
-                (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
-              );
-            this.ccloudEnvironment = environment;
-            this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
+          } else if (this.schemaRegistry.isCCloud) {
+            const environment: Environment | null = await getResourceManager().getCCloudEnvironment(
+              (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
+            );
+            this.environment = environment;
+            this.treeView.description = `${this.environment!.name} | ${this.schemaRegistry.id}`;
+          } else if (this.schemaRegistry.isDirect) {
+            // TODO: look this up
           }
           this.refresh();
         }

@@ -53,7 +53,7 @@
     ],
     "commands": [
       {
-        "command": "confluent.connections.create",
+        "command": "confluent.connections.ccloud.logIn",
         "icon": "$(plus)",
         "title": "Log in to Confluent Cloud",
         "category": "Confluent: Connections"
@@ -61,7 +61,13 @@
       {
         "command": "confluent.connections.direct",
         "title": "Add New Connection",
-        "icon": "$(plug)",
+        "icon": "$(plus)",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.direct.delete",
+        "icon": "$(trash)",
+        "title": "Delete Connection",
         "category": "Confluent: Connections"
       },
       {
@@ -432,7 +438,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
       },
       {
@@ -447,7 +453,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.create)\nOr start Kafka locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Kafka locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable)"
       },
       {
@@ -464,12 +470,16 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "confluent.connections.create",
+          "command": "confluent.connections.ccloud.logIn",
           "when": "!confluent.ccloudConnectionAvailable"
         },
         {
           "command": "confluent.connections.direct",
           "when": "confluent.directConnectionsEnabled"
+        },
+        {
+          "command": "confluent.connections.direct.delete",
+          "when": "false"
         },
         {
           "command": "confluent.copyOrganizationId",
@@ -604,11 +614,6 @@
       ],
       "view/title": [
         {
-          "command": "confluent.connections.direct",
-          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
-          "group": "navigation@1"
-        },
-        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation@2"
@@ -706,9 +711,19 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.connections.create",
+          "command": "confluent.connections.ccloud.logIn",
           "when": "viewItem == resources-ccloud-container",
           "group": "inline@1"
+        },
+        {
+          "command": "confluent.connections.direct",
+          "when": "viewItem == resources-direct-container && confluent.directConnectionsEnabled",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.connections.direct.delete",
+          "when": "viewItem == direct-environment && confluent.directConnectionsEnabled",
+          "group": "inline@2"
         },
         {
           "command": "confluent.organizations.use",
@@ -848,13 +863,13 @@
           {
             "id": "connect-local-cluster",
             "title": "Connect to Kafka",
-            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.create)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
+            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.ccloud.logIn)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
             },
             "completionEvents": [
-              "onCommand:command:confluent.connections.create",
+              "onCommand:command:confluent.connections.ccloud.logIn",
               "onCommand:confluent.docker.startLocalResources"
             ]
           },
