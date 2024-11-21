@@ -139,7 +139,7 @@ export class IntervalPoller {
     }
     // In with the new frequency. (Done before any immediate call to ensure callbacks that may affect the poller don't trip up checking .isRunning())
     this.registeredInterval = setInterval(() => {
-      logger.trace(`${this.name}: calling callback function`);
+      // logger.trace(`${this.name}: calling callback function`);
       this.callback();
     }, frequency);
     // Run the callback immediately if the flag is set and then defer to the interval for subsequent calls.
