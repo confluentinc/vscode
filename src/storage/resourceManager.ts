@@ -700,7 +700,6 @@ export class ResourceManager {
     });
   }
 
-  // TODO(shoup): add mutex here
   async deleteDirectConnection(id: string): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
