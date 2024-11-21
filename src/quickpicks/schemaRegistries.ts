@@ -48,7 +48,6 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   )! as CCloudSchemaRegistry[];
 
   if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
-    vscode.window.showInformationMessage("No Schema Registries available.");
     if (!hasCCloudAuthSession()) {
       const login = "Log in to Confluent Cloud";
       vscode.window

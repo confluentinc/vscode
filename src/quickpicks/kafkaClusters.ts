@@ -62,7 +62,6 @@ export async function kafkaClusterQuickPick(
   let availableKafkaClusters: KafkaCluster[] = [];
   availableKafkaClusters.push(...localKafkaClusters, ...cloudKafkaClusters);
   if (availableKafkaClusters.length === 0) {
-    vscode.window.showInformationMessage("No local Apache Kafka clusters available.");
     if (includeCCloud && !hasCCloudAuthSession()) {
       const login = "Log in to Confluent Cloud";
       vscode.window
