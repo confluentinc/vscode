@@ -2,10 +2,20 @@ import { type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { KafkaCluster } from "./kafkaCluster";
+import {
+  CCloudKafkaCluster,
+  DirectKafkaCluster,
+  KafkaCluster,
+  LocalKafkaCluster,
+} from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
 import { ConnectionId, ResourceBase } from "./resource";
-import { SchemaRegistry } from "./schemaRegistry";
+import {
+  CCloudSchemaRegistry,
+  DirectSchemaRegistry,
+  LocalSchemaRegistry,
+  SchemaRegistry,
+} from "./schemaRegistry";
 
 /**
  * Base class for an environment, which is a distinct group of resources under a single connection:
@@ -40,6 +50,9 @@ export class CCloudEnvironment extends Environment {
   readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
   streamGovernancePackage!: Enforced<string>;
+  // set explicit CCloud* typing
+  kafkaClusters: CCloudKafkaCluster[] = [];
+  schemaRegistry: CCloudSchemaRegistry | undefined = undefined;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
@@ -56,6 +69,10 @@ export class DirectEnvironment extends Environment {
   connectionType: ConnectionType = "DIRECT";
   // TODO: update this based on feedback from product+design
   readonly iconName = IconNames.EXPERIMENTAL;
+
+  // set explicit Direct* typing
+  kafkaClusters: DirectKafkaCluster[] = [];
+  schemaRegistry: DirectSchemaRegistry | undefined = undefined;
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -63,6 +80,10 @@ export class LocalEnvironment extends Environment {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
   readonly connectionType: ConnectionType = "LOCAL";
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
+
+  // set explicit Local* typing
+  kafkaClusters: LocalKafkaCluster[] = [];
+  schemaRegistry?: LocalSchemaRegistry | undefined = undefined;
 }
 
 /** The representation of an {@link Environment} as a {@link TreeItem} in the VS Code UI. */
