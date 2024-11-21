@@ -145,12 +145,16 @@ export class DirectConnectionManager {
 
     // if there are any stored connections that the sidecar doesn't know about, create them
     const newConnectionPromises: Promise<Connection>[] = [];
-    for (const [id, connection] of Object.entries(storedConnections)) {
+    for (const [id, connectionSpec] of storedConnections.entries()) {
       if (!sidecarDirectConnections.find((conn) => conn.spec.id === id)) {
         logger.debug("telling sidecar about stored connection:", { id });
-        newConnectionPromises.push(tryToCreateConnection(connection.spec));
+        newConnectionPromises.push(tryToCreateConnection(connectionSpec));
       }
     }
-    await Promise.all(newConnectionPromises);
+
+    if (newConnectionPromises.length > 0) {
+      await Promise.all(newConnectionPromises);
+      getResourceViewProvider().refresh();
+    }
   }
 }
