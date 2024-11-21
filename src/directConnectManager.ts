@@ -65,14 +65,17 @@ export class DirectConnectionManager {
     return [settingsListener];
   }
 
+  /**
+   * Create a new direct connection with the configurations provided from the webview form.
+   * @see `src/webview/direct-connection-form.ts` for the form submission handling.
+   */
   async createConnection(
     kafkaClusterConfig: KafkaClusterConfig | undefined,
     schemaRegistryConfig: SchemaRegistryConfig | undefined,
     name?: string,
   ) {
-    const connectionId = randomUUID();
     const spec: ConnectionSpec = {
-      id: connectionId,
+      id: randomUUID(),
       name: name ?? "New Connection",
       type: ConnectionType.Direct,
     };
@@ -89,7 +92,6 @@ export class DirectConnectionManager {
     try {
       connection = await tryToCreateConnection(spec);
       success = true;
-      logger.debug("Successfully created direct connection:", { connection });
     } catch (error) {
       logger.error("Failed to create direct connection:", { error });
       let errorMessage = "";
@@ -107,6 +109,7 @@ export class DirectConnectionManager {
 
     // TODO(shoup): refresh Resources view in follow-on branch
 
+    // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success, message: JSON.stringify(connection) };
   }
 
