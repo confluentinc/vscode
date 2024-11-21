@@ -4,7 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
 - Ability to update basic topic configuration fields via webform
+- Local Resources: the Docker image tag used to start a Schema Registry container is now
+  configurable via the extension settings.
 
 ### Fixed
 

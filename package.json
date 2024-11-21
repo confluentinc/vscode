@@ -386,6 +386,11 @@
           "type": "string",
           "default": "latest",
           "description": "Docker image tag to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.schemaRegistryImageTag": {
+          "type": "string",
+          "default": "latest",
+          "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
         }
       }
     },
