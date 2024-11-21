@@ -69,7 +69,7 @@ export async function kafkaClusterQuickPick(
       login = "Log in to Confluent Cloud";
     }
     if (includeLocal) {
-      local = "Start local resources.";
+      local = "Start Local Resources.";
     }
     vscode.window
       .showInformationMessage("No Kafka clusters available.", login, local)

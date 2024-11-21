@@ -59,11 +59,11 @@ export async function schemaRegistryQuickPick(
       login = "Log in to Confluent Cloud";
     }
     if (includeLocal) {
-      local = "Start local resources.";
+      local = "Start Local Resources.";
     }
 
     vscode.window
-      .showInformationMessage("Connect to Confluent Cloud.", login, local)
+      .showInformationMessage("No Schema Registries available.", login, local)
       .then((selected) => {
         if (selected === login) {
           vscode.commands.executeCommand("confluent.connections.create");
