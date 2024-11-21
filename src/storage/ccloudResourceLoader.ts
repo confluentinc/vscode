@@ -151,26 +151,22 @@ export class CCloudResourceLoader extends ResourceLoader {
     try {
       const resourceManager = getResourceManager();
 
-      // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
-      const envGroups = await getEnvironments();
-
       // Queue up to store the environments in the resource manager
-      const environments = envGroups.map((envGroup) => envGroup.environment);
+      const environments: CCloudEnvironment[] = await getEnvironments();
       await resourceManager.setCCloudEnvironments(environments);
 
-      // Collect all of the Kafka clusters into a single array and queue up to store them in the resource manager.
-      // (Each environment may have many clusters.)
-      const kafkaClusters = envGroups.flatMap((envGroup) => envGroup.kafkaClusters);
-      await resourceManager.setCCloudKafkaClusters(kafkaClusters);
-
-      // Likewise the schema registries, but filter out any undefineds for environments that don't have one.
-      const schemaRegistries: CCloudSchemaRegistry[] = envGroups
-        .map((envGroup) => envGroup.schemaRegistry)
-        .filter(
-          (schemaRegistry): schemaRegistry is CCloudSchemaRegistry => schemaRegistry !== undefined,
-        );
-
-      await resourceManager.setCCloudSchemaRegistries(schemaRegistries);
+      // Collect all of the CCloudKafkaCluster and CCloudSchemaRegistries into individual arrays
+      // before storing them via the resource manager.
+      const kafkaClusters: CCloudKafkaCluster[] = [];
+      const schemaRegistries: CCloudSchemaRegistry[] = [];
+      environments.forEach((env: CCloudEnvironment) => {
+        kafkaClusters.push(...env.kafkaClusters);
+        if (env.schemaRegistry) schemaRegistries.push(env.schemaRegistry);
+      });
+      await Promise.all([
+        resourceManager.setCCloudKafkaClusters(kafkaClusters),
+        resourceManager.setCCloudSchemaRegistries(schemaRegistries),
+      ]);
 
       // Mark each schema registry as existing, but schemas not yet loaded.
       this.schemaRegistryCacheStates.clear();
