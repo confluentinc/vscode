@@ -11,26 +11,35 @@ import {
   localSchemaRegistryConnected,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { getDirectResources } from "../graphql/direct";
 import { getLocalResources, LocalResourceGroup } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
-import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
+import { CCloudEnvironment, DirectEnvironment, EnvironmentTreeItem } from "../models/environment";
 import {
   CCloudKafkaCluster,
+  DirectKafkaCluster,
   KafkaClusterTreeItem,
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import {
   CCloudSchemaRegistry,
+  DirectSchemaRegistry,
   LocalSchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
+import { ENABLE_DIRECT_CONNECTIONS } from "../preferences/constants";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
+
+type CCloudResources = CCloudEnvironment | CCloudKafkaCluster | CCloudSchemaRegistry;
+// TODO: add LocalEnvironment here?
+type LocalResources = LocalKafkaCluster | LocalSchemaRegistry;
+type DirectResources = DirectEnvironment | DirectKafkaCluster | DirectSchemaRegistry;
 
 /**
  * The types managed by the {@link ResourceViewProvider}, which are converted to their appropriate tree item
@@ -38,12 +47,11 @@ const logger = new Logger("viewProviders.resources");
  */
 type ResourceViewProviderData =
   | ContainerTreeItem<CCloudEnvironment>
-  | CCloudEnvironment
-  | CCloudKafkaCluster
-  | CCloudSchemaRegistry
+  | CCloudResources
   | ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
-  | LocalKafkaCluster
-  | LocalSchemaRegistry;
+  | LocalResources
+  | ContainerTreeItem<DirectEnvironment>
+  | DirectResources;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -89,11 +97,19 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
-    if (element instanceof CCloudEnvironment) {
-      return new CCloudEnvironmentTreeItem(element);
-    } else if (element instanceof LocalKafkaCluster || element instanceof CCloudKafkaCluster) {
+    if (element instanceof CCloudEnvironment || element instanceof DirectEnvironment) {
+      return new EnvironmentTreeItem(element);
+    } else if (
+      element instanceof LocalKafkaCluster ||
+      element instanceof CCloudKafkaCluster ||
+      element instanceof DirectKafkaCluster
+    ) {
       return new KafkaClusterTreeItem(element);
-    } else if (element instanceof LocalSchemaRegistry || element instanceof CCloudSchemaRegistry) {
+    } else if (
+      element instanceof LocalSchemaRegistry ||
+      element instanceof CCloudSchemaRegistry ||
+      element instanceof DirectSchemaRegistry
+    ) {
       return new SchemaRegistryTreeItem(element);
     }
     // should only be left with ContainerTreeItems
@@ -111,14 +127,38 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
         return await getCCloudEnvironmentChildren(element);
+      } else if (element instanceof DirectEnvironment) {
+        const children: DirectResources[] = [];
+        if (element.kafkaClusters)
+          children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
+        if (element.schemaRegistry) children.push(element.schemaRegistry);
+        return children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[] = await Promise.all([
-        loadCCloudResources(this.forceDeepRefresh),
-        loadLocalResources(),
-      ]);
+      const resources: ResourceViewProviderData[] = [];
+
+      // EXPERIMENTAL: check if direct connections are enabled in extension settings
+      const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+      const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
+      if (directConnectionsEnabled) {
+        resources.push(
+          ...(await Promise.all([
+            loadCCloudResources(this.forceDeepRefresh),
+            loadLocalResources(),
+            loadDirectConnectResources(),
+          ])),
+        );
+      } else {
+        resources.push(
+          ...(await Promise.all([
+            loadCCloudResources(this.forceDeepRefresh),
+            loadLocalResources(),
+          ])),
+        );
+      }
+
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
@@ -300,6 +340,32 @@ export async function loadLocalResources(): Promise<
   }
 
   return localContainerItem;
+}
+
+export async function loadDirectConnectResources(): Promise<ContainerTreeItem<DirectEnvironment>> {
+  const directContainerItem = new ContainerTreeItem<DirectEnvironment>(
+    "Other",
+    vscode.TreeItemCollapsibleState.None,
+    [],
+  );
+  directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
+
+  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
+  directContainerItem.id = randomUUID();
+
+  // top-level container before each direct "environment" (connection)
+  directContainerItem.contextValue = "resources-direct-container";
+  directContainerItem.description = "(No connections)";
+
+  // fetch all direct connections and their resources; each connection will be treated the same as a
+  // CCloud environment (connection ID and environment ID are the same)
+  directContainerItem.children = await getDirectResources();
+  if (directContainerItem.children.length > 0) {
+    directContainerItem.description = `(${directContainerItem.children.length})`;
+    directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+  }
+
+  return directContainerItem;
 }
 
 /**

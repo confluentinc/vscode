@@ -56,7 +56,6 @@ import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
-import { registerDirectConnectionCommand } from "./directConnect";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
@@ -201,7 +200,6 @@ async function _activateExtension(
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
   registerProjectGenerationCommand(context);
-  registerDirectConnectionCommand(context);
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());
@@ -211,6 +209,7 @@ async function _activateExtension(
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
+  await directConnectionManager.reconcileSidecarConnections();
 
   // XXX: used for testing; do not remove
   return context;

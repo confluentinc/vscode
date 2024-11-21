@@ -1,6 +1,9 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { openDirectConnectionForm } from "../directConnect";
+import { DirectConnectionManager } from "../directConnectManager";
 import { Logger } from "../logging";
+import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
 
@@ -53,10 +56,25 @@ export async function addSSLPemPath() {
   }
 }
 
+export async function showDirectConnectionForm() {
+  // TODO: add more context here for editing connections?
+  openDirectConnectionForm();
+}
+
+export async function deleteDirectConnection(item: DirectEnvironment) {
+  if (!(item instanceof DirectEnvironment)) {
+    return;
+  }
+  // TODO(shoup): add confirmation dialog
+  await DirectConnectionManager.getInstance().deleteConnection(item.connectionId);
+}
+
 export function registerConnectionCommands(): Disposable[] {
   return [
-    registerCommandWithLogging("confluent.connections.create", createConnectionCommand),
+    registerCommandWithLogging("confluent.connections.ccloud.logIn", createConnectionCommand),
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
+    registerCommandWithLogging("confluent.connections.direct", showDirectConnectionForm),
+    registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
   ];
 }
 

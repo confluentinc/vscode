@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { ConnectionSpec } from "../clients/sidecar";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
@@ -163,12 +164,16 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
           if (cluster.isLocal) {
             // just show "Local" since we don't have a name for the local cluster(s)
             this.treeView.description = "Local";
-          } else {
+          } else if (cluster.isCCloud) {
             const parentEnvironment: CCloudEnvironment | null =
               await getResourceManager().getCCloudEnvironment(
                 (this.kafkaCluster as CCloudKafkaCluster).environmentId,
               );
             this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
+          } else if (cluster.isDirect) {
+            const parentConnection: ConnectionSpec | null =
+              await getResourceManager().getDirectConnection(cluster.connectionId);
+            this.treeView.description = `${parentConnection?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
           }
           this.refresh();
         }
