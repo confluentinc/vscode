@@ -12,11 +12,12 @@ import {
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { ContextValues, setContextValue } from "./context/values";
+import { directConnectionDeleted } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { getSidecar } from "./sidecar";
-import { tryToCreateConnection } from "./sidecar/connections";
+import { tryToCreateConnection, tryToDeleteConnection } from "./sidecar/connections";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { getResourceViewProvider } from "./viewProviders/resources";
 
@@ -113,12 +114,16 @@ export class DirectConnectionManager {
     await getResourceManager().addDirectConnection(spec);
     // refresh the Resources view to load the new connection
     getResourceViewProvider().refresh();
+    // TODO(shoup): fire emitter
 
     return { success, message: JSON.stringify(connection) };
   }
 
   async deleteConnection(id: string) {
-    // TODO: implement this
+    await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
+    // refresh the Resources view to remove the deleted connection
+    getResourceViewProvider().refresh();
+    directConnectionDeleted.fire(id);
   }
 
   /** Compare the known connections between our SecretStorage and the sidecar, then make updates as needed. */
