@@ -36,7 +36,9 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  *
  * @returns The selected Schema Registry, or undefined if none was selected.
  */
-export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+export async function schemaRegistryQuickPick(
+  includeLocal: boolean = true,
+): Promise<SchemaRegistry | undefined> {
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
 
@@ -51,33 +53,29 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   availableSchemaRegistries.push(...localSchemaRegistries, ...ccloudSchemaRegistries);
   if (availableSchemaRegistries.length === 0) {
     let login: string = "";
+    let local: string = "";
 
     if (!hasCCloudAuthSession()) {
       login = "Log in to Confluent Cloud";
-      vscode.window
-        .showInformationMessage(
-          "Connect to Confluent Cloud to access remote schema registries.",
-          login,
-        )
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.connections.create");
-          }
-        });
-      return undefined;
+    }
+    if (includeLocal) {
+      local = "Start local resources.";
     }
 
-    if (localSchemaRegistries.length === 0) {
-      login = "Create a local connection.";
-      vscode.window
-        .showInformationMessage("No local Kafka Schema Registries available.", login)
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.docker.startLocalResources");
-          }
-        });
-      return undefined;
-    }
+    vscode.window
+      .showInformationMessage(
+        "Connect to Confluent Cloud to access remote schema registries.",
+        local,
+        login,
+      )
+      .then((selected) => {
+        if (selected === login) {
+          vscode.commands.executeCommand("confluent.connections.create");
+        } else if (selected === local) {
+          vscode.commands.executeCommand("confluent.docker.startLocalResources");
+        }
+      });
+    return undefined;
   } else {
     logger.debug(
       `Generating schema registry quickpick with ${localSchemaRegistries.length} local and ${ccloudSchemaRegistries.length} ccloud schema registries.`,

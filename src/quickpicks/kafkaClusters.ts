@@ -63,28 +63,23 @@ export async function kafkaClusterQuickPick(
   availableKafkaClusters.push(...localKafkaClusters, ...cloudKafkaClusters);
   if (availableKafkaClusters.length === 0) {
     let login: string = "";
+    let local: string = "";
 
     if (includeCCloud && !hasCCloudAuthSession()) {
       login = "Log in to Confluent Cloud";
-      vscode.window
-        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.connections.create");
-          }
-        });
     }
-    if (localKafkaClusters.length === 0) {
-      login = "Create a local connection.";
-      vscode.window
-        .showInformationMessage("No local Kafka clusters available.", login)
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.docker.startLocalResources");
-          }
-        });
-      return undefined;
+    if (includeLocal) {
+      local = "Start local resources.";
     }
+    vscode.window
+      .showInformationMessage("No Kafka clusters available.", login, local)
+      .then((selected) => {
+        if (selected === login) {
+          vscode.commands.executeCommand("confluent.connections.create");
+        } else if (selected === local) {
+          vscode.commands.executeCommand("confluent.docker.startLocalResources");
+        }
+      });
     return undefined;
   } else {
     logger.debug(
