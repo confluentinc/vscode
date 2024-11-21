@@ -32,7 +32,7 @@ export class DirectConnectionManager {
   disposables: Disposable[] = [];
 
   // singleton instance to prevent multiple listeners and single source of connection management
-  private static instance: DirectConnectionManager;
+  private static instance: DirectConnectionManager | null = null;
   private constructor() {
     const context = getExtensionContext();
     if (!context) {
@@ -108,10 +108,6 @@ export class DirectConnectionManager {
     // TODO(shoup): refresh Resources view in follow-on branch
 
     return { success, message: JSON.stringify(connection) };
-  }
-
-  async getConnections() {
-    // TODO: implement this
   }
 
   async deleteConnection(id: string) {
