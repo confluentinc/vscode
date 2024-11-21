@@ -36,7 +36,9 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  *
  * @returns The selected Schema Registry, or undefined if none was selected.
  */
-export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+export async function schemaRegistryQuickPick(
+  includeLocal: boolean = true,
+): Promise<SchemaRegistry | undefined> {
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
 
@@ -47,18 +49,32 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
     CCLOUD_CONNECTION_ID,
   )! as CCloudSchemaRegistry[];
 
-  if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
-    vscode.window.showInformationMessage("No Schema Registries available.");
+  let availableSchemaRegistries: SchemaRegistry[] = [];
+  availableSchemaRegistries.push(...localSchemaRegistries, ...ccloudSchemaRegistries);
+  if (availableSchemaRegistries.length === 0) {
+    let login: string = "";
+    let local: string = "";
+
     if (!hasCCloudAuthSession()) {
-      const login = "Log in to Confluent Cloud";
-      vscode.window
-        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.connections.create");
-          }
-        });
+      login = "Log in to Confluent Cloud";
     }
+    if (includeLocal) {
+      local = "Start local resources.";
+    }
+
+    vscode.window
+      .showInformationMessage(
+        "Connect to Confluent Cloud to access remote schema registries.",
+        local,
+        login,
+      )
+      .then((selected) => {
+        if (selected === login) {
+          vscode.commands.executeCommand("confluent.connections.create");
+        } else if (selected === local) {
+          vscode.commands.executeCommand("confluent.docker.startLocalResources");
+        }
+      });
     return undefined;
   } else {
     logger.debug(

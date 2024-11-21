@@ -62,18 +62,29 @@ export async function kafkaClusterQuickPick(
   let availableKafkaClusters: KafkaCluster[] = [];
   availableKafkaClusters.push(...localKafkaClusters, ...cloudKafkaClusters);
   if (availableKafkaClusters.length === 0) {
-    vscode.window.showInformationMessage("No local Apache Kafka clusters available.");
+    let login: string = "";
+    let local: string = "";
+
     if (includeCCloud && !hasCCloudAuthSession()) {
-      const login = "Log in to Confluent Cloud";
-      vscode.window
-        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.connections.create");
-          }
-        });
+      login = "Log in to Confluent Cloud";
     }
+    if (includeLocal) {
+      local = "Start local resources.";
+    }
+    vscode.window
+      .showInformationMessage("No Kafka clusters available.", login, local)
+      .then((selected) => {
+        if (selected === login) {
+          vscode.commands.executeCommand("confluent.connections.create");
+        } else if (selected === local) {
+          vscode.commands.executeCommand("confluent.docker.startLocalResources");
+        }
+      });
     return undefined;
+  } else {
+    logger.debug(
+      `Generating Kafka cluster quickpick with ${localKafkaClusters.length} local and ${cloudKafkaClusters.length} ccloud clusters.`,
+    );
   }
 
   // convert all available Kafka Clusters to quick pick items
