@@ -2,7 +2,6 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { instanceOfKafkaClusterConfig } from "../clients/sidecar";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
@@ -54,10 +53,11 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     console.log("formData:", formData, "data", data);
-    // const result = await post("Submit", data);
-    if (instanceOfKafkaClusterConfig(data)) {
-      this.success(true);
-    } else this.errorMessage("An unexpected error occurred");
+    const result = await post("Submit", data);
+    this.success(result.success);
+    if (!result.success) {
+      this.errorMessage(result.message ?? "Unknown error occurred");
+    }
   }
 }
 

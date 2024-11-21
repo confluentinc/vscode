@@ -13,11 +13,7 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getSidecar } from "../sidecar";
 import * as connections from "../sidecar/connections";
 import { getStorageManager, StorageManager } from "../storage";
-import {
-  AUTH_COMPLETED_KEY,
-  AUTH_SESSION_EXISTS_KEY,
-  CCLOUD_AUTH_STATUS_KEY,
-} from "../storage/constants";
+import { SecretStorageKeys } from "../storage/constants";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { pollCCloudConnectionAuth } from "./ccloudPolling";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
@@ -102,7 +98,7 @@ describe("ConfluentCloudAuthProvider", () => {
 
     assert.ok(
       setSecretStub.calledWith(
-        CCLOUD_AUTH_STATUS_KEY,
+        SecretStorageKeys.CCLOUD_AUTH_STATUS,
         TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
       ),
     );
@@ -143,7 +139,7 @@ describe("ConfluentCloudAuthProvider", () => {
     await authProvider.removeSession("sessionId");
 
     assert.ok(deleteConnectionStub.called);
-    assert.ok(deleteSecretStub.calledWith(CCLOUD_AUTH_STATUS_KEY));
+    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.CCLOUD_AUTH_STATUS));
     assert.ok(handleSessionRemovedStub.calledWith(true));
   });
 
@@ -182,7 +178,7 @@ describe("ConfluentCloudAuthProvider", () => {
     await authProvider["handleSessionCreated"](TEST_CCLOUD_AUTH_SESSION, true);
 
     assert.strictEqual(authProvider["_session"], TEST_CCLOUD_AUTH_SESSION);
-    assert.ok(setSecretStub.calledWith(AUTH_SESSION_EXISTS_KEY, "true"));
+    assert.ok(setSecretStub.calledWith(SecretStorageKeys.AUTH_SESSION_EXISTS, "true"));
     assert.ok(stubOnDidChangeSessions.fire.called);
     assert.ok(
       stubOnDidChangeSessions.fire.calledWith({
@@ -205,8 +201,8 @@ describe("ConfluentCloudAuthProvider", () => {
     await authProvider["handleSessionRemoved"](true);
 
     assert.strictEqual(authProvider["_session"], null);
-    assert.ok(deleteSecretStub.calledWith(AUTH_SESSION_EXISTS_KEY));
-    assert.ok(deleteSecretStub.calledWith(AUTH_COMPLETED_KEY));
+    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_SESSION_EXISTS));
+    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_COMPLETED));
     assert.ok(stubOnDidChangeSessions.fire.called);
     assert.ok(
       stubOnDidChangeSessions.fire.calledWith({
