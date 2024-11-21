@@ -2,6 +2,7 @@ import { graphql } from "gql.tada";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
+import { ConnectionId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 
@@ -51,7 +52,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
           name: "Kafka Cluster",
           bootstrapServers: connection.kafkaCluster.bootstrapServers,
           uri: connection.kafkaCluster.uri ?? "",
-          connectionId: connection.id,
+          connectionId: connection.id as ConnectionId,
         });
       }
 
@@ -60,15 +61,15 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         schemaRegistry = DirectSchemaRegistry.create({
           id: connection.schemaRegistry.id,
           uri: connection.schemaRegistry.uri,
-          connectionId: connection.id,
+          connectionId: connection.id as ConnectionId,
         });
       }
 
       const directEnv = DirectEnvironment.create({
-        connectionId: connection.id,
+        connectionId: connection.id as ConnectionId,
         id: connection.id,
         name: connection.name,
-        kafkaCluster,
+        kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
         schemaRegistry,
       });
       directResources.push(directEnv);

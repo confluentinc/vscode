@@ -17,6 +17,9 @@ export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 
+/** Indicate that a direct connection was removed, by its connection ID. */
+export const directConnectionDeleted = new vscode.EventEmitter<string>();
+
 /**
  * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
  * Cluster" action from the Topics view, or cleared out from a connection (or CCloud organization)

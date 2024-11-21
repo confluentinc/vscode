@@ -128,10 +128,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       } else if (element instanceof CCloudEnvironment) {
         return await getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
-        const children = [element.kafkaCluster, element.schemaRegistry].filter(
-          (child) => child !== undefined,
-        );
-        return children as DirectResources[];
+        const children: DirectResources[] = [];
+        if (element.kafkaClusters)
+          children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
+        if (element.schemaRegistry) children.push(element.schemaRegistry);
+        return children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
@@ -360,6 +361,7 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
   // CCloud environment (connection ID and environment ID are the same)
   directContainerItem.children = await getDirectResources();
   if (directContainerItem.children.length > 0) {
+    directContainerItem.description = `(${directContainerItem.children.length})`;
     directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
   }
 
