@@ -63,11 +63,7 @@ export async function schemaRegistryQuickPick(
     }
 
     vscode.window
-      .showInformationMessage(
-        "Connect to Confluent Cloud to access remote schema registries.",
-        local,
-        login,
-      )
+      .showInformationMessage("Connect to Confluent Cloud.", login, local)
       .then((selected) => {
         if (selected === login) {
           vscode.commands.executeCommand("confluent.connections.create");
