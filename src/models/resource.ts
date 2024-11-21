@@ -16,12 +16,12 @@ export class ResourceBase extends Data {
   }
 
   get isLocal(): boolean {
-    return this.connectionType === "LOCAL";
+    return this.connectionType === ConnectionType.Local;
   }
   get isCCloud(): boolean {
-    return this.connectionType === "CCLOUD";
+    return this.connectionType === ConnectionType.Ccloud;
   }
   get isDirect(): boolean {
-    return this.connectionType === "DIRECT";
+    return this.connectionType === ConnectionType.Direct;
   }
 }
