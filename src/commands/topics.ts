@@ -129,22 +129,22 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
         return topic.ccloudUrl satisfies MessageResponse<"GetCCloudLink">;
       }
       case "GetCleanupPolicy": {
-        // cc default "delete"
+        // cc default: "delete"
         return (topicConfigRemoteItems.data.find((item) => item.name === "cleanup.policy")?.value ??
           "delete") satisfies MessageResponse<"GetCleanupPolicy">;
       }
       case "GetRetentionSize": {
-        // cc default -1
+        // cc default: -1
         return (topicConfigRemoteItems.data.find((item) => item.name === "retention.bytes")
           ?.value ?? "-1") satisfies MessageResponse<"GetRetentionSize">;
       }
       case "GetRetentionMs": {
-        //cc default = (7, 'days').asMilliseconds(),
+        // cc default: (7, 'days').asMilliseconds(),
         return (topicConfigRemoteItems.data.find((item) => item.name === "retention.ms")?.value ??
           "-1") satisfies MessageResponse<"GetRetentionMs">;
       }
       case "GetMaxMessageBytes": {
-        //cc defaultValue: 1 * 1000
+        // cc default: 1 * 1000
         return (topicConfigRemoteItems.data.find((item) => item.name === "max.message.bytes")
           ?.value ?? "1000") satisfies MessageResponse<"GetMaxMessageBytes">;
       }

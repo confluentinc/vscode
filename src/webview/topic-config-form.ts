@@ -136,8 +136,10 @@ class ConfigFormViewModel extends ViewModel {
     const data = Object.fromEntries(formData.entries());
     const result = await post("Submit", data);
     if (result !== undefined) {
-      if (result.success) this.success(true);
-      else this.errorOnSubmit(result.message ?? "Unknown error occurred");
+      if (result.success) {
+        this.success(true);
+        this.hasChanges(false);
+      } else this.errorOnSubmit(result.message ?? "Unknown error occurred");
     }
   }
 }
