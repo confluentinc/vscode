@@ -1,11 +1,12 @@
-import { Data, type Require as Enforced } from "dataclass";
+import { type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../authz/types";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
+import { ResourceBase } from "./resource";
 
 /** Main class representing Kafka topic */
-export class KafkaTopic extends Data {
+export class KafkaTopic extends ResourceBase {
   name!: Enforced<string>;
   replication_factor!: Enforced<number>;
   partition_count!: Enforced<number>;
@@ -28,7 +29,7 @@ export class KafkaTopic extends Data {
   /** Property producing a URL for the topic in the Confluent Cloud UI */
   get ccloudUrl(): string {
     // Only ccloud topics have a ccloud URL.
-    if (this.isLocalTopic()) {
+    if (this.isLocal) {
       return "";
     }
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.clusterId}/topics/${this.name}/overview`;
@@ -37,16 +38,6 @@ export class KafkaTopic extends Data {
   /** Property producing a unique identifier for a topic based on both the cluster id and the topic name */
   get uniqueId(): string {
     return `${this.clusterId}-${this.name}`;
-  }
-
-  /** Is this a local cluster topic (if not, then is ccloud)? */
-  isLocalTopic(): boolean {
-    // as indicated by the (ccloud) environmentId being undefined
-    return this.environmentId === undefined;
-  }
-
-  get connectionId(): string {
-    return this.isLocalTopic() ? LOCAL_CONNECTION_ID : CCLOUD_CONNECTION_ID;
   }
 }
 
@@ -59,7 +50,7 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 
     // internal properties
     this.resource = resource;
-    this.contextValue = resource.isLocalTopic() ? "local-kafka-topic" : "ccloud-kafka-topic";
+    this.contextValue = `${this.resource.contextPrefix}-kafka-topic`;
     if (this.resource.hasSchema) {
       this.contextValue += "-with-schema";
       this.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
@@ -128,7 +119,7 @@ function createKafkaTopicTooltip(
     missingAuthz.forEach((op) => tooltip.appendMarkdown(` - ${op}\n`));
   }
 
-  if (!resource.isLocalTopic()) {
+  if (resource.isCCloud) {
     tooltip.appendMarkdown("---\n\n");
     tooltip.appendMarkdown(
       `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
