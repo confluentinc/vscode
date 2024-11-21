@@ -66,18 +66,17 @@ class ConfigFormViewModel extends ViewModel {
     const res = await post("ValidateConfigValue", {
       [input.name]: input.value,
     });
+    const errorMsgElement = input.nextElementSibling;
     if (res.success) {
       input.classList.remove("error");
-      const errorMsgElement = input.previousElementSibling;
       if (errorMsgElement && errorMsgElement.classList.contains("error")) {
-        errorMsgElement.remove();
+        errorMsgElement.textContent = "";
       }
     } else {
       input.classList.add("error");
-      const errorMsgElement = document.createElement("div");
-      errorMsgElement.className = "info error";
-      errorMsgElement.textContent = res.message ?? "Unknown error occurred";
-      input.insertAdjacentElement("beforebegin", errorMsgElement);
+      if (errorMsgElement && errorMsgElement.classList.contains("error")) {
+        errorMsgElement.textContent = res.message ?? "Unknown error occurred";
+      }
     }
     this.hasValidationErrors(document.querySelectorAll(".input.error").length > 0);
   }
@@ -87,9 +86,9 @@ class ConfigFormViewModel extends ViewModel {
     const errorInputs = document.querySelectorAll(".input.error");
     errorInputs.forEach((input) => {
       input.classList.remove("error");
-      const errorMsgElement = input.previousElementSibling;
+      const errorMsgElement = input.nextElementSibling;
       if (errorMsgElement && errorMsgElement.classList.contains("error")) {
-        errorMsgElement.remove();
+        errorMsgElement.textContent = "";
       }
     });
     this.hasValidationErrors(false);
