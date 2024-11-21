@@ -29,6 +29,8 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
 export class DirectSchemaRegistry extends SchemaRegistry {
   // `connectionId` dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = "DIRECT";
+  // added separately from sidecar responses; will be the same value as the connectionId
+  environmentId!: Enforced<string>;
 }
 
 export class LocalSchemaRegistry extends SchemaRegistry {
@@ -36,7 +38,7 @@ export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionType: ConnectionType = "LOCAL";
 }
 
-/** The representation of a {@link SchemaRegistry} as a {@link vscode.TreeItem} in the VS Code UI. */
+/** The representation of a {@link SchemaRegistry} as a {@link TreeItem} in the VS Code UI. */
 export class SchemaRegistryTreeItem extends TreeItem {
   resource: SchemaRegistry;
 

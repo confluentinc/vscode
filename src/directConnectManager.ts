@@ -15,9 +15,12 @@ import { ContextValues, setContextValue } from "./context/values";
 import { directConnectionDeleted } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
+import { ConnectionId } from "./models/resource";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { getSidecar } from "./sidecar";
 import { tryToCreateConnection, tryToDeleteConnection } from "./sidecar/connections";
+import { DirectResourceLoader } from "./storage/directResourceLoader";
+import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { getResourceViewProvider } from "./viewProviders/resources";
 
@@ -82,8 +85,9 @@ export class DirectConnectionManager {
     schemaRegistryConfig: SchemaRegistryConfig | undefined,
     name?: string,
   ) {
+    const connectionId = randomUUID() as ConnectionId;
     const spec: ConnectionSpec = {
-      id: randomUUID(),
+      id: connectionId,
       name: name ?? "New Connection",
       type: ConnectionType.Direct,
     };
@@ -114,6 +118,8 @@ export class DirectConnectionManager {
 
     // save the new connection in secret storage
     await getResourceManager().addDirectConnection(spec);
+    // create a new ResourceLoader instance for managing the new connection's resources
+    ResourceLoader.registerInstance(connectionId, new DirectResourceLoader(connectionId));
     // refresh the Resources view to load the new connection
     getResourceViewProvider().refresh();
     // TODO(shoup): fire emitter
@@ -122,11 +128,12 @@ export class DirectConnectionManager {
     return { success, message: JSON.stringify(connection) };
   }
 
-  async deleteConnection(id: string) {
+  async deleteConnection(id: ConnectionId): Promise<void> {
     await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
     // refresh the Resources view to remove the deleted connection
     getResourceViewProvider().refresh();
     directConnectionDeleted.fire(id);
+    ResourceLoader.deregisterInstance(id);
   }
 
   /** Compare the known connections between our SecretStorage and the sidecar, then make updates as needed. */

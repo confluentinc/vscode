@@ -5,15 +5,17 @@ import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { Environment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { ConnectionId } from "../models/resource";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
 
-/** Human readable characterization of the backing technology resources were loaded from */
+/** Human readable characterization of the backing connection type used to load resources. */
 export enum ResourceLoaderType {
   CCloud = "Confluent Cloud",
   Local = "Local",
+  Direct = "Direct",
 }
 
 /**
@@ -44,12 +46,16 @@ export abstract class ResourceLoader {
   // Map of connectionId to ResourceLoader instance.
   private static registry: Map<string, ResourceLoader> = new Map();
 
-  public static registerInstance(connectionId: string, loader: ResourceLoader): void {
+  public static registerInstance(connectionId: ConnectionId, loader: ResourceLoader): void {
     ResourceLoader.registry.set(connectionId, loader);
   }
 
+  public static deregisterInstance(connectionId: ConnectionId): void {
+    ResourceLoader.registry.delete(connectionId);
+  }
+
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
-  public static getInstance(connectionId: string): ResourceLoader {
+  public static getInstance(connectionId: ConnectionId): ResourceLoader {
     const loader = ResourceLoader.registry.get(connectionId);
     if (loader) {
       return loader;
@@ -218,7 +224,7 @@ export function correlateTopicsWithSchemas(
  */
 export async function fetchSchemas(
   schemaRegistryId: string,
-  connectionId: string,
+  connectionId: ConnectionId,
   environmentId: string | undefined = undefined,
 ): Promise<Schema[]> {
   const sidecarHandle = await getSidecar();
