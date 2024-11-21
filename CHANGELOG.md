@@ -4,11 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Ability to update basic topic configuration fields via webform
+
 ### Fixed
 
-- Correct schema upload success message when the uploaded schema was normalized to a preexisting version which wasn't the most recent existing version for the subject, [issue #642](https://github.com/confluentinc/vscode/issues/642).
-- Fix possible race conditions in workspace state cache management when needing to read and mutate existing workspace state keys, [issue #534](https://github.com/confluentinc/vscode/issues/534).
-
+- Correct schema upload success message when the uploaded schema was normalized to a preexisting
+  version which wasn't the most recent existing version for the subject,
+  [issue #642](https://github.com/confluentinc/vscode/issues/642).
+- Fix possible race conditions in workspace state cache management when needing to read and mutate
+  existing workspace state keys, [issue #534](https://github.com/confluentinc/vscode/issues/534).
 
 ## 0.21.2
 
