@@ -47,18 +47,37 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
     CCLOUD_CONNECTION_ID,
   )! as CCloudSchemaRegistry[];
 
-  if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
+  let availableSchemaRegistries: SchemaRegistry[] = [];
+  availableSchemaRegistries.push(...localSchemaRegistries, ...ccloudSchemaRegistries);
+  if (availableSchemaRegistries.length === 0) {
+    let login: string = "";
+
     if (!hasCCloudAuthSession()) {
-      const login = "Log in to Confluent Cloud";
+      login = "Log in to Confluent Cloud";
       vscode.window
-        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
+        .showInformationMessage(
+          "Connect to Confluent Cloud to access remote schema registries.",
+          login,
+        )
         .then((selected) => {
           if (selected === login) {
             vscode.commands.executeCommand("confluent.connections.create");
           }
         });
+      return undefined;
     }
-    return undefined;
+
+    if (localSchemaRegistries.length === 0) {
+      login = "Create a local connection.";
+      vscode.window
+        .showInformationMessage("No local Kafka Schema Registries available.", login)
+        .then((selected) => {
+          if (selected === login) {
+            vscode.commands.executeCommand("confluent.docker.startLocalResources");
+          }
+        });
+      return undefined;
+    }
   } else {
     logger.debug(
       `Generating schema registry quickpick with ${localSchemaRegistries.length} local and ${ccloudSchemaRegistries.length} ccloud schema registries.`,
