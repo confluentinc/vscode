@@ -1,19 +1,20 @@
-import { Data, type Require as Enforced } from "dataclass";
-import * as vscode from "vscode";
+import { type Require as Enforced } from "dataclass";
+import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
-import { DirectKafkaCluster } from "./kafkaCluster";
+import { KafkaCluster } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { DirectSchemaRegistry } from "./schemaRegistry";
+import { ConnectionId, ResourceBase } from "./resource";
+import { SchemaRegistry } from "./schemaRegistry";
 
 /**
- * Base class for an environment, which is a distinct collection of resources, primarily Kafka
- * clusters, possible Schema Registry, and perhaps more things in the future such as Flink clusters.
+ * Base class for an environment, which is a distinct group of resources under a single connection:
+ * - {@link KafkaCluster} cluster(s)
+ * - {@link SchemaRegistry}
+ * ...more, in the future.
  */
-export abstract class Environment extends Data {
-  abstract connectionId: string | undefined;
-  abstract readonly isCCloud: boolean;
-  abstract readonly isDirect: boolean;
-  abstract readonly isLocal: boolean;
+export abstract class Environment extends ResourceBase {
+  abstract iconName: IconNames;
 
   id!: Enforced<string>;
   name!: Enforced<string>;
@@ -24,111 +25,85 @@ export abstract class Environment extends Data {
    * CCloud environemts may have neither (yet), but we still want to show
    * them in the tree.
    */
-  abstract hasClusters: boolean;
+  kafkaClusters!: KafkaCluster[];
+  schemaRegistry?: SchemaRegistry | undefined;
 
-  // It would seem natural for the Environment to have a list of clusters,
-  // optional schema registry, and so on, but this hasn't grown to be
-  // the case yet.
+  get hasClusters(): boolean {
+    return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
+  }
 }
 
-/** Representation of a group of resources in CCLoud */
+/** A Confluent Cloud {@link Environment} with additional properties. */
 export class CCloudEnvironment extends Environment {
-  readonly connectionId: string = CCLOUD_CONNECTION_ID;
-  readonly isCCloud: boolean = true;
-  readonly isDirect: boolean = false;
-  readonly isLocal: boolean = false;
+  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
+  readonly connectionType: ConnectionType = "CCLOUD";
+  readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
   streamGovernancePackage!: Enforced<string>;
-  hasClusters!: Enforced<boolean>;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
   }
 }
 
-/** Representation of a "direct" connection to a Kafka cluster and/or Schema Registry */
+/**
+ * A "direct" connection's {@link Environment}, which can have at most:
+ * - one {@link KafkaCluster}
+ * - one {@link SchemaRegistry}
+ */
 export class DirectEnvironment extends Environment {
-  readonly isCCloud: boolean = false;
-  readonly isDirect: boolean = true;
-  readonly isLocal: boolean = false;
-
-  connectionId!: Enforced<string>; // dynamically assigned at connection creation time
-  id: Enforced<string> = this.connectionId;
-
-  kafkaCluster?: DirectKafkaCluster | undefined;
-  schemaRegistry?: DirectSchemaRegistry | undefined;
-
-  // we only get `DIRECT` back from the GQL query but should change this based on what the user chose
-  connectionType?: string;
-
-  get hasClusters(): boolean {
-    return !!(this.kafkaCluster || this.schemaRegistry);
-  }
+  // connectionId is set dynamically at creation time
+  connectionType: ConnectionType = "DIRECT";
+  // TODO: update this based on feedback from product+design
+  readonly iconName = IconNames.EXPERIMENTAL;
 }
 
-/** Class representing the local / Docker resource group. */
+/** A "local" {@link Environment} manageable by the extension via Docker. */
 export class LocalEnvironment extends Environment {
-  readonly connectionId: string = LOCAL_CONNECTION_ID;
-  readonly isCCloud: boolean = false;
-  readonly isDirect: boolean = false;
-  readonly isLocal: boolean = true;
-
-  // If we have a local connection, we have at least one Kafka cluster.
-  readonly hasClusters: boolean = true;
+  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
+  readonly connectionType: ConnectionType = "LOCAL";
+  readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 }
 
-// Tree item representing one of the above Environment subclasses
-// TODO: update this for LocalEnvironment
-export class EnvironmentTreeItem extends vscode.TreeItem {
-  resource: CCloudEnvironment | DirectEnvironment;
+/** The representation of an {@link Environment} as a {@link TreeItem} in the VS Code UI. */
+export class EnvironmentTreeItem extends TreeItem {
+  resource: Environment;
 
-  constructor(resource: CCloudEnvironment | DirectEnvironment) {
+  constructor(resource: Environment) {
     // If has interior clusters, is collapsed and can be expanded.
     const collapseState = resource.hasClusters
-      ? vscode.TreeItemCollapsibleState.Collapsed
-      : vscode.TreeItemCollapsibleState.None;
+      ? TreeItemCollapsibleState.Collapsed
+      : TreeItemCollapsibleState.None;
 
     super(resource.name, collapseState);
 
     // internal properties
     this.resource = resource;
-    if (this.resource.isCCloud) {
-      this.contextValue = "ccloud-environment";
-    } else if (this.resource.isDirect) {
-      this.contextValue = "direct-environment";
-    }
+    this.contextValue = `${this.resource.contextPrefix}-environment`;
 
     // user-facing properties
     this.description = this.resource.id;
-    // TODO: figure out an icon for Local/Direct?
-    this.iconPath = new vscode.ThemeIcon(IconNames.CCLOUD_ENVIRONMENT);
+    this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
 }
 
-function createEnvironmentTooltip(
-  resource: CCloudEnvironment | DirectEnvironment,
-): vscode.MarkdownString {
-  const tooltip = new CustomMarkdownString();
+function createEnvironmentTooltip(resource: Environment): MarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .appendMarkdown(`#### $(${resource.iconName}) Environment`)
+    .appendMarkdown("\n\n---\n\n")
+    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
+    .appendMarkdown(`Name: \`${resource.name}\`\n\n`);
+
   if (resource.isCCloud) {
     const ccloudEnv = resource as CCloudEnvironment;
     tooltip
-      .appendMarkdown(`#### $(${IconNames.CCLOUD_ENVIRONMENT}) Confluent Cloud Environment`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${ccloudEnv.id}\`\n\n`)
-      .appendMarkdown(`Name: \`${ccloudEnv.name}\`\n\n`)
       .appendMarkdown(`Stream Governance Package: \`${ccloudEnv.streamGovernancePackage}\``)
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(
         `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
       );
-  } else if (resource.isDirect) {
-    const directEnv = resource as DirectEnvironment;
-    tooltip
-      .appendMarkdown(`#### $(${IconNames.CONFLUENT_LOGO}) Direct Connection`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${directEnv.id}\`\n\n`)
-      .appendMarkdown(`Name: \`${directEnv.name}\``);
   }
+
   return tooltip;
 }
