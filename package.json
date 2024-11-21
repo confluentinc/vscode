@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.22.0-22",
+  "version": "0.22.0-24",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -60,7 +60,8 @@
       },
       {
         "command": "confluent.connections.direct",
-        "title": "Direct connection",
+        "title": "Add New Connection",
+        "icon": "$(plug)",
         "category": "Confluent: Connections"
       },
       {
@@ -298,6 +299,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.edit",
+        "title": "Configure Topic",
+        "category": "Confluent: Topics"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -464,7 +470,7 @@
         },
         {
           "command": "confluent.connections.direct",
-          "when": "false"
+          "when": "confluent.directConnectionsEnabled"
         },
         {
           "command": "confluent.copyOrganizationId",
@@ -543,6 +549,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.edit",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
@@ -599,9 +609,14 @@
       ],
       "view/title": [
         {
+          "command": "confluent.connections.direct",
+          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.schema-registry.select",
@@ -743,6 +758,11 @@
         {
           "command": "confluent.topics.delete",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
+          "group": "topics"
+        },
+        {
+          "command": "confluent.topics.edit",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzAlterConfigs.*/",
           "group": "topics"
         },
         {

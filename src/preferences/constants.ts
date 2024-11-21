@@ -24,3 +24,5 @@ export const LOCAL_KAFKA_IMAGE = prefix + "localDocker.kafkaImageRepo";
 export const LOCAL_KAFKA_IMAGE_TAG = prefix + "localDocker.kafkaImageTag";
 export const LOCAL_SCHEMA_REGISTRY_IMAGE = prefix + "localDocker.schemaRegistryImageRepo";
 export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = prefix + "localDocker.schemaRegistryImageTag";
+
+export const ENABLE_DIRECT_CONNECTIONS = prefix + "experimental.enableDirectConnections";
