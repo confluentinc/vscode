@@ -1,21 +1,20 @@
-import { Data, type Require as Enforced } from "dataclass";
-import * as vscode from "vscode";
+import { type Require as Enforced } from "dataclass";
+import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { KafkaCluster } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
+import { ConnectionId, ResourceBase } from "./resource";
+import { SchemaRegistry } from "./schemaRegistry";
 
 /**
- * Base class between local and ccloud environments, and possibly
- * direct connections in the future.
- *
- * An environment is a distinct collection of resources, namely
- * Kafka clusters, a possible Schema Registry, and perhaps more
- * things in the future such as Flink clusters.
- *
+ * Base class for an environment, which is a distinct group of resources under a single connection:
+ * - {@link KafkaCluster} cluster(s)
+ * - {@link SchemaRegistry}
+ * ...more, in the future.
  */
-export abstract class Environment extends Data {
-  abstract readonly connectionId: string;
-  abstract readonly isLocal: boolean;
-  abstract readonly isCCloud: boolean;
+export abstract class Environment extends ResourceBase {
+  abstract iconName: IconNames;
 
   id!: Enforced<string>;
   name!: Enforced<string>;
@@ -26,70 +25,85 @@ export abstract class Environment extends Data {
    * CCloud environemts may have neither (yet), but we still want to show
    * them in the tree.
    */
-  abstract hasClusters: boolean;
+  kafkaClusters!: KafkaCluster[];
+  schemaRegistry?: SchemaRegistry | undefined;
 
-  // It would seem natural for the Environment to have a list of clusters,
-  // optional schema registry, and so on, but this hasn't grown to be
-  // the case yet.
+  get hasClusters(): boolean {
+    return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
+  }
 }
 
-/** Representation of a group of resources in CCLoud */
+/** A Confluent Cloud {@link Environment} with additional properties. */
 export class CCloudEnvironment extends Environment {
-  readonly connectionId: string = CCLOUD_CONNECTION_ID;
-  readonly isLocal: boolean = false;
-  readonly isCCloud: boolean = true;
+  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
+  readonly connectionType: ConnectionType = "CCLOUD";
+  readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
   streamGovernancePackage!: Enforced<string>;
-  hasClusters!: Enforced<boolean>;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
   }
 }
 
-/** Class representing the local / Docker resource group. */
-export class LocalEnvironment extends Environment {
-  readonly connectionId: string = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
-
-  // If we have a local connection, we have at least one Kafka cluster.
-  readonly hasClusters: boolean = true;
+/**
+ * A "direct" connection's {@link Environment}, which can have at most:
+ * - one {@link KafkaCluster}
+ * - one {@link SchemaRegistry}
+ */
+export class DirectEnvironment extends Environment {
+  // connectionId is set dynamically at creation time
+  connectionType: ConnectionType = "DIRECT";
+  // TODO: update this based on feedback from product+design
+  readonly iconName = IconNames.EXPERIMENTAL;
 }
 
-// Tree item representing a CCloud environment on top an instance of CloudEnvironment
-export class CCloudEnvironmentTreeItem extends vscode.TreeItem {
-  resource: CCloudEnvironment;
+/** A "local" {@link Environment} manageable by the extension via Docker. */
+export class LocalEnvironment extends Environment {
+  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
+  readonly connectionType: ConnectionType = "LOCAL";
+  readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
+}
 
-  constructor(resource: CCloudEnvironment) {
+/** The representation of an {@link Environment} as a {@link TreeItem} in the VS Code UI. */
+export class EnvironmentTreeItem extends TreeItem {
+  resource: Environment;
+
+  constructor(resource: Environment) {
     // If has interior clusters, is collapsed and can be expanded.
     const collapseState = resource.hasClusters
-      ? vscode.TreeItemCollapsibleState.Collapsed
-      : vscode.TreeItemCollapsibleState.None;
+      ? TreeItemCollapsibleState.Collapsed
+      : TreeItemCollapsibleState.None;
 
     super(resource.name, collapseState);
 
     // internal properties
     this.resource = resource;
-    this.contextValue = "ccloud-environment";
+    this.contextValue = `${this.resource.contextPrefix}-environment`;
 
     // user-facing properties
     this.description = this.resource.id;
-    this.iconPath = new vscode.ThemeIcon(IconNames.CCLOUD_ENVIRONMENT);
+    this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
 }
 
-function createEnvironmentTooltip(resource: CCloudEnvironment): vscode.MarkdownString {
+function createEnvironmentTooltip(resource: Environment): MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${IconNames.CCLOUD_ENVIRONMENT}) Confluent Cloud Environment`)
+    .appendMarkdown(`#### $(${resource.iconName}) Environment`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
-    .appendMarkdown(`Name: \`${resource.name}\`\n\n`)
-    .appendMarkdown(`Stream Governance Package: \`${resource.streamGovernancePackage}\``)
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(
-      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
-    );
+    .appendMarkdown(`Name: \`${resource.name}\`\n\n`);
+
+  if (resource.isCCloud) {
+    const ccloudEnv = resource as CCloudEnvironment;
+    tooltip
+      .appendMarkdown(`Stream Governance Package: \`${ccloudEnv.streamGovernancePackage}\``)
+      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(
+        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
+      );
+  }
+
   return tooltip;
 }

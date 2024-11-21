@@ -14,7 +14,7 @@ import {
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
-import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
+import { CCloudEnvironment, EnvironmentTreeItem } from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
@@ -31,7 +31,7 @@ describe("ResourceViewProvider methods", () => {
 
   it("getTreeItem() should return a CCloudEnvironmentTreeItem for a CCloudEnvironment instance", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT);
-    assert.ok(treeItem instanceof CCloudEnvironmentTreeItem);
+    assert.ok(treeItem instanceof EnvironmentTreeItem);
   });
 
   it("getTreeItem() should return a KafkaClusterTreeItem for a LocalKafkaCluster instance", () => {
