@@ -75,7 +75,7 @@ export async function kafkaClusterQuickPick(
       .showInformationMessage("No Kafka clusters available.", login, local)
       .then((selected) => {
         if (selected === login) {
-          vscode.commands.executeCommand("confluent.connections.create");
+          vscode.commands.executeCommand("confluent.connections.ccloud.logIn");
         } else if (selected === local) {
           vscode.commands.executeCommand("confluent.docker.startLocalResources");
         }
