@@ -4,7 +4,7 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
-import { CCLOUD_AUTH_STATUS_KEY } from "../storage/constants";
+import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { SIDECAR_CONNECTION_ID_HEADER } from "./constants";
 
@@ -194,7 +194,7 @@ export class CCloudAuthStatusMiddleware implements Middleware {
       const secretSubscriber: vscode.Disposable = getExtensionContext().secrets.onDidChange(
         async ({ key }: vscode.SecretStorageChangeEvent) => {
           // any change (other status or the "secret" being deleted entirely) will resolve and unblock requests
-          if (key === CCLOUD_AUTH_STATUS_KEY) {
+          if (key === SecretStorageKeys.CCLOUD_AUTH_STATUS) {
             secretSubscriber.dispose();
             resolve(void 0);
           }

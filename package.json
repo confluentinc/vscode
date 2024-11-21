@@ -60,7 +60,8 @@
       },
       {
         "command": "confluent.connections.direct",
-        "title": "Direct connection",
+        "title": "Add New Connection",
+        "icon": "$(plug)",
         "category": "Confluent: Connections"
       },
       {
@@ -458,7 +459,7 @@
         },
         {
           "command": "confluent.connections.direct",
-          "when": "false"
+          "when": "confluent.directConnectionsEnabled"
         },
         {
           "command": "confluent.copyOrganizationId",
@@ -589,9 +590,14 @@
       ],
       "view/title": [
         {
+          "command": "confluent.connections.direct",
+          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.schema-registry.select",
