@@ -675,19 +675,10 @@ export class ResourceManager {
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
     if (!connectionsString) {
-      logger.debug("No direct connections found in extension state");
       return new Map<string, ConnectionSpec>();
     }
     const connections: Map<string, ConnectionSpec> = JSON.parse(connectionsString);
     const connectionsById: DirectConnectionsById = new Map(Object.entries(connections));
-    // ensure each value is a ConnectionSpec
-    // for (const [id, connection] of Object.entries(connections)) {
-    //   connectionsById.set(id, { connection } as ConnectionSpec);
-    // }
-    logger.debug(
-      "Direct connections found in extension state:",
-      JSON.stringify(Object.fromEntries(connectionsById)),
-    );
     return connectionsById;
   }
 
