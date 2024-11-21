@@ -139,7 +139,7 @@ class ConfigFormViewModel extends ViewModel {
       if (result.success) {
         this.success(true);
         this.hasChanges(false);
-      } else this.errorOnSubmit(result.message ?? "Unknown error occurred");
+      } else this.errorOnSubmit(result.message ?? "An unexpected error occurred");
     }
   }
 }
