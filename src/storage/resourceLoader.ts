@@ -36,7 +36,7 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   // Map of connectionId to ResourceLoader instance.
-  static registry: Map<string, ResourceLoader> = new Map();
+  private static registry: Map<string, ResourceLoader> = new Map();
 
   public static registerInstance(connectionId: ConnectionId, loader: ResourceLoader): void {
     ResourceLoader.registry.set(connectionId, loader);
@@ -44,6 +44,10 @@ export abstract class ResourceLoader implements IResourceBase {
 
   public static deregisterInstance(connectionId: ConnectionId): void {
     ResourceLoader.registry.delete(connectionId);
+  }
+
+  static loaders(): ResourceLoader[] {
+    return Array.from(ResourceLoader.registry.values());
   }
 
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
@@ -211,9 +215,7 @@ export function correlateTopicsWithSchemas(
  * Deep read and return of all schemas in a CCloud or local environment's Schema Registry.
  * Does not store into the resource manager.
  *
- * @param schemaRegistryId The Schema Registry ID to fetch schemas from (within the environment).
- * @param connectionId The connection ID to use to fetch schemas.
- * @param environmentId Optional: the CCloud environment ID to associate CCloud schemas with.
+ * @param schemaRegistry The Schema Registry to fetch schemas from.
  * @returns An array of all the schemas in the environment's Schema Registry.
  */
 export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
