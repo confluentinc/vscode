@@ -27,6 +27,24 @@ export interface ProduceRequestData {
   type?: string;
   /**
    *
+   * @type {string}
+   * @memberof ProduceRequestData
+   */
+  subject?: string | null;
+  /**
+   *
+   * @type {string}
+   * @memberof ProduceRequestData
+   */
+  subject_name_strategy?: string | null;
+  /**
+   *
+   * @type {number}
+   * @memberof ProduceRequestData
+   */
+  schema_version?: number | null;
+  /**
+   *
    * @type {any}
    * @memberof ProduceRequestData
    */
@@ -53,6 +71,10 @@ export function ProduceRequestDataFromJSONTyped(
   }
   return {
     type: json["type"] == null ? undefined : json["type"],
+    subject: json["subject"] == null ? undefined : json["subject"],
+    subject_name_strategy:
+      json["subject_name_strategy"] == null ? undefined : json["subject_name_strategy"],
+    schema_version: json["schema_version"] == null ? undefined : json["schema_version"],
     data: json["data"] == null ? undefined : json["data"],
   };
 }
@@ -63,6 +85,9 @@ export function ProduceRequestDataToJSON(value?: ProduceRequestData | null): any
   }
   return {
     type: value["type"],
+    subject: value["subject"],
+    subject_name_strategy: value["subject_name_strategy"],
+    schema_version: value["schema_version"],
     data: value["data"],
   };
 }
