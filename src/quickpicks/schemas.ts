@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { getConnectionLabel } from "../models/resource";
 import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
@@ -50,7 +51,7 @@ export async function schemaSubjectQuickPick(
     {
       kind: vscode.QuickPickItemKind.Separator,
       // TODO: Perhaps also mix in the 'environment' name here, esp. if ccloud-y or in future direct connect?
-      label: loader.kind,
+      label: getConnectionLabel(loader.connectionType),
     },
   ];
 
