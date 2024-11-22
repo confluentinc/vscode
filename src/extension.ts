@@ -267,6 +267,7 @@ async function setupContextValues() {
     // topics also have names, but their context values vary wildly and must be regex-matched
   ]);
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
+    "ccloud-kafka-cluster",
     "ccloud-schema-registry",
     "local-kafka-cluster",
     "local-schema-registry",
