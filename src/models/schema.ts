@@ -84,17 +84,17 @@ export class SchemaTreeItem extends vscode.TreeItem {
 
 function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${IconNames.SCHEMA}) Schema`)
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
-    .appendMarkdown(`Subject: \`${resource.subject}\`\n\n`)
-    .appendMarkdown(`Version: \`${resource.version}\`\n\n`)
-    .appendMarkdown(`Type: \`${resource.type}\``);
+    .appendMarkdown(`#### $(${resource.iconName}) Schema`)
+    .appendMarkdown("\n\n---")
+    .appendMarkdown(`\n\nID: \`${resource.id}\``)
+    .appendMarkdown(`\n\nSubject: \`${resource.subject}\``)
+    .appendMarkdown(`\n\nVersion: \`${resource.version}\``)
+    .appendMarkdown(`\n\nType: \`${resource.type}\``);
   if (isCCloud(resource)) {
     tooltip
-      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown("\n\n---")
       .appendMarkdown(
-        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
       );
   }
   return tooltip;

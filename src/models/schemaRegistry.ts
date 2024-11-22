@@ -67,18 +67,18 @@ export class SchemaRegistryTreeItem extends TreeItem {
 // todo easy peasy make this a method of SchemaRegistry family.
 function createSchemaRegistryTooltip(resource: SchemaRegistry): MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Schema Registry`)
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
-    .appendMarkdown(`URI: \`${resource.uri}\``);
+    .appendMarkdown(`#### $(${resource.iconName}) Schema Registry`)
+    .appendMarkdown("\n\n---")
+    .appendMarkdown(`\n\nID: \`${resource.id}\``)
+    .appendMarkdown(`\n\nURI: \`${resource.uri}\``);
   if (isCCloud(resource)) {
     const ccloudSchemaRegistry = resource as CCloudSchemaRegistry;
     tooltip
-      .appendMarkdown(`Provider: \`${ccloudSchemaRegistry.provider}\`\n\n`)
-      .appendMarkdown(`Region: \`${ccloudSchemaRegistry.region}\`\n\n`)
-      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`\n\nProvider: \`${ccloudSchemaRegistry.provider}\``)
+      .appendMarkdown(`\n\nRegion: \`${ccloudSchemaRegistry.region}\``)
+      .appendMarkdown("\n\n---")
       .appendMarkdown(
-        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudSchemaRegistry.ccloudUrl})`,
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudSchemaRegistry.ccloudUrl})`,
       );
   }
   return tooltip;
