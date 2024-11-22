@@ -1,4 +1,5 @@
 import { TopicData } from "../clients/kafkaRest";
+import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
@@ -12,7 +13,6 @@ import {
   fetchSchemas,
   fetchTopics,
   ResourceLoader,
-  ResourceLoaderType,
 } from "./resourceLoader";
 
 const logger = new Logger("storage.directResourceLoader");
@@ -24,17 +24,19 @@ const logger = new Logger("storage.directResourceLoader");
  * {@link DirectResourceLoader} keeps track of its own {@link ConnectionId} and is not a singleton.
  */
 export class DirectResourceLoader extends ResourceLoader {
-  kind = ResourceLoaderType.Direct;
+  connectionId: ConnectionId;
+  connectionType = ConnectionType.Direct;
 
   // non-singleton since we have to manager per-connection loading
-  constructor(public id: ConnectionId) {
+  constructor(id: ConnectionId) {
     super();
+    this.connectionId = id;
   }
 
   async getEnvironments(): Promise<DirectEnvironment[]> {
     const envs: DirectEnvironment[] = await getDirectResources();
     // should only return an array of one DirectEnvironment
-    return envs.filter((env) => env.connectionId === this.id);
+    return envs.filter((env) => env.connectionId === this.connectionId);
   }
 
   async getKafkaClustersForEnvironmentId(environmentId: string): Promise<DirectKafkaCluster[]> {

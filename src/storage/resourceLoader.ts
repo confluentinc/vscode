@@ -2,20 +2,14 @@ import { Disposable } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
+import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, IResourceBase } from "../models/resource";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
-
-/** Human readable characterization of the backing connection type used to load resources. */
-export enum ResourceLoaderType {
-  CCloud = "Confluent Cloud",
-  Local = "Local",
-  Direct = "Direct",
-}
 
 /**
  * Class family for dealing with loading (and perhaps caching) information
@@ -24,12 +18,11 @@ export enum ResourceLoaderType {
  * API to make things simple and consistent across CCloud, local, or direct
  * connection clusters.
  */
-export abstract class ResourceLoader {
-  /**
-   * What kind of resources does this loader manage? Human readable string, often
-   * used by quickpick separator labels.
-   */
-  public abstract kind: ResourceLoaderType;
+export abstract class ResourceLoader implements IResourceBase {
+  /** The connectionId for this resource loader. */
+  public abstract connectionId: ConnectionId;
+  /** The parent connectionType for this resource loader. */
+  public abstract connectionType: ConnectionType;
 
   /** Disposables belonging to all instances of ResourceLoader to be added to the extension
    * context during activation, cleaned up on extension deactivation.
