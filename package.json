@@ -672,7 +672,7 @@
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
           "group": "2_copy@2"
         },
         {
@@ -742,17 +742,17 @@
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
-          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
+          "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
           "group": "2_copy@3"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem == ccloud-schema",
+          "when": "view == confluent-schemas && viewItem == schema",
           "group": "4_copy@1"
         },
         {
           "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem == ccloud-schema",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema/",
           "group": "inline@1"
         },
         {
