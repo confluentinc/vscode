@@ -5,6 +5,7 @@ import { ConnectionSpec, Status } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { isCCloud, isLocal } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -277,11 +278,13 @@ export class ResourceManager {
 
   /** Get the cluster for this topic. May return either a ccloud or local cluster */
   async getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | null> {
-    if (topic.isLocalTopic()) {
+    if (isLocal(topic)) {
       return this.getLocalKafkaCluster(topic.clusterId);
-    } else {
+    } else if (isCCloud(topic)) {
       return this.getCCloudKafkaCluster(topic.environmentId!, topic.clusterId);
     }
+    // TODO(shoup): add isDirect() check here?
+    return null;
   }
 
   // SCHEMA REGISTRY
