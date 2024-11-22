@@ -57,7 +57,9 @@ export class LocalKafkaCluster extends KafkaCluster {
 
   name!: Enforced<string>;
 
-  readonly environmentId: undefined = undefined;
+  get environmentId(): string {
+    return this.connectionId;
+  }
 }
 
 /** The representation of a {@link KafkaCluster} as a {@link TreeItem} in the VS Code UI. */

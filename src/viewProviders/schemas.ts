@@ -10,11 +10,10 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
-import { isCCloud, isDirect, isLocal } from "../models/resource";
+import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.schemas");
 
@@ -157,18 +156,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         } else {
           setContextValue(ContextValues.schemaRegistrySelected, true);
           this.schemaRegistry = schemaRegistry;
-          // update the tree view title to show the currently focused Schema Registry and repopulate the tree
-          if (isLocal(this.schemaRegistry)) {
-            // just show "Local" since we don't have a name for the local SR instance
-            this.treeView.description = "Local";
-          } else if (isCCloud(this.schemaRegistry)) {
-            const environment: Environment | null = await getResourceManager().getCCloudEnvironment(
-              (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
-            );
-            this.environment = environment;
-            this.treeView.description = `${this.environment!.name} | ${this.schemaRegistry.id}`;
-          } else if (isDirect(this.schemaRegistry)) {
-            // TODO: look this up
+          // update the tree view description to show the currently-focused Schema Registry's parent
+          // env name and the Schema Registry ID, then repopulate the tree
+          const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
+          const envs = await loader.getEnvironments();
+          const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
+          this.environment = parentEnv ?? null;
+          if (parentEnv) {
+            this.treeView.description = `${parentEnv.name} | ${schemaRegistry.id}`;
+          } else {
+            this.treeView.description = schemaRegistry.id;
           }
           this.refresh();
         }

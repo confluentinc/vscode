@@ -1,18 +1,16 @@
 import * as vscode from "vscode";
-import { ConnectionSpec } from "../clients/sidecar";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { Environment } from "../models/environment";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { isCCloud, isDirect, isLocal } from "../models/resource";
+import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -50,6 +48,8 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   }
 
   private treeView: vscode.TreeView<TopicViewProviderData>;
+  /** The parent of the focused Kafka cluster.  */
+  public environment: Environment | null = null;
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
   public kafkaCluster: KafkaCluster | null = null;
 
@@ -161,20 +161,19 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         } else {
           setContextValue(ContextValues.kafkaClusterSelected, true);
           this.kafkaCluster = cluster;
-          // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
-          if (isLocal(cluster)) {
-            // just show "Local" since we don't have a name for the local cluster(s)
-            this.treeView.description = "Local";
-          } else if (isCCloud(cluster)) {
-            const parentEnvironment: CCloudEnvironment | null =
-              await getResourceManager().getCCloudEnvironment(
-                (this.kafkaCluster as CCloudKafkaCluster).environmentId,
-              );
-            this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
-          } else if (isDirect(cluster)) {
-            const parentConnection: ConnectionSpec | null =
-              await getResourceManager().getDirectConnection(cluster.connectionId);
-            this.treeView.description = `${parentConnection?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
+          // update the tree view description to show the currently-focused Kafka cluster's parent
+          // env name and the Schema Registry ID, then repopulate the tree
+          const loader = ResourceLoader.getInstance(cluster.connectionId);
+          const envs = await loader.getEnvironments();
+          const parentEnv = envs.find((env) => env.id === cluster.environmentId);
+          this.environment = parentEnv ?? null;
+          if (parentEnv) {
+            this.treeView.description = `${parentEnv.name} | ${cluster.name}`;
+          } else {
+            logger.warn("couldn't find parent environment for Kafka cluster", {
+              cluster,
+            });
+            this.treeView.description = cluster.id;
           }
           this.refresh();
         }
