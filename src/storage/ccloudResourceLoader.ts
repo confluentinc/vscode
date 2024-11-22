@@ -1,6 +1,8 @@
 import { Disposable } from "vscode";
 
 import { TopicData } from "../clients/kafkaRest/models";
+import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
@@ -15,7 +17,6 @@ import {
   fetchSchemas,
   fetchTopics,
   ResourceLoader,
-  ResourceLoaderType,
 } from "./resourceLoader";
 import { getResourceManager } from "./resourceManager";
 
@@ -37,7 +38,8 @@ const logger = new Logger("storage.ccloudResourceLoader");
  * this is considered a 'fine grained resource' and is not loaded until requested.
  */
 export class CCloudResourceLoader extends ResourceLoader {
-  kind = ResourceLoaderType.CCloud;
+  connectionId = CCLOUD_CONNECTION_ID;
+  connectionType = ConnectionType.Ccloud;
 
   private static instance: CCloudResourceLoader | null = null;
 
@@ -115,7 +117,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     // If caller requested a deep refresh, reset the loader's state so that we fall through to
     // re-fetching the coarse resources.
     if (forceDeepRefresh) {
-      logger.debug(`Deep refreshing ${this.kind} resources.`);
+      logger.debug(`Deep refreshing ${this.connectionType} resources.`);
       this.reset();
       this.deleteCoarseResources();
     }
