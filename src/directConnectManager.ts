@@ -24,7 +24,7 @@ import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { getResourceViewProvider } from "./viewProviders/resources";
 
-const logger = new Logger("direct");
+const logger = new Logger("directConnectManager");
 
 /**
  * Singleton class responsible for the following:
@@ -163,7 +163,7 @@ export class DirectConnectionManager {
       (connection: Connection) => connection.spec.type === ConnectionType.Direct,
     );
     logger.debug(
-      `looked up existing direct connections -> sidecar: ${sidecarDirectConnections.length}, stored: ${Object.keys(storedConnections).length}`,
+      `looked up existing direct connections -> sidecar: ${sidecarDirectConnections.length}, stored: ${Array.from(storedConnections.entries()).length}`,
     );
 
     // if there are any stored connections that the sidecar doesn't know about, create them
