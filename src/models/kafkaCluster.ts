@@ -92,22 +92,24 @@ export class KafkaClusterTreeItem extends TreeItem {
 function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${resource.iconName}) Kafka Cluster`)
-    .appendMarkdown("\n\n---\n\n");
+    .appendMarkdown("\n\n---");
   if (resource.name) {
-    tooltip.appendMarkdown(`Name: \`${resource.name}\`\n\n`);
+    tooltip.appendMarkdown(`\n\nName: \`${resource.name}\``);
   }
   tooltip
-    .appendMarkdown(`ID: \`${resource.id}\`\n\n`) // TODO: remove this?
-    .appendMarkdown(`Bootstrap Servers: \`${resource.bootstrapServers}\``)
-    .appendMarkdown(`URI: \`${resource.uri}\``);
+    .appendMarkdown(`\n\nID: \`${resource.id}\``) // TODO: remove this?
+    .appendMarkdown(`\n\nBootstrap Servers: \`${resource.bootstrapServers}\``);
+  if (resource.uri) {
+    tooltip.appendMarkdown(`\n\nURI: \`${resource.uri}\``);
+  }
   if (isCCloud(resource)) {
     const ccloudCluster = resource as CCloudKafkaCluster;
     tooltip
-      .appendMarkdown(`Provider: \`${ccloudCluster.provider}\`\n\n`)
-      .appendMarkdown(`Region: \`${ccloudCluster.region}\`\n\n`)
-      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`\n\nProvider: \`${ccloudCluster.provider}\``)
+      .appendMarkdown(`\n\nRegion: \`${ccloudCluster.region}\``)
+      .appendMarkdown("\n\n---")
       .appendMarkdown(
-        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
       );
   }
   return tooltip;
