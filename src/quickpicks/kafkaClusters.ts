@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { ContextValues, getContextValue } from "../context/values";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
@@ -10,7 +10,7 @@ const logger = new Logger("quickpicks.kafkaClusters");
 
 /** Wrapper for the Kafka Cluster quickpick to accomodate data-fetching time and display a progress indicator on the Topics view. */
 export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaCluster | undefined> {
-  return await vscode.window.withProgress(
+  return await window.withProgress(
     {
       location: { viewId: "confluent-topics" },
       title: "Loading Kafka clusters...",
@@ -42,6 +42,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
   const kafkaClusters: KafkaCluster[] = [];
   const clusterIdMap: Map<string, KafkaCluster> = new Map();
 
+  // TODO: enforce ordering between CCloud loader, Local loader, and Direct loaders?
   for (const loader of ResourceLoader.registry.values()) {
     const envs: Environment[] = await loader.getEnvironments();
     environments.push(...envs);
@@ -63,18 +64,16 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
       login = "Log in to Confluent Cloud";
     }
     if (!getContextValue(ContextValues.localKafkaClusterAvailable)) {
-      local = "Start Local Resources.";
+      local = "Start Local Resources";
     }
     // TODO: offer button for creating a direct connection?
-    vscode.window
-      .showInformationMessage("No Kafka clusters available.", login, local)
-      .then((selected) => {
-        if (selected === login) {
-          vscode.commands.executeCommand("confluent.connections.ccloud.logIn");
-        } else if (selected === local) {
-          vscode.commands.executeCommand("confluent.docker.startLocalResources");
-        }
-      });
+    window.showInformationMessage("No Kafka clusters available.", login, local).then((selected) => {
+      if (selected === login) {
+        commands.executeCommand("confluent.connections.ccloud.logIn");
+      } else if (selected === local) {
+        commands.executeCommand("confluent.docker.startLocalResources");
+      }
+    });
     return;
   }
 
@@ -86,7 +85,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
 
   // convert all available Kafka Clusters to quick pick items and keep track of the last env name
   // used for the separators
-  const clusterItems: vscode.QuickPickItem[] = [];
+  const clusterItems: QuickPickItem[] = [];
 
   let lastSeparator: string = "";
   for (const cluster of kafkaClusters) {
@@ -107,7 +106,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
           ? connectionLabel
           : `${connectionLabel}: ${environment.name}`;
       clusterItems.push({
-        kind: vscode.QuickPickItemKind.Separator,
+        kind: QuickPickItemKind.Separator,
         label: separatorLabel,
       });
       lastSeparator = separatorLabel;
@@ -115,17 +114,14 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     clusterItems.push({
       label: cluster.name,
       description: cluster.id,
-      iconPath: new vscode.ThemeIcon(cluster.iconName),
+      iconPath: new ThemeIcon(cluster.iconName),
     });
   }
 
   // prompt the user to select a Kafka Cluster
-  const chosenClusterItem: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
-    clusterItems,
-    {
-      placeHolder: "Select a Kafka cluster",
-      ignoreFocusOut: true,
-    },
-  );
+  const chosenClusterItem: QuickPickItem | undefined = await window.showQuickPick(clusterItems, {
+    placeHolder: "Select a Kafka cluster",
+    ignoreFocusOut: true,
+  });
   return chosenClusterItem ? clusterIdMap.get(chosenClusterItem.description!) : undefined;
 }
