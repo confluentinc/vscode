@@ -19,7 +19,7 @@ import reports from "istanbul-reports";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { appendFile, readFile, unlink, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
@@ -668,6 +668,8 @@ export async function apigen() {
     .map(([key, value]) => `${key}=${value}`)
     .join(",");
 
+  const format = await prettier();
+
   for (const [spec, path] of clients) {
     // other client generator types: https://openapi-generator.tech/docs/generators#client-generators
     const result = spawnSync(
@@ -688,6 +690,12 @@ export async function apigen() {
         stdio: "inherit",
         shell: IS_WINDOWS,
       },
+    );
+    // apply prettier formatting to generated code
+    await pipeline(
+      src(join(path, "**", "*.ts")),
+      format,
+      dest((file) => file.base),
     );
     if (result.error) throw result.error;
     if (result.status !== 0) throw new Error(`Failed to generate client for ${spec}`);
