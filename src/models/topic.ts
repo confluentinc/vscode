@@ -100,34 +100,34 @@ function createKafkaTopicTooltip(
   resource: KafkaTopic,
   missingAuthz: KafkaTopicOperation[],
 ): vscode.MarkdownString {
-  const tooltip = new CustomMarkdownString();
   const iconName = resource.hasSchema ? IconNames.TOPIC : IconNames.TOPIC_WITHOUT_SCHEMA;
-  tooltip
+
+  const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${iconName}) Kafka Topic`)
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`Name: \`${resource.name}\`\n\n`)
-    .appendMarkdown(`Replication Factor: \`${resource.replication_factor}\`\n\n`)
-    .appendMarkdown(`Partition Count: \`${resource.partition_count}\`\n\n`)
-    .appendMarkdown(`Internal: \`${resource.is_internal}\`\n\n`);
+    .appendMarkdown("\n\n---")
+    .appendMarkdown(`\n\nName: \`${resource.name}\``)
+    .appendMarkdown(`\n\nReplication Factor: \`${resource.replication_factor}\``)
+    .appendMarkdown(`\n\nPartition Count: \`${resource.partition_count}\``)
+    .appendMarkdown(`\n\nInternal: \`${resource.is_internal}\``);
 
   if (!resource.hasSchema) {
     tooltip
-      .appendMarkdown("---\n\n")
-      .appendMarkdown("$(warning) No schema(s) found for topic.\n\n");
+      .appendMarkdown("\n\n---")
+      .appendMarkdown("\n\n$(warning) No schema(s) found for topic.");
   }
 
   // list any missing authorized operations
   if (missingAuthz.length > 0) {
     tooltip
-      .appendMarkdown("---\n\n")
-      .appendMarkdown("$(warning) Missing authorization for the following actions:\n\n");
+      .appendMarkdown("\n\n---")
+      .appendMarkdown("\n\n$(warning) Missing authorization for the following actions:");
     missingAuthz.forEach((op) => tooltip.appendMarkdown(` - ${op}\n`));
   }
 
   if (isCCloud(resource)) {
-    tooltip.appendMarkdown("---\n\n");
+    tooltip.appendMarkdown("\n\n---");
     tooltip.appendMarkdown(
-      `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+      `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
     );
   }
 

@@ -127,16 +127,16 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
     resource.connectionType === ConnectionType.Direct ? "Connection" : "Environment";
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${resource.iconName}) ${resourceLabel}`)
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
-    .appendMarkdown(`Name: \`${resource.name}\`\n\n`);
+    .appendMarkdown("\n\n---")
+    .appendMarkdown(`\n\nID: \`${resource.id}\``)
+    .appendMarkdown(`\n\nName: \`${resource.name}\``);
   if (isCCloud(resource)) {
     const ccloudEnv = resource as CCloudEnvironment;
     tooltip
-      .appendMarkdown(`Stream Governance Package: \`${ccloudEnv.streamGovernancePackage}\``)
-      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`\n\nStream Governance Package: \`${ccloudEnv.streamGovernancePackage}\``)
+      .appendMarkdown("\n\n---")
       .appendMarkdown(
-        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
       );
   }
   return tooltip;
