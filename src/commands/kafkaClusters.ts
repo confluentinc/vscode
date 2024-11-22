@@ -4,8 +4,8 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { isLocal } from "../models/resource";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
   kafkaClusterQuickPick,
@@ -112,7 +112,7 @@ async function createTopicCommand(item?: KafkaCluster) {
 
   let cluster: KafkaCluster | undefined;
   // we'll need to know which Kafka cluster to create the topic in, which happens one of three ways:
-  if (item instanceof CCloudKafkaCluster || item instanceof LocalKafkaCluster) {
+  if (item instanceof KafkaCluster) {
     // 1) the user right-clicked a Kafka cluster in the Resources view and we get the associated
     // Kafka cluster as the argument by default
     cluster = item;
@@ -150,7 +150,7 @@ async function createTopicCommand(item?: KafkaCluster) {
   });
 
   // CCloud Kafka clusters will return an error if replication factor is less than 3
-  const defaultReplicationFactor = isLocal(cluster) ? "1" : "3";
+  const defaultReplicationFactor = isCCloud(cluster) ? "3" : "1";
   const replicationFactor: string | undefined = await vscode.window.showInputBox({
     title: title,
     prompt: "Enter replication factor",
