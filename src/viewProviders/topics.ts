@@ -4,13 +4,13 @@ import { ContextValues, setContextValue } from "../context/values";
 import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { Environment } from "../models/environment";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
+import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -48,6 +48,8 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   }
 
   private treeView: vscode.TreeView<TopicViewProviderData>;
+  /** The parent of the focused Kafka cluster.  */
+  public environment: Environment | null = null;
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
   public kafkaCluster: KafkaCluster | null = null;
 
@@ -126,7 +128,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
-      if (this.kafkaCluster?.isCCloud) {
+      if (this.kafkaCluster && isCCloud(this.kafkaCluster)) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
         // a CCloud Kafka Cluster
         logger.debug(
@@ -139,7 +141,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
     const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
       (connected: boolean) => {
-        if (this.kafkaCluster?.isLocal) {
+        if (this.kafkaCluster && isLocal(this.kafkaCluster)) {
           // any transition of local resource availability should reset the tree view if we're focused
           // on a local Kafka cluster
           logger.debug(
@@ -159,16 +161,19 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         } else {
           setContextValue(ContextValues.kafkaClusterSelected, true);
           this.kafkaCluster = cluster;
-          // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
-          if (cluster.isLocal) {
-            // just show "Local" since we don't have a name for the local cluster(s)
-            this.treeView.description = "Local";
+          // update the tree view description to show the currently-focused Kafka cluster's parent
+          // env name and the Schema Registry ID, then repopulate the tree
+          const loader = ResourceLoader.getInstance(cluster.connectionId);
+          const envs = await loader.getEnvironments();
+          const parentEnv = envs.find((env) => env.id === cluster.environmentId);
+          this.environment = parentEnv ?? null;
+          if (parentEnv) {
+            this.treeView.description = `${parentEnv.name} | ${cluster.name}`;
           } else {
-            const parentEnvironment: CCloudEnvironment | null =
-              await getResourceManager().getCCloudEnvironment(
-                (this.kafkaCluster as CCloudKafkaCluster).environmentId,
-              );
-            this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
+            logger.warn("couldn't find parent environment for Kafka cluster", {
+              cluster,
+            });
+            this.treeView.description = cluster.id;
           }
           this.refresh();
         }

@@ -12,9 +12,10 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources/schemaRegistry";
 import { getExtensionContext } from "../../tests/unit/testUtils";
+import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
-import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
+import { CCloudEnvironment, EnvironmentTreeItem, LocalEnvironment } from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
@@ -31,7 +32,7 @@ describe("ResourceViewProvider methods", () => {
 
   it("getTreeItem() should return a CCloudEnvironmentTreeItem for a CCloudEnvironment instance", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT);
-    assert.ok(treeItem instanceof CCloudEnvironmentTreeItem);
+    assert.ok(treeItem instanceof EnvironmentTreeItem);
   });
 
   it("getTreeItem() should return a KafkaClusterTreeItem for a LocalKafkaCluster instance", () => {
@@ -105,11 +106,13 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadLocalResources() should load local resources under the Local container tree item when clusters are discoverable", async () => {
-    const testLocalResourceGroup: local.LocalResourceGroup = {
+    const testLocalEnv: LocalEnvironment = LocalEnvironment.create({
+      id: LOCAL_CONNECTION_ID,
+      name: LOCAL_ENVIRONMENT_NAME,
       kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
       schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
-    };
-    sandbox.stub(local, "getLocalResources").resolves([testLocalResourceGroup]);
+    });
+    sandbox.stub(local, "getLocalResources").resolves([testLocalEnv]);
 
     const result: ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry> =
       await loadLocalResources();
