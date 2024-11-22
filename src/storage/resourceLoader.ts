@@ -1,19 +1,20 @@
-import { Require } from "dataclass";
 import { Disposable } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { Environment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { ConnectionId } from "../models/resource";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
 
-/** Human readable characterization of the backing technology resources were loaded from */
+/** Human readable characterization of the backing connection type used to load resources. */
 export enum ResourceLoaderType {
   CCloud = "Confluent Cloud",
   Local = "Local",
+  Direct = "Direct",
 }
 
 /**
@@ -44,12 +45,16 @@ export abstract class ResourceLoader {
   // Map of connectionId to ResourceLoader instance.
   private static registry: Map<string, ResourceLoader> = new Map();
 
-  public static registerInstance(connectionId: string, loader: ResourceLoader): void {
+  public static registerInstance(connectionId: ConnectionId, loader: ResourceLoader): void {
     ResourceLoader.registry.set(connectionId, loader);
   }
 
+  public static deregisterInstance(connectionId: ConnectionId): void {
+    ResourceLoader.registry.delete(connectionId);
+  }
+
   /** Get the ResourceLoader subclass instance corresponding to the given connectionId */
-  public static getInstance(connectionId: string): ResourceLoader {
+  public static getInstance(connectionId: ConnectionId): ResourceLoader {
     const loader = ResourceLoader.registry.get(connectionId);
     if (loader) {
       return loader;
@@ -191,6 +196,8 @@ export function correlateTopicsWithSchemas(
     );
 
     return KafkaTopic.create({
+      connectionId: cluster.connectionId,
+      connectionType: cluster.connectionType,
       name: topic.topic_name,
       is_internal: topic.is_internal,
       replication_factor: topic.replication_factor,
@@ -216,28 +223,27 @@ export function correlateTopicsWithSchemas(
  * @param environmentId Optional: the CCloud environment ID to associate CCloud schemas with.
  * @returns An array of all the schemas in the environment's Schema Registry.
  */
-export async function fetchSchemas(
-  schemaRegistryId: string,
-  connectionId: string,
-  environmentId: string | undefined = undefined,
-): Promise<Schema[]> {
+export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
   const sidecarHandle = await getSidecar();
-  const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(schemaRegistryId, connectionId);
+  const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(
+    schemaRegistry.id,
+    schemaRegistry.connectionId,
+  );
   const schemaListRespData: ResponseSchema[] = await client.getSchemas();
   const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
     // AVRO doesn't show up in `schemaType`
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
     const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
-    // appease typescript because it doesn't want to convert `string | undefined` to `Require<string> | undefined`
-    const maybeEnvironmentId = environmentId as Require<string | undefined>;
     // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
     return Schema.create({
+      connectionId: schemaRegistry.connectionId,
+      connectionType: schemaRegistry.connectionType,
       id: schema.id!.toString(),
       subject: schema.subject!,
       version: schema.version!,
       type: schemaType,
-      schemaRegistryId: schemaRegistryId,
-      environmentId: maybeEnvironmentId,
+      schemaRegistryId: schemaRegistry.id,
+      environmentId: schemaRegistry.environmentId,
     });
   });
   return schemas;

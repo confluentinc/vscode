@@ -6,6 +6,7 @@ import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -151,26 +152,22 @@ export class CCloudResourceLoader extends ResourceLoader {
     try {
       const resourceManager = getResourceManager();
 
-      // Fetch the from-sidecar-API list of triplets of (environment, kafkaClusters, schemaRegistry)
-      const envGroups = await getEnvironments();
-
       // Queue up to store the environments in the resource manager
-      const environments = envGroups.map((envGroup) => envGroup.environment);
+      const environments: CCloudEnvironment[] = await getEnvironments();
       await resourceManager.setCCloudEnvironments(environments);
 
-      // Collect all of the Kafka clusters into a single array and queue up to store them in the resource manager.
-      // (Each environment may have many clusters.)
-      const kafkaClusters = envGroups.flatMap((envGroup) => envGroup.kafkaClusters);
-      await resourceManager.setCCloudKafkaClusters(kafkaClusters);
-
-      // Likewise the schema registries, but filter out any undefineds for environments that don't have one.
-      const schemaRegistries: CCloudSchemaRegistry[] = envGroups
-        .map((envGroup) => envGroup.schemaRegistry)
-        .filter(
-          (schemaRegistry): schemaRegistry is CCloudSchemaRegistry => schemaRegistry !== undefined,
-        );
-
-      await resourceManager.setCCloudSchemaRegistries(schemaRegistries);
+      // Collect all of the CCloudKafkaCluster and CCloudSchemaRegistries into individual arrays
+      // before storing them via the resource manager.
+      const kafkaClusters: CCloudKafkaCluster[] = [];
+      const schemaRegistries: CCloudSchemaRegistry[] = [];
+      environments.forEach((env: CCloudEnvironment) => {
+        kafkaClusters.push(...env.kafkaClusters);
+        if (env.schemaRegistry) schemaRegistries.push(env.schemaRegistry);
+      });
+      await Promise.all([
+        resourceManager.setCCloudKafkaClusters(kafkaClusters),
+        resourceManager.setCCloudSchemaRegistries(schemaRegistries),
+      ]);
 
       // Mark each schema registry as existing, but schemas not yet loaded.
       this.schemaRegistryCacheStates.clear();
@@ -197,7 +194,9 @@ export class CCloudResourceLoader extends ResourceLoader {
       const rm = getResourceManager();
 
       const ccloudSchemaRegistry: CCloudSchemaRegistry = schemaRegistry as CCloudSchemaRegistry;
-      const environment = await rm.getCCloudEnvironment(ccloudSchemaRegistry.environmentId);
+      const environment: CCloudEnvironment | null = await rm.getCCloudEnvironment(
+        ccloudSchemaRegistry.environmentId,
+      );
       if (!environment) {
         throw new Error(
           `Environment with id ${ccloudSchemaRegistry.environmentId} is unknown to the resource manager.`,
@@ -205,11 +204,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       }
 
       // Fetch from sidecar API and store into resource manager.
-      const schemas = await fetchSchemas(
-        ccloudSchemaRegistry.id,
-        environment.connectionId,
-        environment.id,
-      );
+      const schemas: Schema[] = await fetchSchemas(ccloudSchemaRegistry);
       await rm.setSchemasForRegistry(schemaRegistry.id, schemas);
 
       // Mark this cluster as having its schemas loaded.
@@ -273,7 +268,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     cluster: CCloudKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<KafkaTopic[]> {
-    if (!cluster.isCCloud) {
+    if (!isCCloud(cluster)) {
       // Programming error.
       throw new Error(`Cluster ${cluster.id} is not a CCloud cluster.`);
     }
