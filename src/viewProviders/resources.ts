@@ -12,7 +12,7 @@ import {
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { getDirectResources } from "../graphql/direct";
-import { getLocalResources, LocalResourceGroup } from "../graphql/local";
+import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import {
@@ -20,6 +20,7 @@ import {
   DirectEnvironment,
   Environment,
   EnvironmentTreeItem,
+  LocalEnvironment,
 } from "../models/environment";
 import {
   CCloudKafkaCluster,
@@ -306,23 +307,23 @@ export async function loadLocalResources(): Promise<
   // the sidecar for discovery before the GraphQL query kicks off
   await updateLocalConnection();
 
-  const localResources: LocalResourceGroup[] = await getLocalResources();
-  if (localResources.length > 0) {
+  const localEnvs: LocalEnvironment[] = await getLocalResources();
+  if (localEnvs.length > 0) {
     const connectedId = "local-container-connected";
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
     // unpack the local resources to more easily update the UI elements
     const localKafkaClusters: LocalKafkaCluster[] = [];
     const localSchemaRegistries: LocalSchemaRegistry[] = [];
-    localResources.forEach((group) => {
-      localKafkaClusters.push(...group.kafkaClusters);
-      if (group.schemaRegistry) {
-        localSchemaRegistries.push(group.schemaRegistry);
+    localEnvs.forEach((env: LocalEnvironment) => {
+      localKafkaClusters.push(...env.kafkaClusters);
+      if (env.schemaRegistry) {
+        localSchemaRegistries.push(env.schemaRegistry);
       }
     });
     // update the UI based on whether or not we have local resources available
     await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, localResources.length > 0),
+      setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
       setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
     ]);
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;

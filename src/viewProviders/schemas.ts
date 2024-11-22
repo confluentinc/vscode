@@ -10,6 +10,7 @@ import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
+import { isCCloud, isDirect, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
@@ -132,7 +133,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
-      if (this.schemaRegistry?.isCCloud) {
+      if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
         logger.debug("ccloudConnected event fired, resetting", { connected });
         // any transition of CCloud connection state should reset the tree view
         this.reset();
@@ -141,7 +142,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
       (connected: boolean) => {
-        if (this.schemaRegistry?.isLocal) {
+        if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
           logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
           // any transition of local schema registry connection state should reset the tree view
           this.reset();
@@ -157,16 +158,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
           setContextValue(ContextValues.schemaRegistrySelected, true);
           this.schemaRegistry = schemaRegistry;
           // update the tree view title to show the currently focused Schema Registry and repopulate the tree
-          if (this.schemaRegistry.isLocal) {
+          if (isLocal(this.schemaRegistry)) {
             // just show "Local" since we don't have a name for the local SR instance
             this.treeView.description = "Local";
-          } else if (this.schemaRegistry.isCCloud) {
+          } else if (isCCloud(this.schemaRegistry)) {
             const environment: Environment | null = await getResourceManager().getCCloudEnvironment(
               (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
             );
             this.environment = environment;
             this.treeView.description = `${this.environment!.name} | ${this.schemaRegistry.id}`;
-          } else if (this.schemaRegistry.isDirect) {
+          } else if (isDirect(this.schemaRegistry)) {
             // TODO: look this up
           }
           this.refresh();

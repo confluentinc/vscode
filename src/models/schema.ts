@@ -1,7 +1,9 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { ConnectionType } from "../clients/sidecar";
+import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
+import { ConnectionId, IResourceBase, isCCloud } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -17,7 +19,11 @@ const extensionMap: { [key in SchemaType]: string } = {
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
-export class Schema extends Data {
+export class Schema extends Data implements IResourceBase {
+  connectionId!: Enforced<ConnectionId>;
+  connectionType!: Enforced<ConnectionType>;
+  iconName: IconNames.SCHEMA = IconNames.SCHEMA;
+
   id!: Enforced<string>;
   subject!: Enforced<string>;
   version!: Enforced<number>;
@@ -49,18 +55,10 @@ export class Schema extends Data {
   }
 
   get ccloudUrl(): string {
-    if (this.isLocalSchema()) {
-      return "";
+    if (isCCloud(this)) {
+      return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas/${this.subject}`;
     }
-    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas/${this.subject}`;
-  }
-
-  isLocalSchema(): boolean {
-    return this.environmentId == null;
-  }
-
-  get connectionId(): string {
-    return this.isLocalSchema() ? LOCAL_CONNECTION_ID : CCLOUD_CONNECTION_ID;
+    return "";
   }
 }
 
@@ -86,13 +84,13 @@ export class SchemaTreeItem extends vscode.TreeItem {
 
 function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown("#### $(primitive-square) Schema")
+    .appendMarkdown(`#### $(${IconNames.SCHEMA}) Schema`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Subject: \`${resource.subject}\`\n\n`)
     .appendMarkdown(`Version: \`${resource.version}\`\n\n`)
     .appendMarkdown(`Type: \`${resource.type}\``);
-  if (!resource.isLocalSchema()) {
+  if (isCCloud(resource)) {
     tooltip
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(

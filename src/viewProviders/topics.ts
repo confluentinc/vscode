@@ -8,6 +8,7 @@ import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
+import { isCCloud, isDirect, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
@@ -127,7 +128,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
-      if (this.kafkaCluster?.isCCloud) {
+      if (this.kafkaCluster && isCCloud(this.kafkaCluster)) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
         // a CCloud Kafka Cluster
         logger.debug(
@@ -140,7 +141,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
     const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
       (connected: boolean) => {
-        if (this.kafkaCluster?.isLocal) {
+        if (this.kafkaCluster && isLocal(this.kafkaCluster)) {
           // any transition of local resource availability should reset the tree view if we're focused
           // on a local Kafka cluster
           logger.debug(
@@ -161,16 +162,16 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
           setContextValue(ContextValues.kafkaClusterSelected, true);
           this.kafkaCluster = cluster;
           // update the tree view title to show the currently-focused Kafka cluster and repopulate the tree
-          if (cluster.isLocal) {
+          if (isLocal(cluster)) {
             // just show "Local" since we don't have a name for the local cluster(s)
             this.treeView.description = "Local";
-          } else if (cluster.isCCloud) {
+          } else if (isCCloud(cluster)) {
             const parentEnvironment: CCloudEnvironment | null =
               await getResourceManager().getCCloudEnvironment(
                 (this.kafkaCluster as CCloudKafkaCluster).environmentId,
               );
             this.treeView.description = `${parentEnvironment?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
-          } else if (cluster.isDirect) {
+          } else if (isDirect(cluster)) {
             const parentConnection: ConnectionSpec | null =
               await getResourceManager().getDirectConnection(cluster.connectionId);
             this.treeView.description = `${parentConnection?.name ?? "Unknown"} | ${this.kafkaCluster.name}`;
