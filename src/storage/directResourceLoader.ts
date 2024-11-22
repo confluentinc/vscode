@@ -3,7 +3,7 @@ import { getDirectResources } from "../graphql/direct";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, isDirect } from "../models/resource";
 import { Schema } from "../models/schema";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -32,8 +32,9 @@ export class DirectResourceLoader extends ResourceLoader {
   }
 
   async getEnvironments(): Promise<DirectEnvironment[]> {
-    // TODO: just return this connection's "environment"?
-    return await getDirectResources();
+    const envs: DirectEnvironment[] = await getDirectResources();
+    // should only return an array of one DirectEnvironment
+    return envs.filter((env) => env.connectionId === this.id);
   }
 
   async getKafkaClustersForEnvironmentId(environmentId: string): Promise<DirectKafkaCluster[]> {
@@ -46,14 +47,13 @@ export class DirectResourceLoader extends ResourceLoader {
   }
 
   async getTopicsForCluster(cluster: DirectKafkaCluster): Promise<KafkaTopic[]> {
-    if (!cluster.isDirect) {
+    if (!isDirect(cluster)) {
       throw new Error(`Expected a direct cluster, got ${cluster.connectionType}`);
     }
     const [topics, schemas]: [TopicData[], Schema[]] = await Promise.all([
       fetchTopics(cluster),
       this.getSchemasForEnvironmentId(cluster.environmentId),
     ]);
-
     return correlateTopicsWithSchemas(cluster, topics, schemas);
   }
 
@@ -81,12 +81,11 @@ export class DirectResourceLoader extends ResourceLoader {
     if (!schemaRegistry) {
       return [];
     }
-    // this.id and environmentId are the same for direct connections
-    return fetchSchemas(schemaRegistry.id, this.id, environmentId);
+    return this.getSchemasForRegistry(schemaRegistry);
   }
 
   async getSchemasForRegistry(schemaRegistry: DirectSchemaRegistry): Promise<Schema[]> {
-    return fetchSchemas(schemaRegistry.id, this.id, schemaRegistry.environmentId);
+    return fetchSchemas(schemaRegistry);
   }
 
   purgeSchemas(): void {

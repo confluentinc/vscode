@@ -1,7 +1,12 @@
-import { type Require as Enforced } from "dataclass";
+import { Data, type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  IconNames,
+  LOCAL_CONNECTION_ID,
+  LOCAL_ENVIRONMENT_NAME,
+} from "../constants";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -9,7 +14,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, ResourceBase } from "./resource";
+import { ConnectionId, IResourceBase, isCCloud } from "./resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -23,7 +28,9 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment extends ResourceBase {
+export abstract class Environment extends Data implements IResourceBase {
+  abstract connectionId: ConnectionId;
+  abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
 
   id!: Enforced<string>;
@@ -45,8 +52,9 @@ export abstract class Environment extends ResourceBase {
 
 /** A Confluent Cloud {@link Environment} with additional properties. */
 export class CCloudEnvironment extends Environment {
-  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
-  readonly connectionType: ConnectionType = "CCLOUD";
+  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
+  readonly connectionType: ConnectionType = ConnectionType.Ccloud as ConnectionType;
+
   readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
   streamGovernancePackage!: Enforced<string>;
@@ -65,8 +73,9 @@ export class CCloudEnvironment extends Environment {
  * - one {@link SchemaRegistry}
  */
 export class DirectEnvironment extends Environment {
-  // connectionId is set dynamically at creation time
-  connectionType: ConnectionType = "DIRECT";
+  connectionId!: ConnectionId; // dynamically assigned at connection creation time
+  readonly connectionType: ConnectionType = ConnectionType.Direct as ConnectionType;
+
   // TODO: update this based on feedback from product+design
   readonly iconName = IconNames.EXPERIMENTAL;
 
@@ -77,9 +86,12 @@ export class DirectEnvironment extends Environment {
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
 export class LocalEnvironment extends Environment {
-  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
-  readonly connectionType: ConnectionType = "LOCAL";
+  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
+  readonly connectionType: ConnectionType = ConnectionType.Local as ConnectionType;
+
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
+
+  name: Enforced<string> = LOCAL_ENVIRONMENT_NAME as Enforced<string>;
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
@@ -100,7 +112,7 @@ export class EnvironmentTreeItem extends TreeItem {
 
     // internal properties
     this.resource = resource;
-    this.contextValue = `${this.resource.contextPrefix}-environment`;
+    this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
     // user-facing properties
     this.description = this.resource.id;
@@ -110,13 +122,15 @@ export class EnvironmentTreeItem extends TreeItem {
 }
 
 function createEnvironmentTooltip(resource: Environment): MarkdownString {
+  // Direct connections are treated like environments, but calling it an environment will feel weird
+  const resourceLabel =
+    resource.connectionType === ConnectionType.Direct ? "Connection" : "Environment";
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) Environment`)
+    .appendMarkdown(`#### $(${resource.iconName}) ${resourceLabel}`)
     .appendMarkdown("\n\n---\n\n")
     .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
     .appendMarkdown(`Name: \`${resource.name}\`\n\n`);
-
-  if (resource.isCCloud) {
+  if (isCCloud(resource)) {
     const ccloudEnv = resource as CCloudEnvironment;
     tooltip
       .appendMarkdown(`Stream Governance Package: \`${ccloudEnv.streamGovernancePackage}\``)
@@ -125,6 +139,5 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
         `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
       );
   }
-
   return tooltip;
 }

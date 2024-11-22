@@ -1,15 +1,18 @@
-import { type Require as Enforced } from "dataclass";
-import * as vscode from "vscode";
+import { Data, type Require as Enforced } from "dataclass";
+import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, ResourceBase } from "./resource";
+import { ConnectionId, IResourceBase, isCCloud } from "./resource";
 
 /** Base class for all KafkaClusters */
-export abstract class KafkaCluster extends ResourceBase {
+export abstract class KafkaCluster extends Data implements IResourceBase {
+  abstract connectionId: ConnectionId;
+  abstract connectionType: ConnectionType;
+  iconName: IconNames = IconNames.KAFKA_CLUSTER;
+
   abstract name: string;
   abstract environmentId: string | undefined;
-  iconName: IconNames = IconNames.KAFKA_CLUSTER;
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
@@ -18,8 +21,8 @@ export abstract class KafkaCluster extends ResourceBase {
 
 /** A Confluent Cloud {@link KafkaCluster} with additional properties. */
 export class CCloudKafkaCluster extends KafkaCluster {
-  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
-  readonly connectionType: ConnectionType = "CCLOUD";
+  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
+  readonly connectionType: ConnectionType = ConnectionType.Ccloud as ConnectionType;
 
   name!: Enforced<string>;
   provider!: Enforced<string>;
@@ -35,8 +38,8 @@ export class CCloudKafkaCluster extends KafkaCluster {
 
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */
 export class DirectKafkaCluster extends KafkaCluster {
-  // `connectionId` dynamically assigned at connection creation time
-  readonly connectionType: ConnectionType = "DIRECT";
+  connectionId!: ConnectionId; // dynamically assigned at connection creation time
+  readonly connectionType: ConnectionType = ConnectionType.Direct as ConnectionType;
 
   name!: Enforced<string>;
 
@@ -49,30 +52,29 @@ export class DirectKafkaCluster extends KafkaCluster {
 
 /** A "local" {@link KafkaCluster} manageable by the extension via Docker. */
 export class LocalKafkaCluster extends KafkaCluster {
-  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
-  readonly connectionType: ConnectionType = "LOCAL";
-  readonly environmentId: undefined = undefined;
+  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
+  readonly connectionType: ConnectionType = ConnectionType.Local as ConnectionType;
 
-  // this is solely for display purposes so we don't have to check whether a resource is either a
-  // LocalKafkaCluster or CCloudKafkaCluster when generating a label for a tree/quickpick/etc item
-  readonly name: string = "Local";
+  name!: Enforced<string>;
+
+  readonly environmentId: undefined = undefined;
 }
 
-/** The representation of a {@link KafkaCluster} as a {@link vscode.TreeItem} in the VS Code UI. */
-export class KafkaClusterTreeItem extends vscode.TreeItem {
+/** The representation of a {@link KafkaCluster} as a {@link TreeItem} in the VS Code UI. */
+export class KafkaClusterTreeItem extends TreeItem {
   resource: KafkaCluster;
 
   constructor(resource: KafkaCluster) {
-    super(resource.name, vscode.TreeItemCollapsibleState.None);
+    super(resource.name, TreeItemCollapsibleState.None);
 
     // internal properties
     this.resource = resource;
     // currently only used to determine whether or not we can show the rename command
-    this.contextValue = `${this.resource.contextPrefix}-kafka-cluster`;
+    this.contextValue = `${this.resource.connectionType.toLowerCase()}-kafka-cluster`;
 
     // user-facing properties
     this.description = `${this.resource.id}`;
-    this.iconPath = new vscode.ThemeIcon(this.resource.iconName);
+    this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createKafkaClusterTooltip(this.resource);
 
     // set primary click action to select this cluster as the current one, focusing it in the Topics view
@@ -85,38 +87,26 @@ export class KafkaClusterTreeItem extends vscode.TreeItem {
 }
 
 // todo make this a method of KafkaCluster family.
-function createKafkaClusterTooltip(resource: KafkaCluster): vscode.MarkdownString {
-  const tooltip = new CustomMarkdownString();
-  if (resource.isCCloud) {
+function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .appendMarkdown(`#### $(${resource.iconName}) Kafka Cluster`)
+    .appendMarkdown("\n\n---\n\n");
+  if (resource.name) {
+    tooltip.appendMarkdown(`Name: \`${resource.name}\`\n\n`);
+  }
+  tooltip
+    .appendMarkdown(`ID: \`${resource.id}\`\n\n`) // TODO: remove this?
+    .appendMarkdown(`Bootstrap Servers: \`${resource.bootstrapServers}\``)
+    .appendMarkdown(`URI: \`${resource.uri}\``);
+  if (isCCloud(resource)) {
     const ccloudCluster = resource as CCloudKafkaCluster;
     tooltip
-      .appendMarkdown(`#### $(${resource.iconName}) Confluent Cloud Kafka Cluster`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${ccloudCluster.id}\`\n\n`)
-      .appendMarkdown(`Name: \`${ccloudCluster.name}\`\n\n`)
       .appendMarkdown(`Provider: \`${ccloudCluster.provider}\`\n\n`)
       .appendMarkdown(`Region: \`${ccloudCluster.region}\`\n\n`)
-      .appendMarkdown(`Bootstrap Servers: \`${ccloudCluster.bootstrapServers}\``)
       .appendMarkdown("\n\n---\n\n")
       .appendMarkdown(
         `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudCluster.ccloudUrl})`,
       );
-  } else if (resource.isLocal) {
-    const localCluster = resource as LocalKafkaCluster;
-    tooltip
-      .appendMarkdown(`#### $(${IconNames.KAFKA_CLUSTER}) Local Kafka Cluster`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${localCluster.id}\`\n\n`)
-      .appendMarkdown(`Bootstrap Servers: \`${localCluster.bootstrapServers}\`\n\n`)
-      .appendMarkdown(`URI: \`${localCluster.uri}\``);
-  } else {
-    const directCluster = resource as DirectKafkaCluster;
-    tooltip
-      .appendMarkdown(`#### $(${IconNames.KAFKA_CLUSTER}) Kafka Cluster`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${directCluster.id}\`\n\n`)
-      .appendMarkdown(`Name: \`${directCluster.name}\`\n\n`)
-      .appendMarkdown(`Bootstrap Servers: \`${directCluster.bootstrapServers}\``);
   }
   return tooltip;
 }
