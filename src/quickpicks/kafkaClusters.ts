@@ -1,10 +1,12 @@
 import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { ResourceLoader } from "../storage/resourceLoader";
+import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
@@ -87,6 +89,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
   // used for the separators
   const clusterItems: QuickPickItem[] = [];
 
+  const focusedCluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
   let lastSeparator: string = "";
   for (const cluster of kafkaClusters) {
     const environment: Environment | undefined = environments.find(
@@ -111,10 +114,12 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
       });
       lastSeparator = separatorLabel;
     }
+    // show the currently-focused cluster, if there is one
+    const icon = focusedCluster?.id === cluster.id ? IconNames.CURRENT_RESOURCE : cluster.iconName;
     clusterItems.push({
       label: cluster.name,
       description: cluster.id,
-      iconPath: new ThemeIcon(cluster.iconName),
+      iconPath: new ThemeIcon(icon),
     });
   }
 
