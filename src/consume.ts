@@ -63,7 +63,7 @@ export function activateMessageViewer(context: ExtensionContext) {
       "confluent.topic.consume",
       async (topic?: KafkaTopic, duplicate = false, config = MessageViewerConfig.create()) => {
         if (topic == null) {
-          const cluster = await kafkaClusterQuickPick(true, true);
+          const cluster = await kafkaClusterQuickPick();
           if (cluster == null) return;
           topic = await topicQuickPick(cluster);
           if (topic == null) return;
