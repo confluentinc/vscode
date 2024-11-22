@@ -73,7 +73,9 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.id = `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
-    this.contextValue = "ccloud-schema";
+    // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the
+    // "View in CCloud" context menu item
+    this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema`;
 
     // user-facing properties
     this.description = resource.id.toString();
