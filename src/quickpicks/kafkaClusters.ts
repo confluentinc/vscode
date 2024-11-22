@@ -2,12 +2,7 @@ import * as vscode from "vscode";
 import { ContextValues, getContextValue } from "../context/values";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
-import {
-  CCloudKafkaCluster,
-  DirectKafkaCluster,
-  KafkaCluster,
-  LocalKafkaCluster,
-} from "../models/kafkaCluster";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { ResourceLoader } from "../storage/resourceLoader";
 
@@ -44,33 +39,24 @@ export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaClus
 export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined> {
   const environments: Environment[] = [];
 
-  const localKafkaClusters: LocalKafkaCluster[] = [];
-  const ccloudKafkaClusters: CCloudKafkaCluster[] = [];
-  const directKafkaClusters: DirectKafkaCluster[] = [];
+  const kafkaClusters: KafkaCluster[] = [];
   const clusterIdMap: Map<string, KafkaCluster> = new Map();
 
   for (const loader of ResourceLoader.registry.values()) {
     const envs: Environment[] = await loader.getEnvironments();
     environments.push(...envs);
     for (const env of envs) {
-      const clusters = await loader.getKafkaClustersForEnvironmentId(env.id);
+      const clusters: KafkaCluster[] = await loader.getKafkaClustersForEnvironmentId(env.id);
       if (clusters.length > 0) {
-        if (isLocal(loader)) {
-          localKafkaClusters.push(...(clusters as LocalKafkaCluster[]));
-        } else if (isCCloud(loader)) {
-          ccloudKafkaClusters.push(...(clusters as CCloudKafkaCluster[]));
-        } else if (isDirect(loader)) {
-          directKafkaClusters.push(...(clusters as DirectKafkaCluster[]));
+        kafkaClusters.push(...clusters);
+        for (const cluster of clusters) {
+          clusterIdMap.set(cluster.id, cluster);
         }
       }
     }
   }
 
-  if (
-    localKafkaClusters.length === 0 &&
-    ccloudKafkaClusters.length === 0 &&
-    directKafkaClusters.length === 0
-  ) {
+  if (kafkaClusters.length === 0) {
     let login: string = "";
     let local: string = "";
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
@@ -93,9 +79,9 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
   }
 
   logger.debug("generating Kafka cluster quickpick", {
-    local: localKafkaClusters.length,
-    ccloud: ccloudKafkaClusters.length,
-    direct: directKafkaClusters.length,
+    local: kafkaClusters.filter((cluster) => isLocal(cluster)).length,
+    ccloud: kafkaClusters.filter((cluster) => isCCloud(cluster)).length,
+    direct: kafkaClusters.filter((cluster) => isDirect(cluster)).length,
   });
 
   // convert all available Kafka Clusters to quick pick items and keep track of the last env name
@@ -103,7 +89,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
   const clusterItems: vscode.QuickPickItem[] = [];
 
   let lastSeparator: string = "";
-  for (const cluster of [...localKafkaClusters, ...ccloudKafkaClusters, ...directKafkaClusters]) {
+  for (const cluster of kafkaClusters) {
     const environment: Environment | undefined = environments.find(
       (env) => env.id === cluster.environmentId,
     );
