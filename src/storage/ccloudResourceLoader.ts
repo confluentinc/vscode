@@ -6,6 +6,7 @@ import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
+import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -193,7 +194,9 @@ export class CCloudResourceLoader extends ResourceLoader {
       const rm = getResourceManager();
 
       const ccloudSchemaRegistry: CCloudSchemaRegistry = schemaRegistry as CCloudSchemaRegistry;
-      const environment = await rm.getCCloudEnvironment(ccloudSchemaRegistry.environmentId);
+      const environment: CCloudEnvironment | null = await rm.getCCloudEnvironment(
+        ccloudSchemaRegistry.environmentId,
+      );
       if (!environment) {
         throw new Error(
           `Environment with id ${ccloudSchemaRegistry.environmentId} is unknown to the resource manager.`,
@@ -201,11 +204,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       }
 
       // Fetch from sidecar API and store into resource manager.
-      const schemas = await fetchSchemas(
-        ccloudSchemaRegistry.id,
-        environment.connectionId,
-        environment.id,
-      );
+      const schemas: Schema[] = await fetchSchemas(ccloudSchemaRegistry);
       await rm.setSchemasForRegistry(schemaRegistry.id, schemas);
 
       // Mark this cluster as having its schemas loaded.
@@ -269,7 +268,7 @@ export class CCloudResourceLoader extends ResourceLoader {
     cluster: CCloudKafkaCluster,
     forceDeepRefresh: boolean = false,
   ): Promise<KafkaTopic[]> {
-    if (!cluster.isCCloud) {
+    if (!isCCloud(cluster)) {
       // Programming error.
       throw new Error(`Cluster ${cluster.id} is not a CCloud cluster.`);
     }

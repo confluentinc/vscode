@@ -45,6 +45,11 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         return;
       }
 
+      const connectionInfo = {
+        connectionId: connection.id as ConnectionId,
+        connectionType: connection.type,
+      };
+
       let kafkaCluster: DirectKafkaCluster | undefined;
       if (connection.kafkaCluster) {
         kafkaCluster = DirectKafkaCluster.create({
@@ -52,7 +57,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
           name: "Kafka Cluster",
           bootstrapServers: connection.kafkaCluster.bootstrapServers,
           uri: connection.kafkaCluster.uri ?? "",
-          connectionId: connection.id as ConnectionId,
+          ...connectionInfo,
         });
       }
 
@@ -61,17 +66,17 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         schemaRegistry = DirectSchemaRegistry.create({
           id: connection.schemaRegistry.id,
           uri: connection.schemaRegistry.uri,
-          connectionId: connection.id as ConnectionId,
           environmentId: connection.id,
+          ...connectionInfo,
         });
       }
 
       const directEnv = DirectEnvironment.create({
-        connectionId: connection.id as ConnectionId,
         id: connection.id,
         name: connection.name,
         kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
         schemaRegistry,
+        ...connectionInfo,
       });
       directResources.push(directEnv);
     });
