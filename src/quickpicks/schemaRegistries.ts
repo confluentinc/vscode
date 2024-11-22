@@ -92,7 +92,16 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   // used for the separators
   const registryItems: QuickPickItem[] = [];
 
+  // if there's a focused registry, push it to the front of the array
   const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  const focusedRegistryIndex: number = schemaRegistries.findIndex(
+    (registry) => registry.id === focusedRegistry?.id,
+  );
+  if (focusedRegistryIndex !== -1) {
+    schemaRegistries.splice(focusedRegistryIndex, 1);
+    schemaRegistries.unshift(focusedRegistry!);
+  }
+
   let lastSeparator: string = "";
   for (const registry of schemaRegistries) {
     const environment: Environment | undefined = environments.find(
@@ -102,6 +111,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
       logger.warn(`No environment found for Schema Registry ${registry.id}`);
       return;
     }
+    const isFocusedRegistry = focusedRegistry?.id === registry.id;
     // show a separator by connection type (not connection + env name like with Kafka clusters)
     const connectionLabel = getConnectionLabel(registry.connectionType);
     if (lastSeparator !== connectionLabel) {
@@ -112,8 +122,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
       lastSeparator = connectionLabel;
     }
     // show the currently-focused registry, if there is one
-    const icon =
-      focusedRegistry?.id === registry.id ? IconNames.CURRENT_RESOURCE : registry.iconName;
+    const icon = isFocusedRegistry ? IconNames.CURRENT_RESOURCE : registry.iconName;
     registryItems.push({
       label: environment.name,
       description: registry.id,
