@@ -1,10 +1,12 @@
 import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("quickpicks.schemaRegistry");
 
@@ -90,6 +92,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   // used for the separators
   const registryItems: QuickPickItem[] = [];
 
+  const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   let lastSeparator: string = "";
   for (const registry of schemaRegistries) {
     const environment: Environment | undefined = environments.find(
@@ -108,10 +111,13 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
       });
       lastSeparator = connectionLabel;
     }
+    // show the currently-focused registry, if there is one
+    const icon =
+      focusedRegistry?.id === registry.id ? IconNames.CURRENT_RESOURCE : registry.iconName;
     registryItems.push({
       label: environment.name,
       description: registry.id,
-      iconPath: new ThemeIcon(registry.iconName),
+      iconPath: new ThemeIcon(icon),
     });
   }
 
