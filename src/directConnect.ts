@@ -1,9 +1,7 @@
 import { randomUUID } from "crypto";
-import { ExtensionContext, ViewColumn } from "vscode";
+import { ViewColumn } from "vscode";
 import { KafkaClusterConfig, SchemaRegistryConfig } from "./clients/sidecar";
-import { registerCommandWithLogging } from "./commands";
 import { DirectConnectionManager } from "./directConnectManager";
-import { Logger } from "./logging";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { post } from "./webview/direct-connect-form";
@@ -13,15 +11,6 @@ type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
-
-const logger = new Logger("direct");
-
-export const registerDirectConnectionCommand = (context: ExtensionContext) => {
-  const directConnectionCommand = registerCommandWithLogging("confluent.connections.direct", () =>
-    openDirectConnectionForm(),
-  );
-  context.subscriptions.push(directConnectionCommand);
-};
 
 const directConnectWebviewCache = new WebviewPanelCache();
 

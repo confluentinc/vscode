@@ -9,16 +9,6 @@ import {
 import { IconNames } from "../constants";
 import { KafkaTopic, KafkaTopicTreeItem } from "./topic";
 
-describe("Test KafkaTopic methods", () => {
-  it("Local topics should smell local", () => {
-    assert.strictEqual(true, TEST_LOCAL_KAFKA_TOPIC.isLocalTopic());
-  });
-
-  it("CCloud topics should not smell local", () => {
-    assert.strictEqual(false, TEST_CCLOUD_KAFKA_TOPIC.isLocalTopic());
-  });
-});
-
 describe("Test KafkaTopic properties", () => {
   it("uniqueId should return a unique identifier for the topic", () => {
     assert.strictEqual(
