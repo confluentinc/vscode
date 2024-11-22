@@ -24,7 +24,7 @@ import {
 export interface ProduceRecordRequest {
   cluster_id: string;
   topic_name: string;
-  dry_run?: string;
+  dry_run?: boolean;
   ProduceRequest?: ProduceRequest;
 }
 

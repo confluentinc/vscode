@@ -1753,7 +1753,7 @@ components:
       in: query
       required: false
       schema:
-        type: string
+        type: boolean
 
     IncludeAuthorizedOperations:
       name: include_authorized_operations
