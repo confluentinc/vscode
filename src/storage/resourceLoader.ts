@@ -4,7 +4,7 @@ import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
-import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, IResourceBase } from "../models/resource";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
@@ -198,7 +198,7 @@ export function correlateTopicsWithSchemas(
       partitions: topic.partitions,
       configs: topic.configs,
       clusterId: cluster.id,
-      environmentId: cluster instanceof CCloudKafkaCluster ? cluster.environmentId : undefined,
+      environmentId: cluster.environmentId,
       hasSchema: hasMatchingSchema,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
     });
