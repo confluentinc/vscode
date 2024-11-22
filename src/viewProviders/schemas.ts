@@ -4,13 +4,14 @@ import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
   currentSchemaRegistryChanged,
+  directConnectionDeleted,
   localSchemaRegistryConnected,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
-import { isCCloud, isLocal } from "../models/resource";
+import { ConnectionId, isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
@@ -139,6 +140,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
     });
 
+    const directDisconnectedSub: vscode.Disposable = directConnectionDeleted.event(
+      (connectionId: ConnectionId) => {
+        if (this.schemaRegistry && this.schemaRegistry.connectionId === connectionId) {
+          logger.debug("directConnectionDeleted event fired, resetting", { connectionId });
+          // any deletion of the focused direct connection should reset the tree view
+          this.reset();
+        }
+      },
+    );
+
     const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
       (connected: boolean) => {
         if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
@@ -172,7 +183,12 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       },
     );
 
-    return [ccloudConnectedSub, localSchemaRegistryConnectedSub, currentSchemaRegistryChangedSub];
+    return [
+      ccloudConnectedSub,
+      directDisconnectedSub,
+      localSchemaRegistryConnectedSub,
+      currentSchemaRegistryChangedSub,
+    ];
   }
 
   /** Try to reveal this particular schema, if present */

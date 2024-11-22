@@ -1,13 +1,18 @@
 import * as vscode from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
-import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
+import {
+  ccloudConnected,
+  currentKafkaClusterChanged,
+  directConnectionDeleted,
+  localKafkaConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { isCCloud, isLocal } from "../models/resource";
+import { ConnectionId, isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
@@ -139,6 +144,16 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       }
     });
 
+    const directDisconnectedSub: vscode.Disposable = directConnectionDeleted.event(
+      (connectionId: ConnectionId) => {
+        if (this.kafkaCluster && this.kafkaCluster.connectionId === connectionId) {
+          logger.debug("directConnectionDeleted event fired, resetting", { connectionId });
+          // any deletion of the focused direct connection should reset the tree view
+          this.reset();
+        }
+      },
+    );
+
     const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
       (connected: boolean) => {
         if (this.kafkaCluster && isLocal(this.kafkaCluster)) {
@@ -180,7 +195,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       },
     );
 
-    return [ccloudConnectedSub, localKafkaConnectedSub, currentKafkaClusterChangedSub];
+    return [
+      ccloudConnectedSub,
+      directDisconnectedSub,
+      localKafkaConnectedSub,
+      currentKafkaClusterChangedSub,
+    ];
   }
 }
 
