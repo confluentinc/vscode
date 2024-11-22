@@ -45,7 +45,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
   const clusterIdMap: Map<string, KafkaCluster> = new Map();
 
   // TODO: enforce ordering between CCloud loader, Local loader, and Direct loaders?
-  for (const loader of ResourceLoader.registry.values()) {
+  for (const loader of ResourceLoader.loaders()) {
     const envs: Environment[] = await loader.getEnvironments();
     environments.push(...envs);
     for (const env of envs) {
