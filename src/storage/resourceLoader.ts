@@ -43,7 +43,7 @@ export abstract class ResourceLoader {
   }
 
   // Map of connectionId to ResourceLoader instance.
-  private static registry: Map<string, ResourceLoader> = new Map();
+  static registry: Map<string, ResourceLoader> = new Map();
 
   public static registerInstance(connectionId: ConnectionId, loader: ResourceLoader): void {
     ResourceLoader.registry.set(connectionId, loader);

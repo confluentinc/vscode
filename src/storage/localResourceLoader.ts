@@ -42,9 +42,14 @@ export class LocalResourceLoader extends ResourceLoader {
     return await getLocalResources();
   }
 
-  public async getKafkaClustersForEnvironmentId(): Promise<LocalKafkaCluster[]> {
+  async getKafkaClustersForEnvironmentId(environmentId: string): Promise<LocalKafkaCluster[]> {
     const envs: LocalEnvironment[] = await this.getEnvironments();
-    return envs.flatMap((env: LocalEnvironment) => env.kafkaClusters);
+    // should only ever be one, but we'll filter just in case
+    const env = envs.find((env) => env.id === environmentId);
+    if (!env) {
+      throw new Error(`Unknown environmentId ${environmentId}`);
+    }
+    return env.kafkaClusters;
   }
 
   /**
