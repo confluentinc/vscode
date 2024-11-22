@@ -66,8 +66,8 @@
       },
       {
         "command": "confluent.connections.direct.delete",
-        "icon": "$(trash)",
-        "title": "Delete Connection",
+        "icon": "$(debug-disconnect)",
+        "title": "Disconnect",
         "category": "Confluent: Connections"
       },
       {

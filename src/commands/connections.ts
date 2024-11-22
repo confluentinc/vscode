@@ -66,9 +66,9 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
     return;
   }
 
-  const yesButton = "Yes, delete";
+  const yesButton = "Yes, disconnect";
   const confirmation = await window.showWarningMessage(
-    `Are you sure you want to delete the connection "${item.name}"? This will disconnect any associated resources from the Confluent extension. To reconnect, you will need to re-enter the associated connection details.`,
+    `Are you sure you want to disconnect "${item.name}"? To reconnect, you will need to re-enter the associated connection details. (This will not delete any associated resources.)`,
     { modal: true },
     yesButton,
     // "Cancel" is added by default
