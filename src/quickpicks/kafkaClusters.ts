@@ -89,7 +89,16 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
   // used for the separators
   const clusterItems: QuickPickItem[] = [];
 
+  // if there's a focused cluster, push it to the top of the list
   const focusedCluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
+  const focusedClusterIndex: number = kafkaClusters.findIndex(
+    (cluster) => cluster.id === focusedCluster?.id,
+  );
+  if (focusedClusterIndex !== -1) {
+    kafkaClusters.splice(focusedClusterIndex, 1);
+    kafkaClusters.unshift(focusedCluster!);
+  }
+
   let lastSeparator: string = "";
   for (const cluster of kafkaClusters) {
     const environment: Environment | undefined = environments.find(
@@ -99,6 +108,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
       logger.warn(`No environment found for Kafka cluster ${cluster.name}`);
       return;
     }
+    const isFocusedCluster = focusedCluster?.id === cluster.id;
     // show a separator by environment to make it easier to differentiate between the connection types
     // and make it clear which environment the cluster(s) are associated with
     const connectionLabel = getConnectionLabel(environment.connectionType);
@@ -115,7 +125,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
       lastSeparator = separatorLabel;
     }
     // show the currently-focused cluster, if there is one
-    const icon = focusedCluster?.id === cluster.id ? IconNames.CURRENT_RESOURCE : cluster.iconName;
+    const icon = isFocusedCluster ? IconNames.CURRENT_RESOURCE : cluster.iconName;
     clusterItems.push({
       label: cluster.name,
       description: cluster.id,
