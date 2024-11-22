@@ -98,13 +98,13 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     }
     // show a separator by environment to make it easier to differentiate between the connection types
     // and make it clear which environment the cluster(s) are associated with
-    if (lastSeparator !== environment.name) {
-      const connectionLabel = getConnectionLabel(environment.connectionType);
-      // if the connection label is the same as the environment name, only show one
-      const separatorLabel =
-        connectionLabel === environment.name
-          ? connectionLabel
-          : `${connectionLabel}: ${environment.name}`;
+    const connectionLabel = getConnectionLabel(environment.connectionType);
+    // if the connection label is the same as the environment name, only show one
+    const separatorLabel =
+      connectionLabel === environment.name
+        ? connectionLabel
+        : `${connectionLabel}: ${environment.name}`;
+    if (lastSeparator !== separatorLabel) {
       clusterItems.push({
         kind: QuickPickItemKind.Separator,
         label: separatorLabel,
