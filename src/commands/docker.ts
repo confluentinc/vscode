@@ -10,13 +10,14 @@ import {
 } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
-import { isDockerAvailable, getSocketPath } from "../docker/configs";
+import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { Logger } from "../logging";
-import { localResourcesQuickPick } from "../quickpicks/localResources";
+import { ConnectionLabel } from "../models/resource";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
+import { localResourcesQuickPick } from "../quickpicks/localResources";
 
 const logger = new Logger("commands.docker");
 
@@ -86,7 +87,7 @@ export async function runWorkflowWithProgress(
   window.withProgress(
     {
       location: ProgressLocation.Notification,
-      title: "Local",
+      title: ConnectionLabel.LOCAL,
       cancellable: true,
     },
     async (progress, token: CancellationToken) => {
