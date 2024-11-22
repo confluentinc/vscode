@@ -229,6 +229,8 @@ async function setupContextValues() {
   // constants for easier `when` clause matching in package.json; not updated dynamically
   const diffResources = setContextValue(ContextValues.READONLY_DIFFABLE_RESOURCES, [
     "ccloud-schema",
+    "direct-schema",
+    "local-schema",
   ]);
   const openInCCloudResources = setContextValue(ContextValues.CCLOUD_RESOURCES, [
     "ccloud-environment",
@@ -246,25 +248,30 @@ async function setupContextValues() {
   ]);
   // enables the "Copy ID" command; these resources must have the "id" property
   const resourcesWithIds = setContextValue(ContextValues.RESOURCES_WITH_ID, [
-    "ccloud-environment",
+    "ccloud-environment", // direct/local environments only have internal IDs
     "ccloud-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
-    "ccloud-schema",
     "local-kafka-cluster",
+    "local-schema-registry",
+    "direct-kafka-cluster",
+    "direct-schema-registry",
+    "ccloud-schema",
+    "direct-schema",
+    "local-schema",
   ]);
   const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
     "ccloud-environment",
     "ccloud-kafka-cluster",
-    "ccloud-kafka-topic", // only name, no ID
-    "ccloud-kafka-topic-with-schema", // only name, no ID
     "local-kafka-cluster",
-    "local-kafka-topic", // only name, no ID
-    "local-kafka-topic-with-schema", // only name, no ID
+    "direct-kafka-cluster",
+    // topics also have names, but their context values vary wildly and must be regex-matched
   ]);
   const resourcesWithURIs = setContextValue(ContextValues.RESOURCES_WITH_URIS, [
     "ccloud-schema-registry",
     "local-kafka-cluster",
     "local-schema-registry",
+    "direct-kafka-cluster",
+    "direct-schema-registry",
   ]);
   await Promise.all([
     directConnectionsEnabled,
