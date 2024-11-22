@@ -88,7 +88,7 @@ export class DirectConnectionManager {
     const connectionId = randomUUID() as ConnectionId;
     const spec: ConnectionSpec = {
       id: connectionId,
-      name: name ?? "New Connection",
+      name: name || "New Connection",
       type: ConnectionType.Direct,
     };
 
