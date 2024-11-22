@@ -63,7 +63,7 @@ export function activateMessageViewer(context: ExtensionContext) {
       "confluent.topic.consume",
       async (topic?: KafkaTopic, duplicate = false, config = MessageViewerConfig.create()) => {
         if (topic == null) {
-          const cluster = await kafkaClusterQuickPick(true, true);
+          const cluster = await kafkaClusterQuickPick();
           if (cluster == null) return;
           topic = await topicQuickPick(cluster);
           if (topic == null) return;
@@ -119,11 +119,10 @@ export function activateMessageViewer(context: ExtensionContext) {
     registerCommandWithLogging("confluent.topic.consume.getUri", async () => {
       if (activeTopic == null || activeConfig == null) return;
       const query = activeConfig.toQuery();
-      if (activeTopic.isLocalTopic()) {
-        query.set("origin", "local");
-      } else {
-        query.set("origin", "ccloud");
-        query.set("envId", activeTopic.environmentId!);
+      query.set("origin", activeTopic.connectionType.toLowerCase());
+      if (activeTopic.environmentId) {
+        // applies to CCloud and Direct connections
+        query.set("envId", activeTopic.environmentId);
       }
       query.set("clusterId", activeTopic.clusterId);
       query.set("topicName", activeTopic.name);
