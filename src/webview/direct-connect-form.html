@@ -12,19 +12,19 @@
   <body>
     <main class="container">
       <h1>Create a new connection (⚠️ experimental)</h1>
-      <p>Form currently <strong>only supports connections with no authentication required</strong>, but more auth types are coming soon. Close this tab to cancel changes.</p>
+      <p>
+        Form currently <strong>only supports connections with no authentication required</strong>,
+        but more auth types are coming soon. Close this tab to cancel changes.
+      </p>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
           <div>
             <label for="name" class="label">Connection Label (optional)</label>
-            <input
-              class="input"
-              id="name"
-              name="name"
-              type="text"
-            />
+            <input class="input" id="name" name="name" type="text" />
           </div>
-          <span class="description">An easy to remember name to reference this connection in the future</span>
+          <span class="description"
+            >An easy to remember name to reference this connection in the future</span
+          >
         </div>
         <fieldset>
           <legend>Kafka Broker</legend>
@@ -39,7 +39,10 @@
                 required
               />
             </div>
-            <span class="description">A comma-separated list of host/port pairs to use for establishing the initial connection to the Kafka cluster</span>
+            <span class="description"
+              >A comma-separated list of host/port pairs to use for establishing the initial
+              connection to the Kafka cluster</span
+            >
           </div>
         </fieldset>
         <fieldset>
@@ -47,36 +50,64 @@
           <div class="input-container">
             <div>
               <label for="uri" class="label">Schema Registry URL</label>
-              <input
-                class="input"
-                id="uri"
-                name="uri"
-                type="url"
-              />
+              <input class="input" id="uri" name="uri" type="url" />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
+          </div>
         </fieldset>
         <fieldset class="input-container">
           <legend>Which connection system or platform are you using?</legend>
           <div class="radio-container">
             <div>
-              <input type="radio" id="apache-kafka" name="platform" value="Apache Kafka" data-on-change="this.updateValue(event)" />
+              <input
+                type="radio"
+                id="apache-kafka"
+                name="platform"
+                value="Apache Kafka"
+                data-on-change="this.updateValue(event)"
+              />
               <label for="apache-kafka">Apache Kafka</label>
             </div>
             <div>
-              <input type="radio" id="confluent-cloud" name="platform" value="Confluent Cloud" data-on-change="this.updateValue(event)"/>
+              <input
+                type="radio"
+                id="confluent-cloud"
+                name="platform"
+                value="Confluent Cloud"
+                data-on-change="this.updateValue(event)"
+              />
               <label for="confluent-cloud">Confluent Cloud</label>
             </div>
             <div>
-              <input type="radio" id="confluent-platform" name="platform" value="Confluent Platform" data-on-change="this.updateValue(event)"/>
+              <input
+                type="radio"
+                id="confluent-platform"
+                name="platform"
+                value="Confluent Platform"
+                data-on-change="this.updateValue(event)"
+              />
               <label for="confluent-platform">Confluent Platform</label>
             </div>
             <div>
-              <input type="radio" id="local" name="platform" value="Local" data-on-change="this.updateValue(event)"/>
+              <input
+                type="radio"
+                id="local"
+                name="platform"
+                value="Local"
+                data-on-change="this.updateValue(event)"
+              />
               <label for="local">Local</label>
             </div>
             <div>
-              <input type="radio" id="other" name="platform" value="Other" checked required data-on-change="this.updateValue(event)"/>
+              <input
+                type="radio"
+                id="other"
+                name="platform"
+                value="Other"
+                checked
+                required
+                data-on-change="this.updateValue(event)"
+              />
               <label for="other">Other (specify)</label>
               <input
                 class="input"
@@ -88,14 +119,16 @@
             </div>
           </div>
         </fieldset>
-        </div>
         <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
-        <input class="button" type="submit" value="Save" data-attr-disabled="this.success()"/>
+        <input class="button" type="submit" value="Save" data-attr-disabled="this.success()" />
         <template data-if="this.errorMessage()">
           <div class="info error" data-text="this.errorMessage()"></div>
         </template>
         <template data-if="this.success() === true">
-          <div class="info success">Connection added. Close this tab and view & interact with your connection in the resources sidebar.</div>
+          <div class="info success">
+            Connection added. Close this tab and view & interact with your connection in the
+            resources sidebar.
+          </div>
         </template>
       </form>
     </main>
