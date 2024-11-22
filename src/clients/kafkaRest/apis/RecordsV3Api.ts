@@ -24,6 +24,7 @@ import {
 export interface ProduceRecordRequest {
   cluster_id: string;
   topic_name: string;
+  dry_run?: string;
   ProduceRequest?: ProduceRequest;
 }
 
@@ -54,6 +55,10 @@ export class RecordsV3Api extends runtime.BaseAPI {
     }
 
     const queryParameters: any = {};
+
+    if (requestParameters["dry_run"] != null) {
+      queryParameters["dry_run"] = requestParameters["dry_run"];
+    }
 
     const headerParameters: runtime.HTTPHeaders = {};
 
