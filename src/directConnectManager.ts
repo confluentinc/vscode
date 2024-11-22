@@ -119,7 +119,7 @@ export class DirectConnectionManager {
     // save the new connection in secret storage
     await getResourceManager().addDirectConnection(spec);
     // create a new ResourceLoader instance for managing the new connection's resources
-    ResourceLoader.registerInstance(connectionId, new DirectResourceLoader(connectionId));
+    this.initResourceLoader(connectionId);
     // refresh the Resources view to load the new connection
     getResourceViewProvider().refresh();
     // TODO(shoup): fire emitter
@@ -136,8 +136,21 @@ export class DirectConnectionManager {
     ResourceLoader.deregisterInstance(id);
   }
 
-  /** Compare the known connections between our SecretStorage and the sidecar, then make updates as needed. */
-  async reconcileSidecarConnections() {
+  /**
+   * Initialize a new {@link DirectResourceLoader} instance for the given connection ID.
+   * @param id The unique identifier for the connection.
+   */
+  initResourceLoader(id: ConnectionId) {
+    ResourceLoader.registerInstance(id, new DirectResourceLoader(id));
+  }
+
+  /**
+   * Compare the known connections between our SecretStorage and the sidecar, creating any missing
+   * connections in the sidecar.
+   *
+   * Also ensure the {@link DirectResourceLoader} instances are available for the {@link ConnectionId}.
+   */
+  async rehydrateConnections() {
     const sidecar = await getSidecar();
     const client: ConnectionsResourceApi = sidecar.getConnectionsResourceApi();
 
@@ -160,6 +173,8 @@ export class DirectConnectionManager {
         logger.debug("telling sidecar about stored connection:", { id });
         newConnectionPromises.push(tryToCreateConnection(connectionSpec));
       }
+      // create a new ResourceLoader instance for managing the new connection's resources
+      this.initResourceLoader(id as ConnectionId);
     }
 
     if (newConnectionPromises.length > 0) {
