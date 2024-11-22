@@ -17,6 +17,68 @@
         but more auth types are coming soon. Close this tab to cancel changes.
       </p>
       <form data-on-submit="this.handleSubmit(event)">
+        <div class="radio-container">
+          <legend class="label">Connection Type</legend>
+          <div>
+            <input
+              type="radio"
+              id="apache-kafka"
+              name="platform"
+              value="Apache Kafka"
+              data-on-change="this.updateValue(event)"
+            />
+            <label for="apache-kafka">Apache Kafka</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="confluent-cloud"
+              name="platform"
+              value="Confluent Cloud"
+              data-on-change="this.updateValue(event)"
+            />
+            <label for="confluent-cloud">Confluent Cloud</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="confluent-platform"
+              name="platform"
+              value="Confluent Platform"
+              data-on-change="this.updateValue(event)"
+            />
+            <label for="confluent-platform">Confluent Platform</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="local"
+              name="platform"
+              value="Local"
+              data-on-change="this.updateValue(event)"
+            />
+            <label for="local">Local</label>
+          </div>
+          <div>
+            <input
+              type="radio"
+              id="other"
+              name="platform"
+              value="Other"
+              checked
+              required
+              data-on-change="this.updateValue(event)"
+            />
+            <label for="other">Other (specify)</label>
+            <input
+              class="input"
+              id="other"
+              name="other-platform"
+              type="text"
+              data-attr-required="this.platformType() === 'Other' ? true : false"
+            />
+          </div>
+        </div>
         <div class="input-container">
           <div>
             <label for="name" class="label">Connection Label (optional)</label>
@@ -38,6 +100,68 @@
               connection to the Kafka cluster</span
             >
           </div>
+          <div class="radio-container">
+            <legend class="label">Authentication Type</legend>
+            <div>
+              <input
+                type="radio"
+                id="auth-none"
+                name="auth_type"
+                value="None"
+                checked
+                data-on-change="this.updateValue(event)"
+              />
+              <label for="auth-none">None</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="auth-basic"
+                name="auth_type"
+                value="Basic"
+                data-on-change="this.updateValue(event)"
+              />
+              <label for="auth-basic">Basic (username & password)</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="auth-basic"
+                name="auth_type"
+                value="API"
+                data-on-change="this.updateValue(event)"
+              />
+              <label for="auth-api">API Credentials</label>
+            </div>
+          </div>
+          <template data-if="this.authType() === 'Basic'">
+            <div class="input-container">
+              <div>
+                <label for="username" class="label">Username</label>
+                <input class="input" id="username" name="username" type="text" required />
+              </div>
+            </div>
+            <div class="input-container">
+              <div>
+                <label for="password" class="label">Password</label>
+                <input class="input" id="password" name="password" type="password" required />
+              </div>
+            </div>
+          </template>
+          <template data-if="this.authType() === 'API'">
+            <div class="input-container">
+              <div>
+                <label for="api_key" class="label">API Key</label>
+                <input class="input" id="api_key" name="api_key" type="text" required />
+              </div>
+            </div>
+            <div class="input-container">
+              <div>
+                <label for="api_secret" class="label">API Secret</label>
+                <input class="input" id="api_secret" name="api_secret" type="password" required />
+              </div>
+            </div>
+          </template>
         </fieldset>
         <fieldset>
           <legend>Schema Registry (optional)</legend>
@@ -49,70 +173,7 @@
             <span class="description">The URL of the Schema Registry to use for serialization</span>
           </div>
         </fieldset>
-        <fieldset class="input-container">
-          <legend>Which connection system or platform are you using?</legend>
-          <div class="radio-container">
-            <div>
-              <input
-                type="radio"
-                id="apache-kafka"
-                name="platform"
-                value="Apache Kafka"
-                data-on-change="this.updateValue(event)"
-              />
-              <label for="apache-kafka">Apache Kafka</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="confluent-cloud"
-                name="platform"
-                value="Confluent Cloud"
-                data-on-change="this.updateValue(event)"
-              />
-              <label for="confluent-cloud">Confluent Cloud</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="confluent-platform"
-                name="platform"
-                value="Confluent Platform"
-                data-on-change="this.updateValue(event)"
-              />
-              <label for="confluent-platform">Confluent Platform</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="local"
-                name="platform"
-                value="Local"
-                data-on-change="this.updateValue(event)"
-              />
-              <label for="local">Local</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="other"
-                name="platform"
-                value="Other"
-                checked
-                required
-                data-on-change="this.updateValue(event)"
-              />
-              <label for="other">Other (specify)</label>
-              <input
-                class="input"
-                id="other"
-                name="other-platform"
-                type="text"
-                data-attr-required="this.platformType() === 'Other' ? true : false"
-              />
-            </div>
-          </div>
-        </fieldset>
+
         <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
         <input class="button" type="submit" value="Save" data-attr-disabled="this.success()" />
         <template data-if="this.errorMessage()">
@@ -155,12 +216,14 @@
         gap: 20px;
         margin-top: 26px;
       }
+      .label {
+        font-weight: 500;
+      }
       .input-container {
         display: flex;
         align-items: end;
         gap: 16px;
         width: 100%;
-        font-weight: 500;
       }
       @media screen and (max-width: 1000px) {
         .input-container {
@@ -174,6 +237,21 @@
       }
       .input-container > * > * {
         width: 100%;
+      }
+      .radio-container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .radio-container > div {
+        display: flex;
+        flex-direction: row;
+        justify-content: stretch;
+        align-items: center;
+      }
+      .radio-container > .label {
+        flex-basis: 100%;
       }
       fieldset {
         width: 100%;
