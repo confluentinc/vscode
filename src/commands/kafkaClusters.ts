@@ -12,7 +12,6 @@ import {
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
-import { getResourceManager } from "../storage/resourceManager";
 import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
@@ -37,14 +36,6 @@ async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
 }
 
 async function deleteTopicCommand(topic: KafkaTopic) {
-  const cluster: KafkaCluster | null =
-    topic.environmentId != null
-      ? await getResourceManager().getCCloudKafkaCluster(topic.environmentId, topic.clusterId)
-      : await getResourceManager().getLocalKafkaCluster(topic.clusterId);
-  if (!cluster) {
-    throw new Error(`Failed to find Kafka cluster for topic "${topic.name}"`);
-  }
-
   // We won't have even gotten here if we didn't think the user has DELETE permissions on the topic.
   // BUT that was at the time we fetched the topic list, so we should check again before proceeding.
   const authorizedOperations = await fetchTopicAuthorizedOperations(topic);
@@ -55,7 +46,7 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     return;
   }
 
-  logger.info(`Deleting topic "${topic.name}" from cluster ${cluster.name}...`);
+  logger.info(`Deleting topic "${topic.name}" from cluster ${topic.clusterId}...`);
   const confirmMessage = `Are you sure you want to delete the topic "${topic.name}"?`;
 
   const topicName: string | undefined = await vscode.window.showInputBox({
@@ -74,7 +65,10 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     return;
   }
 
-  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
+  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(
+    topic.clusterId,
+    topic.connectionId,
+  );
 
   await vscode.window.withProgress(
     {
@@ -84,20 +78,20 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     async (progress) => {
       try {
         await client.deleteKafkaTopic({
-          cluster_id: cluster.id,
+          cluster_id: topic.clusterId,
           topic_name: topic.name,
         });
         // indicate progress done 33 % now.
         progress.report({ increment: 33 });
 
-        await waitForTopicToBeDeleted(client, cluster.id, topic.name, isLocal(cluster));
+        await waitForTopicToBeDeleted(client, topic.clusterId, topic.name, isLocal(topic));
         // Another 1/3 way done now.
         progress.report({ increment: 33 });
 
         // explicitly deep refresh the topics view after deleting a topic, so that repainting
         // ommitting the newly deleted topic is a foreground task we block on before
         // closing the progress window.
-        getTopicViewProvider().refresh(true, cluster.id);
+        getTopicViewProvider().refresh(true, topic.clusterId);
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
