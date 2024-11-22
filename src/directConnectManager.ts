@@ -15,7 +15,7 @@ import { ContextValues, setContextValue } from "./context/values";
 import { directConnectionDeleted } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
-import { ConnectionId } from "./models/resource";
+import { ConnectionId, isDirect } from "./models/resource";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { getSidecar } from "./sidecar";
 import { tryToCreateConnection, tryToDeleteConnection } from "./sidecar/connections";
@@ -23,6 +23,8 @@ import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { getResourceViewProvider } from "./viewProviders/resources";
+import { getSchemasViewProvider } from "./viewProviders/schemas";
+import { getTopicViewProvider } from "./viewProviders/topics";
 
 const logger = new Logger("directConnectManager");
 
@@ -70,6 +72,22 @@ export class DirectConnectionManager {
           setContextValue(ContextValues.directConnectionsEnabled, enabled);
           // toggle "Other" container visibility in the Resources view
           getResourceViewProvider().refresh();
+          // refresh Topics/Schemas in case they were focused on a direct connection resource and
+          // the setting was disabled
+          const topicsView = getTopicViewProvider();
+          topicsView.refresh();
+          const schemasView = getSchemasViewProvider();
+          schemasView.refresh();
+          if (!enabled) {
+            // if the Topics/Schemas views are focused on a direct connection resource and the setting
+            // was disabled, reset the view to its original state
+            if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
+              topicsView.reset();
+            }
+            if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
+              schemasView.reset();
+            }
+          }
         }
       },
     );
@@ -122,7 +140,6 @@ export class DirectConnectionManager {
     this.initResourceLoader(connectionId);
     // refresh the Resources view to load the new connection
     getResourceViewProvider().refresh();
-    // TODO(shoup): fire emitter
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success, message: JSON.stringify(connection) };
