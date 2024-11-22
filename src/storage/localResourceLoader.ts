@@ -1,4 +1,6 @@
 import { TopicData } from "../clients/kafkaRest/models";
+import { ConnectionType } from "../clients/sidecar";
+import { LOCAL_CONNECTION_ID } from "../constants";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { LocalEnvironment } from "../models/environment";
@@ -12,7 +14,6 @@ import {
   fetchSchemas,
   fetchTopics,
   ResourceLoader,
-  ResourceLoaderType,
 } from "./resourceLoader";
 
 const logger = new Logger("storage.localResourceLoader");
@@ -23,7 +24,8 @@ const logger = new Logger("storage.localResourceLoader");
  * each time a resource is requested.
  */
 export class LocalResourceLoader extends ResourceLoader {
-  kind = ResourceLoaderType.Local;
+  connectionId = LOCAL_CONNECTION_ID;
+  connectionType = ConnectionType.Local;
 
   private static instance: LocalResourceLoader | null = null;
   public static getInstance(): LocalResourceLoader {

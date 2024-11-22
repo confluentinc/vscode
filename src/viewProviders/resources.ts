@@ -30,6 +30,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
+import { ConnectionLabel } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -227,7 +228,7 @@ export async function loadCCloudResources(
   // empty container item for the Confluent Cloud resources to start, whose `.id` will change
   // depending on the user's CCloud connection status to adjust the collapsible state and actions
   const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
-    "Confluent Cloud",
+    ConnectionLabel.CCLOUD,
     vscode.TreeItemCollapsibleState.None,
     [],
   );
@@ -285,7 +286,7 @@ export async function loadLocalResources(): Promise<
   ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
 > {
   const localContainerItem = new ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>(
-    "Local",
+    ConnectionLabel.LOCAL,
     vscode.TreeItemCollapsibleState.None,
     [],
   );
@@ -340,7 +341,7 @@ export async function loadLocalResources(): Promise<
 
 export async function loadDirectConnectResources(): Promise<ContainerTreeItem<DirectEnvironment>> {
   const directContainerItem = new ContainerTreeItem<DirectEnvironment>(
-    "Other",
+    ConnectionLabel.DIRECT,
     vscode.TreeItemCollapsibleState.None,
     [],
   );
