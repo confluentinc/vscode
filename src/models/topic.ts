@@ -24,8 +24,8 @@ export class KafkaTopic extends Data implements IResourceBase {
   is_internal!: Enforced<boolean>;
 
   clusterId!: Enforced<string>;
-  /** CCloud env id. If undefined, implies a "local cluster" topic. */
-  environmentId: string | undefined = undefined;
+  // CCloud env IDs are unique, direct/local env IDs match their connection IDs
+  environmentId!: string;
   hasSchema: boolean = false;
 
   /** Operations the user is authzd to perform on the topic */
