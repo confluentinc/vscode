@@ -48,7 +48,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   const registryIdMap: Map<string, SchemaRegistry> = new Map();
 
   // TODO: enforce ordering between CCloud loader, Local loader, and Direct loaders?
-  for (const loader of ResourceLoader.registry.values()) {
+  for (const loader of ResourceLoader.loaders()) {
     const envs: Environment[] = await loader.getEnvironments();
     environments.push(...envs);
     const registries: SchemaRegistry[] = await loader.getSchemaRegistries();
