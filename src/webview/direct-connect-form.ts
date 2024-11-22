@@ -16,12 +16,16 @@ class DirectConnectFormViewModel extends ViewModel {
   errorMessage = this.signal("");
   success = this.signal(false);
   platformType = this.signal<PlatformOptions>("Other");
+  authType = this.signal("None");
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     switch (input.name) {
       case "platform":
         this.platformType(input.value as PlatformOptions);
+        break;
+      case "auth_type":
+        this.authType(input.value);
         break;
       default:
         console.warn(`Unhandled key: ${input.name}`);
