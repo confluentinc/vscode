@@ -5,7 +5,7 @@ import { ConnectionSpec, Status } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { isCCloud, isLocal } from "../models/resource";
+import { ConnectionId, isCCloud, isLocal } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -38,7 +38,7 @@ export type UriMetadata = Map<UriMetadataKeys, string>;
 export type AllUriMetadata = Map<string, UriMetadata>;
 
 /** Map of connection id to ConnectionSpec; only used for `DIRECT` connections. */
-export type DirectConnectionsById = Map<string, ConnectionSpec>;
+export type DirectConnectionsById = Map<ConnectionId, ConnectionSpec>;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
@@ -672,20 +672,22 @@ export class ResourceManager {
 
   // DIRECT CONNECTIONS - entirely handled through SecretStorage
 
-  /** Look up the connectionId:ConnectionSpec map for any existing `DIRECT` connections. */
+  /** Look up the {@link ConnectionId}:{@link ConnectionSpec} map for any existing `DIRECT` connections. */
   async getDirectConnections(): Promise<DirectConnectionsById> {
     const connectionsString: string | undefined = await this.storage.getSecret(
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
     if (!connectionsString) {
-      return new Map<string, ConnectionSpec>();
+      return new Map<ConnectionId, ConnectionSpec>();
     }
-    const connections: Map<string, ConnectionSpec> = JSON.parse(connectionsString);
-    const connectionsById: DirectConnectionsById = new Map(Object.entries(connections));
+    const connections: Map<ConnectionId, ConnectionSpec> = JSON.parse(connectionsString);
+    const connectionsById: DirectConnectionsById = new Map(
+      Object.entries(connections),
+    ) as DirectConnectionsById;
     return connectionsById;
   }
 
-  async getDirectConnection(id: string): Promise<ConnectionSpec | null> {
+  async getDirectConnection(id: ConnectionId): Promise<ConnectionSpec | null> {
     const connections: DirectConnectionsById = await this.getDirectConnections();
     return connections.get(id) ?? null;
   }
@@ -698,17 +700,17 @@ export class ResourceManager {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
       const connectionIds: DirectConnectionsById = await this.getDirectConnections();
-      connectionIds.set(connection.id!, connection);
+      connectionIds.set(connection.id! as ConnectionId, connection);
       await this.storage.setSecret(key, JSON.stringify(Object.fromEntries(connectionIds)));
     });
   }
 
-  async deleteDirectConnection(id: string): Promise<void> {
+  async deleteDirectConnection(id: ConnectionId): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
       const connections: DirectConnectionsById = await this.getDirectConnections();
       connections.delete(id);
-      await this.storage.setSecret(key, JSON.stringify(connections));
+      await this.storage.setSecret(key, JSON.stringify(Object.fromEntries(connections)));
     });
   }
 
