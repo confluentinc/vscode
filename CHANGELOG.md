@@ -4,6 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.21.3
+
+### Fixed
+
+- The Message Viewer will now properly deserialize consumed records from topics associated with schemas having schema references.  
+
 ## 0.21.2
 
 ### Fixed
