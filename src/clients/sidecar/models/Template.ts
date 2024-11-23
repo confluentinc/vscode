@@ -12,96 +12,99 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { TemplateManifest } from "./TemplateManifest";
+import { mapValues } from '../runtime';
+import type { TemplateManifest } from './TemplateManifest';
 import {
-  TemplateManifestFromJSON,
-  TemplateManifestFromJSONTyped,
-  TemplateManifestToJSON,
-} from "./TemplateManifest";
-import type { ObjectMetadata } from "./ObjectMetadata";
+    TemplateManifestFromJSON,
+    TemplateManifestFromJSONTyped,
+    TemplateManifestToJSON,
+} from './TemplateManifest';
+import type { ObjectMetadata } from './ObjectMetadata';
 import {
-  ObjectMetadataFromJSON,
-  ObjectMetadataFromJSONTyped,
-  ObjectMetadataToJSON,
-} from "./ObjectMetadata";
+    ObjectMetadataFromJSON,
+    ObjectMetadataFromJSONTyped,
+    ObjectMetadataToJSON,
+} from './ObjectMetadata';
 
 /**
- *
+ * 
  * @export
  * @interface Template
  */
 export interface Template {
-  /**
-   *
-   * @type {string}
-   * @memberof Template
-   */
-  api_version: string;
-  /**
-   *
-   * @type {string}
-   * @memberof Template
-   */
-  kind: string;
-  /**
-   *
-   * @type {string}
-   * @memberof Template
-   */
-  id: string;
-  /**
-   *
-   * @type {ObjectMetadata}
-   * @memberof Template
-   */
-  metadata: ObjectMetadata;
-  /**
-   *
-   * @type {TemplateManifest}
-   * @memberof Template
-   */
-  spec: TemplateManifest;
+    /**
+     * 
+     * @type {string}
+     * @memberof Template
+     */
+    api_version: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Template
+     */
+    kind: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Template
+     */
+    id: string;
+    /**
+     * 
+     * @type {ObjectMetadata}
+     * @memberof Template
+     */
+    metadata: ObjectMetadata;
+    /**
+     * 
+     * @type {TemplateManifest}
+     * @memberof Template
+     */
+    spec: TemplateManifest;
 }
 
 /**
  * Check if a given object implements the Template interface.
  */
 export function instanceOfTemplate(value: object): value is Template {
-  if (!("api_version" in value) || value["api_version"] === undefined) return false;
-  if (!("kind" in value) || value["kind"] === undefined) return false;
-  if (!("id" in value) || value["id"] === undefined) return false;
-  if (!("metadata" in value) || value["metadata"] === undefined) return false;
-  if (!("spec" in value) || value["spec"] === undefined) return false;
-  return true;
+    if (!('api_version' in value) || value['api_version'] === undefined) return false;
+    if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (!('id' in value) || value['id'] === undefined) return false;
+    if (!('metadata' in value) || value['metadata'] === undefined) return false;
+    if (!('spec' in value) || value['spec'] === undefined) return false;
+    return true;
 }
 
 export function TemplateFromJSON(json: any): Template {
-  return TemplateFromJSONTyped(json, false);
+    return TemplateFromJSONTyped(json, false);
 }
 
 export function TemplateFromJSONTyped(json: any, ignoreDiscriminator: boolean): Template {
-  if (json == null) {
-    return json;
-  }
-  return {
-    api_version: json["api_version"],
-    kind: json["kind"],
-    id: json["id"],
-    metadata: ObjectMetadataFromJSON(json["metadata"]),
-    spec: TemplateManifestFromJSON(json["spec"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'api_version': json['api_version'],
+        'kind': json['kind'],
+        'id': json['id'],
+        'metadata': ObjectMetadataFromJSON(json['metadata']),
+        'spec': TemplateManifestFromJSON(json['spec']),
+    };
 }
 
 export function TemplateToJSON(value?: Template | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    api_version: value["api_version"],
-    kind: value["kind"],
-    id: value["id"],
-    metadata: ObjectMetadataToJSON(value["metadata"]),
-    spec: TemplateManifestToJSON(value["spec"]),
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'api_version': value['api_version'],
+        'kind': value['kind'],
+        'id': value['id'],
+        'metadata': ObjectMetadataToJSON(value['metadata']),
+        'spec': TemplateManifestToJSON(value['spec']),
+    };
 }
+

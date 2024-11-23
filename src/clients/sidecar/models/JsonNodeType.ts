@@ -12,42 +12,45 @@
  * Do not edit the class manually.
  */
 
+
 /**
- *
+ * 
  * @export
  */
 export const JsonNodeType = {
-  Array: "ARRAY",
-  Binary: "BINARY",
-  Boolean: "BOOLEAN",
-  Missing: "MISSING",
-  Null: "NULL",
-  Number: "NUMBER",
-  Object: "OBJECT",
-  Pojo: "POJO",
-  String: "STRING",
+    Array: 'ARRAY',
+    Binary: 'BINARY',
+    Boolean: 'BOOLEAN',
+    Missing: 'MISSING',
+    Null: 'NULL',
+    Number: 'NUMBER',
+    Object: 'OBJECT',
+    Pojo: 'POJO',
+    String: 'STRING'
 } as const;
-export type JsonNodeType = (typeof JsonNodeType)[keyof typeof JsonNodeType];
+export type JsonNodeType = typeof JsonNodeType[keyof typeof JsonNodeType];
+
 
 export function instanceOfJsonNodeType(value: any): boolean {
-  for (const key in JsonNodeType) {
-    if (Object.prototype.hasOwnProperty.call(JsonNodeType, key)) {
-      if ((JsonNodeType as Record<string, JsonNodeType>)[key] === value) {
-        return true;
-      }
+    for (const key in JsonNodeType) {
+        if (Object.prototype.hasOwnProperty.call(JsonNodeType, key)) {
+            if ((JsonNodeType as Record<string, JsonNodeType>)[key] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function JsonNodeTypeFromJSON(json: any): JsonNodeType {
-  return JsonNodeTypeFromJSONTyped(json, false);
+    return JsonNodeTypeFromJSONTyped(json, false);
 }
 
 export function JsonNodeTypeFromJSONTyped(json: any, ignoreDiscriminator: boolean): JsonNodeType {
-  return json as JsonNodeType;
+    return json as JsonNodeType;
 }
 
 export function JsonNodeTypeToJSON(value?: JsonNodeType | null): any {
-  return value as any;
+    return value as any;
 }
+

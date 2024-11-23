@@ -12,40 +12,40 @@
  * Do not edit the class manually.
  */
 
+
 /**
- *
+ * 
  * @export
  */
 export const ConnectionType = {
-  Local: "LOCAL",
-  Platform: "PLATFORM",
-  Ccloud: "CCLOUD",
-  Direct: "DIRECT",
+    Local: 'LOCAL',
+    Platform: 'PLATFORM',
+    Ccloud: 'CCLOUD',
+    Direct: 'DIRECT'
 } as const;
-export type ConnectionType = (typeof ConnectionType)[keyof typeof ConnectionType];
+export type ConnectionType = typeof ConnectionType[keyof typeof ConnectionType];
+
 
 export function instanceOfConnectionType(value: any): boolean {
-  for (const key in ConnectionType) {
-    if (Object.prototype.hasOwnProperty.call(ConnectionType, key)) {
-      if ((ConnectionType as Record<string, ConnectionType>)[key] === value) {
-        return true;
-      }
+    for (const key in ConnectionType) {
+        if (Object.prototype.hasOwnProperty.call(ConnectionType, key)) {
+            if ((ConnectionType as Record<string, ConnectionType>)[key] === value) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 export function ConnectionTypeFromJSON(json: any): ConnectionType {
-  return ConnectionTypeFromJSONTyped(json, false);
+    return ConnectionTypeFromJSONTyped(json, false);
 }
 
-export function ConnectionTypeFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ConnectionType {
-  return json as ConnectionType;
+export function ConnectionTypeFromJSONTyped(json: any, ignoreDiscriminator: boolean): ConnectionType {
+    return json as ConnectionType;
 }
 
 export function ConnectionTypeToJSON(value?: ConnectionType | null): any {
-  return value as any;
+    return value as any;
 }
+

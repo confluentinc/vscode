@@ -12,47 +12,50 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
  * Configuration for Confluent Cloud connections
  * @export
  * @interface CCloudConfig
  */
 export interface CCloudConfig {
-  /**
-   * The identifier of the CCloud organization to use. The user's default organization is used when absent.
-   * @type {string}
-   * @memberof CCloudConfig
-   */
-  organization_id: string;
+    /**
+     * The identifier of the CCloud organization to use. The user's default organization is used when absent.
+     * @type {string}
+     * @memberof CCloudConfig
+     */
+    organization_id: string;
 }
 
 /**
  * Check if a given object implements the CCloudConfig interface.
  */
 export function instanceOfCCloudConfig(value: object): value is CCloudConfig {
-  if (!("organization_id" in value) || value["organization_id"] === undefined) return false;
-  return true;
+    if (!('organization_id' in value) || value['organization_id'] === undefined) return false;
+    return true;
 }
 
 export function CCloudConfigFromJSON(json: any): CCloudConfig {
-  return CCloudConfigFromJSONTyped(json, false);
+    return CCloudConfigFromJSONTyped(json, false);
 }
 
 export function CCloudConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): CCloudConfig {
-  if (json == null) {
-    return json;
-  }
-  return {
-    organization_id: json["organization_id"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'organization_id': json['organization_id'],
+    };
 }
 
 export function CCloudConfigToJSON(value?: CCloudConfig | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    organization_id: value["organization_id"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'organization_id': value['organization_id'],
+    };
 }
+

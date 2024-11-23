@@ -12,72 +12,76 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface HealthCheck
  */
 export interface HealthCheck {
-  /**
-   *
-   * @type {string}
-   * @memberof HealthCheck
-   */
-  status?: HealthCheckStatusEnum;
-  /**
-   *
-   * @type {object}
-   * @memberof HealthCheck
-   */
-  data?: object | null;
-  /**
-   *
-   * @type {string}
-   * @memberof HealthCheck
-   */
-  name?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof HealthCheck
+     */
+    status?: HealthCheckStatusEnum;
+    /**
+     * 
+     * @type {object}
+     * @memberof HealthCheck
+     */
+    data?: object | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof HealthCheck
+     */
+    name?: string;
 }
+
 
 /**
  * @export
  */
 export const HealthCheckStatusEnum = {
-  Up: "UP",
-  Down: "DOWN",
+    Up: 'UP',
+    Down: 'DOWN'
 } as const;
-export type HealthCheckStatusEnum =
-  (typeof HealthCheckStatusEnum)[keyof typeof HealthCheckStatusEnum];
+export type HealthCheckStatusEnum = typeof HealthCheckStatusEnum[keyof typeof HealthCheckStatusEnum];
+
 
 /**
  * Check if a given object implements the HealthCheck interface.
  */
 export function instanceOfHealthCheck(value: object): value is HealthCheck {
-  return true;
+    return true;
 }
 
 export function HealthCheckFromJSON(json: any): HealthCheck {
-  return HealthCheckFromJSONTyped(json, false);
+    return HealthCheckFromJSONTyped(json, false);
 }
 
 export function HealthCheckFromJSONTyped(json: any, ignoreDiscriminator: boolean): HealthCheck {
-  if (json == null) {
-    return json;
-  }
-  return {
-    status: json["status"] == null ? undefined : json["status"],
-    data: json["data"] == null ? undefined : json["data"],
-    name: json["name"] == null ? undefined : json["name"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'status': json['status'] == null ? undefined : json['status'],
+        'data': json['data'] == null ? undefined : json['data'],
+        'name': json['name'] == null ? undefined : json['name'],
+    };
 }
 
 export function HealthCheckToJSON(value?: HealthCheck | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    status: value["status"],
-    data: value["data"],
-    name: value["name"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'status': value['status'],
+        'data': value['data'],
+        'name': value['name'],
+    };
 }
+

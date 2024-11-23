@@ -12,44 +12,43 @@
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
-import type { SidecarVersionResponse } from "../models/index";
-import { SidecarVersionResponseFromJSON, SidecarVersionResponseToJSON } from "../models/index";
+
+import * as runtime from '../runtime';
+import type {
+  SidecarVersionResponse,
+} from '../models/index';
+import {
+    SidecarVersionResponseFromJSON,
+    SidecarVersionResponseToJSON,
+} from '../models/index';
 
 /**
- *
+ * 
  */
 export class VersionResourceApi extends runtime.BaseAPI {
-  /**
-   */
-  async gatewayV1VersionGetRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SidecarVersionResponse>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     */
+    async gatewayV1VersionGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SidecarVersionResponse>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/version`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      SidecarVersionResponseFromJSON(jsonValue),
-    );
-  }
+        const response = await this.request({
+            path: `/gateway/v1/version`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   */
-  async gatewayV1VersionGet(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SidecarVersionResponse> {
-    const response = await this.gatewayV1VersionGetRaw(initOverrides);
-    return await response.value();
-  }
+        return new runtime.JSONApiResponse(response, (jsonValue) => SidecarVersionResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async gatewayV1VersionGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SidecarVersionResponse> {
+        const response = await this.gatewayV1VersionGetRaw(initOverrides);
+        return await response.value();
+    }
+
 }
