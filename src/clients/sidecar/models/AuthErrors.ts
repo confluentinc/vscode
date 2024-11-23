@@ -12,67 +12,72 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { AuthError } from "./AuthError";
-import { AuthErrorFromJSON, AuthErrorFromJSONTyped, AuthErrorToJSON } from "./AuthError";
+import { mapValues } from '../runtime';
+import type { AuthError } from './AuthError';
+import {
+    AuthErrorFromJSON,
+    AuthErrorFromJSONTyped,
+    AuthErrorToJSON,
+} from './AuthError';
 
 /**
- *
+ * 
  * @export
  * @interface AuthErrors
  */
 export interface AuthErrors {
-  /**
-   *
-   * @type {AuthError}
-   * @memberof AuthErrors
-   */
-  auth_status_check?: AuthError;
-  /**
-   *
-   * @type {AuthError}
-   * @memberof AuthErrors
-   */
-  sign_in?: AuthError;
-  /**
-   *
-   * @type {AuthError}
-   * @memberof AuthErrors
-   */
-  token_refresh?: AuthError;
+    /**
+     * 
+     * @type {AuthError}
+     * @memberof AuthErrors
+     */
+    auth_status_check?: AuthError;
+    /**
+     * 
+     * @type {AuthError}
+     * @memberof AuthErrors
+     */
+    sign_in?: AuthError;
+    /**
+     * 
+     * @type {AuthError}
+     * @memberof AuthErrors
+     */
+    token_refresh?: AuthError;
 }
 
 /**
  * Check if a given object implements the AuthErrors interface.
  */
 export function instanceOfAuthErrors(value: object): value is AuthErrors {
-  return true;
+    return true;
 }
 
 export function AuthErrorsFromJSON(json: any): AuthErrors {
-  return AuthErrorsFromJSONTyped(json, false);
+    return AuthErrorsFromJSONTyped(json, false);
 }
 
 export function AuthErrorsFromJSONTyped(json: any, ignoreDiscriminator: boolean): AuthErrors {
-  if (json == null) {
-    return json;
-  }
-  return {
-    auth_status_check:
-      json["auth_status_check"] == null ? undefined : AuthErrorFromJSON(json["auth_status_check"]),
-    sign_in: json["sign_in"] == null ? undefined : AuthErrorFromJSON(json["sign_in"]),
-    token_refresh:
-      json["token_refresh"] == null ? undefined : AuthErrorFromJSON(json["token_refresh"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'auth_status_check': json['auth_status_check'] == null ? undefined : AuthErrorFromJSON(json['auth_status_check']),
+        'sign_in': json['sign_in'] == null ? undefined : AuthErrorFromJSON(json['sign_in']),
+        'token_refresh': json['token_refresh'] == null ? undefined : AuthErrorFromJSON(json['token_refresh']),
+    };
 }
 
 export function AuthErrorsToJSON(value?: AuthErrors | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    auth_status_check: AuthErrorToJSON(value["auth_status_check"]),
-    sign_in: AuthErrorToJSON(value["sign_in"]),
-    token_refresh: AuthErrorToJSON(value["token_refresh"]),
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'auth_status_check': AuthErrorToJSON(value['auth_status_check']),
+        'sign_in': AuthErrorToJSON(value['sign_in']),
+        'token_refresh': AuthErrorToJSON(value['token_refresh']),
+    };
 }
+

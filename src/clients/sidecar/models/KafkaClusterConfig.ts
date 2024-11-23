@@ -12,58 +12,58 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
  * Kafka cluster configuration.
  * @export
  * @interface KafkaClusterConfig
  */
 export interface KafkaClusterConfig {
-  /**
-   * The identifier of the Kafka cluster, if known.
-   * @type {string}
-   * @memberof KafkaClusterConfig
-   */
-  id?: string;
-  /**
-   * A list of host/port pairs to use for establishing the initial connection to the Kafka cluster.
-   * @type {string}
-   * @memberof KafkaClusterConfig
-   */
-  bootstrap_servers: string;
+    /**
+     * The identifier of the Kafka cluster, if known.
+     * @type {string}
+     * @memberof KafkaClusterConfig
+     */
+    id?: string;
+    /**
+     * A list of host/port pairs to use for establishing the initial connection to the Kafka cluster.
+     * @type {string}
+     * @memberof KafkaClusterConfig
+     */
+    bootstrap_servers: string;
 }
 
 /**
  * Check if a given object implements the KafkaClusterConfig interface.
  */
 export function instanceOfKafkaClusterConfig(value: object): value is KafkaClusterConfig {
-  if (!("bootstrap_servers" in value) || value["bootstrap_servers"] === undefined) return false;
-  return true;
+    if (!('bootstrap_servers' in value) || value['bootstrap_servers'] === undefined) return false;
+    return true;
 }
 
 export function KafkaClusterConfigFromJSON(json: any): KafkaClusterConfig {
-  return KafkaClusterConfigFromJSONTyped(json, false);
+    return KafkaClusterConfigFromJSONTyped(json, false);
 }
 
-export function KafkaClusterConfigFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): KafkaClusterConfig {
-  if (json == null) {
-    return json;
-  }
-  return {
-    id: json["id"] == null ? undefined : json["id"],
-    bootstrap_servers: json["bootstrap_servers"],
-  };
+export function KafkaClusterConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): KafkaClusterConfig {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'id': json['id'] == null ? undefined : json['id'],
+        'bootstrap_servers': json['bootstrap_servers'],
+    };
 }
 
 export function KafkaClusterConfigToJSON(value?: KafkaClusterConfig | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    id: value["id"],
-    bootstrap_servers: value["bootstrap_servers"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'id': value['id'],
+        'bootstrap_servers': value['bootstrap_servers'],
+    };
 }
+

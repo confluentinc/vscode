@@ -12,49 +12,49 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface SidecarVersionResponse
  */
 export interface SidecarVersionResponse {
-  /**
-   *
-   * @type {string}
-   * @memberof SidecarVersionResponse
-   */
-  version?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof SidecarVersionResponse
+     */
+    version?: string;
 }
 
 /**
  * Check if a given object implements the SidecarVersionResponse interface.
  */
 export function instanceOfSidecarVersionResponse(value: object): value is SidecarVersionResponse {
-  return true;
+    return true;
 }
 
 export function SidecarVersionResponseFromJSON(json: any): SidecarVersionResponse {
-  return SidecarVersionResponseFromJSONTyped(json, false);
+    return SidecarVersionResponseFromJSONTyped(json, false);
 }
 
-export function SidecarVersionResponseFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): SidecarVersionResponse {
-  if (json == null) {
-    return json;
-  }
-  return {
-    version: json["version"] == null ? undefined : json["version"],
-  };
+export function SidecarVersionResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean): SidecarVersionResponse {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'version': json['version'] == null ? undefined : json['version'],
+    };
 }
 
 export function SidecarVersionResponseToJSON(value?: SidecarVersionResponse | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    version: value["version"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'version': value['version'],
+    };
 }
+

@@ -12,86 +12,90 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { CollectionMetadata } from "./CollectionMetadata";
+import { mapValues } from '../runtime';
+import type { CollectionMetadata } from './CollectionMetadata';
 import {
-  CollectionMetadataFromJSON,
-  CollectionMetadataFromJSONTyped,
-  CollectionMetadataToJSON,
-} from "./CollectionMetadata";
-import type { Connection } from "./Connection";
-import { ConnectionFromJSON, ConnectionFromJSONTyped, ConnectionToJSON } from "./Connection";
+    CollectionMetadataFromJSON,
+    CollectionMetadataFromJSONTyped,
+    CollectionMetadataToJSON,
+} from './CollectionMetadata';
+import type { Connection } from './Connection';
+import {
+    ConnectionFromJSON,
+    ConnectionFromJSONTyped,
+    ConnectionToJSON,
+} from './Connection';
 
 /**
- *
+ * 
  * @export
  * @interface ConnectionsList
  */
 export interface ConnectionsList {
-  /**
-   *
-   * @type {string}
-   * @memberof ConnectionsList
-   */
-  api_version: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ConnectionsList
-   */
-  kind: string;
-  /**
-   *
-   * @type {CollectionMetadata}
-   * @memberof ConnectionsList
-   */
-  metadata: CollectionMetadata;
-  /**
-   *
-   * @type {Array<Connection>}
-   * @memberof ConnectionsList
-   */
-  data: Array<Connection>;
+    /**
+     * 
+     * @type {string}
+     * @memberof ConnectionsList
+     */
+    api_version: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ConnectionsList
+     */
+    kind: string;
+    /**
+     * 
+     * @type {CollectionMetadata}
+     * @memberof ConnectionsList
+     */
+    metadata: CollectionMetadata;
+    /**
+     * 
+     * @type {Array<Connection>}
+     * @memberof ConnectionsList
+     */
+    data: Array<Connection>;
 }
 
 /**
  * Check if a given object implements the ConnectionsList interface.
  */
 export function instanceOfConnectionsList(value: object): value is ConnectionsList {
-  if (!("api_version" in value) || value["api_version"] === undefined) return false;
-  if (!("kind" in value) || value["kind"] === undefined) return false;
-  if (!("metadata" in value) || value["metadata"] === undefined) return false;
-  if (!("data" in value) || value["data"] === undefined) return false;
-  return true;
+    if (!('api_version' in value) || value['api_version'] === undefined) return false;
+    if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (!('metadata' in value) || value['metadata'] === undefined) return false;
+    if (!('data' in value) || value['data'] === undefined) return false;
+    return true;
 }
 
 export function ConnectionsListFromJSON(json: any): ConnectionsList {
-  return ConnectionsListFromJSONTyped(json, false);
+    return ConnectionsListFromJSONTyped(json, false);
 }
 
-export function ConnectionsListFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ConnectionsList {
-  if (json == null) {
-    return json;
-  }
-  return {
-    api_version: json["api_version"],
-    kind: json["kind"],
-    metadata: CollectionMetadataFromJSON(json["metadata"]),
-    data: (json["data"] as Array<any>).map(ConnectionFromJSON),
-  };
+export function ConnectionsListFromJSONTyped(json: any, ignoreDiscriminator: boolean): ConnectionsList {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'api_version': json['api_version'],
+        'kind': json['kind'],
+        'metadata': CollectionMetadataFromJSON(json['metadata']),
+        'data': ((json['data'] as Array<any>).map(ConnectionFromJSON)),
+    };
 }
 
 export function ConnectionsListToJSON(value?: ConnectionsList | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    api_version: value["api_version"],
-    kind: value["kind"],
-    metadata: CollectionMetadataToJSON(value["metadata"]),
-    data: (value["data"] as Array<any>).map(ConnectionToJSON),
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'api_version': value['api_version'],
+        'kind': value['kind'],
+        'metadata': CollectionMetadataToJSON(value['metadata']),
+        'data': ((value['data'] as Array<any>).map(ConnectionToJSON)),
+    };
 }
+

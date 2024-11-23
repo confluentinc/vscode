@@ -12,62 +12,65 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface AuthError
  */
 export interface AuthError {
-  /**
-   *
-   * @type {Date}
-   * @memberof AuthError
-   */
-  created_at?: Date;
-  /**
-   *
-   * @type {string}
-   * @memberof AuthError
-   */
-  message?: string;
-  /**
-   *
-   * @type {boolean}
-   * @memberof AuthError
-   */
-  is_transient?: boolean;
+    /**
+     * 
+     * @type {Date}
+     * @memberof AuthError
+     */
+    created_at?: Date;
+    /**
+     * 
+     * @type {string}
+     * @memberof AuthError
+     */
+    message?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof AuthError
+     */
+    is_transient?: boolean;
 }
 
 /**
  * Check if a given object implements the AuthError interface.
  */
 export function instanceOfAuthError(value: object): value is AuthError {
-  return true;
+    return true;
 }
 
 export function AuthErrorFromJSON(json: any): AuthError {
-  return AuthErrorFromJSONTyped(json, false);
+    return AuthErrorFromJSONTyped(json, false);
 }
 
 export function AuthErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean): AuthError {
-  if (json == null) {
-    return json;
-  }
-  return {
-    created_at: json["created_at"] == null ? undefined : new Date(json["created_at"]),
-    message: json["message"] == null ? undefined : json["message"],
-    is_transient: json["is_transient"] == null ? undefined : json["is_transient"],
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'created_at': json['created_at'] == null ? undefined : (new Date(json['created_at'])),
+        'message': json['message'] == null ? undefined : json['message'],
+        'is_transient': json['is_transient'] == null ? undefined : json['is_transient'],
+    };
 }
 
 export function AuthErrorToJSON(value?: AuthError | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    created_at: value["created_at"] == null ? undefined : value["created_at"].toISOString(),
-    message: value["message"],
-    is_transient: value["is_transient"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'created_at': value['created_at'] == null ? undefined : ((value['created_at']).toISOString()),
+        'message': value['message'],
+        'is_transient': value['is_transient'],
+    };
 }
+

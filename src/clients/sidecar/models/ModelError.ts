@@ -12,9 +12,13 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
-import type { JsonNode } from "./JsonNode";
-import { JsonNodeFromJSON, JsonNodeFromJSONTyped, JsonNodeToJSON } from "./JsonNode";
+import { mapValues } from '../runtime';
+import type { JsonNode } from './JsonNode';
+import {
+    JsonNodeFromJSON,
+    JsonNodeFromJSONTyped,
+    JsonNodeToJSON,
+} from './JsonNode';
 
 /**
  * Describes a particular error encountered while performing an operation.
@@ -22,79 +26,82 @@ import { JsonNodeFromJSON, JsonNodeFromJSONTyped, JsonNodeToJSON } from "./JsonN
  * @interface ModelError
  */
 export interface ModelError {
-  /**
-   *
-   * @type {string}
-   * @memberof ModelError
-   */
-  code?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ModelError
-   */
-  status?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ModelError
-   */
-  title?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ModelError
-   */
-  id?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ModelError
-   */
-  detail?: string;
-  /**
-   *
-   * @type {JsonNode}
-   * @memberof ModelError
-   */
-  source?: JsonNode;
+    /**
+     * 
+     * @type {string}
+     * @memberof ModelError
+     */
+    code?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ModelError
+     */
+    status?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ModelError
+     */
+    title?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ModelError
+     */
+    id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ModelError
+     */
+    detail?: string;
+    /**
+     * 
+     * @type {JsonNode}
+     * @memberof ModelError
+     */
+    source?: JsonNode;
 }
 
 /**
  * Check if a given object implements the ModelError interface.
  */
 export function instanceOfModelError(value: object): value is ModelError {
-  return true;
+    return true;
 }
 
 export function ModelErrorFromJSON(json: any): ModelError {
-  return ModelErrorFromJSONTyped(json, false);
+    return ModelErrorFromJSONTyped(json, false);
 }
 
 export function ModelErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean): ModelError {
-  if (json == null) {
-    return json;
-  }
-  return {
-    code: json["code"] == null ? undefined : json["code"],
-    status: json["status"] == null ? undefined : json["status"],
-    title: json["title"] == null ? undefined : json["title"],
-    id: json["id"] == null ? undefined : json["id"],
-    detail: json["detail"] == null ? undefined : json["detail"],
-    source: json["source"] == null ? undefined : JsonNodeFromJSON(json["source"]),
-  };
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'code': json['code'] == null ? undefined : json['code'],
+        'status': json['status'] == null ? undefined : json['status'],
+        'title': json['title'] == null ? undefined : json['title'],
+        'id': json['id'] == null ? undefined : json['id'],
+        'detail': json['detail'] == null ? undefined : json['detail'],
+        'source': json['source'] == null ? undefined : JsonNodeFromJSON(json['source']),
+    };
 }
 
 export function ModelErrorToJSON(value?: ModelError | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    code: value["code"],
-    status: value["status"],
-    title: value["title"],
-    id: value["id"],
-    detail: value["detail"],
-    source: JsonNodeToJSON(value["source"]),
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'code': value['code'],
+        'status': value['status'],
+        'title': value['title'],
+        'id': value['id'],
+        'detail': value['detail'],
+        'source': JsonNodeToJSON(value['source']),
+    };
 }
+

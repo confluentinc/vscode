@@ -12,154 +12,127 @@
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
-import type { ApplyTemplateRequest, Template, TemplateList } from "../models/index";
+
+import * as runtime from '../runtime';
+import type {
+  ApplyTemplateRequest,
+  Template,
+  TemplateList,
+} from '../models/index';
 import {
-  ApplyTemplateRequestFromJSON,
-  ApplyTemplateRequestToJSON,
-  TemplateFromJSON,
-  TemplateToJSON,
-  TemplateListFromJSON,
-  TemplateListToJSON,
-} from "../models/index";
+    ApplyTemplateRequestFromJSON,
+    ApplyTemplateRequestToJSON,
+    TemplateFromJSON,
+    TemplateToJSON,
+    TemplateListFromJSON,
+    TemplateListToJSON,
+} from '../models/index';
 
 export interface GatewayV1TemplatesNameApplyPostRequest {
-  name: string;
-  ApplyTemplateRequest?: ApplyTemplateRequest;
+    name: string;
+    ApplyTemplateRequest?: ApplyTemplateRequest;
 }
 
 export interface GatewayV1TemplatesNameGetRequest {
-  name: string;
+    name: string;
 }
 
 /**
- *
+ * 
  */
 export class TemplatesApi extends runtime.BaseAPI {
-  /**
-   */
-  async gatewayV1TemplatesGetRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<TemplateList>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     */
+    async gatewayV1TemplatesGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TemplateList>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/templates`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => TemplateListFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/gateway/v1/templates`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   */
-  async gatewayV1TemplatesGet(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<TemplateList> {
-    const response = await this.gatewayV1TemplatesGetRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   * Applies the specified template and returns the result as a zip file.
-   * Apply a template
-   */
-  async gatewayV1TemplatesNameApplyPostRaw(
-    requestParameters: GatewayV1TemplatesNameApplyPostRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Blob>> {
-    if (requestParameters["name"] == null) {
-      throw new runtime.RequiredError(
-        "name",
-        'Required parameter "name" was null or undefined when calling gatewayV1TemplatesNameApplyPost().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => TemplateListFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    headerParameters["Content-Type"] = "application/json";
-
-    const response = await this.request(
-      {
-        path: `/gateway/v1/templates/{name}/apply`.replace(
-          `{${"name"}}`,
-          encodeURIComponent(String(requestParameters["name"])),
-        ),
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ApplyTemplateRequestToJSON(requestParameters["ApplyTemplateRequest"]),
-      },
-      initOverrides,
-    );
-
-    return new runtime.BlobApiResponse(response);
-  }
-
-  /**
-   * Applies the specified template and returns the result as a zip file.
-   * Apply a template
-   */
-  async gatewayV1TemplatesNameApplyPost(
-    requestParameters: GatewayV1TemplatesNameApplyPostRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Blob> {
-    const response = await this.gatewayV1TemplatesNameApplyPostRaw(
-      requestParameters,
-      initOverrides,
-    );
-    return await response.value();
-  }
-
-  /**
-   */
-  async gatewayV1TemplatesNameGetRaw(
-    requestParameters: GatewayV1TemplatesNameGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Template>> {
-    if (requestParameters["name"] == null) {
-      throw new runtime.RequiredError(
-        "name",
-        'Required parameter "name" was null or undefined when calling gatewayV1TemplatesNameGet().',
-      );
+    /**
+     */
+    async gatewayV1TemplatesGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TemplateList> {
+        const response = await this.gatewayV1TemplatesGetRaw(initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     * Applies the specified template and returns the result as a zip file.
+     * Apply a template
+     */
+    async gatewayV1TemplatesNameApplyPostRaw(requestParameters: GatewayV1TemplatesNameApplyPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling gatewayV1TemplatesNameApplyPost().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/templates/{name}`.replace(
-          `{${"name"}}`,
-          encodeURIComponent(String(requestParameters["name"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => TemplateFromJSON(jsonValue));
-  }
+        headerParameters['Content-Type'] = 'application/json';
 
-  /**
-   */
-  async gatewayV1TemplatesNameGet(
-    requestParameters: GatewayV1TemplatesNameGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Template> {
-    const response = await this.gatewayV1TemplatesNameGetRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const response = await this.request({
+            path: `/gateway/v1/templates/{name}/apply`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ApplyTemplateRequestToJSON(requestParameters['ApplyTemplateRequest']),
+        }, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Applies the specified template and returns the result as a zip file.
+     * Apply a template
+     */
+    async gatewayV1TemplatesNameApplyPost(requestParameters: GatewayV1TemplatesNameApplyPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.gatewayV1TemplatesNameApplyPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async gatewayV1TemplatesNameGetRaw(requestParameters: GatewayV1TemplatesNameGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Template>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling gatewayV1TemplatesNameGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/gateway/v1/templates/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TemplateFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async gatewayV1TemplatesNameGet(requestParameters: GatewayV1TemplatesNameGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Template> {
+        const response = await this.gatewayV1TemplatesNameGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }

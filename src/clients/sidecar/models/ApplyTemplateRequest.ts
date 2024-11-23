@@ -12,50 +12,50 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface ApplyTemplateRequest
  */
 export interface ApplyTemplateRequest {
-  /**
-   *
-   * @type {{ [key: string]: any; }}
-   * @memberof ApplyTemplateRequest
-   */
-  options: { [key: string]: any };
+    /**
+     * 
+     * @type {{ [key: string]: any; }}
+     * @memberof ApplyTemplateRequest
+     */
+    options: { [key: string]: any; };
 }
 
 /**
  * Check if a given object implements the ApplyTemplateRequest interface.
  */
 export function instanceOfApplyTemplateRequest(value: object): value is ApplyTemplateRequest {
-  if (!("options" in value) || value["options"] === undefined) return false;
-  return true;
+    if (!('options' in value) || value['options'] === undefined) return false;
+    return true;
 }
 
 export function ApplyTemplateRequestFromJSON(json: any): ApplyTemplateRequest {
-  return ApplyTemplateRequestFromJSONTyped(json, false);
+    return ApplyTemplateRequestFromJSONTyped(json, false);
 }
 
-export function ApplyTemplateRequestFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ApplyTemplateRequest {
-  if (json == null) {
-    return json;
-  }
-  return {
-    options: json["options"],
-  };
+export function ApplyTemplateRequestFromJSONTyped(json: any, ignoreDiscriminator: boolean): ApplyTemplateRequest {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'options': json['options'],
+    };
 }
 
 export function ApplyTemplateRequestToJSON(value?: ApplyTemplateRequest | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    options: value["options"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'options': value['options'],
+    };
 }
+

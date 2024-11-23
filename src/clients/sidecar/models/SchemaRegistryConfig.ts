@@ -12,58 +12,58 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
  * Schema Registry configuration.
  * @export
  * @interface SchemaRegistryConfig
  */
 export interface SchemaRegistryConfig {
-  /**
-   * The identifier of the Schema Registry cluster, if known.
-   * @type {string}
-   * @memberof SchemaRegistryConfig
-   */
-  id?: string;
-  /**
-   * The URL of the Schema Registry.
-   * @type {string}
-   * @memberof SchemaRegistryConfig
-   */
-  uri: string;
+    /**
+     * The identifier of the Schema Registry cluster, if known.
+     * @type {string}
+     * @memberof SchemaRegistryConfig
+     */
+    id?: string;
+    /**
+     * The URL of the Schema Registry.
+     * @type {string}
+     * @memberof SchemaRegistryConfig
+     */
+    uri: string;
 }
 
 /**
  * Check if a given object implements the SchemaRegistryConfig interface.
  */
 export function instanceOfSchemaRegistryConfig(value: object): value is SchemaRegistryConfig {
-  if (!("uri" in value) || value["uri"] === undefined) return false;
-  return true;
+    if (!('uri' in value) || value['uri'] === undefined) return false;
+    return true;
 }
 
 export function SchemaRegistryConfigFromJSON(json: any): SchemaRegistryConfig {
-  return SchemaRegistryConfigFromJSONTyped(json, false);
+    return SchemaRegistryConfigFromJSONTyped(json, false);
 }
 
-export function SchemaRegistryConfigFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): SchemaRegistryConfig {
-  if (json == null) {
-    return json;
-  }
-  return {
-    id: json["id"] == null ? undefined : json["id"],
-    uri: json["uri"],
-  };
+export function SchemaRegistryConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): SchemaRegistryConfig {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'id': json['id'] == null ? undefined : json['id'],
+        'uri': json['uri'],
+    };
 }
 
 export function SchemaRegistryConfigToJSON(value?: SchemaRegistryConfig | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    id: value["id"],
-    uri: value["uri"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'id': value['id'],
+        'uri': value['uri'],
+    };
 }
+

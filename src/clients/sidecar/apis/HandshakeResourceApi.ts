@@ -12,44 +12,43 @@
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
-import type { SidecarAccessToken } from "../models/index";
-import { SidecarAccessTokenFromJSON, SidecarAccessTokenToJSON } from "../models/index";
+
+import * as runtime from '../runtime';
+import type {
+  SidecarAccessToken,
+} from '../models/index';
+import {
+    SidecarAccessTokenFromJSON,
+    SidecarAccessTokenToJSON,
+} from '../models/index';
 
 /**
- *
+ * 
  */
 export class HandshakeResourceApi extends runtime.BaseAPI {
-  /**
-   */
-  async gatewayV1HandshakeGetRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SidecarAccessToken>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     */
+    async gatewayV1HandshakeGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SidecarAccessToken>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/handshake`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      SidecarAccessTokenFromJSON(jsonValue),
-    );
-  }
+        const response = await this.request({
+            path: `/gateway/v1/handshake`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   */
-  async gatewayV1HandshakeGet(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SidecarAccessToken> {
-    const response = await this.gatewayV1HandshakeGetRaw(initOverrides);
-    return await response.value();
-  }
+        return new runtime.JSONApiResponse(response, (jsonValue) => SidecarAccessTokenFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async gatewayV1HandshakeGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SidecarAccessToken> {
+        const response = await this.gatewayV1HandshakeGetRaw(initOverrides);
+        return await response.value();
+    }
+
 }

@@ -12,235 +12,191 @@
  * Do not edit the class manually.
  */
 
-import * as runtime from "../runtime";
-import type { Connection, ConnectionSpec, ConnectionsList, Failure } from "../models/index";
+
+import * as runtime from '../runtime';
+import type {
+  Connection,
+  ConnectionSpec,
+  ConnectionsList,
+  Failure,
+} from '../models/index';
 import {
-  ConnectionFromJSON,
-  ConnectionToJSON,
-  ConnectionSpecFromJSON,
-  ConnectionSpecToJSON,
-  ConnectionsListFromJSON,
-  ConnectionsListToJSON,
-  FailureFromJSON,
-  FailureToJSON,
-} from "../models/index";
+    ConnectionFromJSON,
+    ConnectionToJSON,
+    ConnectionSpecFromJSON,
+    ConnectionSpecToJSON,
+    ConnectionsListFromJSON,
+    ConnectionsListToJSON,
+    FailureFromJSON,
+    FailureToJSON,
+} from '../models/index';
 
 export interface GatewayV1ConnectionsIdDeleteRequest {
-  id: string;
+    id: string;
 }
 
 export interface GatewayV1ConnectionsIdGetRequest {
-  id: string;
+    id: string;
 }
 
 export interface GatewayV1ConnectionsIdPutRequest {
-  id: string;
-  ConnectionSpec?: ConnectionSpec;
+    id: string;
+    ConnectionSpec?: ConnectionSpec;
 }
 
 export interface GatewayV1ConnectionsPostRequest {
-  ConnectionSpec?: ConnectionSpec;
+    ConnectionSpec?: ConnectionSpec;
 }
 
 /**
- *
+ * 
  */
 export class ConnectionsResourceApi extends runtime.BaseAPI {
-  /**
-   */
-  async gatewayV1ConnectionsGetRaw(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<ConnectionsList>> {
-    const queryParameters: any = {};
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     */
+    async gatewayV1ConnectionsGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConnectionsList>> {
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/connections`,
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionsListFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/gateway/v1/connections`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   */
-  async gatewayV1ConnectionsGet(
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<ConnectionsList> {
-    const response = await this.gatewayV1ConnectionsGetRaw(initOverrides);
-    return await response.value();
-  }
-
-  /**
-   */
-  async gatewayV1ConnectionsIdDeleteRaw(
-    requestParameters: GatewayV1ConnectionsIdDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdDelete().',
-      );
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionsListFromJSON(jsonValue));
     }
 
-    const queryParameters: any = {};
-
-    const headerParameters: runtime.HTTPHeaders = {};
-
-    const response = await this.request(
-      {
-        path: `/gateway/v1/connections/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "DELETE",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
-
-    return new runtime.VoidApiResponse(response);
-  }
-
-  /**
-   */
-  async gatewayV1ConnectionsIdDelete(
-    requestParameters: GatewayV1ConnectionsIdDeleteRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.gatewayV1ConnectionsIdDeleteRaw(requestParameters, initOverrides);
-  }
-
-  /**
-   */
-  async gatewayV1ConnectionsIdGetRaw(
-    requestParameters: GatewayV1ConnectionsIdGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Connection>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdGet().',
-      );
+    /**
+     */
+    async gatewayV1ConnectionsGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConnectionsList> {
+        const response = await this.gatewayV1ConnectionsGetRaw(initOverrides);
+        return await response.value();
     }
 
-    const queryParameters: any = {};
+    /**
+     */
+    async gatewayV1ConnectionsIdDeleteRaw(requestParameters: GatewayV1ConnectionsIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdDelete().'
+            );
+        }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/connections/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "GET",
-        headers: headerParameters,
-        query: queryParameters,
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/gateway/v1/connections/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   */
-  async gatewayV1ConnectionsIdGet(
-    requestParameters: GatewayV1ConnectionsIdGetRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Connection> {
-    const response = await this.gatewayV1ConnectionsIdGetRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
-
-  /**
-   */
-  async gatewayV1ConnectionsIdPutRaw(
-    requestParameters: GatewayV1ConnectionsIdPutRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Connection>> {
-    if (requestParameters["id"] == null) {
-      throw new runtime.RequiredError(
-        "id",
-        'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdPut().',
-      );
+        return new runtime.VoidApiResponse(response);
     }
 
-    const queryParameters: any = {};
+    /**
+     */
+    async gatewayV1ConnectionsIdDelete(requestParameters: GatewayV1ConnectionsIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.gatewayV1ConnectionsIdDeleteRaw(requestParameters, initOverrides);
+    }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     */
+    async gatewayV1ConnectionsIdGetRaw(requestParameters: GatewayV1ConnectionsIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Connection>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdGet().'
+            );
+        }
 
-    headerParameters["Content-Type"] = "application/json";
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/connections/{id}`.replace(
-          `{${"id"}}`,
-          encodeURIComponent(String(requestParameters["id"])),
-        ),
-        method: "PUT",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ConnectionSpecToJSON(requestParameters["ConnectionSpec"]),
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
-  }
+        const response = await this.request({
+            path: `/gateway/v1/connections/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
 
-  /**
-   */
-  async gatewayV1ConnectionsIdPut(
-    requestParameters: GatewayV1ConnectionsIdPutRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Connection> {
-    const response = await this.gatewayV1ConnectionsIdPutRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
+    }
 
-  /**
-   */
-  async gatewayV1ConnectionsPostRaw(
-    requestParameters: GatewayV1ConnectionsPostRequest,
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<Connection>> {
-    const queryParameters: any = {};
+    /**
+     */
+    async gatewayV1ConnectionsIdGet(requestParameters: GatewayV1ConnectionsIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Connection> {
+        const response = await this.gatewayV1ConnectionsIdGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
-    const headerParameters: runtime.HTTPHeaders = {};
+    /**
+     */
+    async gatewayV1ConnectionsIdPutRaw(requestParameters: GatewayV1ConnectionsIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Connection>> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdPut().'
+            );
+        }
 
-    headerParameters["Content-Type"] = "application/json";
+        const queryParameters: any = {};
 
-    const response = await this.request(
-      {
-        path: `/gateway/v1/connections`,
-        method: "POST",
-        headers: headerParameters,
-        query: queryParameters,
-        body: ConnectionSpecToJSON(requestParameters["ConnectionSpec"]),
-      },
-      initOverrides,
-    );
+        const headerParameters: runtime.HTTPHeaders = {};
 
-    return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
-  }
+        headerParameters['Content-Type'] = 'application/json';
 
-  /**
-   */
-  async gatewayV1ConnectionsPost(
-    requestParameters: GatewayV1ConnectionsPostRequest = {},
-    initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<Connection> {
-    const response = await this.gatewayV1ConnectionsPostRaw(requestParameters, initOverrides);
-    return await response.value();
-  }
+        const response = await this.request({
+            path: `/gateway/v1/connections/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ConnectionSpecToJSON(requestParameters['ConnectionSpec']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async gatewayV1ConnectionsIdPut(requestParameters: GatewayV1ConnectionsIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Connection> {
+        const response = await this.gatewayV1ConnectionsIdPutRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async gatewayV1ConnectionsPostRaw(requestParameters: GatewayV1ConnectionsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Connection>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/gateway/v1/connections`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ConnectionSpecToJSON(requestParameters['ConnectionSpec']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async gatewayV1ConnectionsPost(requestParameters: GatewayV1ConnectionsPostRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Connection> {
+        const response = await this.gatewayV1ConnectionsPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }

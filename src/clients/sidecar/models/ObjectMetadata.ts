@@ -12,57 +12,57 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from "../runtime";
+import { mapValues } from '../runtime';
 /**
- *
+ * 
  * @export
  * @interface ObjectMetadata
  */
 export interface ObjectMetadata {
-  /**
-   *
-   * @type {string}
-   * @memberof ObjectMetadata
-   */
-  self?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ObjectMetadata
-   */
-  resource_name?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ObjectMetadata
+     */
+    self?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ObjectMetadata
+     */
+    resource_name?: string;
 }
 
 /**
  * Check if a given object implements the ObjectMetadata interface.
  */
 export function instanceOfObjectMetadata(value: object): value is ObjectMetadata {
-  return true;
+    return true;
 }
 
 export function ObjectMetadataFromJSON(json: any): ObjectMetadata {
-  return ObjectMetadataFromJSONTyped(json, false);
+    return ObjectMetadataFromJSONTyped(json, false);
 }
 
-export function ObjectMetadataFromJSONTyped(
-  json: any,
-  ignoreDiscriminator: boolean,
-): ObjectMetadata {
-  if (json == null) {
-    return json;
-  }
-  return {
-    self: json["self"] == null ? undefined : json["self"],
-    resource_name: json["resource_name"] == null ? undefined : json["resource_name"],
-  };
+export function ObjectMetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): ObjectMetadata {
+    if (json == null) {
+        return json;
+    }
+    return {
+        
+        'self': json['self'] == null ? undefined : json['self'],
+        'resource_name': json['resource_name'] == null ? undefined : json['resource_name'],
+    };
 }
 
 export function ObjectMetadataToJSON(value?: ObjectMetadata | null): any {
-  if (value == null) {
-    return value;
-  }
-  return {
-    self: value["self"],
-    resource_name: value["resource_name"],
-  };
+    if (value == null) {
+        return value;
+    }
+    return {
+        
+        'self': value['self'],
+        'resource_name': value['resource_name'],
+    };
 }
+
