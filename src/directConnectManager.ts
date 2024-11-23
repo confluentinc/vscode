@@ -1,5 +1,11 @@
 import { randomUUID } from "crypto";
-import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  ConfigurationChangeEvent,
+  Disposable,
+  SecretStorageChangeEvent,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import {
   Connection,
   ConnectionsList,
@@ -19,6 +25,7 @@ import { ConnectionId, isDirect } from "./models/resource";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { getSidecar } from "./sidecar";
 import { tryToCreateConnection, tryToDeleteConnection } from "./sidecar/connections";
+import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
@@ -70,20 +77,15 @@ export class DirectConnectionManager {
           const enabled = configs.get(ENABLE_DIRECT_CONNECTIONS, false);
           logger.debug(`"${ENABLE_DIRECT_CONNECTIONS}" config changed`, { enabled });
           setContextValue(ContextValues.directConnectionsEnabled, enabled);
-          // toggle "Other" container visibility in the Resources view
+          // "Other" container item will be toggled
           getResourceViewProvider().refresh();
-          // refresh Topics/Schemas in case they were focused on a direct connection resource and
-          // the setting was disabled
-          const topicsView = getTopicViewProvider();
-          topicsView.refresh();
-          const schemasView = getSchemasViewProvider();
-          schemasView.refresh();
+          // if the Topics/Schemas views are focused on a direct connection based resource, wipe them
           if (!enabled) {
-            // if the Topics/Schemas views are focused on a direct connection resource and the setting
-            // was disabled, reset the view to its original state
+            const topicsView = getTopicViewProvider();
             if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
               topicsView.reset();
             }
+            const schemasView = getSchemasViewProvider();
             if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
               schemasView.reset();
             }
@@ -91,7 +93,31 @@ export class DirectConnectionManager {
         }
       },
     );
-    return [settingsListener];
+
+    const connectionsListener: Disposable = getExtensionContext().secrets.onDidChange(
+      async ({ key }: SecretStorageChangeEvent) => {
+        // watch for any cross-workspace direct connection additions/removals
+        if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
+          const connections = await getResourceManager().getDirectConnections();
+          // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
+          // reset the view(s) to prevent orphaned resources from being used for requests
+          const topicsView = getTopicViewProvider();
+          if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
+            if (!connections.has(topicsView.kafkaCluster.connectionId)) {
+              topicsView.reset();
+            }
+          }
+          const schemasView = getSchemasViewProvider();
+          if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
+            if (!connections.has(schemasView.schemaRegistry.connectionId)) {
+              schemasView.reset();
+            }
+          }
+        }
+      },
+    );
+
+    return [settingsListener, connectionsListener];
   }
 
   /**
