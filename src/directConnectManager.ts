@@ -18,7 +18,6 @@ import {
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { ContextValues, setContextValue } from "./context/values";
-import { directConnectionDeleted } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -100,6 +99,18 @@ export class DirectConnectionManager {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
           const connections = await getResourceManager().getDirectConnections();
+          // ensure all DirectResourceLoader instances are up to date -- if this isn't done, hopping
+          // workspaces and attempting to focus on a direct connection-based resource will fail with
+          // the `Unknown connection ID` error
+          const existingLoaderIds = ResourceLoader.loaders().map((loader) => loader.connectionId);
+          for (const [id] of connections.entries()) {
+            const connId = id as ConnectionId;
+            if (!existingLoaderIds.includes(connId)) {
+              this.initResourceLoader(connId);
+            }
+          }
+          // refresh the Resources view to stay in sync with the secret storage
+          getResourceViewProvider().refresh();
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
           // reset the view(s) to prevent orphaned resources from being used for requests
           const topicsView = getTopicViewProvider();
@@ -173,8 +184,6 @@ export class DirectConnectionManager {
     await getResourceManager().addDirectConnection(spec);
     // create a new ResourceLoader instance for managing the new connection's resources
     this.initResourceLoader(connectionId);
-    // refresh the Resources view to load the new connection
-    getResourceViewProvider().refresh();
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success, message: JSON.stringify(connection) };
@@ -188,9 +197,6 @@ export class DirectConnectionManager {
       action: "deleted",
     });
 
-    // refresh the Resources view to remove the deleted connection
-    getResourceViewProvider().refresh();
-    directConnectionDeleted.fire(id);
     ResourceLoader.deregisterInstance(id);
   }
 
