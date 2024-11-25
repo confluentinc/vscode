@@ -18,7 +18,6 @@ import {
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { ContextValues, setContextValue } from "./context/values";
-import { directConnectionDeleted } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -188,7 +187,6 @@ export class DirectConnectionManager {
       action: "deleted",
     });
 
-    directConnectionDeleted.fire(id);
     ResourceLoader.deregisterInstance(id);
   }
 
