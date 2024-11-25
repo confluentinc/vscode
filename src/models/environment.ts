@@ -73,7 +73,7 @@ export class CCloudEnvironment extends Environment {
  * - one {@link SchemaRegistry}
  */
 export class DirectEnvironment extends Environment {
-  connectionId!: ConnectionId; // dynamically assigned at connection creation time
+  readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
   // TODO: update this based on feedback from product+design

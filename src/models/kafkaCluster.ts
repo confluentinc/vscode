@@ -38,7 +38,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
 
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */
 export class DirectKafkaCluster extends KafkaCluster {
-  connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
+  readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
   name!: Enforced<string>;

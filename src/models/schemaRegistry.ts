@@ -29,13 +29,15 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
 }
 
 export class DirectSchemaRegistry extends SchemaRegistry {
-  connectionId!: ConnectionId;
+  readonly connectionId!: Enforced<ConnectionId>;
   readonly connectionType: ConnectionType = ConnectionType.Direct;
+  // environmentId should map to the connectionId
 }
 
 export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
   readonly connectionType: ConnectionType = ConnectionType.Local;
+  // environmentId should map to the connectionId
 }
 
 /** The representation of a {@link SchemaRegistry} as a {@link TreeItem} in the VS Code UI. */
