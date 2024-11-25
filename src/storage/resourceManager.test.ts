@@ -10,9 +10,15 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
-import { getTestStorageManager } from "../../tests/unit/testUtils";
+import {
+  TEST_DIRECT_CONNECTION,
+  TEST_DIRECT_CONNECTION_ID,
+} from "../../tests/unit/testResources/connection";
+import { getExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { ConnectionSpec } from "../clients/sidecar";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { ConnectionId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -20,6 +26,7 @@ import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
+  DirectConnectionsById,
   getResourceManager,
   ResourceManager,
   UriMetadata,
@@ -955,6 +962,105 @@ describe("ResourceManager URI metadata methods", function () {
     // fetch second back, expect it to still be there.
     const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
     assert.deepStrictEqual(otherMetadata, otherMetadataFromStorage);
+  });
+});
+
+describe("ResourceManager direct connection methods", function () {
+  let rm: ResourceManager;
+
+  before(async () => {
+    // extension needs to be activated before storage manager(s) can be used
+    await getExtensionContext();
+  });
+
+  beforeEach(async () => {
+    rm = getResourceManager();
+  });
+
+  afterEach(async () => {
+    // clean up after each test
+    await rm.deleteDirectConnections();
+  });
+
+  it("addDirectConnection() should correctly store a direct connection spec", async () => {
+    // preload one connection
+    const spec = TEST_DIRECT_CONNECTION.spec;
+    await rm.addDirectConnection(spec);
+
+    // make sure it exists
+    const storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
+    assert.ok(storedSpecs);
+    assert.deepStrictEqual(storedSpecs, new Map([[TEST_DIRECT_CONNECTION_ID, spec]]));
+    assert.deepStrictEqual(storedSpecs.get(TEST_DIRECT_CONNECTION_ID), spec);
+
+    const storedSpec: ConnectionSpec | null =
+      await rm.getDirectConnection(TEST_DIRECT_CONNECTION_ID);
+    assert.ok(storedSpec);
+    assert.deepStrictEqual(storedSpec, spec);
+  });
+
+  it("getDirectConnections() should return an empty map if no direct connections are found", async () => {
+    // no preloading
+
+    const storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
+    assert.deepStrictEqual(storedSpecs, new Map());
+  });
+
+  it("getDirectConnection() should return null if the connection is not found", async () => {
+    // no preloading
+
+    const storedSpec: ConnectionSpec | null = await rm.getDirectConnection(
+      "nonexistent-id" as ConnectionId,
+    );
+    assert.strictEqual(storedSpec, null);
+  });
+
+  it("deleteDirectConnection() should correctly delete a direct connection and not touch existing connections", async () => {
+    // preload two connections
+    const connId1: ConnectionId = TEST_DIRECT_CONNECTION_ID;
+    const connId2: ConnectionId = "other-id" as ConnectionId;
+    const specs: ConnectionSpec[] = [
+      TEST_DIRECT_CONNECTION.spec,
+      { ...TEST_DIRECT_CONNECTION.spec, id: connId2 },
+    ];
+    await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
+
+    // make sure they exist
+    let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
+    assert.ok(storedSpecs);
+    assert.equal(storedSpecs.size, specs.length);
+    assert.deepStrictEqual(storedSpecs.get(connId1), specs[0]);
+    assert.deepStrictEqual(storedSpecs.get(connId2), specs[1]);
+
+    // delete one
+    await rm.deleteDirectConnection(connId1);
+
+    // make sure it's gone but the other remains
+    storedSpecs = await rm.getDirectConnections();
+    assert.deepStrictEqual(storedSpecs.get(connId1), undefined);
+    assert.deepStrictEqual(storedSpecs.get(connId2), specs[1]);
+  });
+
+  it("deleteDirectConnections() should delete all direct connections", async () => {
+    // preload multiple connections
+    const specs: ConnectionSpec[] = [
+      TEST_DIRECT_CONNECTION.spec,
+      { ...TEST_DIRECT_CONNECTION.spec, id: "other-id" },
+      { ...TEST_DIRECT_CONNECTION.spec, id: "another-id" },
+    ];
+    await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
+
+    // make sure they exist
+    let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
+    assert.ok(storedSpecs);
+    assert.equal(storedSpecs.size, specs.length);
+
+    // delete all connections
+    await rm.deleteDirectConnections();
+
+    // make sure they're gone
+    storedSpecs = await rm.getDirectConnections();
+    assert.deepStrictEqual(storedSpecs, new Map());
   });
 });
 
