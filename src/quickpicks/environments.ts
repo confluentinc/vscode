@@ -7,15 +7,12 @@ import { hasCCloudAuthSession } from "../sidecar/connections";
 export async function environmentQuickPick(): Promise<CCloudEnvironment | undefined> {
   // Convenience function to get the name of a cloud environment if a command was triggered through
   // the command palette instead of through the view->item->context menu
-  let cloudEnvironments: CCloudEnvironment[] = [];
-
   if (!hasCCloudAuthSession()) {
     vscode.window.showInformationMessage("No Confluent Cloud connection found.");
     return undefined;
   }
-  const cloudEnvironmentGroups = await getEnvironments();
-  cloudEnvironments = cloudEnvironmentGroups.map((group) => group.environment);
 
+  const cloudEnvironments: CCloudEnvironment[] = await getEnvironments();
   if (cloudEnvironments.length === 0) {
     vscode.window.showInformationMessage("No Confluent Cloud environments found.");
     return undefined;
