@@ -29,6 +29,7 @@ import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
+import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
@@ -160,6 +161,11 @@ export class DirectConnectionManager {
       return { success: false, message: errorMessage };
     }
 
+    getTelemetryLogger().logUsage("Connection", {
+      type: ConnectionType.Direct,
+      action: "created",
+    });
+
     // save the new connection in secret storage
     await getResourceManager().addDirectConnection(spec);
     // create a new ResourceLoader instance for managing the new connection's resources
@@ -173,6 +179,13 @@ export class DirectConnectionManager {
 
   async deleteConnection(id: ConnectionId): Promise<void> {
     await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
+
+    // TODO: look up connection system?
+    getTelemetryLogger().logUsage("Connection", {
+      type: ConnectionType.Direct,
+      action: "deleted",
+    });
+
     // refresh the Resources view to remove the deleted connection
     getResourceViewProvider().refresh();
     directConnectionDeleted.fire(id);

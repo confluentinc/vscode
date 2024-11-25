@@ -42,8 +42,6 @@ export function openDirectConnectionForm(): void {
     // XXX: only enable for local debugging:
     // logger.debug("creating connection from form data:", body);
 
-    // TODO: extract `connection-type` from body and send as telemetry event
-
     let kafkaConfig: KafkaClusterConfig | undefined = undefined;
     if (body["bootstrap_servers"]) {
       kafkaConfig = {
