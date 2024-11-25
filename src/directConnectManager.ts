@@ -129,12 +129,13 @@ export class DirectConnectionManager {
     kafkaClusterConfig: KafkaClusterConfig | undefined,
     schemaRegistryConfig: SchemaRegistryConfig | undefined,
     name?: string,
+    platform?: string,
   ) {
     const connectionId = randomUUID() as ConnectionId;
     const spec: ConnectionSpec = {
       id: connectionId,
       name: name || "New Connection",
-      type: ConnectionType.Direct,
+      type: ConnectionType.Direct, // TODO(shoup): update for MDS in follow-on branch
     };
 
     if (kafkaClusterConfig) {
@@ -162,8 +163,10 @@ export class DirectConnectionManager {
     }
 
     getTelemetryLogger().logUsage("Connection", {
-      type: ConnectionType.Direct,
+      type: platform,
       action: "created",
+      withKafka: !!kafkaClusterConfig,
+      withSchemaRegistry: !!schemaRegistryConfig,
     });
 
     // save the new connection in secret storage
@@ -180,9 +183,8 @@ export class DirectConnectionManager {
   async deleteConnection(id: ConnectionId): Promise<void> {
     await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
 
-    // TODO: look up connection system?
+    // TODO(shoup): look up connection platform once we begin storing it alongside the spec
     getTelemetryLogger().logUsage("Connection", {
-      type: ConnectionType.Direct,
       action: "deleted",
     });
 

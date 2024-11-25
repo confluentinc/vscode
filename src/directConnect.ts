@@ -57,7 +57,12 @@ export function openDirectConnectionForm(): void {
     }
 
     const manager = DirectConnectionManager.getInstance();
-    return await manager.createConnection(kafkaConfig, schemaRegistryConfig, body["name"]);
+    return await manager.createConnection(
+      kafkaConfig,
+      schemaRegistryConfig,
+      body["name"],
+      body["platform"],
+    );
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
