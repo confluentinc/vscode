@@ -53,7 +53,7 @@ export abstract class Environment extends Data implements IResourceBase {
 /** A Confluent Cloud {@link Environment} with additional properties. */
 export class CCloudEnvironment extends Environment {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Ccloud as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
   readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
@@ -74,7 +74,7 @@ export class CCloudEnvironment extends Environment {
  */
 export class DirectEnvironment extends Environment {
   connectionId!: ConnectionId; // dynamically assigned at connection creation time
-  readonly connectionType: ConnectionType = ConnectionType.Direct as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Direct;
 
   // TODO: update this based on feedback from product+design
   readonly iconName = IconNames.EXPERIMENTAL;
@@ -87,7 +87,7 @@ export class DirectEnvironment extends Environment {
 /** A "local" {@link Environment} manageable by the extension via Docker. */
 export class LocalEnvironment extends Environment {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Local as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Local;
 
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 

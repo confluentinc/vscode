@@ -22,7 +22,7 @@ export abstract class KafkaCluster extends Data implements IResourceBase {
 /** A Confluent Cloud {@link KafkaCluster} with additional properties. */
 export class CCloudKafkaCluster extends KafkaCluster {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Ccloud as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
   name!: Enforced<string>;
   provider!: Enforced<string>;
@@ -38,8 +38,8 @@ export class CCloudKafkaCluster extends KafkaCluster {
 
 /** A "direct" {@link KafkaCluster} that is configured via webview form. */
 export class DirectKafkaCluster extends KafkaCluster {
-  connectionId!: ConnectionId; // dynamically assigned at connection creation time
-  readonly connectionType: ConnectionType = ConnectionType.Direct as ConnectionType;
+  connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
+  readonly connectionType: ConnectionType = ConnectionType.Direct;
 
   name!: Enforced<string>;
 
@@ -53,7 +53,7 @@ export class DirectKafkaCluster extends KafkaCluster {
 /** A "local" {@link KafkaCluster} manageable by the extension via Docker. */
 export class LocalKafkaCluster extends KafkaCluster {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Local as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Local;
 
   name!: Enforced<string>;
 

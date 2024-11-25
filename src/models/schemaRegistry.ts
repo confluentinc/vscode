@@ -18,7 +18,7 @@ export abstract class SchemaRegistry extends Data implements IResourceBase {
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Ccloud as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
   provider!: Enforced<string>;
   region!: Enforced<string>;
@@ -30,12 +30,12 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
 
 export class DirectSchemaRegistry extends SchemaRegistry {
   connectionId!: ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Direct as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Direct;
 }
 
 export class LocalSchemaRegistry extends SchemaRegistry {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
-  readonly connectionType: ConnectionType = ConnectionType.Local as ConnectionType;
+  readonly connectionType: ConnectionType = ConnectionType.Local;
 }
 
 /** The representation of a {@link SchemaRegistry} as a {@link TreeItem} in the VS Code UI. */
