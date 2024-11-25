@@ -65,7 +65,7 @@ export async function tryToCreateConnection(spec: ConnectionSpec): Promise<Conne
     connection = await client.gatewayV1ConnectionsPost({
       ConnectionSpec: spec,
     });
-    logger.debug("created new connection:", { type: spec.type });
+    logger.debug("created new connection:", { type: spec.type, id: connection.id });
     return connection;
   } catch (error) {
     logResponseError(error, "creating connection", { connectionId: spec.id! }, true);

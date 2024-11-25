@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_DIRECT_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
@@ -12,9 +13,10 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources/schemaRegistry";
 import { getExtensionContext } from "../../tests/unit/testUtils";
+import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
-import { CCloudEnvironment, CCloudEnvironmentTreeItem } from "../models/environment";
+import { CCloudEnvironment, EnvironmentTreeItem, LocalEnvironment } from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
@@ -25,14 +27,26 @@ import { loadCCloudResources, loadLocalResources, ResourceViewProvider } from ".
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
 
-  before(() => {
+  before(async () => {
+    // ensure extension context is available for the ResourceViewProvider
+    await getExtensionContext();
+  });
+
+  beforeEach(() => {
     provider = ResourceViewProvider.getInstance();
   });
 
-  it("getTreeItem() should return a CCloudEnvironmentTreeItem for a CCloudEnvironment instance", () => {
-    const treeItem = provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT);
-    assert.ok(treeItem instanceof CCloudEnvironmentTreeItem);
+  afterEach(() => {
+    ResourceViewProvider["instance"] = null;
   });
+
+  // TODO: add LocalEnvironment if/when we start showing that in the Resources view
+  for (const resource of [TEST_CCLOUD_ENVIRONMENT, TEST_DIRECT_ENVIRONMENT]) {
+    it(`getTreeItem() should return an EnvironmentTreeItem for a ${resource.constructor.name} instance`, () => {
+      const treeItem = provider.getTreeItem(resource);
+      assert.ok(treeItem instanceof EnvironmentTreeItem);
+    });
+  }
 
   it("getTreeItem() should return a KafkaClusterTreeItem for a LocalKafkaCluster instance", () => {
     const treeItem = provider.getTreeItem(TEST_LOCAL_KAFKA_CLUSTER);
@@ -105,11 +119,13 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadLocalResources() should load local resources under the Local container tree item when clusters are discoverable", async () => {
-    const testLocalResourceGroup: local.LocalResourceGroup = {
+    const testLocalEnv: LocalEnvironment = LocalEnvironment.create({
+      id: LOCAL_CONNECTION_ID,
+      name: LOCAL_ENVIRONMENT_NAME,
       kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
       schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
-    };
-    sandbox.stub(local, "getLocalResources").resolves([testLocalResourceGroup]);
+    });
+    sandbox.stub(local, "getLocalResources").resolves([testLocalEnv]);
 
     const result: ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry> =
       await loadLocalResources();
