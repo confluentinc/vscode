@@ -1,10 +1,9 @@
-import { randomUUID } from "crypto";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
   LocalKafkaCluster,
 } from "../../../src/models/kafkaCluster";
-import { ConnectionId } from "../../../src/models/resource";
+import { TEST_DIRECT_CONNECTION_ID } from "./connection";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
 
 export const TEST_LOCAL_KAFKA_CLUSTER: LocalKafkaCluster = LocalKafkaCluster.create({
@@ -25,7 +24,7 @@ export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.
 });
 
 export const TEST_DIRECT_KAFKA_CLUSTER = DirectKafkaCluster.create({
-  connectionId: randomUUID() as ConnectionId,
+  connectionId: TEST_DIRECT_CONNECTION_ID,
   // connectionType set by default
   id: "direct-abc123",
   name: "Kafka Cluster",
