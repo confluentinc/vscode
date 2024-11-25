@@ -100,6 +100,8 @@ export class DirectConnectionManager {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
           const connections = await getResourceManager().getDirectConnections();
+          // refresh the Resources view to stay in sync with the secret storage
+          getResourceViewProvider().refresh();
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
           // reset the view(s) to prevent orphaned resources from being used for requests
           const topicsView = getTopicViewProvider();
@@ -173,8 +175,6 @@ export class DirectConnectionManager {
     await getResourceManager().addDirectConnection(spec);
     // create a new ResourceLoader instance for managing the new connection's resources
     this.initResourceLoader(connectionId);
-    // refresh the Resources view to load the new connection
-    getResourceViewProvider().refresh();
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success, message: JSON.stringify(connection) };
@@ -188,8 +188,6 @@ export class DirectConnectionManager {
       action: "deleted",
     });
 
-    // refresh the Resources view to remove the deleted connection
-    getResourceViewProvider().refresh();
     directConnectionDeleted.fire(id);
     ResourceLoader.deregisterInstance(id);
   }
