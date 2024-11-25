@@ -10,7 +10,7 @@ import { getCCloudAuthSession } from "../sidecar/connections";
 const logger = new Logger("commands.connections");
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
-async function createConnectionCommand() {
+async function createCCloudConnection() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
@@ -82,7 +82,7 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
 
 export function registerConnectionCommands(): Disposable[] {
   return [
-    registerCommandWithLogging("confluent.connections.ccloud.logIn", createConnectionCommand),
+    registerCommandWithLogging("confluent.connections.ccloud.logIn", createCCloudConnection),
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
     registerCommandWithLogging("confluent.connections.direct", showDirectConnectionForm),
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
