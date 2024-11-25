@@ -5,19 +5,12 @@ import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 
-export interface CCloudEnvironmentGroup {
-  environment: CCloudEnvironment;
-  kafkaClusters: CCloudKafkaCluster[];
-  schemaRegistry?: CCloudSchemaRegistry;
-  // TODO: Add Flink compute pool as cluster type eventually
-}
-
 /**
- * Fetches {@link CCloudEnvironmentGroup}s based on a connection ID, sorted by {@link CCloudEnvironment} name.
+ * Fetches {@link CCloudEnvironment}s based on a connection ID, sorted by `name`.
  * @remarks Nested `kafkaClusters` are also sorted by name.
  */
-export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
-  let envGroups: CCloudEnvironmentGroup[] = [];
+export async function getEnvironments(): Promise<CCloudEnvironment[]> {
+  let envs: CCloudEnvironment[] = [];
 
   const sidecar = await getSidecar();
 
@@ -50,58 +43,48 @@ export async function getEnvironments(): Promise<CCloudEnvironmentGroup[]> {
   const response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
   const environments = response.ccloudConnectionById?.environments;
   if (!environments) {
-    return envGroups;
+    return envs;
   }
 
   environments.forEach((env) => {
     if (!env) {
       return;
     }
-    const envGroup: CCloudEnvironmentGroup = {
-      environment: CCloudEnvironment.create({
-        id: env.id,
-        name: env.name,
-        streamGovernancePackage: env.governancePackage,
-        hasClusters: env.kafkaClusters.length > 0 || env.schemaRegistry !== null,
-      }),
-      kafkaClusters: [],
-      schemaRegistry: undefined,
-    };
+
     // parse Kafka clusters and sort by name
+    let kafkaClusters: CCloudKafkaCluster[] = [];
     if (env.kafkaClusters) {
-      const envKafkaClusters = env.kafkaClusters.map((cluster: any) =>
-        CCloudKafkaCluster.create({
-          ...cluster,
-          environmentId: env.id,
-        }),
+      const envKafkaClusters = env.kafkaClusters.map(
+        (cluster: any): CCloudKafkaCluster =>
+          CCloudKafkaCluster.create({
+            ...cluster,
+            environmentId: env.id,
+          }),
       );
       envKafkaClusters.sort((a: KafkaCluster, b: KafkaCluster) => a.name.localeCompare(b.name));
-      envGroup.kafkaClusters = envKafkaClusters;
+      kafkaClusters.push(...envKafkaClusters);
     }
+
     // parse Schema Registry
+    let schemaRegistry: CCloudSchemaRegistry | undefined;
     if (env.schemaRegistry) {
-      envGroup.schemaRegistry = CCloudSchemaRegistry.create({
+      schemaRegistry = CCloudSchemaRegistry.create({
         ...env.schemaRegistry,
         environmentId: env.id,
       });
     }
-    envGroups.push(envGroup);
+
+    envs.push(
+      CCloudEnvironment.create({
+        id: env.id,
+        name: env.name,
+        streamGovernancePackage: env.governancePackage,
+        kafkaClusters,
+        schemaRegistry,
+      }),
+    );
   });
 
-  envGroups.sort((a, b) => a.environment.name.localeCompare(b.environment.name));
-  return envGroups;
-}
-
-/**
- * The same as {@link getEnvironments}, but filtered to a specific {@link CCloudEnvironment} and its
- * associated clusters. Uses the connection ID from the given environment to fetch the environments.
- * @param environment The {@link CCloudEnvironment} to filter by.
- * @returns The {@link CCloudEnvironmentGroup} for the given environment, or `null` if no matching
- * environment was found from the GraphQL response.
- * */
-export async function getClustersByCCloudEnvironment(
-  environment: CCloudEnvironment,
-): Promise<CCloudEnvironmentGroup | null> {
-  const envGroups: CCloudEnvironmentGroup[] = await getEnvironments();
-  return envGroups.find((group) => group.environment.id === environment.id) ?? null;
+  envs.sort((a, b) => a.name.localeCompare(b.name));
+  return envs;
 }

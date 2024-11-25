@@ -4,58 +4,27 @@ import { fetchTopicAuthorizedOperations } from "../authz/topics";
 import { ResponseError, TopicV3Api } from "../clients/kafkaRest";
 import { currentKafkaClusterChanged } from "../emitters";
 import { Logger } from "../logging";
-import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
+import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { isCCloud, isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import {
   kafkaClusterQuickPick,
   kafkaClusterQuickPickWithViewProgress,
 } from "../quickpicks/kafkaClusters";
 import { getSidecar } from "../sidecar";
-import { getResourceManager } from "../storage/resourceManager";
 import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("commands.kafkaClusters");
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function renameKafkaClusterCommand(item?: CCloudKafkaCluster | undefined) {
-  // TODO: un-comment the lines below once the sidecar supports mutations via GraphQL
-  // refer to https://github.com/confluentinc/vscode/pull/420 for reverting changes to package.json
-  // ---
-  // // If the command was triggered through the command palette, `item` will be undefined, so we
-  // // need to prompt the user for the CCloud Kafka cluster.
-  // const kafkaCluster: CCloudKafkaCluster | undefined =
-  //   item instanceof CCloudKafkaCluster ? item : await kafkaClusterQuickPick(false, true);
-  // if (!kafkaCluster) {
-  //   return;
-  // }
-  // // LocalKafkaClusters aren't returned above, so we can safely assume it's a CCloudKafkaCluster
-  // const cloudKafkaCluster = kafkaCluster as CCloudKafkaCluster;
-  // const newName: string | undefined = await vscode.window.showInputBox({
-  //   prompt: "Enter new name",
-  //   ignoreFocusOut: true,
-  //   placeHolder: cloudKafkaCluster.name,
-  // });
-  // if (!newName) {
-  //   return;
-  // }
-  // await vscode.window.withProgress(
-  //   {
-  //     location: vscode.ProgressLocation.Notification,
-  //     title: `Renaming Kafka cluster "${cloudKafkaCluster.name}" to "${newName}"...`,
-  //   },
-  //   async () => {
-  //     // TODO: add sidecar support for renaming Kafka clusters
-  //     vscode.commands.executeCommand("confluent.resources.refresh");
-  //   },
-  // );
+  // TODO: implement this once the sidecar supports mutations via GraphQL
 }
 
 async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
   // ensure whatever was passed in is some form of KafkaCluster; if not, prompt the user to pick one
   const kafkaCluster: KafkaCluster | undefined =
-    cluster instanceof CCloudKafkaCluster || cluster instanceof LocalKafkaCluster
-      ? cluster
-      : await kafkaClusterQuickPickWithViewProgress();
+    cluster instanceof KafkaCluster ? cluster : await kafkaClusterQuickPickWithViewProgress();
   if (!kafkaCluster) {
     return;
   }
@@ -67,14 +36,6 @@ async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
 }
 
 async function deleteTopicCommand(topic: KafkaTopic) {
-  const cluster: KafkaCluster | null =
-    topic.environmentId != null
-      ? await getResourceManager().getCCloudKafkaCluster(topic.environmentId, topic.clusterId)
-      : await getResourceManager().getLocalKafkaCluster(topic.clusterId);
-  if (!cluster) {
-    throw new Error(`Failed to find Kafka cluster for topic "${topic.name}"`);
-  }
-
   // We won't have even gotten here if we didn't think the user has DELETE permissions on the topic.
   // BUT that was at the time we fetched the topic list, so we should check again before proceeding.
   const authorizedOperations = await fetchTopicAuthorizedOperations(topic);
@@ -85,7 +46,7 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     return;
   }
 
-  logger.info(`Deleting topic "${topic.name}" from cluster ${cluster.name}...`);
+  logger.info(`Deleting topic "${topic.name}" from cluster ${topic.clusterId}...`);
   const confirmMessage = `Are you sure you want to delete the topic "${topic.name}"?`;
 
   const topicName: string | undefined = await vscode.window.showInputBox({
@@ -104,7 +65,10 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     return;
   }
 
-  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(cluster.id, cluster.connectionId);
+  const client: TopicV3Api = (await getSidecar()).getTopicV3Api(
+    topic.clusterId,
+    topic.connectionId,
+  );
 
   await vscode.window.withProgress(
     {
@@ -114,20 +78,20 @@ async function deleteTopicCommand(topic: KafkaTopic) {
     async (progress) => {
       try {
         await client.deleteKafkaTopic({
-          cluster_id: cluster.id,
+          cluster_id: topic.clusterId,
           topic_name: topic.name,
         });
         // indicate progress done 33 % now.
         progress.report({ increment: 33 });
 
-        await waitForTopicToBeDeleted(client, cluster.id, topic.name, cluster.isLocal);
+        await waitForTopicToBeDeleted(client, topic.clusterId, topic.name, isLocal(topic));
         // Another 1/3 way done now.
         progress.report({ increment: 33 });
 
         // explicitly deep refresh the topics view after deleting a topic, so that repainting
         // ommitting the newly deleted topic is a foreground task we block on before
         // closing the progress window.
-        getTopicViewProvider().refresh(true, cluster.id);
+        getTopicViewProvider().refresh(true, topic.clusterId);
       } catch (error) {
         const errorMessage = `Failed to delete topic: ${error}`;
         logger.error(errorMessage);
@@ -142,7 +106,7 @@ async function createTopicCommand(item?: KafkaCluster) {
 
   let cluster: KafkaCluster | undefined;
   // we'll need to know which Kafka cluster to create the topic in, which happens one of three ways:
-  if (item instanceof CCloudKafkaCluster || item instanceof LocalKafkaCluster) {
+  if (item instanceof KafkaCluster) {
     // 1) the user right-clicked a Kafka cluster in the Resources view and we get the associated
     // Kafka cluster as the argument by default
     cluster = item;
@@ -180,7 +144,7 @@ async function createTopicCommand(item?: KafkaCluster) {
   });
 
   // CCloud Kafka clusters will return an error if replication factor is less than 3
-  const defaultReplicationFactor = cluster.isLocal ? "1" : "3";
+  const defaultReplicationFactor = isCCloud(cluster) ? "3" : "1";
   const replicationFactor: string | undefined = await vscode.window.showInputBox({
     title: title,
     prompt: "Enter replication factor",
@@ -207,7 +171,7 @@ async function createTopicCommand(item?: KafkaCluster) {
         });
         progress.report({ increment: 33 });
 
-        await waitForTopicToExist(client, cluster.id, topicName, cluster.isLocal);
+        await waitForTopicToExist(client, cluster.id, topicName, isLocal(cluster));
         progress.report({ increment: 33 });
 
         // Refresh in the foreground after creating a topic, so that the new topic is visible
