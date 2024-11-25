@@ -12,16 +12,25 @@
   <body>
     <main class="container">
       <h1>Configure Topic: <span data-text="this.topicName()"></span></h1>
-        <template data-if="this.cCloudLink()">
-          <p>To configure advanced options, <a data-attr-href="this.settingsLink()">visit topic settings in Confluent Cloud.</a></p>
-        </template>
+      <template data-if="this.cCloudLink()">
+        <p>
+          To configure advanced options,
+          <a data-attr-href="this.settingsLink()">visit topic settings in Confluent Cloud.</a>
+        </p>
+      </template>
       <template data-if="this.errorOnSubmit()">
         <p class="error" data-text="this.errorOnSubmit()"></p>
       </template>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="input-container">
           <label for="cleanup-policy" class="label">Cleanup Policy</label>
-            <span class="description">The retention policy to use on old log segments. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy">More info.</a></span>
+          <span class="description"
+            >The retention policy to use on old log segments.
+            <a
+              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy"
+              >More info.</a
+            ></span
+          >
           <select
             id="cleanup-policy"
             class="input dropdown"
@@ -33,59 +42,76 @@
             <option value="compact">Compact</option>
             <option value="compact,delete">Compact, Delete</option>
           </select>
-            <span class="info error"></span>
-          </div>
-          <div class="input-container">
-            <label for="retention-size" class="label">Retention Size</label>
-              <span class="description">The maximum size a partition can grow to before it is discarded to free up space. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes">More info.</a></span>
-            <select
-              class="input dropdown"
-              id="retention-size"
-              name="retention.bytes"
-              data-prop-value="this.retentionSize()"
-              data-on-change="this.handleChange(event)"
-            >
-              <option value="1048576">1 MB</option>
-              <option value="1073741824">1 GB</option>
-              <option value="1099511627776">1 TB</option>
-              <option value="-1">Infinite</option>
-            </select>
-              <span class="info error"></span>
-          </div>
-          <div class="input-container">
-            <label for="retention-ms" class="label">Retention Time</label>
-            <span class="description">The amount of time to retain data. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms">More info.</a></span>
-            <select
-              class="input dropdown"
-              id="retention-ms"
-              name="retention.ms"
-              data-prop-value="this.retentionMs()"
-              data-on-change="this.handleChange(event)"
-            >
-              <option value="3600000">1 Hour</option>
-              <option value="86400000">1 Day</option>
-              <option value="604800000">1 Week</option>
-              <option value="2592000000">1 Month</option>
-              <option value="31536000000">1 Year (365 days)</option>
-              <option value="-1">Infinite</option>
-            </select>
-            <span class="info error"></span>
-          </div>
-          <div class="input-container">
-            <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
-              <span class="description">The maximum message size that can be appended to this topic, in bytes. <a href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes">More info.</a></span>
-            <input
-              class="input"
-              id="max-message-bytes"
-              name="max.message.bytes"
-              type="number"
-              min="0"
-              max="20971520"
-              data-prop-value="this.maxMessageBytes()"
-              data-on-change="this.handleChange(event)"
-            />
-              <span class="info error"></span>
-          </div>
+          <span class="info error"></span>
+        </div>
+        <div class="input-container">
+          <label for="retention-size" class="label">Retention Size</label>
+          <span class="description"
+            >The maximum size a partition can grow to before it is discarded to free up space.
+            <a
+              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes"
+              >More info.</a
+            ></span
+          >
+          <select
+            class="input dropdown"
+            id="retention-size"
+            name="retention.bytes"
+            data-prop-value="this.retentionSize()"
+            data-on-change="this.handleChange(event)"
+          >
+            <option value="1048576">1 MB</option>
+            <option value="1073741824">1 GB</option>
+            <option value="1099511627776">1 TB</option>
+            <option value="-1">Infinite</option>
+          </select>
+          <span class="info error"></span>
+        </div>
+        <div class="input-container">
+          <label for="retention-ms" class="label">Retention Time</label>
+          <span class="description"
+            >The amount of time to retain data.
+            <a
+              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms"
+              >More info.</a
+            ></span
+          >
+          <select
+            class="input dropdown"
+            id="retention-ms"
+            name="retention.ms"
+            data-prop-value="this.retentionMs()"
+            data-on-change="this.handleChange(event)"
+          >
+            <option value="3600000">1 Hour</option>
+            <option value="86400000">1 Day</option>
+            <option value="604800000">1 Week</option>
+            <option value="2592000000">1 Month</option>
+            <option value="31536000000">1 Year (365 days)</option>
+            <option value="-1">Infinite</option>
+          </select>
+          <span class="info error"></span>
+        </div>
+        <div class="input-container">
+          <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
+          <span class="description"
+            >The maximum message size that can be appended to this topic, in bytes.
+            <a
+              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes"
+              >More info.</a
+            ></span
+          >
+          <input
+            class="input"
+            id="max-message-bytes"
+            name="max.message.bytes"
+            type="number"
+            min="0"
+            max="20971520"
+            data-prop-value="this.maxMessageBytes()"
+            data-on-change="this.handleChange(event)"
+          />
+          <span class="info error"></span>
         </div>
         <div class="flex-row">
           <input
@@ -151,9 +177,9 @@
         body {
           max-width: unset;
         }
-         .container {
+        .container {
           padding: 20px 50px;
-         }
+        }
         .input-container {
           display: flex;
           flex-direction: column;
@@ -198,7 +224,7 @@
       .button.ghost {
         background-color: transparent;
         border: none;
-        color: var(--vscode-button-secondaryForeground);
+        color: var(--vscode-descriptionForeground);
         padding: 5px 0;
       }
       .button.ghost:hover:not(:disabled) {

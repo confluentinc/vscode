@@ -38,6 +38,7 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  */
 export async function schemaRegistryQuickPick(
   defaultRegistryId: string | undefined = undefined,
+  includeLocal: boolean = true,
 ): Promise<SchemaRegistry | undefined> {
   const registriesByConnectionID: Map<string, SchemaRegistry[]> =
     await getRegistriesByConnectionID();
@@ -49,23 +50,28 @@ export async function schemaRegistryQuickPick(
     CCLOUD_CONNECTION_ID,
   )! as CCloudSchemaRegistry[];
 
-  const allSchemaRegistries: SchemaRegistry[] = [
-    ...localSchemaRegistries,
-    ...ccloudSchemaRegistries,
-  ];
+  let allSchemaRegistries: SchemaRegistry[] = [];
+  allSchemaRegistries.push(...localSchemaRegistries, ...ccloudSchemaRegistries);
+  if (allSchemaRegistries.length === 0) {
+    let login: string = "";
+    let local: string = "";
 
-  if (localSchemaRegistries.length === 0 && ccloudSchemaRegistries.length === 0) {
-    vscode.window.showInformationMessage("No Schema Registries available.");
     if (!hasCCloudAuthSession()) {
-      const login = "Log in to Confluent Cloud";
-      vscode.window
-        .showInformationMessage("Connect to Confluent Cloud to access remote clusters.", login)
-        .then((selected) => {
-          if (selected === login) {
-            vscode.commands.executeCommand("confluent.connections.create");
-          }
-        });
+      login = "Log in to Confluent Cloud";
     }
+    if (includeLocal) {
+      local = "Start Local Resources.";
+    }
+
+    vscode.window
+      .showInformationMessage("No Schema Registries available.", login, local)
+      .then((selected) => {
+        if (selected === login) {
+          vscode.commands.executeCommand("confluent.connections.create");
+        } else if (selected === local) {
+          vscode.commands.executeCommand("confluent.docker.startLocalResources");
+        }
+      });
     return undefined;
   } else {
     logger.debug(

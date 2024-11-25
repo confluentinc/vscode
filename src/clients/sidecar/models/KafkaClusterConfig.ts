@@ -20,12 +20,6 @@ import { mapValues } from "../runtime";
  */
 export interface KafkaClusterConfig {
   /**
-   * The identifier of the Kafka cluster, if known.
-   * @type {string}
-   * @memberof KafkaClusterConfig
-   */
-  id?: string;
-  /**
    * A list of host/port pairs to use for establishing the initial connection to the Kafka cluster.
    * @type {string}
    * @memberof KafkaClusterConfig
@@ -71,7 +65,6 @@ export function KafkaClusterConfigFromJSONTyped(
     return json;
   }
   return {
-    id: json["id"] == null ? undefined : json["id"],
     bootstrap_servers: json["bootstrap_servers"],
     credentials: json["credentials"] == null ? undefined : json["credentials"],
     ssl: json["ssl"] == null ? undefined : json["ssl"],
@@ -85,7 +78,6 @@ export function KafkaClusterConfigToJSON(value?: KafkaClusterConfig | null): any
     return value;
   }
   return {
-    id: value["id"],
     bootstrap_servers: value["bootstrap_servers"],
     credentials: value["credentials"],
     ssl: value["ssl"],
