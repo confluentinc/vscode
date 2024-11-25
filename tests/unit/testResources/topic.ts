@@ -22,7 +22,7 @@ const TEST_KAFKA_TOPIC_BODY = {
 
 export const TEST_LOCAL_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
   ...TEST_KAFKA_TOPIC_BODY,
-  connectionId: LOCAL_CONNECTION_ID as ConnectionId,
+  connectionId: LOCAL_CONNECTION_ID,
   connectionType: ConnectionType.Local,
   name: "test-local-topic",
   partition_count: 1,
@@ -32,7 +32,7 @@ export const TEST_LOCAL_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
 
 export const TEST_CCLOUD_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
   ...TEST_KAFKA_TOPIC_BODY,
-  connectionId: CCLOUD_CONNECTION_ID as ConnectionId,
+  connectionId: CCLOUD_CONNECTION_ID,
   connectionType: ConnectionType.Ccloud,
   name: "test-ccloud-topic",
   partition_count: 3,

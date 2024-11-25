@@ -17,7 +17,7 @@ export abstract class SchemaRegistry extends Data implements IResourceBase {
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
-  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
+  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
   provider!: Enforced<string>;
@@ -35,7 +35,7 @@ export class DirectSchemaRegistry extends SchemaRegistry {
 }
 
 export class LocalSchemaRegistry extends SchemaRegistry {
-  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
+  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Local;
   // environmentId should map to the connectionId
 }
