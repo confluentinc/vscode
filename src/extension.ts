@@ -87,7 +87,9 @@ const logger = new Logger("extension");
 // This method is called when your extension is activated based on the activation events
 // defined in package.json
 // ref: https://code.visualstudio.com/api/references/activation-events
-export async function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
+export async function activate(
+  context: vscode.ExtensionContext,
+): Promise<vscode.ExtensionContext | undefined> {
   observabilityContext.extensionVersion = context.extension.packageJSON.version;
   observabilityContext.extensionActivated = false;
 
@@ -102,8 +104,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
     Sentry.captureException(e);
     throw e;
   }
-  // XXX: used for testing; do not remove
-  return context;
+
+  // XXX: used to provide the ExtensionContext for tests; do not remove
+  if (context.extensionMode === vscode.ExtensionMode.Test) {
+    return context;
+  }
 }
 
 /**
