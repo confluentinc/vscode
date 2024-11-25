@@ -99,6 +99,10 @@ export class DirectConnectionManager {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
           const connections = await getResourceManager().getDirectConnections();
+          // ensure all DirectResourceLoader instances are up to date
+          for (const [id] of connections.entries()) {
+            this.initResourceLoader(id as ConnectionId);
+          }
           // refresh the Resources view to stay in sync with the secret storage
           getResourceViewProvider().refresh();
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
