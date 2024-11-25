@@ -1,9 +1,7 @@
 import { randomUUID } from "crypto";
-import { ExtensionContext, ViewColumn } from "vscode";
+import { ViewColumn } from "vscode";
 import { KafkaClusterConfig, SchemaRegistryConfig } from "./clients/sidecar";
-import { registerCommandWithLogging } from "./commands";
 import { DirectConnectionManager } from "./directConnectManager";
-import { Logger } from "./logging";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { post } from "./webview/direct-connect-form";
@@ -13,15 +11,6 @@ type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
-
-const logger = new Logger("direct");
-
-export const registerDirectConnectionCommand = (context: ExtensionContext) => {
-  const directConnectionCommand = registerCommandWithLogging("confluent.connections.direct", () =>
-    openDirectConnectionForm(),
-  );
-  context.subscriptions.push(directConnectionCommand);
-};
 
 const directConnectWebviewCache = new WebviewPanelCache();
 
@@ -53,8 +42,6 @@ export function openDirectConnectionForm(): void {
     // XXX: only enable for local debugging:
     // logger.debug("creating connection from form data:", body);
 
-    // TODO: extract `connection-type` from body and send as telemetry event
-
     let kafkaConfig: KafkaClusterConfig | undefined = undefined;
     if (body["bootstrap_servers"]) {
       kafkaConfig = {
@@ -70,7 +57,12 @@ export function openDirectConnectionForm(): void {
     }
 
     const manager = DirectConnectionManager.getInstance();
-    return await manager.createConnection(kafkaConfig, schemaRegistryConfig, body["name"]);
+    return await manager.createConnection(
+      kafkaConfig,
+      schemaRegistryConfig,
+      body["name"],
+      body["platform"],
+    );
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {

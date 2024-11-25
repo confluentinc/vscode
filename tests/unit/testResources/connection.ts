@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
-import { Connection, UserInfo } from "../../../src/clients/sidecar";
+import { Connection, ConnectionType, UserInfo } from "../../../src/clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
   CCLOUD_CONNECTION_SPEC,
+  LOCAL_CONNECTION_ID,
   LOCAL_CONNECTION_SPEC,
 } from "../../../src/constants";
+import { ConnectionId } from "../../../src/models/resource";
 import { SIDECAR_PORT } from "../../../src/sidecar/constants";
 import { TEST_CCLOUD_ORGANIZATION } from "./organization";
 
@@ -54,15 +56,34 @@ export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = {
   },
 };
 
-const TEST_LOCAL_CONNECTION_ID = randomUUID();
 export const TEST_LOCAL_CONNECTION: Connection = {
   api_version: "gateway/v1",
   kind: "Connection",
-  id: TEST_LOCAL_CONNECTION_ID,
+  id: LOCAL_CONNECTION_ID,
   metadata: {
-    self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${TEST_LOCAL_CONNECTION_ID}`,
+    self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${LOCAL_CONNECTION_ID}`,
   },
   spec: LOCAL_CONNECTION_SPEC,
+  status: {
+    authentication: {
+      status: "NO_TOKEN",
+    },
+  },
+};
+
+export const TEST_DIRECT_CONNECTION_ID = randomUUID() as ConnectionId;
+export const TEST_DIRECT_CONNECTION: Connection = {
+  api_version: "gateway/v1",
+  kind: "Connection",
+  id: TEST_DIRECT_CONNECTION_ID,
+  metadata: {
+    self: `http://localhost:${SIDECAR_PORT}/gateway/v1/connections/${TEST_DIRECT_CONNECTION_ID}`,
+  },
+  spec: {
+    id: TEST_DIRECT_CONNECTION_ID,
+    name: "New Connection",
+    type: ConnectionType.Direct,
+  },
   status: {
     authentication: {
       status: "NO_TOKEN",

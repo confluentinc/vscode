@@ -1,53 +1,60 @@
 import { Data, type Require as Enforced } from "dataclass";
-import * as vscode from "vscode";
+import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
+import { ConnectionId, IResourceBase, isCCloud } from "./resource";
 
-export abstract class SchemaRegistry extends Data {
-  abstract readonly connectionId: string;
-  abstract readonly isLocal: boolean;
-  abstract readonly isCCloud: boolean;
+export abstract class SchemaRegistry extends Data implements IResourceBase {
+  abstract connectionId: ConnectionId;
+  abstract connectionType: ConnectionType;
+  iconName: IconNames = IconNames.SCHEMA_REGISTRY;
 
   id!: Enforced<string>;
   uri!: Enforced<string>;
-}
-
-export class LocalSchemaRegistry extends SchemaRegistry {
-  readonly connectionId = LOCAL_CONNECTION_ID;
-  readonly isLocal: boolean = true;
-  readonly isCCloud: boolean = false;
+  // added separately from sidecar responses
+  environmentId!: Enforced<string>;
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
-  readonly connectionId = CCLOUD_CONNECTION_ID;
-  readonly isLocal: boolean = false;
-  readonly isCCloud: boolean = true;
+  readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID as ConnectionId;
+  readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
   provider!: Enforced<string>;
   region!: Enforced<string>;
-  // added separately from sidecar responses
-  environmentId!: Enforced<string>;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas`;
   }
 }
 
-// Tree item representing a Schema Registry in the Resources view
-export class SchemaRegistryTreeItem extends vscode.TreeItem {
+export class DirectSchemaRegistry extends SchemaRegistry {
+  readonly connectionId!: Enforced<ConnectionId>;
+  readonly connectionType: ConnectionType = ConnectionType.Direct;
+  // environmentId should map to the connectionId
+}
+
+export class LocalSchemaRegistry extends SchemaRegistry {
+  readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID as ConnectionId;
+  readonly connectionType: ConnectionType = ConnectionType.Local;
+  // environmentId should map to the connectionId
+}
+
+/** The representation of a {@link SchemaRegistry} as a {@link TreeItem} in the VS Code UI. */
+export class SchemaRegistryTreeItem extends TreeItem {
   resource: SchemaRegistry;
 
   constructor(resource: SchemaRegistry) {
     const label = "Schema Registry";
-    super(label, vscode.TreeItemCollapsibleState.None);
+    super(label, TreeItemCollapsibleState.None);
 
     // internal properties
     this.resource = resource;
-    this.contextValue = this.resource.isLocal ? "local-schema-registry" : "ccloud-schema-registry";
+    this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema-registry`;
 
     // user-facing properties
     this.description = this.resource.id;
-    this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA_REGISTRY);
+    this.iconPath = new ThemeIcon(this.resource.iconName);
     this.tooltip = createSchemaRegistryTooltip(this.resource);
 
     // set primary click action to select this cluster as the current one, focusing it in the Schemas view
@@ -60,28 +67,21 @@ export class SchemaRegistryTreeItem extends vscode.TreeItem {
 }
 
 // todo easy peasy make this a method of SchemaRegistry family.
-function createSchemaRegistryTooltip(resource: SchemaRegistry): vscode.MarkdownString {
-  const tooltip = new CustomMarkdownString();
-  if (resource.isCCloud) {
+function createSchemaRegistryTooltip(resource: SchemaRegistry): MarkdownString {
+  const tooltip = new CustomMarkdownString()
+    .appendMarkdown(`#### $(${resource.iconName}) Schema Registry`)
+    .appendMarkdown("\n\n---")
+    .appendMarkdown(`\n\nID: \`${resource.id}\``)
+    .appendMarkdown(`\n\nURI: \`${resource.uri}\``);
+  if (isCCloud(resource)) {
     const ccloudSchemaRegistry = resource as CCloudSchemaRegistry;
     tooltip
-      .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Confluent Cloud Schema Registry`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${ccloudSchemaRegistry.id}\`\n\n`)
-      .appendMarkdown(`Provider: \`${ccloudSchemaRegistry.provider}\`\n\n`)
-      .appendMarkdown(`Region: \`${ccloudSchemaRegistry.region}\`\n\n`)
-      .appendMarkdown(`URI: \`${ccloudSchemaRegistry.uri}\``)
-      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown(`\n\nProvider: \`${ccloudSchemaRegistry.provider}\``)
+      .appendMarkdown(`\n\nRegion: \`${ccloudSchemaRegistry.region}\``)
+      .appendMarkdown("\n\n---")
       .appendMarkdown(
-        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudSchemaRegistry.ccloudUrl})`,
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudSchemaRegistry.ccloudUrl})`,
       );
-  } else {
-    const localSchemaRegistry = resource as LocalSchemaRegistry;
-    tooltip
-      .appendMarkdown(`#### $(${IconNames.SCHEMA_REGISTRY}) Local Schema Registry`)
-      .appendMarkdown("\n\n---\n\n")
-      .appendMarkdown(`ID: \`${localSchemaRegistry.id}\`\n\n`)
-      .appendMarkdown(`URI: \`${localSchemaRegistry.uri}\``);
   }
   return tooltip;
 }

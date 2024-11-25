@@ -24,14 +24,19 @@ import {
   type SimpleConsumeMultiPartitionResponse,
 } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
+import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { Logger } from "./logging";
+import { ConnectionId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
 import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
-import { getResourceManager } from "./storage/resourceManager";
+import { CCloudResourceLoader } from "./storage/ccloudResourceLoader";
+import { DirectResourceLoader } from "./storage/directResourceLoader";
+import { LocalResourceLoader } from "./storage/localResourceLoader";
+import { ResourceLoader } from "./storage/resourceLoader";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { WebviewPanelCache } from "./webview-cache";
@@ -63,7 +68,7 @@ export function activateMessageViewer(context: ExtensionContext) {
       "confluent.topic.consume",
       async (topic?: KafkaTopic, duplicate = false, config = MessageViewerConfig.create()) => {
         if (topic == null) {
-          const cluster = await kafkaClusterQuickPick(true, true);
+          const cluster = await kafkaClusterQuickPick();
           if (cluster == null) return;
           topic = await topicQuickPick(cluster);
           if (topic == null) return;
@@ -119,12 +124,9 @@ export function activateMessageViewer(context: ExtensionContext) {
     registerCommandWithLogging("confluent.topic.consume.getUri", async () => {
       if (activeTopic == null || activeConfig == null) return;
       const query = activeConfig.toQuery();
-      if (activeTopic.isLocalTopic()) {
-        query.set("origin", "local");
-      } else {
-        query.set("origin", "ccloud");
-        query.set("envId", activeTopic.environmentId!);
-      }
+      query.set("origin", activeTopic.connectionType.toLowerCase());
+      // CCloud will have unique env IDs; local and direct will use their connection IDs
+      query.set("envId", activeTopic.environmentId);
       query.set("clusterId", activeTopic.clusterId);
       query.set("topicName", activeTopic.name);
       const context = getExtensionContext();
@@ -139,28 +141,48 @@ export function activateMessageViewer(context: ExtensionContext) {
     registerCommandWithLogging("confluent.topic.consume.fromUri", async (uri: Uri) => {
       const params = new URLSearchParams(uri.query);
       const origin = params.get("origin");
-      const envId = params.get("envId");
+      let envId = params.get("envId");
       const clusterId = params.get("clusterId");
       const topicName = params.get("topicName");
       if (clusterId == null || topicName == null) {
         return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
       }
-      const rm = getResourceManager();
-      let cluster;
-      if (origin === "ccloud") {
-        if (envId == null) {
+      if (origin === "local" && !envId) {
+        // backwards compatibility for old URIs before we started using local env IDs
+        envId = LOCAL_CONNECTION_ID;
+      }
+
+      // we need to look up which ResourceLoader is responsible for the resources, whether they were
+      // cached or need to be fetched from the sidecar
+      let loader: ResourceLoader;
+      switch (origin) {
+        case "ccloud":
+          loader = CCloudResourceLoader.getInstance();
+          break;
+        case "local":
+          loader = LocalResourceLoader.getInstance();
+          break;
+        case "direct":
+          // direct connections' env IDs are the same as their connection IDs
+          if (envId == null) {
+            return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
+          }
+          loader = DirectResourceLoader.getInstance(envId! as ConnectionId);
+          break;
+        default:
           return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
-        }
-        cluster = await rm.getCCloudKafkaCluster(envId, clusterId);
-      } else if (origin === "local") {
-        cluster = await rm.getLocalKafkaCluster(clusterId);
-      } else {
+      }
+
+      if (envId == null) {
         return window.showErrorMessage("Unable to open Message Viewer: URI is malformed");
       }
+      const cluster = (await loader.getKafkaClustersForEnvironmentId(envId)).find(
+        (cluster) => cluster.id === clusterId,
+      );
       if (cluster == null) {
         return window.showErrorMessage("Unable to open Message Viewer: cluster not found");
       }
-      const topics = await rm.getTopicsForCluster(cluster);
+      const topics = await loader.getTopicsForCluster(cluster);
       if (topics == null) {
         return window.showErrorMessage("Unable to open Message Viewer: can't load topics");
       }
