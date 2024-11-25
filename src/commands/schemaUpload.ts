@@ -81,7 +81,7 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
   }
 
   // Ask the user to choose a schema registry to upload to.
-  const registry = await schemaRegistryQuickPick(defaults?.id);
+  const registry = await schemaRegistryQuickPick(defaults?.schemaRegistryId);
   if (!registry) {
     logger.info("No registry chosen, aborting schema upload");
     return;

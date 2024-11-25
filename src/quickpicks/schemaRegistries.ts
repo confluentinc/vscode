@@ -86,31 +86,6 @@ export async function schemaRegistryQuickPick(
     selectedSchemaRegistry,
   });
 
-  // re-sort each schema registry list to let the selected one be first, if present in this list
-  // so that ultimately we can show the selected one first in the quickpick.
-  for (const schemaRegistryList of [
-    localSchemaRegistries,
-    ccloudSchemaRegistries,
-  ] as SchemaRegistry[][]) {
-    const selectedSchemaRegistryIndex: number = schemaRegistryList.findIndex(
-      (sr) => sr.id === selectedSchemaRegistry?.id,
-    );
-    if (selectedSchemaRegistryIndex !== -1) {
-      // pop it out and push as element 0
-      logger.info(
-        `Moving selected schema registry at index ${selectedSchemaRegistryIndex} to top of list.`,
-      );
-      const selectedSchemaRegistry = schemaRegistryList.splice(selectedSchemaRegistryIndex, 1)[0];
-      schemaRegistryList.unshift(selectedSchemaRegistry);
-
-      logger.info(`Schema registry list after moving: ${schemaRegistryList}`);
-    } else {
-      logger.info(
-        `Selected schema registry ${selectedSchemaRegistry?.id} not found in list ${schemaRegistryList}.`,
-      );
-    }
-  }
-
   // convert all available Schema Registries to quick pick items
   const quickPickItems: vscode.QuickPickItem[] = [];
 
@@ -221,11 +196,16 @@ async function populateCCloudSchemaRegistries(
     environmentMap.set(env.id, env);
   });
 
-  // sort the Schema Registries by the env name
+  // sort the Schema Registries by the env name. Prefer to show the selected one first, then sort by env name.
   ccloudSchemaRegistries.sort((a, b) => {
-    const aEnvName = environmentMap.get(a.environmentId)!.name;
-    const bEnvName = environmentMap.get(b.environmentId)!.name;
-    return aEnvName!.localeCompare(bEnvName!);
+    if (selectedSchemaRegistry?.id === a.id) {
+      return -1;
+    } else if (selectedSchemaRegistry?.id === b.id) {
+      return 1;
+    }
+    const envA: CCloudEnvironment | undefined = environmentMap.get(a.environmentId);
+    const envB: CCloudEnvironment | undefined = environmentMap.get(b.environmentId);
+    return envA!.name.localeCompare(envB!.name);
   });
 
   // show a top-level separator for CCloud Schema Registries (unlike the Kafka cluster quickpick,

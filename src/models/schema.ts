@@ -95,7 +95,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.id = `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
-    this.contextValue = resource.isCCloudSchema() ? "ccloud-schema" : "schema";
+    this.contextValue = resource.isCCloudSchema() ? "ccloud-schema" : "local-schema";
 
     // user-facing properties
     this.description = resource.id.toString();
