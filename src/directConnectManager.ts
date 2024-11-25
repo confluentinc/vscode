@@ -99,9 +99,15 @@ export class DirectConnectionManager {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
           const connections = await getResourceManager().getDirectConnections();
-          // ensure all DirectResourceLoader instances are up to date
+          // ensure all DirectResourceLoader instances are up to date -- if this isn't done, hopping
+          // workspaces and attempting to focus on a direct connection-based resource will fail with
+          // the `Unknown connection ID` error
+          const existingLoaderIds = ResourceLoader.loaders().map((loader) => loader.connectionId);
           for (const [id] of connections.entries()) {
-            this.initResourceLoader(id as ConnectionId);
+            const connId = id as ConnectionId;
+            if (!existingLoaderIds.includes(connId)) {
+              this.initResourceLoader(connId);
+            }
           }
           // refresh the Resources view to stay in sync with the secret storage
           getResourceViewProvider().refresh();
