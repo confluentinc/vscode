@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_DIRECT_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
@@ -26,14 +27,26 @@ import { loadCCloudResources, loadLocalResources, ResourceViewProvider } from ".
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
 
-  before(() => {
+  before(async () => {
+    // ensure extension context is available for the ResourceViewProvider
+    await getExtensionContext();
+  });
+
+  beforeEach(() => {
     provider = ResourceViewProvider.getInstance();
   });
 
-  it("getTreeItem() should return a CCloudEnvironmentTreeItem for a CCloudEnvironment instance", () => {
-    const treeItem = provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT);
-    assert.ok(treeItem instanceof EnvironmentTreeItem);
+  afterEach(() => {
+    ResourceViewProvider["instance"] = null;
   });
+
+  // TODO: add LocalEnvironment if/when we start showing that in the Resources view
+  for (const resource of [TEST_CCLOUD_ENVIRONMENT, TEST_DIRECT_ENVIRONMENT]) {
+    it(`getTreeItem() should return an EnvironmentTreeItem for a ${resource.constructor.name} instance`, () => {
+      const treeItem = provider.getTreeItem(resource);
+      assert.ok(treeItem instanceof EnvironmentTreeItem);
+    });
+  }
 
   it("getTreeItem() should return a KafkaClusterTreeItem for a LocalKafkaCluster instance", () => {
     const treeItem = provider.getTreeItem(TEST_LOCAL_KAFKA_CLUSTER);
