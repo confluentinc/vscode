@@ -38,6 +38,9 @@ export class Schema extends Data implements IResourceBase {
   schemaRegistryId!: Enforced<string>;
   environmentId!: Enforced<string> | undefined;
 
+  /** Is this the highest version bound to this subject? */
+  isHighestVersion!: Enforced<boolean>;
+
   /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
     if (this.subject.endsWith("-key")) {
@@ -90,7 +93,10 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.resource = resource;
     // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the
     // "View in CCloud" context menu item
-    this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema`;
+    const connectionType = resource.connectionType.toLowerCase();
+    this.contextValue = resource.isHighestVersion
+      ? `${connectionType}-evolvable-schema`
+      : `${connectionType}-schema`;
 
     // user-facing properties
     this.description = resource.id.toString();
