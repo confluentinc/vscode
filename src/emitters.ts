@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { KafkaCluster } from "./models/kafkaCluster";
-import { ConnectionId } from "./models/resource";
 import { SchemaRegistry } from "./models/schemaRegistry";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
@@ -17,9 +16,6 @@ export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
-
-/** Indicate that a direct connection was removed, by its connection ID. */
-export const directConnectionDeleted = new vscode.EventEmitter<ConnectionId>();
 
 /**
  * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
