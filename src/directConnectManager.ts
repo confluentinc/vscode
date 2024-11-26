@@ -18,7 +18,6 @@ import {
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { ContextValues, setContextValue } from "./context/values";
-import { directConnectionDeleted } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -99,7 +98,31 @@ export class DirectConnectionManager {
       async ({ key }: SecretStorageChangeEvent) => {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
-          const connections = await getResourceManager().getDirectConnections();
+          const connections: DirectConnectionsById =
+            await getResourceManager().getDirectConnections();
+          // ensure all DirectResourceLoader instances are up to date
+          // part 1: ensure any new connections have registered loaders; if this isn't done, hopping
+          // workspaces and attempting to focus on a direct connection-based resource will fail with
+          // the `Unknown connection ID` error
+          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders().map(
+            (loader) => loader.connectionId,
+          );
+          for (const id of connections.keys()) {
+            if (!existingLoaderIds.includes(id)) {
+              this.initResourceLoader(id);
+            }
+          }
+          // part 2: remove any removed connections was removed from the secret storage to prevent
+          // any requests to orphaned resources/connections
+          for (const id of existingLoaderIds) {
+            if (!connections.has(id)) {
+              ResourceLoader.deregisterInstance(id);
+            }
+          }
+
+          // refresh the Resources view to stay in sync with the secret storage
+          getResourceViewProvider().refresh();
+
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
           // reset the view(s) to prevent orphaned resources from being used for requests
           const topicsView = getTopicViewProvider();
@@ -173,8 +196,6 @@ export class DirectConnectionManager {
     await getResourceManager().addDirectConnection(spec);
     // create a new ResourceLoader instance for managing the new connection's resources
     this.initResourceLoader(connectionId);
-    // refresh the Resources view to load the new connection
-    getResourceViewProvider().refresh();
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success, message: JSON.stringify(connection) };
@@ -188,9 +209,6 @@ export class DirectConnectionManager {
       action: "deleted",
     });
 
-    // refresh the Resources view to remove the deleted connection
-    getResourceViewProvider().refresh();
-    directConnectionDeleted.fire(id);
     ResourceLoader.deregisterInstance(id);
   }
 
@@ -232,7 +250,7 @@ export class DirectConnectionManager {
         newConnectionPromises.push(tryToCreateConnection(connectionSpec));
       }
       // create a new ResourceLoader instance for managing the new connection's resources
-      this.initResourceLoader(id as ConnectionId);
+      this.initResourceLoader(id);
     }
 
     if (newConnectionPromises.length > 0) {
