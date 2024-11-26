@@ -53,7 +53,7 @@
     ],
     "commands": [
       {
-        "command": "confluent.connections.ccloud.logIn",
+        "command": "confluent.connections.ccloud.login",
         "icon": "$(plus)",
         "title": "Log in to Confluent Cloud",
         "category": "Confluent: Connections"
@@ -61,13 +61,7 @@
       {
         "command": "confluent.connections.direct",
         "title": "Add New Connection",
-        "icon": "$(plus)",
-        "category": "Confluent: Connections"
-      },
-      {
-        "command": "confluent.connections.direct.delete",
-        "icon": "$(debug-disconnect)",
-        "title": "Disconnect",
+        "icon": "$(plug)",
         "category": "Confluent: Connections"
       },
       {
@@ -301,8 +295,8 @@
       {
         "command": "confluent.topic.produce.fromFile",
         "title": "Produce Message to Kafka Topic from schemaless JSON file",
-        "category": "Confluent: Topic",
-        "enablement": "activeWebviewPanelId == message-viewer"
+        "icon": "$(send)",
+        "category": "Confluent: Topic"
       },
       {
         "command": "confluent.topics.create",
@@ -450,7 +444,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
       },
       {
@@ -507,6 +501,10 @@
         },
         {
           "command": "confluent.copyResourceName",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topic.produce.fromFile",
           "when": "false"
         },
         {
@@ -630,6 +628,11 @@
       ],
       "view/title": [
         {
+          "command": "confluent.connections.direct",
+          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation@2"
@@ -688,7 +691,7 @@
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
+          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
           "group": "2_copy@2"
         },
         {
@@ -710,6 +713,11 @@
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*/",
           "group": "3_compare"
+        },
+        {
+          "command": "confluent.topic.produce.fromFile",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "group": "inline@1"
         },
         {
           "command": "confluent.diff.selectForCompare",
@@ -763,17 +771,17 @@
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
-          "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
+          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
           "group": "2_copy@3"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem == schema",
+          "when": "view == confluent-schemas && viewItem == ccloud-schema",
           "group": "4_copy@1"
         },
         {
           "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem == ccloud-schema",
           "group": "inline@1"
         },
         {
