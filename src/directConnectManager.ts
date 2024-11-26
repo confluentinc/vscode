@@ -37,6 +37,7 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
+import { PostResponse } from "./webview/direct-connect-form";
 
 const logger = new Logger("directConnectManager");
 
@@ -158,7 +159,7 @@ export class DirectConnectionManager {
     schemaRegistryConfig: SchemaRegistryConfig | undefined,
     name?: string,
     platform?: string,
-  ) {
+  ): Promise<PostResponse> {
     const connectionId = randomUUID() as ConnectionId;
     const spec: ConnectionSpec = {
       id: connectionId,
@@ -173,20 +174,8 @@ export class DirectConnectionManager {
       spec.schema_registry = schemaRegistryConfig;
     }
 
-    let connection: Connection | null = null;
-    let success: boolean = false;
-    try {
-      connection = await tryToCreateConnection(spec);
-      success = true;
-    } catch (error) {
-      logger.error("Failed to create direct connection:", { error });
-      let errorMessage = "";
-      if (error instanceof ResponseError) {
-        const errorBody = await error.response.clone().json();
-        errorMessage = JSON.stringify(errorBody);
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+    const { connection, errorMessage } = await this.createOrUpdateConnection(spec);
+    if (errorMessage || !connection) {
       return { success: false, message: errorMessage };
     }
 
@@ -203,7 +192,7 @@ export class DirectConnectionManager {
     this.initResourceLoader(connectionId);
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
-    return { success, message: JSON.stringify(connection) };
+    return { success: true, message: JSON.stringify(connection) };
   }
 
   async deleteConnection(id: ConnectionId): Promise<void> {
@@ -217,21 +206,46 @@ export class DirectConnectionManager {
     ResourceLoader.deregisterInstance(id);
   }
 
-  async updateConnection(spec: ConnectionSpec): Promise<void> {
+  async updateConnection(spec: ConnectionSpec): Promise<PostResponse> {
     // tell the sidecar about the updated spec
-    let connection: Connection | null = null;
-    try {
-      connection = await tryToUpdateConnection(spec);
-    } catch (error) {
-      // logging happens in the above function
-      if (error instanceof Error) {
-        window.showErrorMessage(`Failed to update connection: ${error.message}`);
-      }
-      return;
+    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, true);
+    if (errorMessage || !connection) {
+      return { success: false, message: errorMessage };
     }
 
     // update the connection in secret storage (via full replace of the connection by its id)
     await getResourceManager().addDirectConnection(connection.spec);
+    return { success: true, message: JSON.stringify(connection) };
+  }
+
+  /**
+   * Attempt to create or update a {@link Connection} in the sidecar based on the provided
+   * {@link ConnectionSpec}.
+   *
+   * If the request/operation fails, the `errorMessage` will be populated with the error message and
+   * the `connection` will be `null`.
+   * Otherwise, the `connection` will be the updated/created connection object and the `errorMessage`
+   * will be `null`.
+   */
+  private async createOrUpdateConnection(
+    spec: ConnectionSpec,
+    update: boolean = false,
+  ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
+    let connection: Connection | null = null;
+    let errorMessage: string | null = null;
+    try {
+      connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
+    } catch (error) {
+      // logging happens in the above call
+      if (error instanceof ResponseError) {
+        const errorBody = await error.response.clone().json();
+        errorMessage = JSON.stringify(errorBody);
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      window.showErrorMessage(`Failed to create connection: ${errorMessage}`);
+    }
+    return { connection, errorMessage };
   }
 
   /**
