@@ -523,10 +523,13 @@ async function updateRegistryCacheAndFindNewSchema(
   // it should be present in the cache because we have just refreshed the cache.
   const schema = allSchemas!.find((s) => s.id === `${newSchemaID}` && s.subject === boundSubject);
 
-  // While here, if the schema view controller is focused on this registry, do a shallow refresh.
-  // (shallow is fine because we just updated the cache at the loader level).
-  // (This ensures that even if the user doesn't chose to highlight the new schema in the schema registry view,
-  //  they will still see the new schema in the view if they have it open w/o having to hit the 'refresh' button.)
+  // While here, if the schema view controller is focused on this registry, do a shallow refresh
+  //  (shallow is fine because we just updated any possible cache at the loader level).
+
+  // This ensures that even if the user doesn't chose to highlight the new schema in the schema registry view,
+  // they will still see the new schema in the view if they currently have its schema registry open
+  // w/o having to hit the 'refresh' button.
+
   if (schemaViewProvider.schemaRegistry?.id === registry.id) {
     schemaViewProvider.refresh();
   }
