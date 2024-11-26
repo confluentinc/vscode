@@ -192,7 +192,14 @@
           <div class="input-container">
             <div>
               <label for="uri" class="label">Schema Registry URL</label>
-              <input class="input" id="uri" name="uri" type="url" />
+              <input
+                class="input"
+                id="uri"
+                name="uri"
+                type="url"
+                pattern="https?://.*"
+                title="URL must begin with http or https"
+              />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
           </div>
@@ -386,6 +393,9 @@
       input:disabled {
         background-color: var(--vscode-disabledForeground);
         cursor: not-allowed;
+      }
+      input:invalid {
+        border: 1px solid var(--vscode-errorForeground);
       }
       .dropdown {
         display: flex;
