@@ -238,6 +238,7 @@ export class SidecarHandle {
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
     });
+
     return new RecordsV3Api(config);
   }
 

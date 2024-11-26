@@ -281,7 +281,7 @@
         "enablement": "false"
       },
       {
-        "command": "confluent.topic.produce.fromJSONFile",
+        "command": "confluent.topic.produce.fromFile",
         "title": "Produce Message to Kafka Topic from schemaless JSON file",
         "category": "Confluent: Topic",
         "enablement": "activeWebviewPanelId == message-viewer"

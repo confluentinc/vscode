@@ -31,6 +31,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     this._onDidChangeTreeData.event;
 
   private forceDeepRefresh: boolean = false;
+  selectedTopic: any;
 
   /** Repaint the topics view. When invoked from the 'refresh' button, will force deep reading from sidecar. */
   refresh(forceDeepRefresh: boolean = false, onlyIfViewingClusterId: string | null = null): void {
