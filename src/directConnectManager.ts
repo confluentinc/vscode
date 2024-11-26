@@ -250,7 +250,7 @@ export class DirectConnectionManager {
         newConnectionPromises.push(tryToCreateConnection(connectionSpec));
       }
       // create a new ResourceLoader instance for managing the new connection's resources
-      this.initResourceLoader(id as ConnectionId);
+      this.initResourceLoader(id);
     }
 
     if (newConnectionPromises.length > 0) {
