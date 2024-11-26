@@ -24,7 +24,11 @@ import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { getSidecar } from "./sidecar";
-import { tryToCreateConnection, tryToDeleteConnection } from "./sidecar/connections";
+import {
+  tryToCreateConnection,
+  tryToDeleteConnection,
+  tryToUpdateConnection,
+} from "./sidecar/connections";
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
@@ -213,19 +217,16 @@ export class DirectConnectionManager {
     ResourceLoader.deregisterInstance(id);
   }
 
-  async updateConnection(id: ConnectionId, spec: ConnectionSpec): Promise<void> {
+  async updateConnection(spec: ConnectionSpec): Promise<void> {
     // tell the sidecar about the updated spec
-    const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
     let connection: Connection | null = null;
     try {
-      connection = await client.gatewayV1ConnectionsIdPut({
-        id,
-        ConnectionSpec: spec,
-      });
+      connection = await tryToUpdateConnection(spec);
     } catch (error) {
-      const errorMsg = `Failed to update connection name: ${error}`;
-      logger.error(errorMsg);
-      window.showErrorMessage(errorMsg);
+      // logging happens in the above function
+      if (error instanceof Error) {
+        window.showErrorMessage(`Failed to update connection: ${error.message}`);
+      }
       return;
     }
 

@@ -1,13 +1,15 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ConnectionsResourceApi } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, CCLOUD_CONNECTION_SPEC } from "../constants";
+import { CCLOUD_CONNECTION_SPEC } from "../constants";
 import { ccloudOrganizationChanged } from "../emitters";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudOrganization } from "../models/organization";
 import { organizationQuickPick } from "../quickpicks/organizations";
-import { getSidecar } from "../sidecar";
-import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections";
+import {
+  clearCurrentCCloudResources,
+  hasCCloudAuthSession,
+  tryToUpdateConnection,
+} from "../sidecar/connections";
 
 async function useOrganizationCommand() {
   if (!hasCCloudAuthSession()) {
@@ -30,14 +32,10 @@ async function useOrganizationCommand() {
       cancellable: true,
     },
     async () => {
-      const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
-      await client.gatewayV1ConnectionsIdPut({
-        id: CCLOUD_CONNECTION_ID,
-        ConnectionSpec: {
-          ...CCLOUD_CONNECTION_SPEC,
-          ccloud_config: {
-            organization_id: organization.id,
-          },
+      await tryToUpdateConnection({
+        ...CCLOUD_CONNECTION_SPEC,
+        ccloud_config: {
+          organization_id: organization.id,
         },
       });
 
