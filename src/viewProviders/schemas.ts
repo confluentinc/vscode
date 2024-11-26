@@ -8,12 +8,12 @@ import {
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
-import { CCloudEnvironment } from "../models/environment";
+import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
+import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { ResourceLoader } from "../storage/resourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.schemas");
 
@@ -45,8 +45,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
-  /** The parent of the focused Schema Registry, if it came from CCloud.  */
-  public ccloudEnvironment: CCloudEnvironment | null = null;
+  /** The parent of the focused Schema Registry.  */
+  public environment: Environment | null = null;
   /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
   public schemaRegistry: SchemaRegistry | undefined = undefined;
 
@@ -74,8 +74,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Convenience method to revert this view to its original state. */
   reset(): void {
     setContextValue(ContextValues.schemaRegistrySelected, false);
+    this.environment = null;
     this.schemaRegistry = undefined;
-    this.ccloudEnvironment = null;
     this.treeView.description = "";
     this.refresh();
   }
@@ -132,7 +132,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
-      if (this.schemaRegistry?.isCCloud) {
+      if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
         logger.debug("ccloudConnected event fired, resetting", { connected });
         // any transition of CCloud connection state should reset the tree view
         this.reset();
@@ -141,7 +141,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
       (connected: boolean) => {
-        if (this.schemaRegistry?.isLocal) {
+        if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
           logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
           // any transition of local schema registry connection state should reset the tree view
           this.reset();
@@ -156,17 +156,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         } else {
           setContextValue(ContextValues.schemaRegistrySelected, true);
           this.schemaRegistry = schemaRegistry;
-          // update the tree view title to show the currently focused Schema Registry and repopulate the tree
-          if (this.schemaRegistry.isLocal) {
-            // just show "Local" since we don't have a name for the local SR instance
-            this.treeView.description = "Local";
+          // update the tree view description to show the currently-focused Schema Registry's parent
+          // env name and the Schema Registry ID, then repopulate the tree
+          const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
+          const envs = await loader.getEnvironments();
+          const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
+          this.environment = parentEnv ?? null;
+          if (parentEnv) {
+            this.treeView.description = `${parentEnv.name} | ${schemaRegistry.id}`;
           } else {
-            const environment: CCloudEnvironment | null =
-              await getResourceManager().getCCloudEnvironment(
-                (this.schemaRegistry as CCloudSchemaRegistry).environmentId,
-              );
-            this.ccloudEnvironment = environment;
-            this.treeView.description = `${this.ccloudEnvironment!.name} | ${this.schemaRegistry.id}`;
+            this.treeView.description = schemaRegistry.id;
           }
           this.refresh();
         }

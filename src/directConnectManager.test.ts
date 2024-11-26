@@ -2,19 +2,39 @@ import * as assert from "assert";
 import sinon from "sinon";
 import { ConfigurationChangeEvent, workspace } from "vscode";
 import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../tests/unit/testResources";
+import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
 import { getExtensionContext } from "../tests/unit/testUtils";
-import { ConnectionSpec, ConnectionType, SchemaRegistryConfig } from "./clients/sidecar";
+import {
+  ConnectionsList,
+  ConnectionSpec,
+  ConnectionsResourceApi,
+  ConnectionType,
+  SchemaRegistryConfig,
+} from "./clients/sidecar";
 import * as contextValues from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
+import * as sidecar from "./sidecar";
 import * as connections from "./sidecar/connections";
+import { getResourceManager } from "./storage/resourceManager";
+
+const fakeConnectionsList: ConnectionsList = {
+  api_version: "v1",
+  kind: "ConnectionsList",
+  metadata: {},
+  data: [],
+};
 
 describe("DirectConnectionManager behavior", () => {
   let sandbox: sinon.SinonSandbox;
+
   let onDidChangeConfigurationStub: sinon.SinonStub;
   let getConfigurationStub: sinon.SinonStub;
   let setContextValueStub: sinon.SinonStub;
+
   let tryToCreateConnectionStub: sinon.SinonStub;
+
+  let stubbedConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
 
   before(async () => {
     // DirectConnectionManager requires the extension context to be set
@@ -23,9 +43,19 @@ describe("DirectConnectionManager behavior", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+
+    // stub VS Code APIs
     onDidChangeConfigurationStub = sandbox.stub(workspace, "onDidChangeConfiguration");
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
     setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+
+    // stub the sidecar Connections API
+    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+      sandbox.createStubInstance(sidecar.SidecarHandle);
+    stubbedConnectionsResourceApi = sandbox.createStubInstance(ConnectionsResourceApi);
+    mockSidecarHandle.getConnectionsResourceApi.returns(stubbedConnectionsResourceApi);
+    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
     // don't return a Connection type since the IDs are randomly generated
     tryToCreateConnectionStub = sandbox
       .stub(connections, "tryToCreateConnection")
@@ -35,6 +65,9 @@ describe("DirectConnectionManager behavior", () => {
   afterEach(() => {
     // reset the singleton instance
     DirectConnectionManager["instance"] = null;
+    // wipe out any stored connections
+    getResourceManager().deleteDirectConnections();
+
     sandbox.restore();
   });
 
@@ -103,5 +136,31 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(spec.name, connectionName);
     assert.equal(spec.type, ConnectionType.Direct);
     assert.ok(result.success);
+  });
+
+  it("should inform the sidecar of new/untracked connections", async () => {
+    // preload a direct connection
+    await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION.spec);
+    // stub the sidecar not knowing about it
+    stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(fakeConnectionsList);
+
+    await DirectConnectionManager.getInstance().rehydrateConnections();
+
+    assert.ok(tryToCreateConnectionStub.calledOnceWith(TEST_DIRECT_CONNECTION.spec));
+  });
+
+  it("should not inform the sidecar of existing/tracked connections", async () => {
+    // preload a direct connection
+    await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION.spec);
+    // stub the sidecar already tracking it
+    const connectionsList: ConnectionsList = {
+      ...fakeConnectionsList,
+      data: [TEST_DIRECT_CONNECTION],
+    };
+    stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(connectionsList);
+
+    await DirectConnectionManager.getInstance().rehydrateConnections();
+
+    assert.ok(tryToCreateConnectionStub.notCalled);
   });
 });

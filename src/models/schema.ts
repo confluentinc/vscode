@@ -1,7 +1,9 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { ConnectionType } from "../clients/sidecar";
+import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
+import { ConnectionId, IResourceBase, isCCloud } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -23,7 +25,11 @@ const languageTypes: { [key in SchemaType]: string[] } = {
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
-export class Schema extends Data {
+export class Schema extends Data implements IResourceBase {
+  connectionId!: Enforced<ConnectionId>;
+  connectionType!: Enforced<ConnectionType>;
+  iconName: IconNames.SCHEMA = IconNames.SCHEMA;
+
   id!: Enforced<string>;
   subject!: Enforced<string>;
   version!: Enforced<number>;
@@ -64,23 +70,10 @@ export class Schema extends Data {
   }
 
   get ccloudUrl(): string {
-    if (this.isLocalSchema()) {
-      return "";
+    if (isCCloud(this)) {
+      return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas/${this.subject}`;
     }
-    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas/${this.subject}`;
-  }
-
-  isLocalSchema(): boolean {
-    return this.environmentId == null;
-  }
-
-  /** Is this a CCloud-resident schema, as opposed to local or perhaps direct-connection? */
-  isCCloudSchema(): boolean {
-    return this.environmentId != null;
-  }
-
-  get connectionId(): string {
-    return this.isLocalSchema() ? LOCAL_CONNECTION_ID : CCLOUD_CONNECTION_ID;
+    return "";
   }
 }
 
@@ -95,7 +88,9 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.id = `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
-    this.contextValue = resource.isCCloudSchema() ? "ccloud-schema" : "local-schema";
+    // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the
+    // "View in CCloud" context menu item
+    this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema`;
 
     // user-facing properties
     this.description = resource.id.toString();
@@ -106,17 +101,17 @@ export class SchemaTreeItem extends vscode.TreeItem {
 
 function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown("#### $(primitive-square) Schema")
-    .appendMarkdown("\n\n---\n\n")
-    .appendMarkdown(`ID: \`${resource.id}\`\n\n`)
-    .appendMarkdown(`Subject: \`${resource.subject}\`\n\n`)
-    .appendMarkdown(`Version: \`${resource.version}\`\n\n`)
-    .appendMarkdown(`Type: \`${resource.type}\``);
-  if (!resource.isLocalSchema()) {
+    .appendMarkdown(`#### $(${resource.iconName}) Schema`)
+    .appendMarkdown("\n\n---")
+    .appendMarkdown(`\n\nID: \`${resource.id}\``)
+    .appendMarkdown(`\n\nSubject: \`${resource.subject}\``)
+    .appendMarkdown(`\n\nVersion: \`${resource.version}\``)
+    .appendMarkdown(`\n\nType: \`${resource.type}\``);
+  if (isCCloud(resource)) {
     tooltip
-      .appendMarkdown("\n\n---\n\n")
+      .appendMarkdown("\n\n---")
       .appendMarkdown(
-        `[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${resource.ccloudUrl})`,
       );
   }
   return tooltip;

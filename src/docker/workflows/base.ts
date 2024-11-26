@@ -1,6 +1,7 @@
 import { CancellationToken, commands, Progress, ProgressLocation, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
+import { ConnectionLabel } from "../../models/resource";
 import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
 import { DEFAULT_DOCKER_NETWORK } from "../constants";
 import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
@@ -201,7 +202,7 @@ export abstract class LocalResourceWorkflow {
     window.withProgress(
       {
         location: ProgressLocation.Notification,
-        title: "Local",
+        title: ConnectionLabel.LOCAL,
         cancellable: true,
       },
       async (progress, token: CancellationToken) => {

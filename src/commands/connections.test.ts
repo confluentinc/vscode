@@ -1,18 +1,28 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
+import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
+import { getExtensionContext } from "../../tests/unit/testUtils";
+import { DirectConnectionManager } from "../directConnectManager";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import * as connections from "./connections";
 
 describe("commands/connections.ts", function () {
   let sandbox: sinon.SinonSandbox;
   let showOpenDialogStub: sinon.SinonStub;
+  let showWarningMessageStub: sinon.SinonStub;
   let getConfigurationStub: sinon.SinonStub;
+
+  before(async () => {
+    // needed for the DirectConnectionManager to be initialized
+    await getExtensionContext();
+  });
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
-    // stub the showOpenDialog method to avoid opening a dialog during tests
+    // avoid opening a dialog or notification modal during tests
     showOpenDialogStub = sandbox.stub(vscode.window, "showOpenDialog");
+    showWarningMessageStub = sandbox.stub(vscode.window, "showWarningMessage");
     // stub the WorkspaceConfiguration
     getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration");
   });
@@ -136,5 +146,32 @@ describe("commands/connections.ts", function () {
     const result = connections.getSSLPemPaths();
 
     assert.deepStrictEqual(result, ["path/to/file.pem"]);
+  });
+
+  it("deleteDirectConnection() should delete the connection if user confirms", async function () {
+    const item = TEST_DIRECT_ENVIRONMENT;
+    showWarningMessageStub.resolves("Yes, disconnect");
+    const deleteConnectionStub = sandbox
+      .stub(DirectConnectionManager.getInstance(), "deleteConnection")
+      .resolves();
+
+    await connections.deleteDirectConnection(item);
+
+    assert.ok(showWarningMessageStub.calledOnce);
+    assert.ok(deleteConnectionStub.calledOnceWith(item.connectionId));
+  });
+
+  it("deleteDirectConnection() should not delete the connection if user cancels", async function () {
+    const item = TEST_DIRECT_ENVIRONMENT;
+    showWarningMessageStub.resolves("Cancel");
+    const deleteConnectionStub = sandbox.stub(
+      DirectConnectionManager.getInstance(),
+      "deleteConnection",
+    );
+
+    await connections.deleteDirectConnection(item);
+
+    assert.ok(showWarningMessageStub.calledOnce);
+    assert.ok(deleteConnectionStub.notCalled);
   });
 });

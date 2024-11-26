@@ -1,18 +1,19 @@
 import { TopicData } from "../clients/kafkaRest/models";
+import { ConnectionType } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
-import { Environment, LocalEnvironment } from "../models/environment";
+import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
+import { isLocal } from "../models/resource";
 import { Schema } from "../models/schema";
-import { LocalSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   correlateTopicsWithSchemas,
   fetchSchemas,
   fetchTopics,
   ResourceLoader,
-  ResourceLoaderType,
 } from "./resourceLoader";
 
 const logger = new Logger("storage.localResourceLoader");
@@ -23,7 +24,8 @@ const logger = new Logger("storage.localResourceLoader");
  * each time a resource is requested.
  */
 export class LocalResourceLoader extends ResourceLoader {
-  kind = ResourceLoaderType.Local;
+  connectionId = LOCAL_CONNECTION_ID;
+  connectionType = ConnectionType.Local;
 
   private static instance: LocalResourceLoader | null = null;
   public static getInstance(): LocalResourceLoader {
@@ -34,33 +36,22 @@ export class LocalResourceLoader extends ResourceLoader {
   }
 
   // singleton class, get instance via getInstance()
-  // (construct only public for testing / signon mocking purposes.)
   private constructor() {
     super();
   }
 
-  public async getEnvironments(): Promise<Environment[]> {
-    // todo: resolve the impedance mismatch between
-    // LocalResourceGroup vs LocalEnvironment. Perhaps have getLocalResources
-    // return something closer to an evolved LocalEnvironment?
-    const localResourceGroups = await getLocalResources();
-    if (localResourceGroups.length === 0) {
-      return [];
-    } else {
-      // respell as a single LocalEnvironment
-      return [
-        LocalEnvironment.create({
-          id: "local",
-          name: "Local",
-          hasClusters: true,
-        }),
-      ];
-    }
+  public async getEnvironments(): Promise<LocalEnvironment[]> {
+    return await getLocalResources();
   }
 
-  public async getKafkaClustersForEnvironmentId(): Promise<LocalKafkaCluster[]> {
-    const localGroups = await getLocalResources();
-    return localGroups.flatMap((group) => group.kafkaClusters);
+  async getKafkaClustersForEnvironmentId(environmentId: string): Promise<LocalKafkaCluster[]> {
+    const envs: LocalEnvironment[] = await this.getEnvironments();
+    // should only ever be one, but we'll filter just in case
+    const env = envs.find((env) => env.id === environmentId);
+    if (!env) {
+      throw new Error(`Unknown environmentId ${environmentId}`);
+    }
+    return env.kafkaClusters;
   }
 
   /**
@@ -68,7 +59,7 @@ export class LocalResourceLoader extends ResourceLoader {
    * in the schema registry for the cluster, if any.
    */
   public async getTopicsForCluster(cluster: LocalKafkaCluster): Promise<KafkaTopic[]> {
-    if (!cluster.isLocal) {
+    if (!isLocal(cluster)) {
       throw new Error(
         `Cluster ${cluster.id} is not a local cluster, yet is passed to LocalResourceLoader.`,
       );
@@ -84,15 +75,18 @@ export class LocalResourceLoader extends ResourceLoader {
   }
 
   public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {
-    const localGroups = await getLocalResources();
-
-    return localGroups
-      .filter((group) => group.schemaRegistry !== undefined)
-      .map((group) => group.schemaRegistry!);
+    const envs: LocalEnvironment[] = await this.getEnvironments();
+    const schemaRegistries: LocalSchemaRegistry[] = [];
+    envs.forEach((env) => {
+      if (env.schemaRegistry) {
+        schemaRegistries.push(env.schemaRegistry);
+      }
+    });
+    return schemaRegistries;
   }
 
   public async getSchemaRegistryForEnvironmentId(): Promise<LocalSchemaRegistry | undefined> {
-    const allRegistries = await this.getSchemaRegistries();
+    const allRegistries: LocalSchemaRegistry[] = await this.getSchemaRegistries();
     if (allRegistries.length === 0) {
       return undefined;
     } else {
@@ -113,15 +107,15 @@ export class LocalResourceLoader extends ResourceLoader {
       return [];
     }
 
-    return fetchSchemas(schemaRegistries[0].id, LOCAL_CONNECTION_ID, undefined);
+    return this.getSchemasForRegistry(schemaRegistries[0]);
   }
 
   /**
    * Fetch schemas from local schema registry.
    * Simple, pass through to deep fetch every time.
    */
-  public async getSchemasForRegistry(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
-    return fetchSchemas(schemaRegistry.id, LOCAL_CONNECTION_ID, undefined);
+  public async getSchemasForRegistry(schemaRegistry: LocalSchemaRegistry): Promise<Schema[]> {
+    return fetchSchemas(schemaRegistry);
   }
 
   /** Purge schemas from this registry from cache.
