@@ -3,6 +3,7 @@ import {
   ConfigurationChangeEvent,
   Disposable,
   SecretStorageChangeEvent,
+  window,
   workspace,
   WorkspaceConfiguration,
 } from "vscode";
@@ -210,6 +211,26 @@ export class DirectConnectionManager {
     });
 
     ResourceLoader.deregisterInstance(id);
+  }
+
+  async updateConnection(id: ConnectionId, spec: ConnectionSpec): Promise<void> {
+    // tell the sidecar about the updated spec
+    const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+    let connection: Connection | null = null;
+    try {
+      connection = await client.gatewayV1ConnectionsIdPut({
+        id,
+        ConnectionSpec: spec,
+      });
+    } catch (error) {
+      const errorMsg = `Failed to update connection name: ${error}`;
+      logger.error(errorMsg);
+      window.showErrorMessage(errorMsg);
+      return;
+    }
+
+    // update the connection in secret storage (via full replace of the connection by its id)
+    await getResourceManager().addDirectConnection(connection.spec);
   }
 
   /**
