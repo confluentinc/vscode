@@ -69,14 +69,16 @@
               required
               data-on-change="this.updateValue(event)"
             />
-            <label for="other">Other (specify)</label>
-            <input
-              class="input"
-              id="other"
-              name="other-platform"
-              type="text"
-              data-attr-required="this.platformType() === 'Other' ? true : false"
-            />
+            <label for="other">Other</label>
+            <template data-if="this.platformType() === 'Other'">
+              <input
+                class="input"
+                id="other"
+                name="other-platform"
+                type="text"
+                data-attr-required="this.platformType() === 'Other' ? true : false"
+              />
+            </template>
           </div>
         </div>
         <div class="input-container">
@@ -105,60 +107,78 @@
             <div>
               <input
                 type="radio"
-                id="auth-none"
-                name="auth_type"
+                id="kafka-auth-none"
+                name="kafka_auth_type"
                 value="None"
                 checked
                 data-on-change="this.updateValue(event)"
               />
-              <label for="auth-none">None</label>
+              <label for="kafka-auth-none">None</label>
             </div>
             <div>
               <input
                 type="radio"
-                id="auth-basic"
-                name="auth_type"
+                id="kafka-auth-basic"
+                name="kafka_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
               />
-              <label for="auth-basic">Basic (username & password)</label>
+              <label for="kafka-auth-basic">Basic (username & password)</label>
             </div>
             <div>
               <input
                 type="radio"
-                id="auth-basic"
-                name="auth_type"
+                id="kafka-auth-api"
+                name="kafka_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
               />
-              <label for="auth-api">API Credentials</label>
+              <label for="kafka-auth-api">API Credentials</label>
             </div>
           </div>
-          <template data-if="this.authType() === 'Basic'">
+          <template data-if="this.kafkaAuthType() === 'Basic'">
             <div class="input-container">
               <div>
-                <label for="username" class="label">Username</label>
-                <input class="input" id="username" name="username" type="text" required />
+                <label for="kafka_username" class="label">Username</label>
+                <input
+                  class="input"
+                  id="kafka_username"
+                  name="kafka_username"
+                  type="text"
+                  required
+                />
               </div>
             </div>
             <div class="input-container">
               <div>
-                <label for="password" class="label">Password</label>
-                <input class="input" id="password" name="password" type="password" required />
+                <label for="kafka_password" class="label">Password</label>
+                <input
+                  class="input"
+                  id="kafka_password"
+                  name="kafka_password"
+                  type="password"
+                  required
+                />
               </div>
             </div>
           </template>
-          <template data-if="this.authType() === 'API'">
+          <template data-if="this.kafkaAuthType() === 'API'">
             <div class="input-container">
               <div>
-                <label for="api_key" class="label">API Key</label>
-                <input class="input" id="api_key" name="api_key" type="text" required />
+                <label for="kafka_api_key" class="label">API Key</label>
+                <input class="input" id="api_key" name="kafka_api_key" type="text" required />
               </div>
             </div>
             <div class="input-container">
               <div>
-                <label for="api_secret" class="label">API Secret</label>
-                <input class="input" id="api_secret" name="api_secret" type="password" required />
+                <label for="kafka_api_secret" class="label">API Secret</label>
+                <input
+                  class="input"
+                  id="api_secret"
+                  name="kafka_api_secret"
+                  type="password"
+                  required
+                />
               </div>
             </div>
           </template>
@@ -172,6 +192,92 @@
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
           </div>
+          <div class="radio-container">
+            <legend class="label">Authentication Type</legend>
+            <div>
+              <input
+                type="radio"
+                id="schema-auth-none"
+                name="schema_auth_type"
+                value="None"
+                checked
+                data-on-change="this.updateValue(event)"
+              />
+              <label for="schema-auth-none">None</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="schema-auth-basic"
+                name="schema_auth_type"
+                value="Basic"
+                data-on-change="this.updateValue(event)"
+              />
+              <label for="schema-auth-basic">Basic (username & password)</label>
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="schema-auth-api"
+                name="schema_auth_type"
+                value="API"
+                data-on-change="this.updateValue(event)"
+              />
+              <label for="schema-auth-api">API Credentials</label>
+            </div>
+          </div>
+          <template data-if="this.schemaAuthType() === 'Basic'">
+            <div class="input-container">
+              <div>
+                <label for="schema_username" class="label">Username</label>
+                <input
+                  class="input"
+                  id="schema_username"
+                  name="schema_username"
+                  type="text"
+                  required
+                />
+              </div>
+            </div>
+            <div class="input-container">
+              <div>
+                <label for="schema_password" class="label">Password</label>
+                <input
+                  class="input"
+                  id="schema_password"
+                  name="schema_password"
+                  type="password"
+                  required
+                />
+              </div>
+            </div>
+          </template>
+          <template data-if="this.schemaAuthType() === 'API'">
+            <div class="input-container">
+              <div>
+                <label for="schema_api_key" class="label">API Key</label>
+                <input
+                  class="input"
+                  id="schema_api_key"
+                  name="schema_api_key"
+                  type="text"
+                  required
+                />
+              </div>
+            </div>
+            <div class="input-container">
+              <div>
+                <label for="schema_api_secret" class="label">API Secret</label>
+                <input
+                  class="input"
+                  id="schema_api_secret"
+                  name="schema_api_secret"
+                  type="password"
+                  required
+                />
+              </div>
+            </div>
+          </template>
         </fieldset>
 
         <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
