@@ -3,11 +3,11 @@ import * as sinon from "sinon";
 import * as sidecar from ".";
 import {
   TEST_CCLOUD_CONNECTION,
+  TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
 } from "../../tests/unit/testResources/connection";
 import { getExtensionContext } from "../../tests/unit/testUtils";
 import { Connection, ConnectionsResourceApi, ResponseError } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_SPEC, LOCAL_CONNECTION_SPEC } from "../constants";
 import { ContextValues, setContextValue } from "../context/values";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { getResourceManager } from "../storage/resourceManager";
@@ -17,6 +17,7 @@ import {
   hasCCloudAuthSession,
   tryToCreateConnection,
   tryToDeleteConnection,
+  tryToUpdateConnection,
 } from "./connections";
 
 describe("sidecar/connections.ts", () => {
@@ -38,10 +39,12 @@ describe("sidecar/connections.ts", () => {
     sandbox.restore();
   });
 
-  for (const connectionSpec of [LOCAL_CONNECTION_SPEC, CCLOUD_CONNECTION_SPEC]) {
-    const fakeConnection: Connection =
-      connectionSpec.type === "LOCAL" ? TEST_LOCAL_CONNECTION : TEST_CCLOUD_CONNECTION;
-    it(`${connectionSpec.type}: tryToGetConnection() should return null if no connection exists / we get a 404 response`, async () => {
+  for (const testConnection of [
+    TEST_LOCAL_CONNECTION,
+    TEST_CCLOUD_CONNECTION,
+    TEST_DIRECT_CONNECTION,
+  ]) {
+    it(`${testConnection.spec.type}: tryToGetConnection() should return null if no connection exists / we get a 404 response`, async () => {
       stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.rejects({ response: { status: 404 } });
 
       const connection = await getLocalConnection();
@@ -49,27 +52,39 @@ describe("sidecar/connections.ts", () => {
       assert.strictEqual(connection, null);
     });
 
-    it(`${connectionSpec.type}: tryToGetConnection() should return a connection if it exists`, async () => {
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(fakeConnection);
+    it(`${testConnection.spec.type}: tryToGetConnection() should return a connection if it exists`, async () => {
+      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(testConnection);
 
       const connection = await getLocalConnection();
 
-      assert.strictEqual(connection, fakeConnection);
+      assert.strictEqual(connection, testConnection);
     });
 
-    it(`${connectionSpec.type}: tryToCreateConnection() should create and return a new connection`, async () => {
-      stubConnectionsResourceApi.gatewayV1ConnectionsPost.resolves(fakeConnection);
+    it(`${testConnection.spec.type}: tryToCreateConnection() should create and return a new connection`, async () => {
+      stubConnectionsResourceApi.gatewayV1ConnectionsPost.resolves(testConnection);
 
-      const connection = await tryToCreateConnection(connectionSpec);
+      const connection = await tryToCreateConnection(testConnection.spec);
 
-      assert.strictEqual(connection, fakeConnection);
+      assert.strictEqual(connection, testConnection);
     });
 
-    it(`${connectionSpec.type}: tryToDeleteConnection() should not re-throw 404 response errors`, async () => {
+    it(`${testConnection.spec.type}: tryToUpdateConnection() should update and return a connection`, async () => {
+      const updatedConnection: Connection = {
+        ...testConnection,
+        spec: { ...testConnection.spec, name: "updated-name" },
+      };
+      stubConnectionsResourceApi.gatewayV1ConnectionsIdPut.resolves(updatedConnection);
+
+      const connection = await tryToUpdateConnection(updatedConnection);
+
+      assert.strictEqual(connection, updatedConnection);
+    });
+
+    it(`${testConnection.spec.type}: tryToDeleteConnection() should not re-throw 404 response errors`, async () => {
       const error = new ResponseError(new Response(null, { status: 404 }));
       stubConnectionsResourceApi.gatewayV1ConnectionsIdDeleteRaw.rejects(error);
 
-      const promise = tryToDeleteConnection(fakeConnection.id);
+      const promise = tryToDeleteConnection(testConnection.id);
 
       await assert.doesNotReject(promise);
     });
