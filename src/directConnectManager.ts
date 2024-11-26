@@ -98,19 +98,31 @@ export class DirectConnectionManager {
       async ({ key }: SecretStorageChangeEvent) => {
         // watch for any cross-workspace direct connection additions/removals
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
-          const connections = await getResourceManager().getDirectConnections();
-          // ensure all DirectResourceLoader instances are up to date -- if this isn't done, hopping
+          const connections: DirectConnectionsById =
+            await getResourceManager().getDirectConnections();
+          // ensure all DirectResourceLoader instances are up to date
+          // part 1: ensure any new connections have registered loaders; if this isn't done, hopping
           // workspaces and attempting to focus on a direct connection-based resource will fail with
           // the `Unknown connection ID` error
-          const existingLoaderIds = ResourceLoader.loaders().map((loader) => loader.connectionId);
-          for (const [id] of connections.entries()) {
-            const connId = id as ConnectionId;
-            if (!existingLoaderIds.includes(connId)) {
-              this.initResourceLoader(connId);
+          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders().map(
+            (loader) => loader.connectionId,
+          );
+          for (const id of connections.keys()) {
+            if (!existingLoaderIds.includes(id)) {
+              this.initResourceLoader(id);
             }
           }
+          // part 2: remove any removed connections was removed from the secret storage to prevent
+          // any requests to orphaned resources/connections
+          for (const id of existingLoaderIds) {
+            if (!connections.has(id)) {
+              ResourceLoader.deregisterInstance(id);
+            }
+          }
+
           // refresh the Resources view to stay in sync with the secret storage
           getResourceViewProvider().refresh();
+
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
           // reset the view(s) to prevent orphaned resources from being used for requests
           const topicsView = getTopicViewProvider();
