@@ -53,7 +53,7 @@
     ],
     "commands": [
       {
-        "command": "confluent.connections.ccloud.login",
+        "command": "confluent.connections.ccloud.logIn",
         "icon": "$(plus)",
         "title": "Log in to Confluent Cloud",
         "category": "Confluent: Connections"
@@ -61,7 +61,13 @@
       {
         "command": "confluent.connections.direct",
         "title": "Add New Connection",
-        "icon": "$(plug)",
+        "icon": "$(plus)",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.direct.delete",
+        "icon": "$(debug-disconnect)",
+        "title": "Disconnect",
         "category": "Confluent: Connections"
       },
       {
@@ -444,7 +450,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
       },
       {

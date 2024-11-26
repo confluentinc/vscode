@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
+import * as fs from "fs";
 import { Logger } from "../logging";
 import { registerCommandWithLogging } from ".";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -166,6 +167,49 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   editConfigForm.onDidDispose(() => disposable.dispose());
 }
 
+async function produceMessageFromFile(topic: KafkaTopic) {
+  // check and make sure this is actually a KafkaTopic
+  const options: vscode.OpenDialogOptions = {
+    canSelectMany: false,
+    openLabel: "Select JSON file",
+    filters: {
+      "JSON files": ["json"],
+    },
+  };
+
+  const fileUri = await vscode.window.showOpenDialog(options);
+  if (fileUri && fileUri[0]) {
+    const filePath = fileUri[0].fsPath;
+    const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+    if (!topic) {
+      vscode.window.showErrorMessage("No topic selected.");
+      return;
+    }
+
+    const sidecar = await getSidecar();
+    const clusterId = topic.clusterId;
+    const connectionId = topic.connectionId;
+
+    const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
+
+    try {
+      let respmessage = await recordsApi.produceRecord({
+        topic_name: topic.name,
+        cluster_id: clusterId,
+        ProduceRequest: {
+          value: message as any,
+          //patching with any here, need to understand WHY this is necessary
+        },
+      });
+
+      vscode.window.showInformationMessage(`Message produced to topic ${topic.name}`);
+    } catch (error: any) {
+      vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
+    }
+  }
+}
+
 export function registerTopicCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.topics.copyKafkaClusterId", copyKafkaClusterId),
@@ -175,5 +219,6 @@ export function registerTopicCommands(): vscode.Disposable[] {
       copyKafkaClusterBootstrapUrl,
     ),
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
+    registerCommandWithLogging("confluent.topic.produce.fromFile", produceMessageFromFile),
   ];
 }
