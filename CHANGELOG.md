@@ -17,6 +17,8 @@ All notable changes to this extension will be documented in this file.
   [issue #642](https://github.com/confluentinc/vscode/issues/642).
 - Fix possible race conditions in workspace state cache management when needing to read and mutate
   existing workspace state keys, [issue #534](https://github.com/confluentinc/vscode/issues/534).
+- Improve auto-refreshing the schema view controller when uploading a schema to the viewed registry, 
+  [issue #640](https://github.com/confluentinc/vscode/issues/640).
 
 ## 0.21.2
 
