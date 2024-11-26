@@ -36,7 +36,7 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   // Map of connectionId to ResourceLoader instance.
-  private static registry: Map<string, ResourceLoader> = new Map();
+  private static registry: Map<ConnectionId, ResourceLoader> = new Map();
 
   public static registerInstance(connectionId: ConnectionId, loader: ResourceLoader): void {
     ResourceLoader.registry.set(connectionId, loader);
