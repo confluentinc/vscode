@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { ViewColumn } from "vscode";
+import { ViewColumn, window } from "vscode";
 import { KafkaClusterConfig, SchemaRegistryConfig } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
@@ -43,26 +43,30 @@ export function openDirectConnectionForm(): void {
     // logger.debug("creating connection from form data:", body);
 
     let kafkaConfig: KafkaClusterConfig | undefined = undefined;
-    if (body["bootstrap_servers"]) {
-      kafkaConfig = {
-        bootstrap_servers: body["bootstrap_servers"],
-      };
+    if (body["clusterConfig"]) {
+      kafkaConfig = { ...body["clusterConfig"] };
     }
 
     let schemaRegistryConfig: SchemaRegistryConfig | undefined = undefined;
-    if (body["uri"]) {
-      schemaRegistryConfig = {
-        uri: body["uri"],
-      };
+    if (body["schemaConfig"]) {
+      schemaRegistryConfig = { ...body["schemaConfig"] };
     }
 
     const manager = DirectConnectionManager.getInstance();
-    return await manager.createConnection(
+    const result = await manager.createConnection(
       kafkaConfig,
       schemaRegistryConfig,
       body["name"],
       body["platform"],
     );
+    if (result.success) {
+      await window.showInformationMessage(`🎉 New Connection Created`, {
+        modal: true,
+        detail: `View and interact with ${body["name"]} in the Resources sidebar`,
+      });
+      directConnectForm.dispose();
+    }
+    return result;
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
