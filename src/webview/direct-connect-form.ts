@@ -17,8 +17,8 @@ class DirectConnectFormViewModel extends ViewModel {
   errorMessage = this.signal("");
   success = this.signal(false);
   platformType = this.signal<PlatformOptions>("Other");
-  kafkaAuthType = this.signal("None");
-  schemaAuthType = this.signal("None");
+  kafkaAuthType = this.signal<SupportedAuthTypes>("None");
+  schemaAuthType = this.signal<SupportedAuthTypes>("None");
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -27,10 +27,10 @@ class DirectConnectFormViewModel extends ViewModel {
         this.platformType(input.value as PlatformOptions);
         break;
       case "kafka_auth_type":
-        this.kafkaAuthType(input.value);
+        this.kafkaAuthType(input.value as SupportedAuthTypes);
         break;
       case "schema_auth_type":
-        this.schemaAuthType(input.value);
+        this.schemaAuthType(input.value as SupportedAuthTypes);
         break;
       default:
         console.warn(`Unhandled key: ${input.name}`);
@@ -65,14 +65,19 @@ class DirectConnectFormViewModel extends ViewModel {
     let schemaConfig: SchemaRegistryConfig | undefined = undefined;
     console.log("formData:", formData, "data", data);
     if (data["bootstrap_servers"]) {
-      clusterConfig = transformFormDataToKafkaClusterConfig(data);
+      clusterConfig = transformFormDataToKafkaConfig(data);
       console.log("Kafka config transform", clusterConfig);
     }
     if (data["uri"]) {
       schemaConfig = transformFormDataToSchemaRegistryConfig(data);
       console.log("SR config transform", schemaConfig);
     }
-    const result = await post("Submit", { ...data, clusterConfig, schemaConfig });
+    const result = await post("Submit", {
+      name: data.name,
+      platform: data.platform,
+      clusterConfig,
+      schemaConfig,
+    });
     this.success(result.success);
     if (!result.success) {
       this.errorMessage(result.message ?? "Unknown error occurred");
@@ -98,7 +103,9 @@ type PlatformOptions =
   | "Local"
   | "Other";
 
-function transformFormDataToKafkaClusterConfig(formData: any): KafkaClusterConfig {
+type SupportedAuthTypes = "None" | "Basic" | "API";
+
+function transformFormDataToKafkaConfig(formData: any): KafkaClusterConfig {
   let kafkaClusterConfig: KafkaClusterConfig = { bootstrap_servers: "", credentials: {} };
   if (formData.bootstrap_servers) {
     kafkaClusterConfig["bootstrap_servers"] = formData.bootstrap_servers;
