@@ -41,10 +41,9 @@ class DirectConnectFormViewModel extends ViewModel {
     event.preventDefault();
     this.success(false);
     this.errorMessage("");
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    console.log("formData:", formData, "data", data);
+    // const form = event.target as HTMLFormElement;
+    // const formData = new FormData(form);
+    // const data = Object.fromEntries(formData.entries());
     // TODO not implemented yet
     // const result = await post("TestConnection", data);
     // if (result.success) {
@@ -63,14 +62,11 @@ class DirectConnectFormViewModel extends ViewModel {
     const data = Object.fromEntries(formData.entries());
     let clusterConfig: KafkaClusterConfig | undefined = undefined;
     let schemaConfig: SchemaRegistryConfig | undefined = undefined;
-    console.log("formData:", formData, "data", data);
     if (data["bootstrap_servers"]) {
       clusterConfig = transformFormDataToKafkaConfig(data);
-      console.log("Kafka config transform", clusterConfig);
     }
     if (data["uri"]) {
       schemaConfig = transformFormDataToSchemaRegistryConfig(data);
-      console.log("SR config transform", schemaConfig);
     }
     const result = await post("Submit", {
       name: data.name,
