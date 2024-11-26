@@ -59,10 +59,11 @@ export function openDirectConnectionForm(): void {
       body["name"],
       body["platform"],
     );
+    let name = body["name"] || "the connection";
     if (result.success) {
       await window.showInformationMessage(`🎉 New Connection Created`, {
         modal: true,
-        detail: `View and interact with ${body["name"]} in the Resources sidebar`,
+        detail: `View and interact with ${name} in the Resources sidebar`,
       });
       directConnectForm.dispose();
     }
