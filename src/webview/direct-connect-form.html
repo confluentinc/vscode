@@ -137,48 +137,52 @@
             </div>
           </div>
           <template data-if="this.kafkaAuthType() === 'Basic'">
-            <div class="input-container">
-              <div>
-                <label for="kafka_username" class="label">Username</label>
-                <input
-                  class="input"
-                  id="kafka_username"
-                  name="kafka_username"
-                  type="text"
-                  required
-                />
+            <div>
+              <div class="input-container">
+                <div>
+                  <label for="kafka_username" class="label">Username</label>
+                  <input
+                    class="input"
+                    id="kafka_username"
+                    name="kafka_username"
+                    type="text"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            <div class="input-container">
-              <div>
-                <label for="kafka_password" class="label">Password</label>
-                <input
-                  class="input"
-                  id="kafka_password"
-                  name="kafka_password"
-                  type="password"
-                  required
-                />
+              <div class="input-container">
+                <div>
+                  <label for="kafka_password" class="label">Password</label>
+                  <input
+                    class="input"
+                    id="kafka_password"
+                    name="kafka_password"
+                    type="password"
+                    required
+                  />
+                </div>
               </div>
             </div>
           </template>
           <template data-if="this.kafkaAuthType() === 'API'">
-            <div class="input-container">
-              <div>
-                <label for="kafka_api_key" class="label">API Key</label>
-                <input class="input" id="api_key" name="kafka_api_key" type="text" required />
+            <div>
+              <div class="input-container">
+                <div>
+                  <label for="kafka_api_key" class="label">API Key</label>
+                  <input class="input" id="api_key" name="kafka_api_key" type="text" required />
+                </div>
               </div>
-            </div>
-            <div class="input-container">
-              <div>
-                <label for="kafka_api_secret" class="label">API Secret</label>
-                <input
-                  class="input"
-                  id="api_secret"
-                  name="kafka_api_secret"
-                  type="password"
-                  required
-                />
+              <div class="input-container">
+                <div>
+                  <label for="kafka_api_secret" class="label">API Secret</label>
+                  <input
+                    class="input"
+                    id="api_secret"
+                    name="kafka_api_secret"
+                    type="password"
+                    required
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -227,54 +231,58 @@
             </div>
           </div>
           <template data-if="this.schemaAuthType() === 'Basic'">
-            <div class="input-container">
-              <div>
-                <label for="schema_username" class="label">Username</label>
-                <input
-                  class="input"
-                  id="schema_username"
-                  name="schema_username"
-                  type="text"
-                  required
-                />
+            <div>
+              <div class="input-container">
+                <div>
+                  <label for="schema_username" class="label">Username</label>
+                  <input
+                    class="input"
+                    id="schema_username"
+                    name="schema_username"
+                    type="text"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            <div class="input-container">
-              <div>
-                <label for="schema_password" class="label">Password</label>
-                <input
-                  class="input"
-                  id="schema_password"
-                  name="schema_password"
-                  type="password"
-                  required
-                />
+              <div class="input-container">
+                <div>
+                  <label for="schema_password" class="label">Password</label>
+                  <input
+                    class="input"
+                    id="schema_password"
+                    name="schema_password"
+                    type="password"
+                    required
+                  />
+                </div>
               </div>
             </div>
           </template>
           <template data-if="this.schemaAuthType() === 'API'">
-            <div class="input-container">
-              <div>
-                <label for="schema_api_key" class="label">API Key</label>
-                <input
-                  class="input"
-                  id="schema_api_key"
-                  name="schema_api_key"
-                  type="text"
-                  required
-                />
+            <div>
+              <div class="input-container">
+                <div>
+                  <label for="schema_api_key" class="label">API Key</label>
+                  <input
+                    class="input"
+                    id="schema_api_key"
+                    name="schema_api_key"
+                    type="text"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            <div class="input-container">
-              <div>
-                <label for="schema_api_secret" class="label">API Secret</label>
-                <input
-                  class="input"
-                  id="schema_api_secret"
-                  name="schema_api_secret"
-                  type="password"
-                  required
-                />
+              <div class="input-container">
+                <div>
+                  <label for="schema_api_secret" class="label">API Secret</label>
+                  <input
+                    class="input"
+                    id="schema_api_secret"
+                    name="schema_api_secret"
+                    type="password"
+                    required
+                  />
+                </div>
               </div>
             </div>
           </template>
@@ -348,7 +356,7 @@
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 5px 10px;
       }
       .radio-container > div {
         display: flex;
@@ -358,13 +366,17 @@
       }
       .radio-container > .label {
         flex-basis: 100%;
+        margin-bottom: 0;
       }
       fieldset {
         width: 100%;
         border-width: 1px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
       legend {
-        font-size: 12px;
+        font-weight: 500;
         margin-bottom: 0.5rem;
       }
       input:not([type="submit"]):not([type="radio"]),
