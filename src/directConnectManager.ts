@@ -238,8 +238,7 @@ export class DirectConnectionManager {
     } catch (error) {
       // logging happens in the above call
       if (error instanceof ResponseError) {
-        const errorBody = await error.response.clone().json();
-        errorMessage = JSON.stringify(errorBody);
+        errorMessage = await error.response.clone().text();
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
