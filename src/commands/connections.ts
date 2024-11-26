@@ -113,7 +113,7 @@ export async function renameDirectConnection(item: DirectEnvironment) {
     ...spec,
     name: newName,
   };
-  await DirectConnectionManager.getInstance().updateConnection(item.connectionId, updatedSpec);
+  await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 }
 
 export function registerConnectionCommands(): Disposable[] {
