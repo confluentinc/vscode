@@ -15,11 +15,7 @@ import {
   getCCloudConnection,
 } from "../sidecar/connections";
 import { getStorageManager } from "../storage";
-import {
-  AUTH_COMPLETED_KEY,
-  AUTH_SESSION_EXISTS_KEY,
-  CCLOUD_AUTH_STATUS_KEY,
-} from "../storage/constants";
+import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
@@ -208,8 +204,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // see what the (persistent, cross-workspace) secret store says about existence of a session
     [connection, sessionSecret, authComplete] = await Promise.all([
       getCCloudConnection(),
-      storageManager.getSecret(AUTH_SESSION_EXISTS_KEY),
-      storageManager.getSecret(AUTH_COMPLETED_KEY),
+      storageManager.getSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
+      storageManager.getSecret(SecretStorageKeys.AUTH_COMPLETED),
     ]);
 
     if (connection && ["NO_TOKEN", "FAILED"].includes(connection.status.authentication.status)) {
@@ -232,10 +228,10 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       logger.debug("getSessions() session secret exists but no connection found, removing secret");
       // WARNING: if you add a value below, also add it to the if block, otherwise it may not trigger the onChange event when setting later
       await Promise.all([
-        storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
-        storageManager.deleteSecret(AUTH_COMPLETED_KEY),
+        storageManager.deleteSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
+        storageManager.deleteSecret(SecretStorageKeys.AUTH_COMPLETED),
         // we don't need to check for this up above, just clear it out if we don't have a connection
-        storageManager.deleteSecret(CCLOUD_AUTH_STATUS_KEY),
+        storageManager.deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
       ]);
     } else if (!sessionSecretExists && connectionExists) {
       // NOTE: this should never happen, because in order for the connection to be made with the
@@ -313,7 +309,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // to prevent any last-minute requests from passing through the middleware
     await Promise.all([
       deleteCCloudConnection(),
-      getStorageManager().deleteSecret(CCLOUD_AUTH_STATUS_KEY),
+      getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
     ]);
     await this.handleSessionRemoved(true);
     ccloudConnected.fire(false);
@@ -332,13 +328,13 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       async ({ key }: vscode.SecretStorageChangeEvent) => {
         logger.debug("authProvider: secrets.onDidChange event", { key });
         switch (key) {
-          case AUTH_SESSION_EXISTS_KEY: {
+          case SecretStorageKeys.AUTH_SESSION_EXISTS: {
             // another workspace noticed a change in the auth status, so we need to update our internal
             // state and notify any listeners in this extension instance
             await this.handleSessionSecretChange();
             break;
           }
-          case AUTH_COMPLETED_KEY: {
+          case SecretStorageKeys.AUTH_COMPLETED: {
             // the user has completed the auth flow in some way, whether in this window or another --
             // (e.g they started the auth flow in one window and another handled the callback URI) --
             // so we need to notify any listeners in this extension instance that the auth flow has
@@ -351,7 +347,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
               try {
                 const preferences = await fetchPreferences();
                 logger.debug(
-                  `authProvider: ${AUTH_COMPLETED_KEY} changed (success=${success}); current sidecar preferences: `,
+                  `authProvider: ${SecretStorageKeys.AUTH_COMPLETED} changed (success=${success}); current sidecar preferences:`,
                   { preferences },
                 );
               } catch {
@@ -464,7 +460,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // updating secrets is cross-workspace-scoped
     if (updateSecret) {
-      await getStorageManager().setSecret(AUTH_SESSION_EXISTS_KEY, "true");
+      await getStorageManager().setSecret(SecretStorageKeys.AUTH_SESSION_EXISTS, "true");
     }
   }
 
@@ -496,8 +492,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     if (updateSecret) {
       const storageManager = getStorageManager();
       await Promise.all([
-        storageManager.deleteSecret(AUTH_SESSION_EXISTS_KEY),
-        storageManager.deleteSecret(AUTH_COMPLETED_KEY),
+        storageManager.deleteSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
+        storageManager.deleteSecret(SecretStorageKeys.AUTH_COMPLETED),
       ]);
     }
   }

@@ -794,10 +794,6 @@ components:
         - bootstrap_servers
       type: object
       properties:
-        id:
-          description: "The identifier of the Kafka cluster, if known."
-          maxLength: 64
-          type: string
         bootstrap_servers:
           description:
             A list of host/port pairs to use for establishing the initial connection to the Kafka

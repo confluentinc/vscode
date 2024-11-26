@@ -4,6 +4,7 @@ import { print } from "graphql";
 // OpenAPI generated static client classes
 
 import {
+  ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
   PartitionV3Api,
   RecordsV3Api,
@@ -209,6 +210,18 @@ export class SidecarHandle {
     return new TopicV3Api(config);
   }
 
+  public getConfigsV3Api(clusterId: string, connectionId: string): ConfigsV3Api {
+    const config = new KafkaRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [CLUSTER_ID_HEADER]: clusterId,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new ConfigsV3Api(config);
+  }
+
   /**
    * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link PartitionV3Api} client instance with a
    * preconfigured {@link KafkaRestConfiguration}.
@@ -238,7 +251,6 @@ export class SidecarHandle {
         [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
       },
     });
-
     return new RecordsV3Api(config);
   }
 

@@ -8,7 +8,12 @@ import {
 } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { Logger } from "../logging";
-import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../preferences/constants";
+import {
+  LOCAL_KAFKA_IMAGE,
+  LOCAL_KAFKA_IMAGE_TAG,
+  LOCAL_SCHEMA_REGISTRY_IMAGE,
+  LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
+} from "../preferences/constants";
 
 const logger = new Logger("quickpicks.localResources");
 
@@ -37,7 +42,9 @@ export async function localResourcesQuickPick(): Promise<LocalResourceKind[]> {
       description: schemaRegistryRepoTag,
       detail:
         "A local Schema Registry instance that can be used to manage schemas for Kafka topics",
-      // no button to change SR image until we have other candidate images
+      buttons: [
+        { iconPath: new ThemeIcon("gear"), tooltip: `Select Schema Registry Docker Image Tag` },
+      ],
     },
   ];
   quickpick.show();
@@ -58,6 +65,12 @@ export async function localResourcesQuickPick(): Promise<LocalResourceKind[]> {
         commands.executeCommand(
           "workbench.action.openSettings",
           `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
+        );
+      } else if (event.button.tooltip?.includes(LocalResourceKind.SchemaRegistry)) {
+        // open Settings and filter to the Schema Registry image repo+tag settings
+        commands.executeCommand(
+          "workbench.action.openSettings",
+          `@id:${LOCAL_SCHEMA_REGISTRY_IMAGE} @id:${LOCAL_SCHEMA_REGISTRY_IMAGE_TAG}`,
         );
       }
     },

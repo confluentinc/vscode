@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.22.0-19",
+  "version": "0.22.0-28",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -56,6 +56,12 @@
         "command": "confluent.connections.create",
         "icon": "$(plus)",
         "title": "Log in to Confluent Cloud",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.direct",
+        "title": "Add New Connection",
+        "icon": "$(plug)",
         "category": "Confluent: Connections"
       },
       {
@@ -293,6 +299,11 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.edit",
+        "title": "Configure Topic",
+        "category": "Confluent: Topics"
+      },
+      {
         "command": "confluent.topics.delete",
         "title": "Delete Topic",
         "category": "Confluent: Topics"
@@ -381,6 +392,11 @@
           "type": "string",
           "default": "latest",
           "description": "Docker image tag to use when starting a local Kafka container"
+        },
+        "confluent.localDocker.schemaRegistryImageTag": {
+          "type": "string",
+          "default": "latest",
+          "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
         }
       }
     },
@@ -458,6 +474,10 @@
           "when": "!confluent.ccloudConnectionAvailable"
         },
         {
+          "command": "confluent.connections.direct",
+          "when": "confluent.directConnectionsEnabled"
+        },
+        {
           "command": "confluent.copyOrganizationId",
           "when": "false"
         },
@@ -530,6 +550,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.edit",
+          "when": "false"
+        },
+        {
           "command": "confluent.topics.openlatestschemas",
           "when": "false"
         },
@@ -586,9 +610,14 @@
       ],
       "view/title": [
         {
+          "command": "confluent.connections.direct",
+          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.schema-registry.select",
@@ -725,6 +754,11 @@
         {
           "command": "confluent.topics.delete",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
+          "group": "topics"
+        },
+        {
+          "command": "confluent.topics.edit",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzAlterConfigs.*/",
           "group": "topics"
         },
         {
@@ -927,6 +961,7 @@
     "@sentry/rollup-plugin": "^2.21.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "async-mutex": "^0.5.0",
     "d3": "^7.9.0",
     "dataclass": "^3.0.0-beta.1",
     "gql.tada": "^1.8.3",
