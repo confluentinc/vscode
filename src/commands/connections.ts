@@ -91,6 +91,7 @@ export async function renameDirectConnection(item: DirectEnvironment) {
   const newName = await window.showInputBox({
     placeHolder: "Enter a new name for this connection",
     value: item.name,
+    ignoreFocusOut: true,
   });
   if (!newName) {
     return;
