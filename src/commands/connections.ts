@@ -1,11 +1,14 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { ConnectionSpec } from "../clients/sidecar";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
+import { getResourceManager } from "../storage/resourceManager";
+import { getResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 
@@ -80,12 +83,47 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().deleteConnection(item.connectionId);
 }
 
+export async function renameDirectConnection(item: DirectEnvironment) {
+  if (!(item instanceof DirectEnvironment)) {
+    return;
+  }
+
+  const newName = await window.showInputBox({
+    placeHolder: "Enter a new name for this connection",
+    value: item.name,
+    ignoreFocusOut: true,
+  });
+  if (!newName) {
+    return;
+  }
+
+  // look up the associated ConnectionSpec
+  const spec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+    item.connectionId,
+  );
+  if (!spec) {
+    logger.error("Direct connection not found, can't rename");
+    // possibly stale Resources view? this shouldn't happen
+    window.showErrorMessage("Connection not found.");
+    getResourceViewProvider().refresh();
+    return;
+  }
+
+  // update and send it to the manager to update the sidecar + secret storage
+  const updatedSpec: ConnectionSpec = {
+    ...spec,
+    name: newName,
+  };
+  await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+}
+
 export function registerConnectionCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.connections.ccloud.logIn", createCCloudConnection),
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
     registerCommandWithLogging("confluent.connections.direct", showDirectConnectionForm),
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
+    registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
   ];
 }
 

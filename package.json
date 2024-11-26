@@ -71,6 +71,12 @@
         "category": "Confluent: Connections"
       },
       {
+        "command": "confluent.connections.direct.rename",
+        "icon": "$(pencil)",
+        "title": "Rename Connection",
+        "category": "Confluent: Connections"
+      },
+      {
         "command": "confluent.connections.addSSLPemPath",
         "icon": "$(key)",
         "title": "Add SSL/TLS PEM Path",
@@ -482,6 +488,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.connections.direct.rename",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyOrganizationId",
           "when": "false"
         },
@@ -722,6 +732,11 @@
         },
         {
           "command": "confluent.connections.direct.delete",
+          "when": "viewItem == direct-environment && confluent.directConnectionsEnabled",
+          "group": "inline@3"
+        },
+        {
+          "command": "confluent.connections.direct.rename",
           "when": "viewItem == direct-environment && confluent.directConnectionsEnabled",
           "group": "inline@2"
         },
