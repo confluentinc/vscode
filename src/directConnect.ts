@@ -62,7 +62,7 @@ export function openDirectConnectionForm(): void {
     if (result.success) {
       await window.showInformationMessage(`🎉 New Connection Created`, {
         modal: true,
-        detail: `View and interact with ${body["name"]} in the Resources sidebar`,
+        detail: `View and interact with ${body["name"] ?? "the connection"} in the Resources sidebar`,
       });
       directConnectForm.dispose();
     }
