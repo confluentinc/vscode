@@ -101,9 +101,14 @@ export async function isDockerAvailable(showNotification: boolean = false): Prom
     logger.debug("docker ping response:", resp);
     return true;
   } catch (error) {
-    logResponseError(error, "docker ping");
-    if (showNotification) {
-      await showDockerUnavailableErrorNotification(error);
+    if (error instanceof ResponseError) {
+      logResponseError(error, "docker ping");
+      if (showNotification) {
+        await showDockerUnavailableErrorNotification(error);
+      }
+    } else {
+      // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
+      logger.debug("docker ping error:", error);
     }
   }
   return false;
