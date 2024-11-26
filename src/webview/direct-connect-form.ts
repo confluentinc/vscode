@@ -106,19 +106,25 @@ type PlatformOptions =
 type SupportedAuthTypes = "None" | "Basic" | "API";
 
 function transformFormDataToKafkaConfig(formData: any): KafkaClusterConfig {
-  let kafkaClusterConfig: KafkaClusterConfig = { bootstrap_servers: "", credentials: {} };
+  let kafkaClusterConfig: KafkaClusterConfig = { bootstrap_servers: "" };
   if (formData.bootstrap_servers) {
     kafkaClusterConfig["bootstrap_servers"] = formData.bootstrap_servers;
   }
   if (formData.kafka_auth_type === "Basic") {
-    kafkaClusterConfig["credentials"] = {
-      username: formData.kafka_username,
-      password: formData.kafka_password,
+    kafkaClusterConfig = {
+      ...kafkaClusterConfig,
+      credentials: {
+        username: formData.kafka_username,
+        password: formData.kafka_password,
+      },
     };
   } else if (formData.kafka_auth_type === "API") {
-    kafkaClusterConfig["credentials"] = {
-      api_key: formData.kafka_api_key,
-      api_secret: formData.kafka_api_secret,
+    kafkaClusterConfig = {
+      ...kafkaClusterConfig,
+      credentials: {
+        api_key: formData.kafka_api_key,
+        api_secret: formData.kafka_api_secret,
+      },
     };
   }
 
@@ -126,19 +132,25 @@ function transformFormDataToKafkaConfig(formData: any): KafkaClusterConfig {
 }
 
 function transformFormDataToSchemaRegistryConfig(formData: any) {
-  let schemaRegistryConfig = { uri: "", credentials: {} };
+  let schemaRegistryConfig: SchemaRegistryConfig = { uri: "" };
   if (formData.uri) {
     schemaRegistryConfig["uri"] = formData.uri;
   }
   if (formData.schema_auth_type === "Basic") {
-    schemaRegistryConfig["credentials"] = {
-      username: formData.schema_username,
-      password: formData.schema_password,
+    schemaRegistryConfig = {
+      ...schemaRegistryConfig,
+      credentials: {
+        username: formData.schema_username,
+        password: formData.schema_password,
+      },
     };
   } else if (formData.schema_auth_type === "API") {
-    schemaRegistryConfig["credentials"] = {
-      api_key: formData.schema_api_key,
-      api_secret: formData.schema_api_secret,
+    schemaRegistryConfig = {
+      ...schemaRegistryConfig,
+      credentials: {
+        api_key: formData.schema_api_key,
+        api_secret: formData.schema_api_secret,
+      },
     };
   }
 
