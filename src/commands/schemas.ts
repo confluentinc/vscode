@@ -139,7 +139,13 @@ async function evolveSchema(schema: Schema) {
     return;
   }
 
-  // First, going to need to save the schema to a file.
+  // Ask the user where they might want to save the schema. Is not
+  // necessary for it to hit disk per se, but in case they want to,
+  // we'll need to know ahead of time where they choose so that we can
+  // decide to use either a file:// or untitled:// URI.
+  // (If a file already exists that corresponds with an untitled scheme URI,
+  // then bad things happen if the user does save to disk, hence
+  // predetermining now).
 
   // What directory to default the save dialog to?
   // If there's an open document in the active editor, use that directory.
@@ -166,6 +172,34 @@ async function evolveSchema(schema: Schema) {
     return;
   }
 
+  const evolveSchemaUri = await determineFinalSchemaEvolveUri(saveLocation, schema);
+
+  // Initialize the editor with the current schema body (if need be)
+  await initializeSchemaEditor(evolveSchemaUri, schemaBody);
+
+  // Finally, set the language of the editor based on the schema type.
+  const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
+  await setEditorLanguageForSchema(editor, schema);
+
+  // The user can edit, then either save to disk or to use the 'cloud upload' button
+  // to upload to the schema registry. Because of the query string in the URI,
+  // the upload schema command will be able to default to the originating
+  // schema registry and subject.
+}
+
+/** Determine the final URI to save the schema to.
+ * If the given URI does not exist in the filesystem, then we
+ * can use an untitled scheme URI. Otherwise, we'll use the given file-based URI..
+ * In any event, we'll encode the schema data in the query string so that the
+ * schema upload command can default properly.
+ *
+ * @param saveLocation The URI the user selected to save the schema to.
+ * @param schema The schema to encode in the query string of the returned URI
+ */
+async function determineFinalSchemaEvolveUri(
+  saveLocation: vscode.Uri,
+  schema: Schema,
+): Promise<vscode.Uri> {
   // Open up an new buffer from that path, but with the schema data in the query string.
   // (That schema data will provide defaults for the 'schema upload' command
   // later on down the line, see `uploadNewSchema`.
@@ -175,48 +209,52 @@ async function evolveSchema(schema: Schema) {
     query: encodeURIComponent(JSON.stringify(schema)),
   });
 
-  logger.info(`User selected ${editSchemaFileUri.fsPath}`);
-
-  let editSchemaUri: vscode.Uri = editSchemaFileUri;
-
   // If file does not exist, then we're clear to make an untitled scheme URL.
   // Otherwise, we'll use the path given, but we'll update the contents in the opened editor
   // so that the editor will smell dirty, but they haven't hit disk yet.
   try {
     await vscode.workspace.fs.stat(editSchemaFileUri);
-    logger.info("File exists, running with it.");
-  } catch (e) {
-    logger.info("File does not exist, creating untitled scheme URL");
-    editSchemaUri = vscode.Uri.from({
+    return editSchemaFileUri;
+  } catch {
+    // File does not exist, so we can use an untitled scheme URI w/o ultimate
+    // conflict if the user decides to save to disk.
+    return vscode.Uri.from({
       scheme: "untitled",
       path: editSchemaFileUri.path,
       query: editSchemaFileUri.query,
     });
   }
+}
 
-  let document: vscode.TextDocument;
-  let editor: vscode.TextEditor;
-  document = await vscode.workspace.openTextDocument(editSchemaUri);
-  editor = await vscode.window.showTextDocument(editSchemaUri, { preview: false });
+/**
+ * Open a new editor document atop the given URI and populate the contents with the current schema body
+ * (if it differs from the existing contents).
+ *
+ * @param editUri The URI of the editor to initialize. May be a file or untitled scheme.
+ * @param schemaBody The current schema body to initialize the document / editor with.
+ * */
+async function initializeSchemaEditor(editUri: vscode.Uri, schemaBody: string): Promise<void> {
+  const document = await vscode.workspace.openTextDocument(editUri);
 
-  logger.info(`Opened ${editSchemaUri.toString()} in editor`);
+  const existingContents = document.getText();
+  if (existingContents !== schemaBody) {
+    // They either opened a new file, or the chose file's contents are different.
+    if (existingContents.length > 0) {
+      // Different preexisting contents.
+      // Out with the old!
+      const edit = new vscode.WorkspaceEdit();
+      edit.delete(editUri, new vscode.Range(0, 0, document.lineCount, 0));
+      await vscode.workspace.applyEdit(edit);
+    }
 
-  // Empty the existing document if need be.
-  if (document.getText()) {
+    // Always insert the new schema content.
+    // Do this in the editor, not the on-disk file, so that they can upload
+    // to the schema registry without necessarily saving to disk. Their choice
+    // to also do a filesystem-level save.
     const edit = new vscode.WorkspaceEdit();
-    edit.delete(editSchemaUri, new vscode.Range(0, 0, document.lineCount, 0));
+    edit.insert(editUri, new vscode.Position(0, 0), schemaBody);
     await vscode.workspace.applyEdit(edit);
-    logger.info("Cleared existing document contents in editor");
   }
-
-  // Write the current schema content to the document
-  const edit = new vscode.WorkspaceEdit();
-  edit.insert(editSchemaUri, new vscode.Position(0, 0), schemaBody);
-  await vscode.workspace.applyEdit(edit);
-  logger.info("Wrote schema content to document in editor");
-
-  // Set the language of the editor based on the schema type.
-  await setEditorLanguageForSchema(editor, schema);
 }
 
 /**

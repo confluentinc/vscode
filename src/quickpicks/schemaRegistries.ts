@@ -96,9 +96,9 @@ export async function schemaRegistryQuickPick(
 
   // Determine the default registry to select, if any.
   // Prefer defaultRegistryId if provided, otherwise the focused registry in the schemas view, if any.
-  const defaultRegistry: SchemaRegistry | undefined = defaultRegistryId
-    ? registryIdMap.get(defaultRegistryId)
-    : getSchemasViewProvider().schemaRegistry;
+  const focusedRegistry: SchemaRegistry | undefined = getSchemasViewProvider().schemaRegistry;
+  const defaultRegistry: SchemaRegistry | undefined =
+    (defaultRegistryId && registryIdMap.get(defaultRegistryId)) || focusedRegistry;
 
   const defaultRegistryIndex: number = schemaRegistries.findIndex(
     (registry) => registry.id === defaultRegistry?.id,
@@ -117,7 +117,8 @@ export async function schemaRegistryQuickPick(
       logger.warn(`No environment found for Schema Registry ${registry.id}`);
       return;
     }
-    const isDefaultRegistry = defaultRegistry?.id === registry.id;
+    const isFocusedRegistry = focusedRegistry?.id === registry.id;
+
     // show a separator by connection type (not connection + env name like with Kafka clusters)
     const connectionLabel = getConnectionLabel(registry.connectionType);
     if (lastSeparator !== connectionLabel) {
@@ -128,10 +129,11 @@ export async function schemaRegistryQuickPick(
       lastSeparator = connectionLabel;
     }
     // show the default registry, if there is one
-    const icon = isDefaultRegistry ? IconNames.CURRENT_RESOURCE : registry.iconName;
+    const icon = isFocusedRegistry ? IconNames.CURRENT_RESOURCE : registry.iconName;
     registryItems.push({
       label: environment.name,
       description: registry.id,
+      detail: defaultRegistryId === registry.id ? "Default" : undefined,
       iconPath: new ThemeIcon(icon),
     });
   }
