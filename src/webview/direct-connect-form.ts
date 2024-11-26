@@ -57,9 +57,14 @@ class DirectConnectFormViewModel extends ViewModel {
   /** Submit all form data to the extension */
   async handleSubmit(event: Event) {
     event.preventDefault();
+    this.success(false);
+    this.errorMessage("");
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    if (!data["bootstrap_servers"] && !data["uri"]) {
+      return this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
+    }
     let clusterConfig: KafkaClusterConfig | undefined = undefined;
     let schemaConfig: SchemaRegistryConfig | undefined = undefined;
     if (data["bootstrap_servers"]) {
