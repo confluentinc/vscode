@@ -61,14 +61,13 @@ class DirectConnectFormViewModel extends ViewModel {
   }
 }
 
+export type PostResponse = { success: boolean; message: string | null };
+
 export function post(
   type: "TestConnection",
   body: { [key: string]: unknown },
-): Promise<{ success: boolean; message: string | null }>;
-export function post(
-  type: "Submit",
-  body: { [key: string]: unknown },
-): Promise<{ success: boolean; message: string | null }>;
+): Promise<PostResponse>;
+export function post(type: "Submit", body: { [key: string]: unknown }): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
