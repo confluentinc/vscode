@@ -59,6 +59,7 @@ import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { captureException } from "./errors";
 import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_DIRECT_CONNECTIONS,
@@ -100,7 +101,7 @@ export async function activate(
   } catch (e) {
     logger.error("Error activating extension:", e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
-    Sentry.captureException(e);
+    captureException(e);
     throw e;
   }
 

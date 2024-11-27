@@ -1,10 +1,11 @@
 import * as Sentry from "@sentry/node";
-
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
+import { observabilityContext } from "./context/observability";
 import { Logger } from "./logging";
+import { SIDECAR_CONNECTION_ID_HEADER } from "./sidecar/constants";
 
 const logger = new Logger("errors");
 
@@ -52,9 +53,63 @@ export async function logResponseError(
 
   logger.error(errorMessage, { ...errorContext, ...extra });
   if (sendTelemetry) {
-    Sentry.captureException(e, {
+    captureException(e, {
       contexts: { response: { status_code: responseStatusCode } },
       extra: { ...errorContext, ...extra },
     });
   }
+}
+
+/**
+ * Wrapper around the {@link Sentry.captureException} to include our extension instance's
+ * {@link observabilityContext} in the event context, along with any additionally provided context.
+ *
+ * See {@link Sentry.captureException}'s `ExclusiveEventHintOrCaptureContext` for more information
+ * on the `context` parameter.
+ *
+ * NOTE: If a {@link ResponseError} is provided as the `error`, the response status code and any
+ * associated `x-connection-id` header will be included in the event context under `contexts.response`.
+ */
+export function captureException(e: unknown, context = {}): void {
+  const errorContext = enrichErrorContext(e, context);
+  Sentry.captureException(e, errorContext);
+}
+
+// split from `captureException` for easier testing
+export function enrichErrorContext(
+  e: unknown,
+  context: Record<string, any> = {},
+): Record<string, any> {
+  const obsContext: Record<string, any> = observabilityContext.toRecord();
+  let errorContext: Record<string, any> = { extra: { ...obsContext } };
+
+  // merge `extra` from the provided `context` with the observability context
+  const { extra: extraFromContext = {}, ...otherContext } = context;
+  if (extraFromContext) {
+    // ensure observability context keys always make it into the Sentry event under `extra`, even if
+    // the caller provided their own `extra` data in `context`
+    errorContext = {
+      extra: { ...obsContext, ...extraFromContext },
+    };
+  }
+
+  // add any `ResponseError`-specific context
+  if ((e as any).response) {
+    const errorResponse = (e as ResponseError).response;
+    errorContext = {
+      ...errorContext,
+      contexts: {
+        response: {
+          status_code: errorResponse.status,
+          headers: {
+            [SIDECAR_CONNECTION_ID_HEADER]:
+              errorResponse.headers.get(SIDECAR_CONNECTION_ID_HEADER) ?? "",
+          },
+        },
+      },
+    };
+  }
+
+  // merge any other context provided by the caller
+  return { ...errorContext, ...otherContext };
 }
