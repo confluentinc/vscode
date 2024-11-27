@@ -2,7 +2,7 @@ import { CancellationToken, commands, Progress, ProgressLocation, window } from 
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
-import { getTelemetryLogger } from "../../telemetry/telemetryLogger";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import { DEFAULT_DOCKER_NETWORK } from "../constants";
 import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
@@ -59,7 +59,7 @@ export abstract class LocalResourceWorkflow {
   ): Promise<ContainerInspectResponse | undefined> {
     try {
       await startContainer(container.id);
-      this.sendTelemetryEvent("Docker Container Started", {
+      this.sendTelemetryEvent(UserEvent.DockerContainerStarted, {
         dockerContainerName: container.name,
       });
     } catch (error) {
@@ -119,7 +119,7 @@ export abstract class LocalResourceWorkflow {
 
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
-      this.sendTelemetryEvent("Docker Container Stopped", {
+      this.sendTelemetryEvent(UserEvent.DockerContainerStopped, {
         dockerContainerName: container.name,
       });
     }
@@ -173,7 +173,7 @@ export abstract class LocalResourceWorkflow {
         commands.executeCommand("confluent.support.issue");
       }
 
-      this.sendTelemetryEvent("Notification Button Clicked", {
+      this.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
         buttonLabel: selection,
         notificationType: "error",
       });
@@ -208,7 +208,7 @@ export abstract class LocalResourceWorkflow {
       async (progress, token: CancellationToken) => {
         token.onCancellationRequested(() => {
           this.logger.debug("cancellation requested, exiting workflow early");
-          this.sendTelemetryEvent("Notification Button Clicked", {
+          this.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
             buttonLabel: "Cancel",
             notificationType: "progress",
             purpose: `Existing ${this.resourceKind} Containers Detected`,
@@ -253,8 +253,8 @@ export abstract class LocalResourceWorkflow {
     this.progress?.report({ message: message });
   }
 
-  sendTelemetryEvent(eventName: string, properties: Record<string, any>) {
-    getTelemetryLogger().logUsage(eventName, {
+  sendTelemetryEvent(eventName: UserEvent, properties: Record<string, any>) {
+    logUsage(eventName, {
       dockerImage: this.imageRepoTag,
       extensionUserFlow: "Local Resource Management",
       localResourceKind: this.resourceKind,
