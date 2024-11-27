@@ -73,6 +73,7 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
+import { UserEvent, logUsage } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -118,7 +119,7 @@ export async function activate(
 async function _activateExtension(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
-  getTelemetryLogger().logUsage("Extension Activated");
+  logUsage(UserEvent.ExtensionActivated);
 
   // must be done first to allow any other downstream callers to call `getExtensionContext()`
   // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
@@ -350,7 +351,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // Send an Identify event to Segment with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
-      eventName: "Activated With Session",
+      eventName: UserEvent.ActivatedWithSession,
       userInfo: undefined,
       session: cloudSession,
     });
