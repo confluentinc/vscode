@@ -12,6 +12,7 @@ import { localSchemaRegistryConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { updateLocalConnection } from "../../sidecar/connections";
+import { UserEvent } from "../../telemetry/events";
 import {
   getLocalKafkaImageName,
   getLocalKafkaImageTag,
@@ -102,7 +103,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
             commands.executeCommand("confluent.docker.startLocalResources", [
               LocalResourceKind.Kafka,
             ]);
-            this.sendTelemetryEvent("Notification Button Clicked", {
+            this.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
               buttonLabel: START_KAFKA_BUTTON,
               notificationType: "error",
               purpose: "No Kafka Containers Found",
@@ -112,7 +113,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
               "workbench.action.openSettings",
               `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
             );
-            this.sendTelemetryEvent("Notification Button Clicked", {
+            this.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
               buttonLabel: IMAGE_SETTINGS_BUTTON,
               notificationType: "error",
               purpose: "No Kafka Containers Found",
@@ -140,7 +141,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       this.showErrorNotification(`Failed to create ${this.resourceKind} container.`);
       return;
     }
-    this.sendTelemetryEvent("Docker Container Created", {
+    this.sendTelemetryEvent(UserEvent.DockerContainerCreated, {
       dockerContainerName: container.name,
     });
     if (token.isCancellationRequested) return;
