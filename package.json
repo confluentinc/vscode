@@ -37,7 +37,13 @@
     "kafka",
     "flink",
     "kstreams",
+    "kafka streams",
     "schema",
+    "schema registry",
+    "producer",
+    "consumer",
+    "kafka consumer",
+    "kafka producer",
     "templates"
   ],
   "activationEvents": [
