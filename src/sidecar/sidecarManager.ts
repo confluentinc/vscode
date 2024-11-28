@@ -18,6 +18,7 @@ import {
 } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
+import { WebsocketManager } from "./websocketManager";
 
 import { normalize } from "path";
 import { Tail } from "tail";
@@ -55,6 +56,7 @@ export class SidecarManager {
   private logTailer: Tail | null = null;
 
   private sidecarContacted: boolean = false;
+  private websocketManager: WebsocketManager | null = null;
 
   /** Construct or return reference to already running sidecar process.
    * Code should _not_ retain the return result here for more than a single direct action, in that
@@ -245,7 +247,16 @@ export class SidecarManager {
       await this.getHandle();
     }
 
+    await this.setupWebsocketManager(handle.authToken);
     this.sidecarContacted = true;
+  }
+
+  private async setupWebsocketManager(authToken: string): Promise<void> {
+    if (!this.websocketManager) {
+      this.websocketManager = WebsocketManager.getInstance();
+    }
+
+    await this.websocketManager.connect(authToken);
   }
 
   /**
