@@ -190,20 +190,31 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     const sidecar = await getSidecar();
     const clusterId = topic.clusterId;
     const connectionId = topic.connectionId;
+    const topicName = topic.name;
 
     const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
 
     try {
-      let respmessage = await recordsApi.produceRecord({
-        topic_name: topic.name,
+      let response = await recordsApi.produceRecord({
+        topic_name: topicName,
         cluster_id: clusterId,
         ProduceRequest: {
-          value: message as any,
-          //patching with any here, need to understand WHY this is necessary
+          partition_id: 1,
+          key: message.key,
+          value: message.value,
+          headers: [{ name: "test-header" }],
+          timestamp: new Date(),
         },
       });
-
-      vscode.window.showInformationMessage(`Message produced to topic ${topic.name}`);
+      if (response) {
+        vscode.window.showInformationMessage(
+          `Message ${JSON.stringify(message.value)} 
+          ${JSON.stringify(message.key)} 
+          ${JSON.stringify(message.partition_id)} produced to topic 
+          ${topic.name} with response message 
+          ${JSON.stringify(response)})}`,
+        );
+      }
     } catch (error: any) {
       vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
     }
