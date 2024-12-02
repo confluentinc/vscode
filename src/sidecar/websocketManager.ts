@@ -39,7 +39,7 @@ export class WebsocketManager {
 
         // send authorize message to sidecar
         const message = {
-          header: {
+          headers: {
             originator: `${this.myPid}`,
             message_id: randomUUID().toString(),
             message_type: "AUTHORIZE_REQUEST",
@@ -55,7 +55,7 @@ export class WebsocketManager {
         // now wait for the authorize response. Once authorized, then we're good to resolve the promise.
         websocket.once("message", (data: WebSocket.Data) => {
           const message = JSON.parse(data.toString());
-          if (message.header?.message_type === "AUTHORIZE_RESPONSE") {
+          if (message.headers?.message_type === "AUTHORIZE_RESPONSE") {
             if (message.body.authorized) {
               logger.info("Authorized by sidecar");
               this.postAuthorizeSetup(websocket);
@@ -87,19 +87,19 @@ export class WebsocketManager {
         try {
           const message = JSON.parse(data.toString());
           // AUTHORIZE_RESPONSE messages handled elsewhere.
-          if (message.header.message_type === "AUTHORIZE_RESPONSE") {
+          if (message.headers.message_type === "AUTHORIZE_RESPONSE") {
             return;
           }
 
           // todo dispatch to handler(s) hased on message_type.
-          const header = message.header;
-          const messageType = message.header.message_type as string;
-          const originator = header.originator as string;
+          const headers = message.headers;
+          const messageType = message.headers.message_type as string;
+          const originator = headers.originator as string;
           logger.info(
             `Recieved ${messageType} websocket message from originator ${originator}: ${JSON.stringify(message, null, 2)}`,
           );
         } catch (e) {
-          logger.info(`Unparseable websocket message from sidecar: ${data}`);
+          logger.info(`Unparseable websocket message from sidecar: ${data.toString()}`);
         }
       });
 
@@ -119,12 +119,12 @@ export class WebsocketManager {
   }
 
   private postAuthorizeSetup(websocket: WebSocket): void {
-    // While connected, every 5s, send a hello message to all other workspaces
+    // While connected, every 5s, send a hello message to all other workspaces just as a proof-of-concept.
     const helloTimer = setInterval(() => {
       if (this.websocket) {
         logger.info("Sending hello message to all other workspaces...");
         const message = {
-          header: {
+          headers: {
             originator: `${this.myPid}`,
             message_id: randomUUID().toString(),
             message_type: "HELLO",
@@ -132,6 +132,9 @@ export class WebsocketManager {
           },
           body: {
             message: `hello from workspace ${this.myPid}`,
+            substructure: {
+              workspace_id: this.myPid,
+            },
           },
         };
         this.websocket.send(JSON.stringify(message));
