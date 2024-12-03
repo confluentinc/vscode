@@ -109,6 +109,23 @@ export async function deleteLocalConnection(): Promise<void> {
   await tryToDeleteConnection(LOCAL_CONNECTION_ID);
 }
 
+/** Update the existing {@link Connection} with the given {@link ConnectionSpec}. */
+export async function tryToUpdateConnection(spec: ConnectionSpec): Promise<Connection> {
+  let connection: Connection;
+  const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
+  try {
+    connection = await client.gatewayV1ConnectionsIdPut({
+      id: spec.id!,
+      ConnectionSpec: spec,
+    });
+    logger.debug("updated connection:", { id: connection.id });
+    return connection;
+  } catch (error) {
+    logResponseError(error, "updating connection", { connectionId: spec.id! }, true);
+    throw error;
+  }
+}
+
 export async function clearCurrentCCloudResources() {
   // if the current connection changes or is deleted, we need to clear any associated CCloud resources
   // that may have depended on it:

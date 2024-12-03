@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.22.0-33",
+  "version": "0.22.0-37",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -37,7 +37,13 @@
     "kafka",
     "flink",
     "kstreams",
+    "kafka streams",
     "schema",
+    "schema registry",
+    "producer",
+    "consumer",
+    "kafka consumer",
+    "kafka producer",
     "templates"
   ],
   "activationEvents": [
@@ -68,6 +74,12 @@
         "command": "confluent.connections.direct.delete",
         "icon": "$(debug-disconnect)",
         "title": "Disconnect",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.direct.rename",
+        "icon": "$(pencil)",
+        "title": "Rename Connection",
         "category": "Confluent: Connections"
       },
       {
@@ -488,6 +500,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.connections.direct.rename",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyOrganizationId",
           "when": "false"
         },
@@ -732,6 +748,11 @@
         },
         {
           "command": "confluent.connections.direct.delete",
+          "when": "viewItem == direct-environment && confluent.directConnectionsEnabled",
+          "group": "inline@3"
+        },
+        {
+          "command": "confluent.connections.direct.rename",
           "when": "viewItem == direct-environment && confluent.directConnectionsEnabled",
           "group": "inline@2"
         },
