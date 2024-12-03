@@ -195,7 +195,7 @@ export function generateSchemaSubjectGroups(
     // set the icon based on subject suffix
     schemaContainerItem.iconPath = getSubjectIcon(subject, topicName !== undefined);
 
-    const contextValueParts = [];
+    const contextValueParts: string[] = [];
 
     // override description to show schema types + count
     schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
@@ -209,11 +209,6 @@ export function generateSchemaSubjectGroups(
 
     // dash-join all parts, assign to context value
     schemaContainerItem.contextValue = contextValueParts.join("-");
-
-    const matchesRegex = /.*-schema$/.test(schemaContainerItem.contextValue);
-    logger.info(
-      `Generated schema group for subject ${subject}, contextValue ${schemaContainerItem.contextValue}, matches regex ${matchesRegex}`,
-    );
 
     schemaGroups.push(schemaContainerItem);
   }
