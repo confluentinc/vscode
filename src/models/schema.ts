@@ -2,8 +2,11 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
+import { Logger } from "../logging";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
 import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+
+const logger = new Logger("models.schema");
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -68,8 +71,22 @@ export class Schema extends Data implements IResourceBase {
     return languageTypes[this.type];
   }
 
+  /**
+   * Return a file name for this schema.
+   */
   fileName(): string {
     return `${this.subject}.${this.id}.v${this.version}.confluent.${this.fileExtension()}`;
+  }
+
+  /**
+   * Return a file name for a draft next version of this schema.
+   */
+  nextVersionDraftFileName(draftNumber: number): string {
+    if (draftNumber === 0) {
+      return `${this.subject}.v${this.version + 1}-draft.confluent.${this.fileExtension()}`;
+    } else {
+      return `${this.subject}.v${this.version + 1}-draft-${draftNumber}.confluent.${this.fileExtension()}`;
+    }
   }
 
   get ccloudUrl(): string {
@@ -178,12 +195,26 @@ export function generateSchemaSubjectGroups(
     // set the icon based on subject suffix
     schemaContainerItem.iconPath = getSubjectIcon(subject, topicName !== undefined);
 
+    const contextValueParts = [];
+
     // override description to show schema types + count
     schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
     if (schemaGroup.length > 1) {
       // set context key indicating this group has multiple versions (so can be quickly diff'd, etc.)
-      schemaContainerItem.contextValue = "multiple-versions";
+      contextValueParts.push("multiple-versions");
     }
+
+    // set context value identifying this as a schema group
+    contextValueParts.push("schema-group");
+
+    // dash-join all parts, assign to context value
+    schemaContainerItem.contextValue = contextValueParts.join("-");
+
+    const matchesRegex = /.*-schema$/.test(schemaContainerItem.contextValue);
+    logger.info(
+      `Generated schema group for subject ${subject}, contextValue ${schemaContainerItem.contextValue}, matches regex ${matchesRegex}`,
+    );
+
     schemaGroups.push(schemaContainerItem);
   }
   return schemaGroups;

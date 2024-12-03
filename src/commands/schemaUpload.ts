@@ -72,7 +72,6 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
     vscode.window.showErrorMessage((e as Error).message);
     return;
   }
-  // XXX todo show quickpick to choose schema type, value defaulting to the currently determined type.
 
   // If the document has (locally marked) errors, don't proceed with upload.
   if (await documentHasErrors(activeEditor)) {
@@ -88,7 +87,7 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
   }
 
   // Ask the user to choose a subject to bind the schema to.
-  const subject = await chooseSubject(registry, schemaType);
+  const subject = await chooseSubject(registry, schemaType, defaults?.subject);
   if (!subject) {
     logger.info("No subject chosen, aborting schema upload");
     vscode.window.showInformationMessage("Schema upload aborted.");
@@ -204,10 +203,11 @@ async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boole
 async function chooseSubject(
   registry: SchemaRegistry,
   schemaType: SchemaType,
+  defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, schemaType);
+  let subject = await schemaSubjectQuickPick(registry, schemaType, defaultSubject);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.

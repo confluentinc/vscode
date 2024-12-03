@@ -1,5 +1,4 @@
 import { homedir } from "os";
-import path from "path";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
@@ -19,8 +18,13 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
-    registerCommandWithLogging("confluent.schemas.evolve", evolveSchema),
+    registerCommandWithLogging("confluent.schemas.evolveSchemaGroup", evolveSchemaGroupCommand),
+    registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
+    registerCommandWithLogging(
+      "confluent.schemaViewer.viewLatestLocally",
+      viewLatestLocallyCommand,
+    ),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
     registerCommandWithLogging(
@@ -127,55 +131,62 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
   );
 }
 
+/** Drop into evolving the latest version of the schema in the subject group. */
+async function evolveSchemaGroupCommand(schemaGroup: ContainerTreeItem<Schema>) {
+  if (!(schemaGroup instanceof ContainerTreeItem)) {
+    logger.error("evolveSchemaGroupCommand called with invalid argument type", schemaGroup);
+    return;
+  }
+
+  if (schemaGroup.children.length === 0) {
+    logger.error("evolveSchemaGroupCommand called with no schemas", schemaGroup);
+    return;
+  }
+
+  // Evolve the first schema in the group. Will be the highest versioned one.
+  await evolveSchemaCommand(schemaGroup.children[0]);
+}
+
+/** Drop into read-only viewing the latest version of the schema in the subject group.  */
+async function viewLatestLocallyCommand(schemaGroup: ContainerTreeItem<Schema>) {
+  if (!(schemaGroup instanceof ContainerTreeItem)) {
+    logger.error("viewLatestLocallyCommand called with invalid argument type", schemaGroup);
+    return;
+  }
+
+  if (schemaGroup.children.length === 0) {
+    logger.error("viewLatestLocallyCommand called with no schemas", schemaGroup);
+    return;
+  }
+
+  // View the first schema in the group. Will be the highest versioned one.
+  await viewLocallyCommand(schemaGroup.children[0]);
+}
+
 /**
- * Command run against a schema to:
- *  1. Download to a temp file
- *  2. Associate that URL with the schema registry and subject
- *  3. Open the file in a new editor tab
- * */
-async function evolveSchema(schema: Schema) {
+ * Command to evolve a single schema (should be the most revent version in a schema subject group).
+ * This will create a new untitled document with the schema body and set up the
+ * file uri with the schema data in the query string for future reference by the
+ * upload schema command, allowing to default to the originating schema registr
+ * and subject.
+ **/
+async function evolveSchemaCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
     logger.error("evolveSchema called with invalid argument type", schema);
     return;
   }
 
-  // Ask the user where they might want to save the schema. Is not
-  // necessary for it to hit disk per se, but in case they want to,
-  // we'll need to know ahead of time where they choose so that we can
-  // decide to use either a file:// or untitled:// URI.
-  // (If a file already exists that corresponds with an untitled scheme URI,
-  // then bad things happen if the user does save to disk, hence
-  // predetermining now).
+  // Go get the schema.
+  const schemaBody = await fetchSchemaBody(schema);
 
-  // What directory to default the save dialog to?
-  // If there's an open document in the active editor, use that directory.
-  // Otherwise, use the first workspace folder,
-  // Finally, use the user's home directory.
-  const activeEditor = vscode.window.activeTextEditor;
-  const activeDir = activeEditor?.document.uri.fsPath;
-  const baseDir = activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || homedir();
+  // Get an untitled scheme URI corresponding the the schema that has no file path currently
+  // (so that if they opt save to disk, it won't fail -- untitleds cannot supplant file:// schema documents).
+  const evolveSchemaUri = await determineDraftSchemaUri(schema);
 
-  // Ask the user for a save location, and fetch the schema body concurrently.
-  const [saveLocation, schemaBody]: [vscode.Uri | undefined, string] = await Promise.all([
-    vscode.window.showSaveDialog({
-      defaultUri: vscode.Uri.file(
-        path.join(baseDir, `${schema.subject}.${schema.fileExtension()}`),
-      ),
-      filters: { "Schema Files": [schema.fileExtension()] },
-    }),
-    fetchSchemaBody(schema),
-  ]);
-
-  if (!saveLocation) {
-    // show a canceled message
-    vscode.window.showInformationMessage("Schema evolution canceled: no save location selected.");
-    return;
-  }
-
-  const evolveSchemaUri = await determineFinalSchemaEvolveUri(saveLocation, schema);
-
-  // Initialize the editor with the current schema body (if need be)
-  await initializeSchemaEditor(evolveSchemaUri, schemaBody);
+  // Initialize the editor with the current schema body.
+  const edit = new vscode.WorkspaceEdit();
+  edit.insert(evolveSchemaUri, new vscode.Position(0, 0), schemaBody);
+  await vscode.workspace.applyEdit(edit);
 
   // Finally, set the language of the editor based on the schema type.
   const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
@@ -187,73 +198,46 @@ async function evolveSchema(schema: Schema) {
   // schema registry and subject.
 }
 
-/** Determine the final URI to save the schema to.
- * If the given URI does not exist in the filesystem, then we
- * can use an untitled scheme URI. Otherwise, we'll use the given file-based URI..
- * In any event, we'll encode the schema data in the query string so that the
- * schema upload command can default properly.
- *
- * @param saveLocation The URI the user selected to save the schema to.
- * @param schema The schema to encode in the query string of the returned URI
- */
-async function determineFinalSchemaEvolveUri(
-  saveLocation: vscode.Uri,
-  schema: Schema,
-): Promise<vscode.Uri> {
-  // Open up an new buffer from that path, but with the schema data in the query string.
-  // (That schema data will provide defaults for the 'schema upload' command
-  // later on down the line, see `uploadNewSchema`.
-  const editSchemaFileUri = vscode.Uri.from({
-    scheme: "file",
-    path: saveLocation.fsPath,
+/**
+ * Return a URI for a draft schema file that does not exist in the filesystem corresponding to a draft
+ * next version of the given schema. The URI will have an untitled scheme and the schema data encoded
+ * in the query string for future reference.
+ **/
+async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeDir = activeEditor?.document.uri.fsPath;
+  const baseDir = activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || homedir();
+
+  // Now loop through draft file:// uris until we find one that doesn't exist.,
+  let chosenFileUri: vscode.Uri | null = null;
+  let draftNumber = -1;
+  while (!chosenFileUri || (await fileUriExists(chosenFileUri))) {
+    draftNumber += 1;
+    const draftFileName = schema.nextVersionDraftFileName(draftNumber);
+    chosenFileUri = vscode.Uri.file(`${baseDir}/${draftFileName}`);
+
+    if (draftNumber > 15) {
+      throw new Error(
+        `Could not find a draft file URI that does not exist in the filesystem after 15 tries.`,
+      );
+    }
+  }
+
+  // Now respell to be unknown scheme and add the schema data to the query string.
+  return vscode.Uri.from({
+    ...chosenFileUri,
+    scheme: "untitled",
     query: encodeURIComponent(JSON.stringify(schema)),
   });
-
-  // If file does not exist, then we're clear to make an untitled scheme URL.
-  // Otherwise, we'll use the path given, but we'll update the contents in the opened editor
-  // so that the editor will smell dirty, but they haven't hit disk yet.
-  try {
-    await vscode.workspace.fs.stat(editSchemaFileUri);
-    return editSchemaFileUri;
-  } catch {
-    // File does not exist, so we can use an untitled scheme URI w/o ultimate
-    // conflict if the user decides to save to disk.
-    return vscode.Uri.from({
-      scheme: "untitled",
-      path: editSchemaFileUri.path,
-      query: editSchemaFileUri.query,
-    });
-  }
 }
 
-/**
- * Open a new editor document atop the given URI and populate the contents with the current schema body
- * (if it differs from the existing contents).
- *
- * @param editUri The URI of the editor to initialize. May be a file or untitled scheme.
- * @param schemaBody The current schema body to initialize the document / editor with.
- * */
-async function initializeSchemaEditor(editUri: vscode.Uri, schemaBody: string): Promise<void> {
-  const document = await vscode.workspace.openTextDocument(editUri);
-
-  const existingContents = document.getText();
-  if (existingContents !== schemaBody) {
-    // They either opened a new file, or the chose file's contents are different.
-    if (existingContents.length > 0) {
-      // Different preexisting contents.
-      // Out with the old!
-      const edit = new vscode.WorkspaceEdit();
-      edit.delete(editUri, new vscode.Range(0, 0, document.lineCount, 0));
-      await vscode.workspace.applyEdit(edit);
-    }
-
-    // Always insert the new schema content.
-    // Do this in the editor, not the on-disk file, so that they can upload
-    // to the schema registry without necessarily saving to disk. Their choice
-    // to also do a filesystem-level save.
-    const edit = new vscode.WorkspaceEdit();
-    edit.insert(editUri, new vscode.Position(0, 0), schemaBody);
-    await vscode.workspace.applyEdit(edit);
+/** Check if a file URI exists in the filesystem. */
+async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -273,8 +257,6 @@ async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEdit
 /** Possibly set the language of the editor's document based on the schema. W */
 async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, schema: Schema) {
   const installedLanguages = await vscode.languages.getLanguages();
-  logger.info("Available languages", installedLanguages);
-  logger.info("Schema languages", schema.languageTypes());
 
   for (const language of schema.languageTypes()) {
     if (installedLanguages.indexOf(language) !== -1) {
