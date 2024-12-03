@@ -255,7 +255,7 @@
       {
         "command": "confluent.schemas.evolveSchemaGroup",
         "icon": "$(plus)",
-        "title": "Evolve Schema",
+        "title": "Evolve Latest Schema",
         "category": "Confluent: Schemas"
       },
       {
