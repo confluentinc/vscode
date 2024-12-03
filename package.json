@@ -713,12 +713,12 @@
       "view/item/context": [
         {
           "command": "confluent.copyResourceId",
-          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithIDs",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithIDs || viewItem =~ /.*-schema$/)",
           "group": "2_copy@1"
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/ || viewItem =~ /.*-schema$/)",
           "group": "2_copy@2"
         },
         {

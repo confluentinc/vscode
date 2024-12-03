@@ -250,15 +250,10 @@ async function setupContextValues() {
     "ccloud-environment", // direct/local environments only have internal IDs
     "ccloud-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
-    "schema",
-    "ccloud-schema",
     "local-kafka-cluster",
     "local-schema-registry",
     "direct-kafka-cluster",
     "direct-schema-registry",
-    "ccloud-schema",
-    "direct-schema",
-    "local-schema",
   ]);
   const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
     "ccloud-environment",
