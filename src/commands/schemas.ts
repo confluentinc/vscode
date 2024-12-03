@@ -171,7 +171,6 @@ async function evolveSchemaCommand(schema: Schema) {
   // Get an untitled scheme URI corresponding the the schema that has no file path currently
   // (so that if they opt save to disk, it won't fail -- untitleds cannot supplant file:// schema documents).
   const evolveSchemaUri = await determineDraftSchemaUri(schema);
-  logger.info(`Evolve schema URI: ${evolveSchemaUri.toString()}`);
 
   // Initialize the editor with the current schema body.
   const edit = new vscode.WorkspaceEdit();
