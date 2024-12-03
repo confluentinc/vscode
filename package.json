@@ -743,12 +743,12 @@
         },
         {
           "command": "confluent.diff.selectForCompare",
-          "when": "viewItem in confluent.readOnlyDiffableResources",
+          "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
           "command": "confluent.diff.compareWithSelected",
-          "when": "confluent.resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
+         "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
@@ -863,7 +863,7 @@
         },
         {
           "command": "confluent.openCCloudLink",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/ || viewItem =~ /.*ccloud.*schema/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/ || viewItem =~ /.*ccloud.*schema$/)",
           "group": "z_openInCloud"
         }
       ]

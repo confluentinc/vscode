@@ -29,9 +29,6 @@ export function getContextValue<T>(key: string): T | undefined {
 
 export enum ContextValues {
   // -- CONTEXT VALUES ONLY SET DURING EXTENSION ACTIVATION --
-  /** Array of contextValues from `src/models` that support "Select for Compare"/"Compare with
-   * Selected" operations in our sidebar. */
-  READONLY_DIFFABLE_RESOURCES = "confluent.readOnlyDiffableResources",
   /** Array of resources that support the "View in CCloud" action. */
   CCLOUD_RESOURCES = "confluent.ccloudResources",
   /** Array of view IDs that contain Confluent/Kafka resources. */

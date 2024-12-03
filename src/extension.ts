@@ -232,7 +232,6 @@ async function setupContextValues() {
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
   // constants for easier `when` clause matching in package.json; not updated dynamically
-  const diffResources = setContextValue(ContextValues.READONLY_DIFFABLE_RESOURCES, ["schema"]);
   const openInCCloudResources = setContextValue(ContextValues.CCLOUD_RESOURCES, [
     "ccloud-environment",
     "ccloud-kafka-cluster",
@@ -280,7 +279,6 @@ async function setupContextValues() {
     directConnectionsEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
-    diffResources,
     openInCCloudResources,
     viewsWithResources,
     resourcesWithIds,
