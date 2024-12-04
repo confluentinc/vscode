@@ -79,8 +79,7 @@ import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SupportViewProvider } from "./viewProviders/support";
-import { getTopicViewProvider, TopicViewProvider } from "./viewProviders/topics";
-import { KafkaTopicTreeItem } from "./models/topic";
+import { TopicViewProvider } from "./viewProviders/topics";
 
 const logger = new Logger("extension");
 

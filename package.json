@@ -788,12 +788,12 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem == ccloud-schema",
+          "when": "ccloud-schema",
           "group": "4_copy@1"
         },
         {
           "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem == ccloud-schema",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema/",
           "group": "inline@1"
         },
         {
