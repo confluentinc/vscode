@@ -9,12 +9,12 @@ export enum MessageType {
   // When a new workspace is granted access, sidecar sends this message to all of the
   // other workspaces along with message body type WorkspacesChangedBody describing
   // the new workspace's process id.
-  ADDED_WORKSPACE = "ADDED_WORKSPACE",
+  WORKSPACE_ADDED = "WORKSPACE_ADDED",
 
   // When a workspace is closed, sidecar sends this message to all of the other
   // workspaces along with message body type WorkspacesChangedBody describing
   // the closed workspace's process id.
-  CLOSED_WORKSPACE = "REMOVED_WORKSPACE",
+  WORKSPACE_REMOVED = "WORKSPACE_REMOVED",
 
   // Extension <--> Extension messages, audience=extensions
   HELLO = "HELLO",
@@ -67,8 +67,8 @@ type MessageBodyMap = {
   [MessageType.ACCESS_REQUEST]: AccessRequestBody;
   [MessageType.ACCESS_RESPONSE]: AccessResponseBody;
   [MessageType.HELLO]: HelloBody;
-  [MessageType.ADDED_WORKSPACE]: WorkspacesChangedBody;
-  [MessageType.CLOSED_WORKSPACE]: WorkspacesChangedBody;
+  [MessageType.WORKSPACE_ADDED]: WorkspacesChangedBody;
+  [MessageType.WORKSPACE_REMOVED]: WorkspacesChangedBody;
 };
 
 export interface Message<T extends MessageType> {
