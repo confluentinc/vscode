@@ -10,7 +10,8 @@ import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
-
+import { Logger } from "../logging";
+const logger = new Logger("ResourceLoader");
 /**
  * Class family for dealing with loading (and perhaps caching) information
  * about resources (kafka clusters, schema registries, etc). View providers
@@ -39,10 +40,12 @@ export abstract class ResourceLoader implements IResourceBase {
   private static registry: Map<ConnectionId, ResourceLoader> = new Map();
 
   public static registerInstance(connectionId: ConnectionId, loader: ResourceLoader): void {
+    logger.debug(`Registering ResourceLoader for connectionId ${connectionId}`);
     ResourceLoader.registry.set(connectionId, loader);
   }
 
   public static deregisterInstance(connectionId: ConnectionId): void {
+    logger.debug(`DE-registering ResourceLoader for connectionId ${connectionId}`);
     ResourceLoader.registry.delete(connectionId);
   }
 
