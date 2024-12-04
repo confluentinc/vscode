@@ -69,7 +69,7 @@ export async function canAccessSchemaTypeForTopic(
   } catch (error) {
     if (error instanceof ResponseError) {
       const decision = await determineAccessFromResponseError(error.response);
-      logger.debug("determined access from response error:", { decision, type });
+      logger.debug("determined access from response error:", { canAccessSchemas: decision, type });
       return decision;
     } else {
       logger.error("error making lookupSchemaUnderSubject request:", error);
@@ -88,8 +88,7 @@ export async function determineAccessFromResponseError(response: Response): Prom
     return false;
   }
 
-  logger.error("error response looking up subject:", body);
-
+  logger.debug("error response looking up subject:", body);
   // "Schema not found" = schema exists but this endpoint can't get it (???)
   const schema404 = body.error_code === 40403;
   // "Subject '...' not found" = no schema(s) for the topic
