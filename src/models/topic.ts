@@ -1,4 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
+
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
@@ -48,6 +49,9 @@ export class KafkaTopic extends Data implements IResourceBase {
 
 // Main class controlling the representation of a Kafka topic as a tree item.
 export class KafkaTopicTreeItem extends vscode.TreeItem {
+  produceMessageFromFile() {
+    throw new Error("Method not implemented.");
+  }
   resource: KafkaTopic;
 
   constructor(resource: KafkaTopic) {
@@ -78,16 +82,12 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 
   checkMissingAuthorizedOperations(resource: KafkaTopic): KafkaTopicOperation[] {
     // operations we support via view/item actions that require authorization
-    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE", "ALTER_CONFIGS"];
+    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE"];
 
     for (const op of interestingAuthz) {
       if (resource.operations.includes(op)) {
         // Convert to "authzRead", "authzDelete", etc. for context flags to hang context-sensitive commands off of (see package.json)
-        const operationTitleCase = op
-          .toLowerCase()
-          .replace(/_/g, " ") // replace underscores with spaces
-          .replace(/^\w|\s\w/g, (c) => c.toUpperCase()) // convert to title case
-          .replace(/\s/g, ""); // remove spaces
+        const operationTitleCase = op.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
         this.contextValue += `-authz${operationTitleCase}`;
       }
     }
