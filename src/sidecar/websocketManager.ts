@@ -2,14 +2,8 @@ import { randomUUID } from "crypto";
 import { Disposable } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
-import {
-  AccessRequestBody,
-  AccessResponseBody,
-  Audience,
-  HelloBody,
-  Message,
-  MessageType,
-} from "../ws/messageTypes";
+import { MessageRouter } from "../ws/messageRouter";
+import { Audience, Message, MessageHeader, MessageType } from "../ws/messageTypes";
 import { SIDECAR_PORT } from "./constants";
 
 const logger = new Logger("websocketManager");
@@ -27,6 +21,7 @@ export class WebsocketManager {
   private websocket: WebSocket | null = null;
   private disposables: Disposable[] = [];
   private myPid = process.pid;
+  private messageRouter = MessageRouter.getInstance();
 
   private constructor() {}
 
@@ -53,8 +48,27 @@ export class WebsocketManager {
       websocket.on("open", () => {
         logger.info("Websocket connected to sidecar, sending authorization.");
 
+        // set up to handle the access request response *before* we send the access request.
+        // When a positive response is received, we can then proceed with the rest of the setup
+        // and resolve our overall promise.
+        const messageRouter = MessageRouter.getInstance();
+        const accessResponseHandler = async (message: Message<MessageType.ACCESS_RESPONSE>) => {
+          if (message.body.authorized) {
+            logger.info("Authorized by sidecar");
+            this.postAuthorizeSetup(websocket);
+            resolved = true;
+            resolve();
+          } else {
+            logger.error("Websocke authorization failed!");
+            websocket.close();
+            resolved = true;
+            reject("Authorization failed");
+          }
+        };
+        messageRouter.once(MessageType.ACCESS_RESPONSE, accessResponseHandler);
+
         // send authorize message to sidecar
-        const message: Message<AccessRequestBody> = {
+        const message: Message<MessageType.ACCESS_REQUEST> = {
           headers: {
             originator: `${this.myPid}`,
             message_id: randomUUID().toString(),
@@ -67,30 +81,6 @@ export class WebsocketManager {
         };
 
         websocket.send(JSON.stringify(message));
-
-        // now wait for the next message, which should be an access response.
-        // If comes back with payload `true`, then we're good to resolve the promise.
-        websocket.once("message", (data: WebSocket.Data) => {
-          const message = JSON.parse(data.toString()) as Message<AccessResponseBody>;
-          if (message.headers.message_type === "ACCESS_RESPONSE") {
-            if (message.body.authorized) {
-              logger.info("Authorized by sidecar");
-              this.postAuthorizeSetup(websocket);
-              resolved = true;
-              resolve();
-            } else {
-              logger.error("Authorization failed");
-              websocket.close();
-              resolved = true;
-              reject("Authorization failed");
-            }
-          } else {
-            logger.error("Unexpected message received, type: " + message.headers.message_type);
-            websocket.close();
-            resolved = true;
-            reject("Unexpected message received");
-          }
-        });
 
         // if takes more than 5s to get a response, reject the promise.
         setTimeout(() => {
@@ -115,18 +105,18 @@ export class WebsocketManager {
         // decode from json. All messages from sidecar are expected to be JSON.
         try {
           const message = JSON.parse(data.toString()) as Message<any>;
-          // AUTHORIZE_RESPONSE messages handled elsewhere.
-          if (message.headers.message_type === MessageType.ACCESS_RESPONSE) {
-            return;
-          }
 
-          // todo dispatch to handler(s) hased on message_type.
-          const headers = message.headers;
-          const messageType = message.headers.message_type;
-          const originator = headers.originator;
-          logger.info(
+          const headers: MessageHeader = message.headers;
+          const messageType: MessageType = message.headers.message_type;
+          const originator: string = headers.originator;
+          logger.debug(
             `Recieved ${messageType} websocket message from originator ${originator}: ${JSON.stringify(message, null, 2)}`,
           );
+
+          // Defer to the internal message router to deliver the message to the registered by-message-type async handler(s).
+          this.messageRouter.deliver(message).catch((e) => {
+            logger.error(`Error delivering message ${JSON.stringify(message, null, 2)}: ${e}`);
+          });
         } catch {
           logger.info(`Unparseable websocket message from sidecar: ${data.toString()}`);
         }
@@ -152,7 +142,7 @@ export class WebsocketManager {
     const helloTimer = setInterval(() => {
       if (this.websocket) {
         logger.info("Sending hello message to all other workspaces...");
-        const message: Message<HelloBody> = {
+        const message: Message<MessageType.HELLO> = {
           headers: {
             originator: `${this.myPid}`,
             message_id: randomUUID().toString(),
@@ -167,6 +157,14 @@ export class WebsocketManager {
         logger.info("... sent.");
       }
     }, 5000);
+
+    const messageRouter = MessageRouter.getInstance();
+    const helloHandler = async (message: Message<MessageType.HELLO>) => {
+      logger.info(
+        `Received hello message from workspace ${message.headers.originator}: ${message.body.message}`,
+      );
+    };
+    const registrationToken = messageRouter.subscribe(MessageType.HELLO, helloHandler);
 
     this.disposables.push({ dispose: () => clearInterval(helloTimer) });
 

@@ -46,11 +46,6 @@ export interface MessageHeader {
   response_to_id?: string | undefined;
 }
 
-export interface Message<T> {
-  headers: MessageHeader;
-  body: T;
-}
-
 export interface AccessRequestBody {
   access_token: string;
 }
@@ -65,4 +60,18 @@ export interface HelloBody {
 
 export interface WorkspacesChangedBody {
   workspace_pid: number;
+}
+
+/** Type mapping of message type -> corresponding message body type */
+type MessageBodyMap = {
+  [MessageType.ACCESS_REQUEST]: AccessRequestBody;
+  [MessageType.ACCESS_RESPONSE]: AccessResponseBody;
+  [MessageType.HELLO]: HelloBody;
+  [MessageType.ADDED_WORKSPACE]: WorkspacesChangedBody;
+  [MessageType.CLOSED_WORKSPACE]: WorkspacesChangedBody;
+};
+
+export interface Message<T extends MessageType> {
+  headers: MessageHeader;
+  body: MessageBodyMap[T];
 }
