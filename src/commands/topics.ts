@@ -191,26 +191,35 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     const clusterId = topic.clusterId;
     const connectionId = topic.connectionId;
     const topicName = topic.name;
+    const connectionType = topic.connectionType;
 
     const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
+
+    const type = topic.connectionType === "LOCAL" ? undefined : "JSON";
+
+    const msgKeyAndVal = {
+      key: { data: message.key, ...(type && { type }) },
+      value: { data: message.value, ...(type && { type }) },
+    };
 
     try {
       let response = await recordsApi.produceRecord({
         topic_name: topicName,
         cluster_id: clusterId,
         ProduceRequest: {
-          partition_id: 1,
-          key: message.key,
-          value: message.value,
-          headers: [{ name: "test-header" }],
-          timestamp: new Date(),
+          headers: message.headers.map((header: any) => ({
+            name: header.key ? header.key : header.name,
+            value: header.value,
+          })),
+          key: msgKeyAndVal.key,
+          value: msgKeyAndVal.value,
         },
       });
+
       if (response) {
         vscode.window.showInformationMessage(
-          `Message ${JSON.stringify(message.value)} 
-          ${JSON.stringify(message.key)} 
-          ${JSON.stringify(message.partition_id)} produced to topic 
+          `VALUE:KEY  ${JSON.stringify(message.key)}: ${JSON.stringify(message.value)}
+          produced to topic 
           ${topic.name} with response message 
           ${JSON.stringify(response)})}`,
         );
