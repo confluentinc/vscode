@@ -191,7 +191,6 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     const clusterId = topic.clusterId;
     const connectionId = topic.connectionId;
     const topicName = topic.name;
-    const connectionType = topic.connectionType;
 
     const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
 
