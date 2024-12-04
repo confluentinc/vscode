@@ -1,4 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
+
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
@@ -78,7 +79,7 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 
   checkMissingAuthorizedOperations(resource: KafkaTopic): KafkaTopicOperation[] {
     // operations we support via view/item actions that require authorization
-    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE", "ALTER_CONFIGS"];
+    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE"];
 
     for (const op of interestingAuthz) {
       if (resource.operations.includes(op)) {
