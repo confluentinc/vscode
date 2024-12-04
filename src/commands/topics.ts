@@ -168,7 +168,6 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
 }
 
 async function produceMessageFromFile(topic: KafkaTopic) {
-  // check and make sure this is actually a KafkaTopic
   const options: vscode.OpenDialogOptions = {
     canSelectMany: false,
     openLabel: "Select JSON file",

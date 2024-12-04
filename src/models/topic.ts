@@ -49,9 +49,6 @@ export class KafkaTopic extends Data implements IResourceBase {
 
 // Main class controlling the representation of a Kafka topic as a tree item.
 export class KafkaTopicTreeItem extends vscode.TreeItem {
-  produceMessageFromFile() {
-    throw new Error("Method not implemented.");
-  }
   resource: KafkaTopic;
 
   constructor(resource: KafkaTopic) {
@@ -87,7 +84,11 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
     for (const op of interestingAuthz) {
       if (resource.operations.includes(op)) {
         // Convert to "authzRead", "authzDelete", etc. for context flags to hang context-sensitive commands off of (see package.json)
-        const operationTitleCase = op.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+        const operationTitleCase = op
+          .toLowerCase()
+          .replace(/_/g, " ") // replace underscores with spaces
+          .replace(/^\w|\s\w/g, (c) => c.toUpperCase()) // convert to title case
+          .replace(/\s/g, ""); // remove spaces
         this.contextValue += `-authz${operationTitleCase}`;
       }
     }

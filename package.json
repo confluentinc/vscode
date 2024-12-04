@@ -783,7 +783,7 @@
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
-          "when": "view == confluent-resources && (viewItem == ccloud-kafka-cluster || viewItem == local-kafka-cluster)",
+          "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
           "group": "2_copy@3"
         },
         {
