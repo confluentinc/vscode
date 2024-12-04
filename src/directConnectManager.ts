@@ -106,13 +106,15 @@ export class DirectConnectionManager {
         if (key === SecretStorageKeys.DIRECT_CONNECTIONS) {
           const connections: DirectConnectionsById =
             await getResourceManager().getDirectConnections();
+          logger.debug("connections", connections);
           // ensure all DirectResourceLoader instances are up to date
           // part 1: ensure any new connections have registered loaders; if this isn't done, hopping
           // workspaces and attempting to focus on a direct connection-based resource will fail with
           // the `Unknown connection ID` error
-          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders().map(
-            (loader) => loader.connectionId,
-          );
+          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders()
+            .filter((loader) => loader.connectionType === "DIRECT") // BUG FIX - filter out non-direct loaders so they don't get deleted later
+            .map((loader) => loader.connectionId);
+          logger.debug("existingLoaderIds", existingLoaderIds);
           for (const id of connections.keys()) {
             if (!existingLoaderIds.includes(id)) {
               this.initResourceLoader(id);
@@ -121,7 +123,9 @@ export class DirectConnectionManager {
           // part 2: remove any removed connections was removed from the secret storage to prevent
           // any requests to orphaned resources/connections
           for (const id of existingLoaderIds) {
+            // BUG CAUSE - connections is {} here when adding a new Direct, so CCloud & Local get de-registered & can't view Topics/SR
             if (!connections.has(id)) {
+              logger.debug("deleting connection bc it's not in list", id);
               ResourceLoader.deregisterInstance(id);
             }
           }
