@@ -16,7 +16,7 @@ addEventListener("DOMContentLoaded", () => {
 class DirectConnectFormViewModel extends ViewModel {
   errorMessage = this.signal("");
   success = this.signal(false);
-  platformType = this.signal<PlatformOptions>("Other");
+  platformType = this.signal<PlatformOptions>("Apache Kafka");
   kafkaAuthType = this.signal<SupportedAuthTypes>("None");
   schemaAuthType = this.signal<SupportedAuthTypes>("None");
 
@@ -25,6 +25,13 @@ class DirectConnectFormViewModel extends ViewModel {
     switch (input.name) {
       case "platform":
         this.platformType(input.value as PlatformOptions);
+        if (input.value === "Confluent Cloud") {
+          this.kafkaAuthType("API");
+          this.schemaAuthType("API");
+        } else {
+          this.kafkaAuthType("None");
+          this.schemaAuthType("None");
+        }
         break;
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
@@ -97,12 +104,7 @@ export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
 
-type PlatformOptions =
-  | "Apache Kafka"
-  | "Confluent Cloud"
-  | "Confluent Platform"
-  | "Local"
-  | "Other";
+type PlatformOptions = "Apache Kafka" | "Confluent Cloud" | "Confluent Platform" | "Other";
 
 type SupportedAuthTypes = "None" | "Basic" | "API";
 
