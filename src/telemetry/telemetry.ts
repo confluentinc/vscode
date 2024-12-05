@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { UserInfo } from "../clients/sidecar/models/UserInfo";
 import { getTelemetryLogger } from "./telemetryLogger";
-import * as Sentry from "@sentry/node";
 
 /** Given authenticated session and/or userInfo, clean the data & send an Identify event to Segment via TelemetryLogger
  * @param eventName - The event name to be sent to Segment as a follow up per docs: "follow the Identify call with a Track event that records what caused the user to be identified"
@@ -38,14 +37,4 @@ export function sendTelemetryIdentifyEvent({
       user: { id, domain, social_connection },
     });
   }
-}
-
-/** Helper function to make sure the user has Telemetry ON before sending Sentry error events */
-export function checkTelemetrySettings(event: Sentry.Event) {
-  const telemetryLevel = vscode.workspace.getConfiguration()?.get("telemetry.telemetryLevel");
-  if (!vscode.env.isTelemetryEnabled || telemetryLevel === "off") {
-    // Returning `null` will drop the event
-    return null;
-  }
-  return event;
 }
