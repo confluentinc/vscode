@@ -55,7 +55,6 @@
               id="other"
               name="platform"
               value="Other"
-              checked
               required
               data-on-change="this.updateValue(event)"
             />
@@ -106,8 +105,9 @@
                 id="kafka-auth-none"
                 name="kafka_auth_type"
                 value="None"
-                checked
+                required
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="kafka-auth-none">None</label>
             </div>
@@ -118,6 +118,7 @@
                 name="kafka_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="kafka-auth-basic">Username & Password</label>
             </div>
@@ -128,6 +129,7 @@
                 name="kafka_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="kafka-auth-api">API Credentials</label>
             </div>
@@ -208,8 +210,9 @@
                 id="schema-auth-none"
                 name="schema_auth_type"
                 value="None"
-                checked
+                required
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-none">None</label>
             </div>
@@ -220,6 +223,7 @@
                 name="schema_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-basic">Username & Password</label>
             </div>
@@ -230,6 +234,7 @@
                 name="schema_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-api">API Credentials</label>
             </div>
