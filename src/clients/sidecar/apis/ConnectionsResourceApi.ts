@@ -39,6 +39,7 @@ export interface GatewayV1ConnectionsIdPutRequest {
 }
 
 export interface GatewayV1ConnectionsPostRequest {
+  dry_run?: boolean;
   ConnectionSpec?: ConnectionSpec;
 }
 
@@ -215,6 +216,10 @@ export class ConnectionsResourceApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<Connection>> {
     const queryParameters: any = {};
+
+    if (requestParameters["dry_run"] != null) {
+      queryParameters["dry_run"] = requestParameters["dry_run"];
+    }
 
     const headerParameters: runtime.HTTPHeaders = {};
 
