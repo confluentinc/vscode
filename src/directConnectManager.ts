@@ -110,16 +110,16 @@ export class DirectConnectionManager {
           // part 1: ensure any new connections have registered loaders; if this isn't done, hopping
           // workspaces and attempting to focus on a direct connection-based resource will fail with
           // the `Unknown connection ID` error
-          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders().map(
-            (loader) => loader.connectionId,
-          );
+          const existingLoaderIds: ConnectionId[] = ResourceLoader.loaders()
+            .filter((loader) => loader.connectionType === "DIRECT")
+            .map((loader) => loader.connectionId);
           for (const id of connections.keys()) {
             if (!existingLoaderIds.includes(id)) {
               this.initResourceLoader(id);
             }
           }
-          // part 2: remove any removed connections was removed from the secret storage to prevent
-          // any requests to orphaned resources/connections
+          // part 2: remove any direct connections not in the secret storage to prevent
+          // requests to orphaned resources/connections
           for (const id of existingLoaderIds) {
             if (!connections.has(id)) {
               ResourceLoader.deregisterInstance(id);
