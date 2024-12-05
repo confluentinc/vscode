@@ -5,24 +5,39 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_DIRECT_ENVIRONMENT,
+  TEST_DIRECT_KAFKA_CLUSTER,
+  TEST_LOCAL_ENVIRONMENT,
   TEST_LOCAL_KAFKA_CLUSTER,
 } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources/schemaRegistry";
 import { getExtensionContext } from "../../tests/unit/testUtils";
-import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
+import { EXTENSION_VERSION } from "../constants";
+import * as direct from "../graphql/direct";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
-import { CCloudEnvironment, EnvironmentTreeItem, LocalEnvironment } from "../models/environment";
+import {
+  CCloudEnvironment,
+  DirectEnvironment,
+  EnvironmentTreeItem,
+  LocalEnvironment,
+} from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
+import { ConnectionLabel } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as auth from "../sidecar/connections";
 import * as resourceManager from "../storage/resourceManager";
-import { loadCCloudResources, loadLocalResources, ResourceViewProvider } from "./resources";
+import {
+  loadCCloudResources,
+  loadDirectConnectResources,
+  loadLocalResources,
+  ResourceViewProvider,
+} from "./resources";
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
@@ -100,7 +115,8 @@ describe("ResourceViewProvider loading functions", () => {
     const result: ContainerTreeItem<CCloudEnvironment> = await loadCCloudResources();
 
     assert.ok(result instanceof ContainerTreeItem);
-    assert.equal(result.label, "Confluent Cloud");
+    assert.equal(result.label, ConnectionLabel.CCLOUD);
+    assert.equal(result.id, `ccloud-connected-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_CCLOUD_ORGANIZATION.name);
     assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
@@ -112,7 +128,8 @@ describe("ResourceViewProvider loading functions", () => {
     const result: ContainerTreeItem<CCloudEnvironment> = await loadCCloudResources();
 
     assert.ok(result instanceof ContainerTreeItem);
-    assert.equal(result.label, "Confluent Cloud");
+    assert.equal(result.label, ConnectionLabel.CCLOUD);
+    assert.equal(result.id, `ccloud-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
     assert.equal(result.description, "(No connection)");
     assert.deepStrictEqual(result.children, []);
@@ -120,8 +137,7 @@ describe("ResourceViewProvider loading functions", () => {
 
   it("loadLocalResources() should load local resources under the Local container tree item when clusters are discoverable", async () => {
     const testLocalEnv: LocalEnvironment = LocalEnvironment.create({
-      id: LOCAL_CONNECTION_ID,
-      name: LOCAL_ENVIRONMENT_NAME,
+      ...TEST_LOCAL_ENVIRONMENT,
       kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
       schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
     });
@@ -131,7 +147,8 @@ describe("ResourceViewProvider loading functions", () => {
       await loadLocalResources();
 
     assert.ok(result instanceof ContainerTreeItem);
-    assert.equal(result.label, "Local");
+    assert.equal(result.label, ConnectionLabel.LOCAL);
+    assert.equal(result.id, `local-connected-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
     assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY]);
@@ -144,9 +161,41 @@ describe("ResourceViewProvider loading functions", () => {
       await loadLocalResources();
 
     assert.ok(result instanceof ContainerTreeItem);
-    assert.equal(result.label, "Local");
+    assert.equal(result.label, ConnectionLabel.LOCAL);
+    assert.equal(result.id, `local-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
     assert.equal(result.description, "(Not running)");
     assert.deepStrictEqual(result.children, []);
+  });
+
+  it("loadDirectConnectResources() should return a direct connection placeholder item when no direct connections exist", async () => {
+    sandbox.stub(direct, "getDirectResources").resolves([]);
+
+    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectConnectResources();
+
+    assert.ok(result instanceof ContainerTreeItem);
+    assert.equal(result.label, ConnectionLabel.DIRECT);
+    assert.equal(result.id, `direct-${EXTENSION_VERSION}`);
+    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
+    assert.equal(result.description, "(No connections)");
+    assert.deepStrictEqual(result.children, []);
+  });
+
+  it("loadDirectConnectResources() should load direct connection resources under the Direct container tree item", async () => {
+    const testDirectEnv: DirectEnvironment = DirectEnvironment.create({
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
+    });
+    sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
+
+    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectConnectResources();
+
+    assert.ok(result instanceof ContainerTreeItem);
+    assert.equal(result.label, ConnectionLabel.DIRECT);
+    assert.equal(result.id, `direct-connected-${EXTENSION_VERSION}`);
+    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
+    assert.equal(result.description, "(1)");
+    assert.deepStrictEqual(result.children, [testDirectEnv]);
   });
 });
