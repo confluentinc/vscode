@@ -219,9 +219,7 @@ async function produceMessageFromFile(topic: KafkaTopic) {
       });
 
       if (response) {
-        vscode.window.showInformationMessage(
-          `Success: Produced message to topic ${topic.name} with response message ${JSON.stringify(response)})}`,
-        );
+        vscode.window.showInformationMessage(`Success: Produced message to topic ${topic.name}.`);
       }
     } catch (error: any) {
       vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
