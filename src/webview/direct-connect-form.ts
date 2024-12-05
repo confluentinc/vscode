@@ -97,12 +97,7 @@ export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
 
-type PlatformOptions =
-  | "Apache Kafka"
-  | "Confluent Cloud"
-  | "Confluent Platform"
-  | "Local"
-  | "Other";
+type PlatformOptions = "Apache Kafka" | "Confluent Cloud" | "Confluent Platform" | "Other";
 
 type SupportedAuthTypes = "None" | "Basic" | "API";
 
