@@ -73,26 +73,23 @@ export class WebsocketManager {
           },
         };
 
-        const replyPromise = this.sendrecv(message, 5000, websocket);
-        replyPromise.then((reply) => {
-          const accessReply = reply as Message<MessageType.ACCESS_RESPONSE>;
-
-          if (accessReply.body.authorized) {
-            logger.info("Authorized by sidecar");
-            this.postAuthorizeSetup(websocket, accessReply.body);
-            resolve();
-          } else {
-            logger.error("Websocke authorization failed!");
+        this.sendrecv(message, 5000, websocket)
+          .then((accessReply) => {
+            if (accessReply.body.authorized) {
+              logger.info("Authorized by sidecar");
+              this.postAuthorizeSetup(websocket, accessReply.body);
+              resolve();
+            } else {
+              logger.error("Websocke authorization failed!");
+              websocket.close();
+              reject("Authorization failed");
+            }
+          })
+          .catch((e) => {
+            logger.error(`Error authorizing websocket: ${e}`);
             websocket.close();
-            reject("Authorization failed");
-          }
-        });
-
-        replyPromise.catch((e) => {
-          logger.error(`Error authorizing websocket: ${e}`);
-          websocket.close();
-          reject(e);
-        });
+            reject(e);
+          });
       });
 
       websocket.on("close", () => {
@@ -182,7 +179,7 @@ export class WebsocketManager {
     timeoutMs?: number,
     /** Optional websocket to use for the send, special cased for startup. */
     websocket?: WebSocket,
-  ): Promise<Message<(typeof RequestResponseTypeMap)[T]>> {
+  ): Promise<Message<RequestResponseTypeMap[T]>> {
     return new Promise((resolve, reject) => {
       if (!websocket) {
         websocket = this.websocket || undefined;
@@ -204,7 +201,7 @@ export class WebsocketManager {
       }
 
       // set up a handler for the reply message which resolves the promise, returning the reply message to our caller.
-      const replyHandler = async (message: Message<(typeof RequestResponseTypeMap)[T]>) => {
+      const replyHandler = async (message: Message<RequestResponseTypeMap[T]>) => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }

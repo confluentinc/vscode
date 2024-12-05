@@ -119,6 +119,6 @@ type MessageHeaderMap = {
 export type RequestResponseMessageTypes = MessageType.ACCESS_REQUEST;
 
 /** Relationships between request / response type pairs. */
-export const RequestResponseTypeMap: { [key in RequestResponseMessageTypes]: MessageType } = {
-  [MessageType.ACCESS_REQUEST]: MessageType.ACCESS_RESPONSE,
+export type RequestResponseTypeMap = {
+  [MessageType.ACCESS_REQUEST]: MessageType.ACCESS_RESPONSE;
 };

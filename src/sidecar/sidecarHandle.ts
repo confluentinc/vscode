@@ -160,7 +160,7 @@ export class SidecarHandle {
     message: Message<T>,
     /** Optional milliseconds to wait for the reply. */
     timeoutMs?: number,
-  ): Promise<Message<(typeof RequestResponseTypeMap)[T]>> {
+  ): Promise<Message<RequestResponseTypeMap[T]>> {
     return this.websocketManager.sendrecv(message, timeoutMs);
   }
 

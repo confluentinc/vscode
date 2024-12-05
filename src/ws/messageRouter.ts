@@ -76,7 +76,7 @@ export class MessageRouter {
   /** Register a callback for a specific reply message. See {@link deliver}, {@link WebsocketManager#sendrecv} for more details. */
   registerReplyCallback<T extends RequestResponseMessageTypes>(
     messageId: string,
-    callback: MessageCallback<(typeof RequestResponseTypeMap)[T]>,
+    callback: MessageCallback<RequestResponseTypeMap[T]>,
   ): void {
     this.replyCallbacks.set(messageId, callback);
   }
