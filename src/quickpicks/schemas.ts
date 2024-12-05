@@ -65,6 +65,7 @@ export async function schemaSubjectQuickPick(
       label: subject,
       iconPath: getSubjectIcon(subject),
       description: `v${latestVersionSchema?.version}`,
+      alwaysShow: subject === defaultSubject,
     });
   }
 

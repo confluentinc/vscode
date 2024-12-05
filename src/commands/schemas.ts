@@ -211,7 +211,7 @@ async function evolveSchemaGroupCommand(schemaGroup: ContainerTreeItem<Schema>) 
 async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
   const activeEditor = vscode.window.activeTextEditor;
   const activeDir = activeEditor?.document.uri.fsPath;
-  const baseDir = /*activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || */ homedir();
+  const baseDir = activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || homedir();
 
   // Now loop through draft file:// uris until we find one that doesn't exist.,
   let chosenFileUri: vscode.Uri | null = null;
