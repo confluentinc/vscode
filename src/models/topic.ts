@@ -79,7 +79,7 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
 
   checkMissingAuthorizedOperations(resource: KafkaTopic): KafkaTopicOperation[] {
     // operations we support via view/item actions that require authorization
-    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE"];
+    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE", "ALTER_CONFIGS"];
 
     for (const op of interestingAuthz) {
       if (resource.operations.includes(op)) {

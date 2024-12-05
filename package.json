@@ -788,7 +788,7 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "ccloud-schema",
+          "when": "view == confluent-schemas && viewItem == schema",
           "group": "4_copy@1"
         },
         {

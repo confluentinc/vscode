@@ -186,6 +186,10 @@ async function produceMessageFromFile(topic: KafkaTopic) {
       return;
     }
 
+    if (!message.key || !message.value) {
+      vscode.window.showErrorMessage(`Message must have a key and a value.`);
+    }
+
     const sidecar = await getSidecar();
     const clusterId = topic.clusterId;
     const connectionId = topic.connectionId;
@@ -216,10 +220,7 @@ async function produceMessageFromFile(topic: KafkaTopic) {
 
       if (response) {
         vscode.window.showInformationMessage(
-          `VALUE:KEY  ${JSON.stringify(message.key)}: ${JSON.stringify(message.value)}
-          produced to topic 
-          ${topic.name} with response message 
-          ${JSON.stringify(response)})}`,
+          `Success: Produced message to topic ${topic.name} with response message ${JSON.stringify(response)})}`,
         );
       }
     } catch (error: any) {
