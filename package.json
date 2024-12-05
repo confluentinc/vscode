@@ -956,7 +956,7 @@
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
+    "@types/node": "^18.19.67",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.87.0",
@@ -1001,6 +1001,7 @@
     "tail": "^2.2.6",
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zlib": "^1.0.5"
   }
 }

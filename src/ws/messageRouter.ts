@@ -1,17 +1,25 @@
 /** Event subscribing / routing for recieved websocket messages */
 
+import { randomUUID } from "node:crypto";
 import { Logger } from "../logging";
-import { Message, MessageType } from "./messageTypes";
+import {
+  Message,
+  MessageType,
+  RequestResponseMessageTypes,
+  RequestResponseTypeMap,
+} from "./messageTypes";
 
 /** Type describing message handler callbacks to whom messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
+/** Type keeping track of a single subscription / callback. */
 type CallbackEntry<T extends MessageType> = {
   callback: MessageCallback<T>; // Callback to be called when the event is triggered
   once: boolean; // Indicates if the callback should be called only once
   registrationToken: string; // Unique token to identify the callback for removal
 };
 
+/** Map of callback entries per message type */
 type CallbackMap = Map<MessageType, CallbackEntry<any>[]>;
 
 const logger = new Logger("messageRouter");
@@ -26,29 +34,94 @@ export class MessageRouter {
     return MessageRouter.instance;
   }
 
+  /**
+   * Map of message type -> array of (many|once) callbacks registered via either
+   * subscribe() or once().
+   */
   private callbacks: CallbackMap;
+
+  /** Map of response_to_id message id values to their one-off reply callbacks, registered
+   * via awaitReply(). */
+  private replyCallbacks: Map<string, MessageCallback<any>>;
 
   private constructor() {
     this.callbacks = new Map();
     for (const messageType in MessageType) {
       this.callbacks.set(messageType as MessageType, []);
     }
+
+    this.replyCallbacks = new Map();
   }
 
+  /**
+   * Register an async callback for messages of the given type.
+   * @returns A registration token that can be used to unsubscribe the callback.
+   **/
   subscribe<T extends MessageType>(messageType: T, callback: MessageCallback<T>): string {
     const registrationToken = this.generateRegistrationToken();
     this.callbacks.get(messageType)!.push({ callback, once: false, registrationToken });
     return registrationToken;
   }
 
+  /**
+   * Register an async callback for messages of the given type, to be called only once.
+   * @returns A registration token that can be used to unsubscribe the callback (before it is called).
+   **/
   once<T extends MessageType>(messageType: T, callback: MessageCallback<T>): string {
     const registrationToken = this.generateRegistrationToken();
     this.callbacks.get(messageType)!.push({ callback, once: true, registrationToken });
     return registrationToken;
   }
 
+  /** Register a callback for a specific reply message. See {@link deliver}, {@link WebsocketManager#sendrecv} for more details. */
+  registerReplyCallback<T extends RequestResponseMessageTypes>(
+    messageId: string,
+    callback: MessageCallback<(typeof RequestResponseTypeMap)[T]>,
+  ): void {
+    this.replyCallbacks.set(messageId, callback);
+  }
+
+  /**
+   * Unsubscribe a callback from receiving messages of the given type.
+   * @param registrationToken The token returned by the subscribe() or once() call.
+   **/
+  unsubscribe(registrationToken: string): void {
+    for (const callbacks of this.callbacks.values()) {
+      for (let i = 0; i < callbacks.length; i++) {
+        if (callbacks[i].registrationToken === registrationToken) {
+          callbacks.splice(i, 1);
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * Deliver a message to all registered callbacks for the message type.
+   * @param message The message to deliver.
+   **/
   async deliver<T extends MessageType>(message: Message<T>): Promise<void> {
     logger.info(`Delivering message of type ${message.headers.message_type}`);
+
+    // if message header is ReplyMessageHeader, it's a reply message. Look in the replyCallbacks map first.
+    // If a callback is registered, then call it, else fallthrough for regular message delivery.
+    if ("response_to_id" in message.headers) {
+      const replyCallback = this.replyCallbacks.get(message.headers.response_to_id);
+      if (replyCallback) {
+        logger.debug(
+          `Delivering reply message of type ${message.headers.message_type} to callback registered for message id ${message.headers.response_to_id}`,
+        );
+        // Remove the reply callback from the map
+        this.replyCallbacks.delete(message.headers.response_to_id);
+        try {
+          await replyCallback(message);
+        } catch (e) {
+          logger.error(`Error delivering reply message ${message.headers.message_type}: ${e}`);
+        }
+        return;
+      }
+    }
+
     const callbacks = this.callbacks.get(message.headers.message_type);
     if (callbacks === undefined) {
       // Wacky! We got a message type that we don't have callbacks array in map for.
@@ -86,26 +159,15 @@ export class MessageRouter {
     // Wait for all the promises to resolve concurrently
     await Promise.all(callbackPromises);
 
-    logger.info(`Delivered message of type ${message.headers.message_type} to all callbacks.`);
+    logger.debug(`Delivered message of type ${message.headers.message_type} to all callbacks.`);
     if (callbacks.length !== initialCallbackCount) {
-      logger.info(
+      logger.debug(
         `Removed ${initialCallbackCount - callbacks.length} one-time callbacks for message type ${message.headers.message_type}`,
       );
     }
   }
 
-  remove(registrationToken: string): void {
-    for (const callbacks of this.callbacks.values()) {
-      for (let i = 0; i < callbacks.length; i++) {
-        if (callbacks[i].registrationToken === registrationToken) {
-          callbacks.splice(i, 1);
-          return;
-        }
-      }
-    }
-  }
-
   private generateRegistrationToken(): string {
-    return Math.random().toString(36).substring(2);
+    return randomUUID().toString();
   }
 }

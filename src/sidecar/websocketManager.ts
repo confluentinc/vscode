@@ -3,7 +3,20 @@ import { Disposable } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
 import { MessageRouter } from "../ws/messageRouter";
-import { Audience, Message, MessageHeader, MessageType } from "../ws/messageTypes";
+import {
+  AccessResponseBody,
+  Audience,
+  Message,
+  MessageHeader,
+  MessageType,
+  RequestResponseMessageTypes,
+  RequestResponseTypeMap,
+} from "../ws/messageTypes";
+import {
+  WebsocketTransportMessage,
+  decodeMessageFromWS,
+  encodeMessageForWS,
+} from "../ws/transportTypes";
 import { SIDECAR_PORT } from "./constants";
 
 const logger = new Logger("websocketManager");
@@ -22,6 +35,7 @@ export class WebsocketManager {
   private disposables: Disposable[] = [];
   private myPid = process.pid;
   private messageRouter = MessageRouter.getInstance();
+  private peerWorkspaceCount = 0;
 
   private constructor() {}
 
@@ -43,29 +57,8 @@ export class WebsocketManager {
 
       const websocket = new WebSocket(`ws://localhost:${SIDECAR_PORT}/pubsub`);
 
-      let resolved = false;
-
       websocket.on("open", () => {
         logger.info("Websocket connected to sidecar, sending authorization.");
-
-        // set up to handle the access request response *before* we send the access request.
-        // When a positive response is received, we can then proceed with the rest of the setup
-        // and resolve our overall promise.
-        const messageRouter = MessageRouter.getInstance();
-        const accessResponseHandler = async (message: Message<MessageType.ACCESS_RESPONSE>) => {
-          if (message.body.authorized) {
-            logger.info("Authorized by sidecar");
-            this.postAuthorizeSetup(websocket);
-            resolved = true;
-            resolve();
-          } else {
-            logger.error("Websocke authorization failed!");
-            websocket.close();
-            resolved = true;
-            reject("Authorization failed");
-          }
-        };
-        messageRouter.once(MessageType.ACCESS_RESPONSE, accessResponseHandler);
 
         // send authorize message to sidecar
         const message: Message<MessageType.ACCESS_REQUEST> = {
@@ -80,31 +73,46 @@ export class WebsocketManager {
           },
         };
 
-        websocket.send(JSON.stringify(message));
+        const replyPromise = this.sendrecv(message, 5000, websocket);
+        replyPromise.then((reply) => {
+          const accessReply = reply as Message<MessageType.ACCESS_RESPONSE>;
 
-        // if takes more than 5s to get a response, reject the promise.
-        setTimeout(() => {
-          if (!resolved) {
-            logger.error("Authorization timeout");
+          if (accessReply.body.authorized) {
+            logger.info("Authorized by sidecar");
+            this.postAuthorizeSetup(websocket, accessReply.body);
+            resolve();
+          } else {
+            logger.error("Websocke authorization failed!");
             websocket.close();
-            reject("Authorization timeout");
+            reject("Authorization failed");
           }
-        }, 5000);
-      }); // on open
+        });
+
+        replyPromise.catch((e) => {
+          logger.error(`Error authorizing websocket: ${e}`);
+          websocket.close();
+          reject(e);
+        });
+      });
 
       websocket.on("close", () => {
         logger.info("Websocket closed");
 
         // do additional cleanup here
-
         this.websocket = null;
         this.dispose();
-      }); // on close
+      });
+
+      websocket.on("error", (error) => {
+        logger.error(`Websocket error: ${error}`);
+      });
 
       websocket.on("message", (data: WebSocket.Data) => {
-        // decode from json. All messages from sidecar are expected to be JSON.
+        // Deserialize from JSON and deliver the message to the message router.
         try {
-          const message = JSON.parse(data.toString()) as Message<any>;
+          // Deserialize the message from our possible gzipped websocket transport encoding.
+          const transportEncodedMessage = JSON.parse(data.toString()) as WebsocketTransportMessage;
+          const message = decodeMessageFromWS(transportEncodedMessage);
 
           const headers: MessageHeader = message.headers;
           const messageType: MessageType = message.headers.message_type;
@@ -129,45 +137,126 @@ export class WebsocketManager {
           }
         },
       });
-    }); // promise
+    }); // returned promise
   } // async connect()
+
+  /**
+   * Send a message to / through sidecar over the websocket.
+   * The websocket send is ultimately async underneath the hood.
+   * @throws {WebsocketClosedError} if the websocket is not connected.
+   */
+  public send<T extends MessageType>(
+    message: Message<T>,
+    /** Optional websocket to use for the send, special cased for startup. */
+    websocket?: WebSocket,
+  ): void {
+    websocket = websocket || this.websocket || undefined;
+    if (websocket) {
+      // Actual message sent over the websocket is encoded for transport, including
+      // possibly gzipping the original message JSON if it's large.
+      const transportEncodedMessage = encodeMessageForWS(message);
+      const payload = JSON.stringify(transportEncodedMessage);
+
+      if (payload.length > 5 * 1024 * 1024) {
+        logger.error(
+          `Cannot send websocket message, transport encoded payload too large: ${payload.length} bytes`,
+        );
+        throw new Error("Payload too large");
+      }
+      logger.debug(`Sending ${payload.length} byte message ${transportEncodedMessage.encoding}`);
+      websocket.send(payload);
+    } else {
+      logger.error("Websocket not provided/assigned, cannot send message");
+      throw new WebsocketClosedError();
+    }
+  }
+
+  /**
+   * Send a message expecting a single response. Return promise of the reply message.
+   * Should only be called with messages whose type is a replyable type.
+   */
+  public sendrecv<T extends RequestResponseMessageTypes>(
+    /** Message to send that should recieve a single direct response. */
+    message: Message<T>,
+    /** Optional milliseconds to wait for the reply. */
+    timeoutMs?: number,
+    /** Optional websocket to use for the send, special cased for startup. */
+    websocket?: WebSocket,
+  ): Promise<Message<(typeof RequestResponseTypeMap)[T]>> {
+    return new Promise((resolve, reject) => {
+      if (!websocket) {
+        websocket = this.websocket || undefined;
+      }
+
+      if (!websocket) {
+        logger.error("Websocket not provided or inferrable, cannot send message");
+        reject(new WebsocketClosedError());
+        return;
+      }
+
+      // if a timeout is provided, set up a timer to reject the promise if the reply doesn't come in time.
+      let timeoutId: NodeJS.Timeout | undefined;
+      if (timeoutMs) {
+        timeoutId = setTimeout(() => {
+          logger.error(`Timed out waiting for reply to message ${message.headers.message_id}`);
+          reject("Timeout waiting for reply");
+        }, timeoutMs);
+      }
+
+      // set up a handler for the reply message which resolves the promise, returning the reply message to our caller.
+      const replyHandler = async (message: Message<(typeof RequestResponseTypeMap)[T]>) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        resolve(message);
+      };
+
+      const messageRouter = MessageRouter.getInstance();
+      messageRouter.registerReplyCallback(message.headers.message_id, replyHandler);
+
+      // now send the message, having set up the reply handler. When the reply comes in, the handler will resolve the promise.
+      // The callback will be automatically removed by the messageRouter when the reply is received.
+      this.send(message, websocket);
+    });
+  }
+
+  public getPeerWorkspaceCount(): number {
+    return this.peerWorkspaceCount;
+  }
 
   public dispose(): void {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
   }
 
-  private postAuthorizeSetup(websocket: WebSocket): void {
-    // While connected, every 5s, send a hello message to all other workspaces just as a proof-of-concept.
-    const helloTimer = setInterval(() => {
-      if (this.websocket) {
-        logger.info("Sending hello message to all other workspaces...");
-        const message: Message<MessageType.HELLO> = {
-          headers: {
-            originator: `${this.myPid}`,
-            message_id: randomUUID().toString(),
-            message_type: MessageType.HELLO,
-            audience: Audience.WORKSPACES,
-          },
-          body: {
-            message: `hello from workspace ${this.myPid}`,
-          },
-        };
-        this.websocket.send(JSON.stringify(message));
-        logger.info("... sent.");
-      }
-    }, 5000);
-
-    const messageRouter = MessageRouter.getInstance();
-    const helloHandler = async (message: Message<MessageType.HELLO>) => {
-      logger.info(
-        `Received hello message from workspace ${message.headers.originator}: ${message.body.message}`,
-      );
-    };
-    const registrationToken = messageRouter.subscribe(MessageType.HELLO, helloHandler);
-
-    this.disposables.push({ dispose: () => clearInterval(helloTimer) });
-
+  /**
+   * Do one-time setup after successfully authorizing the workspace to sidecar.
+   * When done experimenting with the websocket / MessageRouter build-out, this method will be removed
+   * and the websocket will be assigned to the instance variable directly in the connect() method.
+   * */
+  private postAuthorizeSetup(websocket: WebSocket, accessReply: AccessResponseBody): void {
+    // Real work, not fun...
+    // Assign the websocket to the instance variable so regular callers can use it to send messages.
     this.websocket = websocket;
+    // Store the initial workspace PEER workspace count. The reply is inclusive of the current workspace.
+    this.peerWorkspaceCount = accessReply.current_workspace_count - 1;
+
+    logger.info(`Authorized by sidecar, peer workspace count: ${this.peerWorkspaceCount}`);
+
+    // set up handler for WORKSPACE_COUNT_CHANGED messages
+    this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
+      logger.info(
+        `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
+      );
+      // Remember, the reply is inclusive of the current workspace.
+      this.peerWorkspaceCount = message.body.current_workspace_count - 1;
+    });
   }
 } // class
+
+class WebsocketClosedError extends Error {
+  constructor() {
+    super("Websocket closed");
+    this.name = "WebsocketClosedError";
+  }
+}
