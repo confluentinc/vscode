@@ -1,7 +1,6 @@
 import * as Sentry from "@sentry/node";
-import { randomUUID } from "crypto";
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { EXTENSION_VERSION, IconNames } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import {
@@ -233,8 +232,7 @@ export async function loadCCloudResources(
     [],
   );
   cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-  // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-  cloudContainerItem.id = randomUUID();
+  cloudContainerItem.id = `ccloud-${EXTENSION_VERSION}`;
 
   if (hasCCloudAuthSession()) {
     const loader = CCloudResourceLoader.getInstance();
@@ -267,6 +265,8 @@ export async function loadCCloudResources(
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.children = ccloudEnvironments;
+    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+    cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
   } else {
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
@@ -293,8 +293,7 @@ export async function loadLocalResources(): Promise<
   localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
 
   const notConnectedId = "local-container";
-  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  localContainerItem.id = randomUUID();
+  localContainerItem.id = `local-${EXTENSION_VERSION}`;
   // enable the "Launch Local Resources" action
   localContainerItem.contextValue = notConnectedId;
 
@@ -327,6 +326,8 @@ export async function loadLocalResources(): Promise<
       setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
       setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
     ]);
+    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+    localContainerItem.id = `local-connected-${EXTENSION_VERSION}`;
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
@@ -346,9 +347,7 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
     [],
   );
   directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
-
-  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  directContainerItem.id = randomUUID();
+  directContainerItem.id = `direct-${EXTENSION_VERSION}`;
 
   // top-level container before each direct "environment" (connection)
   directContainerItem.contextValue = "resources-direct-container";
@@ -358,8 +357,10 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
   // CCloud environment (connection ID and environment ID are the same)
   directContainerItem.children = await getDirectResources();
   if (directContainerItem.children.length > 0) {
-    directContainerItem.description = `(${directContainerItem.children.length})`;
+    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+    directContainerItem.id = `direct-connected-${EXTENSION_VERSION}`;
     directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+    directContainerItem.description = `(${directContainerItem.children.length})`;
   }
 
   return directContainerItem;
