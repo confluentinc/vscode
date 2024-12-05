@@ -39,13 +39,16 @@ class ObservabilityContext {
     public ccloudSignOutCount: number = 0,
   ) {}
 
+  /** Filter out any "internal" keys/properties. */
+  get publicKeys(): string[] {
+    return Object.keys(this).filter((key) => !key.startsWith("_"));
+  }
+
   /** Converts the current state of the {@link ObservabilityContext} to a markdown table string. */
   toMarkdownTable(): string {
-    // filter any "internal" properties from the keys
-    const keys = Object.keys(this).filter((key) => !key.startsWith("_"));
-
+    const keys: string[] = this.publicKeys;
     // stringify all values so they can be displayed in the table
-    const values = keys.map((key) => {
+    const values: string[] = keys.map((key) => {
       return JSON.stringify((this as any)[key]);
     });
 
@@ -59,6 +62,24 @@ class ObservabilityContext {
       ...keys.map((key, index) => `| ${key} | ${values[index]} |`),
     ];
     return table.join("\n");
+  }
+
+  /** Converts the current state of the {@link ObservabilityContext} to a `Record<string, any>`. */
+  toRecord(): Record<string, any> {
+    const record: Record<string, any> = {};
+
+    const keys: string[] = this.publicKeys;
+    keys.forEach((key) => {
+      // also include any getter properties
+      const descriptor = Object.getOwnPropertyDescriptor(this, key);
+      if (descriptor && typeof descriptor.get === "function") {
+        record[key] = this[key as keyof this];
+      } else {
+        record[key] = (this as any)[key];
+      }
+    });
+
+    return record;
   }
 }
 
