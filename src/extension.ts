@@ -32,9 +32,10 @@ if (process.env.SENTRY_DSN) {
 }
 
 import * as vscode from "vscode";
-import { checkTelemetrySettings } from "./telemetry/telemetry";
+import { checkTelemetrySettings, includeObservabilityContext } from "./telemetry/eventProcessors";
 if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
+  Sentry.addEventProcessor(includeObservabilityContext);
 }
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
