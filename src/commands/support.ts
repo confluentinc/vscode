@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 
 const FEEDBACK_URI = vscode.Uri.parse("https://www.surveymonkey.com/r/NYVKQD6");
@@ -36,7 +37,7 @@ ${contextTable}
   }
 
   vscode.commands.executeCommand("vscode.openIssueReporter", {
-    extensionId: "confluentinc.vscode-confluent",
+    extensionId: EXTENSION_ID,
     // issueTitle: "Issue title",
     // issueBody: "Issue body",
     extensionData: extensionMarkdown,
