@@ -33,6 +33,18 @@ export class WebviewPanelCache {
     title: string,
     viewColumn: vscode.ViewColumn,
     options: vscode.WebviewOptions,
+    iconPath?:
+      | vscode.Uri
+      | {
+          /**
+           * The icon path for the light theme.
+           */
+          light: vscode.Uri;
+          /**
+           * The icon path for the dark theme.
+           */
+          dark: vscode.Uri;
+        },
   ): [vscode.WebviewPanel, boolean] {
     const { id, multiple = false, template } = config;
 
@@ -52,6 +64,10 @@ export class WebviewPanelCache {
       ...options,
       localResourceRoots: [staticRoot, ...(options.localResourceRoots ?? [])],
     });
+
+    if (iconPath) {
+      panel.iconPath = iconPath;
+    }
 
     // …initialize its template…
     panel.webview.html = template({
