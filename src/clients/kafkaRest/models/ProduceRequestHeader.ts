@@ -24,7 +24,7 @@ export interface ProduceRequestHeader {
    * @type {string}
    * @memberof ProduceRequestHeader
    */
-  name: string;
+  name?: string;
   /**
    *
    * @type {string}
