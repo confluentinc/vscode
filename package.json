@@ -640,11 +640,6 @@
       ],
       "view/title": [
         {
-          "command": "confluent.connections.direct",
-          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
-          "group": "navigation@1"
-        },
-        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation@2"
