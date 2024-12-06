@@ -698,7 +698,7 @@
         },
         {
           "command": "confluent.copyResourceName",
-          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithNames",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithNames || viewItem =~ /.*-topic-.*/)",
           "group": "2_copy@2"
         },
         {
