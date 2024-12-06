@@ -63,6 +63,7 @@ import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_DIRECT_CONNECTIONS,
+  ENABLE_PRODUCE_MESSAGES,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./preferences/constants";
@@ -231,7 +232,7 @@ async function setupContextValues() {
   );
   const produceMessagesEnabled = setContextValue(
     ContextValues.produceMessagesEnabled,
-    config.get("confluent.preview.enableProduceMessages", false),
+    config.get(ENABLE_PRODUCE_MESSAGES, false),
   );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
