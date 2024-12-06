@@ -10,18 +10,18 @@ info:
     email: vscode@confluent.io
   version: 1.0.1
 servers:
-- url: http://127.0.0.1:26636
-  description: Auto generated value
+  - url: http://127.0.0.1:26636
+    description: Auto generated value
 tags:
-- name: Feature Flags
-  description: Feature flags
-- name: Templates
-  description: Code generation templates
+  - name: Feature Flags
+    description: Feature flags
+  - name: Templates
+    description: Code generation templates
 paths:
   /api/login/realm:
     get:
       tags:
-      - Login Realm Resource
+        - Login Realm Resource
       responses:
         "200":
           description: OK
@@ -30,16 +30,16 @@ paths:
   /gateway/v1/callback-vscode-docs:
     get:
       tags:
-      - O Auth Callback Resource
+        - O Auth Callback Resource
       parameters:
-      - name: code
-        in: query
-        schema:
-          type: string
-      - name: state
-        in: query
-        schema:
-          type: string
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -50,24 +50,24 @@ paths:
   /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/partitions/-/consume:
     post:
       tags:
-      - Kafka Consume Resource
+        - Kafka Consume Resource
       parameters:
-      - name: cluster_id
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: topic_name
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: x-connection-id
-        in: header
-        description: Connection ID
-        required: true
-        schema:
-          type: string
+        - name: cluster_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: topic_name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: x-connection-id
+          in: header
+          description: Connection ID
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -83,7 +83,7 @@ paths:
   /gateway/v1/connections:
     get:
       tags:
-      - Connections Resource
+        - Connections Resource
       responses:
         "200":
           description: OK
@@ -93,15 +93,16 @@ paths:
                 $ref: "#/components/schemas/ConnectionsList"
     post:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: dry_run
-        in: query
-        schema:
-          description: Whether to validate the connection spec and determine the connection
-            status without creating the connection
-          default: false
-          type: boolean
+        - name: dry_run
+          in: query
+          schema:
+            description:
+              Whether to validate the connection spec and determine the connection status without
+              creating the connection
+            default: false
+            type: boolean
       requestBody:
         content:
           application/json:
@@ -117,13 +118,13 @@ paths:
   /gateway/v1/connections/{id}:
     get:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -133,13 +134,13 @@ paths:
                 $ref: "#/components/schemas/Connection"
     put:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -172,26 +173,26 @@ paths:
                 $ref: "#/components/schemas/Failure"
     delete:
       tags:
-      - Connections Resource
+        - Connections Resource
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "204":
           description: No Content
   /gateway/v1/feature-flags/{id}/value:
     get:
       tags:
-      - Feature Flags
+        - Feature Flags
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -220,7 +221,7 @@ paths:
   /gateway/v1/handshake:
     get:
       tags:
-      - Handshake Resource
+        - Handshake Resource
       responses:
         "200":
           description: OK
@@ -231,7 +232,7 @@ paths:
   /gateway/v1/preferences:
     get:
       tags:
-      - Preferences Resource
+        - Preferences Resource
       responses:
         "200":
           description: OK
@@ -241,7 +242,7 @@ paths:
                 $ref: "#/components/schemas/Preferences"
     put:
       tags:
-      - Preferences Resource
+        - Preferences Resource
       requestBody:
         content:
           application/json:
@@ -263,7 +264,7 @@ paths:
   /gateway/v1/templates:
     get:
       tags:
-      - Templates
+        - Templates
       responses:
         "200":
           description: OK
@@ -274,13 +275,13 @@ paths:
   /gateway/v1/templates/{name}:
     get:
       tags:
-      - Templates
+        - Templates
       parameters:
-      - name: name
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -291,16 +292,15 @@ paths:
   /gateway/v1/templates/{name}/apply:
     post:
       tags:
-      - Templates
+        - Templates
       summary: Apply a template
-      description: Applies the specified template and returns the result as a zip
-        file.
+      description: Applies the specified template and returns the result as a zip file.
       parameters:
-      - name: name
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -317,7 +317,7 @@ paths:
   /gateway/v1/version:
     get:
       tags:
-      - Version Resource
+        - Version Resource
       responses:
         "200":
           description: OK
@@ -326,13 +326,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/SidecarVersionResponse"
   /gateway/v1/health:
-    summary: MicroProfile Health provides a way for your application to distribute
-      information about its healthiness state to state whether or not it is able to
-      function properly
+    summary:
+      MicroProfile Health provides a way for your application to distribute information about its
+      healthiness state to state whether or not it is able to function properly
     description: MicroProfile Health Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: "An aggregated view of the Liveness, Readiness and Startup of this\
         \ application"
       description: Check the health of the application
@@ -357,12 +357,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
   /gateway/v1/health/live:
-    summary: Liveness checks are utilized to tell whether the application should be
-      restarted
+    summary: Liveness checks are utilized to tell whether the application should be restarted
     description: MicroProfile Health - Liveness Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: The Liveness check of this application
       description: Check the liveness of the application
       operationId: microprofile_health_liveness
@@ -386,12 +385,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
   /gateway/v1/health/ready:
-    summary: Readiness checks are used to tell whether the application is able to
-      process requests
+    summary: Readiness checks are used to tell whether the application is able to process requests
     description: MicroProfile Health - Readiness Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: The Readiness check of this application
       description: Check the readiness of the application
       operationId: microprofile_health_readiness
@@ -419,7 +417,7 @@ paths:
     description: MicroProfile Health - Startup Endpoint
     get:
       tags:
-      - MicroProfile Health
+        - MicroProfile Health
       summary: The Startup check of this application
       description: Check the startup of the application
       operationId: microprofile_health_startup
@@ -447,8 +445,8 @@ components:
     ApiKeyAndSecret:
       description: Basic authentication credentials
       required:
-      - api_key
-      - api_secret
+        - api_key
+        - api_secret
       type: object
       properties:
         api_key:
@@ -462,7 +460,7 @@ components:
           minLength: 1
           type: string
           allOf:
-          - $ref: "#/components/schemas/ApiSecret"
+            - $ref: "#/components/schemas/ApiSecret"
     ApiSecret:
       description: A user-provided API secret that is always masked in responses
       maxLength: 64
@@ -470,7 +468,7 @@ components:
       type: string
     ApplyTemplateRequest:
       required:
-      - options
+        - options
       type: object
       properties:
         options:
@@ -497,7 +495,7 @@ components:
     Authentication:
       description: The authentication-related status (deprecated).
       required:
-      - status
+        - status
       type: object
       properties:
         status:
@@ -511,8 +509,8 @@ components:
     BasicCredentials:
       description: Basic authentication credentials
       required:
-      - username
-      - password
+        - username
+        - password
       type: object
       properties:
         username:
@@ -526,47 +524,48 @@ components:
           minLength: 1
           type: string
           allOf:
-          - $ref: "#/components/schemas/Password"
+            - $ref: "#/components/schemas/Password"
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
       required:
-      - organization_id
+        - organization_id
       type: object
       properties:
         organization_id:
-          description: The identifier of the CCloud organization to use. The user's
-            default organization is used when absent.
+          description:
+            The identifier of the CCloud organization to use. The user's default organization is
+            used when absent.
           maxLength: 36
           minLength: 36
           type: string
     CCloudStatus:
       description: The status related to CCloud.
       required:
-      - state
+        - state
       type: object
       properties:
         state:
           description: The state of the connection to CCloud.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectedState"
+            - $ref: "#/components/schemas/ConnectedState"
         requires_authentication_at:
           description: "If the connection's auth context holds a valid token, this\
             \ attribute holds the time at which the user must re-authenticate because,\
             \ for instance, the refresh token reached the end of its absolute lifetime."
           type: string
           allOf:
-          - $ref: "#/components/schemas/Instant"
+            - $ref: "#/components/schemas/Instant"
         user:
           description: "Information about the authenticated principal, if known."
           type: object
           allOf:
-          - $ref: "#/components/schemas/UserInfo"
+            - $ref: "#/components/schemas/UserInfo"
         errors:
           description: Errors related to the connection to the Kafka cluster.
           type: object
           allOf:
-          - $ref: "#/components/schemas/AuthErrors"
+            - $ref: "#/components/schemas/AuthErrors"
     CollectionMetadata:
       type: object
       properties:
@@ -579,20 +578,20 @@ components:
           type: integer
     ConnectedState:
       enum:
-      - NONE
-      - ATTEMPTING
-      - SUCCESS
-      - EXPIRED
-      - FAILED
+        - NONE
+        - ATTEMPTING
+        - SUCCESS
+        - EXPIRED
+        - FAILED
       type: string
     Connection:
       required:
-      - api_version
-      - kind
-      - id
-      - metadata
-      - spec
-      - status
+        - api_version
+        - kind
+        - id
+        - metadata
+        - spec
+        - status
       type: object
       properties:
         api_version:
@@ -633,31 +632,31 @@ components:
           description: The type of connection resource.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectionType"
+            - $ref: "#/components/schemas/ConnectionType"
         ccloud_config:
           description: The details for connecting to CCloud.
           type: object
           allOf:
-          - $ref: "#/components/schemas/CCloudConfig"
+            - $ref: "#/components/schemas/CCloudConfig"
         local_config:
           description: The details for connecting to Confluent Local.
           type: object
           allOf:
-          - $ref: "#/components/schemas/LocalConfig"
+            - $ref: "#/components/schemas/LocalConfig"
         kafka_cluster:
           description: "The details for connecting to a CCloud, Confluent Platform,\
             \ or Apache Kafka cluster."
           type: object
           allOf:
-          - $ref: "#/components/schemas/KafkaClusterConfig"
+            - $ref: "#/components/schemas/KafkaClusterConfig"
         schema_registry:
           description: The details for connecting to a Schema Registry.
           type: object
           allOf:
-          - $ref: "#/components/schemas/SchemaRegistryConfig"
+            - $ref: "#/components/schemas/SchemaRegistryConfig"
     ConnectionStatus:
       required:
-      - authentication
+        - authentication
       type: object
       properties:
         ccloud:
@@ -670,17 +669,17 @@ components:
           $ref: "#/components/schemas/Authentication"
     ConnectionType:
       enum:
-      - LOCAL
-      - PLATFORM
-      - CCLOUD
-      - DIRECT
+        - LOCAL
+        - PLATFORM
+        - CCLOUD
+        - DIRECT
       type: string
     ConnectionsList:
       required:
-      - api_version
-      - kind
-      - metadata
-      - data
+        - api_version
+        - kind
+        - metadata
+        - data
       type: object
       properties:
         api_version:
@@ -719,8 +718,8 @@ components:
         value:
           type: boolean
     Failure:
-      description: Provides overall information about problems encountered while performing
-        an operation.
+      description:
+        Provides overall information about problems encountered while performing an operation.
       type: object
       properties:
         status:
@@ -788,25 +787,26 @@ components:
           type: boolean
     JsonNodeType:
       enum:
-      - ARRAY
-      - BINARY
-      - BOOLEAN
-      - MISSING
-      - "NULL"
-      - NUMBER
-      - OBJECT
-      - POJO
-      - STRING
+        - ARRAY
+        - BINARY
+        - BOOLEAN
+        - MISSING
+        - "NULL"
+        - NUMBER
+        - OBJECT
+        - POJO
+        - STRING
       type: string
     KafkaClusterConfig:
       description: Kafka cluster configuration.
       required:
-      - bootstrap_servers
+        - bootstrap_servers
       type: object
       properties:
         bootstrap_servers:
-          description: A list of host/port pairs to use for establishing the initial
-            connection to the Kafka cluster.
+          description:
+            A list of host/port pairs to use for establishing the initial connection to the Kafka
+            cluster.
           maxLength: 256
           minLength: 1
           type: string
@@ -815,10 +815,10 @@ components:
             \ is required"
           type: object
           allOf:
-          - $ref: "#/components/schemas/Credentials"
+            - $ref: "#/components/schemas/Credentials"
           oneOf:
-          - $ref: "#/components/schemas/BasicCredentials"
-          - $ref: "#/components/schemas/ApiKeyAndSecret"
+            - $ref: "#/components/schemas/BasicCredentials"
+            - $ref: "#/components/schemas/ApiKeyAndSecret"
           nullable: true
         ssl:
           description: "Whether to communicate with the Kafka cluster over TLS/SSL.\
@@ -837,27 +837,26 @@ components:
     KafkaClusterStatus:
       description: The status related to the specified Kafka cluster.
       required:
-      - state
+        - state
       type: object
       properties:
         state:
           description: The state of the connection to the Kafka cluster.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectedState"
+            - $ref: "#/components/schemas/ConnectedState"
         user:
           description: "Information about the authenticated principal, if known."
           type: object
           allOf:
-          - $ref: "#/components/schemas/UserInfo"
+            - $ref: "#/components/schemas/UserInfo"
         errors:
           description: Errors related to the connection to the Kafka cluster.
           type: object
           allOf:
-          - $ref: "#/components/schemas/AuthErrors"
+            - $ref: "#/components/schemas/AuthErrors"
     LocalConfig:
-      description: Configuration when using Confluent Local and optionally a local
-        Schema Registry.
+      description: Configuration when using Confluent Local and optionally a local Schema Registry.
       type: object
       properties:
         schema-registry-uri:
@@ -873,8 +872,8 @@ components:
           type: string
     OptionProperties:
       required:
-      - display_name
-      - description
+        - display_name
+        - description
       type: object
       properties:
         display_name:
@@ -960,9 +959,9 @@ components:
       type: string
     Preferences:
       required:
-      - api_version
-      - kind
-      - spec
+        - api_version
+        - kind
+        - spec
       type: object
       properties:
         api_version:
@@ -975,7 +974,7 @@ components:
           $ref: "#/components/schemas/PreferencesSpec"
     PreferencesMetadata:
       required:
-      - self
+        - self
       type: object
       properties:
         self:
@@ -992,7 +991,7 @@ components:
     SchemaRegistryConfig:
       description: Schema Registry configuration.
       required:
-      - uri
+        - uri
       type: object
       properties:
         id:
@@ -1009,32 +1008,32 @@ components:
             \ is required"
           type: object
           allOf:
-          - $ref: "#/components/schemas/Credentials"
+            - $ref: "#/components/schemas/Credentials"
           oneOf:
-          - $ref: "#/components/schemas/BasicCredentials"
-          - $ref: "#/components/schemas/ApiKeyAndSecret"
+            - $ref: "#/components/schemas/BasicCredentials"
+            - $ref: "#/components/schemas/ApiKeyAndSecret"
           nullable: true
     SchemaRegistryStatus:
       description: The status related to the specified Schema Registry.
       required:
-      - state
+        - state
       type: object
       properties:
         state:
           description: The state of the connection to the Schema Registry.
           type: string
           allOf:
-          - $ref: "#/components/schemas/ConnectedState"
+            - $ref: "#/components/schemas/ConnectedState"
         user:
           description: "Information about the authenticated principal, if known."
           type: object
           allOf:
-          - $ref: "#/components/schemas/UserInfo"
+            - $ref: "#/components/schemas/UserInfo"
         errors:
           description: Errors related to the connection to the Schema Registry.
           type: object
           allOf:
-          - $ref: "#/components/schemas/AuthErrors"
+            - $ref: "#/components/schemas/AuthErrors"
     SidecarAccessToken:
       type: object
       properties:
@@ -1079,18 +1078,18 @@ components:
             $ref: "#/components/schemas/PartitionConsumeData"
     Status:
       enum:
-      - NO_TOKEN
-      - VALID_TOKEN
-      - INVALID_TOKEN
-      - FAILED
+        - NO_TOKEN
+        - VALID_TOKEN
+        - INVALID_TOKEN
+        - FAILED
       type: string
     Template:
       required:
-      - api_version
-      - kind
-      - id
-      - metadata
-      - spec
+        - api_version
+        - kind
+        - id
+        - metadata
+        - spec
       type: object
       properties:
         api_version:
@@ -1105,10 +1104,10 @@ components:
           $ref: "#/components/schemas/TemplateManifest"
     TemplateList:
       required:
-      - api_version
-      - kind
-      - metadata
-      - data
+        - api_version
+        - kind
+        - metadata
+        - data
       type: object
       properties:
         api_version:
@@ -1123,13 +1122,13 @@ components:
             $ref: "#/components/schemas/Template"
     TemplateManifest:
       required:
-      - template_api_version
-      - name
-      - display_name
-      - description
-      - language
-      - version
-      - tags
+        - template_api_version
+        - name
+        - display_name
+        - description
+        - language
+        - version
+        - tags
       type: object
       properties:
         template_api_version:
@@ -1154,9 +1153,9 @@ components:
             $ref: "#/components/schemas/OptionProperties"
     TimestampType:
       enum:
-      - NO_TIMESTAMP_TYPE
-      - CREATE_TIME
-      - LOG_APPEND_TIME
+        - NO_TIMESTAMP_TYPE
+        - CREATE_TIME
+        - LOG_APPEND_TIME
       type: string
     UserInfo:
       type: object
@@ -1182,16 +1181,16 @@ components:
             $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
-          - UP
-          - DOWN
+            - UP
+            - DOWN
           type: string
     HealthCheck:
       type: object
       properties:
         status:
           enum:
-          - UP
-          - DOWN
+            - UP
+            - DOWN
           type: string
         data:
           type: object
