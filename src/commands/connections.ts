@@ -71,8 +71,12 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
 
   const yesButton = "Yes, disconnect";
   const confirmation = await window.showWarningMessage(
-    `Are you sure you want to disconnect "${item.name}"? To reconnect, you will need to re-enter the associated connection details. (This will not delete any associated resources.)`,
-    { modal: true },
+    `Are you sure you want to disconnect "${item.name}"? `,
+    {
+      modal: true,
+      detail:
+        "You will need to re-enter the associated connection details to reconnect. This will not delete any associated resources.",
+    },
     yesButton,
     // "Cancel" is added by default
   );
