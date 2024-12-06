@@ -279,6 +279,12 @@ async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, schema: Sc
     }
   }
 
+  const preferredLanguage = schema.languageTypes()[0];
+  vscode.window.showWarningMessage(
+    `Could not find a matching language for schema ${schema.subject}. ` +
+      `Perhaps install a language extension for ${preferredLanguage}?`,
+  );
+
   logger.warn("Could not find a matching language for schema ${schema.subject}");
 }
 
