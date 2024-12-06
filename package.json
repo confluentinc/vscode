@@ -229,6 +229,12 @@
         "category": "Confluent: Schema"
       },
       {
+        "command": "confluent.schemaViewer.viewLatestLocally",
+        "icon": "$(file-code)",
+        "title": "View Latest Schema",
+        "category": "Confluent: Schema"
+      },
+      {
         "command": "confluent.schemas.refresh",
         "icon": "$(sync)",
         "title": "Refresh",
@@ -238,6 +244,18 @@
         "command": "confluent.schemas.upload",
         "icon": "$(cloud-upload)",
         "title": "Upload Schema to Schema Registry",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.evolve",
+        "icon": "$(plus)",
+        "title": "Evolve Schema",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.evolveSchemaGroup",
+        "icon": "$(plus)",
+        "title": "Evolve Latest Schema",
         "category": "Confluent: Schemas"
       },
       {
@@ -554,7 +572,19 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemaViewer.viewLatestLocally",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.upload",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.evolve",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.evolveSchemaGroup",
           "when": "false"
         },
         {
@@ -683,7 +713,7 @@
       "view/item/context": [
         {
           "command": "confluent.copyResourceId",
-          "when": "view in confluent.viewsWithResources && viewItem in confluent.resourcesWithIDs",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.resourcesWithIDs || viewItem =~ /.*-schema$/)",
           "group": "2_copy@1"
         },
         {
@@ -708,17 +738,17 @@
         },
         {
           "command": "confluent.schemas.diffMostRecentVersions",
-          "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*/",
+          "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*schema-group/",
           "group": "3_compare"
         },
         {
           "command": "confluent.diff.selectForCompare",
-          "when": "viewItem in confluent.readOnlyDiffableResources",
+          "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
           "command": "confluent.diff.compareWithSelected",
-          "when": "confluent.resourceSelectedForCompare && viewItem in confluent.readOnlyDiffableResources",
+         "when": "confluent.resourceSelectedForCompare && view == confluent-schemas && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
@@ -768,12 +798,27 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem == schema",
+          "when": "view == confluent-schemas && viewItem =~ /.*-schema*/",
           "group": "4_copy@1"
         },
         {
+          "command": "confluent.schemas.evolve",
+          "when": "view == confluent-schemas  && viewItem =~ /.*evolvable.*schema$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.schemaViewer.viewLatestLocally",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-group$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.schemas.evolveSchemaGroup",
+          "when": "view == confluent-schemas && viewItem =~ /.*schema-group$/",
+          "group": "inline@2"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "inline@1"
         },
         {
@@ -818,7 +863,7 @@
         },
         {
           "command": "confluent.openCCloudLink",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/ || viewItem =~ /.*ccloud.*schema$/)",
           "group": "z_openInCloud"
         }
       ]
