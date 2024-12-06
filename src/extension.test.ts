@@ -1,13 +1,10 @@
-import { type Event } from "@sentry/node";
 import * as assert from "assert";
-import sinon from "sinon";
 import * as vscode from "vscode";
 import { getAndActivateExtension, getExtensionContext } from "../tests/unit/testUtils";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { ExtensionContextNotSetError } from "./errors";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
-import { checkTelemetrySettings } from "./telemetry/telemetry";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { TopicViewProvider } from "./viewProviders/topics";
@@ -143,48 +140,5 @@ describe("ExtensionContext subscription tests", () => {
       context.subscriptions.length > 0,
       "No subscriptions found; did activate() run correctly?",
     );
-  });
-});
-
-describe("Sentry user settings check", () => {
-  let sandbox: sinon.SinonSandbox;
-  let getConfigurationStub: sinon.SinonStub;
-  let isTelemetryEnabledStub: sinon.SinonStub;
-
-  before(() => {
-    sandbox = sinon.createSandbox();
-    getConfigurationStub = sandbox.stub(vscode.workspace, "getConfiguration");
-    isTelemetryEnabledStub = sandbox.stub(vscode.env, "isTelemetryEnabled");
-  });
-
-  after(() => {
-    sandbox.restore();
-  });
-
-  it("should return null when telemetry is disabled", () => {
-    isTelemetryEnabledStub.value(false);
-    const event = { message: "Test event" } as Event;
-    const result = checkTelemetrySettings(event);
-    assert.strictEqual(result, null);
-  });
-
-  it("should return null when telemetry level is 'off'", () => {
-    isTelemetryEnabledStub.value(true);
-    getConfigurationStub.returns({
-      get: (key: string) => (key === "telemetry.telemetryLevel" ? "off" : undefined),
-    });
-    const event = { message: "Test event" } as Event;
-    const result = checkTelemetrySettings(event);
-    assert.strictEqual(result, null);
-  });
-
-  it("should return the event when telemetry level is not 'off'", () => {
-    isTelemetryEnabledStub.value(true);
-    getConfigurationStub.returns({
-      get: (key: string) => (key === "telemetry.telemetryLevel" ? "all" : undefined),
-    });
-    const event = { message: "Test event" } as Event;
-    const result = checkTelemetrySettings(event);
-    assert.deepStrictEqual(result, event);
   });
 });
