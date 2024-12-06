@@ -33,18 +33,6 @@ export class WebviewPanelCache {
     title: string,
     viewColumn: vscode.ViewColumn,
     options: vscode.WebviewOptions,
-    iconPath?:
-      | vscode.Uri
-      | {
-          /**
-           * The icon path for the light theme.
-           */
-          light: vscode.Uri;
-          /**
-           * The icon path for the dark theme.
-           */
-          dark: vscode.Uri;
-        },
   ): [vscode.WebviewPanel, boolean] {
     const { id, multiple = false, template } = config;
 
@@ -65,9 +53,10 @@ export class WebviewPanelCache {
       localResourceRoots: [staticRoot, ...(options.localResourceRoots ?? [])],
     });
 
-    if (iconPath) {
-      panel.iconPath = iconPath;
-    }
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(context.extensionUri, "resources/confluent-logo-dark.svg"),
+      dark: vscode.Uri.joinPath(context.extensionUri, "resources/confluent-logo-light.svg"),
+    };
 
     // …initialize its template…
     panel.webview.html = template({

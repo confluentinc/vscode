@@ -1,12 +1,11 @@
 import { randomUUID } from "crypto";
-import { ViewColumn, window, Uri } from "vscode";
+import { ViewColumn, window } from "vscode";
 import { KafkaClusterConfig, SchemaRegistryConfig } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { post } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
-import { getExtensionContext } from "./context/extension";
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
@@ -16,7 +15,6 @@ type MessageResponse<MessageType extends string> = Awaited<
 const directConnectWebviewCache = new WebviewPanelCache();
 
 export function openDirectConnectionForm(): void {
-  const context = getExtensionContext();
   // Set up the webview, checking for existing form for this connection
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
     { id: randomUUID(), multiple: false, template: connectionFormTemplate }, // TODO change the UUID handling when we start allowing Edit
@@ -25,10 +23,6 @@ export function openDirectConnectionForm(): void {
     ViewColumn.One,
     {
       enableScripts: true,
-    },
-    {
-      light: Uri.joinPath(context.extensionUri, "resources/confluent-logo-dark.svg"),
-      dark: Uri.joinPath(context.extensionUri, "resources/confluent-logo-light.svg"),
     },
   );
 
