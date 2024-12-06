@@ -30,12 +30,6 @@ export interface ProduceRequestHeader {
    * @type {string}
    * @memberof ProduceRequestHeader
    */
-  key?: string;
-  /**
-   *
-   * @type {string}
-   * @memberof ProduceRequestHeader
-   */
   value?: string | null;
 }
 

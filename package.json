@@ -723,7 +723,7 @@
         },
         {
           "command": "confluent.topic.produce.fromFile",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWrite.*/",
           "group": "inline@1"
         },
         {

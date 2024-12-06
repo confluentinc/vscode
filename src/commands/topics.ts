@@ -12,6 +12,7 @@ import { getSidecar } from "../sidecar";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import { post } from "../webview/topic-config-form";
 import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
+import { logResponseError } from "../errors";
 
 const logger = new Logger("topics");
 
@@ -183,7 +184,6 @@ async function produceMessageFromFile(topic: KafkaTopic) {
 
     if (!topic) {
       vscode.window.showErrorMessage("No topic selected.");
-      return;
     }
 
     if (!message.key || !message.value) {
@@ -205,7 +205,7 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     };
 
     try {
-      let response = await recordsApi.produceRecord({
+      await recordsApi.produceRecord({
         topic_name: topicName,
         cluster_id: clusterId,
         ProduceRequest: {
@@ -218,11 +218,17 @@ async function produceMessageFromFile(topic: KafkaTopic) {
         },
       });
 
-      if (response) {
-        vscode.window.showInformationMessage(`Success: Produced message to topic ${topic.name}.`);
-      }
+      vscode.window.showInformationMessage(`Success: Produced message to topic ${topic.name}.`);
     } catch (error: any) {
-      vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
+      logResponseError(error, "topic produce from file"); // not sending to Sentry by default
+      if (error instanceof ResponseError) {
+        const body = await error.response.clone().text();
+        vscode.window.showErrorMessage(
+          `Error response while trying to produce message: ${error.response.status} ${error.response.statusText}: ${body}`,
+        );
+      } else {
+        vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
+      }
     }
   }
 }
