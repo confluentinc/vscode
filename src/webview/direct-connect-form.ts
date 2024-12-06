@@ -14,11 +14,16 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 class DirectConnectFormViewModel extends ViewModel {
-  errorMessage = this.signal("");
-  success = this.signal(false);
+  /** Form Input Values */
   platformType = this.signal<PlatformOptions>("Apache Kafka");
   kafkaAuthType = this.signal<SupportedAuthTypes>("None");
   schemaAuthType = this.signal<SupportedAuthTypes>("None");
+  schemaUri = this.signal("");
+  kafkaBootstrapServers = this.signal("");
+
+  /** Form State */
+  errorMessage = this.signal("");
+  success = this.signal(false);
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -38,6 +43,12 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "schema_auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
+        break;
+      case "uri":
+        this.schemaUri(input.value);
+        break;
+      case "bootstrap_servers":
+        this.kafkaBootstrapServers(input.value);
         break;
       default:
         console.warn(`Unhandled key: ${input.name}`);
