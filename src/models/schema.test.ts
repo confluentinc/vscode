@@ -184,16 +184,28 @@ describe("Schema helper functions", () => {
     );
   });
 
-  it("generateSchemaSubjectGroups() should set the context value to 'multiple-versions' if a subject has more than one schema", () => {
+  it("generateSchemaSubjectGroups() should set the context value to include 'multiple-versions' if a subject has more than one schema", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
-    // valueSubject has two schema versions, so it should have the context value.
+    const mvRe = /multiple-versions/;
+    // valueSubject has two schema versions, so it should have the context value clause.
     const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(testTopicGroup?.contextValue, "multiple-versions");
+    assert.equal(mvRe.test(testTopicGroup!.contextValue!), true);
 
     // Only one version, so no context value.
     const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(anotherTopicGroup?.contextValue, undefined);
+    assert.equal(mvRe.test(anotherTopicGroup!.contextValue!), false);
+  });
+
+  it("generateSchemaSubjectGroups() should set the context value to end with 'schema-group'", () => {
+    const groups = generateSchemaSubjectGroups(schemas);
+
+    const schemaGroupRe = /schema-group$/;
+    const testTopicGroup = groups.find((group) => group.label === valueSubject);
+    assert.equal(schemaGroupRe.test(testTopicGroup!.contextValue!), true);
+
+    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
+    assert.equal(schemaGroupRe.test(anotherTopicGroup!.contextValue!), true);
   });
 
   it("generateSchemaSubjectGroups() should assign the correct icon based on schema subject suffix", () => {
