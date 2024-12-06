@@ -379,14 +379,6 @@
           "default": true,
           "description": "Whether or not warning notifications will appear when consuming messages without permission to access the associated Schema Registry."
         },
-        "confluent.experimental.enableDirectConnections": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable direct connections to Kafka and Schema Registry resources.",
-          "tags": [
-            "experimental"
-          ]
-        },
         "confluent.debugging.showSidecarExceptions": {
           "type": "boolean",
           "default": false,
@@ -427,6 +419,22 @@
           "type": "string",
           "default": "latest",
           "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
+        },
+        "confluent.preview.enableDirectConnections": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable direct connections to Kafka and Schema Registry resources.",
+          "tags": [
+            "preview"
+          ]
+        },
+        "confluent.preview.enableProduceMessages": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable message production for Kafka topics.",
+          "tags": [
+            "preview"
+          ]
         }
       }
     },

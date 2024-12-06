@@ -55,8 +55,13 @@ export enum ContextValues {
   /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
   /**
-   * EXPERIMENTAL: Are direct connections enabled at all?
-   * (This should go away once the `confluent.experimental.enableDirectConnections` setting is removed.)
+   * PREVIEW: Are direct connections enabled at all?
+   * (This should go away once the `confluent.preview.enableDirectConnections` setting is removed.)
    */
   directConnectionsEnabled = "confluent.directConnectionsEnabled",
+  /**
+   * PREVIEW: Is the "produce message" functionality enabled at all?
+   * (This should go away once the `confluent.preview.enableProduceMessages` setting is removed.)
+   */
+  produceMessagesEnabled = "confluent.produceMessagesEnabled",
 }
