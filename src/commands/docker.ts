@@ -49,7 +49,12 @@ export async function runWorkflowWithProgress(
   // show multi-select quickpick to allow user to choose which resources to launch and determine
   // how the workflow should be run
   const resources: LocalResourceKind[] =
-    resourceKinds.length > 0 ? resourceKinds : await localResourcesQuickPick();
+    resourceKinds.length > 0
+      ? resourceKinds
+      : await localResourcesQuickPick(
+          start,
+          start ? "Select resources to start" : "Select resources to stop",
+        );
   if (resources.length === 0) {
     // nothing selected, or user clicked a quickpick button to adjust settings
     return;

@@ -18,35 +18,39 @@ import {
 const logger = new Logger("quickpicks.localResources");
 
 /** Create a multi-select quickpick to allow the user to choose which resources to start/stop. */
-export async function localResourcesQuickPick(): Promise<LocalResourceKind[]> {
+export async function localResourcesQuickPick(
+  toStart: boolean = true,
+  placeholder?: string,
+): Promise<LocalResourceKind[]> {
   const quickpick: QuickPick<QuickPickItem> = window.createQuickPick();
   quickpick.title = "Local Resources";
   quickpick.ignoreFocusOut = true;
-  quickpick.placeholder = "Select resource types";
+  quickpick.placeholder = placeholder ?? "Select resource types";
   quickpick.canSelectMany = true;
 
   const kafkaRepoTag = `${getLocalKafkaImageName()}:${getLocalKafkaImageTag()}`;
+  const kafkaItem: QuickPickItem = {
+    label: LocalResourceKind.Kafka,
+    iconPath: new ThemeIcon(IconNames.KAFKA_CLUSTER),
+    description: kafkaRepoTag,
+    detail: "A local Kafka cluster with a user-specified number of broker containers",
+    buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Select Kafka Docker Image` }],
+  };
+
   const schemaRegistryRepoTag = `${getLocalSchemaRegistryImageName()}:${getLocalSchemaRegistryImageTag()}`;
-  quickpick.items = [
-    {
-      label: LocalResourceKind.Kafka,
-      iconPath: new ThemeIcon(IconNames.KAFKA_CLUSTER),
-      description: kafkaRepoTag,
-      detail: "A local Kafka cluster with a user-specified number of broker containers",
-      picked: true,
-      buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Select Kafka Docker Image` }],
-    },
-    {
-      label: LocalResourceKind.SchemaRegistry,
-      iconPath: new ThemeIcon(IconNames.SCHEMA_REGISTRY),
-      description: schemaRegistryRepoTag,
-      detail:
-        "A local Schema Registry instance that can be used to manage schemas for Kafka topics",
-      buttons: [
-        { iconPath: new ThemeIcon("gear"), tooltip: `Select Schema Registry Docker Image Tag` },
-      ],
-    },
-  ];
+  const schemaRegistryItem: QuickPickItem = {
+    label: LocalResourceKind.SchemaRegistry,
+    iconPath: new ThemeIcon(IconNames.SCHEMA_REGISTRY),
+    description: schemaRegistryRepoTag,
+    detail: "A local Schema Registry instance that can be used to manage schemas for Kafka topics",
+    buttons: [
+      { iconPath: new ThemeIcon("gear"), tooltip: `Select Schema Registry Docker Image Tag` },
+    ],
+  };
+
+  quickpick.items = [kafkaItem, schemaRegistryItem];
+  // set Kafka as selected by default if starting resources
+  quickpick.selectedItems = toStart ? [kafkaItem] : [];
   quickpick.show();
 
   const selectedItems: QuickPickItem[] = [];
