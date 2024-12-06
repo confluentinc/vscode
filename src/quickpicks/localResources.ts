@@ -83,6 +83,18 @@ export async function localResourcesQuickPick(
   quickpick.selectedItems = starting && !kafkaAvailable ? [kafkaItem] : [];
   quickpick.show();
 
+  quickpick.onDidChangeSelection((items: readonly QuickPickItem[]) => {
+    if (
+      !starting &&
+      quickpick.items.includes(schemaRegistryItem) &&
+      !items.includes(schemaRegistryItem)
+    ) {
+      // if the user is attempting to stop Kafka and not Schema Registry, ensure Schema Registry is
+      // selected
+      quickpick.selectedItems = [...items, schemaRegistryItem];
+    }
+  });
+
   const selectedItems: QuickPickItem[] = [];
   quickpick.onDidAccept(() => {
     logger.debug("selected items", { items: JSON.stringify(quickpick.selectedItems) });
