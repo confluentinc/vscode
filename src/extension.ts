@@ -229,6 +229,10 @@ async function setupContextValues() {
     ContextValues.directConnectionsEnabled,
     config.get(ENABLE_DIRECT_CONNECTIONS, false),
   );
+  const produceMessagesEnabled = setContextValue(
+    ContextValues.produceMessagesEnabled,
+    config.get("confluent.preview.enableProduceMessages", false),
+  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
@@ -273,6 +277,7 @@ async function setupContextValues() {
   ]);
   await Promise.all([
     directConnectionsEnabled,
+    produceMessagesEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
     openInCCloudResources,
