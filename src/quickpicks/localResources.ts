@@ -1,5 +1,6 @@
 import { commands, QuickInputButton, QuickPick, QuickPickItem, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
+import { ContextValues, getContextValue } from "../context/values";
 import {
   getLocalKafkaImageName,
   getLocalKafkaImageTag,
@@ -19,7 +20,7 @@ const logger = new Logger("quickpicks.localResources");
 
 /** Create a multi-select quickpick to allow the user to choose which resources to start/stop. */
 export async function localResourcesQuickPick(
-  toStart: boolean = true,
+  starting: boolean = true,
   placeholder?: string,
 ): Promise<LocalResourceKind[]> {
   const quickpick: QuickPick<QuickPickItem> = window.createQuickPick();
@@ -27,6 +28,8 @@ export async function localResourcesQuickPick(
   quickpick.ignoreFocusOut = true;
   quickpick.placeholder = placeholder ?? "Select resource types";
   quickpick.canSelectMany = true;
+
+  const items: QuickPickItem[] = [];
 
   const kafkaRepoTag = `${getLocalKafkaImageName()}:${getLocalKafkaImageTag()}`;
   const kafkaItem: QuickPickItem = {
@@ -36,6 +39,13 @@ export async function localResourcesQuickPick(
     detail: "A local Kafka cluster with a user-specified number of broker containers",
     buttons: [{ iconPath: new ThemeIcon("gear"), tooltip: `Select Kafka Docker Image` }],
   };
+  const kafkaAvailable: boolean =
+    getContextValue(ContextValues.localKafkaClusterAvailable) === true;
+  // show the Kafka item if local Kafka isn't already running and this is the start workflow
+  // or if local Kafka is already running and this is the stop workflow
+  if ((starting && !kafkaAvailable) || (kafkaAvailable && !starting)) {
+    items.push(kafkaItem);
+  }
 
   const schemaRegistryRepoTag = `${getLocalSchemaRegistryImageName()}:${getLocalSchemaRegistryImageTag()}`;
   const schemaRegistryItem: QuickPickItem = {
@@ -47,10 +57,23 @@ export async function localResourcesQuickPick(
       { iconPath: new ThemeIcon("gear"), tooltip: `Select Schema Registry Docker Image Tag` },
     ],
   };
+  const schemaRegistryAvailable: boolean =
+    getContextValue(ContextValues.localSchemaRegistryAvailable) === true;
+  // show the Schema Registry item if local Schema Registry isn't already running and this is the
+  // start workflow or if local Schema Registry is already running and this is the stop workflow
+  if ((starting && !schemaRegistryAvailable) || (schemaRegistryAvailable && !starting)) {
+    items.push(schemaRegistryItem);
+  }
 
-  quickpick.items = [kafkaItem, schemaRegistryItem];
-  // set Kafka as selected by default if starting resources
-  quickpick.selectedItems = toStart ? [kafkaItem] : [];
+  logger.debug("showing local resource quickpick", {
+    starting,
+    kafkaAvailable,
+    schemaRegistryAvailable,
+  });
+
+  quickpick.items = items;
+  // set Kafka as selected by default if starting resources and it isn't already running
+  quickpick.selectedItems = starting && !kafkaAvailable ? [kafkaItem] : [];
   quickpick.show();
 
   const selectedItems: QuickPickItem[] = [];
