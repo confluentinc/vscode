@@ -72,6 +72,8 @@ export function createConfigChangeListener(): Disposable {
         const enabled = configs.get(ENABLE_PRODUCE_MESSAGES, false);
         logger.debug(`"${ENABLE_PRODUCE_MESSAGES}" config changed`, { enabled });
         setContextValue(ContextValues.produceMessagesEnabled, enabled);
+        // no need to refresh the Topics view here since no items are being changed; VS Code will
+        // handle changing the actions to make any actions visible/enabled
       }
     },
   );
