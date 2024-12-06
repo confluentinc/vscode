@@ -223,7 +223,7 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // EXPERIMENTAL: set default value for direct connection enablement
+  // PREVIEW: set default values for enabling the direct connection and message-produce features
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const directConnectionsEnabled = setContextValue(
     ContextValues.directConnectionsEnabled,
