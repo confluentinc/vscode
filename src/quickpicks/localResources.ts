@@ -83,6 +83,7 @@ export async function localResourcesQuickPick(
   quickpick.selectedItems = starting && !kafkaAvailable ? [kafkaItem] : [];
   quickpick.show();
 
+  // user selected/deselected an item from the list
   quickpick.onDidChangeSelection((items: readonly QuickPickItem[]) => {
     if (
       !starting &&
@@ -106,14 +107,7 @@ export async function localResourcesQuickPick(
     }
   });
 
-  const selectedItems: QuickPickItem[] = [];
-  quickpick.onDidAccept(() => {
-    logger.debug("selected items", { items: JSON.stringify(quickpick.selectedItems) });
-    selectedItems.push(...quickpick.selectedItems);
-    quickpick.hide();
-    return;
-  });
-
+  // user clicked one of the secondary buttons to the right of a quickpick item
   quickpick.onDidTriggerItemButton(
     async (event: { button: QuickInputButton; item: QuickPickItem }) => {
       quickpick.hide();
@@ -132,6 +126,15 @@ export async function localResourcesQuickPick(
       }
     },
   );
+
+  // user clicked "Ok" or hit Enter to accept the selected items, if any
+  const selectedItems: QuickPickItem[] = [];
+  quickpick.onDidAccept(() => {
+    logger.debug("selected items", { items: JSON.stringify(quickpick.selectedItems) });
+    selectedItems.push(...quickpick.selectedItems);
+    quickpick.hide();
+    return;
+  });
 
   // block until the quickpick is hidden
   await new Promise<void>((resolve) => {
