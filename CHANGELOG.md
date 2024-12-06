@@ -14,6 +14,9 @@ All notable changes to this extension will be documented in this file.
   schema row within the group to download the schema into a new editor. Add or remove columns, etc.,
   then use the existing 'cloud upload' icon in the editor's top bar to start the process to submit
   it back to the schema registry.
+- "Preview" settings to opt into upcoming functionality as it's being developed:
+  - Connecting directly to Kafka clusters and/or Schema Registries.
+  - Producing messages to a Kafka topic.
 
 ### Fixed
 
