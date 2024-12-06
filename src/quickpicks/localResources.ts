@@ -87,11 +87,22 @@ export async function localResourcesQuickPick(
     if (
       !starting &&
       quickpick.items.includes(schemaRegistryItem) &&
+      items.includes(kafkaItem) &&
       !items.includes(schemaRegistryItem)
     ) {
       // if the user is attempting to stop Kafka and not Schema Registry, ensure Schema Registry is
       // selected
       quickpick.selectedItems = [...items, schemaRegistryItem];
+      window.showInformationMessage("Schema Registry must be stopped when stopping Kafka.");
+    } else if (
+      starting &&
+      quickpick.items.includes(kafkaItem) &&
+      items.includes(schemaRegistryItem) &&
+      !items.includes(kafkaItem)
+    ) {
+      // if the user is attempting to start Schema Registry and not Kafka, ensure Kafka is selected
+      quickpick.selectedItems = [kafkaItem, ...items];
+      window.showInformationMessage("Kafka must be available before starting Schema Registry.");
     }
   });
 
