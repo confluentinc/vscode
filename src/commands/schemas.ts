@@ -1,6 +1,7 @@
+import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { SchemaDocumentProvider } from "../documentProviders/schema";
+import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { Schema } from "../models/schema";
@@ -17,7 +18,13 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
+    registerCommandWithLogging("confluent.schemas.evolveSchemaGroup", evolveSchemaGroupCommand),
+    registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
+    registerCommandWithLogging(
+      "confluent.schemaViewer.viewLatestLocally",
+      viewLatestLocallyCommand,
+    ),
     registerCommandWithLogging("confluent.schemas.copySchemaRegistryId", copySchemaRegistryId),
     registerCommandWithLogging("confluent.topics.openlatestschemas", openLatestSchemasCommand),
     registerCommandWithLogging(
@@ -27,6 +34,10 @@ export function registerSchemaCommands(): vscode.Disposable[] {
   ];
 }
 
+/**
+ * Load a schema into a new editor tab for viewing, wrapped with a progress window
+ * (during the schema fetch).
+ */
 async function viewLocallyCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
     logger.error("viewLocallyCommand called with invalid argument type", schema);
@@ -35,7 +46,7 @@ async function viewLocallyCommand(schema: Schema) {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Loading schema "${schema.subject}"...`,
+      title: `Loading schema "${schema.subject}" v${schema.version}...`,
     },
     async () => {
       await loadOrCreateSchemaViewer(schema);
@@ -86,6 +97,7 @@ export async function diffLatestSchemasCommand(schemaGroup: ContainerTreeItem<Sc
   await vscode.commands.executeCommand("confluent.diff.compareWithSelected", latestSchema);
 }
 
+/** Read-only view the latest schema version(s) related to a topic. */
 async function openLatestSchemasCommand(topic: KafkaTopic) {
   let highestVersionedSchemas: Schema[] | null = null;
 
@@ -124,19 +136,150 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
   );
 }
 
+/** Drop into read-only viewing the latest version of the schema in the subject group.  */
+async function viewLatestLocallyCommand(schemaGroup: ContainerTreeItem<Schema>) {
+  if (!(schemaGroup instanceof ContainerTreeItem)) {
+    logger.error("viewLatestLocallyCommand called with invalid argument type", schemaGroup);
+    return;
+  }
+
+  if (schemaGroup.children.length === 0) {
+    logger.error("viewLatestLocallyCommand called with no schemas", schemaGroup);
+    return;
+  }
+
+  // View the first schema in the group. Will be the highest versioned one.
+  await viewLocallyCommand(schemaGroup.children[0]);
+}
+
+/**
+ * Command to evolve a single schema (should be the most revent version in a schema subject group).
+ * This will create a new untitled document with the schema body and set up the
+ * file uri with the schema data in the query string for future reference by the
+ * upload schema command, allowing to default to the originating schema registr
+ * and subject.
+ **/
+async function evolveSchemaCommand(schema: Schema) {
+  if (!(schema instanceof Schema)) {
+    logger.error("evolveSchema called with invalid argument type", schema);
+    return;
+  }
+
+  // Go get the schema.
+  const schemaBody = await fetchSchemaBody(schema);
+
+  // Get an untitled scheme URI corresponding the the schema that has no file path currently
+  // (so that if they opt save to disk, it won't fail -- untitleds cannot supplant file:// schema documents).
+  const evolveSchemaUri = await determineDraftSchemaUri(schema);
+
+  // Initialize the editor with the current schema body.
+  const edit = new vscode.WorkspaceEdit();
+  edit.insert(evolveSchemaUri, new vscode.Position(0, 0), schemaBody);
+  await vscode.workspace.applyEdit(edit);
+
+  // Load the evolve schema URI into an editor.
+  const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
+
+  // Finally, set the language of the editor based on the schema type.
+  await setEditorLanguageForSchema(editor, schema);
+
+  // The user can edit, then either save to disk or to use the 'cloud upload' button
+  // to upload to the schema registry. Because of the query string in the URI,
+  // the upload schema command will be able to default to the originating
+  // schema registry and subject.
+}
+
+/** Drop into evolving the latest version of the schema in the subject group. */
+async function evolveSchemaGroupCommand(schemaGroup: ContainerTreeItem<Schema>) {
+  if (!(schemaGroup instanceof ContainerTreeItem)) {
+    logger.error("evolveSchemaGroupCommand called with invalid argument type", schemaGroup);
+    return;
+  }
+
+  if (schemaGroup.children.length === 0) {
+    logger.error("evolveSchemaGroupCommand called with no schemas", schemaGroup);
+    return;
+  }
+
+  // Evolve the first schema in the group. Will be the highest versioned one.
+  await evolveSchemaCommand(schemaGroup.children[0]);
+}
+
+/**
+ * Return a URI for a draft schema file that does not exist in the filesystem corresponding to a draft
+ * next version of the given schema. The URI will have an untitled scheme and the schema data encoded
+ * in the query string for future reference.
+ **/
+async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
+  const activeEditor = vscode.window.activeTextEditor;
+  const activeDir = activeEditor?.document.uri.fsPath;
+  const baseDir = activeDir || vscode.workspace.workspaceFolders?.[0].uri.fsPath || homedir();
+
+  // Now loop through draft file:// uris until we find one that doesn't exist.,
+  let chosenFileUri: vscode.Uri | null = null;
+  let draftNumber = -1;
+  while (!chosenFileUri || (await fileUriExists(chosenFileUri))) {
+    draftNumber += 1;
+    const draftFileName = schema.nextVersionDraftFileName(draftNumber);
+    chosenFileUri = vscode.Uri.parse("file://" + `${baseDir}/${draftFileName}`);
+
+    if (draftNumber > 15) {
+      throw new Error(
+        `Could not find a draft file URI that does not exist in the filesystem after 15 tries.`,
+      );
+    }
+  }
+
+  // Now respell to be unknown scheme and add the schema data to the query string,
+  // will become the default schema data for the upload schema command.
+  return vscode.Uri.from({
+    ...chosenFileUri,
+    scheme: "untitled",
+    query: encodeURIComponent(JSON.stringify(schema)),
+  });
+}
+
+/** Check if a file URI exists in the filesystem. */
+async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Convert a {@link Schema} to a URI and render via the {@link SchemaDocumentProvider} as a read-
  * only document in a new editor tab.
  */
-async function loadOrCreateSchemaViewer(schema: Schema) {
+async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEditor> {
   const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
   const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
-  // VSCode may "throw" an error from `workbench.*.main.js` like `Unknown language: avsc` if the
-  // workspace doesn't have an extension that supports the "avsc" extension/language (or similar).
-  // There isn't anything we can do to suppress those errors (like wrapping the line below in try/catch),
-  // but they don't show up to the user unless they look at the "Window" output channel.
-  vscode.languages.setTextDocumentLanguage(textDoc.document, schema.fileExtension());
+
+  await setEditorLanguageForSchema(textDoc, schema);
+
   return textDoc;
+}
+
+/**
+ * Possibly set the language of the editor's document based on the schema.
+ * Depends on what languages the user has installed.
+ */
+async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, schema: Schema) {
+  const installedLanguages = await vscode.languages.getLanguages();
+
+  for (const language of schema.languageTypes()) {
+    if (installedLanguages.indexOf(language) !== -1) {
+      vscode.languages.setTextDocumentLanguage(textDoc.document, language);
+      logger.info(`Set document language to ${language} for schema ${schema.subject}`);
+      return;
+    } else {
+      logger.warn(`Language ${language} not installed for schema ${schema.subject}`);
+    }
+  }
+
+  logger.warn("Could not find a matching language for schema ${schema.subject}");
 }
 
 /**
@@ -185,7 +328,8 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
   return [...nameToHighestVersion.values()];
 }
 
-/** Raised when unexpectedly could not load schema(s) for a topic we previously believed
+/**
+ * Raised when unexpectedly could not load schema(s) for a topic we previously believed
  * had related schemas. Message will be informative and user-facing.
  */
 export class CannotLoadSchemasError extends Error {

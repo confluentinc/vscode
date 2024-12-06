@@ -5,8 +5,11 @@ import {
   determineSchemaType,
   extractDetail,
   parseConflictMessage,
+  schemaFromString,
   schemaRegistrationMessage,
 } from "./schemaUpload";
+
+import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources/schema";
 
 describe("commands/schemaUpload.ts determineSchemaType tests", function () {
   it("determineSchemaType successfully determines schema type from file URI", () => {
@@ -162,4 +165,24 @@ describe("commands/schemaUpload.ts parseConflictMessage tests", () => {
       assert.strictEqual(detail, expectedResult);
     });
   }
+});
+
+describe("schemaFromString tests", () => {
+  it("Should return a schema object with the correct values", () => {
+    const schemaString = JSON.stringify(TEST_CCLOUD_SCHEMA);
+    const schema = schemaFromString(schemaString);
+    assert.deepStrictEqual(schema, TEST_CCLOUD_SCHEMA);
+  });
+
+  it("should return undefined when the schema string is invalid json", () => {
+    const badSchemaString = "invalid schema string";
+    const schema = schemaFromString(badSchemaString);
+    assert.strictEqual(schema, undefined);
+  });
+
+  it("should return undefined when the schema string is json but does not describe a schema", () => {
+    const badSchemaString = '{"foo": "bar"}';
+    const schema = schemaFromString(badSchemaString);
+    assert.strictEqual(schema, undefined);
+  });
 });
