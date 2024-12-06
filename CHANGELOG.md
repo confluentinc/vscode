@@ -9,6 +9,11 @@ All notable changes to this extension will be documented in this file.
 - Ability to update basic topic configuration fields via webform
 - Local Resources: the Docker image tag used to start a Schema Registry container is now
   configurable via the extension settings.
+- Can now "evolve" the highest versioned schema within a subject group viewed within the schema
+  registry view. Use the '+' icon next to either the subject group entry or the highest versioned
+  schema row within the group to download the schema into a new editor. Add or remove columns, etc.,
+  then use the existing 'cloud upload' icon in the editor's top bar to start the process to submit
+  it back to the schema registry.
 
 ### Fixed
 
