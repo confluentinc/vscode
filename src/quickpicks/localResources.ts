@@ -71,6 +71,13 @@ export async function localResourcesQuickPick(
     schemaRegistryAvailable,
   });
 
+  if (!starting && items.length === 1) {
+    // if only one resource kind is available, don't show the quickpick and just use it by default
+    // (we're not doing this for the start workflow because we want to show the user the options and
+    // additional details about the resources)
+    return [items[0].label as LocalResourceKind];
+  }
+
   quickpick.items = items;
   // set Kafka as selected by default if starting resources and it isn't already running
   quickpick.selectedItems = starting && !kafkaAvailable ? [kafkaItem] : [];
