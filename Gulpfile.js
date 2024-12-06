@@ -242,6 +242,12 @@ function getSentryReleaseVersion() {
   } catch (e) {
     console.error("Failed to read version in package.json", e);
   }
+
+  if (version.includes("-")) {
+    // not a release version
+    process.env.SENTRY_ENV = "development";
+  }
+
   // If CI, don't use the revision
   if (IS_CI) {
     return "vscode-confluent@" + version;
