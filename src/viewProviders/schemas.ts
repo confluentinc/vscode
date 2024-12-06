@@ -48,7 +48,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** The parent of the focused Schema Registry.  */
   public environment: Environment | null = null;
   /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
-  public schemaRegistry: SchemaRegistry | null = null;
+  public schemaRegistry: SchemaRegistry | undefined = undefined;
 
   private static instance: SchemasViewProvider | null = null;
   private constructor() {
@@ -74,8 +74,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Convenience method to revert this view to its original state. */
   reset(): void {
     setContextValue(ContextValues.schemaRegistrySelected, false);
-    this.schemaRegistry = null;
     this.environment = null;
+    this.schemaRegistry = undefined;
     this.treeView.description = "";
     this.refresh();
   }

@@ -27,8 +27,13 @@ const logger = new Logger("commands.schemaUpload");
 /**
  * Command backing "Upload a new schema".
  */
-export async function uploadNewSchema(item: vscode.Uri) {
-  // Get the contents of the active editor
+export async function uploadNewSchema(fileUri: vscode.Uri) {
+  if (!fileUri) {
+    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
+    return;
+  }
+
+  // Get the contents of the active editor. Will be the schema payload to upload.
   let activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
     vscode.window.showErrorMessage("Must be invoked from an active editor");
@@ -36,15 +41,33 @@ export async function uploadNewSchema(item: vscode.Uri) {
   }
   const schemaContents = activeEditor.document.getText();
 
-  if (!item) {
-    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
-    return;
+  // If there's a query string in the URL, it should be the encoding of a Schema
+  // object. Parse it into a Schema object if possible to use it for default
+  // values
+  let defaults: Schema | undefined;
+
+  if (fileUri.query) {
+    const query = decodeURIComponent(fileUri.query);
+    const schemaFromJSON = JSON.parse(query);
+    if (!schemaFromJSON) {
+      logger.warn("Could not parse schema object from URI query string", { query });
+    } else {
+      logger.info("Was able to parse object from URI query string", {
+        schemaFromJSON: schemaFromJSON,
+      });
+      try {
+        defaults = Schema.create(schemaFromJSON);
+      } catch (e) {
+        // Must not have been a valid schema object.
+        logger.error("Could not create schema object from parsed JSON", e);
+      }
+    }
   }
 
   // What kind of schema is this? We must tell the schema registry.
   let schemaType: SchemaType;
   try {
-    schemaType = determineSchemaType(item, activeEditor.document.languageId);
+    schemaType = determineSchemaType(fileUri, activeEditor.document.languageId, defaults?.type);
   } catch (e) {
     vscode.window.showErrorMessage((e as Error).message);
     return;
@@ -57,14 +80,14 @@ export async function uploadNewSchema(item: vscode.Uri) {
   }
 
   // Ask the user to choose a schema registry to upload to.
-  const registry = await schemaRegistryQuickPick();
+  const registry = await schemaRegistryQuickPick(defaults?.schemaRegistryId);
   if (!registry) {
     logger.info("No registry chosen, aborting schema upload");
     return;
   }
 
   // Ask the user to choose a subject to bind the schema to.
-  const subject = await chooseSubject(registry, schemaType);
+  const subject = await chooseSubject(registry, schemaType, defaults?.subject);
   if (!subject) {
     logger.info("No subject chosen, aborting schema upload");
     vscode.window.showInformationMessage("Schema upload aborted.");
@@ -180,10 +203,11 @@ async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boole
 async function chooseSubject(
   registry: SchemaRegistry,
   schemaType: SchemaType,
+  defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, schemaType);
+  let subject = await schemaSubjectQuickPick(registry, schemaType, defaultSubject);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.
@@ -312,12 +336,18 @@ export function schemaRegistrationMessage(
 export function determineSchemaType(
   file: vscode.Uri | null,
   languageId: string | null,
+  defaultType: SchemaType | undefined = undefined,
 ): SchemaType {
   if (!file && !languageId) {
     throw new Error("Must call with either a file or document");
   }
 
-  let schemaType: SchemaType | unknown = null;
+  let schemaType: SchemaType | unknown = defaultType;
+
+  // If the schema type was provided in the defaults, use that.
+  if (schemaType) {
+    return schemaType as SchemaType;
+  }
 
   if (languageId) {
     const languageIdToSchemaType = new Map([

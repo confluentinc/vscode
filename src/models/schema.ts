@@ -2,8 +2,11 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
+import { Logger } from "../logging";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
 import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+
+const logger = new Logger("models.schema");
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -15,6 +18,12 @@ const extensionMap: { [key in SchemaType]: string } = {
   [SchemaType.Avro]: "avsc",
   [SchemaType.Json]: "json",
   [SchemaType.Protobuf]: "proto",
+};
+
+const languageTypes: { [key in SchemaType]: string[] } = {
+  [SchemaType.Avro]: ["avroavsc", "json"],
+  [SchemaType.Json]: ["json"],
+  [SchemaType.Protobuf]: ["proto"],
 };
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
@@ -32,6 +41,9 @@ export class Schema extends Data implements IResourceBase {
   schemaRegistryId!: Enforced<string>;
   environmentId!: Enforced<string> | undefined;
 
+  /** Is this the highest version bound to this subject? */
+  isHighestVersion!: Enforced<boolean>;
+
   /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
     if (this.subject.endsWith("-key")) {
@@ -46,12 +58,35 @@ export class Schema extends Data implements IResourceBase {
     }
   }
 
+  /** Get the proper file extension */
   fileExtension(): string {
     return extensionMap[this.type];
   }
 
+  /**
+   * Get possible language types for this kind of extension in priority order.
+   * Used to try to rendezvous on a language type that the user might have installed.
+   */
+  languageTypes(): string[] {
+    return languageTypes[this.type];
+  }
+
+  /**
+   * Return a file name for this schema.
+   */
   fileName(): string {
     return `${this.subject}.${this.id}.v${this.version}.confluent.${this.fileExtension()}`;
+  }
+
+  /**
+   * Return a file name for a draft next version of this schema.
+   */
+  nextVersionDraftFileName(draftNumber: number): string {
+    if (draftNumber === 0) {
+      return `${this.subject}.v${this.version + 1}-draft.confluent.${this.fileExtension()}`;
+    } else {
+      return `${this.subject}.v${this.version + 1}-draft-${draftNumber}.confluent.${this.fileExtension()}`;
+    }
   }
 
   get ccloudUrl(): string {
@@ -62,7 +97,7 @@ export class Schema extends Data implements IResourceBase {
   }
 }
 
-// Tree item representing a CCloud Schema Registry schema
+// Tree item representing a Schema Registry schema
 export class SchemaTreeItem extends vscode.TreeItem {
   resource: Schema;
 
@@ -75,7 +110,10 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.resource = resource;
     // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the
     // "View in CCloud" context menu item
-    this.contextValue = `${this.resource.connectionType.toLowerCase()}-schema`;
+    const connectionType = resource.connectionType.toLowerCase();
+    this.contextValue = resource.isHighestVersion
+      ? `${connectionType}-evolvable-schema`
+      : `${connectionType}-schema`;
 
     // user-facing properties
     this.description = resource.id.toString();
@@ -157,12 +195,21 @@ export function generateSchemaSubjectGroups(
     // set the icon based on subject suffix
     schemaContainerItem.iconPath = getSubjectIcon(subject, topicName !== undefined);
 
+    const contextValueParts: string[] = [];
+
     // override description to show schema types + count
     schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
     if (schemaGroup.length > 1) {
       // set context key indicating this group has multiple versions (so can be quickly diff'd, etc.)
-      schemaContainerItem.contextValue = "multiple-versions";
+      contextValueParts.push("multiple-versions");
     }
+
+    // set context value identifying this as a schema group
+    contextValueParts.push("schema-group");
+
+    // dash-join all parts, assign to context value
+    schemaContainerItem.contextValue = contextValueParts.join("-");
+
     schemaGroups.push(schemaContainerItem);
   }
   return schemaGroups;
