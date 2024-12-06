@@ -128,8 +128,11 @@ export async function schemaRegistryQuickPick(
       });
       lastSeparator = connectionLabel;
     }
-    // show the default registry, if there is one
+
+    // Brand the currently focused registry, if any
     const icon = isFocusedRegistry ? IconNames.CURRENT_RESOURCE : registry.iconName;
+
+    // Add the registry to the quickpick
     registryItems.push({
       label: environment.name,
       description: registry.id,
@@ -138,10 +141,12 @@ export async function schemaRegistryQuickPick(
     });
   }
 
-  // prompt the user to select a Schema Registry
+  // Prompt the user to select a Schema Registry
   const chosenRegistryItem: QuickPickItem | undefined = await window.showQuickPick(registryItems, {
     placeHolder: "Select a Schema Registry",
     ignoreFocusOut: true,
   });
+
+  // Return the selected SchemaRegistry model, else undefined
   return chosenRegistryItem ? registryIdMap.get(chosenRegistryItem.description!) : undefined;
 }
