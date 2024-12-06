@@ -748,7 +748,7 @@
         },
         {
           "command": "confluent.diff.compareWithSelected",
-         "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
+         "when": "confluent.resourceSelectedForCompare && view == confluent-schemas && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
