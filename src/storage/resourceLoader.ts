@@ -227,7 +227,7 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
   const schemaListRespData: ResponseSchema[] = await client.getSchemas();
 
   // Keep track of the highest version number for each subject to determine if a schema is the latest version,
-  // needed for context value setting (only the most recent versions are evolvable, see package.json and ).
+  // needed for context value setting (only the most recent versions are evolvable, see package.json).
   const subjectToHighestVersion: Map<string, number> = new Map();
   for (const schema of schemaListRespData) {
     const subject = schema.subject!;
