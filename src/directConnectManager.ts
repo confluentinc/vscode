@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
 import { Disposable, SecretStorageChangeEvent, window } from "vscode";
 import {
+  ConnectedState,
   Connection,
   ConnectionsList,
   ConnectionSpec,
   ConnectionsResourceApi,
+  ConnectionStatus,
   ConnectionType,
   KafkaClusterConfig,
   ResponseError,
@@ -18,6 +20,7 @@ import { getSidecar } from "./sidecar";
 import {
   tryToCreateConnection,
   tryToDeleteConnection,
+  tryToGetConnection,
   tryToUpdateConnection,
 } from "./sidecar/connections";
 import { SecretStorageKeys } from "./storage/constants";
@@ -200,6 +203,8 @@ export class DirectConnectionManager {
     let errorMessage: string | null = null;
     try {
       connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
+      const connectionId = connection.spec.id as ConnectionId;
+      await waitForConnectionToBeUsable(connectionId);
     } catch (error) {
       // logging happens in the above call
       if (error instanceof ResponseError) {
@@ -244,10 +249,14 @@ export class DirectConnectionManager {
 
     // if there are any stored connections that the sidecar doesn't know about, create them
     const newConnectionPromises: Promise<Connection>[] = [];
+    // and also keep track of which ones we need to make a GET request against for the first time to
+    // ensure they're properly loaded in the sidecar
+    const connectionIdsToCheck: ConnectionId[] = [];
     for (const [id, connectionSpec] of storedConnections.entries()) {
       if (!sidecarDirectConnections.find((conn) => conn.spec.id === id)) {
         logger.debug("telling sidecar about stored connection:", { id });
         newConnectionPromises.push(tryToCreateConnection(connectionSpec));
+        connectionIdsToCheck.push(id);
       }
       // create a new ResourceLoader instance for managing the new connection's resources
       this.initResourceLoader(id);
@@ -255,7 +264,43 @@ export class DirectConnectionManager {
 
     if (newConnectionPromises.length > 0) {
       await Promise.all(newConnectionPromises);
+      const connections = await Promise.all(
+        connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)),
+      );
+      logger.debug("created and checked new connection(s):", JSON.stringify(connections));
       getResourceViewProvider().refresh();
     }
   }
+}
+
+async function waitForConnectionToBeUsable(
+  id: ConnectionId,
+  timeoutMs: number = 10_000,
+): Promise<Connection | null> {
+  let connection: Connection | null = null;
+  const startTime = Date.now();
+  while (Date.now() - startTime < timeoutMs) {
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error(`Connection ${id} did not become ready within ${timeoutMs}ms`);
+    }
+    connection = await tryToGetConnection(id);
+    if (!connection) {
+      logger.debug("waiting for connection to be ready", { connectionId: id });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      continue;
+    }
+    // ensure there's no `ATTEMPTING` status
+    const status: ConnectionStatus = connection.status;
+    const kafkaState: ConnectedState | undefined = status.kafka_cluster?.state;
+    const schemaRegistryState: ConnectedState | undefined = status.schema_registry?.state;
+    const isAttempting = kafkaState === "ATTEMPTING" || schemaRegistryState === "ATTEMPTING";
+    if (isAttempting) {
+      logger.debug("connection is still attempting to connect", { connectionId: id });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      continue;
+    }
+    logger.debug("connection is ready", { connectionId: id });
+    break;
+  }
+  return connection;
 }
