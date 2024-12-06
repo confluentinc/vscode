@@ -19,6 +19,7 @@ import { localKafkaConnected } from "../../emitters";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { ResourceManager } from "../../storage/resourceManager";
+import { UserEvent } from "../../telemetry/events";
 import { getLocalKafkaImageTag } from "../configs";
 import { MANAGED_CONTAINER_LABEL } from "../constants";
 import { createContainer, getContainersForImage } from "../containers";
@@ -101,7 +102,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
     }
     count = parseInt(numContainersString, 10);
     const plural = count > 1 ? "s" : "";
-    this.sendTelemetryEvent("Input Box Filled", {
+    this.sendTelemetryEvent(UserEvent.InputBoxFilled, {
       numContainers: count,
       purpose: "Kafka Broker/Container Count",
     });
@@ -136,7 +137,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         success = false;
         break;
       }
-      this.sendTelemetryEvent("Docker Container Created", {
+      this.sendTelemetryEvent(UserEvent.DockerContainerCreated, {
         dockerContainerName: container.name,
       });
       // then start the container
