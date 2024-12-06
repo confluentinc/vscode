@@ -90,6 +90,8 @@
                 name="bootstrap_servers"
                 type="text"
                 placeholder="host:port, host2:port2"
+                data-attr-value="this.kafkaBootstrapServers()"
+                data-on-change="this.updateValue(event)"
               />
             </div>
             <span class="description"
@@ -105,7 +107,7 @@
                 id="kafka-auth-none"
                 name="kafka_auth_type"
                 value="None"
-                required
+                data-attr-required="this.kafkaBootstrapServers() !== ''"
                 data-on-change="this.updateValue(event)"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
@@ -198,6 +200,8 @@
                 pattern="https?://.*"
                 title="URL must begin with http or https"
                 placeholder="https://example.com"
+                data-attr-value="this.schemaUri()"
+                data-on-change="this.updateValue(event)"
               />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
@@ -210,7 +214,7 @@
                 id="schema-auth-none"
                 name="schema_auth_type"
                 value="None"
-                required
+                data-attr-required="this.schemaUri() !== ''"
                 data-on-change="this.updateValue(event)"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
