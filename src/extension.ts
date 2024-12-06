@@ -63,6 +63,7 @@ import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_DIRECT_CONNECTIONS,
+  ENABLE_PRODUCE_MESSAGES,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./preferences/constants";
@@ -223,11 +224,15 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // EXPERIMENTAL: set default value for direct connection enablement
+  // PREVIEW: set default values for enabling the direct connection and message-produce features
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const directConnectionsEnabled = setContextValue(
     ContextValues.directConnectionsEnabled,
     config.get(ENABLE_DIRECT_CONNECTIONS, false),
+  );
+  const produceMessagesEnabled = setContextValue(
+    ContextValues.produceMessagesEnabled,
+    config.get(ENABLE_PRODUCE_MESSAGES, false),
   );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
@@ -273,6 +278,7 @@ async function setupContextValues() {
   ]);
   await Promise.all([
     directConnectionsEnabled,
+    produceMessagesEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
     openInCCloudResources,
