@@ -56,7 +56,7 @@ async function viewLocallyCommand(schema: Schema) {
 
 /** Copy the Schema Registry ID from the Schemas tree provider nav action. */
 async function copySchemaRegistryId() {
-  const schemaRegistry: SchemaRegistry | undefined = getSchemasViewProvider().schemaRegistry;
+  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
   if (!schemaRegistry) {
     return;
   }
@@ -177,8 +177,10 @@ async function evolveSchemaCommand(schema: Schema) {
   edit.insert(evolveSchemaUri, new vscode.Position(0, 0), schemaBody);
   await vscode.workspace.applyEdit(edit);
 
-  // Finally, set the language of the editor based on the schema type.
+  // Load the evolve schema URI into an editor.
   const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
+
+  // Finally, set the language of the editor based on the schema type.
   await setEditorLanguageForSchema(editor, schema);
 
   // The user can edit, then either save to disk or to use the 'cloud upload' button

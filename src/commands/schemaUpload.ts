@@ -33,36 +33,22 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
     return;
   }
 
-  // Get the contents of the active editor. Will be the schema payload to upload.
   let activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
     vscode.window.showErrorMessage("Must be invoked from an active editor");
     return;
   }
-  const schemaContents = activeEditor.document.getText();
+
+  // If the document has (locally marked) errors, don't proceed.
+  if (await documentHasErrors(activeEditor)) {
+    logger.error("Document has errors, aborting schema upload");
+    return;
+  }
 
   // If there's a query string in the URL, it should be the encoding of a Schema
   // object. Parse it into a Schema object if possible to use it for default
   // values
-  let defaults: Schema | undefined;
-
-  if (fileUri.query) {
-    const query = decodeURIComponent(fileUri.query);
-    const schemaFromJSON = JSON.parse(query);
-    if (!schemaFromJSON) {
-      logger.warn("Could not parse schema object from URI query string", { query });
-    } else {
-      logger.info("Was able to parse object from URI query string", {
-        schemaFromJSON: schemaFromJSON,
-      });
-      try {
-        defaults = Schema.create(schemaFromJSON);
-      } catch (e) {
-        // Must not have been a valid schema object.
-        logger.error("Could not create schema object from parsed JSON", e);
-      }
-    }
-  }
+  const defaults: Schema | undefined = fileUri.query ? schemaFromString(fileUri.query) : undefined;
 
   // What kind of schema is this? We must tell the schema registry.
   let schemaType: SchemaType;
@@ -70,12 +56,6 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
     schemaType = determineSchemaType(fileUri, activeEditor.document.languageId, defaults?.type);
   } catch (e) {
     vscode.window.showErrorMessage((e as Error).message);
-    return;
-  }
-
-  // If the document has (locally marked) errors, don't proceed with upload.
-  if (await documentHasErrors(activeEditor)) {
-    logger.error("Document has errors, aborting schema upload");
     return;
   }
 
@@ -122,7 +102,7 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
       schemaSubjectsApi,
       subject,
       schemaType,
-      schemaContents,
+      activeEditor.document.getText(),
       normalize,
     );
 
@@ -151,12 +131,12 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
   const schemaViewProvider = getSchemasViewProvider();
 
   // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
-  const results: [string | undefined, Schema] = await Promise.all([
+  const [viewchoice, newschema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
   ]);
 
-  if (results[0]) {
+  if (viewchoice) {
     // User chose to view the schema in the schema registry.
 
     // Get the schemas view provider to refresh the view on the right registry.
@@ -166,7 +146,7 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
 
     // get the new schema to pop in the view by getting the treeitem to reveal
     // the schema's item.
-    schemaViewProvider.revealSchema(results[1]);
+    schemaViewProvider.revealSchema(newschema);
   }
 }
 
@@ -565,4 +545,36 @@ async function updateRegistryCacheAndFindNewSchema(
   }
 
   return schema!;
+}
+
+/**
+ * Construct a Schema object from JSON string.
+ * @returns Schema or undefined if was unable to complete.
+ */
+export function schemaFromString(source: string): Schema | undefined {
+  const query = decodeURIComponent(source);
+  let schemaFromJSON: Schema | undefined;
+
+  try {
+    schemaFromJSON = JSON.parse(query);
+  } catch (e) {
+    // Must not have been a valid JSON object.
+    logger.error("Could not parse JSON from URI query string", e);
+    return undefined;
+  }
+
+  if (!schemaFromJSON) {
+    logger.warn("Could not parse schema object from URI query string", { query });
+  } else {
+    logger.info("Was able to parse object from URI query string", {
+      schemaFromJSON: schemaFromJSON,
+    });
+    try {
+      return Schema.create(schemaFromJSON);
+    } catch (e) {
+      // Must not have been a valid schema object.
+      logger.error("Could not create schema object from parsed JSON", e);
+    }
+    return undefined;
+  }
 }

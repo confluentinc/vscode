@@ -43,7 +43,7 @@ export async function fetchSchemaBody(schema: Schema, prettified: boolean = true
 /**
  * Attempt to prettify a schema definition for display in a read-only editor tab.
  * @param schemaResp The schema response object from the Schema Registry REST API
- * @returns The prettified schema definition, or null if the schema content is empty or invalid
+ * @returns The prettified schema definition, or undefined if the schema content is empty or invalid
  */
 function prettifySchemaDefinition(schemaResp: SchemaString): string | undefined {
   let schemaDefinition = schemaResp.schema;

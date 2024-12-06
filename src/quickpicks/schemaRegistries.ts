@@ -96,8 +96,8 @@ export async function schemaRegistryQuickPick(
 
   // Determine the default registry to select, if any.
   // Prefer defaultRegistryId if provided, otherwise the focused registry in the schemas view, if any.
-  const focusedRegistry: SchemaRegistry | undefined = getSchemasViewProvider().schemaRegistry;
-  const defaultRegistry: SchemaRegistry | undefined =
+  const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
+  const defaultRegistry: SchemaRegistry | null =
     (defaultRegistryId && registryIdMap.get(defaultRegistryId)) || focusedRegistry;
 
   const defaultRegistryIndex: number = schemaRegistries.findIndex(
