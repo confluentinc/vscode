@@ -1,5 +1,4 @@
 import { Data, type Require as Enforced } from "dataclass";
-
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
