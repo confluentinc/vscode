@@ -21,12 +21,13 @@ const logger = new Logger("quickpicks.localResources");
 /** Create a multi-select quickpick to allow the user to choose which resources to start/stop. */
 export async function localResourcesQuickPick(
   starting: boolean = true,
-  placeholder?: string,
+  title: string,
+  placeholder: string,
 ): Promise<LocalResourceKind[]> {
   const quickpick: QuickPick<QuickPickItem> = window.createQuickPick();
-  quickpick.title = "Local Resources";
+  quickpick.title = title;
   quickpick.ignoreFocusOut = true;
-  quickpick.placeholder = placeholder ?? "Select resource types";
+  quickpick.placeholder = placeholder;
   quickpick.canSelectMany = true;
 
   const items: QuickPickItem[] = [];

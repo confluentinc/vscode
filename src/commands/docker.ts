@@ -53,6 +53,7 @@ export async function runWorkflowWithProgress(
       ? resourceKinds
       : await localResourcesQuickPick(
           start,
+          start ? "Local Resources to Start" : "Local Resources to Stop",
           start ? "Select resources to start" : "Select resources to stop",
         );
   if (resources.length === 0) {
