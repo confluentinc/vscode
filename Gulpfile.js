@@ -79,6 +79,7 @@ export function build(done) {
   if (result.error) throw result.error;
 
   if (production) {
+    process.env.SENTRY_ENV = "production";
     setupSegment();
     setupSentry();
   }
@@ -218,8 +219,10 @@ function getSentryReleaseVersion() {
     // add "dirty" to the revision instead of sha if there are uncommmited changes
     const isDirty =
       spawnSync("git", ["diff", "--quiet"], { stdio: "pipe", shell: IS_WINDOWS }).status !== 0;
-    if (isDirty) revision = "dirty";
-    else {
+    if (isDirty) {
+      revision = "dirty";
+      process.env.SENTRY_ENV = "development";
+    } else {
       revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
         stdio: "pipe",
         shell: IS_WINDOWS,
