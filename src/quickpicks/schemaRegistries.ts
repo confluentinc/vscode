@@ -41,7 +41,9 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
  * direct-env2 (direct-sr2)
  * direct-env3 (direct-sr3)
  */
-export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefined> {
+export async function schemaRegistryQuickPick(
+  defaultRegistryId: string | undefined = undefined,
+): Promise<SchemaRegistry | undefined> {
   const environments: Environment[] = [];
 
   const schemaRegistries: SchemaRegistry[] = [];
@@ -92,14 +94,18 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
   // used for the separators
   const registryItems: QuickPickItem[] = [];
 
-  // if there's a focused registry, push it to the front of the array
+  // Determine the default registry to select, if any.
+  // Prefer defaultRegistryId if provided, otherwise the focused registry in the schemas view, if any.
   const focusedRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
-  const focusedRegistryIndex: number = schemaRegistries.findIndex(
-    (registry) => registry.id === focusedRegistry?.id,
+  const defaultRegistry: SchemaRegistry | null =
+    (defaultRegistryId && registryIdMap.get(defaultRegistryId)) || focusedRegistry;
+
+  const defaultRegistryIndex: number = schemaRegistries.findIndex(
+    (registry) => registry.id === defaultRegistry?.id,
   );
-  if (focusedRegistryIndex !== -1) {
-    schemaRegistries.splice(focusedRegistryIndex, 1);
-    schemaRegistries.unshift(focusedRegistry!);
+  if (defaultRegistryIndex !== -1) {
+    schemaRegistries.splice(defaultRegistryIndex, 1);
+    schemaRegistries.unshift(defaultRegistry!);
   }
 
   let lastSeparator: string = "";
@@ -112,6 +118,7 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
       return;
     }
     const isFocusedRegistry = focusedRegistry?.id === registry.id;
+
     // show a separator by connection type (not connection + env name like with Kafka clusters)
     const connectionLabel = getConnectionLabel(registry.connectionType);
     if (lastSeparator !== connectionLabel) {
@@ -121,11 +128,12 @@ export async function schemaRegistryQuickPick(): Promise<SchemaRegistry | undefi
       });
       lastSeparator = connectionLabel;
     }
-    // show the currently-focused registry, if there is one
+    // show the default registry, if there is one
     const icon = isFocusedRegistry ? IconNames.CURRENT_RESOURCE : registry.iconName;
     registryItems.push({
       label: environment.name,
       description: registry.id,
+      detail: defaultRegistryId === registry.id ? "Default" : undefined,
       iconPath: new ThemeIcon(icon),
     });
   }

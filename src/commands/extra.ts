@@ -23,9 +23,9 @@ async function copyResourceId(item: any) {
   vscode.window.showInformationMessage(`Copied "${item.id}" to clipboard.`);
 }
 
+/** Copy the object's name to the clipboard. */
 async function copyResourceName(item: any) {
   logger.debug("Copying resource name", item);
-  // make sure the item has the "name" property
   if (!item?.name) {
     return;
   }

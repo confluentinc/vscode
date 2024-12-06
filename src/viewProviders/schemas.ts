@@ -74,8 +74,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Convenience method to revert this view to its original state. */
   reset(): void {
     setContextValue(ContextValues.schemaRegistrySelected, false);
-    this.schemaRegistry = null;
     this.environment = null;
+    this.schemaRegistry = null;
     this.treeView.description = "";
     this.refresh();
   }
