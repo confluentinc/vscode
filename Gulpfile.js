@@ -79,6 +79,7 @@ export function build(done) {
   if (result.error) throw result.error;
 
   if (production) {
+    process.env.SENTRY_ENV = "production";
     setupSegment();
     setupSentry();
   }
@@ -113,6 +114,7 @@ export function build(done) {
         "process.env.SENTRY_AUTH_TOKEN": JSON.stringify(process.env.SENTRY_AUTH_TOKEN),
         "process.env.SENTRY_RELEASE": JSON.stringify(process.env.SENTRY_RELEASE),
         "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN),
+        "process.env.SENTRY_ENV": JSON.stringify(process.env.SENTRY_ENV),
         preventAssignment: true,
       }),
       copy({
@@ -218,8 +220,11 @@ function getSentryReleaseVersion() {
     // add "dirty" to the revision instead of sha if there are uncommmited changes
     const isDirty =
       spawnSync("git", ["diff", "--quiet"], { stdio: "pipe", shell: IS_WINDOWS }).status !== 0;
-    if (isDirty) revision = "dirty";
-    else {
+    if (isDirty) {
+      revision = "dirty";
+      console.log("Using 'dirty' version suffix and setting SENTRY_ENV=development");
+      process.env.SENTRY_ENV = "development";
+    } else {
       revision = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
         stdio: "pipe",
         shell: IS_WINDOWS,

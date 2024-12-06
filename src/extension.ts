@@ -12,7 +12,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     // debug: true, // enable for local "prod" debugging with dev console
     dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV,
+    environment: process.env.SENTRY_ENV,
     release: process.env.SENTRY_RELEASE,
     tracesSampleRate: 0,
     profilesSampleRate: 0,
