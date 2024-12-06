@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { EXTENSION_VERSION, IconNames } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
+import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
@@ -71,8 +72,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
+  /** Did the user use the 'refresh' button / command to force a deep refresh of the tree? */
   private forceDeepRefresh: boolean = false;
+  /** Have we informed the sidecar of any direct connections saved in secret storage? */
+  private rehydratedDirectConnections: boolean = false;
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -118,6 +121,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
     const resourceItems: ResourceViewProviderData[] = [];
+
+    // if this is the first time we're loading the Resources view items, ensure we've told the sidecar
+    // about any direct connections before the GraphQL queries kick off
+    if (!this.rehydratedDirectConnections) {
+      await DirectConnectionManager.getInstance().rehydrateConnections();
+      this.rehydratedDirectConnections = true;
+    }
 
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
