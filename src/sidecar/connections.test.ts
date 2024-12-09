@@ -202,6 +202,7 @@ describe("sidecar/connections.ts", () => {
       const connectionPromise: Promise<Connection | null> = waitForConnectionToBeUsable(
         testConnectionId,
         shortTimeoutMs,
+        shortTimeoutMs / 2,
       );
       // "wait" for the timeout to occur
       await clock.tickAsync(100);

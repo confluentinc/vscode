@@ -209,7 +209,7 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
 export async function waitForConnectionToBeUsable(
   id: ConnectionId,
   timeoutMs: number = 15_000,
-  waitTimeMs: number = 100,
+  waitTimeMs: number = 500,
 ): Promise<Connection | null> {
   let connection: Connection | null = null;
 
@@ -259,7 +259,13 @@ export async function waitForConnectionToBeUsable(
 
     // if we didn't time out by now through the series of `continue`s, we have a usable connection
     // (or we need to update the logic above for other connection types/states)
-    logger.debug("connection is usable, returning", { id, type, status });
+    logger.debug("connection is usable, returning", {
+      id,
+      type,
+      ccloud: status.ccloud?.state,
+      kafka: status.kafka_cluster?.state,
+      schemaRegistry: status.schema_registry?.state,
+    });
     connection = checkedConnection;
     break;
   }
