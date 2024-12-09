@@ -241,6 +241,12 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.create",
+        "icon": "$(plus)",
+        "title": "Create New Schema",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.upload",
         "icon": "$(cloud-upload)",
         "title": "Upload Schema to Schema Registry",
@@ -478,7 +484,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "No schemas found.",
+        "contents": "No schemas found.\n[Create Schema](command:confluent.schemas.create)",
         "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
       },
       {
