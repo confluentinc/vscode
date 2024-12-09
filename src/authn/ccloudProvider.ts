@@ -13,6 +13,7 @@ import {
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
+  waitForConnectionToBeUsable,
 } from "../sidecar/connections";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
@@ -150,9 +151,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw e;
     }
 
-    const authenticatedConnection = await getCCloudConnection();
+    const authenticatedConnection = await waitForConnectionToBeUsable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
-      throw new Error("Failed to find created connection");
+      throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
     // User logged in successfully so we send an identify event to Segment
