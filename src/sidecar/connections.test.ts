@@ -183,6 +183,7 @@ describe("sidecar/connections.ts", () => {
     });
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should throw an error if the connection does not become usable within the timeout`, async () => {
+      // use fake timers so we can control the time and "time out" quickly
       clock = sandbox.useFakeTimers(Date.now());
 
       const testConnection: Connection = {
@@ -202,6 +203,7 @@ describe("sidecar/connections.ts", () => {
         testConnectionId,
         shortTimeoutMs,
       );
+      // "wait" for the timeout to occur
       await clock.tickAsync(100);
 
       await assert.rejects(
