@@ -296,7 +296,9 @@ export class DirectConnectionManager {
     }
 
     if (newConnectionPromises.length > 0) {
+      // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
+      // ensure the new connections are usable before refreshing the Resources view
       const connections = await Promise.all(
         connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)),
       );
