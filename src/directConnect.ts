@@ -1,6 +1,12 @@
 import { randomUUID } from "crypto";
 import { ViewColumn, window } from "vscode";
-import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
+import {
+  AuthErrors,
+  ConnectedState,
+  Connection,
+  ConnectionSpec,
+  ConnectionType,
+} from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -16,12 +22,14 @@ type MessageResponse<MessageType extends string> = Awaited<
 
 const directConnectWebviewCache = new WebviewPanelCache();
 
-export function openDirectConnectionForm(): void {
+export function openDirectConnectionForm(connection: ConnectionSpec | null): void {
+  console.log("EDIT:", connection?.id);
+  const connectionUUID = connection?.id || randomUUID();
   // Set up the webview, checking for existing form for this connection
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
-    { id: randomUUID(), multiple: false, template: connectionFormTemplate }, // TODO change the UUID handling when we start allowing Edit
-    "direct-connect-form",
-    `New Connection`,
+    { id: connectionUUID, multiple: false, template: connectionFormTemplate },
+    `direct-connect-${connectionUUID}`,
+    connection?.id ? "Edit Connection" : "New Connection",
     ViewColumn.One,
     {
       enableScripts: true,
@@ -80,6 +88,12 @@ export function openDirectConnectionForm(): void {
         return (await testConnection(body)) satisfies MessageResponse<"Test">;
       case "Submit":
         return (await saveConnection(body)) satisfies MessageResponse<"Submit">;
+      case "GetConnectionSpec": {
+        const spec = connection ? cleanSpec(connection) : null;
+        return spec satisfies MessageResponse<"GetConnectionSpec">;
+      }
+      case "Update":
+        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
@@ -171,4 +185,17 @@ export function parseTestResult(connection: Connection): TestResponse {
     }
   }
   return result;
+}
+// Remove sensitive fields from the connection spec before sending to the webview form
+function cleanSpec(connection: ConnectionSpec): ConnectionSpec {
+  const clean = { ...connection };
+  // @ts-expect-error - these fields are not in the TypeScript definition
+  delete clean.kafka_cluster?.credentials?.password;
+  // @ts-expect-error - these fields are not in the TypeScript definition
+  delete clean.kafka_cluster?.credentials?.api_secret;
+  // @ts-expect-error - these fields are not in the TypeScript definition
+  delete clean.schema_registry?.credentials?.password;
+  // @ts-expect-error - these fields are not in the TypeScript definition
+  delete clean.schema_registry?.credentials?.api_secret;
+  return clean;
 }

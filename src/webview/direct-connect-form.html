@@ -11,7 +11,7 @@
   </head>
   <body>
     <main class="container">
-      <h1>Create a new connection</h1>
+      <h1 data-text="this.spec() ? 'Edit connection details' : 'Create a new connection'"></h1>
       <p>
         Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
         cancel all changes.
@@ -74,7 +74,15 @@
         <div class="input-container">
           <div>
             <label for="name" class="label">Connection Name</label>
-            <input class="input" id="name" name="name" type="text" placeholder="New Connection" />
+            <input
+              class="input"
+              id="name"
+              name="name"
+              type="text"
+              placeholder="New Connection"
+              data-attr-value="this.name()"
+              data-on-change="this.updateValue(event)"
+            />
           </div>
           <span class="description"
             >An easy to remember name to reference this connection in the future</span
@@ -113,7 +121,7 @@
                 type="radio"
                 id="kafka-auth-none"
                 name="kafka_auth_type"
-                value="None"
+                data-attr-checked="this.kafkaAuthType() === 'None' ? true : false"
                 data-attr-required="this.kafkaBootstrapServers() !== ''"
                 data-on-change="this.updateValue(event)"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
@@ -126,6 +134,7 @@
                 id="kafka-auth-basic"
                 name="kafka_auth_type"
                 value="Basic"
+                data-attr-checked="this.kafkaAuthType() === 'Basic' ? true : false"
                 data-on-change="this.updateValue(event)"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
@@ -137,6 +146,7 @@
                 id="kafka-auth-api"
                 name="kafka_auth_type"
                 value="API"
+                data-attr-checked="this.kafkaAuthType() === 'API' ? true : false"
                 data-on-change="this.updateValue(event)"
                 data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
@@ -153,6 +163,8 @@
                     id="kafka_username"
                     name="kafka_username"
                     type="text"
+                    data-attr-value="this.kafkaUsername()"
+                    data-on-change="this.updateValue(event)"
                     required
                   />
                 </div>
@@ -165,6 +177,7 @@
                     id="kafka_password"
                     name="kafka_password"
                     type="password"
+                    data-attr-value="this.kafkaSecret()"
                     required
                   />
                 </div>
@@ -176,7 +189,15 @@
               <div class="input-container">
                 <div>
                   <label for="kafka_api_key" class="label">Key</label>
-                  <input class="input" id="api_key" name="kafka_api_key" type="text" required />
+                  <input
+                    class="input"
+                    id="api_key"
+                    name="kafka_api_key"
+                    type="text"
+                    required
+                    data-attr-value="this.kafkaApiKey()"
+                    data-on-change="this.updateValue(event)"
+                  />
                 </div>
               </div>
               <div class="input-container">
@@ -186,6 +207,7 @@
                     class="input"
                     id="api_secret"
                     name="kafka_api_secret"
+                    data-attr-value="this.kafkaSecret()"
                     type="password"
                     required
                   />
