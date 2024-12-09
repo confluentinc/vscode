@@ -8,12 +8,10 @@ import {
   WorkspaceConfiguration,
 } from "vscode";
 import {
-  ConnectedState,
   Connection,
   ConnectionsList,
   ConnectionSpec,
   ConnectionsResourceApi,
-  ConnectionStatus,
   ConnectionType,
   KafkaClusterConfig,
   ResponseError,
@@ -29,8 +27,8 @@ import { getSidecar } from "./sidecar";
 import {
   tryToCreateConnection,
   tryToDeleteConnection,
-  tryToGetConnection,
   tryToUpdateConnection,
+  waitForConnectionToBeUsable,
 } from "./sidecar/connections";
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
@@ -306,36 +304,4 @@ export class DirectConnectionManager {
       getResourceViewProvider().refresh();
     }
   }
-}
-
-async function waitForConnectionToBeUsable(
-  id: ConnectionId,
-  timeoutMs: number = 10_000,
-): Promise<Connection | null> {
-  let connection: Connection | null = null;
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeoutMs) {
-    if (Date.now() - startTime > timeoutMs) {
-      throw new Error(`Connection ${id} did not become ready within ${timeoutMs}ms`);
-    }
-    connection = await tryToGetConnection(id);
-    if (!connection) {
-      logger.debug("waiting for connection to be ready", { connectionId: id });
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      continue;
-    }
-    // ensure there's no `ATTEMPTING` status
-    const status: ConnectionStatus = connection.status;
-    const kafkaState: ConnectedState | undefined = status.kafka_cluster?.state;
-    const schemaRegistryState: ConnectedState | undefined = status.schema_registry?.state;
-    const isAttempting = kafkaState === "ATTEMPTING" || schemaRegistryState === "ATTEMPTING";
-    if (isAttempting) {
-      logger.debug("connection is still attempting to connect", { connectionId: id });
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      continue;
-    }
-    logger.debug("connection is ready", { connectionId: id });
-    break;
-  }
-  return connection;
 }
