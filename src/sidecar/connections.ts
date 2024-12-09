@@ -2,9 +2,12 @@ import { authentication, AuthenticationSession } from "vscode";
 import { getSidecar } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import {
+  ConnectedState,
   Connection,
   ConnectionSpec,
   ConnectionsResourceApi,
+  ConnectionStatus,
+  ConnectionType,
   ResponseError,
 } from "../clients/sidecar";
 import {
@@ -25,6 +28,7 @@ import { getContainersForImage } from "../docker/containers";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
+import { ConnectionId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("sidecar.connections");
@@ -190,6 +194,67 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
     await deleteLocalConnection();
     await tryToCreateConnection(spec);
   }
+}
+
+/**
+ * Wait for the connection with the given ID to be usable, to be done before any GraphQL queries.
+ * This function will poll the connection status until it's ready, or until the timeout is reached.
+ *
+ * For `DIRECT` connections, this will wait for Kafka and Schema Registry states to be anything other
+ * than `ATTEMPTING`.
+ *
+ * For `CCLOUD` connections, this will wait for the CCloud state to be anything other than `NONE` or `ATTEMPTING`.
+ */
+export async function waitForConnectionToBeUsable(
+  id: ConnectionId,
+  timeoutMs: number = 15_000,
+): Promise<Connection | null> {
+  let connection: Connection | null = null;
+  const startTime = Date.now();
+  while (Date.now() - startTime < timeoutMs) {
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error(`Connection ${id} did not become ready within ${timeoutMs}ms`);
+    }
+    connection = await tryToGetConnection(id);
+    if (!connection) {
+      logger.debug("waiting for connection to be ready", { connectionId: id });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      continue;
+    }
+
+    const type: ConnectionType = connection.spec.type!;
+    const status: ConnectionStatus = connection.status;
+
+    if (type === ConnectionType.Direct) {
+      // direct connections will use an `ATTEMPTING` status
+      const kafkaState: ConnectedState | undefined = status.kafka_cluster?.state;
+      const schemaRegistryState: ConnectedState | undefined = status.schema_registry?.state;
+      const isAttempting = kafkaState === "ATTEMPTING" || schemaRegistryState === "ATTEMPTING";
+      if (isAttempting) {
+        logger.debug("still waiting for connection to be usable", {
+          id,
+          type,
+          kafkaState,
+          schemaRegistryState,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+    } else if (type === ConnectionType.Ccloud) {
+      // CCloud connections don't transition from `NONE` to `ATTEMPTING` to `SUCCESS`, just directly
+      // from `NONE` to `SUCCESS` (or `FAILED`)
+      const ccloudState = status.ccloud!.state;
+      if (ccloudState === "NONE") {
+        logger.debug("still waiting for connection to be usable", { id, type, ccloudState });
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        continue;
+      }
+    }
+
+    logger.debug("connection is usable, returning", { id, type, status });
+    break;
+  }
+  return connection;
 }
 
 // TODO(shoup): this may need to move into a different file for general resource discovery
