@@ -8,6 +8,7 @@ import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { getResourceViewProvider } from "../viewProviders/resources";
+import { ConnectionSpec } from "../clients/sidecar";
 
 const logger = new Logger("commands.connections");
 
@@ -58,9 +59,12 @@ export async function addSSLPemPath() {
   }
 }
 
-export async function showDirectConnectionForm() {
+export async function showDirectConnectionForm(item?: DirectEnvironment) {
   // TODO: add more context here for editing connections?
-  openDirectConnectionForm();
+  const spec: ConnectionSpec | null = item
+    ? await getResourceManager().getDirectConnection(item.connectionId)
+    : null;
+  openDirectConnectionForm(spec);
 }
 
 export async function deleteDirectConnection(item: DirectEnvironment) {
@@ -86,17 +90,42 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().deleteConnection(item.connectionId);
 }
 
+// export async function renameDirectConnection(item: DirectEnvironment) {
+//   if (!(item instanceof DirectEnvironment)) {
+//     return;
+//   }
+//   const newName = await window.showInputBox({
+//     placeHolder: "Enter a new name for this connection",
+//     value: item.name,
+//     ignoreFocusOut: true,
+//   });
+//   if (!newName) {
+//     return;
+//   }
+
+//   // look up the associated ConnectionSpec
+//   const spec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+//     item.connectionId,
+//   );
+//   if (!spec) {
+//     logger.error("Direct connection not found, can't rename");
+//     // possibly stale Resources view? this shouldn't happen
+//     window.showErrorMessage("Connection not found.");
+//     getResourceViewProvider().refresh();
+//     return;
+//   }
+
+//   // update and send it to the manager to update the sidecar + secret storage
+//   const updatedSpec: ConnectionSpec = {
+//     ...spec,
+//     name: newName,
+//   };
+//   await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+// }
+
+// FIXME rename command
 export async function renameDirectConnection(item: DirectEnvironment) {
   if (!(item instanceof DirectEnvironment)) {
-    return;
-  }
-
-  const newName = await window.showInputBox({
-    placeHolder: "Enter a new name for this connection",
-    value: item.name,
-    ignoreFocusOut: true,
-  });
-  if (!newName) {
     return;
   }
 
@@ -105,19 +134,14 @@ export async function renameDirectConnection(item: DirectEnvironment) {
     item.connectionId,
   );
   if (!spec) {
-    logger.error("Direct connection not found, can't rename");
+    logger.error("Direct connection not found, can't edit");
     // possibly stale Resources view? this shouldn't happen
     window.showErrorMessage("Connection not found.");
     getResourceViewProvider().refresh();
     return;
   }
 
-  // update and send it to the manager to update the sidecar + secret storage
-  const updatedSpec: CustomConnectionSpec = {
-    ...spec,
-    name: newName,
-  };
-  await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+  openDirectConnectionForm(spec);
 }
 
 export function registerConnectionCommands(): Disposable[] {
