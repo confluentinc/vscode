@@ -11,6 +11,7 @@ import {
   SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
+import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -26,7 +27,6 @@ import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { getResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
 import { PostResponse } from "./webview/direct-connect-form";
@@ -92,8 +92,8 @@ export class DirectConnectionManager {
             }
           }
 
-          // refresh the Resources view to stay in sync with the secret storage
-          getResourceViewProvider().refresh();
+          // this is mainly to inform the Resources view to refresh its list of connections
+          directConnectionsChanged.fire();
 
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
           // reset the view(s) to prevent orphaned resources from being used for requests
@@ -266,11 +266,11 @@ export class DirectConnectionManager {
       // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
       // ensure the new connections are usable before refreshing the Resources view
-      const connections = await Promise.all(
-        connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)),
+      await Promise.all(connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)));
+      logger.debug(
+        `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );
-      logger.debug("created and checked new connection(s):", JSON.stringify(connections));
-      getResourceViewProvider().refresh();
+      directConnectionsChanged.fire();
     }
   }
 }
