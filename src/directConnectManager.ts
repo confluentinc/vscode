@@ -24,7 +24,7 @@ import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
-import { getTelemetryLogger } from "./telemetry/telemetryLogger";
+import { logUsage, UserEvent } from "./telemetry/events";
 import { getResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
@@ -144,7 +144,7 @@ export class DirectConnectionManager {
       return { success: false, message: errorMessage };
     }
 
-    getTelemetryLogger().logUsage("Connection", {
+    logUsage(UserEvent.DirectConnectionAction, {
       type: platform,
       action: "created",
       withKafka: !!kafkaClusterConfig,
@@ -164,7 +164,7 @@ export class DirectConnectionManager {
     await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
 
     // TODO(shoup): look up connection platform once we begin storing it alongside the spec
-    getTelemetryLogger().logUsage("Connection", {
+    logUsage(UserEvent.DirectConnectionAction, {
       action: "deleted",
     });
 
