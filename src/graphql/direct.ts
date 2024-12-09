@@ -6,7 +6,7 @@ import { ConnectionId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 
-const logger = new Logger("graphql.local");
+const logger = new Logger("graphql.direct");
 
 export async function getDirectResources(): Promise<DirectEnvironment[]> {
   let directResources: DirectEnvironment[] = [];
