@@ -217,7 +217,6 @@ async function _activateExtension(
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
-  await directConnectionManager.rehydrateConnections();
 
   // XXX: used for testing; do not remove
   return context;

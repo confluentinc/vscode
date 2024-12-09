@@ -14,6 +14,9 @@ export const nonInvalidTokenStatus = new vscode.EventEmitter<void>();
 export const ccloudAuthSessionInvalidated = new vscode.EventEmitter<void>();
 export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 
+/** Fired whenever the list of direct connections changes. */
+export const directConnectionsChanged = new vscode.EventEmitter<void>();
+
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 
