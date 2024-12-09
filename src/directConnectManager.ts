@@ -11,6 +11,7 @@ import {
   SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
+import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -19,13 +20,13 @@ import {
   tryToCreateConnection,
   tryToDeleteConnection,
   tryToUpdateConnection,
+  waitForConnectionToBeUsable,
 } from "./sidecar/connections";
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { getResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
 import { PostResponse } from "./webview/direct-connect-form";
@@ -91,8 +92,8 @@ export class DirectConnectionManager {
             }
           }
 
-          // refresh the Resources view to stay in sync with the secret storage
-          getResourceViewProvider().refresh();
+          // this is mainly to inform the Resources view to refresh its list of connections
+          directConnectionsChanged.fire();
 
           // if the Topics/Schemas views were focused on a resource whose direct connection was removed,
           // reset the view(s) to prevent orphaned resources from being used for requests
@@ -200,6 +201,8 @@ export class DirectConnectionManager {
     let errorMessage: string | null = null;
     try {
       connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
+      const connectionId = connection.spec.id as ConnectionId;
+      await waitForConnectionToBeUsable(connectionId);
     } catch (error) {
       // logging happens in the above call
       if (error instanceof ResponseError) {
@@ -207,7 +210,9 @@ export class DirectConnectionManager {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      window.showErrorMessage(`Failed to create connection: ${errorMessage}`);
+      const msg = `Failed to ${update ? "update" : "create"} connection: ${errorMessage}`;
+      logger.error(msg);
+      window.showErrorMessage(msg);
     }
     return { connection, errorMessage };
   }
@@ -244,18 +249,28 @@ export class DirectConnectionManager {
 
     // if there are any stored connections that the sidecar doesn't know about, create them
     const newConnectionPromises: Promise<Connection>[] = [];
+    // and also keep track of which ones we need to make a GET request against for the first time to
+    // ensure they're properly loaded in the sidecar
+    const connectionIdsToCheck: ConnectionId[] = [];
     for (const [id, connectionSpec] of storedConnections.entries()) {
       if (!sidecarDirectConnections.find((conn) => conn.spec.id === id)) {
         logger.debug("telling sidecar about stored connection:", { id });
         newConnectionPromises.push(tryToCreateConnection(connectionSpec));
+        connectionIdsToCheck.push(id);
       }
       // create a new ResourceLoader instance for managing the new connection's resources
       this.initResourceLoader(id);
     }
 
     if (newConnectionPromises.length > 0) {
+      // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
-      getResourceViewProvider().refresh();
+      // ensure the new connections are usable before refreshing the Resources view
+      await Promise.all(connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)));
+      logger.debug(
+        `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
+      );
+      directConnectionsChanged.fire();
     }
   }
 }
