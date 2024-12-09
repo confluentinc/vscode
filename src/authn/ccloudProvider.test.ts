@@ -57,6 +57,11 @@ describe("ConfluentCloudAuthProvider", () => {
     getCCloudConnectionStub = sandbox.stub(connections, "getCCloudConnection");
     createCCloudConnectionStub = sandbox.stub(connections, "createCCloudConnection");
 
+    // assume the connection is immediately usable for most tests
+    sandbox
+      .stub(connections, "waitForConnectionToBeUsable")
+      .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+
     // don't handle the progress notification, openExternal, etc in this test suite
     browserAuthFlowStub = sandbox.stub(authProvider, "browserAuthFlow").resolves();
     stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);

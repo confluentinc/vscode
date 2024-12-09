@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { workspace } from "vscode";
 import { TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY } from "../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
 import { getExtensionContext } from "../tests/unit/testUtils";
@@ -10,7 +9,6 @@ import {
   ConnectionsResourceApi,
   ResponseError,
 } from "./clients/sidecar";
-import * as contextValues from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { ConnectionId } from "./models/resource";
 import * as sidecar from "./sidecar";
@@ -38,10 +36,6 @@ const PLAIN_LOCAL_KAFKA_SR_SPEC: ConnectionSpec = {
 describe("DirectConnectionManager behavior", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let onDidChangeConfigurationStub: sinon.SinonStub;
-  let getConfigurationStub: sinon.SinonStub;
-  let setContextValueStub: sinon.SinonStub;
-
   let tryToCreateConnectionStub: sinon.SinonStub;
   let tryToUpdateConnectionStub: sinon.SinonStub;
 
@@ -54,11 +48,6 @@ describe("DirectConnectionManager behavior", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-
-    // stub VS Code APIs
-    onDidChangeConfigurationStub = sandbox.stub(workspace, "onDidChangeConfiguration");
-    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
-    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
 
     // stub the sidecar Connections API
     const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
@@ -74,6 +63,8 @@ describe("DirectConnectionManager behavior", () => {
     tryToUpdateConnectionStub = sandbox
       .stub(connections, "tryToUpdateConnection")
       .resolves({} as any);
+    // assume the connection is immediately usable for most tests
+    sandbox.stub(connections, "waitForConnectionToBeUsable").resolves(TEST_DIRECT_CONNECTION);
   });
 
   afterEach(() => {
@@ -88,6 +79,8 @@ describe("DirectConnectionManager behavior", () => {
   it("createConnection() should not include `kafkaClusterConfig` in the ConnectionSpec if not provided", async () => {
     const testSpec: ConnectionSpec = PLAIN_LOCAL_KAFKA_SR_SPEC;
     testSpec.kafka_cluster = undefined;
+    const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
+    tryToCreateConnectionStub.resolves(createdConnection);
 
     const result = await DirectConnectionManager.getInstance().createConnection(
       testSpec.kafka_cluster,
@@ -95,7 +88,7 @@ describe("DirectConnectionManager behavior", () => {
       testSpec.name,
     );
 
-    assert.ok(result.success);
+    assert.ok(result.success, JSON.stringify(result));
     assert.ok(tryToCreateConnectionStub.calledOnce);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
     assert.strictEqual(specArg.kafka_cluster, undefined);
@@ -106,6 +99,8 @@ describe("DirectConnectionManager behavior", () => {
   it("createConnection() should not include `schemaRegistryConfig` in the ConnectionSpec if not provided", async () => {
     const testSpec: ConnectionSpec = PLAIN_LOCAL_KAFKA_SR_SPEC;
     testSpec.schema_registry = undefined;
+    const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
+    tryToCreateConnectionStub.resolves(createdConnection);
 
     const result = await DirectConnectionManager.getInstance().createConnection(
       testSpec.kafka_cluster,
