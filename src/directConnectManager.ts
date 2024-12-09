@@ -210,7 +210,9 @@ export class DirectConnectionManager {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      window.showErrorMessage(`Failed to create connection: ${errorMessage}`);
+      const msg = `Failed to ${update ? "update" : "create"} connection: ${errorMessage}`;
+      logger.error(msg);
+      window.showErrorMessage(msg);
     }
     return { connection, errorMessage };
   }
