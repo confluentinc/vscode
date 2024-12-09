@@ -14,7 +14,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud, isDirect } from "./resource";
+import { ConnectionId, IResourceBase, isCCloud } from "./resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -113,11 +113,6 @@ export class EnvironmentTreeItem extends TreeItem {
     // internal properties
     this.resource = resource;
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
-
-    if (isDirect(resource)) {
-      // set up a listener to change the icon to a spinning thing whenever we get an
-      // `ATTEMPTING` connection status
-    }
 
     // user-facing properties
     this.description = this.resource.id;
