@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { ConfigurationChangeEvent, workspace } from "vscode";
+import { workspace } from "vscode";
 import { TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY } from "../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
 import { getExtensionContext } from "../tests/unit/testUtils";
@@ -13,7 +13,6 @@ import {
 import * as contextValues from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { ConnectionId } from "./models/resource";
-import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import * as sidecar from "./sidecar";
 import * as connections from "./sidecar/connections";
 import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
@@ -85,29 +84,6 @@ describe("DirectConnectionManager behavior", () => {
 
     sandbox.restore();
   });
-
-  for (const enabled of [true, false]) {
-    it(`should update the "${contextValues.ContextValues.directConnectionsEnabled}" context value when the "${ENABLE_DIRECT_CONNECTIONS}" setting is changed to ${enabled} (REMOVE ONCE EXPERIMENTAL SETTING IS NO LONGER USED)`, async () => {
-      getConfigurationStub.returns({
-        get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(enabled),
-      });
-      const mockEvent = {
-        affectsConfiguration: (config: string) => config === ENABLE_DIRECT_CONNECTIONS,
-      } as ConfigurationChangeEvent;
-      onDidChangeConfigurationStub.yields(mockEvent);
-
-      DirectConnectionManager.getInstance();
-      // simulate the setting being changed by the user
-      await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
-
-      assert.ok(
-        setContextValueStub.calledWith(
-          contextValues.ContextValues.directConnectionsEnabled,
-          enabled,
-        ),
-      );
-    });
-  }
 
   it("createConnection() should not include `kafkaClusterConfig` in the ConnectionSpec if not provided", async () => {
     const testSpec: ConnectionSpec = PLAIN_LOCAL_KAFKA_SR_SPEC;

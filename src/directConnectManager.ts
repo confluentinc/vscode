@@ -1,12 +1,5 @@
 import { randomUUID } from "crypto";
-import {
-  ConfigurationChangeEvent,
-  Disposable,
-  SecretStorageChangeEvent,
-  window,
-  workspace,
-  WorkspaceConfiguration,
-} from "vscode";
+import { Disposable, SecretStorageChangeEvent, window } from "vscode";
 import {
   Connection,
   ConnectionsList,
@@ -18,11 +11,9 @@ import {
   SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
-import { ContextValues, setContextValue } from "./context/values";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
-import { ENABLE_DIRECT_CONNECTIONS } from "./preferences/constants";
 import { getSidecar } from "./sidecar";
 import {
   tryToCreateConnection,
@@ -43,7 +34,6 @@ const logger = new Logger("directConnectManager");
 
 /**
  * Singleton class responsible for the following:
- * - watching for changes in the {@link ENABLE_DIRECT_CONNECTIONS} experimental setting and adjusting
  *   associated context value(s) to enable/disable actions
  * - creating connections via input from the webview form and updating the Resources view
  * - fetching connections from persistent storage and deconflicting with the sidecar
@@ -75,31 +65,6 @@ export class DirectConnectionManager {
   }
 
   private setEventListeners(): Disposable[] {
-    // watch the extension settings and toggle the associated context value accordingly
-    const settingsListener: Disposable = workspace.onDidChangeConfiguration(
-      async (event: ConfigurationChangeEvent) => {
-        const configs: WorkspaceConfiguration = workspace.getConfiguration();
-        if (event.affectsConfiguration(ENABLE_DIRECT_CONNECTIONS)) {
-          const enabled = configs.get(ENABLE_DIRECT_CONNECTIONS, false);
-          logger.debug(`"${ENABLE_DIRECT_CONNECTIONS}" config changed`, { enabled });
-          setContextValue(ContextValues.directConnectionsEnabled, enabled);
-          // "Other" container item will be toggled
-          getResourceViewProvider().refresh();
-          // if the Topics/Schemas views are focused on a direct connection based resource, wipe them
-          if (!enabled) {
-            const topicsView = getTopicViewProvider();
-            if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
-              topicsView.reset();
-            }
-            const schemasView = getSchemasViewProvider();
-            if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
-              schemasView.reset();
-            }
-          }
-        }
-      },
-    );
-
     const connectionsListener: Disposable = getExtensionContext().secrets.onDidChange(
       async ({ key }: SecretStorageChangeEvent) => {
         // watch for any cross-workspace direct connection additions/removals
@@ -147,7 +112,7 @@ export class DirectConnectionManager {
       },
     );
 
-    return [settingsListener, connectionsListener];
+    return [connectionsListener];
   }
 
   /**
