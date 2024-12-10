@@ -25,11 +25,15 @@ import {
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
-import { DirectConnectionsById, getResourceManager } from "./storage/resourceManager";
+import {
+  CustomConnectionSpec,
+  DirectConnectionsById,
+  getResourceManager,
+} from "./storage/resourceManager";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
-import { PostResponse } from "./webview/direct-connect-form";
+import { FormConnectionType, PostResponse } from "./webview/direct-connect-form";
 
 const logger = new Logger("directConnectManager");
 
@@ -123,14 +127,15 @@ export class DirectConnectionManager {
   async createConnection(
     kafkaClusterConfig: KafkaClusterConfig | undefined,
     schemaRegistryConfig: SchemaRegistryConfig | undefined,
+    formConnectionType: FormConnectionType,
     name?: string,
-    platform?: string,
   ): Promise<PostResponse> {
     const connectionId = randomUUID() as ConnectionId;
-    const spec: ConnectionSpec = {
+    const spec: CustomConnectionSpec = {
       id: connectionId,
       name: name || "New Connection",
       type: ConnectionType.Direct, // TODO(shoup): update for MDS in follow-on branch
+      formConnectionType,
     };
 
     if (kafkaClusterConfig) {
@@ -146,7 +151,7 @@ export class DirectConnectionManager {
     }
 
     logUsage(UserEvent.DirectConnectionAction, {
-      type: platform,
+      type: formConnectionType,
       action: "created",
       withKafka: !!kafkaClusterConfig,
       withSchemaRegistry: !!schemaRegistryConfig,
@@ -162,28 +167,38 @@ export class DirectConnectionManager {
   }
 
   async deleteConnection(id: ConnectionId): Promise<void> {
+    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(id);
     await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
 
-    // TODO(shoup): look up connection platform once we begin storing it alongside the spec
     logUsage(UserEvent.DirectConnectionAction, {
+      type: spec?.formConnectionType,
       action: "deleted",
+      withKafka: !!spec?.kafka_cluster,
+      withSchemaRegistry: !!spec?.schema_registry,
     });
 
     ResourceLoader.deregisterInstance(id);
   }
 
-  async updateConnection(spec: ConnectionSpec): Promise<PostResponse> {
+  async updateConnection(spec: CustomConnectionSpec): Promise<PostResponse> {
     // tell the sidecar about the updated spec
     const { connection, errorMessage } = await this.createOrUpdateConnection(spec, true);
     if (errorMessage || !connection) {
       return { success: false, message: errorMessage };
     }
 
+    // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
+    // (spec comes first because the ConnectionSpec will try to override `id` as a string)
+    const mergedSpec: CustomConnectionSpec = {
+      ...connection.spec,
+      id: spec.id,
+      formConnectionType: spec.formConnectionType,
+    };
     // update the connection in secret storage (via full replace of the connection by its id)
-    await getResourceManager().addDirectConnection(connection.spec);
+    await getResourceManager().addDirectConnection(mergedSpec);
     // notify subscribers that the "environment" has changed since direct connections are treated
     // as environment-specific resources
-    environmentChanged.fire(connection.spec.id!);
+    environmentChanged.fire(mergedSpec.id);
     return { success: true, message: JSON.stringify(connection) };
   }
 
