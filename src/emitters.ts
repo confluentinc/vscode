@@ -20,6 +20,10 @@ export const directConnectionsChanged = new vscode.EventEmitter<void>();
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 
+/** Fired whenever a property of an {@link Environment} has changed. (Mainly to affect watchers in
+ * the Topics/Schemas views, or similar.) */
+export const environmentChanged = new vscode.EventEmitter<string>(); // TODO: update to EnvironmentId once used
+
 /**
  * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
  * Cluster" action from the Topics view, or cleared out from a connection (or CCloud organization)
