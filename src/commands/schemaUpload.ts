@@ -11,7 +11,7 @@ import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { schemaSubjectQuickPick } from "../quickpicks/schemas";
+import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { ResourceLoader } from "../storage/resourceLoader";
@@ -35,9 +35,12 @@ const logger = new Logger("commands.schemaUpload");
  */
 export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTreeItem<Schema>) {
   // prompt for the editor/file first
-  const schemaUri: vscode.Uri | undefined = await uriQuickpick([], {
-    "Schema files": [".avsc", ".avro", ".json", ".proto"],
-  });
+  const schemaUri: vscode.Uri | undefined = await uriQuickpick(
+    ["plaintext", "avroavsc", "protobuf", "proto3", "json"],
+    {
+      "Schema files": [".avsc", ".avro", ".json", ".proto"],
+    },
+  );
   if (!schemaUri) {
     return;
   }
@@ -70,11 +73,10 @@ export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTree
   }
 
   // What kind of schema is this? We must tell the schema registry.
-  let schemaType: SchemaType;
-  try {
-    schemaType = determineSchemaType(schemaUri, null, undefined);
-  } catch (e) {
-    vscode.window.showErrorMessage((e as Error).message);
+  const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri, null, undefined);
+  if (!schemaType) {
+    // the only way we get here is if the user bailed on the schema type quickpick after we failed
+    // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
     return;
   }
 
@@ -346,13 +348,13 @@ export function schemaRegistrationMessage(
 /**
  * Given a file and / or a language id, determine the schema type of the file.
  */
-export function determineSchemaType(
+export async function determineSchemaType(
   file: vscode.Uri | null,
   languageId: string | null,
   defaultType: SchemaType | undefined = undefined,
-): SchemaType {
+): Promise<SchemaType | undefined> {
   if (!file && !languageId) {
-    throw new Error("Must call with either a file or document");
+    return;
   }
 
   let schemaType: SchemaType | unknown = defaultType;
@@ -385,7 +387,8 @@ export function determineSchemaType(
   }
 
   if (!schemaType) {
-    throw new Error("Could not determine schema type from file or document");
+    // can't determine schema type from file or language id, show the quickpick
+    return await schemaTypeQuickPick();
   }
 
   return schemaType as SchemaType;
