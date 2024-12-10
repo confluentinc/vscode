@@ -80,13 +80,6 @@ function validateCommand(item: any) {
 
 /** User has gestured to create a new schema from scratch relative to the currently selected schema registry. */
 async function createSchemaCommand() {
-  const schemaRegistry: SchemaRegistry | null = getSchemasViewProvider().schemaRegistry;
-
-  if (!schemaRegistry) {
-    logger.error("createSchemaCommand called with no schema registry selected");
-    return;
-  }
-
   const chosenSchemaType = await schemaTypeQuickPick();
   if (!chosenSchemaType) {
     logger.info("User canceled schema type selection.");
