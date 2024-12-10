@@ -120,6 +120,12 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.description = resource.id.toString();
     this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA);
     this.tooltip = createSchemaTooltip(this.resource);
+
+    this.command = {
+      command: "confluent.schemaViewer.viewLocally",
+      title: "View Schema",
+      arguments: [this.resource],
+    };
   }
 }
 

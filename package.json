@@ -837,17 +837,17 @@
         },
         {
           "command": "confluent.schemas.evolve",
-          "when": "view == confluent-schemas  && viewItem =~ /.*evolvable.*schema$/",
+          "when": "view == confluent-schemas && viewItem =~ /.*evolvable.*schema$/",
           "group": "inline@2"
+        },
+        {
+          "command": "confluent.schemas.upload",
+          "group": "navigation@2",
+          "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/"
         },
         {
           "command": "confluent.schemaViewer.viewLatestLocally",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
-          "group": "inline@1"
-        },
-        {
-          "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "inline@1"
         },
         {
