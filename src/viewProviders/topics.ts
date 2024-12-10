@@ -142,6 +142,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
             },
           );
           await this.updateTreeViewDescription();
+          this.refresh();
         }
       },
     );

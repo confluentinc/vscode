@@ -142,6 +142,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
             },
           );
           await this.updateTreeViewDescription();
+          this.refresh();
         }
       },
     );
