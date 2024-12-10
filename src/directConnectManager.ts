@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { Disposable, SecretStorageChangeEvent, window } from "vscode";
+import { Disposable, ProgressLocation, SecretStorageChangeEvent, window } from "vscode";
 import {
   Connection,
   ConnectionsList,
@@ -205,7 +205,15 @@ export class DirectConnectionManager {
     try {
       connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
       const connectionId = connection.spec.id as ConnectionId;
-      await waitForConnectionToBeUsable(connectionId);
+      await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          title: `Waiting for "${connection.spec.name}" to be usable...`,
+        },
+        async () => {
+          await waitForConnectionToBeUsable(connectionId);
+        },
+      );
     } catch (error) {
       // logging happens in the above call
       if (error instanceof ResponseError) {
