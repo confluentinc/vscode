@@ -12,11 +12,7 @@ import {
   RequestResponseMessageTypes,
   RequestResponseTypeMap,
 } from "../ws/messageTypes";
-import {
-  WebsocketTransportMessage,
-  decodeMessageFromWS,
-  encodeMessageForWS,
-} from "../ws/transportTypes";
+
 import { SIDECAR_PORT } from "./constants";
 
 const logger = new Logger("websocketManager");
@@ -108,8 +104,7 @@ export class WebsocketManager {
         // Deserialize from JSON and deliver the message to the message router.
         try {
           // Deserialize the message from our possible gzipped websocket transport encoding.
-          const transportEncodedMessage = JSON.parse(data.toString()) as WebsocketTransportMessage;
-          const message = decodeMessageFromWS(transportEncodedMessage);
+          const message = JSON.parse(data.toString()) as Message<any>;
 
           const headers: MessageHeader = message.headers;
           const messageType: MessageType = message.headers.message_type;
@@ -149,10 +144,7 @@ export class WebsocketManager {
   ): void {
     websocket = websocket || this.websocket || undefined;
     if (websocket) {
-      // Actual message sent over the websocket is encoded for transport, including
-      // possibly gzipping the original message JSON if it's large.
-      const transportEncodedMessage = encodeMessageForWS(message);
-      const payload = JSON.stringify(transportEncodedMessage);
+      const payload = JSON.stringify(message);
 
       if (payload.length > 5 * 1024 * 1024) {
         logger.error(
@@ -160,7 +152,7 @@ export class WebsocketManager {
         );
         throw new Error("Payload too large");
       }
-      logger.debug(`Sending ${payload.length} byte message ${transportEncodedMessage.encoding}`);
+      logger.debug(`Sending ${payload.length} byte message`);
       websocket.send(payload);
     } else {
       logger.error("Websocket not provided/assigned, cannot send message");
