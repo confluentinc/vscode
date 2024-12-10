@@ -21,7 +21,6 @@ import {
   DirectConnectionsById,
   getResourceManager,
 } from "./storage/resourceManager";
-import { FormConnectionType } from "./webview/direct-connect-form";
 
 const fakeConnectionsList: ConnectionsList = {
   api_version: "v1",
@@ -40,8 +39,6 @@ const PLAIN_LOCAL_KAFKA_SR_SPEC: ConnectionSpec = {
     uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
   },
 };
-
-const fakeFormConnectionType: FormConnectionType = "Apache Kafka";
 
 describe("DirectConnectionManager behavior", () => {
   let sandbox: sinon.SinonSandbox;
@@ -95,7 +92,7 @@ describe("DirectConnectionManager behavior", () => {
     const result = await DirectConnectionManager.getInstance().createConnection(
       testSpec.kafka_cluster,
       testSpec.schema_registry,
-      fakeFormConnectionType,
+      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       testSpec.name,
     );
 
@@ -116,7 +113,7 @@ describe("DirectConnectionManager behavior", () => {
     const result = await DirectConnectionManager.getInstance().createConnection(
       testSpec.kafka_cluster,
       testSpec.schema_registry,
-      fakeFormConnectionType,
+      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       testSpec.name,
     );
 
@@ -139,7 +136,7 @@ describe("DirectConnectionManager behavior", () => {
     const result = await DirectConnectionManager.getInstance().createConnection(
       PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
       PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
-      fakeFormConnectionType,
+      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       PLAIN_LOCAL_KAFKA_SR_SPEC.name,
     );
 
@@ -157,7 +154,7 @@ describe("DirectConnectionManager behavior", () => {
     const result = await DirectConnectionManager.getInstance().createConnection(
       PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
       PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
-      fakeFormConnectionType,
+      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       PLAIN_LOCAL_KAFKA_SR_SPEC.name,
     );
 
