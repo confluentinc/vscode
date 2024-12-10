@@ -56,8 +56,8 @@ export function openDirectConnectionForm(): void {
     const result = await manager.createConnection(
       kafkaConfig,
       schemaRegistryConfig,
-      body["name"],
       body["platform"],
+      body["name"],
     );
     let name = body["name"] || "the connection";
     if (result.success) {

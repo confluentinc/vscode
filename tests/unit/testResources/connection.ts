@@ -8,6 +8,7 @@ import {
 } from "../../../src/constants";
 import { ConnectionId } from "../../../src/models/resource";
 import { SIDECAR_PORT } from "../../../src/sidecar/constants";
+import { CustomConnectionSpec } from "../../../src/storage/resourceManager";
 import { TEST_CCLOUD_ORGANIZATION } from "./organization";
 
 export const TEST_CCLOUD_USER: UserInfo = {
@@ -89,4 +90,11 @@ export const TEST_DIRECT_CONNECTION: Connection = {
       status: "NO_TOKEN",
     },
   },
+};
+
+/** Fake spec augmented with `formConnectionType` for test purposes. */
+export const TEST_DIRECT_CONNECTION_FORM_SPEC: CustomConnectionSpec = {
+  ...TEST_DIRECT_CONNECTION.spec,
+  id: TEST_DIRECT_CONNECTION_ID, // enforced ConnectionId type
+  formConnectionType: "Apache Kafka",
 };
