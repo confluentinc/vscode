@@ -41,7 +41,7 @@ export type AllUriMetadata = Map<string, UriMetadata>;
 export interface CustomConnectionSpec extends ConnectionSpec {
   // enforce `ConnectionId` type over `string`
   id: ConnectionId;
-  /** The option chosen by the user to describe this connection. Similar to {@link ConnectionSpec} */
+  /** The option chosen by the user to describe this connection. Similar to {@link ConnectionType} */
   formConnectionType: FormConnectionType;
 }
 
