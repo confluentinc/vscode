@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { Logger } from "../logging";
-import { getTelemetryLogger } from "../telemetry/telemetryLogger";
+import { UserEvent, logUsage } from "../telemetry/events";
 
 const logger = new Logger("commands");
 
@@ -10,7 +10,7 @@ export function registerCommandWithLogging(
   command: (...args: any[]) => void,
 ): vscode.Disposable {
   const wrappedCommand = async (...args: any[]) => {
-    getTelemetryLogger().logUsage("Command Invoked", { command: commandName });
+    logUsage(UserEvent.CommandInvoked, { command: commandName });
     try {
       await command(...args);
     } catch (e) {

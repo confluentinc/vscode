@@ -38,7 +38,7 @@ import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { LocalResourceLoader } from "./storage/localResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
-import { getTelemetryLogger } from "./telemetry/telemetryLogger";
+import { logUsage, UserEvent } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
@@ -1010,7 +1010,7 @@ class Timer extends Data {
 }
 
 function track(details: object) {
-  getTelemetryLogger().logUsage("Message Viewer Action", details);
+  logUsage(UserEvent.MessageViewerAction, details);
 }
 
 let timer: ReturnType<typeof setTimeout>;

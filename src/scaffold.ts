@@ -9,7 +9,7 @@ import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
-import { getTelemetryLogger } from "./telemetry/telemetryLogger";
+import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/scaffold-form";
@@ -45,7 +45,7 @@ export const scaffoldProjectRequest = async () => {
   }
 
   if (pickedTemplate !== undefined) {
-    getTelemetryLogger().logUsage("Scaffold Template Picked", {
+    logUsage(UserEvent.ScaffoldTemplatePicked, {
       templateName: pickedTemplate.spec.display_name,
     });
   } else {
@@ -91,7 +91,7 @@ export const scaffoldProjectRequest = async () => {
         return null satisfies MessageResponse<"SetOptionValue">;
       }
       case "Submit":
-        getTelemetryLogger().logUsage("Scaffold Form Submitted", {
+        logUsage(UserEvent.ScaffoldFormSubmitted, {
           templateName: pickedTemplate?.spec.display_name,
         });
         if (pickedTemplate) applyTemplate(pickedTemplate, body.data);
@@ -130,7 +130,7 @@ async function applyTemplate(
 
     if (!fileUris || fileUris.length !== 1) {
       // This means the user cancelled @ save dialog. Show a message and return
-      getTelemetryLogger().logUsage("Scaffold Cancelled", {
+      logUsage(UserEvent.ScaffoldCancelled, {
         templateName: pickedTemplate.spec.display_name,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
@@ -140,7 +140,7 @@ async function applyTemplate(
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
     await extractZipContents(arrayBuffer, destination);
-    getTelemetryLogger().logUsage("Scaffold Completed", {
+    logUsage(UserEvent.ScaffoldCompleted, {
       templateName: pickedTemplate.spec.display_name,
     });
     // Notify the user that the project was generated successfully
@@ -155,7 +155,7 @@ async function applyTemplate(
       // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
       // reusing the current one
       const keepsExistingWindow = selection.title === "Open in New Window";
-      getTelemetryLogger().logUsage("Scaffold Folder Opened", {
+      logUsage(UserEvent.ScaffoldFolderOpened, {
         templateName: pickedTemplate.spec.display_name,
         keepsExistingWindow,
       });

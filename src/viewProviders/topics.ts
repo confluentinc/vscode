@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
-import { ccloudConnected, currentKafkaClusterChanged, localKafkaConnected } from "../emitters";
+import {
+  ccloudConnected,
+  currentKafkaClusterChanged,
+  environmentChanged,
+  localKafkaConnected,
+} from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
@@ -127,6 +132,21 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
+    const environmentChangedSub: vscode.Disposable = environmentChanged.event(
+      async (envId: string) => {
+        if (this.kafkaCluster && this.kafkaCluster.environmentId === envId) {
+          logger.debug(
+            "environmentChanged event fired with matching Kafka cluster env ID, updating view description",
+            {
+              envId,
+            },
+          );
+          await this.updateTreeViewDescription();
+          this.refresh();
+        }
+      },
+    );
+
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
       if (this.kafkaCluster && isCCloud(this.kafkaCluster)) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
@@ -161,26 +181,39 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         } else {
           setContextValue(ContextValues.kafkaClusterSelected, true);
           this.kafkaCluster = cluster;
-          // update the tree view description to show the currently-focused Kafka cluster's parent
-          // env name and the Schema Registry ID, then repopulate the tree
-          const loader = ResourceLoader.getInstance(cluster.connectionId);
-          const envs = await loader.getEnvironments();
-          const parentEnv = envs.find((env) => env.id === cluster.environmentId);
-          this.environment = parentEnv ?? null;
-          if (parentEnv) {
-            this.treeView.description = `${parentEnv.name} | ${cluster.name}`;
-          } else {
-            logger.warn("couldn't find parent environment for Kafka cluster", {
-              cluster,
-            });
-            this.treeView.description = cluster.id;
-          }
+          await this.updateTreeViewDescription();
           this.refresh();
         }
       },
     );
 
-    return [ccloudConnectedSub, localKafkaConnectedSub, currentKafkaClusterChangedSub];
+    return [
+      environmentChangedSub,
+      ccloudConnectedSub,
+      localKafkaConnectedSub,
+      currentKafkaClusterChangedSub,
+    ];
+  }
+
+  /** Update the tree view description to show the currently-focused Kafka cluster's parent env
+   * name and the Kafka cluster name. */
+  async updateTreeViewDescription(): Promise<void> {
+    const cluster = this.kafkaCluster;
+    if (!cluster) {
+      return;
+    }
+    const loader = ResourceLoader.getInstance(cluster.connectionId);
+    const envs = await loader.getEnvironments();
+    const parentEnv = envs.find((env) => env.id === cluster.environmentId);
+    this.environment = parentEnv ?? null;
+    if (parentEnv) {
+      this.treeView.description = `${parentEnv.name} | ${cluster.name}`;
+    } else {
+      logger.warn("couldn't find parent environment for Kafka cluster", {
+        cluster,
+      });
+      this.treeView.description = cluster.name;
+    }
   }
 }
 

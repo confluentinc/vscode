@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { UserInfo } from "../clients/sidecar/models/UserInfo";
-import { getTelemetryLogger } from "./telemetryLogger";
+import { logUsage, UserEvent } from "./events";
 
 /** Given authenticated session and/or userInfo, clean the data & send an Identify event to Segment via TelemetryLogger
  * @param eventName - The event name to be sent to Segment as a follow up per docs: "follow the Identify call with a Track event that records what caused the user to be identified"
@@ -15,7 +15,7 @@ export function sendTelemetryIdentifyEvent({
   userInfo,
   session,
 }: {
-  eventName: string;
+  eventName: UserEvent;
   userInfo: UserInfo | undefined;
   session: vscode.AuthenticationSession | undefined;
 }) {
@@ -32,7 +32,7 @@ export function sendTelemetryIdentifyEvent({
     }
   }
   if (id) {
-    getTelemetryLogger().logUsage(eventName, {
+    logUsage(eventName, {
       identify: true,
       user: { id, domain, social_connection },
     });
