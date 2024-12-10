@@ -200,7 +200,7 @@ export class SidecarManager {
       const wantedMessage = `${version_result.version}, need ${currentSidecarVersion}`;
 
       logger.warn(
-        "Trying to shut down existing sidecar process due to version mismatch (${wantedMessage})",
+        `Trying to shut down existing sidecar process due to version mismatch (${wantedMessage})`,
       );
 
       let sidecarPid: number;
