@@ -690,7 +690,7 @@
         },
         {
           "command": "confluent.schemas.upload",
-          "when": "view == confluent-schemas",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
           "group": "navigation@2"
         },
         {
@@ -710,7 +710,7 @@
         },
         {
           "command": "confluent.topics.create",
-          "when": "view == confluent-topics",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "navigation@1"
         },
         {
@@ -841,14 +841,14 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.schemas.evolve",
-          "when": "view == confluent-schemas && viewItem =~ /.*evolvable.*schema$/",
+          "command": "confluent.schemas.upload",
+          "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
         },
         {
-          "command": "confluent.schemas.upload",
-          "group": "navigation@2",
-          "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/"
+          "command": "confluent.schemas.evolve",
+          "when": "view == confluent-schemas && viewItem =~ /.*evolvable.*schema$/",
+          "group": "inline@1"
         },
         {
           "command": "confluent.schemaViewer.viewLatestLocally",
