@@ -4,7 +4,7 @@ import { registerCommandWithLogging } from ".";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
-import { getLanguageTypes, Schema, SchemaDefaults, SchemaType } from "../models/schema";
+import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { ResourceLoader } from "../storage/resourceLoader";
@@ -113,29 +113,13 @@ async function createSchemaCommand() {
     return;
   }
 
-  const schemaDefaults: SchemaDefaults = {
-    connectionId: schemaRegistry.connectionId,
-    schemaRegistryId: schemaRegistry.id,
-    environmentId: schemaRegistry.environmentId,
-    type: chosenSchemaType,
-    subject: undefined,
-  };
-
-  // open new empty untitled document with the defaults encoded in the query string
-  const uri = vscode.Uri.from({
-    scheme: "untitled",
-    query: encodeURIComponent(JSON.stringify(schemaDefaults)),
-    path: `schema`,
+  const document = await vscode.workspace.openTextDocument({
+    language: chosenSchemaType,
   });
-  await vscode.workspace.openTextDocument(uri);
 
   // set the language mode based on the schema type
-  const editor = await vscode.window.showTextDocument(uri, { preview: false });
-  await setEditorLanguageForSchema(editor, schemaDefaults);
-
-  logger.info(
-    `Opened editor for new schema of type ${chosenSchemaType}, uri ${uri.toString(true)}`,
-  );
+  const editor = await vscode.window.showTextDocument(document.uri, { preview: false });
+  await setEditorLanguageForSchema(editor, chosenSchemaType);
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */
@@ -243,7 +227,7 @@ async function evolveSchemaCommand(schema: Schema) {
   const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
 
   // Finally, set the language of the editor based on the schema type.
-  await setEditorLanguageForSchema(editor, schema);
+  await setEditorLanguageForSchema(editor, schema.type);
 
   // The user can edit, then either save to disk or to use the 'cloud upload' button
   // to upload to the schema registry. Because of the query string in the URI,
@@ -319,7 +303,7 @@ async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEdit
   const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
   const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
 
-  await setEditorLanguageForSchema(textDoc, schema);
+  await setEditorLanguageForSchema(textDoc, schema.type);
 
   return textDoc;
 }
@@ -328,24 +312,24 @@ async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEdit
  * Possibly set the language of the editor's document based on the schema.
  * Depends on what languages the user has installed.
  */
-async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, schema: SchemaDefaults) {
+async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: SchemaType) {
   const installedLanguages = await vscode.languages.getLanguages();
 
-  const languageTypes = getLanguageTypes(schema.type);
+  const languageTypes = getLanguageTypes(type);
 
   for (const language of languageTypes) {
     if (installedLanguages.indexOf(language) !== -1) {
       vscode.languages.setTextDocumentLanguage(textDoc.document, language);
-      logger.info(`Set document language to ${language} for schema ${schema.subject}`);
+      logger.info(`Set document language to ${language}`);
       return;
     } else {
-      logger.warn(`Language ${language} not installed for schema ${schema.subject}`);
+      logger.warn(`Language ${language} not installed type ${type}`);
     }
   }
 
   const preferredLanguage = languageTypes[0];
   vscode.window.showWarningMessage(
-    `Could not find a matching language for schema ${schema.subject}. ` +
+    `Could not find a matching language for ${type}. ` +
       `Perhaps install a language extension for ${preferredLanguage}?`,
   );
 

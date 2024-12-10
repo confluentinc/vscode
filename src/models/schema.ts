@@ -2,11 +2,8 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import { Logger } from "../logging";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
 import { ConnectionId, IResourceBase, isCCloud } from "./resource";
-
-const logger = new Logger("models.schema");
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -30,26 +27,9 @@ export function getLanguageTypes(schemaType: SchemaType): string[] {
   return languageTypes[schemaType];
 }
 
-/**
- * Subset of a schema desired to be encoded into a URI query string between various create / evolve
- * schema commands and the eventual upload gesture
- */
-export interface SchemaDefaults {
-  // Idenfify the schema registry ...
-  connectionId: string;
-  schemaRegistryId: string;
-  environmentId?: string;
-
-  // schema type
-  type: SchemaType;
-
-  // and the subject -- maybe.
-  subject?: string;
-}
-
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
-export class Schema extends Data implements IResourceBase, SchemaDefaults {
+export class Schema extends Data implements IResourceBase {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
   iconName: IconNames.SCHEMA = IconNames.SCHEMA;
