@@ -73,34 +73,37 @@ class DirectConnectFormViewModel extends ViewModel {
   }
 
   /** Submit all form data to the extension */
-  async handleSubmit(event: Event) {
+  async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     this.success(false);
     this.errorMessage("");
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    if (!data["bootstrap_servers"] && !data["uri"]) {
-      return this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
-    }
-    let clusterConfig: KafkaClusterConfig | undefined = undefined;
-    let schemaConfig: SchemaRegistryConfig | undefined = undefined;
-    if (data["bootstrap_servers"]) {
-      clusterConfig = transformFormDataToKafkaConfig(data);
-    }
-    if (data["uri"]) {
-      schemaConfig = transformFormDataToSchemaRegistryConfig(data);
-    }
-    const result = await post("Submit", {
-      name: data.name,
-      platform: data.platform,
-      clusterConfig,
-      schemaConfig,
-    });
-    this.success(result.success);
-    if (!result.success) {
-      this.errorMessage(result.message ?? "Unknown error occurred");
-    }
+    const submitter = event?.submitter;
+    const dryRun = (submitter as HTMLInputElement)?.value === "Test";
+    console.log("dryrun?", dryRun);
+    // const form = event.target as HTMLFormElement;
+    // const formData = new FormData(form);
+    // const data = Object.fromEntries(formData.entries());
+    // if (!data["bootstrap_servers"] && !data["uri"]) {
+    //   return this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
+    // }
+    // let clusterConfig: KafkaClusterConfig | undefined = undefined;
+    // let schemaConfig: SchemaRegistryConfig | undefined = undefined;
+    // if (data["bootstrap_servers"]) {
+    //   clusterConfig = transformFormDataToKafkaConfig(data);
+    // }
+    // if (data["uri"]) {
+    //   schemaConfig = transformFormDataToSchemaRegistryConfig(data);
+    // }
+    // const result = await post("Submit", {
+    //   name: data.name,
+    //   platform: data.platform,
+    //   clusterConfig,
+    //   schemaConfig,
+    // });
+    // this.success(result.success);
+    // if (!result.success) {
+    //   this.errorMessage(result.message ?? "Unknown error occurred");
+    // }
   }
 }
 
