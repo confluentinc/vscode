@@ -45,7 +45,7 @@ export interface CustomConnectionSpec extends ConnectionSpec {
   formConnectionType: FormConnectionType;
 }
 
-/** Map of connection id to ConnectionSpec; only used for `DIRECT` connections. */
+/** Map of {@link ConnectionId} to {@link CustomConnectionSpec}; only used for `DIRECT` connections. */
 export type DirectConnectionsById = Map<ConnectionId, CustomConnectionSpec>;
 
 /**
