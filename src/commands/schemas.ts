@@ -4,9 +4,10 @@ import { registerCommandWithLogging } from ".";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
-import { Schema } from "../models/schema";
+import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadNewSchema } from "./schemaUpload";
@@ -17,6 +18,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
+    registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
     registerCommandWithLogging("confluent.schemas.evolveSchemaGroup", evolveSchemaGroupCommand),
     registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
@@ -74,6 +76,23 @@ function refreshCommand(item: any) {
 function validateCommand(item: any) {
   logger.info("item", item);
   // TODO: implement this
+}
+
+/** User has gestured to create a new schema from scratch relative to the currently selected schema registry. */
+async function createSchemaCommand() {
+  const chosenSchemaType = await schemaTypeQuickPick();
+  if (!chosenSchemaType) {
+    logger.info("User canceled schema type selection.");
+    return;
+  }
+
+  const document = await vscode.workspace.openTextDocument({
+    language: chosenSchemaType,
+  });
+
+  // set the language mode based on the schema type
+  const editor = await vscode.window.showTextDocument(document.uri, { preview: false });
+  await setEditorLanguageForSchema(editor, chosenSchemaType);
 }
 
 /** Diff the most recent two versions of schemas bound to a subject. */
@@ -181,7 +200,7 @@ async function evolveSchemaCommand(schema: Schema) {
   const editor = await vscode.window.showTextDocument(evolveSchemaUri, { preview: false });
 
   // Finally, set the language of the editor based on the schema type.
-  await setEditorLanguageForSchema(editor, schema);
+  await setEditorLanguageForSchema(editor, schema.type);
 
   // The user can edit, then either save to disk or to use the 'cloud upload' button
   // to upload to the schema registry. Because of the query string in the URI,
@@ -257,7 +276,7 @@ async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEdit
   const uri: vscode.Uri = new SchemaDocumentProvider().resourceToUri(schema, schema.fileName());
   const textDoc = await vscode.window.showTextDocument(uri, { preview: false });
 
-  await setEditorLanguageForSchema(textDoc, schema);
+  await setEditorLanguageForSchema(textDoc, schema.type);
 
   return textDoc;
 }
@@ -266,22 +285,24 @@ async function loadOrCreateSchemaViewer(schema: Schema): Promise<vscode.TextEdit
  * Possibly set the language of the editor's document based on the schema.
  * Depends on what languages the user has installed.
  */
-async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, schema: Schema) {
+async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: SchemaType) {
   const installedLanguages = await vscode.languages.getLanguages();
 
-  for (const language of schema.languageTypes()) {
+  const languageTypes = getLanguageTypes(type);
+
+  for (const language of languageTypes) {
     if (installedLanguages.indexOf(language) !== -1) {
       vscode.languages.setTextDocumentLanguage(textDoc.document, language);
-      logger.info(`Set document language to ${language} for schema ${schema.subject}`);
+      logger.info(`Set document language to ${language}`);
       return;
     } else {
-      logger.warn(`Language ${language} not installed for schema ${schema.subject}`);
+      logger.warn(`Language ${language} not installed type ${type}`);
     }
   }
 
-  const preferredLanguage = schema.languageTypes()[0];
+  const preferredLanguage = languageTypes[0];
   vscode.window.showWarningMessage(
-    `Could not find a matching language for schema ${schema.subject}. ` +
+    `Could not find a matching language for ${type}. ` +
       `Perhaps install a language extension for ${preferredLanguage}?`,
   );
 
