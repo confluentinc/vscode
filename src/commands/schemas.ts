@@ -10,7 +10,7 @@ import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { uploadNewSchema } from "./schemaUpload";
+import { uploadSchemaFromFile } from "./schemaUpload";
 
 const logger = new Logger("commands.schemas");
 
@@ -19,7 +19,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
-    registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
+    registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFile),
     registerCommandWithLogging("confluent.schemas.evolveSchemaSubject", evolveSchemaSubjectCommand),
     registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
@@ -301,9 +301,9 @@ async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: Sche
   }
 
   const preferredLanguage = languageTypes[0];
+  const marketplaceUrl = `https://marketplace.visualstudio.com/search?term=${preferredLanguage}&target=VSCode&category=All%20categories&sortBy=Relevance`;
   vscode.window.showWarningMessage(
-    `Could not find a matching language for ${type}. ` +
-      `Perhaps install a language extension for ${preferredLanguage}?`,
+    `Could not find a matching editor language for "${type}". Try again after installing [an extension that supports "${preferredLanguage}"](${marketplaceUrl}).`,
   );
 
   logger.warn("Could not find a matching language for schema ${schema.subject}");
