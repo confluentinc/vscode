@@ -20,7 +20,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
-    registerCommandWithLogging("confluent.schemas.evolveSchemaGroup", evolveSchemaGroupCommand),
+    registerCommandWithLogging("confluent.schemas.evolveSchemaSubject", evolveSchemaSubjectCommand),
     registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
     registerCommandWithLogging(
@@ -209,14 +209,14 @@ async function evolveSchemaCommand(schema: Schema) {
 }
 
 /** Drop into evolving the latest version of the schema in the subject group. */
-async function evolveSchemaGroupCommand(schemaGroup: ContainerTreeItem<Schema>) {
+async function evolveSchemaSubjectCommand(schemaGroup: ContainerTreeItem<Schema>) {
   if (!(schemaGroup instanceof ContainerTreeItem)) {
-    logger.error("evolveSchemaGroupCommand called with invalid argument type", schemaGroup);
+    logger.error("evolveSchemaSubjectCommand called with invalid argument type", schemaGroup);
     return;
   }
 
   if (schemaGroup.children.length === 0) {
-    logger.error("evolveSchemaGroupCommand called with no schemas", schemaGroup);
+    logger.error("evolveSchemaSubjectCommand called with no schemas", schemaGroup);
     return;
   }
 
