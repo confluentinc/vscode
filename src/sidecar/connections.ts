@@ -190,9 +190,10 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
 
   const currentLocalConnection: Connection | null = await getLocalConnection();
   // inform sidecar if the spec has changed (whether this is a new spec or if we're changing configs)
-  if (JSON.stringify(spec) !== JSON.stringify(currentLocalConnection?.spec)) {
-    await deleteLocalConnection();
+  if (!currentLocalConnection) {
     await tryToCreateConnection(spec);
+  } else if (JSON.stringify(spec) !== JSON.stringify(currentLocalConnection?.spec)) {
+    await tryToUpdateConnection(spec);
   }
 }
 
