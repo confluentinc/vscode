@@ -8,10 +8,11 @@ import {
 } from "../clients/schemaRegistryRest";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
+import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
+import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
@@ -25,34 +26,40 @@ const logger = new Logger("commands.schemaUpload");
  */
 
 /**
- * Command backing "Upload a new schema".
+ * Command backing "Upload a new schema" action, triggered either from a Schema Registry item in the
+ * Resources view, the nav action in the Schemas view (with a Schema Registry selected), or from a
+ * single schema subject container in the Schemas view.
+ *
+ * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
+ * SR and/or subject and then ask for the file/editor.
  */
-export async function uploadNewSchema(fileUri: vscode.Uri) {
-  if (!fileUri) {
-    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
-    return;
-  }
-
-  let activeEditor = vscode.window.activeTextEditor;
-  if (!activeEditor) {
-    vscode.window.showErrorMessage("Must be invoked from an active editor");
+export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTreeItem<Schema>) {
+  // prompt for the editor/file first
+  const schemaUri: vscode.Uri | undefined = await uriQuickpick([], {
+    "Schema files": [".avsc", ".avro", ".json", ".proto"],
+  });
+  if (!schemaUri) {
     return;
   }
 
   // If the document has (locally marked) errors, don't proceed.
-  if (await documentHasErrors(activeEditor)) {
+  if (await documentHasErrors(schemaUri)) {
     logger.error("Document has errors, aborting schema upload");
     return;
   }
 
-  // If there's a query string in the URL, it should be the encoding of a Schema
-  // object. Parse it into a Schema object if possible to use it for default
-  // values
-  const defaults: Schema | undefined = fileUri.query ? schemaFromString(fileUri.query) : undefined;
+  const fileExt: string | undefined = schemaUri.path.split(".").pop();
+  if (!fileExt) {
+    vscode.window.showErrorMessage("Could not determine file extension");
+    return;
+  }
+
+  const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
+  const content = Buffer.from(contentArray).toString("utf-8");
 
   // What kind of schema is this? We must tell the schema registry.
   const schemaType: SchemaType | undefined = await determineSchemaType(
-    fileUri,
+    schemaUri,
     activeEditor.document.languageId,
   );
   if (!schemaType) {
@@ -61,22 +68,44 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
     return;
   }
 
-  // Ask the user to choose a schema registry to upload to.
-  const registry = await schemaRegistryQuickPick(defaults?.schemaRegistryId);
+  let registry: SchemaRegistry | undefined;
+  let subject: string | undefined;
+  if (!item) {
+    // the only way we get here is if the user clicked the action in the Schemas view nav area, so
+    // we need to get the focused schema registry
+    const schemaViewProvider = getSchemasViewProvider();
+    registry = schemaViewProvider.schemaRegistry!;
+  } else if (item instanceof SchemaRegistry) {
+    registry = item;
+    // prompt for subject
+  } else if (item instanceof ContainerTreeItem) {
+    // starting from a schema subject container in the Schemas view
+    const sampleSchema: Schema = item.children[0];
+    const loader = ResourceLoader.getInstance(sampleSchema.connectionId);
+    registry = await loader.getSchemaRegistryForEnvironmentId(sampleSchema.connectionId);
+    subject = item.label as string;
+  }
+
   if (!registry) {
-    logger.info("No registry chosen, aborting schema upload");
+    logger.error("Could not determine schema registry");
     return;
   }
 
-  // Ask the user to choose a subject to bind the schema to.
-  const subject = await chooseSubject(registry, schemaType, defaults?.subject);
+  subject = subject ? subject : await chooseSubject(registry, schemaType);
   if (!subject) {
-    logger.info("No subject chosen, aborting schema upload");
-    vscode.window.showInformationMessage("Schema upload aborted.");
+    logger.error("Could not determine schema subject");
     return;
   }
 
-  // OK, all the user input is in. Let's upload the schema.
+  await uploadSchema(registry, subject, schemaType, content);
+}
+
+async function uploadSchema(
+  registry: SchemaRegistry,
+  subject: string,
+  schemaType: SchemaType,
+  content: string,
+) {
   const sidecar = await getSidecar();
   // Has the route for registering a schema under a subject.
   const schemaSubjectsApi = sidecar.getSubjectsV1Api(registry.id, registry.connectionId);
@@ -100,13 +129,7 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
     // todo ask if want to normalize schema? They ... probably do?
     const normalize = true;
 
-    maybeNewId = await registerSchema(
-      schemaSubjectsApi,
-      subject,
-      schemaType,
-      activeEditor.document.getText(),
-      normalize,
-    );
+    maybeNewId = await registerSchema(schemaSubjectsApi, subject, schemaType, content, normalize);
 
     logger.info(
       `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
@@ -152,11 +175,9 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
   }
 }
 
-/**
- * Does the document have any self-contained errors? If so, don't proceed with upload.
- */
-async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boolean> {
-  const diagnostics = vscode.languages.getDiagnostics(activeEditor.document.uri);
+/** Does the given URI have any self-contained errors? If so, don't proceed with upload. */
+async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
+  const diagnostics = vscode.languages.getDiagnostics(uri);
   const errorDiagnostics = diagnostics.filter(
     (d) => d.severity === vscode.DiagnosticSeverity.Error,
   );
