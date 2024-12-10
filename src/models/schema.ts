@@ -23,12 +23,33 @@ const extensionMap: { [key in SchemaType]: string } = {
 const languageTypes: { [key in SchemaType]: string[] } = {
   [SchemaType.Avro]: ["avroavsc", "json"],
   [SchemaType.Json]: ["json"],
-  [SchemaType.Protobuf]: ["proto"],
+  [SchemaType.Protobuf]: ["proto3", "proto"],
 };
+
+export function getLanguageTypes(schemaType: SchemaType): string[] {
+  return languageTypes[schemaType];
+}
+
+/**
+ * Subset of a schema desired to be encoded into a URI query string between various create / evolve
+ * schema commands and the eventual upload gesture
+ */
+export interface SchemaDefaults {
+  // Idenfify the schema registry ...
+  connectionId: string;
+  schemaRegistryId: string;
+  environmentId?: string;
+
+  // schema type
+  type: SchemaType;
+
+  // and the subject -- maybe.
+  subject?: string;
+}
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
-export class Schema extends Data implements IResourceBase {
+export class Schema extends Data implements IResourceBase, SchemaDefaults {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
   iconName: IconNames.SCHEMA = IconNames.SCHEMA;
@@ -68,7 +89,7 @@ export class Schema extends Data implements IResourceBase {
    * Used to try to rendezvous on a language type that the user might have installed.
    */
   languageTypes(): string[] {
-    return languageTypes[this.type];
+    return getLanguageTypes(this.type);
   }
 
   /**
