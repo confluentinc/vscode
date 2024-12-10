@@ -35,9 +35,12 @@ const logger = new Logger("commands.schemaUpload");
  */
 export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTreeItem<Schema>) {
   // prompt for the editor/file first
-  const schemaUri: vscode.Uri | undefined = await uriQuickpick([], {
-    "Schema files": [".avsc", ".avro", ".json", ".proto"],
-  });
+  const schemaUri: vscode.Uri | undefined = await uriQuickpick(
+    ["plaintext", "avroavsc", "protobuf", "proto3", "json"],
+    {
+      "Schema files": [".avsc", ".avro", ".json", ".proto"],
+    },
+  );
   if (!schemaUri) {
     return;
   }
