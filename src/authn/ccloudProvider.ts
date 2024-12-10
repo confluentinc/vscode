@@ -13,10 +13,12 @@ import {
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
+  waitForConnectionToBeUsable,
 } from "../sidecar/connections";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
+import { UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
 import { openExternal, pollCCloudConnectionAuth } from "./ccloudPolling";
@@ -150,15 +152,15 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw e;
     }
 
-    const authenticatedConnection = await getCCloudConnection();
+    const authenticatedConnection = await waitForConnectionToBeUsable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
-      throw new Error("Failed to find created connection");
+      throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
     // User logged in successfully so we send an identify event to Segment
     if (authenticatedConnection.status.authentication.user) {
       sendTelemetryIdentifyEvent({
-        eventName: "Signed In",
+        eventName: UserEvent.SignedIn,
         userInfo: authenticatedConnection.status.authentication.user,
         session: undefined,
       });

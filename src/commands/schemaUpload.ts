@@ -27,44 +27,47 @@ const logger = new Logger("commands.schemaUpload");
 /**
  * Command backing "Upload a new schema".
  */
-export async function uploadNewSchema(item: vscode.Uri) {
-  // Get the contents of the active editor
+export async function uploadNewSchema(fileUri: vscode.Uri) {
+  if (!fileUri) {
+    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
+    return;
+  }
+
   let activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
     vscode.window.showErrorMessage("Must be invoked from an active editor");
     return;
   }
-  const schemaContents = activeEditor.document.getText();
 
-  if (!item) {
-    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
-    return;
-  }
-
-  // What kind of schema is this? We must tell the schema registry.
-  let schemaType: SchemaType;
-  try {
-    schemaType = determineSchemaType(item, activeEditor.document.languageId);
-  } catch (e) {
-    vscode.window.showErrorMessage((e as Error).message);
-    return;
-  }
-
-  // If the document has (locally marked) errors, don't proceed with upload.
+  // If the document has (locally marked) errors, don't proceed.
   if (await documentHasErrors(activeEditor)) {
     logger.error("Document has errors, aborting schema upload");
     return;
   }
 
+  // If there's a query string in the URL, it should be the encoding of a Schema
+  // object. Parse it into a Schema object if possible to use it for default
+  // values
+  const defaults: Schema | undefined = fileUri.query ? schemaFromString(fileUri.query) : undefined;
+
+  // What kind of schema is this? We must tell the schema registry.
+  let schemaType: SchemaType;
+  try {
+    schemaType = determineSchemaType(fileUri, activeEditor.document.languageId, defaults?.type);
+  } catch (e) {
+    vscode.window.showErrorMessage((e as Error).message);
+    return;
+  }
+
   // Ask the user to choose a schema registry to upload to.
-  const registry = await schemaRegistryQuickPick();
+  const registry = await schemaRegistryQuickPick(defaults?.schemaRegistryId);
   if (!registry) {
     logger.info("No registry chosen, aborting schema upload");
     return;
   }
 
   // Ask the user to choose a subject to bind the schema to.
-  const subject = await chooseSubject(registry, schemaType);
+  const subject = await chooseSubject(registry, schemaType, defaults?.subject);
   if (!subject) {
     logger.info("No subject chosen, aborting schema upload");
     vscode.window.showInformationMessage("Schema upload aborted.");
@@ -99,7 +102,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
       schemaSubjectsApi,
       subject,
       schemaType,
-      schemaContents,
+      activeEditor.document.getText(),
       normalize,
     );
 
@@ -128,12 +131,12 @@ export async function uploadNewSchema(item: vscode.Uri) {
   const schemaViewProvider = getSchemasViewProvider();
 
   // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
-  const results: [string | undefined, Schema] = await Promise.all([
+  const [viewchoice, newschema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
   ]);
 
-  if (results[0]) {
+  if (viewchoice) {
     // User chose to view the schema in the schema registry.
 
     // Get the schemas view provider to refresh the view on the right registry.
@@ -143,7 +146,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
 
     // get the new schema to pop in the view by getting the treeitem to reveal
     // the schema's item.
-    schemaViewProvider.revealSchema(results[1]);
+    schemaViewProvider.revealSchema(newschema);
   }
 }
 
@@ -180,10 +183,11 @@ async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boole
 async function chooseSubject(
   registry: SchemaRegistry,
   schemaType: SchemaType,
+  defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, schemaType);
+  let subject = await schemaSubjectQuickPick(registry, schemaType, defaultSubject);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.
@@ -312,12 +316,18 @@ export function schemaRegistrationMessage(
 export function determineSchemaType(
   file: vscode.Uri | null,
   languageId: string | null,
+  defaultType: SchemaType | undefined = undefined,
 ): SchemaType {
   if (!file && !languageId) {
     throw new Error("Must call with either a file or document");
   }
 
-  let schemaType: SchemaType | unknown = null;
+  let schemaType: SchemaType | unknown = defaultType;
+
+  // If the schema type was provided in the defaults, use that.
+  if (schemaType) {
+    return schemaType as SchemaType;
+  }
 
   if (languageId) {
     const languageIdToSchemaType = new Map([
@@ -535,4 +545,36 @@ async function updateRegistryCacheAndFindNewSchema(
   }
 
   return schema!;
+}
+
+/**
+ * Construct a Schema object from JSON string.
+ * @returns Schema or undefined if was unable to complete.
+ */
+export function schemaFromString(source: string): Schema | undefined {
+  const query = decodeURIComponent(source);
+  let schemaFromJSON: Schema | undefined;
+
+  try {
+    schemaFromJSON = JSON.parse(query);
+  } catch (e) {
+    // Must not have been a valid JSON object.
+    logger.error("Could not parse JSON from URI query string", e);
+    return undefined;
+  }
+
+  if (!schemaFromJSON) {
+    logger.warn("Could not parse schema object from URI query string", { query });
+  } else {
+    logger.info("Was able to parse object from URI query string", {
+      schemaFromJSON: schemaFromJSON,
+    });
+    try {
+      return Schema.create(schemaFromJSON);
+    } catch (e) {
+      // Must not have been a valid schema object.
+      logger.error("Could not create schema object from parsed JSON", e);
+    }
+    return undefined;
+  }
 }

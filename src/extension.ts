@@ -12,7 +12,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     // debug: true, // enable for local "prod" debugging with dev console
     dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV,
+    environment: process.env.SENTRY_ENV,
     release: process.env.SENTRY_RELEASE,
     tracesSampleRate: 0,
     profilesSampleRate: 0,
@@ -32,9 +32,10 @@ if (process.env.SENTRY_DSN) {
 }
 
 import * as vscode from "vscode";
-import { checkTelemetrySettings } from "./telemetry/telemetry";
+import { checkTelemetrySettings, includeObservabilityContext } from "./telemetry/eventProcessors";
 if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(checkTelemetrySettings);
+  Sentry.addEventProcessor(includeObservabilityContext);
 }
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
@@ -62,6 +63,7 @@ import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_DIRECT_CONNECTIONS,
+  ENABLE_PRODUCE_MESSAGES,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./preferences/constants";
@@ -73,6 +75,7 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
+import { UserEvent, logUsage } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -118,7 +121,7 @@ export async function activate(
 async function _activateExtension(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
-  getTelemetryLogger().logUsage("Extension Activated");
+  logUsage(UserEvent.ExtensionActivated);
 
   // must be done first to allow any other downstream callers to call `getExtensionContext()`
   // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
@@ -214,7 +217,6 @@ async function _activateExtension(
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
-  await directConnectionManager.rehydrateConnections();
 
   // XXX: used for testing; do not remove
   return context;
@@ -222,28 +224,26 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // EXPERIMENTAL: set default value for direct connection enablement
+  // PREVIEW: set default values for enabling the direct connection and message-produce features
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const directConnectionsEnabled = setContextValue(
     ContextValues.directConnectionsEnabled,
     config.get(ENABLE_DIRECT_CONNECTIONS, false),
   );
+  const produceMessagesEnabled = setContextValue(
+    ContextValues.produceMessagesEnabled,
+    config.get(ENABLE_PRODUCE_MESSAGES, false),
+  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
   // constants for easier `when` clause matching in package.json; not updated dynamically
-  const diffResources = setContextValue(ContextValues.READONLY_DIFFABLE_RESOURCES, [
-    "ccloud-schema",
-    "direct-schema",
-    "local-schema",
-  ]);
   const openInCCloudResources = setContextValue(ContextValues.CCLOUD_RESOURCES, [
     "ccloud-environment",
     "ccloud-kafka-cluster",
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
     "ccloud-schema-registry",
-    "ccloud-schema",
   ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
@@ -260,9 +260,6 @@ async function setupContextValues() {
     "local-schema-registry",
     "direct-kafka-cluster",
     "direct-schema-registry",
-    "ccloud-schema",
-    "direct-schema",
-    "local-schema",
   ]);
   const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
     "ccloud-environment",
@@ -281,9 +278,9 @@ async function setupContextValues() {
   ]);
   await Promise.all([
     directConnectionsEnabled,
+    produceMessagesEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
-    diffResources,
     openInCCloudResources,
     viewsWithResources,
     resourcesWithIds,
@@ -350,7 +347,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // Send an Identify event to Segment with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
-      eventName: "Activated With Session",
+      eventName: UserEvent.ActivatedWithSession,
       userInfo: undefined,
       session: cloudSession,
     });

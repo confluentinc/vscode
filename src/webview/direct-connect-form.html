@@ -13,8 +13,8 @@
     <main class="container">
       <h1>Create a new connection</h1>
       <p>
-        Establish a connection to a Kafka Cluster, Schema Registry or both. Close this tab to cancel
-        changes.
+        Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
+        cancel all changes.
       </p>
       <form data-on-submit="this.handleSubmit(event)">
         <div class="radio-container">
@@ -27,7 +27,7 @@
               value="Apache Kafka"
               data-on-change="this.updateValue(event)"
             />
-            <label for="apache-kafka">Apache Kafka</label>
+            <label for="apache-kafka">Apache Kafka®</label>
           </div>
           <div>
             <input
@@ -52,20 +52,9 @@
           <div>
             <input
               type="radio"
-              id="local"
-              name="platform"
-              value="Local"
-              data-on-change="this.updateValue(event)"
-            />
-            <label for="local">Local</label>
-          </div>
-          <div>
-            <input
-              type="radio"
               id="other"
               name="platform"
               value="Other"
-              checked
               required
               data-on-change="this.updateValue(event)"
             />
@@ -84,7 +73,7 @@
         <div class="input-container">
           <div>
             <label for="name" class="label">Connection Name</label>
-            <input class="input" id="name" name="name" type="text" />
+            <input class="input" id="name" name="name" type="text" placeholder="New Connection" />
           </div>
           <span class="description"
             >An easy to remember name to reference this connection in the future</span
@@ -95,11 +84,19 @@
           <div class="input-container">
             <div>
               <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
-              <input class="input" id="bootstrap_servers" name="bootstrap_servers" type="text" />
+              <input
+                class="input"
+                id="bootstrap_servers"
+                name="bootstrap_servers"
+                type="text"
+                placeholder="host:port, host2:port2"
+                data-attr-value="this.kafkaBootstrapServers()"
+                data-on-change="this.updateValue(event)"
+              />
             </div>
             <span class="description"
-              >A comma-separated list of host/port pairs to use for establishing the initial
-              connection</span
+              >One or more host:port pairs to use for establishing the initial connection (use a
+              comma-separated list for more than one server)</span
             >
           </div>
           <div class="radio-container">
@@ -110,8 +107,9 @@
                 id="kafka-auth-none"
                 name="kafka_auth_type"
                 value="None"
-                checked
+                data-attr-required="this.kafkaBootstrapServers() !== ''"
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="kafka-auth-none">None</label>
             </div>
@@ -122,8 +120,9 @@
                 name="kafka_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
-              <label for="kafka-auth-basic">Basic (username & password)</label>
+              <label for="kafka-auth-basic">Username & Password</label>
             </div>
             <div>
               <input
@@ -132,6 +131,7 @@
                 name="kafka_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="kafka-auth-api">API Credentials</label>
             </div>
@@ -168,13 +168,13 @@
             <div>
               <div class="input-container">
                 <div>
-                  <label for="kafka_api_key" class="label">API Key</label>
+                  <label for="kafka_api_key" class="label">Key</label>
                   <input class="input" id="api_key" name="kafka_api_key" type="text" required />
                 </div>
               </div>
               <div class="input-container">
                 <div>
-                  <label for="kafka_api_secret" class="label">API Secret</label>
+                  <label for="kafka_api_secret" class="label">Secret</label>
                   <input
                     class="input"
                     id="api_secret"
@@ -191,7 +191,7 @@
           <legend>Schema Registry</legend>
           <div class="input-container">
             <div>
-              <label for="uri" class="label">Schema Registry URL</label>
+              <label for="uri" class="label">URL</label>
               <input
                 class="input"
                 id="uri"
@@ -199,6 +199,9 @@
                 type="url"
                 pattern="https?://.*"
                 title="URL must begin with http or https"
+                placeholder="https://example.com"
+                data-attr-value="this.schemaUri()"
+                data-on-change="this.updateValue(event)"
               />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
@@ -211,8 +214,9 @@
                 id="schema-auth-none"
                 name="schema_auth_type"
                 value="None"
-                checked
+                data-attr-required="this.schemaUri() !== ''"
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-none">None</label>
             </div>
@@ -223,8 +227,9 @@
                 name="schema_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
+                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
-              <label for="schema-auth-basic">Basic (username & password)</label>
+              <label for="schema-auth-basic">Username & Password</label>
             </div>
             <div>
               <input
@@ -233,6 +238,7 @@
                 name="schema_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-api">API Credentials</label>
             </div>
@@ -269,7 +275,7 @@
             <div>
               <div class="input-container">
                 <div>
-                  <label for="schema_api_key" class="label">API Key</label>
+                  <label for="schema_api_key" class="label">Key</label>
                   <input
                     class="input"
                     id="schema_api_key"
@@ -281,7 +287,7 @@
               </div>
               <div class="input-container">
                 <div>
-                  <label for="schema_api_secret" class="label">API Secret</label>
+                  <label for="schema_api_secret" class="label">Secret</label>
                   <input
                     class="input"
                     id="schema_api_secret"

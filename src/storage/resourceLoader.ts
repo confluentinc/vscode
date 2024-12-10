@@ -235,6 +235,18 @@ export async function fetchSchemas(
     schemaRegistry.connectionId,
   );
   const schemaListRespData: ResponseSchema[] = await client.getSchemas();
+
+  // Keep track of the highest version number for each subject to determine if a schema is the latest version,
+  // needed for context value setting (only the most recent versions are evolvable, see package.json).
+  const subjectToHighestVersion: Map<string, number> = new Map();
+  for (const schema of schemaListRespData) {
+    const subject = schema.subject!;
+    const version = schema.version!;
+    if (!subjectToHighestVersion.has(subject) || version > subjectToHighestVersion.get(subject)!) {
+      subjectToHighestVersion.set(subject, version);
+    }
+  }
+
   const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
     // AVRO doesn't show up in `schemaType`
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
@@ -249,6 +261,7 @@ export async function fetchSchemas(
       type: schemaType,
       schemaRegistryId: schemaRegistry.id,
       environmentId: schemaRegistry.environmentId,
+      isHighestVersion: schema.version === subjectToHighestVersion.get(schema.subject!),
     });
   });
   return schemas;

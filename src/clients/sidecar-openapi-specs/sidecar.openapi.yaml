@@ -94,6 +94,15 @@ paths:
     post:
       tags:
         - Connections Resource
+      parameters:
+        - name: dry_run
+          in: query
+          schema:
+            description:
+              Whether to validate the connection spec and determine the connection status without
+              creating the connection
+            default: false
+            type: boolean
       requestBody:
         content:
           application/json:

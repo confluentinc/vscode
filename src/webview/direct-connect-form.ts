@@ -1,8 +1,8 @@
 import { ObservableScope } from "inertial";
+import { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
@@ -14,23 +14,41 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 class DirectConnectFormViewModel extends ViewModel {
-  errorMessage = this.signal("");
-  success = this.signal(false);
-  platformType = this.signal<PlatformOptions>("Other");
+  /** Form Input Values */
+  platformType = this.signal<FormConnectionType>("Apache Kafka");
   kafkaAuthType = this.signal<SupportedAuthTypes>("None");
   schemaAuthType = this.signal<SupportedAuthTypes>("None");
+  schemaUri = this.signal("");
+  kafkaBootstrapServers = this.signal("");
+
+  /** Form State */
+  errorMessage = this.signal("");
+  success = this.signal(false);
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     switch (input.name) {
       case "platform":
-        this.platformType(input.value as PlatformOptions);
+        this.platformType(input.value as FormConnectionType);
+        if (input.value === "Confluent Cloud") {
+          this.kafkaAuthType("API");
+          this.schemaAuthType("API");
+        } else {
+          this.kafkaAuthType("None");
+          this.schemaAuthType("None");
+        }
         break;
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         break;
       case "schema_auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
+        break;
+      case "uri":
+        this.schemaUri(input.value);
+        break;
+      case "bootstrap_servers":
+        this.kafkaBootstrapServers(input.value);
         break;
       default:
         console.warn(`Unhandled key: ${input.name}`);
@@ -97,11 +115,11 @@ export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
 
-type PlatformOptions =
+/** Similar to {@link ConnectionType}, but only used for telemetry purposes. */
+export type FormConnectionType =
   | "Apache Kafka"
   | "Confluent Cloud"
   | "Confluent Platform"
-  | "Local"
   | "Other";
 
 type SupportedAuthTypes = "None" | "Basic" | "API";

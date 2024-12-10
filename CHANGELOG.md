@@ -9,6 +9,14 @@ All notable changes to this extension will be documented in this file.
 - Ability to update basic topic configuration fields via webform
 - Local Resources: the Docker image tag used to start a Schema Registry container is now
   configurable via the extension settings.
+- Can now "evolve" the highest versioned schema within a subject group viewed within the schema
+  registry view. Use the '+' icon next to either the subject group entry or the highest versioned
+  schema row within the group to download the schema into a new editor. Add or remove columns, etc.,
+  then use the existing 'cloud upload' icon in the editor's top bar to start the process to submit
+  it back to the schema registry.
+- "Preview" settings to opt into upcoming functionality as it's being developed:
+  - Connecting directly to Kafka clusters and/or Schema Registries.
+  - Producing messages to a Kafka topic.
 
 ### Fixed
 
@@ -17,8 +25,11 @@ All notable changes to this extension will be documented in this file.
   [issue #642](https://github.com/confluentinc/vscode/issues/642).
 - Fix possible race conditions in workspace state cache management when needing to read and mutate
   existing workspace state keys, [issue #534](https://github.com/confluentinc/vscode/issues/534).
-- Improve auto-refreshing the schema view controller when uploading a schema to the viewed registry, 
+- Improve auto-refreshing the schema view controller when uploading a schema to the viewed registry,
   [issue #640](https://github.com/confluentinc/vscode/issues/640).
+- Toggling the collapsible states of the top-level items in the Resources view and refreshing the
+  view will no longer reset those collapsible states.
+  [issue #681](https://github.com/confluentinc/vscode/issues/681)
 
 ## 0.21.2
 

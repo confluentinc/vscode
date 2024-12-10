@@ -1,12 +1,13 @@
 import * as Sentry from "@sentry/node";
-import { randomUUID } from "crypto";
 import * as vscode from "vscode";
-import { IconNames } from "../constants";
+import { EXTENSION_VERSION, IconNames } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
+import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
+  directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
 } from "../emitters";
@@ -72,8 +73,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
+  /** Did the user use the 'refresh' button / command to force a deep refresh of the tree? */
   private forceDeepRefresh: boolean = false;
+  /** Have we informed the sidecar of any direct connections saved in secret storage? */
+  private rehydratedDirectConnections: boolean = false;
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -120,6 +123,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
     const resourceItems: ResourceViewProviderData[] = [];
 
+    // if this is the first time we're loading the Resources view items, ensure we've told the sidecar
+    // about any direct connections before the GraphQL queries kick off
+    if (!this.rehydratedDirectConnections) {
+      await DirectConnectionManager.getInstance().rehydrateConnections();
+      this.rehydratedDirectConnections = true;
+    }
+
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
@@ -133,6 +143,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         if (element.kafkaClusters)
           children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
         if (element.schemaRegistry) children.push(element.schemaRegistry);
+        logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
         return children;
       }
     } else {
@@ -184,6 +195,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.refresh(true);
     });
 
+    const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
+      logger.debug("directConnectionsChanged event fired");
+      this.refresh();
+    });
+
     const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
       (connected: boolean) => {
         logger.debug("localKafkaConnected event fired", { connected });
@@ -201,6 +217,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
+      directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
     ];
@@ -233,8 +250,7 @@ export async function loadCCloudResources(
     [],
   );
   cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-  // XXX: if we don't adjust the ID here, we'll see weird collapsibleState behavior
-  cloudContainerItem.id = randomUUID();
+  cloudContainerItem.id = `ccloud-${EXTENSION_VERSION}`;
 
   if (hasCCloudAuthSession()) {
     const loader = CCloudResourceLoader.getInstance();
@@ -243,7 +259,9 @@ export async function loadCCloudResources(
 
     const ccloudEnvironments: CCloudEnvironment[] = [];
     try {
-      ccloudEnvironments.push(...(await loader.getEnvironments(forceDeepRefresh)));
+      const ccloudEnvs = await loader.getEnvironments(forceDeepRefresh);
+      logger.debug(`got ${ccloudEnvs.length} CCloud environment(s) from loader`);
+      ccloudEnvironments.push(...ccloudEnvs);
     } catch (e) {
       // if we fail to load CCloud environments, we need to get as much information as possible as to
       // what went wrong since the user is effectively locked out of the CCloud resources for this org
@@ -267,6 +285,8 @@ export async function loadCCloudResources(
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
     cloudContainerItem.children = ccloudEnvironments;
+    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+    cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
   } else {
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
@@ -293,8 +313,7 @@ export async function loadLocalResources(): Promise<
   localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
 
   const notConnectedId = "local-container";
-  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  localContainerItem.id = randomUUID();
+  localContainerItem.id = `local-${EXTENSION_VERSION}`;
   // enable the "Launch Local Resources" action
   localContainerItem.contextValue = notConnectedId;
 
@@ -309,6 +328,7 @@ export async function loadLocalResources(): Promise<
   await updateLocalConnection();
 
   const localEnvs: LocalEnvironment[] = await getLocalResources();
+  logger.debug(`got ${localEnvs.length} local environment(s) from GQL query`);
   if (localEnvs.length > 0) {
     const connectedId = "local-container-connected";
     // enable the "Stop Local Resources" action
@@ -327,6 +347,8 @@ export async function loadLocalResources(): Promise<
       setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
       setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
     ]);
+    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+    localContainerItem.id = `local-connected-${EXTENSION_VERSION}`;
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
     // override the default "child item count" description
     localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
@@ -346,9 +368,7 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
     [],
   );
   directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
-
-  // XXX: if we don't adjust the ID, we'll see weird collapsibleState behavior
-  directContainerItem.id = randomUUID();
+  directContainerItem.id = `direct-${EXTENSION_VERSION}`;
 
   // top-level container before each direct "environment" (connection)
   directContainerItem.contextValue = "resources-direct-container";
@@ -356,10 +376,14 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
 
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
-  directContainerItem.children = await getDirectResources();
+  const directEnvs = await getDirectResources();
+  logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
+  directContainerItem.children = directEnvs;
   if (directContainerItem.children.length > 0) {
-    directContainerItem.description = `(${directContainerItem.children.length})`;
+    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+    directContainerItem.id = `direct-connected-${EXTENSION_VERSION}`;
     directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+    directContainerItem.description = `(${directContainerItem.children.length})`;
   }
 
   return directContainerItem;
