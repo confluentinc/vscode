@@ -684,19 +684,24 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.schemas.upload",
-          "group": "navigation@1",
-          "when": "view == confluent-schemas"
+          "command": "confluent.schemas.create",
+          "when": "view == confluent-schemas",
+          "group": "navigation@1"
         },
         {
-          "command": "confluent.resources.schema-registry.select",
+          "command": "confluent.schemas.upload",
           "when": "view == confluent-schemas",
           "group": "navigation@2"
         },
         {
-          "command": "confluent.schemas.refresh",
+          "command": "confluent.resources.schema-registry.select",
           "when": "view == confluent-schemas",
           "group": "navigation@3"
+        },
+        {
+          "command": "confluent.schemas.refresh",
+          "when": "view == confluent-schemas",
+          "group": "navigation@4"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
