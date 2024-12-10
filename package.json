@@ -323,6 +323,12 @@
         "enablement": "false"
       },
       {
+        "command": "confluent.topic.produce.fromFile",
+        "title": "Produce Message to Kafka Topic from schemaless JSON file",
+        "icon": "$(send)",
+        "category": "Confluent: Topic"
+      },
+      {
         "command": "confluent.topics.create",
         "icon": "$(plus)",
         "title": "Create Topic",
@@ -533,6 +539,10 @@
         },
         {
           "command": "confluent.copyResourceName",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topic.produce.fromFile",
           "when": "false"
         },
         {
@@ -748,6 +758,11 @@
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*schema-group/",
           "group": "3_compare"
+        },
+        {
+          "command": "confluent.topic.produce.fromFile",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWrite.*/",
+          "group": "inline@1"
         },
         {
           "command": "confluent.diff.selectForCompare",
