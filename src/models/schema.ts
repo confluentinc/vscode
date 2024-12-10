@@ -2,11 +2,8 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import { Logger } from "../logging";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
 import { ConnectionId, IResourceBase, isCCloud } from "./resource";
-
-const logger = new Logger("models.schema");
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -23,8 +20,12 @@ const extensionMap: { [key in SchemaType]: string } = {
 const languageTypes: { [key in SchemaType]: string[] } = {
   [SchemaType.Avro]: ["avroavsc", "json"],
   [SchemaType.Json]: ["json"],
-  [SchemaType.Protobuf]: ["proto"],
+  [SchemaType.Protobuf]: ["proto3", "proto"],
 };
+
+export function getLanguageTypes(schemaType: SchemaType): string[] {
+  return languageTypes[schemaType];
+}
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
@@ -68,7 +69,7 @@ export class Schema extends Data implements IResourceBase {
    * Used to try to rendezvous on a language type that the user might have installed.
    */
   languageTypes(): string[] {
-    return languageTypes[this.type];
+    return getLanguageTypes(this.type);
   }
 
   /**

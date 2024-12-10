@@ -17,6 +17,7 @@ All notable changes to this extension will be documented in this file.
 - "Preview" settings to opt into upcoming functionality as it's being developed:
   - Connecting directly to Kafka clusters and/or Schema Registries.
   - Producing messages to a Kafka topic.
+- "Create new schema" invitation button from the empty state of a schema registry.
 
 ### Fixed
 
