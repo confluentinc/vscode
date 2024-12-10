@@ -169,6 +169,10 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
 }
 
 async function produceMessageFromFile(topic: KafkaTopic) {
+  if (!topic) {
+    vscode.window.showErrorMessage("No topic selected.");
+    return;
+  }
   const options: vscode.OpenDialogOptions = {
     canSelectMany: false,
     openLabel: "Select JSON file",
@@ -181,10 +185,6 @@ async function produceMessageFromFile(topic: KafkaTopic) {
   if (fileUri && fileUri[0]) {
     const filePath = fileUri[0].fsPath;
     const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-
-    if (!topic) {
-      vscode.window.showErrorMessage("No topic selected.");
-    }
 
     if (!message.key || !message.value) {
       vscode.window.showErrorMessage(`Message must have a key and a value.`);
