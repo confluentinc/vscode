@@ -7,6 +7,7 @@ import { ContainerTreeItem } from "../models/main";
 import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadNewSchema } from "./schemaUpload";
@@ -33,27 +34,6 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       diffLatestSchemasCommand,
     ),
   ];
-}
-
-async function schemaTypeQuickPick(): Promise<SchemaType | undefined> {
-  const schemaTypes = Object.values(SchemaType);
-  const chosenType = await vscode.window.showQuickPick(schemaTypes, {
-    placeHolder: "Choose a schema type",
-  });
-
-  if (!chosenType) {
-    return undefined;
-  }
-
-  // chosenType is a string, but we want to return a SchemaType. And it is a string
-  // that will have been titlecased by the quick pick ("Avro", etc.).
-
-  // find the best match
-  for (const schemaType of schemaTypes) {
-    if (schemaType.toLowerCase() === chosenType.toLowerCase()) {
-      return schemaType as SchemaType;
-    }
-  }
 }
 
 /**
