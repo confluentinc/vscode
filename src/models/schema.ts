@@ -206,7 +206,7 @@ export function generateSchemaSubjectGroups(
     }
 
     // set context value identifying this as a schema group
-    contextValueParts.push("schema-group");
+    contextValueParts.push("schema-subject");
 
     // dash-join all parts, assign to context value
     schemaContainerItem.contextValue = contextValueParts.join("-");
