@@ -16,10 +16,23 @@ export async function uriQuickpick(
   ];
 
   const filenameUriMap: Map<string, Uri> = new Map();
-  // filter open editors by languageId if provided, otherwise show all open editors
-  const editors: readonly TextEditor[] = window.visibleTextEditors.filter((editor) =>
-    editorLanguageIds ? editorLanguageIds.includes(editor.document.languageId) : true,
-  );
+
+  const editors: TextEditor[] = [];
+  window.visibleTextEditors.forEach((editor) => {
+    if (editor.document.uri.scheme === "output") {
+      // ignore output channels
+      return;
+    }
+    // filter open editors by languageId if provided, otherwise show all open editors
+    if (
+      editorLanguageIds.length === 0 ||
+      (editorLanguageIds.length > 0 && editorLanguageIds.includes(editor.document.languageId))
+    ) {
+      editors.push(editor);
+      filenameUriMap.set(editor.document.fileName, editor.document.uri);
+    }
+  });
+
   let pickedItem: QuickPickItem | undefined;
   if (editors.length > 0) {
     quickpickItems.push({
@@ -28,7 +41,6 @@ export async function uriQuickpick(
     });
     quickpickItems.push(
       ...editors.map((editor) => {
-        filenameUriMap.set(editor.document.fileName, editor.document.uri);
         return {
           label: editor.document.fileName,
           description: editor.document.languageId,
