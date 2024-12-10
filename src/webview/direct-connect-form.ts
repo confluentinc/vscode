@@ -1,8 +1,8 @@
 import { ObservableScope } from "inertial";
+import { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
@@ -15,7 +15,7 @@ addEventListener("DOMContentLoaded", () => {
 
 class DirectConnectFormViewModel extends ViewModel {
   /** Form Input Values */
-  platformType = this.signal<PlatformOptions>("Apache Kafka");
+  platformType = this.signal<FormConnectionType>("Apache Kafka");
   kafkaAuthType = this.signal<SupportedAuthTypes>("None");
   schemaAuthType = this.signal<SupportedAuthTypes>("None");
   schemaUri = this.signal("");
@@ -29,7 +29,7 @@ class DirectConnectFormViewModel extends ViewModel {
     const input = event.target as HTMLInputElement;
     switch (input.name) {
       case "platform":
-        this.platformType(input.value as PlatformOptions);
+        this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
           this.kafkaAuthType("API");
           this.schemaAuthType("API");
@@ -115,7 +115,12 @@ export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
 
-type PlatformOptions = "Apache Kafka" | "Confluent Cloud" | "Confluent Platform" | "Other";
+/** Similar to {@link ConnectionType}, but only used for telemetry purposes. */
+export type FormConnectionType =
+  | "Apache Kafka"
+  | "Confluent Cloud"
+  | "Confluent Platform"
+  | "Other";
 
 type SupportedAuthTypes = "None" | "Basic" | "API";
 
