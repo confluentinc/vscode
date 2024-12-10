@@ -4,6 +4,7 @@ import { ContextValues, setContextValue } from "../context/values";
 import {
   ccloudConnected,
   currentSchemaRegistryChanged,
+  environmentChanged,
   localSchemaRegistryConnected,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
@@ -131,6 +132,21 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
+    const environmentChangedSub: vscode.Disposable = environmentChanged.event(
+      async (envId: string) => {
+        if (this.schemaRegistry && this.schemaRegistry.environmentId === envId) {
+          logger.debug(
+            "environmentChanged event fired with matching SR env ID, updating view description",
+            {
+              envId,
+            },
+          );
+          await this.updateTreeViewDescription();
+          this.refresh();
+        }
+      },
+    );
+
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
       if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
         logger.debug("ccloudConnected event fired, resetting", { connected });
@@ -156,23 +172,39 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         } else {
           setContextValue(ContextValues.schemaRegistrySelected, true);
           this.schemaRegistry = schemaRegistry;
-          // update the tree view description to show the currently-focused Schema Registry's parent
-          // env name and the Schema Registry ID, then repopulate the tree
-          const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-          const envs = await loader.getEnvironments();
-          const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
-          this.environment = parentEnv ?? null;
-          if (parentEnv) {
-            this.treeView.description = `${parentEnv.name} | ${schemaRegistry.id}`;
-          } else {
-            this.treeView.description = schemaRegistry.id;
-          }
+          await this.updateTreeViewDescription();
           this.refresh();
         }
       },
     );
 
-    return [ccloudConnectedSub, localSchemaRegistryConnectedSub, currentSchemaRegistryChangedSub];
+    return [
+      environmentChangedSub,
+      ccloudConnectedSub,
+      localSchemaRegistryConnectedSub,
+      currentSchemaRegistryChangedSub,
+    ];
+  }
+
+  /** Update the tree view description to show the currently-focused Schema Registry's parent env
+   * name and the Schema Registry ID. */
+  async updateTreeViewDescription(): Promise<void> {
+    const schemaRegistry = this.schemaRegistry;
+    if (!schemaRegistry) {
+      return;
+    }
+    const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
+    const envs = await loader.getEnvironments();
+    const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
+    this.environment = parentEnv ?? null;
+    if (parentEnv) {
+      this.treeView.description = `${parentEnv.name} | ${schemaRegistry.id}`;
+    } else {
+      logger.warn("couldn't find parent environment for Schema Registry", {
+        schemaRegistry,
+      });
+      this.treeView.description = schemaRegistry.id;
+    }
   }
 
   /** Try to reveal this particular schema, if present */

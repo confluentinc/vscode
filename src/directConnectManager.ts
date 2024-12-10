@@ -11,7 +11,7 @@ import {
   SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
-import { directConnectionsChanged } from "./emitters";
+import { directConnectionsChanged, environmentChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -181,6 +181,9 @@ export class DirectConnectionManager {
 
     // update the connection in secret storage (via full replace of the connection by its id)
     await getResourceManager().addDirectConnection(connection.spec);
+    // notify subscribers that the "environment" has changed since direct connections are treated
+    // as environment-specific resources
+    environmentChanged.fire(connection.spec.id!);
     return { success: true, message: JSON.stringify(connection) };
   }
 
