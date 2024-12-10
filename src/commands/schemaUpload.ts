@@ -54,8 +54,20 @@ export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTree
     return;
   }
 
-  const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
-  const content = Buffer.from(contentArray).toString("utf-8");
+  let content: string | undefined;
+  if (schemaUri.scheme === "file") {
+    const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
+    content = Buffer.from(contentArray).toString("utf-8");
+  } else if (schemaUri.scheme === "untitled") {
+    const editor: vscode.TextEditor | undefined = vscode.window.visibleTextEditors.find(
+      (e) => e.document.uri.toString() === schemaUri.toString(),
+    );
+    content = editor?.document.getText();
+  }
+  if (content === undefined) {
+    vscode.window.showErrorMessage("Could not read schema file");
+    return;
+  }
 
   // What kind of schema is this? We must tell the schema registry.
   let schemaType: SchemaType;
