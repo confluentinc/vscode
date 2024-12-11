@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { Disposable } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
@@ -7,8 +6,9 @@ import {
   AccessResponseBody,
   Audience,
   Message,
-  MessageHeader,
+  MessageHeaders,
   MessageType,
+  newMessageHeaders,
   RequestResponseMessageTypes,
   RequestResponseTypeMap,
 } from "../ws/messageTypes";
@@ -29,7 +29,6 @@ export class WebsocketManager {
 
   private websocket: WebSocket | null = null;
   private disposables: Disposable[] = [];
-  private myPid = process.pid;
   private messageRouter = MessageRouter.getInstance();
   private peerWorkspaceCount = 0;
 
@@ -56,19 +55,15 @@ export class WebsocketManager {
       websocket.on("open", () => {
         logger.info("Websocket connected to sidecar, sending authorization.");
 
-        // send authorize message to sidecar
+        // construct access request message to sidecar
         const message: Message<MessageType.ACCESS_REQUEST> = {
-          headers: {
-            originator: `${this.myPid}`,
-            message_id: randomUUID().toString(),
-            message_type: MessageType.ACCESS_REQUEST,
-            audience: Audience.SIDECAR,
-          },
+          headers: newMessageHeaders(MessageType.ACCESS_REQUEST, Audience.SIDECAR),
           body: {
             access_token: access_token,
           },
         };
 
+        // send it and wait for the reply for at most 5s.
         this.sendrecv(message, 5000, websocket)
           .then((accessReply) => {
             if (accessReply.body.authorized) {
@@ -106,7 +101,7 @@ export class WebsocketManager {
           // Deserialize the message from our possible gzipped websocket transport encoding.
           const message = JSON.parse(data.toString()) as Message<any>;
 
-          const headers: MessageHeader = message.headers;
+          const headers: MessageHeaders = message.headers;
           const messageType: MessageType = message.headers.message_type;
           const originator: string = headers.originator;
           logger.debug(
@@ -146,10 +141,8 @@ export class WebsocketManager {
     if (websocket) {
       const payload = JSON.stringify(message);
 
-      if (payload.length > 5 * 1024 * 1024) {
-        logger.error(
-          `Cannot send websocket message, transport encoded payload too large: ${payload.length} bytes`,
-        );
+      if (payload.length > 64 * 1024) {
+        logger.error(`Cannot send websocket message, too large: ${payload.length} bytes`);
         throw new Error("Payload too large");
       }
       logger.debug(`Sending ${payload.length} byte message`);

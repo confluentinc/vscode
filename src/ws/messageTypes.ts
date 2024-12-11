@@ -1,5 +1,6 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
+import { randomUUID } from "crypto";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
 
@@ -43,7 +44,7 @@ export enum Audience {
 }
 
 /** Header structure for websocket messages. */
-export interface MessageHeader {
+export interface MessageHeaders {
   /** Type of message. Dictates what the message body structure should be. */
   message_type: MessageType;
 
@@ -57,9 +58,24 @@ export interface MessageHeader {
   message_id: string;
 }
 
-export interface ReplyMessageHeader extends MessageHeader {
+export interface ReplyMessageHeaders extends MessageHeaders {
   /** Used to correlate responses to requests. Holds message_id value of the message being replied to. */
   response_to_id: string;
+}
+
+/** Construct and return either a MessageHeaders or ReplyMessageHeaders given the message type, audience, and possible response_to_id value. */
+export function newMessageHeaders<T extends MessageType>(
+  message_type: T,
+  audience: Audience,
+  response_to_id?: string,
+): MessageHeaderMap[T] {
+  return {
+    message_type,
+    audience,
+    originator: process.pid.toString(),
+    message_id: randomUUID().toString(),
+    ...(response_to_id ? { response_to_id } : {}),
+  } as MessageHeaderMap[T];
 }
 
 /**
@@ -108,11 +124,11 @@ type MessageBodyMap = {
 
 /** Type mapping of message type -> corresponding headers type. Dictates which messages should have `response_to_id` field.` */
 type MessageHeaderMap = {
-  [MessageType.ACCESS_REQUEST]: MessageHeader;
-  [MessageType.ACCESS_RESPONSE]: ReplyMessageHeader;
-  [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeader;
-  [MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS]: MessageHeader;
-  [MessageType.CCLOUD_KAFKA_TOPICS]: MessageHeader;
+  [MessageType.ACCESS_REQUEST]: MessageHeaders;
+  [MessageType.ACCESS_RESPONSE]: ReplyMessageHeaders;
+  [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
+  [MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS]: MessageHeaders;
+  [MessageType.CCLOUD_KAFKA_TOPICS]: MessageHeaders;
 };
 
 // Subset of message types that are request/response pairs.
