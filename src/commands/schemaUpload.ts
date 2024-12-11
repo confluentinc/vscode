@@ -11,7 +11,7 @@ import { Logger } from "../logging";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
-import { schemaSubjectQuickPick } from "../quickpicks/schemas";
+import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
@@ -51,11 +51,13 @@ export async function uploadNewSchema(fileUri: vscode.Uri) {
   const defaults: Schema | undefined = fileUri.query ? schemaFromString(fileUri.query) : undefined;
 
   // What kind of schema is this? We must tell the schema registry.
-  let schemaType: SchemaType;
-  try {
-    schemaType = determineSchemaType(fileUri, activeEditor.document.languageId, defaults?.type);
-  } catch (e) {
-    vscode.window.showErrorMessage((e as Error).message);
+  const schemaType: SchemaType | undefined = await determineSchemaType(
+    fileUri,
+    activeEditor.document.languageId,
+  );
+  if (!schemaType) {
+    // the only way we get here is if the user bailed on the schema type quickpick after we failed
+    // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
     return;
   }
 
@@ -311,51 +313,67 @@ export function schemaRegistrationMessage(
 }
 
 /**
- * Given a file and / or a language id, determine the schema type of the file.
+ * General map for associating Avro and Protobuf to their associated {@link SchemaType}s based on
+ * either file extension or language ID.
+ *
+ * This does not include `json` because it may be used when editing an Avro schema without an Avro
+ * language extension installed.
  */
-export function determineSchemaType(
-  file: vscode.Uri | null,
-  languageId: string | null,
-  defaultType: SchemaType | undefined = undefined,
-): SchemaType {
-  if (!file && !languageId) {
-    throw new Error("Must call with either a file or document");
-  }
+export const AVRO_PROTOBUF_SCHEMA_TYPE_MAP = new Map([
+  // language IDs
+  ["avroavsc", SchemaType.Avro],
+  ["proto", SchemaType.Protobuf],
+  ["proto3", SchemaType.Protobuf],
+  // file extensions
+  ["avsc", SchemaType.Avro],
+  ["proto", SchemaType.Protobuf],
+]);
 
-  let schemaType: SchemaType | unknown = defaultType;
+/**
+ * Given a file/editor {@link vscode.Uri Uri}, determine the {@link SchemaType}.
+ *
+ * If a `languageId` is passed, it will be used if we can't determine a schema type from the Uri.
+ * If we still can't determine the schema type, we'll show a quickpick to the user so they can choose.
+ */
+export async function determineSchemaType(
+  uri: vscode.Uri,
+  languageId?: string,
+): Promise<SchemaType | undefined> {
+  let schemaType: SchemaType | undefined;
 
-  // If the schema type was provided in the defaults, use that.
-  if (schemaType) {
-    return schemaType as SchemaType;
-  }
-
-  if (languageId) {
-    const languageIdToSchemaType = new Map([
-      ["avroavsc", SchemaType.Avro],
-      ["proto", SchemaType.Protobuf],
-      ["json", SchemaType.Json],
-    ]);
-    schemaType = languageIdToSchemaType.get(languageId);
-  }
-
-  if (!schemaType && file) {
-    // extract the file extension from file.path
-    const ext = file.path.split(".").pop();
-    if (ext) {
-      const extensionToSchemaType = new Map([
-        ["avsc", SchemaType.Avro],
-        ["proto", SchemaType.Protobuf],
-        ["json", SchemaType.Json],
-      ]);
-      schemaType = extensionToSchemaType.get(ext);
+  switch (uri.scheme) {
+    case "file": {
+      // extract the file extension from file.path
+      const ext = uri.path.split(".").pop();
+      if (ext) {
+        schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(ext);
+      }
+      break;
+    }
+    case "untitled": {
+      // look up the editor belonging to the Uri
+      const editor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.toString() === uri.toString(),
+      );
+      if (editor) {
+        // only match against Avro/Protobuf, if available
+        schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(editor.document.languageId);
+      }
+      break;
     }
   }
 
-  if (!schemaType) {
-    throw new Error("Could not determine schema type from file or document");
+  if (languageId && !schemaType) {
+    // fall back on any language ID, if provided
+    schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(languageId);
   }
 
-  return schemaType as SchemaType;
+  logger.debug("schemaType before quickpick", { schemaType });
+  if (!schemaType) {
+    // can't determine schema type from file/editor (or language ID, if passed), let the user pick
+    return await schemaTypeQuickPick();
+  }
+  return schemaType;
 }
 
 /**
