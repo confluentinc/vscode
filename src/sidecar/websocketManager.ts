@@ -51,7 +51,7 @@ export class WebsocketManager {
 
       logger.info("Setting up websocket to sidecar");
 
-      const websocket = new WebSocket(`ws://localhost:${SIDECAR_PORT}/pubsub`);
+      const websocket = new WebSocket(`ws://localhost:${SIDECAR_PORT}/ws`);
 
       websocket.on("open", () => {
         logger.info("Websocket connected to sidecar, sending authorization.");
