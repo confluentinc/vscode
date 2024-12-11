@@ -368,7 +368,7 @@ export async function determineSchemaType(
     schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(languageId);
   }
 
-  logger.info("schemaType before quickpick", { schemaType });
+  logger.debug("schemaType before quickpick", { schemaType });
   if (!schemaType) {
     // can't determine schema type from file/editor (or language ID, if passed), let the user pick
     return await schemaTypeQuickPick();
