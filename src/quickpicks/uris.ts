@@ -6,7 +6,7 @@ export async function uriQuickpick(
   editorLanguageIds: string[] = [],
   fileFilters: { [name: string]: string[] } = {},
 ): Promise<Uri | undefined> {
-  const selectFileLabel = "Select a file";
+  const selectFileLabel = "Open File...";
   const quickpickItems: QuickPickItem[] = [
     {
       label: selectFileLabel,
