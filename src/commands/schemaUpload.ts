@@ -26,14 +26,26 @@ const logger = new Logger("commands.schemaUpload");
  */
 
 /**
+ * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from an inline action on a schema
+ * subject container in the Schemas view.
+ */
+export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Schema>) {
+  // grab a schema just to get the connectionId to look up the Schema Registry
+  const sampleSchema: Schema = item.children[0];
+  const loader = ResourceLoader.getInstance(sampleSchema.connectionId);
+  const registry = await loader.getSchemaRegistryForEnvironmentId(sampleSchema.connectionId);
+  const subject = item.label as string;
+  await uploadSchemaFromFile(registry, subject);
+}
+
+/**
  * Command backing "Upload a new schema" action, triggered either from a Schema Registry item in the
- * Resources view, the nav action in the Schemas view (with a Schema Registry selected), or from a
- * single schema subject container in the Schemas view.
+ * Resources view or the nav action in the Schemas view (with a Schema Registry selected).
  *
  * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
- * SR and/or subject and then ask for the file/editor.
+ * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
-export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTreeItem<Schema>) {
+export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: string) {
   // prompt for the editor/file first
   const schemaUri: vscode.Uri | undefined = await uriQuickpick(
     ["plaintext", "avroavsc", "protobuf", "proto3", "json"],
@@ -72,35 +84,26 @@ export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTree
     return;
   }
 
-  // What kind of schema is this? We must tell the schema registry.
-  const schemaType: SchemaType | undefined = await determineSchemaType(
-    schemaUri,
-    activeEditor.document.languageId,
+  // check if the Uri belongs to an active editor
+  const activeEditor: vscode.TextEditor | undefined = vscode.window.visibleTextEditors.find(
+    (e) => e.document.uri.toString() === schemaUri.toString(),
   );
+  const languageId: string | undefined = activeEditor?.document.languageId;
+
+  // What kind of schema is this? We must tell the schema registry.
+  const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri, languageId);
   if (!schemaType) {
     // the only way we get here is if the user bailed on the schema type quickpick after we failed
     // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
     return;
   }
 
-  let registry: SchemaRegistry | undefined;
-  let subject: string | undefined;
-  if (!item) {
+  if (!(registry instanceof SchemaRegistry)) {
     // the only way we get here is if the user clicked the action in the Schemas view nav area, so
     // we need to get the focused schema registry
     const schemaViewProvider = getSchemasViewProvider();
     registry = schemaViewProvider.schemaRegistry!;
-  } else if (item instanceof SchemaRegistry) {
-    registry = item;
-    // prompt for subject
-  } else if (item instanceof ContainerTreeItem) {
-    // starting from a schema subject container in the Schemas view
-    const sampleSchema: Schema = item.children[0];
-    const loader = ResourceLoader.getInstance(sampleSchema.connectionId);
-    registry = await loader.getSchemaRegistryForEnvironmentId(sampleSchema.connectionId);
-    subject = item.label as string;
   }
-
   if (!registry) {
     logger.error("Could not determine schema registry");
     return;
