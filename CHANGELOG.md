@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.22.0
+
 ### Added
 
 - Ability to update basic topic configuration fields via webform
