@@ -12,7 +12,7 @@ import {
 import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources/schema";
 
 describe("commands/schemaUpload.ts determineSchemaType tests", function () {
-  it("determineSchemaType successfully determines schema type from file URI", () => {
+  it("determineSchemaType successfully determines schema type from file URI", async () => {
     // for pair of (file extension, expected schema type) from array of string pairs ...
     for (const [fileExtension, expectedSchemaType] of [
       ["avsc", "AVRO"],
@@ -20,7 +20,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
       ["proto", "PROTOBUF"],
     ]) {
       const fileUri = vscode.Uri.file(`some-file.${fileExtension}`);
-      const schemaType = determineSchemaType(fileUri, null);
+      const schemaType = await determineSchemaType(fileUri, null);
       assert.strictEqual(
         schemaType,
         expectedSchemaType,
@@ -29,14 +29,14 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     }
   });
 
-  it("determineSchemaType successfully determines schema type from language ID", () => {
+  it("determineSchemaType successfully determines schema type from language ID", async () => {
     // for pair of (language ID, expected schema type) from array of string pairs ...
     for (const [languageId, expectedSchemaType] of [
       ["avroavsc", "AVRO"],
       ["json", "JSON"],
       ["proto", "PROTOBUF"],
     ]) {
-      const schemaType = determineSchemaType(null, languageId);
+      const schemaType = await determineSchemaType(null, languageId);
       assert.strictEqual(
         schemaType,
         expectedSchemaType,
@@ -45,14 +45,14 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     }
   });
 
-  it("determineSchemaType successfully determines schema type from language ID when file URI is also provided", () => {
+  it("determineSchemaType successfully determines schema type from language ID when file URI is also provided", async () => {
     for (const [fileExtension, languageId, expectedSchemaType] of [
       ["avsc", "avroavsc", "AVRO"],
       ["json", "json", "JSON"],
       ["proto", "proto", "PROTOBUF"],
     ]) {
       const fileUri = vscode.Uri.file(`some-file.${fileExtension}`);
-      const schemaType = determineSchemaType(fileUri, languageId);
+      const schemaType = await determineSchemaType(fileUri, languageId);
       assert.strictEqual(
         schemaType,
         expectedSchemaType,
@@ -61,10 +61,9 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     }
   });
 
-  it("determineSchemaType should raise Error when neither file URI nor languageID is provided", () => {
-    assert.throws(() => {
-      determineSchemaType(null, null);
-    }, /Must call with either a file or document/);
+  it("determineSchemaType should return undefined when neither file URI nor languageID is provided", async () => {
+    const result = await determineSchemaType(null, null);
+    assert.strictEqual(result, undefined);
   });
 });
 

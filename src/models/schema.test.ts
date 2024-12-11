@@ -197,10 +197,10 @@ describe("Schema helper functions", () => {
     assert.equal(mvRe.test(anotherTopicGroup!.contextValue!), false);
   });
 
-  it("generateSchemaSubjectGroups() should set the context value to end with 'schema-group'", () => {
+  it("generateSchemaSubjectGroups() should set the context value to end with 'schema-subject'", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
-    const schemaGroupRe = /schema-group$/;
+    const schemaGroupRe = /schema-subject$/;
     const testTopicGroup = groups.find((group) => group.label === valueSubject);
     assert.equal(schemaGroupRe.test(testTopicGroup!.contextValue!), true);
 
