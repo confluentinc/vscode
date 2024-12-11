@@ -7,6 +7,7 @@ import {
   MessageType,
   RequestResponseMessageTypes,
   RequestResponseTypeMap,
+  ResponseMessage,
 } from "./messageTypes";
 
 /** Type describing message handler callbacks to whom messages are routed. */
@@ -103,25 +104,12 @@ export class MessageRouter {
   async deliver<T extends MessageType>(message: Message<T>): Promise<void> {
     logger.info(`Delivering message of type ${message.headers.message_type}`);
 
-    // if message header is ReplyMessageHeader, it's a reply message. Look in the replyCallbacks map first.
-    // If a callback is registered, then call it, else fallthrough for regular message delivery.
+    // Messages with a response_to_id are responses to requests. Deliver them to the single registered reply callback.
     if ("response_to_id" in message.headers) {
-      const replyCallback = this.replyCallbacks.get(message.headers.response_to_id);
-      if (replyCallback) {
-        logger.debug(
-          `Delivering reply message of type ${message.headers.message_type} to callback registered for message id ${message.headers.response_to_id}`,
-        );
-        // Remove the reply callback from the map
-        this.replyCallbacks.delete(message.headers.response_to_id);
-        try {
-          await replyCallback(message);
-        } catch (e) {
-          logger.error(`Error delivering reply message ${message.headers.message_type}: ${e}`);
-        }
-        return;
-      }
+      return await this.deliverResponse(message as ResponseMessage<T>);
     }
 
+    // Otherwise deliver the message to all registered general by-message-type callbacks.
     const callbacks = this.callbacks.get(message.headers.message_type);
     if (callbacks === undefined) {
       // Wacky! We got a message type that we don't have callbacks array in map for.
@@ -144,7 +132,7 @@ export class MessageRouter {
 
     const callbackPromises: Promise<void>[] = [];
 
-    // Collect all the promises from the callbacks + clean out any one-time callbacks
+    // Collect all the promises from the in-pam callbacks. Clean out any one-time callbacks as we go.
     for (let i = 0; i < callbacks.length; i++) {
       const { callback, once } = callbacks[i];
       callbackPromises.push(callback(message));
@@ -159,12 +147,42 @@ export class MessageRouter {
     // Wait for all the promises to resolve concurrently
     await Promise.all(callbackPromises);
 
-    logger.debug(`Delivered message of type ${message.headers.message_type} to all callbacks.`);
+    logger.debug(
+      `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
+    );
     if (callbacks.length !== initialCallbackCount) {
       logger.debug(
         `Removed ${initialCallbackCount - callbacks.length} one-time callbacks for message type ${message.headers.message_type}`,
       );
     }
+  }
+
+  /**
+   * Deliver a response message to the callback registered for the message's response_to_id.
+   * @param message: A response message to deliver.
+   */
+  private async deliverResponse<T extends MessageType>(message: ResponseMessage<T>): Promise<void> {
+    // if message header is ReplyMessageHeader, it's a reply message. Look in the replyCallbacks map.
+    // If a callback is registered, then call it and remove it from the map.
+
+    const replyCallback = this.replyCallbacks.get(message.headers.response_to_id);
+    if (replyCallback) {
+      logger.debug(
+        `Delivering reply message of type ${message.headers.message_type} to callback registered for message id ${message.headers.response_to_id}`,
+      );
+      // Remove the reply callback from the map
+      this.replyCallbacks.delete(message.headers.response_to_id);
+      try {
+        await replyCallback(message);
+      } catch (e) {
+        logger.error(`Error delivering reply message ${message.headers.message_type}: ${e}`);
+      }
+    } else {
+      logger.error(
+        `No reply callback registered for message id ${message.headers.response_to_id}! Not handling.`,
+      );
+    }
+    return;
   }
 
   private generateRegistrationToken(): string {

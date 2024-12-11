@@ -12,9 +12,7 @@ import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { getSidecar, SidecarHandle } from "../sidecar";
-import { MessageRouter } from "../ws/messageRouter";
-import { Audience, Message, MessageType } from "../ws/messageTypes";
+import { getSidecar } from "../sidecar";
 import {
   correlateTopicsWithSchemas,
   fetchSchemas,
@@ -84,44 +82,6 @@ export class CCloudResourceLoader extends ResourceLoader {
     });
 
     ResourceLoader.disposables.push(ccloudConnectedSub);
-
-    this.setupWebsocketMessageHandlers();
-  }
-
-  private setupWebsocketMessageHandlers(): void {
-    const messageRouter = MessageRouter.getInstance();
-
-    // listen for CCLOUD_KAFKA_TOPICS announcements, write them to the resource manager.
-    const topicsAnnouncementHandler = async (message: Message<MessageType.CCLOUD_KAFKA_TOPICS>) => {
-      const body = message.body;
-
-      logger.debug(
-        `Received CCLOUD_KAFKA_TOPICS message from a peer via sidecar for environment ${body.environment_id} cluster ${body.cluster_id}`,
-      );
-
-      const resourceManager = getResourceManager();
-
-      // find the (ccloud) cluster given the id.
-      const cluster = await resourceManager.getCCloudKafkaCluster(
-        body.environment_id,
-        body.cluster_id,
-      );
-      if (cluster) {
-        await resourceManager.setTopicsForCluster(cluster, body.topics);
-      }
-    };
-    messageRouter.subscribe(MessageType.CCLOUD_KAFKA_TOPICS, topicsAnnouncementHandler);
-
-    // listen for CCLOUD_SCHEMA_REGISTRY_SCHEMAS messages from the sidecar, and cache the schemas.
-    const schemasAnnouncementHandler = async (
-      message: Message<MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS>,
-    ) => {
-      logger.debug(`Received SCHEMA_REGISTRY_SCHEMAS message from a peer via sidecar`);
-
-      await this.cacheSchemas(message.body.schema_registry_id, message.body.schemas);
-    };
-
-    messageRouter.subscribe(MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS, schemasAnnouncementHandler);
   }
 
   protected deleteCoarseResources(): void {
@@ -249,10 +209,7 @@ export class CCloudResourceLoader extends ResourceLoader {
       const sidecarHandle = await getSidecar();
       // Fetch from sidecar API and store into resource manager + transmit to peers (todo conditionally if any)
       const schemas: Schema[] = await fetchSchemas(ccloudSchemaRegistry, sidecarHandle);
-      await Promise.all([
-        this.cacheSchemas(schemaRegistry.id, schemas),
-        this.broadcastSchemas(sidecarHandle, schemaRegistry.id, schemas),
-      ]);
+      await this.cacheSchemas(schemaRegistry.id, schemas);
     } catch (error) {
       // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
       logger.error("Error while preloading CCloud schemas", { error });
@@ -363,11 +320,8 @@ export class CCloudResourceLoader extends ResourceLoader {
       schemas as Schema[],
     );
 
-    // Cache + broadcast the correlated topics for this cluster.
-    await Promise.all([
-      resourceManager.setTopicsForCluster(cluster, topics),
-      this.broadcastTopics(sidecarHandle, cluster, topics),
-    ]);
+    // Cache the correlated topics for this cluster.
+    await resourceManager.setTopicsForCluster(cluster, topics);
 
     return topics;
   }
@@ -476,53 +430,5 @@ export class CCloudResourceLoader extends ResourceLoader {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
     this.schemaRegistryCacheStates.clear();
-  }
-
-  /** Broadcast these schemas to peers via websocket, so they may also cache. */
-  private async broadcastSchemas(
-    sidecarHandle: SidecarHandle,
-    schemaRegistryId: string,
-    schemas: Schema[],
-  ): Promise<void> {
-    logger.debug(`Broadcasting schemas for schema registry ${schemaRegistryId} to peers`);
-    const message: Message<MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS> = {
-      headers: {
-        message_type: MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS,
-        audience: Audience.WORKSPACES,
-        originator: sidecarHandle.myPid,
-        message_id: sidecarHandle.generateMessageId(),
-      },
-      body: {
-        schema_registry_id: schemaRegistryId,
-        schemas,
-      },
-    };
-
-    sidecarHandle.broadcastToPeers(message);
-  }
-
-  private async broadcastTopics(
-    sidecarHandle: SidecarHandle,
-    cluster: CCloudKafkaCluster,
-    topics: KafkaTopic[],
-  ): Promise<void> {
-    logger.debug(
-      `Broadcasting topics for env ${cluster.environmentId} kafka cluster ${cluster.id} to peers`,
-    );
-    const message: Message<MessageType.CCLOUD_KAFKA_TOPICS> = {
-      headers: {
-        message_type: MessageType.CCLOUD_KAFKA_TOPICS,
-        audience: Audience.WORKSPACES,
-        originator: sidecarHandle.myPid,
-        message_id: sidecarHandle.generateMessageId(),
-      },
-      body: {
-        environment_id: cluster.environmentId,
-        cluster_id: cluster.id,
-        topics,
-      },
-    };
-
-    sidecarHandle.broadcastToPeers(message);
   }
 }

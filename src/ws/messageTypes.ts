@@ -1,11 +1,9 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
 import { randomUUID } from "crypto";
-import { Schema } from "../models/schema";
-import { KafkaTopic } from "../models/topic";
 
 /**
- * All websocket message types, message.header.type values.
+ * All websocket message types, message.header_type values.
  * Some come in request/response pairs, others are individual events, either
  * directed at a single workspace or to sidecar or broadcast to all workspaces.
  */
@@ -15,10 +13,6 @@ export enum MessageType {
   // access request/response
   ACCESS_REQUEST = "ACCESS_REQUEST",
   ACCESS_RESPONSE = "ACCESS_RESPONSE",
-
-  // Cache-sync messages, audience=sidecar
-  CCLOUD_SCHEMA_REGISTRY_SCHEMAS = "CCLOUD_SCHEMA_REGISTRY_SCHEMAS",
-  CCLOUD_KAFKA_TOPICS = "CCLOUD_KAFKA_TOPICS",
 
   // When a new workspace connects and is granted access, or when a workspace disconnects,
   // sidecar will send this message to all other workspaces.
@@ -87,30 +81,34 @@ export interface Message<T extends MessageType> {
   body: MessageBodyMap[T];
 }
 
-/** Workspace -> Sidecar authorization message, sent immediately after websocket connection established. */
+/** A message whose headers carry field "response_to_id", indicating is a response message. */
+export interface ResponseMessage<T extends MessageType> extends Message<T> {
+  headers: ReplyMessageHeaders;
+}
+
+/**
+ * Workspace -> sidecar access message body, sent immediately after websocket connection established.
+ * Corresponds to message_type {@link MessageType.ACCESS_REQUEST}
+ */
 export interface AccessRequestBody {
   access_token: string;
 }
 
-/** Sidecar -> Workspace reply to an authorization request. */
+/**
+ * Sidecar -> Workspace message body, response to an access request message.
+ * Corresponds to message_type {@link MessageType.ACCESS_RESPONSE}
+ */
 export interface AccessResponseBody {
   authorized: boolean;
   current_workspace_count: number;
 }
 
+/**
+ * Sidecar -> workspaces message body, sent whenever the total number of authorized websocket connections to sidecar changes.
+ * Corresponds to message_type {@link MessageType.WORKSPACE_COUNT_CHANGED}
+ */
 export interface WorkspacesChangedBody {
   current_workspace_count: number;
-}
-
-export interface CCloudSchemaRegistrySchemasBody {
-  schema_registry_id: string;
-  schemas: Schema[];
-}
-
-export interface CCloudKafkaTopicsBody {
-  environment_id: string;
-  cluster_id: string;
-  topics: KafkaTopic[];
 }
 
 /** Type mapping of message type -> corresponding message body type */
@@ -118,17 +116,16 @@ type MessageBodyMap = {
   [MessageType.ACCESS_REQUEST]: AccessRequestBody;
   [MessageType.ACCESS_RESPONSE]: AccessResponseBody;
   [MessageType.WORKSPACE_COUNT_CHANGED]: WorkspacesChangedBody;
-  [MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS]: CCloudSchemaRegistrySchemasBody;
-  [MessageType.CCLOUD_KAFKA_TOPICS]: CCloudKafkaTopicsBody;
 };
 
-/** Type mapping of message type -> corresponding headers type. Dictates which messages should have `response_to_id` field.` */
+/**
+ * Type mapping of message type -> corresponding headers type.
+ * Dictates which messages whose headers should have `response_to_id` field.`
+ */
 type MessageHeaderMap = {
   [MessageType.ACCESS_REQUEST]: MessageHeaders;
   [MessageType.ACCESS_RESPONSE]: ReplyMessageHeaders;
   [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
-  [MessageType.CCLOUD_SCHEMA_REGISTRY_SCHEMAS]: MessageHeaders;
-  [MessageType.CCLOUD_KAFKA_TOPICS]: MessageHeaders;
 };
 
 // Subset of message types that are request/response pairs.
