@@ -13,14 +13,14 @@ import {
 /** Type describing message handler callbacks to whom messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
-/** Type keeping track of a single subscription / callback. */
+/** Type keeping track of a per-message-type callbacks. */
 type CallbackEntry<T extends MessageType> = {
-  callback: MessageCallback<T>; // Callback to be called when the event is triggered
-  once: boolean; // Indicates if the callback should be called only once
-  registrationToken: string; // Unique token to identify the callback for removal
+  callback: MessageCallback<T>; // Callback to be called when a message of this type is recieved.
+  once: boolean; // Indicates if the callback should be called only once, then removed. This featurette might never be used.
+  registrationToken: string; // Unique token to identify the callback for removal.
 };
 
-/** Map of callback entries per message type */
+/** Type for a map of message type -> array of callback entries.*/
 type CallbackMap = Map<MessageType, CallbackEntry<any>[]>;
 
 const logger = new Logger("messageRouter");
@@ -41,8 +41,10 @@ export class MessageRouter {
    */
   private callbacks: CallbackMap;
 
-  /** Map of response_to_id message id values to their one-off reply callbacks, registered
-   * via awaitReply(). */
+  /**
+   * Map of response_to_id message id values to their one-off reply callbacks, registered
+   * via {@link registerReplyCallback}. See {@link WebsocketManager.sendrecv} for high-level use.
+   */
   private replyCallbacks: Map<string, MessageCallback<any>>;
 
   private constructor() {
@@ -74,12 +76,26 @@ export class MessageRouter {
     return registrationToken;
   }
 
-  /** Register a callback for a specific reply message. See {@link deliver}, {@link WebsocketManager#sendrecv} for more details. */
+  /**
+   * Register a callback for the reply for a single message.
+   * See {@link deliver}, {@link WebsocketManager#sendrecv} for more details.
+   */
   registerReplyCallback<T extends RequestResponseMessageTypes>(
     messageId: string,
     callback: MessageCallback<RequestResponseTypeMap[T]>,
   ): void {
+    if (this.replyCallbacks.has(messageId)) {
+      throw new Error(`Reply callback already registered for message id ${messageId}`);
+    }
     this.replyCallbacks.set(messageId, callback);
+  }
+
+  /**
+   * Remove a previously registered callback for a specific reply message.
+   * Used if waiting for the response times out.
+   */
+  removeReplyCallback(messageId: string): void {
+    this.replyCallbacks.delete(messageId);
   }
 
   /**
@@ -163,21 +179,23 @@ export class MessageRouter {
    */
   private async deliverResponse<T extends MessageType>(message: ResponseMessage<T>): Promise<void> {
     // if message header is ReplyMessageHeader, it's a reply message. Look in the replyCallbacks map.
-    // If a callback is registered, then call it and remove it from the map.
+    // If a callback is registered, then remove it from the map and call it.
 
     const replyCallback = this.replyCallbacks.get(message.headers.response_to_id);
     if (replyCallback) {
       logger.debug(
         `Delivering reply message of type ${message.headers.message_type} to callback registered for message id ${message.headers.response_to_id}`,
       );
-      // Remove the reply callback from the map
+
       this.replyCallbacks.delete(message.headers.response_to_id);
+
       try {
         await replyCallback(message);
       } catch (e) {
         logger.error(`Error delivering reply message ${message.headers.message_type}: ${e}`);
       }
     } else {
+      // Perhaps the reply callback was removed because the request timed out?
       logger.error(
         `No reply callback registered for message id ${message.headers.response_to_id}! Not handling.`,
       );

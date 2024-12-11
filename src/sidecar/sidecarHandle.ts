@@ -3,7 +3,6 @@ import { print } from "graphql";
 
 // OpenAPI generated static client classes
 
-import { randomUUID } from "crypto";
 import {
   ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
@@ -114,7 +113,7 @@ export class SidecarHandle {
    * The websocket send is ultimately async underneath the hood.
    * @throws {WebsocketClosedError} if the websocket is not connected.
    */
-  public broadcastToPeers<T extends MessageType>(message: Message<T>): void {
+  public wsBroadcastToPeers<T extends MessageType>(message: Message<T>): void {
     if (message.headers.audience !== Audience.WORKSPACES) {
       throw new Error(
         `Expected message audience to be 'workspaces', got ${message.headers.audience}`,
@@ -127,17 +126,10 @@ export class SidecarHandle {
       );
     }
 
-    /*
     if (this.websocketManager.getPeerWorkspaceCount() === 0) {
       logger.debug("No peers connected, not sending broadcast message");
       return;
     }
-      */
-
-    // todo future. Know the count of peers, and if none, don't send.
-    // (will need ACCESS_REPLY to tell us the initial peer count, and then
-    //  a WebsocketManager-level WORKSPACES_CHANGED message handler when a peer connects or disconnects
-    // to increment or decrement the count)
 
     this.websocketManager.send(message);
   }
@@ -162,10 +154,6 @@ export class SidecarHandle {
     timeoutMs?: number,
   ): Promise<Message<RequestResponseTypeMap[T]>> {
     return this.websocketManager.sendrecv(message, timeoutMs);
-  }
-
-  public generateMessageId(): string {
-    return randomUUID().toString();
   }
 
   // === OPENAPI CLIENT METHODS ===

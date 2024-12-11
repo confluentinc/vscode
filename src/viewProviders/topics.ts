@@ -98,10 +98,6 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   }
 
   async getChildren(element?: TopicViewProviderData): Promise<TopicViewProviderData[]> {
-    // get name of class of element
-    const elementType = element ? element.constructor.name : "null";
-    logger.debug(`getChildren() start for ${elementType}`);
-
     let topicItems: TopicViewProviderData[] = [];
 
     if (element) {
@@ -120,12 +116,11 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         // no current cluster, nothing to display
         return topicItems;
       }
-      logger.debug("getChildren(): Loading topics for cluster", this.kafkaCluster);
+
       const topics: KafkaTopic[] = await getTopicsForCluster(
         this.kafkaCluster,
         this.forceDeepRefresh,
       );
-      logger.debug("getChildren(): Done loading topics");
       topicItems.push(...topics);
 
       // clear any prior request to deep refresh, allow any subsequent repaint

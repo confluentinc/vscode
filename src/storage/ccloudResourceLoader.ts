@@ -12,7 +12,6 @@ import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { getSidecar } from "../sidecar";
 import {
   correlateTopicsWithSchemas,
   fetchSchemas,
@@ -206,10 +205,12 @@ export class CCloudResourceLoader extends ResourceLoader {
         );
       }
 
-      const sidecarHandle = await getSidecar();
-      // Fetch from sidecar API and store into resource manager + transmit to peers (todo conditionally if any)
-      const schemas: Schema[] = await fetchSchemas(ccloudSchemaRegistry, sidecarHandle);
-      await this.cacheSchemas(schemaRegistry.id, schemas);
+      // Fetch from sidecar API and store into resource manager.
+      const schemas: Schema[] = await fetchSchemas(ccloudSchemaRegistry);
+      await rm.setSchemasForRegistry(schemaRegistry.id, schemas);
+
+      // Mark this cluster as having its schemas loaded.
+      this.schemaRegistryCacheStates.set(schemaRegistry.id, true);
     } catch (error) {
       // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
       logger.error("Error while preloading CCloud schemas", { error });
@@ -219,25 +220,6 @@ export class CCloudResourceLoader extends ResourceLoader {
 
       throw error;
     }
-  }
-
-  /**
-   * Cache a list of schemas from the given ccloud schema registry.
-   *
-   * Called by either {@link doLoadSchemas} when the user has caused
-   * this workspace to deep fetch these schemas, or the SCHEMA_REGISTRY_SCHEMAS websocket
-   * message handler when the schemas are broadcast from a peer workspace.
-   */
-  private async cacheSchemas(schemaRegistryId: string, schemas: Schema[]): Promise<void> {
-    // Ensure the coarse resources are loaded before attempting to cache the schemas,
-    // otherwise it will subsequently reset this.schemaRegistryCacheStates.
-    await this.ensureCoarseResourcesLoaded();
-
-    const resourceManager = getResourceManager();
-    await resourceManager.setSchemasForRegistry(schemaRegistryId, schemas);
-
-    // Mark this cluster as having its schemas loaded.
-    this.schemaRegistryCacheStates.set(schemaRegistryId, true);
   }
 
   /**
@@ -303,14 +285,13 @@ export class CCloudResourceLoader extends ResourceLoader {
       return cachedTopics;
     }
 
-    // Do a deep fetch, cache + broadcast the results, then return them.
-    const sidecarHandle = await getSidecar();
+    // Do a deep fetch, cache the results, then return them.
 
     // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
     // but the topics are always a deep fetch.
     const [schemas, responseTopics] = await Promise.all([
       this.getSchemasForEnvironmentId(cluster.environmentId, forceDeepRefresh),
-      fetchTopics(cluster, sidecarHandle),
+      fetchTopics(cluster),
     ]);
 
     // now correlate the topics with the schemas.

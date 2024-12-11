@@ -262,11 +262,13 @@ export class SidecarManager {
       this.websocketManager = WebsocketManager.getInstance();
     }
 
+    // Connect and authorize a websocket to the sidecar.
+    // will raise if the ACCESS_REQUEST / ACCESS_RESPONSE pair doesn't complete successfully in 5s.
     await this.websocketManager.connect(authToken);
   }
 
   /**
-   * Make a healthcheck request to the sidecar. Returns true if the sidecar is healthy.
+   * Make a healthcheck HTTP request to the sidecar. Returns true if the sidecar is healthy.
    * Will find out if the sidecar is healthy, or if it's not running, or if it's running but rejects our auth token.
    **/
   private async healthcheck(accessToken: string): Promise<boolean> {

@@ -9,7 +9,7 @@ import { ConnectionId, IResourceBase } from "../models/resource";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { getSidecar, SidecarHandle } from "../sidecar";
+import { getSidecar } from "../sidecar";
 
 /**
  * Class family for dealing with loading (and perhaps caching) information
@@ -154,13 +154,8 @@ export class TopicFetchError extends Error {
 /**
  * Deep read and return of all topics in a Kafka cluster.
  */
-export async function fetchTopics(
-  cluster: KafkaCluster,
-  sidecar?: SidecarHandle,
-): Promise<TopicData[]> {
-  if (!sidecar) {
-    sidecar = await getSidecar();
-  }
+export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
+  const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
   let topicsResp: TopicDataList;
 
@@ -223,13 +218,8 @@ export function correlateTopicsWithSchemas(
  * @param schemaRegistry The Schema Registry to fetch schemas from.
  * @returns An array of all the schemas in the environment's Schema Registry.
  */
-export async function fetchSchemas(
-  schemaRegistry: SchemaRegistry,
-  sidecarHandle?: SidecarHandle,
-): Promise<Schema[]> {
-  if (!sidecarHandle) {
-    sidecarHandle = await getSidecar();
-  }
+export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
+  const sidecarHandle = await getSidecar();
   const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(
     schemaRegistry.id,
     schemaRegistry.connectionId,

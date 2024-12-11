@@ -32,7 +32,16 @@ export class WebsocketManager {
   private messageRouter = MessageRouter.getInstance();
   private peerWorkspaceCount = 0;
 
-  private constructor() {}
+  private constructor() {
+    // set up handler for WORKSPACE_COUNT_CHANGED messages
+    this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
+      logger.info(
+        `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
+      );
+      // Remember, the reply is inclusive of the current workspace.
+      this.peerWorkspaceCount = message.body.current_workspace_count - 1;
+    });
+  }
 
   /**
    * Connect websocket to the sidecar, then send an ACCESS_REQUEST message containing the access_token.
@@ -155,14 +164,14 @@ export class WebsocketManager {
 
   /**
    * Send a message expecting a single response. Return promise of the reply message.
-   * Should only be called with messages whose type is a replyable type.
+   * Can only be called with messages whose type is a replyable type.
    */
   public sendrecv<T extends RequestResponseMessageTypes>(
     /** Message to send that should recieve a single direct response. */
     message: Message<T>,
     /** Optional milliseconds to wait for the reply. */
     timeoutMs?: number,
-    /** Optional websocket to use for the send, special cased for startup. */
+    /** Optional websocket to use for the send, special case param for initial websocketmanger startup. */
     websocket?: WebSocket,
   ): Promise<Message<RequestResponseTypeMap[T]>> {
     return new Promise((resolve, reject) => {
@@ -181,6 +190,11 @@ export class WebsocketManager {
       if (timeoutMs) {
         timeoutId = setTimeout(() => {
           logger.error(`Timed out waiting for reply to message ${message.headers.message_id}`);
+
+          // Forget about the reply handler, we've given up on it now.
+          this.messageRouter.removeReplyCallback(message.headers.message_id);
+
+          // Indicate failure.
           reject("Timeout waiting for reply");
         }, timeoutMs);
       }
@@ -188,20 +202,24 @@ export class WebsocketManager {
       // set up a handler for the reply message which resolves the promise, returning the reply message to our caller.
       const replyHandler = async (message: Message<RequestResponseTypeMap[T]>) => {
         if (timeoutId) {
+          // We received the reply in time, so cancel the timeout.
           clearTimeout(timeoutId);
         }
+
+        // Resolve the promise with the reply message.
         resolve(message);
       };
 
-      const messageRouter = MessageRouter.getInstance();
-      messageRouter.registerReplyCallback(message.headers.message_id, replyHandler);
+      // Register the reply handler for the message id.
+      this.messageRouter.registerReplyCallback(message.headers.message_id, replyHandler);
 
-      // now send the message, having set up the reply handler. When the reply comes in, the handler will resolve the promise.
+      // Send the message, having set up the reply handler. When the reply comes in, the handler will resolve our promise.
       // The callback will be automatically removed by the messageRouter when the reply is received.
       this.send(message, websocket);
     });
   }
 
+  /** How many peer workspaces are connected to sidecar, exclusive of ourselves? */
   public getPeerWorkspaceCount(): number {
     return this.peerWorkspaceCount;
   }
@@ -217,24 +235,15 @@ export class WebsocketManager {
    * and the websocket will be assigned to the instance variable directly in the connect() method.
    * */
   private postAuthorizeSetup(websocket: WebSocket, accessReply: AccessResponseBody): void {
-    // Real work, not fun...
     // Assign the websocket to the instance variable so regular callers can use it to send messages.
     this.websocket = websocket;
-    // Store the initial workspace PEER workspace count. The reply is inclusive of the current workspace.
+
+    // Store the initial workspace peer workspace count. The reply is inclusive of the current workspace.
     this.peerWorkspaceCount = accessReply.current_workspace_count - 1;
 
     logger.info(`Authorized by sidecar, peer workspace count: ${this.peerWorkspaceCount}`);
-
-    // set up handler for WORKSPACE_COUNT_CHANGED messages
-    this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
-      logger.info(
-        `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
-      );
-      // Remember, the reply is inclusive of the current workspace.
-      this.peerWorkspaceCount = message.body.current_workspace_count - 1;
-    });
   }
-} // class
+}
 
 class WebsocketClosedError extends Error {
   constructor() {
