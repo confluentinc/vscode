@@ -987,6 +987,16 @@
             ]
           },
           {
+            "id": "create-connections",
+            "title": "Create a New Connection",
+            "description": "Click the + icon next to Resources -> Other to establish a connection to an Apache Kafka® Cluster or Schema Registry: in Confluent Cloud, Confluent Platform, or hosted elsewhere.",
+            "media": {
+              "image": "resources/walkthrough/direct-connection-form.png",
+              "altText": "Create a new connection to a Kafka cluster or Schema Registry"
+            },
+            "completionEvents": []
+          },
+          {
             "id": "give-feedback",
             "title": "Provide Feedback",
             "description": "Confluent for VS Code is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
