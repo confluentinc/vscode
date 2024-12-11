@@ -313,24 +313,18 @@ export function schemaRegistrationMessage(
 }
 
 /**
- * Limited map to associate the Avro and Protobuf language IDs to their associated {@link SchemaType}s.
+ * General map for associating Avro and Protobuf to their associated {@link SchemaType}s based on
+ * either file extension or language ID.
  *
  * This does not include `json` because it may be used when editing an Avro schema without an Avro
  * language extension installed.
  */
-export const LANGUAGE_ID_TO_SCHEMA_TYPE = new Map([
+export const AVRO_PROTOBUF_SCHEMA_TYPE_MAP = new Map([
+  // language IDs
   ["avroavsc", SchemaType.Avro],
   ["proto", SchemaType.Protobuf],
   ["proto3", SchemaType.Protobuf],
-]);
-
-/**
- * Limited map to associate the Avro and Protobuf file extensions to their associated {@link SchemaType}s.
- *
- * This does not include `json` because it may be used when editing an Avro schema without an Avro
- * language extension installed.
- */
-export const FILE_EXTENSION_TO_SCHEMA_TYPE = new Map([
+  // file extensions
   ["avsc", SchemaType.Avro],
   ["proto", SchemaType.Protobuf],
 ]);
@@ -352,7 +346,7 @@ export async function determineSchemaType(
       // extract the file extension from file.path
       const ext = uri.path.split(".").pop();
       if (ext) {
-        schemaType = FILE_EXTENSION_TO_SCHEMA_TYPE.get(ext);
+        schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(ext);
       }
       break;
     }
@@ -363,7 +357,7 @@ export async function determineSchemaType(
       );
       if (editor) {
         // only match against Avro/Protobuf, if available
-        schemaType = LANGUAGE_ID_TO_SCHEMA_TYPE.get(editor.document.languageId);
+        schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(editor.document.languageId);
       }
       break;
     }
@@ -371,7 +365,7 @@ export async function determineSchemaType(
 
   if (languageId && !schemaType) {
     // fall back on any language ID, if provided
-    schemaType = LANGUAGE_ID_TO_SCHEMA_TYPE.get(languageId);
+    schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(languageId);
   }
 
   logger.info("schemaType before quickpick", { schemaType });
