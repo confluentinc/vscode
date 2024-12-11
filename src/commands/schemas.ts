@@ -10,7 +10,7 @@ import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { uploadSchemaFromFile } from "./schemaUpload";
+import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 
 const logger = new Logger("commands.schemas");
 
@@ -20,6 +20,10 @@ export function registerSchemaCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFile),
+    registerCommandWithLogging(
+      "confluent.schemas.uploadForSubject",
+      uploadSchemaForSubjectFromfile,
+    ),
     registerCommandWithLogging("confluent.schemas.evolveSchemaSubject", evolveSchemaSubjectCommand),
     registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),

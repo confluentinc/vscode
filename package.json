@@ -253,6 +253,12 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.uploadForSubject",
+        "icon": "$(cloud-upload)",
+        "title": "Upload Schema to Schema Registry for Subject",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.evolve",
         "icon": "$(plus)",
         "title": "Evolve Schema",
@@ -594,6 +600,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.uploadForSubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolve",
           "when": "false"
         },
@@ -826,7 +836,7 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.schemas.upload",
+          "command": "confluent.schemas.uploadForSubject",
           "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
         },
