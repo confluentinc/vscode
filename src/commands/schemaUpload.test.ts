@@ -28,7 +28,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     sandbox.restore();
   });
 
-  it("determineSchemaType() should successfully determine schema type from file URI", async () => {
+  it("should successfully determine schema type from file URI", async () => {
     // for pair of (file extension, expected schema type) from array of string pairs ...
     for (const [fileExtension, expectedSchemaType] of [
       ["avsc", SchemaType.Avro],
@@ -46,14 +46,14 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     }
   });
 
-  it("determineSchemaType() should show the schema type quickpick when unable to determine the schema type from the provided Uri and language ID", async () => {
+  it("should show the schema type quickpick when unable to determine the schema type from the provided Uri and language ID", async () => {
     const fileUri = vscode.Uri.file("some-file.txt");
     await determineSchemaType(fileUri, "plaintext");
 
     assert.ok(schemaTypeQuickPickStub.calledOnce);
   });
 
-  it("determineSchemaType() should show the schema type quickpick when the provided Uri has a JSON file extension and language ID, but return undefined if the user cancels the quickpick", async () => {
+  it("should show the schema type quickpick when the provided Uri has a JSON file extension and language ID", async () => {
     // first, simulate the user cancelling the quickpick
     schemaTypeQuickPickStub.resolves(undefined);
     const fileUri = vscode.Uri.file("some-file.json");
@@ -70,7 +70,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     assert.strictEqual(nextResult, SchemaType.Json);
   });
 
-  it("determineSchemaType() should successfully determine schema type from a valid provided language ID when failing to determine from file/editor Uri", async () => {
+  it("should successfully determine schema type from a valid provided language ID when failing to determine from file/editor Uri", async () => {
     for (const [languageId, expectedSchemaType] of [
       ["avroavsc", SchemaType.Avro],
       ["proto", SchemaType.Protobuf],
@@ -88,7 +88,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     }
   });
 
-  it("determineSchemaType() should successfully determine schema type from language ID when file URI has an ambiguous file extension", async () => {
+  it("should successfully determine schema type from language ID when file URI has an ambiguous file extension", async () => {
     for (const [languageId, expectedSchemaType] of [
       ["avroavsc", "AVRO"],
       ["proto", "PROTOBUF"],
@@ -106,7 +106,7 @@ describe("commands/schemaUpload.ts determineSchemaType tests", function () {
     }
   });
 
-  it("determineSchemaType() should return undefined when a schema type can't be determined from the Uri, no language ID is passed, and the user cancels the quickpick", async () => {
+  it("should return undefined when a schema type can't be determined from the Uri, no language ID is passed, and the user cancels the quickpick", async () => {
     // simulate the user cancelling the quickpick
     schemaTypeQuickPickStub.resolves(undefined);
     const fileUri = vscode.Uri.file("some-file.txt");
