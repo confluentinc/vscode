@@ -954,6 +954,18 @@
             ]
           },
           {
+            "id": "create-connections",
+            "title": "Connect Directly to Kafka / Schema Registry",
+            "description": "In the Resources view, click the $(plus) icon next to the 'Other' item to connect directly to a Kafka cluster or Schema Registry instance.\n[Open Connection Form](command:confluent.connections.direct)",
+            "media": {
+              "image": "resources/walkthrough/direct-connection-form.png",
+              "altText": "Create a new connection to a Kafka cluster or Schema Registry"
+            },
+            "completionEvents": [
+              "onCommand:confluent.connections.direct"
+            ]
+          },
+          {
             "id": "view-topics",
             "title": "View Messages",
             "description": "Click the $(play) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
