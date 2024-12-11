@@ -120,6 +120,12 @@ export class SchemaTreeItem extends vscode.TreeItem {
     this.description = resource.id.toString();
     this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA);
     this.tooltip = createSchemaTooltip(this.resource);
+
+    this.command = {
+      command: "confluent.schemaViewer.viewLocally",
+      title: "View Schema",
+      arguments: [this.resource],
+    };
   }
 }
 
@@ -206,7 +212,7 @@ export function generateSchemaSubjectGroups(
     }
 
     // set context value identifying this as a schema group
-    contextValueParts.push("schema-group");
+    contextValueParts.push("schema-subject");
 
     // dash-join all parts, assign to context value
     schemaContainerItem.contextValue = contextValueParts.join("-");
