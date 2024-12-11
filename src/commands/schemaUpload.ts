@@ -73,7 +73,7 @@ export async function uploadSchemaFromFile(item?: SchemaRegistry | ContainerTree
   }
 
   // What kind of schema is this? We must tell the schema registry.
-  const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri, null, undefined);
+  const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri);
   if (!schemaType) {
     // the only way we get here is if the user bailed on the schema type quickpick after we failed
     // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
@@ -346,52 +346,66 @@ export function schemaRegistrationMessage(
 }
 
 /**
- * Given a file and / or a language id, determine the schema type of the file.
+ * Limited map to associate the Avro and Protobuf language IDs to their associated {@link SchemaType}s.
+ *
+ * This does not include `json` because it may be used when editing an Avro schema without an Avro
+ * language extension installed.
+ */
+export const LANGUAGE_ID_TO_SCHEMA_TYPE = new Map([
+  ["avroavsc", SchemaType.Avro],
+  ["proto", SchemaType.Protobuf],
+  ["proto3", SchemaType.Protobuf],
+]);
+
+/**
+ * Given a file/editor {@link vscode.Uri Uri}, determine the {@link SchemaType}.
+ *
+ * If a `languageId` is passed, it will be used if we can't determine a schema type from the Uri.
+ * If we still can't determine the schema type, we'll show a quickpick to the user so they can choose.
  */
 export async function determineSchemaType(
-  file: vscode.Uri | null,
-  languageId: string | null,
-  defaultType: SchemaType | undefined = undefined,
+  uri: vscode.Uri,
+  languageId?: string,
 ): Promise<SchemaType | undefined> {
-  if (!file && !languageId) {
-    return;
-  }
+  let schemaType: SchemaType | undefined;
 
-  let schemaType: SchemaType | unknown = defaultType;
-
-  // If the schema type was provided in the defaults, use that.
-  if (schemaType) {
-    return schemaType as SchemaType;
-  }
-
-  if (languageId) {
-    const languageIdToSchemaType = new Map([
-      ["avroavsc", SchemaType.Avro],
-      ["proto", SchemaType.Protobuf],
-      ["json", SchemaType.Json],
-    ]);
-    schemaType = languageIdToSchemaType.get(languageId);
-  }
-
-  if (!schemaType && file) {
-    // extract the file extension from file.path
-    const ext = file.path.split(".").pop();
-    if (ext) {
-      const extensionToSchemaType = new Map([
-        ["avsc", SchemaType.Avro],
-        ["proto", SchemaType.Protobuf],
-        ["json", SchemaType.Json],
-      ]);
-      schemaType = extensionToSchemaType.get(ext);
+  switch (uri.scheme) {
+    case "file": {
+      // extract the file extension from file.path
+      const ext = uri.path.split(".").pop();
+      if (ext) {
+        const extensionToSchemaType = new Map([
+          ["avsc", SchemaType.Avro],
+          ["proto", SchemaType.Protobuf],
+          ["json", SchemaType.Json],
+        ]);
+        schemaType = extensionToSchemaType.get(ext);
+      }
+      break;
+    }
+    case "untitled": {
+      // look up the editor belonging to the Uri
+      const editor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.toString() === uri.toString(),
+      );
+      if (editor) {
+        // only match for Avro/Protobuf, if available
+        schemaType = LANGUAGE_ID_TO_SCHEMA_TYPE.get(editor.document.languageId);
+      }
+      break;
     }
   }
 
-  if (!schemaType) {
-    // can't determine schema type from file or language id, show the quickpick
-    return await schemaTypeQuickPick();
+  if (languageId && !schemaType) {
+    // fall back on any language ID, if provided
+    schemaType = LANGUAGE_ID_TO_SCHEMA_TYPE.get(languageId);
   }
 
-  return schemaType as SchemaType;
+  if (!schemaType) {
+    // can't determine schema type from file/editor (or language ID, if passed), let the user pick
+    return await schemaTypeQuickPick();
+  }
+  return schemaType;
 }
 
 /**
