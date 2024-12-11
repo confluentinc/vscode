@@ -325,6 +325,17 @@ export const LANGUAGE_ID_TO_SCHEMA_TYPE = new Map([
 ]);
 
 /**
+ * Limited map to associate the Avro and Protobuf file extensions to their associated {@link SchemaType}s.
+ *
+ * This does not include `json` because it may be used when editing an Avro schema without an Avro
+ * language extension installed.
+ */
+export const FILE_EXTENSION_TO_SCHEMA_TYPE = new Map([
+  ["avsc", SchemaType.Avro],
+  ["proto", SchemaType.Protobuf],
+]);
+
+/**
  * Given a file/editor {@link vscode.Uri Uri}, determine the {@link SchemaType}.
  *
  * If a `languageId` is passed, it will be used if we can't determine a schema type from the Uri.
@@ -341,12 +352,7 @@ export async function determineSchemaType(
       // extract the file extension from file.path
       const ext = uri.path.split(".").pop();
       if (ext) {
-        const extensionToSchemaType = new Map([
-          ["avsc", SchemaType.Avro],
-          ["proto", SchemaType.Protobuf],
-          // don't include "json" here, as it may be used for Avro schemas without an Avro language extension
-        ]);
-        schemaType = extensionToSchemaType.get(ext);
+        schemaType = FILE_EXTENSION_TO_SCHEMA_TYPE.get(ext);
       }
       break;
     }
