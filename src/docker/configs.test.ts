@@ -12,6 +12,7 @@ describe("docker/configs functions", function () {
 
   // vscode stubs
   let showErrorMessageStub: sinon.SinonStub;
+  let getConfigurationStub: sinon.SinonStub;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
@@ -96,7 +97,6 @@ describe("docker/configs functions", function () {
 
   it("showDockerUnavailableErrorNotification() should show ResponseError content in the error notification", async () => {
     const error = new ResponseError(new Response("uh oh", { status: 400 }));
-
     await configs.showDockerUnavailableErrorNotification(error);
 
     assert.ok(
@@ -109,8 +109,13 @@ describe("docker/configs functions", function () {
   });
 
   it("showDockerUnavailableErrorNotification() should show a canned response when dealing with non-ResponseErrors", async () => {
-    const error = new Error("connect ENOENT /var/run/docker.sock");
+    // assume "http.fetchAdditionalSupport" is disabled by default
+    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs("http.fetchAdditionalSupport").returns(false),
+    });
 
+    const error = new Error("connect ENOENT /var/run/docker.sock");
     await configs.showDockerUnavailableErrorNotification(error);
 
     assert.ok(
@@ -118,6 +123,27 @@ describe("docker/configs functions", function () {
         "Docker is not available: Please install Docker and try again once it's running.",
         "Install Docker",
         "Show Logs",
+      ),
+    );
+  });
+
+  // TODO(shoup): remove this once we have a better way to handle the behavior described in
+  //   https://github.com/confluentinc/vscode/issues/751
+  it("showDockerUnavailableErrorNotification() should suggest toggling the http.fetchAdditionalSupport setting if it's enabled when dealing with non-ResponseErrors", async () => {
+    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs("http.fetchAdditionalSupport").returns(true),
+    });
+
+    const error = new Error("ECONNREFUSED: fetch failed, AggregateError");
+    await configs.showDockerUnavailableErrorNotification(error);
+
+    assert.ok(
+      showErrorMessageStub.calledOnceWith(
+        `Docker is not available: If Docker is currently running, please disable the "http.fetchAdditionalSupport" setting and try again.`,
+        "Install Docker",
+        "Show Logs",
+        "Update Settings",
       ),
     );
   });
