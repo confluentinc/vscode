@@ -2,16 +2,7 @@ import { Disposable } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
 import { MessageRouter } from "../ws/messageRouter";
-import {
-  AccessResponseBody,
-  Audience,
-  Message,
-  MessageHeaders,
-  MessageType,
-  newMessageHeaders,
-  RequestResponseMessageTypes,
-  RequestResponseTypeMap,
-} from "../ws/messageTypes";
+import { Message, MessageHeaders, MessageType } from "../ws/messageTypes";
 
 import { SIDECAR_PORT } from "./constants";
 
@@ -33,12 +24,13 @@ export class WebsocketManager {
   private peerWorkspaceCount = 0;
 
   private constructor() {
-    // set up handler for WORKSPACE_COUNT_CHANGED messages
+    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will get one when connected, and whenever
+    // any other workspaces connect or disconnect.
     this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
       logger.info(
         `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
       );
-      // Remember, the reply is inclusive of the current workspace.
+      // The reply is inclusive of the current workspace, but we want peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
     });
   }
@@ -49,7 +41,7 @@ export class WebsocketManager {
    * @param access_token
    * @returns
    */
-  async connect(access_token: string): Promise<void> {
+  async connect(accessToken: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (this.websocket) {
         logger.info("Websocket already connected");
@@ -59,37 +51,34 @@ export class WebsocketManager {
 
       logger.info("Setting up websocket to sidecar");
 
-      const websocket = new WebSocket(`ws://localhost:${SIDECAR_PORT}/ws`);
+      // Quarkus likes knowing what workspace id is connecting at websocket level, but
+      // its websocket framework doesn't let it see request headers. So we pass it in the query string.
+      // (We MUST pass the access token in the headers to pass through the sidecar auth filter, which filters on headers.
+      //  Is just that the headers we pass are not visible to the Quarkus websocket framework.)
+      const websocket = new WebSocket(
+        `ws://localhost:${SIDECAR_PORT}/ws?workspace_id=${process.pid}`,
+        {
+          headers: { authorization: `Bearer ${accessToken}` },
+        },
+      );
 
       websocket.on("open", () => {
-        logger.info("Websocket connected to sidecar, sending authorization.");
+        logger.info("Websocket connected to sidecar");
 
-        // construct access request message to sidecar
-        const message: Message<MessageType.ACCESS_REQUEST> = {
-          headers: newMessageHeaders(MessageType.ACCESS_REQUEST, Audience.SIDECAR),
-          body: {
-            access_token: access_token,
+        // Resolve when we have gotten the first WORKSPACE_COUNT_CHANGED message. Will be sent
+        // when any connect/disconnect happens, even ours.
+        // Install a one-time handler for this message type.
+        this.messageRouter.once(
+          MessageType.WORKSPACE_COUNT_CHANGED,
+          async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+            logger.info(
+              "Received initial WORKSPACE_COUNT_CHANGED message, resolving connection promise",
+            );
+            this.websocket = websocket;
+            this.peerWorkspaceCount = m.body.current_workspace_count - 1;
+            resolve();
           },
-        };
-
-        // send it and wait for the reply for at most 5s.
-        this.sendrecv(message, 5000, websocket)
-          .then((accessReply) => {
-            if (accessReply.body.authorized) {
-              logger.info("Authorized by sidecar");
-              this.postAuthorizeSetup(websocket, accessReply.body);
-              resolve();
-            } else {
-              logger.error("Websocke authorization failed!");
-              websocket.close();
-              reject("Authorization failed");
-            }
-          })
-          .catch((e) => {
-            logger.error(`Error authorizing websocket: ${e}`);
-            websocket.close();
-            reject(e);
-          });
+        );
       });
 
       websocket.on("close", () => {
@@ -133,8 +122,8 @@ export class WebsocketManager {
           }
         },
       });
-    }); // returned promise
-  } // async connect()
+    });
+  }
 
   /**
    * Send a message to / through sidecar over the websocket.
@@ -162,63 +151,6 @@ export class WebsocketManager {
     }
   }
 
-  /**
-   * Send a message expecting a single response. Return promise of the reply message.
-   * Can only be called with messages whose type is a replyable type.
-   */
-  public sendrecv<T extends RequestResponseMessageTypes>(
-    /** Message to send that should recieve a single direct response. */
-    message: Message<T>,
-    /** Optional milliseconds to wait for the reply. */
-    timeoutMs?: number,
-    /** Optional websocket to use for the send, special case param for initial websocketmanger startup. */
-    websocket?: WebSocket,
-  ): Promise<Message<RequestResponseTypeMap[T]>> {
-    return new Promise((resolve, reject) => {
-      if (!websocket) {
-        websocket = this.websocket || undefined;
-      }
-
-      if (!websocket) {
-        logger.error("Websocket not provided or inferrable, cannot send message");
-        reject(new WebsocketClosedError());
-        return;
-      }
-
-      // if a timeout is provided, set up a timer to reject the promise if the reply doesn't come in time.
-      let timeoutId: NodeJS.Timeout | undefined;
-      if (timeoutMs) {
-        timeoutId = setTimeout(() => {
-          logger.error(`Timed out waiting for reply to message ${message.headers.message_id}`);
-
-          // Forget about the reply handler, we've given up on it now.
-          this.messageRouter.removeReplyCallback(message.headers.message_id);
-
-          // Indicate failure.
-          reject("Timeout waiting for reply");
-        }, timeoutMs);
-      }
-
-      // set up a handler for the reply message which resolves the promise, returning the reply message to our caller.
-      const replyHandler = async (message: Message<RequestResponseTypeMap[T]>) => {
-        if (timeoutId) {
-          // We received the reply in time, so cancel the timeout.
-          clearTimeout(timeoutId);
-        }
-
-        // Resolve the promise with the reply message.
-        resolve(message);
-      };
-
-      // Register the reply handler for the message id.
-      this.messageRouter.registerReplyCallback(message.headers.message_id, replyHandler);
-
-      // Send the message, having set up the reply handler. When the reply comes in, the handler will resolve our promise.
-      // The callback will be automatically removed by the messageRouter when the reply is received.
-      this.send(message, websocket);
-    });
-  }
-
   /** How many peer workspaces are connected to sidecar, exclusive of ourselves? */
   public getPeerWorkspaceCount(): number {
     return this.peerWorkspaceCount;
@@ -227,21 +159,6 @@ export class WebsocketManager {
   public dispose(): void {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
-  }
-
-  /**
-   * Do one-time setup after successfully authorizing the workspace to sidecar.
-   * When done experimenting with the websocket / MessageRouter build-out, this method will be removed
-   * and the websocket will be assigned to the instance variable directly in the connect() method.
-   * */
-  private postAuthorizeSetup(websocket: WebSocket, accessReply: AccessResponseBody): void {
-    // Assign the websocket to the instance variable so regular callers can use it to send messages.
-    this.websocket = websocket;
-
-    // Store the initial workspace peer workspace count. The reply is inclusive of the current workspace.
-    this.peerWorkspaceCount = accessReply.current_workspace_count - 1;
-
-    logger.info(`Authorized by sidecar, peer workspace count: ${this.peerWorkspaceCount}`);
   }
 }
 

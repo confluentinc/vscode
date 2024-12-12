@@ -8,14 +8,8 @@ import { randomUUID } from "crypto";
  * directed at a single workspace or to sidecar or broadcast to all workspaces.
  */
 export enum MessageType {
-  // Extension <--> Sidecar messages, audience=sidecar or audience=extension
-
-  // access request/response
-  ACCESS_REQUEST = "ACCESS_REQUEST",
-  ACCESS_RESPONSE = "ACCESS_RESPONSE",
-
   // When a new workspace connects and is granted access, or when a workspace disconnects,
-  // sidecar will send this message to all other workspaces.
+  // sidecar will send this message to all workspaces.
   WORKSPACE_COUNT_CHANGED = "WORKSPACE_COUNT_CHANGED",
 }
 
@@ -87,23 +81,6 @@ export interface ResponseMessage<T extends MessageType> extends Message<T> {
 }
 
 /**
- * Workspace -> sidecar access message body, sent immediately after websocket connection established.
- * Corresponds to message_type {@link MessageType.ACCESS_REQUEST}
- */
-export interface AccessRequestBody {
-  access_token: string;
-}
-
-/**
- * Sidecar -> Workspace message body, response to an access request message.
- * Corresponds to message_type {@link MessageType.ACCESS_RESPONSE}
- */
-export interface AccessResponseBody {
-  authorized: boolean;
-  current_workspace_count: number;
-}
-
-/**
  * Sidecar -> workspaces message body, sent whenever the total number of authorized websocket connections to sidecar changes.
  * Corresponds to message_type {@link MessageType.WORKSPACE_COUNT_CHANGED}
  */
@@ -113,8 +90,6 @@ export interface WorkspacesChangedBody {
 
 /** Type mapping of message type -> corresponding message body type */
 type MessageBodyMap = {
-  [MessageType.ACCESS_REQUEST]: AccessRequestBody;
-  [MessageType.ACCESS_RESPONSE]: AccessResponseBody;
   [MessageType.WORKSPACE_COUNT_CHANGED]: WorkspacesChangedBody;
 };
 
@@ -123,15 +98,5 @@ type MessageBodyMap = {
  * Dictates which messages whose headers should have `response_to_id` field.`
  */
 type MessageHeaderMap = {
-  [MessageType.ACCESS_REQUEST]: MessageHeaders;
-  [MessageType.ACCESS_RESPONSE]: ReplyMessageHeaders;
   [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
-};
-
-// Subset of message types that are request/response pairs.
-export type RequestResponseMessageTypes = MessageType.ACCESS_REQUEST;
-
-/** Relationships between request / response type pairs. */
-export type RequestResponseTypeMap = {
-  [MessageType.ACCESS_REQUEST]: MessageType.ACCESS_RESPONSE;
 };

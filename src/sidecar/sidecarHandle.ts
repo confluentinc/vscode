@@ -28,13 +28,7 @@ import {
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
-import {
-  Audience,
-  Message,
-  MessageType,
-  RequestResponseMessageTypes,
-  RequestResponseTypeMap,
-} from "../ws/messageTypes";
+import { Audience, Message, MessageType } from "../ws/messageTypes";
 import {
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
@@ -141,19 +135,6 @@ export class SidecarHandle {
    */
   public wsSend<T extends MessageType>(message: Message<T>): void {
     this.websocketManager.send(message);
-  }
-
-  /**
-   * Send a message expecting a single response. Return promise of the reply message.
-   * Should only be called with messages whose type is a replyable type.
-   */
-  public wsSendRecv<T extends RequestResponseMessageTypes>(
-    /** Message to send that should recieve a single direct response. */
-    message: Message<T>,
-    /** Optional milliseconds to wait for the reply. */
-    timeoutMs?: number,
-  ): Promise<Message<RequestResponseTypeMap[T]>> {
-    return this.websocketManager.sendrecv(message, timeoutMs);
   }
 
   // === OPENAPI CLIENT METHODS ===
