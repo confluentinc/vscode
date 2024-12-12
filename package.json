@@ -806,6 +806,11 @@
           "group": "inline@2"
         },
         {
+          "command": "confluent.schemas.upload",
+          "when": "view == confluent-resources && viewItem =~ /.*-schema-registry/",
+          "group": "inline@1"
+        },
+        {
           "command": "confluent.schemas.uploadForSubject",
           "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
