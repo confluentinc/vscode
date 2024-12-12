@@ -1,4 +1,15 @@
-import { QuickPickItem, QuickPickItemKind, TextEditor, ThemeIcon, Uri, window } from "vscode";
+import {
+  QuickPickItem,
+  QuickPickItemKind,
+  Tab,
+  TabGroup,
+  TabInputText,
+  TextDocument,
+  ThemeIcon,
+  Uri,
+  window,
+  workspace,
+} from "vscode";
 
 /** Create a quickpick to list all open editors, as well as an item to select a file from the open
  * dialog. */
@@ -17,33 +28,47 @@ export async function uriQuickpick(
 
   const filenameUriMap: Map<string, Uri> = new Map();
 
-  const editors: TextEditor[] = [];
-  window.visibleTextEditors.forEach((editor) => {
-    if (editor.document.uri.scheme === "output") {
-      // ignore output channels
-      return;
-    }
-    // filter open editors by languageId if provided, otherwise show all open editors
+  // inspect *all* open editors, not just the visible/active ones
+  const documentPromises: Promise<TextDocument>[] = [];
+  window.tabGroups.all.forEach((tabGroup: TabGroup) => {
+    tabGroup.tabs.forEach(async (tab: Tab) => {
+      // .input is `unknown`, not sure what other properties are available if `uri` isn't there
+      if (!(tab.input instanceof TabInputText)) {
+        return;
+      }
+      const tabInput: TabInputText = tab.input as TabInputText;
+      if (tabInput.uri.scheme === "output") {
+        // ignore output channels
+        return;
+      }
+      // look up document based on Uri
+      documentPromises.push(Promise.resolve(workspace.openTextDocument(tabInput.uri)));
+    });
+  });
+
+  const documents: TextDocument[] = [];
+  const allDocuments: TextDocument[] = await Promise.all(documentPromises);
+  allDocuments.forEach((document: TextDocument) => {
     if (
       editorLanguageIds.length === 0 ||
-      (editorLanguageIds.length > 0 && editorLanguageIds.includes(editor.document.languageId))
+      (editorLanguageIds.length > 0 && editorLanguageIds.includes(document.languageId))
     ) {
-      editors.push(editor);
-      filenameUriMap.set(editor.document.fileName, editor.document.uri);
+      documents.push(document);
+      filenameUriMap.set(document.fileName, document.uri);
     }
   });
 
   let pickedItem: QuickPickItem | undefined;
-  if (editors.length > 0) {
+  if (documents.length > 0) {
     quickpickItems.push({
       kind: QuickPickItemKind.Separator,
-      label: "Open editors",
+      label: "Open documents",
     });
     quickpickItems.push(
-      ...editors.map((editor) => {
+      ...documents.map((document: TextDocument) => {
         return {
-          label: editor.document.fileName,
-          description: editor.document.languageId,
+          label: document.fileName,
+          description: document.languageId,
           iconPath: new ThemeIcon("file"),
         };
       }),
@@ -58,7 +83,7 @@ export async function uriQuickpick(
     }
   }
   // either there are no open editors, or the user selected the "Select a file" option
-  if (editors.length === 0 || pickedItem?.label === selectFileLabel) {
+  if (documents.length === 0 || pickedItem?.label === selectFileLabel) {
     const uri: Uri[] | undefined = await window.showOpenDialog({
       openLabel: "Select a file",
       canSelectFiles: true,
