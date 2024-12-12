@@ -10,17 +10,19 @@ import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { uploadNewSchema } from "./schemaUpload";
+import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 
 const logger = new Logger("commands.schemas");
 
 export function registerSchemaCommands(): vscode.Disposable[] {
   return [
-    registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
-    registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
-    registerCommandWithLogging("confluent.schemas.upload", uploadNewSchema),
-    registerCommandWithLogging("confluent.schemas.evolveSchemaGroup", evolveSchemaGroupCommand),
+    registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFile),
+    registerCommandWithLogging(
+      "confluent.schemas.uploadForSubject",
+      uploadSchemaForSubjectFromfile,
+    ),
+    registerCommandWithLogging("confluent.schemas.evolveSchemaSubject", evolveSchemaSubjectCommand),
     registerCommandWithLogging("confluent.schemas.evolve", evolveSchemaCommand),
     registerCommandWithLogging("confluent.schemaViewer.viewLocally", viewLocallyCommand),
     registerCommandWithLogging(
@@ -64,18 +66,6 @@ async function copySchemaRegistryId() {
   }
   await vscode.env.clipboard.writeText(schemaRegistry.id);
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
-}
-
-// refer to https://github.com/confluentinc/vscode/pull/420 for reverting changes to package.json for
-// the following three commands:
-function refreshCommand(item: any) {
-  logger.info("item", item);
-  // TODO: implement this
-}
-
-function validateCommand(item: any) {
-  logger.info("item", item);
-  // TODO: implement this
 }
 
 /** User has gestured to create a new schema from scratch relative to the currently selected schema registry. */
@@ -209,14 +199,14 @@ async function evolveSchemaCommand(schema: Schema) {
 }
 
 /** Drop into evolving the latest version of the schema in the subject group. */
-async function evolveSchemaGroupCommand(schemaGroup: ContainerTreeItem<Schema>) {
+async function evolveSchemaSubjectCommand(schemaGroup: ContainerTreeItem<Schema>) {
   if (!(schemaGroup instanceof ContainerTreeItem)) {
-    logger.error("evolveSchemaGroupCommand called with invalid argument type", schemaGroup);
+    logger.error("evolveSchemaSubjectCommand called with invalid argument type", schemaGroup);
     return;
   }
 
   if (schemaGroup.children.length === 0) {
-    logger.error("evolveSchemaGroupCommand called with no schemas", schemaGroup);
+    logger.error("evolveSchemaSubjectCommand called with no schemas", schemaGroup);
     return;
   }
 
@@ -293,7 +283,7 @@ async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: Sche
   for (const language of languageTypes) {
     if (installedLanguages.indexOf(language) !== -1) {
       vscode.languages.setTextDocumentLanguage(textDoc.document, language);
-      logger.info(`Set document language to ${language}`);
+      logger.debug(`Set document language to "${language}"`);
       return;
     } else {
       logger.warn(`Language ${language} not installed type ${type}`);
@@ -301,9 +291,9 @@ async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: Sche
   }
 
   const preferredLanguage = languageTypes[0];
+  const marketplaceUrl = `https://marketplace.visualstudio.com/search?term=${preferredLanguage}&target=VSCode&category=All%20categories&sortBy=Relevance`;
   vscode.window.showWarningMessage(
-    `Could not find a matching language for ${type}. ` +
-      `Perhaps install a language extension for ${preferredLanguage}?`,
+    `Could not find a matching editor language for "${type}". Try again after installing [an extension that supports "${preferredLanguage}"](${marketplaceUrl}).`,
   );
 
   logger.warn("Could not find a matching language for schema ${schema.subject}");

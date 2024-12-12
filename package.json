@@ -211,18 +211,6 @@
         "category": "Confluent: Project"
       },
       {
-        "command": "confluent.schemaViewer.refresh",
-        "icon": "$(sync)",
-        "title": "Refresh Schema",
-        "category": "Confluent: Schema"
-      },
-      {
-        "command": "confluent.schemaViewer.validate",
-        "icon": "$(check)",
-        "title": "Validate",
-        "category": "Confluent: Schema"
-      },
-      {
         "command": "confluent.schemaViewer.viewLocally",
         "icon": "$(file-code)",
         "title": "View Schema",
@@ -253,14 +241,20 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.uploadForSubject",
+        "icon": "$(cloud-upload)",
+        "title": "Upload Schema to Schema Registry for Subject",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.evolve",
-        "icon": "$(plus)",
+        "icon": "$(versions)",
         "title": "Evolve Schema",
         "category": "Confluent: Schemas"
       },
       {
-        "command": "confluent.schemas.evolveSchemaGroup",
-        "icon": "$(plus)",
+        "command": "confluent.schemas.evolveSchemaSubject",
+        "icon": "$(versions)",
         "title": "Evolve Latest Schema",
         "category": "Confluent: Schemas"
       },
@@ -574,14 +568,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemaViewer.refresh",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemaViewer.validate",
-          "when": "false"
-        },
-        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -594,11 +580,15 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.uploadForSubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolve",
           "when": "false"
         },
         {
-          "command": "confluent.schemas.evolveSchemaGroup",
+          "command": "confluent.schemas.evolveSchemaSubject",
           "when": "false"
         },
         {
@@ -640,21 +630,6 @@
       ],
       "editor/title": [
         {
-          "command": "confluent.schemaViewer.refresh",
-          "group": "navigation@1",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemaViewer.validate",
-          "group": "navigation@2",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemas.upload",
-          "group": "navigation@3",
-          "when": "resourceFilename =~ /.*\\.(avsc|json|proto)/"
-        },
-        {
           "command": "confluent.topic.consume.duplicate",
           "group": "navigation@1",
           "when": "activeWebviewPanelId == message-viewer"
@@ -679,14 +654,24 @@
           "group": "navigation@2"
         },
         {
-          "command": "confluent.resources.schema-registry.select",
+          "command": "confluent.schemas.create",
           "when": "view == confluent-schemas",
           "group": "navigation@1"
         },
         {
+          "command": "confluent.schemas.upload",
+          "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
+          "group": "navigation@2"
+        },
+        {
+          "command": "confluent.resources.schema-registry.select",
+          "when": "view == confluent-schemas",
+          "group": "navigation@3"
+        },
+        {
           "command": "confluent.schemas.refresh",
           "when": "view == confluent-schemas",
-          "group": "navigation@2"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
@@ -695,7 +680,7 @@
         },
         {
           "command": "confluent.topics.create",
-          "when": "view == confluent-topics",
+          "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "navigation@1"
         },
         {
@@ -749,11 +734,6 @@
           "command": "confluent.docker.stopLocalResources",
           "when": "view == confluent-resources && viewItem == local-container-connected && confluent.localKafkaClusterAvailable",
           "group": "inline"
-        },
-        {
-          "command": "confluent.schemas.diffMostRecentVersions",
-          "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*schema-group/",
-          "group": "3_compare"
         },
         {
           "command": "confluent.diff.selectForCompare",
@@ -812,27 +792,37 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem =~ /.*-schema*/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema*/",
           "group": "4_copy@1"
         },
         {
+          "command": "confluent.schemas.diffMostRecentVersions",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*multiple-versions.*schema-subject/",
+          "group": "3_compare"
+        },
+        {
           "command": "confluent.schemas.evolve",
-          "when": "view == confluent-schemas  && viewItem =~ /.*evolvable.*schema$/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*evolvable.*schema$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.schemas.evolveSchemaSubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "confluent.schemas.upload",
+          "when": "view == confluent-resources && viewItem =~ /.*-schema-registry/",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.schemas.uploadForSubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
         },
         {
           "command": "confluent.schemaViewer.viewLatestLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-group$/",
-          "group": "inline@1"
-        },
-        {
-          "command": "confluent.schemas.evolveSchemaGroup",
-          "when": "view == confluent-schemas && viewItem =~ /.*schema-group$/",
-          "group": "inline@2"
-        },
-        {
-          "command": "confluent.schemaViewer.viewLocally",
-          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "inline@1"
         },
         {

@@ -4,6 +4,14 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+
+- Schema upload actions are now available in the Schemas view, as well as any Schema Registry shown
+  in the Resources view. Schemas can also now be uploaded from an editor without needing to save to
+  a file first.
+- Clicking a schema item in the Topics/Schemas view will now open the schema definition in a
+  read-only document without needing to click on the "View Schema" action.
+
 ## 0.22.1
 
 - Additional information is now provided when attempting to start/stop local resources and the
