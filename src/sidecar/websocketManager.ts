@@ -119,6 +119,7 @@ export class WebsocketManager implements Disposable {
         dispose: () => {
           if (this.websocket && this.websocket.readyState !== WebSocket.CLOSED) {
             this.websocket.close();
+            this.websocket = null;
           }
         },
       });
@@ -130,13 +131,8 @@ export class WebsocketManager implements Disposable {
    * The websocket send is ultimately async underneath the hood.
    * @throws {WebsocketClosedError} if the websocket is not connected.
    */
-  public send<T extends MessageType>(
-    message: Message<T>,
-    /** Optional websocket to use for the send, special cased for startup. */
-    websocket?: WebSocket,
-  ): void {
-    websocket = websocket || this.websocket || undefined;
-    if (websocket) {
+  public send<T extends MessageType>(message: Message<T>): void {
+    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
       const payload = JSON.stringify(message);
 
       if (payload.length > 64 * 1024) {
@@ -144,9 +140,9 @@ export class WebsocketManager implements Disposable {
         throw new Error("Payload too large");
       }
       logger.debug(`Sending ${payload.length} byte message`);
-      websocket.send(payload);
+      this.websocket.send(payload);
     } else {
-      logger.error("Websocket not provided/assigned, cannot send message");
+      logger.error("Websocket not assigned + open, cannot send message");
       throw new WebsocketClosedError();
     }
   }
