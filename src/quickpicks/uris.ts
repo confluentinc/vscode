@@ -14,6 +14,7 @@ import {
 /** Create a quickpick to list all open editors, as well as an item to select a file from the open
  * dialog. */
 export async function uriQuickpick(
+  uriSchemes: string[] = [],
   editorLanguageIds: string[] = [],
   fileFilters: { [name: string]: string[] } = {},
 ): Promise<Uri | undefined> {
@@ -37,8 +38,8 @@ export async function uriQuickpick(
         return;
       }
       const tabInput: TabInputText = tab.input as TabInputText;
-      if (tabInput.uri.scheme === "output") {
-        // ignore output channels
+      if (uriSchemes && !uriSchemes.includes(tabInput.uri.scheme)) {
+        // skip URIs that don't match the provided schemes
         return;
       }
       // look up document based on Uri
