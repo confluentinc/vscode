@@ -4,7 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
 - Produce message button and commmand enabling schemaless production of JSON messages
+
+### Changed
+
+- Schema upload actions are now available in the Schemas view, as well as any Schema Registry shown
+  in the Resources view. Schemas can also now be uploaded from an editor without needing to save to
+  a file first.
 
 ## 0.22.1
 
