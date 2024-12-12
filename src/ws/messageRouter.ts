@@ -8,14 +8,14 @@ import { Message, MessageType } from "./messageTypes";
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
 /** Type keeping track of a per-message-type callbacks. */
-type CallbackEntry<T extends MessageType> = {
+export type CallbackEntry<T extends MessageType> = {
   callback: MessageCallback<T>; // Callback to be called when a message of this type is recieved.
   once: boolean; // Indicates if the callback should be called only once, then removed. This featurette might never be used.
   registrationToken: string; // Unique token to identify the callback for removal.
 };
 
 /** Type for a map of message type -> array of callback entries.*/
-type CallbackMap = Map<MessageType, CallbackEntry<any>[]>;
+export type CallbackMap = Map<MessageType, CallbackEntry<any>[]>;
 
 const logger = new Logger("messageRouter");
 
@@ -48,7 +48,13 @@ export class MessageRouter {
    **/
   subscribe<T extends MessageType>(messageType: T, callback: MessageCallback<T>): string {
     const registrationToken = this.generateRegistrationToken();
-    this.callbacks.get(messageType)!.push({ callback, once: false, registrationToken });
+    const callbacks = this.callbacks.get(messageType);
+    if (callbacks === undefined) {
+      throw new Error(`MessageRouter::subscribe(): unknown message type ${messageType}`);
+    }
+
+    callbacks.push({ callback, once: false, registrationToken });
+
     return registrationToken;
   }
 
