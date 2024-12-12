@@ -125,17 +125,10 @@ export class MessageRouter {
       }
     }
 
-    // Wait for all the promises to resolve concurrently, but wrap them
-    // all so that any errors raised by callbacks won't cause the Promise.all to reject
-    // or two skip other callbacks.
-    const errors: Error[] = [];
-    await Promise.all(
-      callbackPromises.map((promise) =>
-        promise.catch((error) => {
-          errors.push(error);
-        }),
-      ),
-    );
+    // Wait for all the promises to resolve concurrently, using allSettled() to wrap them
+    // all so that any errors raised by callbacks won't cause the us to reject or to skip remaining callbacks.
+    const results = await Promise.allSettled(callbackPromises);
+    const errors = results.filter((r) => r.status === "rejected").map((r) => r.reason as Error);
 
     if (errors.length > 0) {
       // Log all the errors, but don't let them bubble up.
