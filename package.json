@@ -248,13 +248,13 @@
       },
       {
         "command": "confluent.schemas.evolve",
-        "icon": "$(plus)",
+        "icon": "$(versions)",
         "title": "Evolve Schema",
         "category": "Confluent: Schemas"
       },
       {
         "command": "confluent.schemas.evolveSchemaSubject",
-        "icon": "$(plus)",
+        "icon": "$(versions)",
         "title": "Evolve Latest Schema",
         "category": "Confluent: Schemas"
       },
