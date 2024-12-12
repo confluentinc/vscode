@@ -1,7 +1,7 @@
 import assert from "assert";
 import "mocha";
 import { CallbackEntry, CallbackMap, MessageRouter } from "./messageRouter";
-import { Audience, Message, MessageType } from "./messageTypes";
+import { Audience, Message, MessageType, WorkspacesChangedBody } from "./messageTypes";
 
 // tests over MessageRouter
 
@@ -130,5 +130,55 @@ describe("MessageRouter tests", () => {
     await messageRouter.deliver(simpleMessage);
     assert.deepStrictEqual(null, callbackOneCalledWith);
     assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+  });
+
+  it("Delivery of unknown message type should not raise any error", async () => {
+    const unknownMessageType: Message<MessageType> = {
+      headers: {
+        message_type: "UNKNOWN" as MessageType,
+        audience: Audience.WORKSPACES,
+        originator: "sidecar",
+        message_id: "1",
+      },
+      body: {} as WorkspacesChangedBody,
+    };
+
+    await messageRouter.deliver(unknownMessageType);
+  });
+
+  it("Delivering message when no callbacks are registered should not raise any error", async () => {
+    await messageRouter.deliver(simpleMessage);
+  });
+
+  it("test errors raised by some callbacks do not prevent other callbacks from being called", async () => {
+    let callbackTwoCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+    let callbackThreeCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+    let raised = false;
+
+    const callbackOne = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      raised = true;
+      throw new Error("callbackOne error");
+    };
+
+    const callbackTwo = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackTwoCalledWith = message;
+    };
+
+    const callbackThree = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackThreeCalledWith = message;
+    };
+
+    //
+    messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
+    messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
+    messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackThree);
+
+    // Should call all callbacks, starting with callbackOne, which will raise an error.
+    // The error should not prevent the other callbacks from being called.
+    await messageRouter.deliver(simpleMessage);
+
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackThreeCalledWith);
+    assert.strictEqual(true, raised);
   });
 });

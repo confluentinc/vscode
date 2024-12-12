@@ -125,8 +125,26 @@ export class MessageRouter {
       }
     }
 
-    // Wait for all the promises to resolve concurrently
-    await Promise.all(callbackPromises);
+    // Wait for all the promises to resolve concurrently, but wrap them
+    // all so that any errors raised by callbacks won't cause the Promise.all to reject
+    // or two skip other callbacks.
+    const errors: Error[] = [];
+    await Promise.all(
+      callbackPromises.map((promise) =>
+        promise.catch((error) => {
+          errors.push(error);
+        }),
+      ),
+    );
+
+    if (errors.length > 0) {
+      // Log all the errors, but don't let them bubble up.
+      logger.error(
+        `Errors delivering message of type ${message.headers.message_type}: ${errors
+          .map((e) => e.message)
+          .join(", ")}`,
+      );
+    }
 
     logger.debug(
       `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
