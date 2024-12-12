@@ -736,11 +736,6 @@
           "group": "inline"
         },
         {
-          "command": "confluent.schemas.diffMostRecentVersions",
-          "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*schema-subject/",
-          "group": "3_compare"
-        },
-        {
           "command": "confluent.diff.selectForCompare",
           "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
           "group": "3_compare"
@@ -797,12 +792,22 @@
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
-          "when": "view == confluent-schemas && viewItem =~ /.*-schema*/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema*/",
           "group": "4_copy@1"
         },
         {
+          "command": "confluent.schemas.diffMostRecentVersions",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*multiple-versions.*schema-subject/",
+          "group": "3_compare"
+        },
+        {
+          "command": "confluent.schemas.evolve",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*evolvable.*schema$/",
+          "group": "inline@1"
+        },
+        {
           "command": "confluent.schemas.evolveSchemaSubject",
-          "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
         },
         {
@@ -812,13 +817,8 @@
         },
         {
           "command": "confluent.schemas.uploadForSubject",
-          "when": "view == confluent-schemas && viewItem =~ /.*schema-subject$/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
-        },
-        {
-          "command": "confluent.schemas.evolve",
-          "when": "view == confluent-schemas && viewItem =~ /.*evolvable.*schema$/",
-          "group": "inline@1"
         },
         {
           "command": "confluent.schemaViewer.viewLatestLocally",
