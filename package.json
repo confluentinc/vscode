@@ -955,8 +955,8 @@
           },
           {
             "id": "create-connections",
-            "title": "Connect Directly to Kafka / Schema Registry",
-            "description": "In the Resources view, click the $(plus) icon next to the 'Other' item to connect directly to a Kafka cluster or Schema Registry instance.\n[Open Connection Form](command:confluent.connections.direct)",
+            "title": "Connect directly to Kafka / Schema Registry",
+            "description": "To connect to an Apache Kafka or Schema Registry cluster, click $(plus) next to Resource > Other. The cluster can be in Confluent Cloud, Confluent Platform, or hosted elsewhere.\n[Open Connection Form](command:confluent.connections.direct)",
             "media": {
               "image": "resources/walkthrough/direct-connection-form.png",
               "altText": "Create a new connection to a Kafka cluster or Schema Registry"
