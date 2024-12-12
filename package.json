@@ -767,7 +767,7 @@
         },
         {
           "command": "confluent.topic.produce.fromFile",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWrite.*/ && confluent.preview.enableProduceMessages",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWrite.*/ && confluent.produceMessagesEnabled",
           "group": "inline@1"
         },
         {

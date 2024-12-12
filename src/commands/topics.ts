@@ -186,7 +186,7 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     const filePath = fileUri[0].fsPath;
     const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
-    if (!message.key || !message.value || message.headers.length === 0) {
+    if (!message.key || !message.value || message.headers === 0) {
       vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
     }
 
