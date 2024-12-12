@@ -123,5 +123,12 @@ describe("MessageRouter tests", () => {
       ],
       remainingCallbacks,
     );
+
+    // deliver again, will only call callbackTwo.
+    callbackOneCalledWith = null;
+    callbackTwoCalledWith = null;
+    await messageRouter.deliver(simpleMessage);
+    assert.deepStrictEqual(null, callbackOneCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
   });
 });
