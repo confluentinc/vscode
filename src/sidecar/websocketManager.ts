@@ -8,7 +8,7 @@ import { SIDECAR_PORT } from "./constants";
 
 const logger = new Logger("websocketManager");
 
-export class WebsocketManager {
+export class WebsocketManager implements Disposable {
   static instance: WebsocketManager | null = null;
 
   static getInstance(): WebsocketManager {
@@ -42,8 +42,8 @@ export class WebsocketManager {
    * @returns
    */
   async connect(accessToken: string): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      if (this.websocket) {
+    return new Promise<void>((resolve) => {
+      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
         logger.info("Websocket already connected");
         resolve();
         return;
@@ -117,7 +117,7 @@ export class WebsocketManager {
 
       this.disposables.push({
         dispose: () => {
-          if (this.websocket) {
+          if (this.websocket && this.websocket.readyState !== WebSocket.CLOSED) {
             this.websocket.close();
           }
         },
