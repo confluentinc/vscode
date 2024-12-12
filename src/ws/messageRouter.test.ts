@@ -155,7 +155,7 @@ describe("MessageRouter tests", () => {
     let callbackThreeCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
     let raised = false;
 
-    const callbackOne = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+    const callbackOne = async () => {
       raised = true;
       throw new Error("callbackOne error");
     };
