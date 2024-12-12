@@ -1,13 +1,12 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { ConnectionSpec } from "../clients/sidecar";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
-import { getResourceManager } from "../storage/resourceManager";
+import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { getResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
@@ -71,8 +70,12 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
 
   const yesButton = "Yes, disconnect";
   const confirmation = await window.showWarningMessage(
-    `Are you sure you want to disconnect "${item.name}"? To reconnect, you will need to re-enter the associated connection details. (This will not delete any associated resources.)`,
-    { modal: true },
+    `Are you sure you want to disconnect "${item.name}"? `,
+    {
+      modal: true,
+      detail:
+        "You will need to re-enter the associated connection details to reconnect. This will not delete any associated resources.",
+    },
     yesButton,
     // "Cancel" is added by default
   );
@@ -98,7 +101,7 @@ export async function renameDirectConnection(item: DirectEnvironment) {
   }
 
   // look up the associated ConnectionSpec
-  const spec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
     item.connectionId,
   );
   if (!spec) {
@@ -110,7 +113,7 @@ export async function renameDirectConnection(item: DirectEnvironment) {
   }
 
   // update and send it to the manager to update the sidecar + secret storage
-  const updatedSpec: ConnectionSpec = {
+  const updatedSpec: CustomConnectionSpec = {
     ...spec,
     name: newName,
   };

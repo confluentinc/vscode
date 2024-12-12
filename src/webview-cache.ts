@@ -53,6 +53,11 @@ export class WebviewPanelCache {
       localResourceRoots: [staticRoot, ...(options.localResourceRoots ?? [])],
     });
 
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(context.extensionUri, "resources/confluent-logo-dark.svg"),
+      dark: vscode.Uri.joinPath(context.extensionUri, "resources/confluent-logo.svg"),
+    };
+
     // …initialize its template…
     panel.webview.html = template({
       cspSource: panel.webview.cspSource,

@@ -9,6 +9,7 @@ import { ConnectionId, isCCloud, isLocal } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { FormConnectionType } from "../webview/direct-connect-form";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 
 const logger = new Logger("storage.resourceManager");
@@ -37,8 +38,15 @@ export type UriMetadata = Map<UriMetadataKeys, string>;
 /** Map of string of uri for a file -> dict of its confluent-extension-centric metadata */
 export type AllUriMetadata = Map<string, UriMetadata>;
 
-/** Map of connection id to ConnectionSpec; only used for `DIRECT` connections. */
-export type DirectConnectionsById = Map<ConnectionId, ConnectionSpec>;
+export interface CustomConnectionSpec extends ConnectionSpec {
+  // enforce `ConnectionId` type over `string`
+  id: ConnectionId;
+  /** The option chosen by the user to describe this connection. Similar to {@link ConnectionType} */
+  formConnectionType: FormConnectionType;
+}
+
+/** Map of {@link ConnectionId} to {@link CustomConnectionSpec}; only used for `DIRECT` connections. */
+export type DirectConnectionsById = Map<ConnectionId, CustomConnectionSpec>;
 
 /**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
@@ -678,16 +686,16 @@ export class ResourceManager {
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
     if (!connectionsString) {
-      return new Map<ConnectionId, ConnectionSpec>();
+      return new Map<ConnectionId, CustomConnectionSpec>();
     }
-    const connections: Map<ConnectionId, ConnectionSpec> = JSON.parse(connectionsString);
+    const connections: Map<ConnectionId, CustomConnectionSpec> = JSON.parse(connectionsString);
     const connectionsById: DirectConnectionsById = new Map(
       Object.entries(connections),
     ) as DirectConnectionsById;
     return connectionsById;
   }
 
-  async getDirectConnection(id: ConnectionId): Promise<ConnectionSpec | null> {
+  async getDirectConnection(id: ConnectionId): Promise<CustomConnectionSpec | null> {
     const connections: DirectConnectionsById = await this.getDirectConnections();
     return connections.get(id) ?? null;
   }
@@ -696,7 +704,7 @@ export class ResourceManager {
    * Add a direct connection to the extension state by looking up the existing
    * {@link DirectConnectionsById} map and adding/overwriting the `connection` by its `id`.
    */
-  async addDirectConnection(connection: ConnectionSpec): Promise<void> {
+  async addDirectConnection(connection: CustomConnectionSpec): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
       const connectionIds: DirectConnectionsById = await this.getDirectConnections();

@@ -18,6 +18,7 @@ import { Logger } from "../logging";
 import { ConnectionLabel } from "../models/resource";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
+import { UserEvent } from "../telemetry/events";
 
 const logger = new Logger("commands.docker");
 
@@ -49,7 +50,13 @@ export async function runWorkflowWithProgress(
   // show multi-select quickpick to allow user to choose which resources to launch and determine
   // how the workflow should be run
   const resources: LocalResourceKind[] =
-    resourceKinds.length > 0 ? resourceKinds : await localResourcesQuickPick();
+    resourceKinds.length > 0
+      ? resourceKinds
+      : await localResourcesQuickPick(
+          start,
+          start ? "Local Resources to Start" : "Local Resources to Stop",
+          start ? "Select resources to start" : "Select resources to stop",
+        );
   if (resources.length === 0) {
     // nothing selected, or user clicked a quickpick button to adjust settings
     return;
@@ -97,7 +104,7 @@ export async function runWorkflowWithProgress(
             start,
             resourceKind: workflow.resourceKind,
           });
-          workflow.sendTelemetryEvent("Notification Button Clicked", {
+          workflow.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
             buttonLabel: "Cancel",
             notificationType: "progress",
             start,
@@ -106,7 +113,7 @@ export async function runWorkflowWithProgress(
         });
 
         logger.debug(`running ${workflow.resourceKind} workflow`, { start });
-        workflow.sendTelemetryEvent("Workflow Initiated", {
+        workflow.sendTelemetryEvent(UserEvent.WorkflowInitiated, {
           start,
         });
         try {
@@ -116,13 +123,13 @@ export async function runWorkflowWithProgress(
             await workflow.stop(token, progress);
           }
           logger.debug(`finished ${workflow.resourceKind} workflow`, { start });
-          workflow.sendTelemetryEvent("Workflow Finished", {
+          workflow.sendTelemetryEvent(UserEvent.WorkflowFinished, {
             start,
           });
         } catch (error) {
           logger.error(`error running ${workflow.resourceKind} workflow`, error);
           if (error instanceof Error) {
-            workflow.sendTelemetryEvent("Workflow Errored", {
+            workflow.sendTelemetryEvent(UserEvent.WorkflowErrored, {
               start,
             });
             Sentry.captureException(error, {

@@ -11,7 +11,7 @@ import { Logger } from "../logging";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
-import { schemaSubjectQuickPick } from "../quickpicks/schemas";
+import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { getSidecar } from "../sidecar";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
@@ -27,44 +27,49 @@ const logger = new Logger("commands.schemaUpload");
 /**
  * Command backing "Upload a new schema".
  */
-export async function uploadNewSchema(item: vscode.Uri) {
-  // Get the contents of the active editor
+export async function uploadNewSchema(fileUri: vscode.Uri) {
+  if (!fileUri) {
+    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
+    return;
+  }
+
   let activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
     vscode.window.showErrorMessage("Must be invoked from an active editor");
     return;
   }
-  const schemaContents = activeEditor.document.getText();
 
-  if (!item) {
-    vscode.window.showErrorMessage("Must be invoked with an Avro, JSON Schema, or Protobuf file");
-    return;
-  }
-
-  // What kind of schema is this? We must tell the schema registry.
-  let schemaType: SchemaType;
-  try {
-    schemaType = determineSchemaType(item, activeEditor.document.languageId);
-  } catch (e) {
-    vscode.window.showErrorMessage((e as Error).message);
-    return;
-  }
-
-  // If the document has (locally marked) errors, don't proceed with upload.
+  // If the document has (locally marked) errors, don't proceed.
   if (await documentHasErrors(activeEditor)) {
     logger.error("Document has errors, aborting schema upload");
     return;
   }
 
+  // If there's a query string in the URL, it should be the encoding of a Schema
+  // object. Parse it into a Schema object if possible to use it for default
+  // values
+  const defaults: Schema | undefined = fileUri.query ? schemaFromString(fileUri.query) : undefined;
+
+  // What kind of schema is this? We must tell the schema registry.
+  const schemaType: SchemaType | undefined = await determineSchemaType(
+    fileUri,
+    activeEditor.document.languageId,
+  );
+  if (!schemaType) {
+    // the only way we get here is if the user bailed on the schema type quickpick after we failed
+    // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
+    return;
+  }
+
   // Ask the user to choose a schema registry to upload to.
-  const registry = await schemaRegistryQuickPick();
+  const registry = await schemaRegistryQuickPick(defaults?.schemaRegistryId);
   if (!registry) {
     logger.info("No registry chosen, aborting schema upload");
     return;
   }
 
   // Ask the user to choose a subject to bind the schema to.
-  const subject = await chooseSubject(registry, schemaType);
+  const subject = await chooseSubject(registry, schemaType, defaults?.subject);
   if (!subject) {
     logger.info("No subject chosen, aborting schema upload");
     vscode.window.showInformationMessage("Schema upload aborted.");
@@ -99,7 +104,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
       schemaSubjectsApi,
       subject,
       schemaType,
-      schemaContents,
+      activeEditor.document.getText(),
       normalize,
     );
 
@@ -128,12 +133,12 @@ export async function uploadNewSchema(item: vscode.Uri) {
   const schemaViewProvider = getSchemasViewProvider();
 
   // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
-  const results: [string | undefined, Schema] = await Promise.all([
+  const [viewchoice, newschema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
   ]);
 
-  if (results[0]) {
+  if (viewchoice) {
     // User chose to view the schema in the schema registry.
 
     // Get the schemas view provider to refresh the view on the right registry.
@@ -143,7 +148,7 @@ export async function uploadNewSchema(item: vscode.Uri) {
 
     // get the new schema to pop in the view by getting the treeitem to reveal
     // the schema's item.
-    schemaViewProvider.revealSchema(results[1]);
+    schemaViewProvider.revealSchema(newschema);
   }
 }
 
@@ -180,10 +185,11 @@ async function documentHasErrors(activeEditor: vscode.TextEditor): Promise<boole
 async function chooseSubject(
   registry: SchemaRegistry,
   schemaType: SchemaType,
+  defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, schemaType);
+  let subject = await schemaSubjectQuickPick(registry, schemaType, defaultSubject);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.
@@ -307,45 +313,67 @@ export function schemaRegistrationMessage(
 }
 
 /**
- * Given a file and / or a language id, determine the schema type of the file.
+ * General map for associating Avro and Protobuf to their associated {@link SchemaType}s based on
+ * either file extension or language ID.
+ *
+ * This does not include `json` because it may be used when editing an Avro schema without an Avro
+ * language extension installed.
  */
-export function determineSchemaType(
-  file: vscode.Uri | null,
-  languageId: string | null,
-): SchemaType {
-  if (!file && !languageId) {
-    throw new Error("Must call with either a file or document");
-  }
+export const AVRO_PROTOBUF_SCHEMA_TYPE_MAP = new Map([
+  // language IDs
+  ["avroavsc", SchemaType.Avro],
+  ["proto", SchemaType.Protobuf],
+  ["proto3", SchemaType.Protobuf],
+  // file extensions
+  ["avsc", SchemaType.Avro],
+  ["proto", SchemaType.Protobuf],
+]);
 
-  let schemaType: SchemaType | unknown = null;
+/**
+ * Given a file/editor {@link vscode.Uri Uri}, determine the {@link SchemaType}.
+ *
+ * If a `languageId` is passed, it will be used if we can't determine a schema type from the Uri.
+ * If we still can't determine the schema type, we'll show a quickpick to the user so they can choose.
+ */
+export async function determineSchemaType(
+  uri: vscode.Uri,
+  languageId?: string,
+): Promise<SchemaType | undefined> {
+  let schemaType: SchemaType | undefined;
 
-  if (languageId) {
-    const languageIdToSchemaType = new Map([
-      ["avroavsc", SchemaType.Avro],
-      ["proto", SchemaType.Protobuf],
-      ["json", SchemaType.Json],
-    ]);
-    schemaType = languageIdToSchemaType.get(languageId);
-  }
-
-  if (!schemaType && file) {
-    // extract the file extension from file.path
-    const ext = file.path.split(".").pop();
-    if (ext) {
-      const extensionToSchemaType = new Map([
-        ["avsc", SchemaType.Avro],
-        ["proto", SchemaType.Protobuf],
-        ["json", SchemaType.Json],
-      ]);
-      schemaType = extensionToSchemaType.get(ext);
+  switch (uri.scheme) {
+    case "file": {
+      // extract the file extension from file.path
+      const ext = uri.path.split(".").pop();
+      if (ext) {
+        schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(ext);
+      }
+      break;
+    }
+    case "untitled": {
+      // look up the editor belonging to the Uri
+      const editor = vscode.window.visibleTextEditors.find(
+        (e) => e.document.uri.toString() === uri.toString(),
+      );
+      if (editor) {
+        // only match against Avro/Protobuf, if available
+        schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(editor.document.languageId);
+      }
+      break;
     }
   }
 
-  if (!schemaType) {
-    throw new Error("Could not determine schema type from file or document");
+  if (languageId && !schemaType) {
+    // fall back on any language ID, if provided
+    schemaType = AVRO_PROTOBUF_SCHEMA_TYPE_MAP.get(languageId);
   }
 
-  return schemaType as SchemaType;
+  logger.debug("schemaType before quickpick", { schemaType });
+  if (!schemaType) {
+    // can't determine schema type from file/editor (or language ID, if passed), let the user pick
+    return await schemaTypeQuickPick();
+  }
+  return schemaType;
 }
 
 /**
@@ -535,4 +563,36 @@ async function updateRegistryCacheAndFindNewSchema(
   }
 
   return schema!;
+}
+
+/**
+ * Construct a Schema object from JSON string.
+ * @returns Schema or undefined if was unable to complete.
+ */
+export function schemaFromString(source: string): Schema | undefined {
+  const query = decodeURIComponent(source);
+  let schemaFromJSON: Schema | undefined;
+
+  try {
+    schemaFromJSON = JSON.parse(query);
+  } catch (e) {
+    // Must not have been a valid JSON object.
+    logger.error("Could not parse JSON from URI query string", e);
+    return undefined;
+  }
+
+  if (!schemaFromJSON) {
+    logger.warn("Could not parse schema object from URI query string", { query });
+  } else {
+    logger.info("Was able to parse object from URI query string", {
+      schemaFromJSON: schemaFromJSON,
+    });
+    try {
+      return Schema.create(schemaFromJSON);
+    } catch (e) {
+      // Must not have been a valid schema object.
+      logger.error("Could not create schema object from parsed JSON", e);
+    }
+    return undefined;
+  }
 }

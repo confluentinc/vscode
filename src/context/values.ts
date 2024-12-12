@@ -29,9 +29,6 @@ export function getContextValue<T>(key: string): T | undefined {
 
 export enum ContextValues {
   // -- CONTEXT VALUES ONLY SET DURING EXTENSION ACTIVATION --
-  /** Array of contextValues from `src/models` that support "Select for Compare"/"Compare with
-   * Selected" operations in our sidebar. */
-  READONLY_DIFFABLE_RESOURCES = "confluent.readOnlyDiffableResources",
   /** Array of resources that support the "View in CCloud" action. */
   CCLOUD_RESOURCES = "confluent.ccloudResources",
   /** Array of view IDs that contain Confluent/Kafka resources. */
@@ -58,8 +55,13 @@ export enum ContextValues {
   /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
   /**
-   * EXPERIMENTAL: Are direct connections enabled at all?
-   * (This should go away once the `confluent.experimental.enableDirectConnections` setting is removed.)
+   * PREVIEW: Are direct connections enabled at all?
+   * (This should go away once the `confluent.preview.enableDirectConnections` setting is removed.)
    */
   directConnectionsEnabled = "confluent.directConnectionsEnabled",
+  /**
+   * PREVIEW: Is the "produce message" functionality enabled at all?
+   * (This should go away once the `confluent.preview.enableProduceMessages` setting is removed.)
+   */
+  produceMessagesEnabled = "confluent.produceMessagesEnabled",
 }
