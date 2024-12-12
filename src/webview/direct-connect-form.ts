@@ -75,6 +75,7 @@ class DirectConnectFormViewModel extends ViewModel {
     // @ts-expect-error the types don't specify credentials
     return this.spec()?.schema_registry?.credentials?.api_key || "";
   });
+
   /** Form State */
   message = this.signal("");
   success = this.signal(false);
@@ -136,7 +137,7 @@ class DirectConnectFormViewModel extends ViewModel {
         this.name(input.value);
         break;
       default:
-        console.warn(`Unhandled key: ${input.name}`);
+        console.warn(`Unhandled input update: ${input.name}`);
     }
   }
 
@@ -181,16 +182,10 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     if (!data["bootstrap_servers"] && !data["uri"]) {
-      return this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
+      this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
+      return;
     }
-    let clusterConfig: KafkaClusterConfig | undefined = undefined;
-    let schemaConfig: SchemaRegistryConfig | undefined = undefined;
-    if (data["bootstrap_servers"]) {
-      clusterConfig = transformFormDataToKafkaConfig(data);
-    }
-    if (data["uri"]) {
-      schemaConfig = transformFormDataToSchemaRegistryConfig(data);
-    }
+    const [clusterConfig, schemaConfig] = processFormData(data);
     const result = await post("Update", {
       name: data.name,
       platform: data.platform,
