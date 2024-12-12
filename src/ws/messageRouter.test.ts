@@ -1,6 +1,6 @@
 import assert from "assert";
 import "mocha";
-import { CallbackMap, MessageRouter } from "./messageRouter";
+import { CallbackEntry, CallbackMap, MessageRouter } from "./messageRouter";
 import { Audience, Message, MessageType } from "./messageTypes";
 
 // tests over MessageRouter
@@ -111,10 +111,16 @@ describe("MessageRouter tests", () => {
     assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
     assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
 
-    // the callbacks for this type should just have a registration callbackTwo. callbackOne should have been removed.
+    // the callbacks for this type should just have a registration for callbackTwo. callbackOne should have been removed.
     const remainingCallbacks = messageRouter["callbacks"].get(MessageType.WORKSPACE_COUNT_CHANGED);
     assert.deepStrictEqual(
-      [{ callback: callbackTwo, once: false, registrationToken: tokenTwo }],
+      [
+        {
+          callback: callbackTwo,
+          once: false,
+          registrationToken: tokenTwo,
+        } as CallbackEntry<MessageType.WORKSPACE_COUNT_CHANGED>,
+      ],
       remainingCallbacks,
     );
   });
