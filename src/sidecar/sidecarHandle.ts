@@ -28,6 +28,7 @@ import {
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
+import { Audience, Message, MessageType } from "../ws/messageTypes";
 import {
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
@@ -41,6 +42,7 @@ import {
   ErrorResponseMiddleware,
   setDebugOutputChannel,
 } from "./middlewares";
+import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecarHandle");
 
@@ -55,16 +57,20 @@ export class SidecarHandle {
 
   defaultHeaders: Record<string, string>;
   defaultClientConfigParams: ConfigurationParameters;
+  private websocketManager: WebsocketManager;
 
   constructor(
     public auth_secret: string,
     myPid: string,
     handleId: number,
+    websocketManager: WebsocketManager,
   ) {
     this.authToken = auth_secret;
     this.myPid = myPid;
     // perhaps will be useful in future logging?
     this.myId = handleId;
+
+    this.websocketManager = websocketManager;
 
     // used for client creation for individual service (class) methods, merged with any custom
     // config parameters provided by the caller
@@ -91,6 +97,44 @@ export class SidecarHandle {
       headers: this.defaultHeaders,
       middleware: middleware,
     };
+  }
+
+  // Websocket sending methods
+
+  /**
+   * Send an Audience.WORKSPACES message to all workspaces over the websocket.
+   * In the future, if no peers are connected, the message will not be sent.
+   * The websocket send is ultimately async underneath the hood.
+   * @throws {WebsocketClosedError} if the websocket is not connected.
+   */
+  public wsBroadcastToPeers<T extends MessageType>(message: Message<T>): void {
+    if (message.headers.audience !== Audience.WORKSPACES) {
+      throw new Error(
+        `Expected message audience to be 'workspaces', got ${message.headers.audience}`,
+      );
+    }
+
+    if (message.headers.originator !== this.myPid) {
+      throw new Error(
+        `Expected message originator to be '${this.myPid}', got ${message.headers.originator}`,
+      );
+    }
+
+    if (this.websocketManager.getPeerWorkspaceCount() === 0) {
+      logger.debug("No peers connected, not sending broadcast message");
+      return;
+    }
+
+    this.websocketManager.send(message);
+  }
+
+  /**
+   * Send a message to / through sidecar over the websocket.
+   * The websocket send is ultimately async underneath the hood.
+   * @throws {WebsocketClosedError} if the websocket is not connected.
+   */
+  public wsSend<T extends MessageType>(message: Message<T>): void {
+    this.websocketManager.send(message);
   }
 
   // === OPENAPI CLIENT METHODS ===
