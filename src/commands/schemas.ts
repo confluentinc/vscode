@@ -16,8 +16,6 @@ const logger = new Logger("commands.schemas");
 
 export function registerSchemaCommands(): vscode.Disposable[] {
   return [
-    registerCommandWithLogging("confluent.schemaViewer.refresh", refreshCommand),
-    registerCommandWithLogging("confluent.schemaViewer.validate", validateCommand),
     registerCommandWithLogging("confluent.schemas.create", createSchemaCommand),
     registerCommandWithLogging("confluent.schemas.upload", uploadSchemaFromFile),
     registerCommandWithLogging(
@@ -68,18 +66,6 @@ async function copySchemaRegistryId() {
   }
   await vscode.env.clipboard.writeText(schemaRegistry.id);
   vscode.window.showInformationMessage(`Copied "${schemaRegistry.id}" to clipboard.`);
-}
-
-// refer to https://github.com/confluentinc/vscode/pull/420 for reverting changes to package.json for
-// the following three commands:
-function refreshCommand(item: any) {
-  logger.info("item", item);
-  // TODO: implement this
-}
-
-function validateCommand(item: any) {
-  logger.info("item", item);
-  // TODO: implement this
 }
 
 /** User has gestured to create a new schema from scratch relative to the currently selected schema registry. */
@@ -297,7 +283,7 @@ async function setEditorLanguageForSchema(textDoc: vscode.TextEditor, type: Sche
   for (const language of languageTypes) {
     if (installedLanguages.indexOf(language) !== -1) {
       vscode.languages.setTextDocumentLanguage(textDoc.document, language);
-      logger.info(`Set document language to ${language}`);
+      logger.debug(`Set document language to "${language}"`);
       return;
     } else {
       logger.warn(`Language ${language} not installed type ${type}`);

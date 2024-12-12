@@ -211,18 +211,6 @@
         "category": "Confluent: Project"
       },
       {
-        "command": "confluent.schemaViewer.refresh",
-        "icon": "$(sync)",
-        "title": "Refresh Schema",
-        "category": "Confluent: Schema"
-      },
-      {
-        "command": "confluent.schemaViewer.validate",
-        "icon": "$(check)",
-        "title": "Validate",
-        "category": "Confluent: Schema"
-      },
-      {
         "command": "confluent.schemaViewer.viewLocally",
         "icon": "$(file-code)",
         "title": "View Schema",
@@ -590,14 +578,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemaViewer.refresh",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemaViewer.validate",
-          "when": "false"
-        },
-        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -659,16 +639,6 @@
         }
       ],
       "editor/title": [
-        {
-          "command": "confluent.schemaViewer.refresh",
-          "group": "navigation@1",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemaViewer.validate",
-          "group": "navigation@2",
-          "when": "false"
-        },
         {
           "command": "confluent.topic.consume.duplicate",
           "group": "navigation@1",
