@@ -70,25 +70,22 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
   }
 
   let content: string | undefined;
+  let activeEditor: vscode.TextEditor | undefined;
+  let languageId: string | undefined;
   if (schemaUri.scheme === "file") {
     const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
     content = Buffer.from(contentArray).toString("utf-8");
   } else if (schemaUri.scheme === "untitled") {
-    const editor: vscode.TextEditor | undefined = vscode.window.visibleTextEditors.find(
+    activeEditor = vscode.window.visibleTextEditors.find(
       (e) => e.document.uri.toString() === schemaUri.toString(),
     );
-    content = editor?.document.getText();
+    content = activeEditor?.document.getText();
+    languageId = activeEditor?.document.languageId;
   }
   if (content === undefined) {
     vscode.window.showErrorMessage("Could not read schema file");
     return;
   }
-
-  // check if the Uri belongs to an active editor
-  const activeEditor: vscode.TextEditor | undefined = vscode.window.visibleTextEditors.find(
-    (e) => e.document.uri.toString() === schemaUri.toString(),
-  );
-  const languageId: string | undefined = activeEditor?.document.languageId;
 
   // What kind of schema is this? We must tell the schema registry.
   const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri, languageId);
