@@ -6,6 +6,7 @@ import {
   SubjectsV1Api,
   SubjectVersion,
 } from "../clients/schemaRegistryRest";
+import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
@@ -46,12 +47,16 @@ export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Sch
  * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
 export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: string) {
-  // prompt for the editor/file first
+  // prompt for the editor/file first via the URI quickpick
+  const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
+  const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json"];
+  const fileFilters = {
+    "Schema files": [".avsc", ".avro", ".json", ".proto"],
+  };
   const schemaUri: vscode.Uri | undefined = await uriQuickpick(
-    ["plaintext", "avroavsc", "protobuf", "proto3", "json"],
-    {
-      "Schema files": [".avsc", ".avro", ".json", ".proto"],
-    },
+    uriSchemes,
+    languageIds,
+    fileFilters,
   );
   if (!schemaUri) {
     return;
