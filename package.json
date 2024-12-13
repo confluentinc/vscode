@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.23.0-6",
+  "version": "0.23.0-7",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -329,6 +329,12 @@
         "enablement": "false"
       },
       {
+        "command": "confluent.topic.produce.fromFile",
+        "title": "Produce Message to Kafka Topic from schemaless JSON file",
+        "icon": "$(send)",
+        "category": "Confluent: Topic"
+      },
+      {
         "command": "confluent.topics.create",
         "icon": "$(plus)",
         "title": "Create Topic",
@@ -539,6 +545,10 @@
         },
         {
           "command": "confluent.copyResourceName",
+          "when": "false"
+        },
+        {
+          "command": "confluent.topic.produce.fromFile",
           "when": "false"
         },
         {
@@ -754,6 +764,11 @@
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "view == confluent-schemas && viewItem =~ /.*multiple-versions.*schema-group/",
           "group": "3_compare"
+        },
+        {
+          "command": "confluent.topic.produce.fromFile",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWrite.*/ && confluent.produceMessagesEnabled",
+          "group": "inline@1"
         },
         {
           "command": "confluent.diff.selectForCompare",
