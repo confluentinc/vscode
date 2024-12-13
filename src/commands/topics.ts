@@ -6,6 +6,7 @@ import { registerCommandWithLogging } from ".";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
+import { isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import topicFormTemplate from "../webview/topic-config-form.html";
 import { getSidecar } from "../sidecar";
@@ -186,8 +187,9 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     const filePath = fileUri[0].fsPath;
     const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
-    if (!message.key || !message.value || message.headers === 0) {
+    if (!message.key || !message.value || !Array.isArray(message.headers)) {
       vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
+      return;
     }
 
     const sidecar = await getSidecar();
@@ -197,11 +199,9 @@ async function produceMessageFromFile(topic: KafkaTopic) {
 
     const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
 
-    const type = topic.connectionType === "LOCAL" ? undefined : "JSON";
-
     const msgKeyAndVal = {
-      key: { data: message.key, ...(type && { type }) },
-      value: { data: message.value, ...(type && { type }) },
+      key: { data: message.key },
+      value: { data: message.value },
     };
 
     try {
