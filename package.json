@@ -837,17 +837,17 @@
         },
         {
           "command": "confluent.topic.consume",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzRead.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzREAD.*/",
           "group": "inline@1"
         },
         {
           "command": "confluent.topics.delete",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDelete.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDELETE.*/",
           "group": "topics"
         },
         {
           "command": "confluent.topics.edit",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzAlterConfigs.*/",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzALTER_CONFIGS.*/",
           "group": "topics"
         },
         {
@@ -877,7 +877,7 @@
         },
         {
           "command": "confluent.topic.produce.fromFile",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWrite.*/ && confluent.produceMessagesEnabled",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
           "group": "inline@1"
         },
         {

@@ -1,5 +1,6 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
+import { KAFKA_TOPIC_OPERATIONS } from "../authz/constants";
 import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
@@ -77,22 +78,14 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
   }
 
   checkMissingAuthorizedOperations(resource: KafkaTopic): KafkaTopicOperation[] {
-    // operations we support via view/item actions that require authorization
-    const interestingAuthz: KafkaTopicOperation[] = ["READ", "DELETE", "WRITE", "ALTER_CONFIGS"];
-
-    for (const op of interestingAuthz) {
+    for (const op of KAFKA_TOPIC_OPERATIONS) {
       if (resource.operations.includes(op)) {
-        // Convert to "authzRead", "authzDelete", etc. for context flags to hang context-sensitive commands off of (see package.json)
-        const operationTitleCase = op
-          .toLowerCase()
-          .replace(/_/g, " ") // replace underscores with spaces
-          .replace(/^\w|\s\w/g, (c) => c.toUpperCase()) // convert to title case
-          .replace(/\s/g, ""); // remove spaces
-        this.contextValue += `-authz${operationTitleCase}`;
+        // append to contextValue for each authorized operation
+        // e.g. "local-kafka-topic-authzREAD-authzWRITE"
+        this.contextValue += `-authz${op}`;
       }
     }
-
-    return interestingAuthz.filter((op) => !resource.operations.includes(op));
+    return KAFKA_TOPIC_OPERATIONS.filter((op) => !resource.operations.includes(op));
   }
 }
 
