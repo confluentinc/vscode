@@ -4,11 +4,12 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Produce message button and commmand enabling schemaless production of JSON messages
+
 ## 0.22.0
 
 ### Added
 
-- Produce message button and commmand enabling schemaless production of JSON messages
 - Ability to update basic topic configuration fields via webform
 - Local Resources: the Docker image tag used to start a Schema Registry container is now
   configurable via the extension settings.
