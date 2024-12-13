@@ -46,7 +46,7 @@ blocks:
           value: macos-amd64
       # Define the task jobs anchor for reuse (except Windows)
       jobs: &packageVsixTaskJobs
-        - name: "Package VSIX (${{ TARGET }})"
+        - name: "Package VSIX (${TARGET})"
           commands:
             - npx gulp bundle
       # Define the task epilogue anchor for reuse (except Windows)
@@ -135,7 +135,7 @@ blocks:
             gh auth status
           - npm ci --include=dev
       jobs:
-        - name: "Package VSIX (${{ TARGET }})"
+        - name: "Package VSIX (${TARGET})"
           commands:
             # Download ide-sidecar third party notices to include in the VSIX
             - |
