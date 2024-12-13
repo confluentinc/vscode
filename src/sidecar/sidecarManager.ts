@@ -18,6 +18,7 @@ import {
 } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
+import { WebsocketManager } from "./websocketManager";
 
 import { normalize } from "path";
 import { Tail } from "tail";
@@ -56,6 +57,7 @@ export class SidecarManager {
   private logTailer: Tail | null = null;
 
   private sidecarContacted: boolean = false;
+  private websocketManager: WebsocketManager | null = null;
 
   /** Construct or return reference to already running sidecar process.
    * Code should _not_ retain the return result here for more than a single direct action, in that
@@ -111,7 +113,12 @@ export class SidecarManager {
         if (await this.healthcheck(accessToken)) {
           // 1. The sidecar is running and healthy, in which case we're probably done.
           // (this is the only path that may resolve this promise successfully)
-          const handle = new SidecarHandle(accessToken, this.myPid, this.handleIdSource++);
+          const handle = new SidecarHandle(
+            accessToken,
+            this.myPid,
+            this.handleIdSource++,
+            this.websocketManager!,
+          );
 
           if (!this.sidecarContacted) {
             // Do the one-time-only things re/this sidecar process, whether or not
@@ -246,11 +253,22 @@ export class SidecarManager {
       await this.getHandle();
     }
 
+    await this.setupWebsocketManager(handle.authToken);
     this.sidecarContacted = true;
   }
 
+  private async setupWebsocketManager(authToken: string): Promise<void> {
+    if (!this.websocketManager) {
+      this.websocketManager = WebsocketManager.getInstance();
+    }
+
+    // Connect and authorize a websocket to the sidecar.
+    // will raise if the ACCESS_REQUEST / ACCESS_RESPONSE pair doesn't complete successfully in 5s.
+    await this.websocketManager.connect(authToken);
+  }
+
   /**
-   * Make a healthcheck request to the sidecar. Returns true if the sidecar is healthy.
+   * Make a healthcheck HTTP request to the sidecar. Returns true if the sidecar is healthy.
    * Will find out if the sidecar is healthy, or if it's not running, or if it's running but rejects our auth token.
    **/
   private async healthcheck(accessToken: string): Promise<boolean> {
