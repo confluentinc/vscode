@@ -1,16 +1,19 @@
 import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
+import * as fs from "fs";
 import { Logger } from "../logging";
 import { registerCommandWithLogging } from ".";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
+import { isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import topicFormTemplate from "../webview/topic-config-form.html";
 import { getSidecar } from "../sidecar";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import { post } from "../webview/topic-config-form";
 import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
+import { logResponseError } from "../errors";
 
 const logger = new Logger("topics");
 
@@ -166,6 +169,70 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   editConfigForm.onDidDispose(() => disposable.dispose());
 }
 
+async function produceMessageFromFile(topic: KafkaTopic) {
+  if (!topic) {
+    vscode.window.showErrorMessage("No topic selected.");
+    return;
+  }
+  const options: vscode.OpenDialogOptions = {
+    canSelectMany: false,
+    openLabel: "Select JSON file",
+    filters: {
+      "JSON files": ["json"],
+    },
+  };
+
+  const fileUri = await vscode.window.showOpenDialog(options);
+  if (fileUri && fileUri[0]) {
+    const filePath = fileUri[0].fsPath;
+    const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+    if (!message.key || !message.value || !Array.isArray(message.headers)) {
+      vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
+      return;
+    }
+
+    const sidecar = await getSidecar();
+    const clusterId = topic.clusterId;
+    const connectionId = topic.connectionId;
+    const topicName = topic.name;
+
+    const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
+
+    const msgKeyAndVal = {
+      key: { data: message.key },
+      value: { data: message.value },
+    };
+
+    try {
+      await recordsApi.produceRecord({
+        topic_name: topicName,
+        cluster_id: clusterId,
+        ProduceRequest: {
+          headers: message.headers.map((header: any) => ({
+            name: header.key ? header.key : header.name,
+            value: header.value,
+          })),
+          key: msgKeyAndVal.key,
+          value: msgKeyAndVal.value,
+        },
+      });
+
+      vscode.window.showInformationMessage(`Success: Produced message to topic ${topic.name}.`);
+    } catch (error: any) {
+      logResponseError(error, "topic produce from file"); // not sending to Sentry by default
+      if (error instanceof ResponseError) {
+        const body = await error.response.clone().text();
+        vscode.window.showErrorMessage(
+          `Error response while trying to produce message: ${error.response.status} ${error.response.statusText}: ${body}`,
+        );
+      } else {
+        vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
+      }
+    }
+  }
+}
+
 export function registerTopicCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.topics.copyKafkaClusterId", copyKafkaClusterId),
@@ -175,5 +242,6 @@ export function registerTopicCommands(): vscode.Disposable[] {
       copyKafkaClusterBootstrapUrl,
     ),
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
+    registerCommandWithLogging("confluent.topic.produce.fromFile", produceMessageFromFile),
   ];
 }
