@@ -149,6 +149,7 @@ blocks:
             - make ci-bin-sem-cache-store
         on_pass:
           commands:
+            # Single multi-line command because Powershell won't track $vsix between commands
             - |
               $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
               artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
