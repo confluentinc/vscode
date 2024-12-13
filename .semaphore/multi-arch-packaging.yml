@@ -150,6 +150,8 @@ blocks:
         on_pass:
           commands:
             - $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+            - if ($null -eq $vsix) { Write-Error "No VSIX file found in the 'out' directory"; exit 1 }
+            - Write-Output "VSIX file found - $vsix"
             - artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
 
   - name: "Upload VSIX files to GitHub"
