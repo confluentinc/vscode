@@ -19,15 +19,6 @@ global_job_config:
   env_vars:
     - name: NODE_ENV
       value: "production"
-  prologue:
-    commands:
-      - checkout
-      - make ci-bin-sem-cache-restore
-      - . vault-setup
-  epilogue:
-    always:
-      commands:
-        - make ci-bin-sem-cache-store
 
 blocks:
   - name: "Package VSIX (MacOS AMD64)"
@@ -36,8 +27,15 @@ blocks:
       agent:
         machine:
           type: s1-prod-macos-13-5-amd64
-      prologue: &taskPrologue
-        commands_file: scripts/package_vsix_prologue.sh
+      # Define the task prologue anchor for reuse (except Windows)
+      prologue: &packageVsixTaskPrologue
+        commands:
+          - checkout
+          - make ci-bin-sem-cache-restore
+          - . vault-setup
+          - make download-sidecar-executable
+          - make download-third-party-notices-sidecar || true
+          - make install-dependencies
       env_vars:
         # From https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions:
         # The currently available platforms are: win32-x64, win32-arm64, linux-x64, linux-arm64, linux-armhf,
@@ -46,13 +44,20 @@ blocks:
           value: darwin-x64
         - name: SIDECAR_OS_ARCH
           value: macos-amd64
-      jobs: &taskJobs
-        - name: "Package VSIX"
+      # Define the task jobs anchor for reuse (except Windows)
+      jobs: &packageVsixTaskJobs
+        - name: "Package VSIX (${{ TARGET }})"
           commands:
             - npx gulp bundle
-      epilogue: &taskEpilogue
+      # Define the task epilogue anchor for reuse (except Windows)
+      epilogue: &packageVsixTaskEpilogue
+        always:
+          commands:
+            - make ci-bin-sem-cache-store
         on_pass:
-          commands_file: scripts/package_vsix_epilogue.sh
+          commands: 
+            - VSIX_FILE=$(find out/ -name "*.vsix")
+            - artifact push workflow ${VSIX_FILE} --destination packaged-vsix-files/$(basename ${VSIX_FILE})
 
   - name: "Package VSIX (MacOS ARM64)"
     dependencies: []
@@ -65,9 +70,9 @@ blocks:
           value: darwin-arm64
         - name: SIDECAR_OS_ARCH
           value: macos-arm64
-      prologue: *taskPrologue
-      jobs: *taskJobs
-      epilogue: *taskEpilogue
+      prologue: *packageVsixTaskPrologue
+      jobs: *packageVsixTaskJobs
+      epilogue: *packageVsixTaskEpilogue
 
   - name: "Package VSIX (Linux AMD64)"
     dependencies: []
@@ -80,9 +85,9 @@ blocks:
           value: linux-x64
         - name: SIDECAR_OS_ARCH
           value: linux-amd64
-      prologue: *taskPrologue
-      jobs: *taskJobs
-      epilogue: *taskEpilogue
+      prologue: *packageVsixTaskPrologue
+      jobs: *packageVsixTaskJobs
+      epilogue: *packageVsixTaskEpilogue
 
   - name: "Package VSIX (Linux ARM64)"
     dependencies: []
@@ -95,9 +100,9 @@ blocks:
           value: linux-arm64
         - name: SIDECAR_OS_ARCH
           value: linux-arm64
-      prologue: *taskPrologue
-      jobs: *taskJobs
-      epilogue: *taskEpilogue
+      prologue: *packageVsixTaskPrologue
+      jobs: *packageVsixTaskJobs
+      epilogue: *packageVsixTaskEpilogue
 
   - name: "Package VSIX (Windows AMD64)"
     dependencies: []
@@ -130,7 +135,7 @@ blocks:
             gh auth status
           - npm ci --include=dev
       jobs:
-        - name: "Package VSIX (Windows AMD64)"
+        - name: "Package VSIX (${{ TARGET }})"
           commands:
             # Download ide-sidecar third party notices to include in the VSIX
             - |
@@ -150,7 +155,7 @@ blocks:
               gh auth status
               Write-Host "Uploading $vsix to the release $version"
               gh release upload $version $vsix --clobber
-      epilogue: *taskEpilogue
+      epilogue: *packageVsixTaskEpilogue
 
   - name: "Upload VSIX files to GitHub"
     run:
