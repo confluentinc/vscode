@@ -78,7 +78,8 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
     content = Buffer.from(contentArray).toString("utf-8");
   } else {
-    // "untitled" and SCHEMA_URI_SCHEME URIs are treated the same way
+    // "untitled" and SCHEMA_URI_SCHEME URIs are treated the same way since they aren't saved to
+    // the file system and are always open in an editor if they were chosen through the quickpick
     document = await vscode.workspace.openTextDocument(schemaUri);
     content = document.getText();
     languageId = document.languageId;
