@@ -149,8 +149,9 @@ blocks:
             - make ci-bin-sem-cache-store
         on_pass:
           commands:
-            - $vsix = Get-ChildItem -Path "C:\semaphore-agent\vscode\out" -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
-            - artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
+            - |
+              $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+              artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
 
   - name: "Upload VSIX files to GitHub"
     run:
