@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.23.0-2",
+  "version": "0.23.0-6",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -951,6 +951,18 @@
             "completionEvents": [
               "onCommand:command:confluent.connections.ccloud.logIn",
               "onCommand:confluent.docker.startLocalResources"
+            ]
+          },
+          {
+            "id": "create-connections",
+            "title": "Connect directly to Kafka / Schema Registry",
+            "description": "To connect to an Apache Kafka or Schema Registry cluster, click $(plus) next to Resource > Other. The cluster can be in Confluent Cloud, Confluent Platform, or hosted elsewhere.\n[Open Connection Form](command:confluent.connections.direct)",
+            "media": {
+              "image": "resources/walkthrough/direct-connection-form.png",
+              "altText": "Create a new connection to a Kafka cluster or Schema Registry"
+            },
+            "completionEvents": [
+              "onCommand:confluent.connections.direct"
             ]
           },
           {

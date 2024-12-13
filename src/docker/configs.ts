@@ -124,6 +124,7 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
   // buttons to show in the notification; if left as empty strings, they won't appear at all
   let primaryButton: string = "";
   let secondaryButton: string = "";
+  let tertiaryButton: string = "";
 
   if (error instanceof ResponseError) {
     let errorMessage: string;
@@ -141,6 +142,14 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
     primaryButton = "Install Docker";
     secondaryButton = "Show Logs";
     notificationMessage = "Please install Docker and try again once it's running.";
+    // TEMPORARY: if the `http.fetchAdditionalSupport` setting is enabled, suggest disabling it
+    // TODO(shoup): remove this once we have a better way to handle the behavior described in
+    //   https://github.com/confluentinc/vscode/issues/751
+    const configs: WorkspaceConfiguration = workspace.getConfiguration();
+    if (configs.get("http.fetchAdditionalSupport", false)) {
+      notificationMessage = `If Docker is currently running, please disable the "http.fetchAdditionalSupport" setting and try again.`;
+      tertiaryButton = "Update Settings";
+    }
   }
 
   window
@@ -148,6 +157,7 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
       "Docker is not available: " + notificationMessage,
       primaryButton,
       secondaryButton,
+      tertiaryButton,
     )
     .then((selection) => {
       switch (selection) {
@@ -161,6 +171,12 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
           break;
         case "File Issue":
           commands.executeCommand("confluent.support.issue");
+          break;
+        case "Update Settings":
+          commands.executeCommand(
+            "workbench.action.openSettings",
+            "@id:http.fetchAdditionalSupport",
+          );
           break;
       }
     });
