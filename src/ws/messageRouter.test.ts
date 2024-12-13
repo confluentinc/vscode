@@ -1,7 +1,7 @@
 import assert from "assert";
 import "mocha";
 import { CallbackEntry, CallbackMap, MessageRouter } from "./messageRouter";
-import { Audience, Message, MessageType, WorkspacesChangedBody } from "./messageTypes";
+import { Message, MessageType, WorkspacesChangedBody } from "./messageTypes";
 
 // tests over MessageRouter
 
@@ -12,7 +12,6 @@ describe("MessageRouter tests", () => {
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
       message_type: MessageType.WORKSPACE_COUNT_CHANGED,
-      audience: Audience.WORKSPACES,
       originator: "sidecar",
       message_id: "1",
     },
@@ -136,7 +135,6 @@ describe("MessageRouter tests", () => {
     const unknownMessageType: Message<MessageType> = {
       headers: {
         message_type: "UNKNOWN" as MessageType,
-        audience: Audience.WORKSPACES,
         originator: "sidecar",
         message_id: "1",
       },

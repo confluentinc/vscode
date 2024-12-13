@@ -1,7 +1,7 @@
 import assert from "assert";
 import "mocha";
 import { MessageRouter } from "../ws/messageRouter";
-import { Audience, Message, MessageType } from "../ws/messageTypes";
+import { Message, MessageType } from "../ws/messageTypes";
 import { WebsocketManager } from "./websocketManager";
 
 // tests over WebsocketManager
@@ -15,7 +15,6 @@ describe("WebsocketManager tests", () => {
     const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
       headers: {
         message_type: MessageType.WORKSPACE_COUNT_CHANGED,
-        audience: Audience.WORKSPACES,
         originator: "sidecar",
         message_id: "1",
       },
@@ -40,7 +39,6 @@ describe("WebsocketManager tests", () => {
     const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
       headers: {
         message_type: MessageType.WORKSPACE_COUNT_CHANGED,
-        audience: Audience.WORKSPACES,
         originator: "sidecar",
         message_id: "1",
       },
