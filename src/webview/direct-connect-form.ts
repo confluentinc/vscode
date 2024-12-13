@@ -1,5 +1,4 @@
 import { ObservableScope } from "inertial";
-import { KafkaClusterConfig, SchemaRegistryConfig } from "../clients/sidecar";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
@@ -68,36 +67,16 @@ class DirectConnectFormViewModel extends ViewModel {
 
     const data = Object.fromEntries(formData.entries());
     if (!data["bootstrap_servers"] && !data["uri"]) {
-      return this.message("Please provide either Kafka cluster or Schema Registry details");
+      this.message("Please provide either Kafka cluster or Schema Registry details");
+      return;
     }
 
-    let clusterConfig: KafkaClusterConfig | undefined = undefined;
-    let schemaConfig: SchemaRegistryConfig | undefined = undefined;
-    if (data["bootstrap_servers"]) {
-      clusterConfig = transformFormDataToKafkaConfig(data);
-    }
-    if (data["uri"]) {
-      schemaConfig = transformFormDataToSchemaRegistryConfig(data);
-    }
+    let dryRun = submitter.value === "Test Connection";
+    const result = await post("Submit", {
+      data,
+      dryRun,
+    });
 
-    let result;
-    if (submitter.value === "Test Connection") {
-      result = await post("TestConnection", {
-        name: data.name,
-        platform: data.platform,
-        clusterConfig,
-        schemaConfig,
-        dryRun: true,
-      });
-    } else {
-      result = await post("Submit", {
-        name: data.name,
-        platform: data.platform,
-        clusterConfig,
-        schemaConfig,
-        dryRun: false,
-      });
-    }
     this.success(result.success);
     this.message(result.message ?? "");
     this.loading(false);
@@ -106,11 +85,11 @@ class DirectConnectFormViewModel extends ViewModel {
 
 export type PostResponse = { success: boolean; message: string | null };
 
-export function post(
-  type: "TestConnection",
-  body: { [key: string]: unknown },
-): Promise<PostResponse>;
-export function post(type: "Submit", body: { [key: string]: unknown }): Promise<PostResponse>;
+// export function post(
+//   type: "TestConnection",
+//   body: { data: any; dryRun: boolean },
+// ): Promise<PostResponse>;
+export function post(type: "Submit", body: { data: any; dryRun: boolean }): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
@@ -123,55 +102,3 @@ export type FormConnectionType =
   | "Other";
 
 type SupportedAuthTypes = "None" | "Basic" | "API";
-
-function transformFormDataToKafkaConfig(formData: any): KafkaClusterConfig {
-  let kafkaClusterConfig: KafkaClusterConfig = { bootstrap_servers: "" };
-  if (formData.bootstrap_servers) {
-    kafkaClusterConfig["bootstrap_servers"] = formData.bootstrap_servers;
-  }
-  if (formData.kafka_auth_type === "Basic") {
-    kafkaClusterConfig = {
-      ...kafkaClusterConfig,
-      credentials: {
-        username: formData.kafka_username,
-        password: formData.kafka_password,
-      },
-    };
-  } else if (formData.kafka_auth_type === "API") {
-    kafkaClusterConfig = {
-      ...kafkaClusterConfig,
-      credentials: {
-        api_key: formData.kafka_api_key,
-        api_secret: formData.kafka_api_secret,
-      },
-    };
-  }
-
-  return kafkaClusterConfig;
-}
-
-function transformFormDataToSchemaRegistryConfig(formData: any) {
-  let schemaRegistryConfig: SchemaRegistryConfig = { uri: "" };
-  if (formData.uri) {
-    schemaRegistryConfig["uri"] = formData.uri;
-  }
-  if (formData.schema_auth_type === "Basic") {
-    schemaRegistryConfig = {
-      ...schemaRegistryConfig,
-      credentials: {
-        username: formData.schema_username,
-        password: formData.schema_password,
-      },
-    };
-  } else if (formData.schema_auth_type === "API") {
-    schemaRegistryConfig = {
-      ...schemaRegistryConfig,
-      credentials: {
-        api_key: formData.schema_api_key,
-        api_secret: formData.schema_api_secret,
-      },
-    };
-  }
-
-  return schemaRegistryConfig;
-}

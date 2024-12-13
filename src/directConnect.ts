@@ -9,9 +9,8 @@ import {
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import { post } from "./webview/direct-connect-form";
+import { post, PostResponse } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
-import { CustomConnectionSpec } from "./storage/resourceManager";
 import { tryToCreateConnection } from "./sidecar/connections";
 
 type MessageSender = OverloadUnion<typeof post>;
@@ -46,14 +45,14 @@ export function openDirectConnectionForm(): void {
       result.message = "dryRun must be true";
     }
     let spec: ConnectionSpec = {
-      name: body["name"],
+      name: body.data["name"],
       type: "DIRECT",
     };
     if (body["clusterConfig"]) {
-      spec.kafka_cluster = { ...body["clusterConfig"] };
+      spec.kafka_cluster = { ...body.data["clusterConfig"] };
     }
     if (body["schemaConfig"]) {
-      spec.schema_registry = { ...body["schemaConfig"] };
+      spec.schema_registry = { ...body.data["schemaConfig"] };
     }
     console.log("sending dry run");
     try {
@@ -87,47 +86,105 @@ export function openDirectConnectionForm(): void {
     return result;
   }
 
-  async function createConnection(
-    body: any,
-  ): Promise<{ success: boolean; message: string | null }> {
+  async function testOrSaveConnection(body: {
+    data: any;
+    dryRun: boolean;
+  }): Promise<{ success: boolean; message: string | null }> {
     // XXX: only enable for local debugging:
     // logger.debug("creating connection from form data:", body);
     let kafkaConfig: KafkaClusterConfig | undefined = undefined;
-    if (body["clusterConfig"]) {
-      kafkaConfig = { ...body["clusterConfig"] };
+    if (body.data["bootstrap_servers"]) {
+      kafkaConfig = transformFormDataToKafkaConfig(body.data);
     }
 
     let schemaRegistryConfig: SchemaRegistryConfig | undefined = undefined;
-    if (body["schemaConfig"]) {
-      schemaRegistryConfig = { ...body["schemaConfig"] };
+    if (body.data["uri"]) {
+      schemaRegistryConfig = transformFormDataToSchemaRegistryConfig(body);
     }
 
+    let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
-    const result = await manager.createConnection(
-      kafkaConfig,
-      schemaRegistryConfig,
-      body["platform"],
-      body["name"],
-    );
-    let name = body["name"] || "the connection";
-    if (result.success) {
-      await window.showInformationMessage(`🎉 New Connection Created`, {
-        modal: true,
-        detail: `View and interact with ${name} in the Resources sidebar`,
-      });
-      directConnectForm.dispose();
+    if (!body.dryRun) {
+      await manager.createConnection(
+        kafkaConfig,
+        schemaRegistryConfig,
+        body.data["platform"],
+        body.data["name"],
+      );
+      let name = body.data["name"] || "the connection";
+      if (result.success) {
+        await window.showInformationMessage(`🎉 New Connection Created`, {
+          modal: true,
+          detail: `View and interact with ${name} in the Resources sidebar`,
+        });
+        directConnectForm.dispose();
+      }
+    } else {
+      result = await testConnect(body);
     }
     return result;
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
-      case "TestConnection":
-        return (await testConnect(body)) satisfies MessageResponse<"TestConnection">;
+      // case "TestConnection":
+      //   return (await testConnect(body)) satisfies MessageResponse<"TestConnection">;
       case "Submit":
-        return (await createConnection(body)) satisfies MessageResponse<"Submit">;
+        return (await testOrSaveConnection(body)) satisfies MessageResponse<"Submit">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
   directConnectForm.onDidDispose(() => disposable.dispose());
+}
+
+function transformFormDataToKafkaConfig(formData: any): KafkaClusterConfig {
+  let kafkaClusterConfig: KafkaClusterConfig = { bootstrap_servers: "" };
+  if (formData.bootstrap_servers) {
+    kafkaClusterConfig["bootstrap_servers"] = formData.bootstrap_servers;
+  }
+  if (formData.kafka_auth_type === "Basic") {
+    kafkaClusterConfig = {
+      ...kafkaClusterConfig,
+      credentials: {
+        username: formData.kafka_username,
+        password: formData.kafka_password,
+      },
+    };
+  } else if (formData.kafka_auth_type === "API") {
+    kafkaClusterConfig = {
+      ...kafkaClusterConfig,
+      credentials: {
+        api_key: formData.kafka_api_key,
+        api_secret: formData.kafka_api_secret,
+      },
+    };
+  }
+
+  return kafkaClusterConfig;
+}
+
+function transformFormDataToSchemaRegistryConfig(formData: any) {
+  let schemaRegistryConfig: SchemaRegistryConfig = { uri: "" };
+  if (formData.uri) {
+    schemaRegistryConfig["uri"] = formData.uri;
+  }
+  if (formData.schema_auth_type === "Basic") {
+    schemaRegistryConfig = {
+      ...schemaRegistryConfig,
+      credentials: {
+        username: formData.schema_username,
+        password: formData.schema_password,
+      },
+    };
+  } else if (formData.schema_auth_type === "API") {
+    schemaRegistryConfig = {
+      ...schemaRegistryConfig,
+      credentials: {
+        api_key: formData.schema_api_key,
+        api_secret: formData.schema_api_secret,
+      },
+    };
+  }
+
+  return schemaRegistryConfig;
 }
