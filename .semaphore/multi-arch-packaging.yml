@@ -143,16 +143,13 @@ blocks:
               gh release download $IDE_SIDECAR_VERSION --repo confluentinc/ide-sidecar --pattern=THIRD_PARTY_NOTICES.txt --output THIRD_PARTY_NOTICES_IDE_SIDECAR.txt --clobber
             # Build the VSIX
             - npx gulp bundle
+            # Push artifact
+            - $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+            - artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
       epilogue:
         always:
           commands:
             - make ci-bin-sem-cache-store
-        on_pass:
-          commands:
-            - $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
-            - if ($null -eq $vsix) { Write-Error "No VSIX file found in the 'out' directory"; exit 1 }
-            - Write-Output "VSIX file found - $vsix"
-            - artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
 
   - name: "Upload VSIX files to GitHub"
     run:
