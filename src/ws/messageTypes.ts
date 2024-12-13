@@ -15,18 +15,10 @@ export enum MessageType {
 
 /** All message.header.audience values */
 export enum Audience {
-  /** Messages originating from extension directly and only to the sidecar. */
-  SIDECAR = "sidecar",
-
   /**
-   * Messages originating from sidecar to a single extension, usually in response
-   * to an extension -> sidecar message.
-   */
-  WORKSPACE = "workspace",
-
-  /**
-   * Messages originating from a single extension to all other extensions, broadcasting
-   * through the sidecar as a broadcast IPC mechanism.
+   * Messages originating either from:
+   *   1) sidecar, informing all workspaces of an event of interest to them all.
+   *   2) a single workspace extension to all other workspaces, broadcasting through the sidecar as an IPC mechanism.
    */
   WORKSPACES = "workspaces",
 }
