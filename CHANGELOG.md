@@ -6,6 +6,12 @@ All notable changes to this extension will be documented in this file.
 
 - Produce message button and commmand enabling schemaless production of JSON messages
 
+## 0.22.1
+
+- Additional information is now provided when attempting to start/stop local resources and the
+  extension cannot communcate with the Docker engine API if the new `http.fetchAdditionalSupport`
+  setting is enabled.
+
 ## 0.22.0
 
 ### Added
