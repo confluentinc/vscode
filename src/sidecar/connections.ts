@@ -62,11 +62,15 @@ export async function getLocalConnection(): Promise<Connection | null> {
 }
 
 /** Create a new {@link Connection} with the given {@link ConnectionSpec}. */
-export async function tryToCreateConnection(spec: ConnectionSpec): Promise<Connection> {
+export async function tryToCreateConnection(
+  spec: ConnectionSpec,
+  dryRun: boolean = false,
+): Promise<Connection> {
   let connection: Connection;
   const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
     connection = await client.gatewayV1ConnectionsPost({
+      dry_run: dryRun,
       ConnectionSpec: spec,
     });
     logger.debug("created new connection:", { type: spec.type, id: connection.id });

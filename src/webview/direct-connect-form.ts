@@ -22,8 +22,9 @@ class DirectConnectFormViewModel extends ViewModel {
   kafkaBootstrapServers = this.signal("");
 
   /** Form State */
-  errorMessage = this.signal("");
+  message = this.signal("");
   success = this.signal(false);
+  loading = this.signal(false);
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -55,34 +56,21 @@ class DirectConnectFormViewModel extends ViewModel {
     }
   }
 
-  async testConnection(event: Event) {
-    event.preventDefault();
-    this.success(false);
-    this.errorMessage("");
-    // const form = event.target as HTMLFormElement;
-    // const formData = new FormData(form);
-    // const data = Object.fromEntries(formData.entries());
-    // TODO not implemented yet
-    // const result = await post("TestConnection", data);
-    // if (result.success) {
-    //   console.log("success", result);
-    // } else {
-    //   this.errorMessage(result.message ?? "Unknown error occurred");
-    //   console.log("error", result);
-    // }
-  }
-
   /** Submit all form data to the extension */
-  async handleSubmit(event: Event) {
+  async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     this.success(false);
-    this.errorMessage("");
+    this.message("");
+    this.loading(true);
     const form = event.target as HTMLFormElement;
+    const submitter = event.submitter as HTMLInputElement;
     const formData = new FormData(form);
+
     const data = Object.fromEntries(formData.entries());
     if (!data["bootstrap_servers"] && !data["uri"]) {
-      return this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
+      return this.message("Please provide either Kafka cluster or Schema Registry details");
     }
+
     let clusterConfig: KafkaClusterConfig | undefined = undefined;
     let schemaConfig: SchemaRegistryConfig | undefined = undefined;
     if (data["bootstrap_servers"]) {
@@ -91,16 +79,28 @@ class DirectConnectFormViewModel extends ViewModel {
     if (data["uri"]) {
       schemaConfig = transformFormDataToSchemaRegistryConfig(data);
     }
-    const result = await post("Submit", {
-      name: data.name,
-      platform: data.platform,
-      clusterConfig,
-      schemaConfig,
-    });
-    this.success(result.success);
-    if (!result.success) {
-      this.errorMessage(result.message ?? "Unknown error occurred");
+
+    let result;
+    if (submitter.value === "Test Connection") {
+      result = await post("TestConnection", {
+        name: data.name,
+        platform: data.platform,
+        clusterConfig,
+        schemaConfig,
+        dryRun: true,
+      });
+    } else {
+      result = await post("Submit", {
+        name: data.name,
+        platform: data.platform,
+        clusterConfig,
+        schemaConfig,
+        dryRun: false,
+      });
     }
+    this.success(result.success);
+    this.message(result.message ?? "");
+    this.loading(false);
   }
 }
 

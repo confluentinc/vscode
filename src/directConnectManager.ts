@@ -129,6 +129,7 @@ export class DirectConnectionManager {
     schemaRegistryConfig: SchemaRegistryConfig | undefined,
     formConnectionType: FormConnectionType,
     name?: string,
+    dryRun: boolean = false,
   ): Promise<PostResponse> {
     const connectionId = randomUUID() as ConnectionId;
     const spec: CustomConnectionSpec = {
@@ -145,7 +146,7 @@ export class DirectConnectionManager {
       spec.schema_registry = schemaRegistryConfig;
     }
 
-    const { connection, errorMessage } = await this.createOrUpdateConnection(spec);
+    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, dryRun);
     if (errorMessage || !connection) {
       return { success: false, message: errorMessage };
     }
@@ -214,11 +215,14 @@ export class DirectConnectionManager {
   private async createOrUpdateConnection(
     spec: ConnectionSpec,
     update: boolean = false,
+    dryRun: boolean = false,
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
     try {
-      connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
+      connection = update
+        ? await tryToUpdateConnection(spec)
+        : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
       await window.withProgress(
         {
