@@ -6,7 +6,6 @@ import { registerCommandWithLogging } from ".";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
-import { isLocal } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import topicFormTemplate from "../webview/topic-config-form.html";
 import { getSidecar } from "../sidecar";
