@@ -143,13 +143,14 @@ blocks:
               gh release download $IDE_SIDECAR_VERSION --repo confluentinc/ide-sidecar --pattern=THIRD_PARTY_NOTICES.txt --output THIRD_PARTY_NOTICES_IDE_SIDECAR.txt --clobber
             # Build the VSIX
             - npx gulp bundle
-            # Upload the VSIX to the GitHub release
-            - |
-              $packageJson = Get-Content -Path "package.json" -Raw | ConvertFrom-Json;
-              $version = "v$($packageJson.version)";
-              $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
-              try {artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"} catch {Write-Host "Artifact push failed"}
-      epilogue: *packageVsixTaskEpilogue
+      epilogue:
+        always:
+          commands:
+            - make ci-bin-sem-cache-store
+        on_pass:
+          commands:
+            - $vsix = Get-ChildItem out -Filter "*.vsix" | Select-Object -ExpandProperty FullName;
+            - artifact push workflow $vsix --destination "packaged-vsix-files/$($vsix | Split-Path -Leaf)"
 
   - name: "Upload VSIX files to GitHub"
     run:
