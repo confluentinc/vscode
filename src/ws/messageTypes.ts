@@ -13,23 +13,10 @@ export enum MessageType {
   WORKSPACE_COUNT_CHANGED = "WORKSPACE_COUNT_CHANGED",
 }
 
-/** All message.header.audience values */
-export enum Audience {
-  /**
-   * Messages originating either from:
-   *   1) sidecar, informing all workspaces of an event of interest to them all.
-   *   2) a single workspace extension to all other workspaces, broadcasting through the sidecar as an IPC mechanism.
-   */
-  WORKSPACES = "workspaces",
-}
-
 /** Header structure for websocket messages. */
 export interface MessageHeaders {
   /** Type of message. Dictates what the message body structure should be. */
   message_type: MessageType;
-
-  /** The intended recipient(s): A single workspace, Sidecar, or all other workspaces. */
-  audience: Audience;
 
   /** Originator of the message. Either the sending workspace's process id, or "sidecar". */
   originator: string;
@@ -46,12 +33,10 @@ export interface ReplyMessageHeaders extends MessageHeaders {
 /** Construct and return either a MessageHeaders or ReplyMessageHeaders given the message type, audience, and possible response_to_id value. */
 export function newMessageHeaders<T extends MessageType>(
   message_type: T,
-  audience: Audience,
   response_to_id?: string,
 ): MessageHeaderMap[T] {
   return {
     message_type,
-    audience,
     originator: process.pid.toString(),
     message_id: randomUUID().toString(),
     ...(response_to_id ? { response_to_id } : {}),

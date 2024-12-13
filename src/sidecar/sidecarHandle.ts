@@ -28,7 +28,7 @@ import {
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
-import { Audience, Message, MessageType } from "../ws/messageTypes";
+import { Message, MessageType } from "../ws/messageTypes";
 import {
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
@@ -108,12 +108,6 @@ export class SidecarHandle {
    * @throws {WebsocketClosedError} if the websocket is not connected.
    */
   public wsBroadcastToPeers<T extends MessageType>(message: Message<T>): void {
-    if (message.headers.audience !== Audience.WORKSPACES) {
-      throw new Error(
-        `Expected message audience to be 'workspaces', got ${message.headers.audience}`,
-      );
-    }
-
     if (message.headers.originator !== this.myPid) {
       throw new Error(
         `Expected message originator to be '${this.myPid}', got ${message.headers.originator}`,
