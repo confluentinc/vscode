@@ -4,10 +4,12 @@ import { SchemaString, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { Schema } from "../models/schema";
 import { getSidecar } from "../sidecar";
 
+export const SCHEMA_URI_SCHEME = "confluent.schema";
+
 /** Makes a read-only editor buffer holding a schema */
 export class SchemaDocumentProvider extends ResourceDocumentProvider {
   // non-file, non-untitled URIs cause the resulting buffer to be read-only
-  scheme = "confluent.schema";
+  scheme = SCHEMA_URI_SCHEME;
 
   public async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
     // parse the query string into the JSON respresentation of the original schema object
