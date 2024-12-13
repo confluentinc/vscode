@@ -47,7 +47,8 @@ export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Sch
  * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
 export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: string) {
-  // prompt for the editor/file first via the URI quickpick
+  // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
+  // editor languages, and file extensions
   const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
   const languageIds = ["plaintext", "avroavsc", "protobuf", "proto3", "json"];
   const fileFilters = {
@@ -64,28 +65,23 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
 
   // If the document has (locally marked) errors, don't proceed.
   if (await documentHasErrors(schemaUri)) {
+    // (error notification shown in the above function, no need to do anything else here)
     logger.error("Document has errors, aborting schema upload");
     return;
   }
 
-  const fileExt: string | undefined = schemaUri.path.split(".").pop();
-  if (!fileExt) {
-    vscode.window.showErrorMessage("Could not determine file extension");
-    return;
-  }
-
   let content: string | undefined;
-  let activeEditor: vscode.TextEditor | undefined;
+  let document: vscode.TextDocument | undefined;
   let languageId: string | undefined;
   if (schemaUri.scheme === "file") {
+    // file may not be open/visible, so read it directly
     const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
     content = Buffer.from(contentArray).toString("utf-8");
-  } else if (schemaUri.scheme === "untitled") {
-    activeEditor = vscode.window.visibleTextEditors.find(
-      (e) => e.document.uri.toString() === schemaUri.toString(),
-    );
-    content = activeEditor?.document.getText();
-    languageId = activeEditor?.document.languageId;
+  } else {
+    // "untitled" and SCHEMA_URI_SCHEME URIs are treated the same way
+    document = await vscode.workspace.openTextDocument(schemaUri);
+    content = document.getText();
+    languageId = document.languageId;
   }
   if (content === undefined) {
     vscode.window.showErrorMessage("Could not read schema file");
