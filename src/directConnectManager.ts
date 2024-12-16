@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { Disposable, ProgressLocation, SecretStorageChangeEvent, window } from "vscode";
 import {
   Connection,
@@ -6,9 +5,7 @@ import {
   ConnectionSpec,
   ConnectionsResourceApi,
   ConnectionType,
-  KafkaClusterConfig,
   ResponseError,
-  SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { directConnectionsChanged, environmentChanged } from "./emitters";
@@ -137,7 +134,7 @@ export class DirectConnectionManager {
       withSchemaRegistry: !!spec.schema_registry,
     });
 
-    if (!dryRun) {
+    if (connection && !dryRun) {
       // save the new connection in secret storage
       await getResourceManager().addDirectConnection(spec);
       // create a new ResourceLoader instance for managing the new connection's resources
@@ -164,7 +161,7 @@ export class DirectConnectionManager {
     // tell the sidecar about the updated spec
     const { connection, errorMessage } = await this.createOrUpdateConnection(spec, true);
     if (errorMessage || !connection) {
-      return; // TODO check that this doesn't break update { success: false, message: errorMessage };
+      return; // FIXME show error message somewhere
     }
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
@@ -198,7 +195,6 @@ export class DirectConnectionManager {
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
-    console.log("createOrUpdateConnection", spec);
     try {
       connection = update
         ? await tryToUpdateConnection(spec)
@@ -219,10 +215,8 @@ export class DirectConnectionManager {
       // logging happens in the above call
       if (error instanceof ResponseError) {
         errorMessage = await error.response.clone().text();
-        console.log("Response error:", error);
       } else if (error instanceof Error) {
         errorMessage = error.message;
-        console.log("Generic error:", error);
       }
       // FIXME seems like errormessage is null if the response resturns an error
       const msg = `Failed to ${update ? "update" : dryRun ? "test " : "create"} connection. ${errorMessage}`;

@@ -76,7 +76,6 @@ class DirectConnectFormViewModel extends ViewModel {
       data,
       dryRun,
     });
-    console.log("result in form", result);
     this.success(result.success);
     this.message(result.message ? result.message : result.success ? "Success!" : "Failed");
     this.loading(false);

@@ -46,7 +46,6 @@ export function openDirectConnectionForm(): void {
     const manager = DirectConnectionManager.getInstance();
     const { connection, errorMessage } = await manager.createConnection(spec, body.dryRun);
     if (errorMessage || !connection) {
-      console.log("result in manager if !connection/error", connection);
       return {
         success: false,
         message:
@@ -63,7 +62,7 @@ export function openDirectConnectionForm(): void {
         directConnectForm.dispose();
       }
     } else result = parseTestResult(connection);
-    console.log("result in directConnect.ts", result);
+
     return result;
   }
 
@@ -77,7 +76,7 @@ export function openDirectConnectionForm(): void {
   directConnectForm.onDidDispose(() => disposable.dispose());
 }
 
-function getConnectionSpecFromFormData(formData: any): CustomConnectionSpec {
+export function getConnectionSpecFromFormData(formData: any): CustomConnectionSpec {
   const connectionId = randomUUID() as ConnectionId;
   const spec: CustomConnectionSpec = {
     id: connectionId,
@@ -119,18 +118,18 @@ function getConnectionSpecFromFormData(formData: any): CustomConnectionSpec {
       };
     }
   }
-  console.log("parsed spec:", spec);
+
   return spec;
 }
 
-function parseTestResult(connection: Connection | null): {
+export function parseTestResult(connection: Connection | null): {
   success: boolean;
   message: string | null;
 } {
   if (!connection)
     return { success: false, message: "Error: No connection object returned from sidecar" }; // FIXME will we make it here?
   let result: { success: boolean; message: string | null } = { success: false, message: null };
-  console.log("dry run parsing");
+
   const kafkaState: ConnectedState | undefined = connection.status.kafka_cluster?.state;
   const schemaRegistryState: ConnectedState | undefined = connection.status.schema_registry?.state;
   if (kafkaState === "FAILED" || schemaRegistryState === "FAILED") {
