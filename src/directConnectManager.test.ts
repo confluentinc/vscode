@@ -89,14 +89,15 @@ describe("DirectConnectionManager behavior", () => {
     const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
     tryToCreateConnectionStub.resolves(createdConnection);
 
-    const result = await DirectConnectionManager.getInstance().createConnection(
-      testSpec.kafka_cluster,
-      testSpec.schema_registry,
-      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
-      testSpec.name,
-    );
+    const result = await DirectConnectionManager.getInstance().createConnection({
+      kafka_cluster: testSpec.kafka_cluster,
+      schema_registry: testSpec.schema_registry,
+      formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
+      name: testSpec.name,
+      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+    });
 
-    assert.ok(result.success, JSON.stringify(result));
+    assert.ok(result.connection, JSON.stringify(result));
     assert.ok(tryToCreateConnectionStub.calledOnce);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
     assert.strictEqual(specArg.kafka_cluster, undefined);
@@ -109,15 +110,14 @@ describe("DirectConnectionManager behavior", () => {
     testSpec.schema_registry = undefined;
     const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
     tryToCreateConnectionStub.resolves(createdConnection);
-
-    const result = await DirectConnectionManager.getInstance().createConnection(
-      testSpec.kafka_cluster,
-      testSpec.schema_registry,
-      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
-      testSpec.name,
-    );
-
-    assert.ok(result.success);
+    const result = await DirectConnectionManager.getInstance().createConnection({
+      kafka_cluster: testSpec.kafka_cluster,
+      schema_registry: testSpec.schema_registry,
+      formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
+      name: testSpec.name,
+      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+    });
+    assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
     assert.ok(tryToCreateConnectionStub.calledOnce);
     const specArg: ConnectionSpec = tryToCreateConnectionStub.firstCall.args[0];
@@ -133,14 +133,15 @@ describe("DirectConnectionManager behavior", () => {
       spec: PLAIN_LOCAL_KAFKA_SR_SPEC,
     });
 
-    const result = await DirectConnectionManager.getInstance().createConnection(
-      PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
-      PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
-      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
-      PLAIN_LOCAL_KAFKA_SR_SPEC.name,
-    );
+    const result = await DirectConnectionManager.getInstance().createConnection({
+      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
+      schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
+      formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
+      name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
+    });
 
-    assert.ok(result.success);
+    assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
     assert.ok(tryToCreateConnectionStub.calledOnce);
     const storedConnections: DirectConnectionsById =
@@ -151,14 +152,16 @@ describe("DirectConnectionManager behavior", () => {
   it("createConnection() should not store the new connection spec if the sidecar response is unsuccessful", async () => {
     tryToCreateConnectionStub.rejects(new ResponseError(new Response("oh no", { status: 500 })));
 
-    const result = await DirectConnectionManager.getInstance().createConnection(
-      PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
-      PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
-      TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
-      PLAIN_LOCAL_KAFKA_SR_SPEC.name,
-    );
+    const result = await DirectConnectionManager.getInstance().createConnection({
+      kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
+      schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
+      formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
+      name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
+      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+    });
 
-    assert.ok(!result.success);
+    assert.ok(!result.connection);
+    assert.ok(result.errorMessage);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 0);
@@ -175,9 +178,8 @@ describe("DirectConnectionManager behavior", () => {
     };
     tryToUpdateConnectionStub.resolves({ ...TEST_DIRECT_CONNECTION, spec: updatedSpec });
 
-    const result = await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+    await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 
-    assert.ok(result.success);
     assert.ok(tryToUpdateConnectionStub.calledOnceWith(updatedSpec));
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
@@ -200,9 +202,8 @@ describe("DirectConnectionManager behavior", () => {
     };
     tryToUpdateConnectionStub.rejects(new ResponseError(new Response("oh no", { status: 500 })));
 
-    const result = await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+    await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 
-    assert.ok(!result.success);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);
