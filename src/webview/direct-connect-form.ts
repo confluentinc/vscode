@@ -55,7 +55,7 @@ class DirectConnectFormViewModel extends ViewModel {
     }
   }
 
-  /** Submit all form data to the extension */
+  /** Submit all form data to the extension host */
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     this.success(false);
@@ -76,19 +76,15 @@ class DirectConnectFormViewModel extends ViewModel {
       data,
       dryRun,
     });
-
+    console.log("result in form", result);
     this.success(result.success);
-    this.message(result.message ?? "");
+    this.message(result.message ? result.message : result.success ? "Success!" : "Failed");
     this.loading(false);
   }
 }
 
 export type PostResponse = { success: boolean; message: string | null };
 
-// export function post(
-//   type: "TestConnection",
-//   body: { data: any; dryRun: boolean },
-// ): Promise<PostResponse>;
 export function post(type: "Submit", body: { data: any; dryRun: boolean }): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
