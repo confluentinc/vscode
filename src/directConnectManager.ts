@@ -198,6 +198,7 @@ export class DirectConnectionManager {
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
+    console.log("createOrUpdateConnection", spec);
     try {
       connection = update
         ? await tryToUpdateConnection(spec)
@@ -218,8 +219,10 @@ export class DirectConnectionManager {
       // logging happens in the above call
       if (error instanceof ResponseError) {
         errorMessage = await error.response.clone().text();
+        console.log("Response error:", error);
       } else if (error instanceof Error) {
         errorMessage = error.message;
+        console.log("Generic error:", error);
       }
       const msg = `Failed to ${update ? "update" : dryRun ? "test" : "create"} connection. ${errorMessage}`;
       logger.error(msg);
