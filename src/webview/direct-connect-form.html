@@ -301,17 +301,17 @@
           </template>
         </fieldset>
 
-        <!-- <input class="button" type="button" value="Test Connection" data-on-click="this.testConnection(event)" /> -->
+        <input
+          class="button"
+          type="submit"
+          data-attr-value="this.loading() ? 'Testing...' : 'Test Connection'"
+          data-attr-disabled="this.loading()"
+        />
         <input class="button" type="submit" value="Save" data-attr-disabled="this.success()" />
-        <template data-if="this.errorMessage()">
-          <div class="info error" data-text="this.errorMessage()"></div>
-        </template>
-        <template data-if="this.success() === true">
-          <div class="info success">
-            Connection added. Close this tab and view & interact with your connection in the
-            resources sidebar.
-          </div>
-        </template>
+        <div
+          data-attr-class="this.success() === false ? 'info error' : 'info'"
+          data-text="this.message()"
+        ></div>
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
