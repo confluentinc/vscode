@@ -281,6 +281,21 @@
         "category": "Confluent: Support"
       },
       {
+        "command": "confluent.support.downloadLogs",
+        "title": "Download Logs",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.downloadSidecarLogs",
+        "title": "Download Sidecar Logs",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.downloadSupportZip",
+        "title": "Download Support File (.zip)",
+        "category": "Confluent: Support"
+      },
+      {
         "command": "confluent.support.feedback",
         "title": "Give Feedback",
         "category": "Confluent: Support"
@@ -1028,6 +1043,7 @@
     "@rollup/plugin-replace": "^5.0.7",
     "@rollup/plugin-virtual": "^3.0.2",
     "@twbs/fantasticon": "3.0.0",
+    "@types/archiver": "^6.0.3",
     "@types/d3": "^7.4.3",
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
@@ -1067,6 +1083,7 @@
     "@sentry/rollup-plugin": "^2.21.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "archiver": "^7.0.1",
     "async-mutex": "^0.5.0",
     "d3": "^7.9.0",
     "dataclass": "^3.0.0-beta.1",
