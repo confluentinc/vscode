@@ -146,7 +146,7 @@ export class DirectConnectionManager {
       spec.schema_registry = schemaRegistryConfig;
     }
 
-    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, dryRun);
+    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, false, dryRun);
     if (errorMessage || !connection) {
       return { success: false, message: errorMessage };
     }
@@ -158,10 +158,12 @@ export class DirectConnectionManager {
       withSchemaRegistry: !!schemaRegistryConfig,
     });
 
+    if (!dryRun) {
     // save the new connection in secret storage
     await getResourceManager().addDirectConnection(spec);
     // create a new ResourceLoader instance for managing the new connection's resources
     this.initResourceLoader(connectionId);
+    }
 
     // `message` is hard-coded in the webview, so we don't actually use the connection object yet
     return { success: true, message: JSON.stringify(connection) };
@@ -224,6 +226,7 @@ export class DirectConnectionManager {
         ? await tryToUpdateConnection(spec)
         : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
+      if (!dryRun) {
       await window.withProgress(
         {
           location: ProgressLocation.Notification,
@@ -233,6 +236,7 @@ export class DirectConnectionManager {
           await waitForConnectionToBeUsable(connectionId);
         },
       );
+      }
     } catch (error) {
       // logging happens in the above call
       if (error instanceof ResponseError) {

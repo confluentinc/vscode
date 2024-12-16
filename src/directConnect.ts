@@ -104,13 +104,14 @@ export function openDirectConnectionForm(): void {
 
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
-    if (!body.dryRun) {
-      await manager.createConnection(
+    result = await manager.createConnection(
         kafkaConfig,
         schemaRegistryConfig,
         body.data["platform"],
         body.data["name"],
+      body.dryRun,
       );
+    if (!body.dryRun) {
       let name = body.data["name"] || "the connection";
       if (result.success) {
         await window.showInformationMessage(`🎉 New Connection Created`, {
