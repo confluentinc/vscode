@@ -309,7 +309,7 @@
         />
         <input class="button" type="submit" value="Save" data-attr-disabled="this.success()" />
         <div
-          data-attr-class="this.success() === false ? 'info error' : 'info'"
+          data-attr-class="this.success() ? 'info' : 'info error'"
           data-text="this.message()"
         ></div>
       </form>
@@ -421,6 +421,7 @@
         color: var(--vscode-descriptionForeground);
         font-weight: 700;
         font-style: italic;
+        white-space: break-spaces;
       }
       .success {
         color: var(--vscode-statusBar-foreground);

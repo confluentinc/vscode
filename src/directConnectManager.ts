@@ -161,7 +161,10 @@ export class DirectConnectionManager {
     // tell the sidecar about the updated spec
     const { connection, errorMessage } = await this.createOrUpdateConnection(spec, true);
     if (errorMessage || !connection) {
-      return; // FIXME show error message somewhere
+      window.showErrorMessage(
+        `Error: Failed to update connection. ${errorMessage ?? "No connection object returned"}`,
+      );
+      return;
     }
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
@@ -176,7 +179,7 @@ export class DirectConnectionManager {
     // notify subscribers that the "environment" has changed since direct connections are treated
     // as environment-specific resources
     environmentChanged.fire(mergedSpec.id);
-    // return { success: true, message: JSON.stringify(connection) };
+    return; // TODO NC return value will likely change for Edit in the form
   }
 
   /**
@@ -218,8 +221,7 @@ export class DirectConnectionManager {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      // FIXME seems like errormessage is null if the response resturns an error
-      const msg = `Failed to ${update ? "update" : dryRun ? "test " : "create"} connection. ${errorMessage}`;
+      const msg = `Failed to ${update ? "update" : dryRun ? "test" : "create"} connection. ${errorMessage}`;
       logger.error(msg);
       if (!dryRun) window.showErrorMessage(msg);
       errorMessage = msg;
