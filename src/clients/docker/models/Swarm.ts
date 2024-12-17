@@ -14,17 +14,33 @@
 
 import { mapValues } from "../runtime";
 import type { JoinTokens } from "./JoinTokens";
-import { JoinTokensFromJSON, JoinTokensFromJSONTyped, JoinTokensToJSON } from "./JoinTokens";
+import {
+  JoinTokensFromJSON,
+  JoinTokensFromJSONTyped,
+  JoinTokensToJSON,
+  JoinTokensToJSONTyped,
+} from "./JoinTokens";
 import type { ObjectVersion } from "./ObjectVersion";
 import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { TLSInfo } from "./TLSInfo";
-import { TLSInfoFromJSON, TLSInfoFromJSONTyped, TLSInfoToJSON } from "./TLSInfo";
+import {
+  TLSInfoFromJSON,
+  TLSInfoFromJSONTyped,
+  TLSInfoToJSON,
+  TLSInfoToJSONTyped,
+} from "./TLSInfo";
 import type { SwarmSpec } from "./SwarmSpec";
-import { SwarmSpecFromJSON, SwarmSpecFromJSONTyped, SwarmSpecToJSON } from "./SwarmSpec";
+import {
+  SwarmSpecFromJSON,
+  SwarmSpecFromJSONTyped,
+  SwarmSpecToJSON,
+  SwarmSpecToJSONTyped,
+} from "./SwarmSpec";
 
 /**
  *
@@ -143,10 +159,15 @@ export function SwarmFromJSONTyped(json: any, ignoreDiscriminator: boolean): Swa
   };
 }
 
-export function SwarmToJSON(value?: Swarm | null): any {
+export function SwarmToJSON(json: any): Swarm {
+  return SwarmToJSONTyped(json, false);
+}
+
+export function SwarmToJSONTyped(value?: Swarm | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

@@ -58,10 +58,18 @@ export function SystemAuthResponseFromJSONTyped(
   };
 }
 
-export function SystemAuthResponseToJSON(value?: SystemAuthResponse | null): any {
+export function SystemAuthResponseToJSON(json: any): SystemAuthResponse {
+  return SystemAuthResponseToJSONTyped(json, false);
+}
+
+export function SystemAuthResponseToJSONTyped(
+  value?: SystemAuthResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Status: value["Status"],
     IdentityToken: value["IdentityToken"],

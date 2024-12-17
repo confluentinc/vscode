@@ -51,10 +51,18 @@ export function PluginConfigNetworkFromJSONTyped(
   };
 }
 
-export function PluginConfigNetworkToJSON(value?: PluginConfigNetwork | null): any {
+export function PluginConfigNetworkToJSON(json: any): PluginConfigNetwork {
+  return PluginConfigNetworkToJSONTyped(json, false);
+}
+
+export function PluginConfigNetworkToJSONTyped(
+  value?: PluginConfigNetwork | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Type: value["Type"],
   };

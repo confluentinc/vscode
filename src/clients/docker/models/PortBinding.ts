@@ -56,10 +56,18 @@ export function PortBindingFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function PortBindingToJSON(value?: PortBinding | null): any {
+export function PortBindingToJSON(json: any): PortBinding {
+  return PortBindingToJSONTyped(json, false);
+}
+
+export function PortBindingToJSONTyped(
+  value?: PortBinding | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     HostIp: value["HostIp"],
     HostPort: value["HostPort"],

@@ -58,10 +58,18 @@ export function CommitFromJSONTyped(json: any, ignoreDiscriminator: boolean): Co
   };
 }
 
-export function CommitToJSON(value?: Commit | null): any {
+export function CommitToJSON(json: any): Commit {
+  return CommitToJSONTyped(json, false);
+}
+
+export function CommitToJSONTyped(
+  value?: Commit | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Expected: value["Expected"],

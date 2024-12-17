@@ -82,10 +82,18 @@ export function ClusterVolumeInfoFromJSONTyped(
   };
 }
 
-export function ClusterVolumeInfoToJSON(value?: ClusterVolumeInfo | null): any {
+export function ClusterVolumeInfoToJSON(json: any): ClusterVolumeInfo {
+  return ClusterVolumeInfoToJSONTyped(json, false);
+}
+
+export function ClusterVolumeInfoToJSONTyped(
+  value?: ClusterVolumeInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     CapacityBytes: value["CapacityBytes"],
     VolumeContext: value["VolumeContext"],

@@ -108,10 +108,18 @@ export function EndpointPortConfigFromJSONTyped(
   };
 }
 
-export function EndpointPortConfigToJSON(value?: EndpointPortConfig | null): any {
+export function EndpointPortConfigToJSON(json: any): EndpointPortConfig {
+  return EndpointPortConfigToJSONTyped(json, false);
+}
+
+export function EndpointPortConfigToJSONTyped(
+  value?: EndpointPortConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Protocol: value["Protocol"],

@@ -55,10 +55,18 @@ export function PeerInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function PeerInfoToJSON(value?: PeerInfo | null): any {
+export function PeerInfoToJSON(json: any): PeerInfo {
+  return PeerInfoToJSONTyped(json, false);
+}
+
+export function PeerInfoToJSONTyped(
+  value?: PeerInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     IP: value["IP"],

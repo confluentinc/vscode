@@ -61,10 +61,18 @@ export function NetworkDisconnectRequestFromJSONTyped(
   };
 }
 
-export function NetworkDisconnectRequestToJSON(value?: NetworkDisconnectRequest | null): any {
+export function NetworkDisconnectRequestToJSON(json: any): NetworkDisconnectRequest {
+  return NetworkDisconnectRequestToJSONTyped(json, false);
+}
+
+export function NetworkDisconnectRequestToJSONTyped(
+  value?: NetworkDisconnectRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Container: value["Container"],
     Force: value["Force"],

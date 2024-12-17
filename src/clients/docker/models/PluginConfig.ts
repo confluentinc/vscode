@@ -14,45 +14,61 @@
 
 import { mapValues } from "../runtime";
 import type { PluginEnv } from "./PluginEnv";
-import { PluginEnvFromJSON, PluginEnvFromJSONTyped, PluginEnvToJSON } from "./PluginEnv";
+import {
+  PluginEnvFromJSON,
+  PluginEnvFromJSONTyped,
+  PluginEnvToJSON,
+  PluginEnvToJSONTyped,
+} from "./PluginEnv";
 import type { PluginConfigLinux } from "./PluginConfigLinux";
 import {
   PluginConfigLinuxFromJSON,
   PluginConfigLinuxFromJSONTyped,
   PluginConfigLinuxToJSON,
+  PluginConfigLinuxToJSONTyped,
 } from "./PluginConfigLinux";
 import type { PluginConfigArgs } from "./PluginConfigArgs";
 import {
   PluginConfigArgsFromJSON,
   PluginConfigArgsFromJSONTyped,
   PluginConfigArgsToJSON,
+  PluginConfigArgsToJSONTyped,
 } from "./PluginConfigArgs";
 import type { PluginConfigRootfs } from "./PluginConfigRootfs";
 import {
   PluginConfigRootfsFromJSON,
   PluginConfigRootfsFromJSONTyped,
   PluginConfigRootfsToJSON,
+  PluginConfigRootfsToJSONTyped,
 } from "./PluginConfigRootfs";
 import type { PluginConfigNetwork } from "./PluginConfigNetwork";
 import {
   PluginConfigNetworkFromJSON,
   PluginConfigNetworkFromJSONTyped,
   PluginConfigNetworkToJSON,
+  PluginConfigNetworkToJSONTyped,
 } from "./PluginConfigNetwork";
 import type { PluginConfigInterface } from "./PluginConfigInterface";
 import {
   PluginConfigInterfaceFromJSON,
   PluginConfigInterfaceFromJSONTyped,
   PluginConfigInterfaceToJSON,
+  PluginConfigInterfaceToJSONTyped,
 } from "./PluginConfigInterface";
 import type { PluginConfigUser } from "./PluginConfigUser";
 import {
   PluginConfigUserFromJSON,
   PluginConfigUserFromJSONTyped,
   PluginConfigUserToJSON,
+  PluginConfigUserToJSONTyped,
 } from "./PluginConfigUser";
 import type { PluginMount } from "./PluginMount";
-import { PluginMountFromJSON, PluginMountFromJSONTyped, PluginMountToJSON } from "./PluginMount";
+import {
+  PluginMountFromJSON,
+  PluginMountFromJSONTyped,
+  PluginMountToJSON,
+  PluginMountToJSONTyped,
+} from "./PluginMount";
 
 /**
  * The config of a plugin.
@@ -206,10 +222,18 @@ export function PluginConfigFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function PluginConfigToJSON(value?: PluginConfig | null): any {
+export function PluginConfigToJSON(json: any): PluginConfig {
+  return PluginConfigToJSONTyped(json, false);
+}
+
+export function PluginConfigToJSONTyped(
+  value?: PluginConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     DockerVersion: value["DockerVersion"],
     Description: value["Description"],

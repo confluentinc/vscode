@@ -75,10 +75,18 @@ export function ProcessConfigFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function ProcessConfigToJSON(value?: ProcessConfig | null): any {
+export function ProcessConfigToJSON(json: any): ProcessConfig {
+  return ProcessConfigToJSONTyped(json, false);
+}
+
+export function ProcessConfigToJSONTyped(
+  value?: ProcessConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     privileged: value["privileged"],
     user: value["user"],

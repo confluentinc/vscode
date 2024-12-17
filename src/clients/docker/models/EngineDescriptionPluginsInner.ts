@@ -59,12 +59,18 @@ export function EngineDescriptionPluginsInnerFromJSONTyped(
   };
 }
 
-export function EngineDescriptionPluginsInnerToJSON(
+export function EngineDescriptionPluginsInnerToJSON(json: any): EngineDescriptionPluginsInner {
+  return EngineDescriptionPluginsInnerToJSONTyped(json, false);
+}
+
+export function EngineDescriptionPluginsInnerToJSONTyped(
   value?: EngineDescriptionPluginsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Type: value["Type"],
     Name: value["Name"],

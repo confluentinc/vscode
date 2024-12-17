@@ -18,28 +18,42 @@ import {
   ContainerConfigFromJSON,
   ContainerConfigFromJSONTyped,
   ContainerConfigToJSON,
+  ContainerConfigToJSONTyped,
 } from "./ContainerConfig";
 import type { MountPoint } from "./MountPoint";
-import { MountPointFromJSON, MountPointFromJSONTyped, MountPointToJSON } from "./MountPoint";
+import {
+  MountPointFromJSON,
+  MountPointFromJSONTyped,
+  MountPointToJSON,
+  MountPointToJSONTyped,
+} from "./MountPoint";
 import type { NetworkSettings } from "./NetworkSettings";
 import {
   NetworkSettingsFromJSON,
   NetworkSettingsFromJSONTyped,
   NetworkSettingsToJSON,
+  NetworkSettingsToJSONTyped,
 } from "./NetworkSettings";
 import type { HostConfig } from "./HostConfig";
-import { HostConfigFromJSON, HostConfigFromJSONTyped, HostConfigToJSON } from "./HostConfig";
+import {
+  HostConfigFromJSON,
+  HostConfigFromJSONTyped,
+  HostConfigToJSON,
+  HostConfigToJSONTyped,
+} from "./HostConfig";
 import type { GraphDriverData } from "./GraphDriverData";
 import {
   GraphDriverDataFromJSON,
   GraphDriverDataFromJSONTyped,
   GraphDriverDataToJSON,
+  GraphDriverDataToJSONTyped,
 } from "./GraphDriverData";
 import type { ContainerState } from "./ContainerState";
 import {
   ContainerStateFromJSON,
   ContainerStateFromJSONTyped,
   ContainerStateToJSON,
+  ContainerStateToJSONTyped,
 } from "./ContainerState";
 
 /**
@@ -256,10 +270,18 @@ export function ContainerInspectResponseFromJSONTyped(
   };
 }
 
-export function ContainerInspectResponseToJSON(value?: ContainerInspectResponse | null): any {
+export function ContainerInspectResponseToJSON(json: any): ContainerInspectResponse {
+  return ContainerInspectResponseToJSONTyped(json, false);
+}
+
+export function ContainerInspectResponseToJSONTyped(
+  value?: ContainerInspectResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     Created: value["Created"],

@@ -18,6 +18,7 @@ import {
   ReachabilityFromJSON,
   ReachabilityFromJSONTyped,
   ReachabilityToJSON,
+  ReachabilityToJSONTyped,
 } from "./Reachability";
 
 /**
@@ -74,10 +75,18 @@ export function ManagerStatusFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function ManagerStatusToJSON(value?: ManagerStatus | null): any {
+export function ManagerStatusToJSON(json: any): ManagerStatus {
+  return ManagerStatusToJSONTyped(json, false);
+}
+
+export function ManagerStatusToJSONTyped(
+  value?: ManagerStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Leader: value["Leader"],
     Reachability: ReachabilityToJSON(value["Reachability"]),

@@ -18,9 +18,15 @@ import {
   TaskSpecPlacementPreferencesInnerFromJSON,
   TaskSpecPlacementPreferencesInnerFromJSONTyped,
   TaskSpecPlacementPreferencesInnerToJSON,
+  TaskSpecPlacementPreferencesInnerToJSONTyped,
 } from "./TaskSpecPlacementPreferencesInner";
 import type { Platform } from "./Platform";
-import { PlatformFromJSON, PlatformFromJSONTyped, PlatformToJSON } from "./Platform";
+import {
+  PlatformFromJSON,
+  PlatformFromJSONTyped,
+  PlatformToJSON,
+  PlatformToJSONTyped,
+} from "./Platform";
 
 /**
  *
@@ -114,10 +120,18 @@ export function TaskSpecPlacementFromJSONTyped(
   };
 }
 
-export function TaskSpecPlacementToJSON(value?: TaskSpecPlacement | null): any {
+export function TaskSpecPlacementToJSON(json: any): TaskSpecPlacement {
+  return TaskSpecPlacementToJSONTyped(json, false);
+}
+
+export function TaskSpecPlacementToJSONTyped(
+  value?: TaskSpecPlacement | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Constraints: value["Constraints"],
     Preferences:

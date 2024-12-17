@@ -18,12 +18,14 @@ import {
   SystemVersionPlatformFromJSON,
   SystemVersionPlatformFromJSONTyped,
   SystemVersionPlatformToJSON,
+  SystemVersionPlatformToJSONTyped,
 } from "./SystemVersionPlatform";
 import type { SystemVersionComponentsInner } from "./SystemVersionComponentsInner";
 import {
   SystemVersionComponentsInnerFromJSON,
   SystemVersionComponentsInnerFromJSONTyped,
   SystemVersionComponentsInnerToJSON,
+  SystemVersionComponentsInnerToJSONTyped,
 } from "./SystemVersionComponentsInner";
 
 /**
@@ -157,10 +159,18 @@ export function SystemVersionFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function SystemVersionToJSON(value?: SystemVersion | null): any {
+export function SystemVersionToJSON(json: any): SystemVersion {
+  return SystemVersionToJSONTyped(json, false);
+}
+
+export function SystemVersionToJSONTyped(
+  value?: SystemVersion | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Platform: SystemVersionPlatformToJSON(value["Platform"]),
     Components:

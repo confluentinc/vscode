@@ -68,10 +68,18 @@ export function AuthConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function AuthConfigToJSON(value?: AuthConfig | null): any {
+export function AuthConfigToJSON(json: any): AuthConfig {
+  return AuthConfigToJSONTyped(json, false);
+}
+
+export function AuthConfigToJSONTyped(
+  value?: AuthConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     username: value["username"],
     password: value["password"],

@@ -83,11 +83,19 @@ export function TaskSpecContainerSpecPrivilegesSELinuxContextFromJSONTyped(
 }
 
 export function TaskSpecContainerSpecPrivilegesSELinuxContextToJSON(
+  json: any,
+): TaskSpecContainerSpecPrivilegesSELinuxContext {
+  return TaskSpecContainerSpecPrivilegesSELinuxContextToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecPrivilegesSELinuxContextToJSONTyped(
   value?: TaskSpecContainerSpecPrivilegesSELinuxContext | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Disable: value["Disable"],
     User: value["User"],

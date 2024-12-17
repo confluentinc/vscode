@@ -54,10 +54,18 @@ export function ErrorDetailFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function ErrorDetailToJSON(value?: ErrorDetail | null): any {
+export function ErrorDetailToJSON(json: any): ErrorDetail {
+  return ErrorDetailToJSONTyped(json, false);
+}
+
+export function ErrorDetailToJSONTyped(
+  value?: ErrorDetail | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     code: value["code"],
     message: value["message"],

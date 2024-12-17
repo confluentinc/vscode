@@ -14,21 +14,28 @@
 
 import { mapValues } from "../runtime";
 import type { MountPoint } from "./MountPoint";
-import { MountPointFromJSON, MountPointFromJSONTyped, MountPointToJSON } from "./MountPoint";
+import {
+  MountPointFromJSON,
+  MountPointFromJSONTyped,
+  MountPointToJSON,
+  MountPointToJSONTyped,
+} from "./MountPoint";
 import type { ContainerSummaryNetworkSettings } from "./ContainerSummaryNetworkSettings";
 import {
   ContainerSummaryNetworkSettingsFromJSON,
   ContainerSummaryNetworkSettingsFromJSONTyped,
   ContainerSummaryNetworkSettingsToJSON,
+  ContainerSummaryNetworkSettingsToJSONTyped,
 } from "./ContainerSummaryNetworkSettings";
 import type { ContainerSummaryHostConfig } from "./ContainerSummaryHostConfig";
 import {
   ContainerSummaryHostConfigFromJSON,
   ContainerSummaryHostConfigFromJSONTyped,
   ContainerSummaryHostConfigToJSON,
+  ContainerSummaryHostConfigToJSONTyped,
 } from "./ContainerSummaryHostConfig";
 import type { Port } from "./Port";
-import { PortFromJSON, PortFromJSONTyped, PortToJSON } from "./Port";
+import { PortFromJSON, PortFromJSONTyped, PortToJSON, PortToJSONTyped } from "./Port";
 
 /**
  *
@@ -172,10 +179,18 @@ export function ContainerSummaryFromJSONTyped(
   };
 }
 
-export function ContainerSummaryToJSON(value?: ContainerSummary | null): any {
+export function ContainerSummaryToJSON(json: any): ContainerSummary {
+  return ContainerSummaryToJSONTyped(json, false);
+}
+
+export function ContainerSummaryToJSONTyped(
+  value?: ContainerSummary | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     Names: value["Names"],

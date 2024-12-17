@@ -18,6 +18,7 @@ import {
   ClusterVolumeSpecFromJSON,
   ClusterVolumeSpecFromJSONTyped,
   ClusterVolumeSpecToJSON,
+  ClusterVolumeSpecToJSONTyped,
 } from "./ClusterVolumeSpec";
 
 /**
@@ -57,10 +58,18 @@ export function VolumeUpdateRequestFromJSONTyped(
   };
 }
 
-export function VolumeUpdateRequestToJSON(value?: VolumeUpdateRequest | null): any {
+export function VolumeUpdateRequestToJSON(json: any): VolumeUpdateRequest {
+  return VolumeUpdateRequestToJSONTyped(json, false);
+}
+
+export function VolumeUpdateRequestToJSONTyped(
+  value?: VolumeUpdateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Spec: ClusterVolumeSpecToJSON(value["Spec"]),
   };

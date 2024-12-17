@@ -18,6 +18,7 @@ import {
   ImageDeleteResponseItemFromJSON,
   ImageDeleteResponseItemFromJSONTyped,
   ImageDeleteResponseItemToJSON,
+  ImageDeleteResponseItemToJSONTyped,
 } from "./ImageDeleteResponseItem";
 
 /**
@@ -67,10 +68,18 @@ export function ImagePruneResponseFromJSONTyped(
   };
 }
 
-export function ImagePruneResponseToJSON(value?: ImagePruneResponse | null): any {
+export function ImagePruneResponseToJSON(json: any): ImagePruneResponse {
+  return ImagePruneResponseToJSONTyped(json, false);
+}
+
+export function ImagePruneResponseToJSONTyped(
+  value?: ImagePruneResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ImagesDeleted:
       value["ImagesDeleted"] == null

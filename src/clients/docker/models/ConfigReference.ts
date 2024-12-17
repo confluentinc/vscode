@@ -55,10 +55,18 @@ export function ConfigReferenceFromJSONTyped(
   };
 }
 
-export function ConfigReferenceToJSON(value?: ConfigReference | null): any {
+export function ConfigReferenceToJSON(json: any): ConfigReference {
+  return ConfigReferenceToJSONTyped(json, false);
+}
+
+export function ConfigReferenceToJSONTyped(
+  value?: ConfigReference | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Network: value["Network"],
   };

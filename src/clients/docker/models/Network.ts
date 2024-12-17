@@ -14,20 +14,27 @@
 
 import { mapValues } from "../runtime";
 import type { IPAM } from "./IPAM";
-import { IPAMFromJSON, IPAMFromJSONTyped, IPAMToJSON } from "./IPAM";
+import { IPAMFromJSON, IPAMFromJSONTyped, IPAMToJSON, IPAMToJSONTyped } from "./IPAM";
 import type { PeerInfo } from "./PeerInfo";
-import { PeerInfoFromJSON, PeerInfoFromJSONTyped, PeerInfoToJSON } from "./PeerInfo";
+import {
+  PeerInfoFromJSON,
+  PeerInfoFromJSONTyped,
+  PeerInfoToJSON,
+  PeerInfoToJSONTyped,
+} from "./PeerInfo";
 import type { ConfigReference } from "./ConfigReference";
 import {
   ConfigReferenceFromJSON,
   ConfigReferenceFromJSONTyped,
   ConfigReferenceToJSON,
+  ConfigReferenceToJSONTyped,
 } from "./ConfigReference";
 import type { NetworkContainer } from "./NetworkContainer";
 import {
   NetworkContainerFromJSON,
   NetworkContainerFromJSONTyped,
   NetworkContainerToJSON,
+  NetworkContainerToJSONTyped,
 } from "./NetworkContainer";
 
 /**
@@ -195,10 +202,18 @@ export function NetworkFromJSONTyped(json: any, ignoreDiscriminator: boolean): N
   };
 }
 
-export function NetworkToJSON(value?: Network | null): any {
+export function NetworkToJSON(json: any): Network {
+  return NetworkToJSONTyped(json, false);
+}
+
+export function NetworkToJSONTyped(
+  value?: Network | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Id: value["Id"],

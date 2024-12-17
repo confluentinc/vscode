@@ -75,10 +75,18 @@ export function PluginConfigArgsFromJSONTyped(
   };
 }
 
-export function PluginConfigArgsToJSON(value?: PluginConfigArgs | null): any {
+export function PluginConfigArgsToJSON(json: any): PluginConfigArgs {
+  return PluginConfigArgsToJSONTyped(json, false);
+}
+
+export function PluginConfigArgsToJSONTyped(
+  value?: PluginConfigArgs | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Description: value["Description"],

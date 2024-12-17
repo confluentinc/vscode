@@ -120,10 +120,18 @@ export function ServiceSpecRollbackConfigFromJSONTyped(
   };
 }
 
-export function ServiceSpecRollbackConfigToJSON(value?: ServiceSpecRollbackConfig | null): any {
+export function ServiceSpecRollbackConfigToJSON(json: any): ServiceSpecRollbackConfig {
+  return ServiceSpecRollbackConfigToJSONTyped(json, false);
+}
+
+export function ServiceSpecRollbackConfigToJSONTyped(
+  value?: ServiceSpecRollbackConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Parallelism: value["Parallelism"],
     Delay: value["Delay"],

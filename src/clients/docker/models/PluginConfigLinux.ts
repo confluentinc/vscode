@@ -18,6 +18,7 @@ import {
   PluginDeviceFromJSON,
   PluginDeviceFromJSONTyped,
   PluginDeviceToJSON,
+  PluginDeviceToJSONTyped,
 } from "./PluginDevice";
 
 /**
@@ -74,10 +75,18 @@ export function PluginConfigLinuxFromJSONTyped(
   };
 }
 
-export function PluginConfigLinuxToJSON(value?: PluginConfigLinux | null): any {
+export function PluginConfigLinuxToJSON(json: any): PluginConfigLinux {
+  return PluginConfigLinuxToJSONTyped(json, false);
+}
+
+export function PluginConfigLinuxToJSONTyped(
+  value?: PluginConfigLinux | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Capabilities: value["Capabilities"],
     AllowAllDevices: value["AllowAllDevices"],

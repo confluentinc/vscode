@@ -18,12 +18,14 @@ import {
   PluginConfigFromJSON,
   PluginConfigFromJSONTyped,
   PluginConfigToJSON,
+  PluginConfigToJSONTyped,
 } from "./PluginConfig";
 import type { PluginSettings } from "./PluginSettings";
 import {
   PluginSettingsFromJSON,
   PluginSettingsFromJSONTyped,
   PluginSettingsToJSON,
+  PluginSettingsToJSONTyped,
 } from "./PluginSettings";
 
 /**
@@ -99,10 +101,18 @@ export function PluginFromJSONTyped(json: any, ignoreDiscriminator: boolean): Pl
   };
 }
 
-export function PluginToJSON(value?: Plugin | null): any {
+export function PluginToJSON(json: any): Plugin {
+  return PluginToJSONTyped(json, false);
+}
+
+export function PluginToJSONTyped(
+  value?: Plugin | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     Name: value["Name"],

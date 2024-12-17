@@ -68,10 +68,18 @@ export function IPAMConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function IPAMConfigToJSON(value?: IPAMConfig | null): any {
+export function IPAMConfigToJSON(json: any): IPAMConfig {
+  return IPAMConfigToJSONTyped(json, false);
+}
+
+export function IPAMConfigToJSONTyped(
+  value?: IPAMConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Subnet: value["Subnet"],
     IPRange: value["IPRange"],

@@ -57,10 +57,18 @@ export function VolumePruneResponseFromJSONTyped(
   };
 }
 
-export function VolumePruneResponseToJSON(value?: VolumePruneResponse | null): any {
+export function VolumePruneResponseToJSON(json: any): VolumePruneResponse {
+  return VolumePruneResponseToJSONTyped(json, false);
+}
+
+export function VolumePruneResponseToJSONTyped(
+  value?: VolumePruneResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     VolumesDeleted: value["VolumesDeleted"],
     SpaceReclaimed: value["SpaceReclaimed"],

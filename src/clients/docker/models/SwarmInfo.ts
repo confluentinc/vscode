@@ -14,14 +14,25 @@
 
 import { mapValues } from "../runtime";
 import type { ClusterInfo } from "./ClusterInfo";
-import { ClusterInfoFromJSON, ClusterInfoFromJSONTyped, ClusterInfoToJSON } from "./ClusterInfo";
+import {
+  ClusterInfoFromJSON,
+  ClusterInfoFromJSONTyped,
+  ClusterInfoToJSON,
+  ClusterInfoToJSONTyped,
+} from "./ClusterInfo";
 import type { PeerNode } from "./PeerNode";
-import { PeerNodeFromJSON, PeerNodeFromJSONTyped, PeerNodeToJSON } from "./PeerNode";
+import {
+  PeerNodeFromJSON,
+  PeerNodeFromJSONTyped,
+  PeerNodeToJSON,
+  PeerNodeToJSONTyped,
+} from "./PeerNode";
 import type { LocalNodeState } from "./LocalNodeState";
 import {
   LocalNodeStateFromJSON,
   LocalNodeStateFromJSONTyped,
   LocalNodeStateToJSON,
+  LocalNodeStateToJSONTyped,
 } from "./LocalNodeState";
 
 /**
@@ -122,10 +133,18 @@ export function SwarmInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function SwarmInfoToJSON(value?: SwarmInfo | null): any {
+export function SwarmInfoToJSON(json: any): SwarmInfo {
+  return SwarmInfoToJSONTyped(json, false);
+}
+
+export function SwarmInfoToJSONTyped(
+  value?: SwarmInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NodeID: value["NodeID"],
     NodeAddr: value["NodeAddr"],
