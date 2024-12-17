@@ -64,10 +64,18 @@ export function ConnectionMetadataFromJSONTyped(
   };
 }
 
-export function ConnectionMetadataToJSON(value?: ConnectionMetadata | null): any {
+export function ConnectionMetadataToJSON(json: any): ConnectionMetadata {
+  return ConnectionMetadataToJSONTyped(json, false);
+}
+
+export function ConnectionMetadataToJSONTyped(
+  value?: ConnectionMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     self: value["self"],
     resource_name: value["resource_name"],

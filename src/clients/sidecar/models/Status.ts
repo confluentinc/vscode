@@ -27,7 +27,7 @@ export type Status = (typeof Status)[keyof typeof Status];
 export function instanceOfStatus(value: any): boolean {
   for (const key in Status) {
     if (Object.prototype.hasOwnProperty.call(Status, key)) {
-      if ((Status as Record<string, Status>)[key] === value) {
+      if (Status[key as keyof typeof Status] === value) {
         return true;
       }
     }
@@ -45,4 +45,8 @@ export function StatusFromJSONTyped(json: any, ignoreDiscriminator: boolean): St
 
 export function StatusToJSON(value?: Status | null): any {
   return value as any;
+}
+
+export function StatusToJSONTyped(value: any, ignoreDiscriminator: boolean): Status {
+  return value as Status;
 }

@@ -18,20 +18,28 @@ import {
   ExceededFieldsFromJSON,
   ExceededFieldsFromJSONTyped,
   ExceededFieldsToJSON,
+  ExceededFieldsToJSONTyped,
 } from "./ExceededFields";
 import type { TimestampType } from "./TimestampType";
 import {
   TimestampTypeFromJSON,
   TimestampTypeFromJSONTyped,
   TimestampTypeToJSON,
+  TimestampTypeToJSONTyped,
 } from "./TimestampType";
 import type { JsonNode } from "./JsonNode";
-import { JsonNodeFromJSON, JsonNodeFromJSONTyped, JsonNodeToJSON } from "./JsonNode";
+import {
+  JsonNodeFromJSON,
+  JsonNodeFromJSONTyped,
+  JsonNodeToJSON,
+  JsonNodeToJSONTyped,
+} from "./JsonNode";
 import type { PartitionConsumeRecordHeader } from "./PartitionConsumeRecordHeader";
 import {
   PartitionConsumeRecordHeaderFromJSON,
   PartitionConsumeRecordHeaderFromJSONTyped,
   PartitionConsumeRecordHeaderToJSON,
+  PartitionConsumeRecordHeaderToJSONTyped,
 } from "./PartitionConsumeRecordHeader";
 
 /**
@@ -140,10 +148,18 @@ export function PartitionConsumeRecordFromJSONTyped(
   };
 }
 
-export function PartitionConsumeRecordToJSON(value?: PartitionConsumeRecord | null): any {
+export function PartitionConsumeRecordToJSON(json: any): PartitionConsumeRecord {
+  return PartitionConsumeRecordToJSONTyped(json, false);
+}
+
+export function PartitionConsumeRecordToJSONTyped(
+  value?: PartitionConsumeRecord | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     partition_id: value["partition_id"],
     offset: value["offset"],

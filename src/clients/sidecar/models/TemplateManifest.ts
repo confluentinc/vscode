@@ -18,6 +18,7 @@ import {
   OptionPropertiesFromJSON,
   OptionPropertiesFromJSONTyped,
   OptionPropertiesToJSON,
+  OptionPropertiesToJSONTyped,
 } from "./OptionProperties";
 
 /**
@@ -115,10 +116,18 @@ export function TemplateManifestFromJSONTyped(
   };
 }
 
-export function TemplateManifestToJSON(value?: TemplateManifest | null): any {
+export function TemplateManifestToJSON(json: any): TemplateManifest {
+  return TemplateManifestToJSONTyped(json, false);
+}
+
+export function TemplateManifestToJSONTyped(
+  value?: TemplateManifest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     template_api_version: value["template_api_version"],
     name: value["name"],

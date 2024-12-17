@@ -65,10 +65,18 @@ export function SchemaRegistryConfigFromJSONTyped(
   };
 }
 
-export function SchemaRegistryConfigToJSON(value?: SchemaRegistryConfig | null): any {
+export function SchemaRegistryConfigToJSON(json: any): SchemaRegistryConfig {
+  return SchemaRegistryConfigToJSONTyped(json, false);
+}
+
+export function SchemaRegistryConfigToJSONTyped(
+  value?: SchemaRegistryConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     id: value["id"],
     uri: value["uri"],

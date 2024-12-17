@@ -27,7 +27,7 @@ export type ConnectionType = (typeof ConnectionType)[keyof typeof ConnectionType
 export function instanceOfConnectionType(value: any): boolean {
   for (const key in ConnectionType) {
     if (Object.prototype.hasOwnProperty.call(ConnectionType, key)) {
-      if ((ConnectionType as Record<string, ConnectionType>)[key] === value) {
+      if (ConnectionType[key as keyof typeof ConnectionType] === value) {
         return true;
       }
     }
@@ -48,4 +48,11 @@ export function ConnectionTypeFromJSONTyped(
 
 export function ConnectionTypeToJSON(value?: ConnectionType | null): any {
   return value as any;
+}
+
+export function ConnectionTypeToJSONTyped(
+  value: any,
+  ignoreDiscriminator: boolean,
+): ConnectionType {
+  return value as ConnectionType;
 }

@@ -18,6 +18,7 @@ import {
   JsonNodeTypeFromJSON,
   JsonNodeTypeFromJSONTyped,
   JsonNodeTypeToJSON,
+  JsonNodeTypeToJSONTyped,
 } from "./JsonNodeType";
 
 /**
@@ -202,10 +203,18 @@ export function JsonNodeFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function JsonNodeToJSON(value?: JsonNode | null): any {
+export function JsonNodeToJSON(json: any): JsonNode {
+  return JsonNodeToJSONTyped(json, false);
+}
+
+export function JsonNodeToJSONTyped(
+  value?: JsonNode | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     empty: value["empty"],
     valueNode: value["valueNode"],

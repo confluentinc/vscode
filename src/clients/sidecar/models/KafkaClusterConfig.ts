@@ -73,10 +73,18 @@ export function KafkaClusterConfigFromJSONTyped(
   };
 }
 
-export function KafkaClusterConfigToJSON(value?: KafkaClusterConfig | null): any {
+export function KafkaClusterConfigToJSON(json: any): KafkaClusterConfig {
+  return KafkaClusterConfigToJSONTyped(json, false);
+}
+
+export function KafkaClusterConfigToJSONTyped(
+  value?: KafkaClusterConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     bootstrap_servers: value["bootstrap_servers"],
     credentials: value["credentials"],

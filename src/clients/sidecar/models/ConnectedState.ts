@@ -28,7 +28,7 @@ export type ConnectedState = (typeof ConnectedState)[keyof typeof ConnectedState
 export function instanceOfConnectedState(value: any): boolean {
   for (const key in ConnectedState) {
     if (Object.prototype.hasOwnProperty.call(ConnectedState, key)) {
-      if ((ConnectedState as Record<string, ConnectedState>)[key] === value) {
+      if (ConnectedState[key as keyof typeof ConnectedState] === value) {
         return true;
       }
     }
@@ -49,4 +49,11 @@ export function ConnectedStateFromJSONTyped(
 
 export function ConnectedStateToJSON(value?: ConnectedState | null): any {
   return value as any;
+}
+
+export function ConnectedStateToJSONTyped(
+  value: any,
+  ignoreDiscriminator: boolean,
+): ConnectedState {
+  return value as ConnectedState;
 }
