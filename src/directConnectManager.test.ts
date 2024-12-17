@@ -167,6 +167,30 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(storedConnections.size, 0);
   });
 
+  it.only("createConnection() should not store the new connection spec if dryRun is `true`", async () => {
+    // succesful test run returns the connection
+    tryToCreateConnectionStub.resolves({
+      ...TEST_DIRECT_CONNECTION,
+      spec: PLAIN_LOCAL_KAFKA_SR_SPEC,
+    });
+    const result = await DirectConnectionManager.getInstance().createConnection(
+      {
+        kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
+        schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
+        formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
+        name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
+        id: TEST_DIRECT_CONNECTION.id as ConnectionId,
+      },
+      true, // dryRun
+    );
+
+    assert.ok(result.connection);
+    assert.ok(!result.errorMessage);
+    const storedConnections: DirectConnectionsById =
+      await getResourceManager().getDirectConnections();
+    assert.equal(storedConnections.size, 0);
+  });
+
   it("updateConnection() should store the updated connection spec after successful response from the sidecar", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
