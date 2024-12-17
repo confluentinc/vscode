@@ -133,7 +133,7 @@ describe("directConnect.ts", () => {
     });
   });
 
-  describe("parseTestResult", () => {
+  describe.only("parseTestResult", () => {
     it("should return success: false if either connection is FAILED", () => {
       const result = parseTestResult({
         ...TEST_DIRECT_CONNECTION,
@@ -252,49 +252,49 @@ describe("directConnect.ts", () => {
             sign_in: { message: "Invalid password" },
             token_refresh: { message: "Token refresh failed" },
           },
+          schema_registry: { state: "CONNECTED" as ConnectedState },
+          authentication: { status: "NO_TOKEN" as Status },
         },
-        schema_registry: { state: "CONNECTED" as ConnectedState },
-        authentication: { status: "NO_TOKEN" as Status },
-      },
-    };
+      };
 
-    const result = parseTestResult(connection);
-    assert.strictEqual(result.success, false);
-    assert.strictEqual(
-      result.message,
-      "\nKafka State: FAILED\nInvalid username Invalid password Token refresh failed",
-    );
-  });
+      const result = parseTestResult(connection);
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(
+        result.message,
+        "\nKafka State: FAILED\nInvalid username Invalid password Token refresh failed",
+      );
+    });
 
-  it("should return messages from both kafka and schema registry connection errors", () => {
-    const connection = {
-      ...TEST_DIRECT_CONNECTION,
-      status: {
-        kafka_cluster: {
-          state: "FAILED" as ConnectedState,
-          errors: {
-            auth_status_check: { message: "Invalid username" },
-            sign_in: undefined,
-            token_refresh: undefined,
+    it("should return messages from both kafka and schema registry connection errors", () => {
+      const connection = {
+        ...TEST_DIRECT_CONNECTION,
+        status: {
+          kafka_cluster: {
+            state: "FAILED" as ConnectedState,
+            errors: {
+              auth_status_check: { message: "Invalid username" },
+              sign_in: undefined,
+              token_refresh: undefined,
+            },
           },
-        },
-        schema_registry: {
-          state: "FAILED" as ConnectedState,
-          errors: {
-            auth_status_check: undefined,
-            sign_in: { message: "Unable to reach server" },
-            token_refresh: undefined,
+          schema_registry: {
+            state: "FAILED" as ConnectedState,
+            errors: {
+              auth_status_check: undefined,
+              sign_in: { message: "Unable to reach server" },
+              token_refresh: undefined,
+            },
           },
+          authentication: { status: "NO_TOKEN" as Status },
         },
-        authentication: { status: "NO_TOKEN" as Status },
-      },
-    };
+      };
 
-    const result = parseTestResult(connection);
-    assert.strictEqual(result.success, false);
-    assert.strictEqual(
-      result.message,
-      "\nKafka State: FAILED\nInvalid username\nSchema Registry State: FAILED\nUnable to reach server",
-    );
+      const result = parseTestResult(connection);
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(
+        result.message,
+        "\nKafka State: FAILED\nInvalid username\nSchema Registry State: FAILED\nUnable to reach server",
+      );
+    });
   });
 });
