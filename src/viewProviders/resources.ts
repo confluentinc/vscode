@@ -1,12 +1,19 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
-import { EXTENSION_VERSION, IconNames } from "../constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  EXTENSION_VERSION,
+  IconNames,
+  LOCAL_CONNECTION_ID,
+} from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
+  connectionLoading,
+  connectionUsable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -31,7 +38,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -121,6 +128,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
+    logger.debug("getChildren called", { element });
     const resourceItems: ResourceViewProviderData[] = [];
 
     // if this is the first time we're loading the Resources view items, ensure we've told the sidecar
@@ -149,32 +157,26 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[] = [];
+      const resourcePromises: Promise<ResourceViewProviderData>[] = [
+        loadCCloudResources(this.forceDeepRefresh),
+        loadLocalResources(),
+      ];
 
-      // EXPERIMENTAL: check if direct connections are enabled in extension settings
+      // PREVIEW: check if direct connections are enabled in extension settings
+      // TODO(shoup): remove this once direct connections are enabled by default
       const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
       const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
       if (directConnectionsEnabled) {
-        resources.push(
-          ...(await Promise.all([
-            loadCCloudResources(this.forceDeepRefresh),
-            loadLocalResources(),
-            loadDirectConnectResources(),
-          ])),
-        );
-      } else {
-        resources.push(
-          ...(await Promise.all([
-            loadCCloudResources(this.forceDeepRefresh),
-            loadLocalResources(),
-          ])),
-        );
+        resourcePromises.push(loadDirectConnectResources());
       }
+
+      const resources: ResourceViewProviderData[] = await Promise.all(resourcePromises);
 
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
       }
+
       return resources;
     }
 
@@ -196,7 +198,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     });
 
     const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
-      logger.debug("directConnectionsChanged event fired");
+      logger.debug("directConnectionsChanged event fired, refreshing");
       this.refresh();
     });
 
@@ -214,19 +216,50 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       },
     );
 
+    const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
+      logger.debug("connectionLoading event fired", { id });
+      this.refreshConnection(id, true);
+    });
+
+    const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
+      logger.debug("connectionUsable event fired", { id });
+      this.refreshConnection(id, false);
+    });
+
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
+      connectionLoadingSub,
+      connectionUsableSub,
     ];
   }
-}
 
-/** Get the singleton instance of the {@link ResourceViewProvider} */
-export function getResourceViewProvider() {
-  return ResourceViewProvider.getInstance();
+  async refreshConnection(id: ConnectionId, loading: boolean = false) {
+    switch (id) {
+      case CCLOUD_CONNECTION_ID:
+        throw new Error("Not implemented");
+      case LOCAL_CONNECTION_ID:
+        throw new Error("Not implemented");
+      default: {
+        // direct connection ID
+        const connection = await getResourceManager().getDirectConnection(id);
+        if (connection) {
+          const directEnv = DirectEnvironment.create({
+            id: connection.id,
+            name: connection.name!,
+            connectionId: connection.id,
+            connectionType: connection.type,
+            isLoading: loading,
+          });
+          // update only the direct connection that changed
+          this._onDidChangeTreeData.fire(directEnv);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -398,7 +431,7 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
  * @param environment: The CCloud environment to get children for
  * @returns
  */
-async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
+export async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
   const loader = CCloudResourceLoader.getInstance();

@@ -25,7 +25,12 @@ import {
 } from "../docker/configs";
 import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
-import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
+import {
+  connectionLoading,
+  connectionUsable,
+  currentKafkaClusterChanged,
+  currentSchemaRegistryChanged,
+} from "../emitters";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { ConnectionId } from "../models/resource";
@@ -233,6 +238,7 @@ export async function waitForConnectionToBeUsable(
         const schemaRegistryState: ConnectedState | undefined = status.schema_registry?.state;
         const isAttempting = kafkaState === "ATTEMPTING" || schemaRegistryState === "ATTEMPTING";
         if (isAttempting) {
+          connectionLoading.fire(id);
           logger.debug("still waiting for connection to be usable", {
             id,
             type,
@@ -242,6 +248,7 @@ export async function waitForConnectionToBeUsable(
           await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
           continue;
         }
+        connectionUsable.fire(id);
         break;
       }
       case ConnectionType.Ccloud: {
