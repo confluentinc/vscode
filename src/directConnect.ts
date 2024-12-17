@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { ViewColumn, window } from "vscode";
-import { ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
+import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -49,10 +49,14 @@ export function openDirectConnectionForm(): void {
       return {
         success: false,
         message:
-          errorMessage ?? "Error: No connection object or error message returned from sidecar", // FIXME
+          errorMessage ??
+          "Unknown error occurred. Please check the connection details and try again.",
       };
     }
-    if (!body.dryRun) {
+
+    if (body.dryRun) result = parseTestResult(connection);
+    else {
+      // save and close the form
       let name = body.data["name"] || "the connection";
       if (result.success) {
         await window.showInformationMessage(`🎉 New Connection Created`, {
@@ -61,8 +65,7 @@ export function openDirectConnectionForm(): void {
         });
         directConnectForm.dispose();
       }
-    } else result = parseTestResult(connection);
-
+    }
     return result;
   }
 
@@ -122,29 +125,41 @@ export function getConnectionSpecFromFormData(formData: any): CustomConnectionSp
   return spec;
 }
 
-export function parseTestResult(connection: Connection | null): {
-  success: boolean;
-  message: string | null;
-} {
-  if (!connection)
-    return { success: false, message: "Error: No connection object returned from sidecar" }; // FIXME will we make it here?
-  let result: { success: boolean; message: string | null } = { success: false, message: null };
+export function parseTestResult(connection: Connection): PostResponse {
+  let result: { success: boolean; message: string } = { success: false, message: "" };
 
   const kafkaState: ConnectedState | undefined = connection.status.kafka_cluster?.state;
+  const kafkaErrors: AuthErrors | undefined = connection.status.kafka_cluster?.errors;
   const schemaRegistryState: ConnectedState | undefined = connection.status.schema_registry?.state;
   if (kafkaState === "FAILED" || schemaRegistryState === "FAILED") {
     result.success = false;
     if (kafkaState === "FAILED") {
-      result.message += `Kafka State: ${JSON.stringify(connection.status.kafka_cluster?.errors)}`;
+      result.message += `\nKafka State: ${kafkaState}`;
+      if (kafkaErrors) {
+        const errorMessages = [
+          kafkaErrors.auth_status_check?.message,
+          kafkaErrors.sign_in?.message,
+          kafkaErrors.token_refresh?.message,
+        ].filter((message) => message !== undefined);
+        result.message += `\n${errorMessages.join(" ")}`;
+      }
     }
     if (schemaRegistryState === "FAILED") {
-      result.message += `\nSchema Registry State: ${JSON.stringify(connection.status.schema_registry?.errors)}`;
+      result.message += `\nSchema Registry State: ${schemaRegistryState}`;
+      const schemaErrors = connection.status.schema_registry?.errors;
+      if (schemaErrors) {
+        const errorMessages = [
+          schemaErrors.auth_status_check?.message,
+          schemaErrors.sign_in?.message,
+          schemaErrors.token_refresh?.message,
+        ].filter((message) => message !== undefined);
+        result.message += `\n${errorMessages.join(" ")}`;
+      }
     }
   } else {
-    // FIXME check that NO TOKEN state may not return the FAILED status?
     result.success = true;
     if (kafkaState) {
-      result.message += `Kafka State: ${JSON.stringify(connection.status.kafka_cluster?.state)}`;
+      result.message += `\nKafka State: ${JSON.stringify(connection.status.kafka_cluster?.state)}`;
     }
     if (schemaRegistryState) {
       result.message += `\nSchema Registry State: ${JSON.stringify(connection.status.schema_registry?.state)}`;

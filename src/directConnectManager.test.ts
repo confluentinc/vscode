@@ -167,7 +167,7 @@ describe("DirectConnectionManager behavior", () => {
     assert.equal(storedConnections.size, 0);
   });
 
-  it.only("createConnection() should not store the new connection spec if dryRun is `true`", async () => {
+  it("createConnection() should not store the new connection spec if dryRun is `true`", async () => {
     // succesful test run returns the connection
     tryToCreateConnectionStub.resolves({
       ...TEST_DIRECT_CONNECTION,
