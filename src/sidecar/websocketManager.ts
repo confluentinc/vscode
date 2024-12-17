@@ -1,0 +1,210 @@
+import { Disposable } from "vscode";
+import WebSocket from "ws";
+import { Logger } from "../logging";
+import { MessageRouter } from "../ws/messageRouter";
+import { Message, MessageHeaders, MessageType, validateMessageBody } from "../ws/messageTypes";
+
+import { SIDECAR_PORT } from "./constants";
+
+const logger = new Logger("websocketManager");
+
+export class WebsocketManager implements Disposable {
+  static instance: WebsocketManager | null = null;
+
+  static getInstance(): WebsocketManager {
+    if (!WebsocketManager.instance) {
+      WebsocketManager.instance = new WebsocketManager();
+    }
+    return WebsocketManager.instance;
+  }
+
+  private websocket: WebSocket | null = null;
+  private disposables: Disposable[] = [];
+  private messageRouter = MessageRouter.getInstance();
+  private peerWorkspaceCount = 0;
+
+  private constructor() {
+    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will get one when connected, and whenever
+    // any other workspaces connect or disconnect.
+    this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
+      logger.info(
+        `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
+      );
+      // The reply is inclusive of the current workspace, but we want peer count.
+      this.peerWorkspaceCount = message.body.current_workspace_count - 1;
+    });
+  }
+
+  /**
+   * Connect websocket to the sidecar, then send an ACCESS_REQUEST message containing the access_token.
+   * Resolves the promise upon successful authorization.
+   * @param access_token
+   * @returns
+   */
+  async connect(accessToken: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+        logger.info("Websocket already connected");
+        resolve();
+        return;
+      }
+
+      logger.info("Setting up websocket to sidecar");
+
+      // Quarkus likes knowing what workspace id is connecting at websocket level, but
+      // its websocket framework doesn't let it see request headers. So we pass it in the query string.
+      // (We MUST pass the access token in the headers to pass through the sidecar auth filter, which filters on headers.
+      //  Is just that the headers we pass are not visible to the Quarkus websocket framework.)
+      const websocket = new WebSocket(
+        `ws://localhost:${SIDECAR_PORT}/ws?workspace_id=${process.pid}`,
+        {
+          headers: { authorization: `Bearer ${accessToken}` },
+        },
+      );
+
+      websocket.on("open", () => {
+        logger.info("Websocket connected to sidecar");
+
+        // Resolve when we have gotten the first WORKSPACE_COUNT_CHANGED message. Will be sent
+        // when any connect/disconnect happens, even ours.
+        // Install a one-time handler for this message type.
+        this.messageRouter.once(
+          MessageType.WORKSPACE_COUNT_CHANGED,
+          async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+            logger.info(
+              "Received initial WORKSPACE_COUNT_CHANGED message, resolving connection promise",
+            );
+            this.websocket = websocket;
+            this.peerWorkspaceCount = m.body.current_workspace_count - 1;
+            resolve();
+          },
+        );
+      });
+
+      websocket.on("close", () => {
+        logger.info("Websocket closed");
+
+        // do additional cleanup here
+        this.websocket = null;
+        this.dispose();
+      });
+
+      websocket.on("error", (error) => {
+        logger.error(`Websocket error: ${error}`);
+        // Go ahead and close the websocket, which will trigger the close event above.
+        websocket.close();
+      });
+
+      websocket.on("message", (data: WebSocket.Data) => {
+        // Deserialize from JSON and deliver the message to the message router.
+        let message: Message<MessageType>;
+        try {
+          message = WebsocketManager.parseMessage(data);
+        } catch (e) {
+          logger.info(
+            `Unparseable websocket message from sidecar: ${(e as Error).message} from message '${data.toString()}'`,
+          );
+          return;
+        }
+
+        const headers: MessageHeaders = message.headers;
+        logger.debug(
+          `Recieved ${headers.message_type} websocket message from originator ${headers.originator}: ${JSON.stringify(message, null, 2)}`,
+        );
+
+        // Defer to the internal message router to deliver the message to the registered by-message-type async handler(s).
+        this.messageRouter.deliver(message).catch((e) => {
+          logger.error(`Error delivering message ${JSON.stringify(message, null, 2)}: ${e}`);
+        });
+      });
+
+      this.disposables.push({
+        dispose: () => {
+          if (this.websocket && this.websocket.readyState !== WebSocket.CLOSED) {
+            this.websocket.close();
+            this.websocket = null;
+          }
+        },
+      });
+    });
+  }
+
+  /**
+   * Send a message to / through sidecar over the websocket.
+   * The websocket send is ultimately async underneath the hood.
+   * @throws {WebsocketClosedError} if the websocket is not connected.
+   */
+  public send<T extends MessageType>(message: Message<T>): void {
+    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+      const payload = JSON.stringify(message);
+
+      if (payload.length > 64 * 1024) {
+        logger.error(`Cannot send websocket message, too large: ${payload.length} bytes`);
+        throw new Error("Payload too large");
+      }
+      logger.debug(`Sending ${payload.length} byte message`);
+      this.websocket.send(payload);
+    } else {
+      logger.error("Websocket not assigned + open, cannot send message");
+      throw new WebsocketClosedError();
+    }
+  }
+
+  /** How many peer workspaces are connected to sidecar, exclusive of ourselves? */
+  public getPeerWorkspaceCount(): number {
+    return this.peerWorkspaceCount;
+  }
+
+  public dispose(): void {
+    this.disposables.forEach((d) => d.dispose());
+    this.disposables = [];
+  }
+
+  /** Parse a message recieved from websocket into a Message<T> or die trying *
+   */
+  static parseMessage(data: WebSocket.Data): Message<MessageType> {
+    const strMessage = data.toString();
+    const message = JSON.parse(strMessage) as Message<MessageType>;
+    // ensure the message has the required headers
+    const headers = message.headers;
+    if (!headers) {
+      throw new Error("Message missing headers: " + strMessage);
+    }
+    if (!message.headers.message_type) {
+      throw new Error("Message missing headers.message_type: " + strMessage);
+    }
+    // message type must be known
+    if (!MessageType[message.headers.message_type]) {
+      throw new Error("Unknown message type: " + message.headers.message_type);
+    }
+    if (!message.headers.originator) {
+      throw new Error("Message missing originator header: " + strMessage);
+    }
+    // originator must either be "sidecar" or a process id string
+    if (message.headers.originator !== "sidecar" && isNaN(parseInt(message.headers.originator))) {
+      throw new Error("Invalid originator value: " + message.headers.originator);
+    }
+
+    const body: any = message.body;
+
+    if (!body) {
+      throw new Error("Message missing body: " + strMessage);
+    }
+
+    if (typeof body !== "object") {
+      throw new Error("Message body must be an object: " + strMessage);
+    }
+
+    // Validate the body against the message type
+    validateMessageBody(message.headers.message_type, body);
+
+    return message;
+  }
+}
+
+class WebsocketClosedError extends Error {
+  constructor() {
+    super("Websocket closed");
+    this.name = "WebsocketClosedError";
+  }
+}
