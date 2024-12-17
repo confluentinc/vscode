@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { ConsumerLagData } from "./ConsumerLagData";
 import {
   ConsumerLagDataFromJSON,
   ConsumerLagDataFromJSONTyped,
   ConsumerLagDataToJSON,
+  ConsumerLagDataToJSONTyped,
 } from "./ConsumerLagData";
 
 /**
@@ -80,10 +82,18 @@ export function ConsumerLagDataListFromJSONTyped(
   };
 }
 
-export function ConsumerLagDataListToJSON(value?: ConsumerLagDataList | null): any {
+export function ConsumerLagDataListToJSON(json: any): ConsumerLagDataList {
+  return ConsumerLagDataListToJSONTyped(json, false);
+}
+
+export function ConsumerLagDataListToJSONTyped(
+  value?: ConsumerLagDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

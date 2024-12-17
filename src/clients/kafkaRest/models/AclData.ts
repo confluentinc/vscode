@@ -18,12 +18,14 @@ import {
   AclResourceTypeFromJSON,
   AclResourceTypeFromJSONTyped,
   AclResourceTypeToJSON,
+  AclResourceTypeToJSONTyped,
 } from "./AclResourceType";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -133,10 +135,18 @@ export function AclDataFromJSONTyped(json: any, ignoreDiscriminator: boolean): A
   };
 }
 
-export function AclDataToJSON(value?: AclData | null): any {
+export function AclDataToJSON(json: any): AclData {
+  return AclDataToJSONTyped(json, false);
+}
+
+export function AclDataToJSONTyped(
+  value?: AclData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

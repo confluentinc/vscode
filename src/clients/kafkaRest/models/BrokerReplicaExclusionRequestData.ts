@@ -64,11 +64,19 @@ export function BrokerReplicaExclusionRequestDataFromJSONTyped(
 }
 
 export function BrokerReplicaExclusionRequestDataToJSON(
+  json: any,
+): BrokerReplicaExclusionRequestData {
+  return BrokerReplicaExclusionRequestDataToJSONTyped(json, false);
+}
+
+export function BrokerReplicaExclusionRequestDataToJSONTyped(
   value?: BrokerReplicaExclusionRequestData | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     broker_id: value["broker_id"],
     reason: value["reason"],

@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { ListLinksResponseData } from "./ListLinksResponseData";
 import {
   ListLinksResponseDataFromJSON,
   ListLinksResponseDataFromJSONTyped,
   ListLinksResponseDataToJSON,
+  ListLinksResponseDataToJSONTyped,
 } from "./ListLinksResponseData";
 
 /**
@@ -82,10 +84,18 @@ export function ListLinksResponseDataListFromJSONTyped(
   };
 }
 
-export function ListLinksResponseDataListToJSON(value?: ListLinksResponseDataList | null): any {
+export function ListLinksResponseDataListToJSON(json: any): ListLinksResponseDataList {
+  return ListLinksResponseDataListToJSONTyped(json, false);
+}
+
+export function ListLinksResponseDataListToJSONTyped(
+  value?: ListLinksResponseDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

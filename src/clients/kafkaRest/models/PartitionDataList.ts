@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { PartitionData } from "./PartitionData";
 import {
   PartitionDataFromJSON,
   PartitionDataFromJSONTyped,
   PartitionDataToJSON,
+  PartitionDataToJSONTyped,
 } from "./PartitionData";
 
 /**
@@ -80,10 +82,18 @@ export function PartitionDataListFromJSONTyped(
   };
 }
 
-export function PartitionDataListToJSON(value?: PartitionDataList | null): any {
+export function PartitionDataListToJSON(json: any): PartitionDataList {
+  return PartitionDataListToJSONTyped(json, false);
+}
+
+export function PartitionDataListToJSONTyped(
+  value?: PartitionDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

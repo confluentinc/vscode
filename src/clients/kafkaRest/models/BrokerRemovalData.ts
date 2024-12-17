@@ -18,12 +18,14 @@ import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -104,10 +106,18 @@ export function BrokerRemovalDataFromJSONTyped(
   };
 }
 
-export function BrokerRemovalDataToJSON(value?: BrokerRemovalData | null): any {
+export function BrokerRemovalDataToJSON(json: any): BrokerRemovalData {
+  return BrokerRemovalDataToJSONTyped(json, false);
+}
+
+export function BrokerRemovalDataToJSONTyped(
+  value?: BrokerRemovalData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

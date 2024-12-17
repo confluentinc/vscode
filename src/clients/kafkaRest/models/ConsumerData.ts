@@ -18,12 +18,14 @@ import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -116,10 +118,18 @@ export function ConsumerDataFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function ConsumerDataToJSON(value?: ConsumerData | null): any {
+export function ConsumerDataToJSON(json: any): ConsumerData {
+  return ConsumerDataToJSONTyped(json, false);
+}
+
+export function ConsumerDataToJSONTyped(
+  value?: ConsumerData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

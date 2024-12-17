@@ -70,11 +70,19 @@ export function AlterConfigBatchRequestDataDataInnerFromJSONTyped(
 }
 
 export function AlterConfigBatchRequestDataDataInnerToJSON(
+  json: any,
+): AlterConfigBatchRequestDataDataInner {
+  return AlterConfigBatchRequestDataDataInnerToJSONTyped(json, false);
+}
+
+export function AlterConfigBatchRequestDataDataInnerToJSONTyped(
   value?: AlterConfigBatchRequestDataDataInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     value: value["value"],

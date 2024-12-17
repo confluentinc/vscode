@@ -30,7 +30,7 @@ export type AclResourceType = (typeof AclResourceType)[keyof typeof AclResourceT
 export function instanceOfAclResourceType(value: any): boolean {
   for (const key in AclResourceType) {
     if (Object.prototype.hasOwnProperty.call(AclResourceType, key)) {
-      if ((AclResourceType as Record<string, AclResourceType>)[key] === value) {
+      if (AclResourceType[key as keyof typeof AclResourceType] === value) {
         return true;
       }
     }
@@ -51,4 +51,11 @@ export function AclResourceTypeFromJSONTyped(
 
 export function AclResourceTypeToJSON(value?: AclResourceType | null): any {
   return value as any;
+}
+
+export function AclResourceTypeToJSONTyped(
+  value: any,
+  ignoreDiscriminator: boolean,
+): AclResourceType {
+  return value as AclResourceType;
 }

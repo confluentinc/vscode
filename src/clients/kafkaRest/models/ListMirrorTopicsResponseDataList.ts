@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { ListMirrorTopicsResponseData } from "./ListMirrorTopicsResponseData";
 import {
   ListMirrorTopicsResponseDataFromJSON,
   ListMirrorTopicsResponseDataFromJSONTyped,
   ListMirrorTopicsResponseDataToJSON,
+  ListMirrorTopicsResponseDataToJSONTyped,
 } from "./ListMirrorTopicsResponseData";
 
 /**
@@ -85,11 +87,19 @@ export function ListMirrorTopicsResponseDataListFromJSONTyped(
 }
 
 export function ListMirrorTopicsResponseDataListToJSON(
+  json: any,
+): ListMirrorTopicsResponseDataList {
+  return ListMirrorTopicsResponseDataListToJSONTyped(json, false);
+}
+
+export function ListMirrorTopicsResponseDataListToJSONTyped(
   value?: ListMirrorTopicsResponseDataList | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

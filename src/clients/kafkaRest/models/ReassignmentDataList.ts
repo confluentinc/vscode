@@ -18,12 +18,14 @@ import {
   ReassignmentDataFromJSON,
   ReassignmentDataFromJSONTyped,
   ReassignmentDataToJSON,
+  ReassignmentDataToJSONTyped,
 } from "./ReassignmentData";
 import type { ResourceCollectionMetadata } from "./ResourceCollectionMetadata";
 import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 
 /**
@@ -80,10 +82,18 @@ export function ReassignmentDataListFromJSONTyped(
   };
 }
 
-export function ReassignmentDataListToJSON(value?: ReassignmentDataList | null): any {
+export function ReassignmentDataListToJSON(json: any): ReassignmentDataList {
+  return ReassignmentDataListToJSONTyped(json, false);
+}
+
+export function ReassignmentDataListToJSONTyped(
+  value?: ReassignmentDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

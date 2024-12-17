@@ -56,10 +56,18 @@ export function ConfigDataFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function ConfigDataToJSON(value?: ConfigData | null): any {
+export function ConfigDataToJSON(json: any): ConfigData {
+  return ConfigDataToJSONTyped(json, false);
+}
+
+export function ConfigDataToJSONTyped(
+  value?: ConfigData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     value: value["value"],
