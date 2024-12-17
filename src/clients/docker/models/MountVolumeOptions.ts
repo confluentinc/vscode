@@ -18,6 +18,7 @@ import {
   MountVolumeOptionsDriverConfigFromJSON,
   MountVolumeOptionsDriverConfigFromJSONTyped,
   MountVolumeOptionsDriverConfigToJSON,
+  MountVolumeOptionsDriverConfigToJSONTyped,
 } from "./MountVolumeOptionsDriverConfig";
 
 /**
@@ -74,10 +75,18 @@ export function MountVolumeOptionsFromJSONTyped(
   };
 }
 
-export function MountVolumeOptionsToJSON(value?: MountVolumeOptions | null): any {
+export function MountVolumeOptionsToJSON(json: any): MountVolumeOptions {
+  return MountVolumeOptionsToJSONTyped(json, false);
+}
+
+export function MountVolumeOptionsToJSONTyped(
+  value?: MountVolumeOptions | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NoCopy: value["NoCopy"],
     Labels: value["Labels"],

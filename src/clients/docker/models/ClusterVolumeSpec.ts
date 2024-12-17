@@ -18,6 +18,7 @@ import {
   ClusterVolumeSpecAccessModeFromJSON,
   ClusterVolumeSpecAccessModeFromJSONTyped,
   ClusterVolumeSpecAccessModeToJSON,
+  ClusterVolumeSpecAccessModeToJSONTyped,
 } from "./ClusterVolumeSpecAccessMode";
 
 /**
@@ -74,10 +75,18 @@ export function ClusterVolumeSpecFromJSONTyped(
   };
 }
 
-export function ClusterVolumeSpecToJSON(value?: ClusterVolumeSpec | null): any {
+export function ClusterVolumeSpecToJSON(json: any): ClusterVolumeSpec {
+  return ClusterVolumeSpecToJSONTyped(json, false);
+}
+
+export function ClusterVolumeSpecToJSONTyped(
+  value?: ClusterVolumeSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Group: value["Group"],
     AccessMode: ClusterVolumeSpecAccessModeToJSON(value["AccessMode"]),

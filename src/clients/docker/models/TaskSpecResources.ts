@@ -18,9 +18,10 @@ import {
   ResourceObjectFromJSON,
   ResourceObjectFromJSONTyped,
   ResourceObjectToJSON,
+  ResourceObjectToJSONTyped,
 } from "./ResourceObject";
 import type { Limit } from "./Limit";
-import { LimitFromJSON, LimitFromJSONTyped, LimitToJSON } from "./Limit";
+import { LimitFromJSON, LimitFromJSONTyped, LimitToJSON, LimitToJSONTyped } from "./Limit";
 
 /**
  * Resource requirements which apply to each individual container created
@@ -69,10 +70,18 @@ export function TaskSpecResourcesFromJSONTyped(
   };
 }
 
-export function TaskSpecResourcesToJSON(value?: TaskSpecResources | null): any {
+export function TaskSpecResourcesToJSON(json: any): TaskSpecResources {
+  return TaskSpecResourcesToJSONTyped(json, false);
+}
+
+export function TaskSpecResourcesToJSONTyped(
+  value?: TaskSpecResources | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Limits: LimitToJSON(value["Limits"]),
     Reservations: ResourceObjectToJSON(value["Reservations"]),

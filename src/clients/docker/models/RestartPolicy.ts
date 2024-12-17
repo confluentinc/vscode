@@ -78,10 +78,18 @@ export function RestartPolicyFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function RestartPolicyToJSON(value?: RestartPolicy | null): any {
+export function RestartPolicyToJSON(json: any): RestartPolicy {
+  return RestartPolicyToJSONTyped(json, false);
+}
+
+export function RestartPolicyToJSONTyped(
+  value?: RestartPolicy | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     MaximumRetryCount: value["MaximumRetryCount"],

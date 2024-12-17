@@ -50,10 +50,18 @@ export function ContainerWaitExitErrorFromJSONTyped(
   };
 }
 
-export function ContainerWaitExitErrorToJSON(value?: ContainerWaitExitError | null): any {
+export function ContainerWaitExitErrorToJSON(json: any): ContainerWaitExitError {
+  return ContainerWaitExitErrorToJSONTyped(json, false);
+}
+
+export function ContainerWaitExitErrorToJSONTyped(
+  value?: ContainerWaitExitError | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Message: value["Message"],
   };

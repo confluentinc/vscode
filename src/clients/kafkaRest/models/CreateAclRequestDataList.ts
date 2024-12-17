@@ -18,6 +18,7 @@ import {
   CreateAclRequestDataFromJSON,
   CreateAclRequestDataFromJSONTyped,
   CreateAclRequestDataToJSON,
+  CreateAclRequestDataToJSONTyped,
 } from "./CreateAclRequestData";
 
 /**
@@ -60,10 +61,18 @@ export function CreateAclRequestDataListFromJSONTyped(
   };
 }
 
-export function CreateAclRequestDataListToJSON(value?: CreateAclRequestDataList | null): any {
+export function CreateAclRequestDataListToJSON(json: any): CreateAclRequestDataList {
+  return CreateAclRequestDataListToJSONTyped(json, false);
+}
+
+export function CreateAclRequestDataListToJSONTyped(
+  value?: CreateAclRequestDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     data: (value["data"] as Array<any>).map(CreateAclRequestDataToJSON),
   };

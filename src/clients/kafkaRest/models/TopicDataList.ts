@@ -18,9 +18,15 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { TopicData } from "./TopicData";
-import { TopicDataFromJSON, TopicDataFromJSONTyped, TopicDataToJSON } from "./TopicData";
+import {
+  TopicDataFromJSON,
+  TopicDataFromJSONTyped,
+  TopicDataToJSON,
+  TopicDataToJSONTyped,
+} from "./TopicData";
 
 /**
  *
@@ -73,10 +79,18 @@ export function TopicDataListFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function TopicDataListToJSON(value?: TopicDataList | null): any {
+export function TopicDataListToJSON(json: any): TopicDataList {
+  return TopicDataListToJSONTyped(json, false);
+}
+
+export function TopicDataListToJSONTyped(
+  value?: TopicDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

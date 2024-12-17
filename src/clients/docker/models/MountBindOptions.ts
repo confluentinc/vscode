@@ -78,10 +78,18 @@ export function MountBindOptionsFromJSONTyped(
   };
 }
 
-export function MountBindOptionsToJSON(value?: MountBindOptions | null): any {
+export function MountBindOptionsToJSON(json: any): MountBindOptions {
+  return MountBindOptionsToJSONTyped(json, false);
+}
+
+export function MountBindOptionsToJSONTyped(
+  value?: MountBindOptions | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Propagation: value["Propagation"],
     NonRecursive: value["NonRecursive"],

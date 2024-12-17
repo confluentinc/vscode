@@ -72,10 +72,18 @@ export function PluginEnvFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function PluginEnvToJSON(value?: PluginEnv | null): any {
+export function PluginEnvToJSON(json: any): PluginEnv {
+  return PluginEnvToJSONTyped(json, false);
+}
+
+export function PluginEnvToJSONTyped(
+  value?: PluginEnv | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Description: value["Description"],

@@ -57,10 +57,18 @@ export function ImageDeleteResponseItemFromJSONTyped(
   };
 }
 
-export function ImageDeleteResponseItemToJSON(value?: ImageDeleteResponseItem | null): any {
+export function ImageDeleteResponseItemToJSON(json: any): ImageDeleteResponseItem {
+  return ImageDeleteResponseItemToJSONTyped(json, false);
+}
+
+export function ImageDeleteResponseItemToJSONTyped(
+  value?: ImageDeleteResponseItem | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Untagged: value["Untagged"],
     Deleted: value["Deleted"],

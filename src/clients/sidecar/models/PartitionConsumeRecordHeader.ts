@@ -59,12 +59,18 @@ export function PartitionConsumeRecordHeaderFromJSONTyped(
   };
 }
 
-export function PartitionConsumeRecordHeaderToJSON(
+export function PartitionConsumeRecordHeaderToJSON(json: any): PartitionConsumeRecordHeader {
+  return PartitionConsumeRecordHeaderToJSONTyped(json, false);
+}
+
+export function PartitionConsumeRecordHeaderToJSONTyped(
   value?: PartitionConsumeRecordHeader | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     key: value["key"],
     value: value["value"],

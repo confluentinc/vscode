@@ -58,10 +58,18 @@ export function PreferencesSpecFromJSONTyped(
   };
 }
 
-export function PreferencesSpecToJSON(value?: PreferencesSpec | null): any {
+export function PreferencesSpecToJSON(json: any): PreferencesSpec {
+  return PreferencesSpecToJSONTyped(json, false);
+}
+
+export function PreferencesSpecToJSONTyped(
+  value?: PreferencesSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     tls_pem_paths: value["tls_pem_paths"],
     trust_all_certificates: value["trust_all_certificates"],

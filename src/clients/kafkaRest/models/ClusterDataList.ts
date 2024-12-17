@@ -18,9 +18,15 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { ClusterData } from "./ClusterData";
-import { ClusterDataFromJSON, ClusterDataFromJSONTyped, ClusterDataToJSON } from "./ClusterData";
+import {
+  ClusterDataFromJSON,
+  ClusterDataFromJSONTyped,
+  ClusterDataToJSON,
+  ClusterDataToJSONTyped,
+} from "./ClusterData";
 
 /**
  *
@@ -76,10 +82,18 @@ export function ClusterDataListFromJSONTyped(
   };
 }
 
-export function ClusterDataListToJSON(value?: ClusterDataList | null): any {
+export function ClusterDataListToJSON(json: any): ClusterDataList {
+  return ClusterDataListToJSONTyped(json, false);
+}
+
+export function ClusterDataListToJSONTyped(
+  value?: ClusterDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

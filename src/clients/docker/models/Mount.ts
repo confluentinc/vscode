@@ -18,18 +18,21 @@ import {
   MountVolumeOptionsFromJSON,
   MountVolumeOptionsFromJSONTyped,
   MountVolumeOptionsToJSON,
+  MountVolumeOptionsToJSONTyped,
 } from "./MountVolumeOptions";
 import type { MountTmpfsOptions } from "./MountTmpfsOptions";
 import {
   MountTmpfsOptionsFromJSON,
   MountTmpfsOptionsFromJSONTyped,
   MountTmpfsOptionsToJSON,
+  MountTmpfsOptionsToJSONTyped,
 } from "./MountTmpfsOptions";
 import type { MountBindOptions } from "./MountBindOptions";
 import {
   MountBindOptionsFromJSON,
   MountBindOptionsFromJSONTyped,
   MountBindOptionsToJSON,
+  MountBindOptionsToJSONTyped,
 } from "./MountBindOptions";
 
 /**
@@ -137,10 +140,15 @@ export function MountFromJSONTyped(json: any, ignoreDiscriminator: boolean): Mou
   };
 }
 
-export function MountToJSON(value?: Mount | null): any {
+export function MountToJSON(json: any): Mount {
+  return MountToJSONTyped(json, false);
+}
+
+export function MountToJSONTyped(value?: Mount | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     Target: value["Target"],
     Source: value["Source"],

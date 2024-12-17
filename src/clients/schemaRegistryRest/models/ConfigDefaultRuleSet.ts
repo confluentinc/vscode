@@ -50,10 +50,18 @@ export function ConfigDefaultRuleSetFromJSONTyped(
   };
 }
 
-export function ConfigDefaultRuleSetToJSON(value?: ConfigDefaultRuleSet | null): any {
+export function ConfigDefaultRuleSetToJSON(json: any): ConfigDefaultRuleSet {
+  return ConfigDefaultRuleSetToJSONTyped(json, false);
+}
+
+export function ConfigDefaultRuleSetToJSONTyped(
+  value?: ConfigDefaultRuleSet | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     properties: value["properties"],
   };

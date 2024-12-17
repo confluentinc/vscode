@@ -18,6 +18,7 @@ import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -145,10 +146,18 @@ export function ConsumerLagDataFromJSONTyped(
   };
 }
 
-export function ConsumerLagDataToJSON(value?: ConsumerLagData | null): any {
+export function ConsumerLagDataToJSON(json: any): ConsumerLagData {
+  return ConsumerLagDataToJSONTyped(json, false);
+}
+
+export function ConsumerLagDataToJSONTyped(
+  value?: ConsumerLagData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

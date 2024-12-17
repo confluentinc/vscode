@@ -50,10 +50,18 @@ export function ContainerUpdateResponseFromJSONTyped(
   };
 }
 
-export function ContainerUpdateResponseToJSON(value?: ContainerUpdateResponse | null): any {
+export function ContainerUpdateResponseToJSON(json: any): ContainerUpdateResponse {
+  return ContainerUpdateResponseToJSONTyped(json, false);
+}
+
+export function ContainerUpdateResponseToJSONTyped(
+  value?: ContainerUpdateResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Warnings: value["Warnings"],
   };

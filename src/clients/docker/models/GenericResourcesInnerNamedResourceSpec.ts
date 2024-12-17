@@ -62,11 +62,19 @@ export function GenericResourcesInnerNamedResourceSpecFromJSONTyped(
 }
 
 export function GenericResourcesInnerNamedResourceSpecToJSON(
+  json: any,
+): GenericResourcesInnerNamedResourceSpec {
+  return GenericResourcesInnerNamedResourceSpecToJSONTyped(json, false);
+}
+
+export function GenericResourcesInnerNamedResourceSpecToJSONTyped(
   value?: GenericResourcesInnerNamedResourceSpec | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Kind: value["Kind"],
     Value: value["Value"],

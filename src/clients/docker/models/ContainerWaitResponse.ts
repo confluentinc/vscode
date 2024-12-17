@@ -18,6 +18,7 @@ import {
   ContainerWaitExitErrorFromJSON,
   ContainerWaitExitErrorFromJSONTyped,
   ContainerWaitExitErrorToJSON,
+  ContainerWaitExitErrorToJSONTyped,
 } from "./ContainerWaitExitError";
 
 /**
@@ -65,10 +66,18 @@ export function ContainerWaitResponseFromJSONTyped(
   };
 }
 
-export function ContainerWaitResponseToJSON(value?: ContainerWaitResponse | null): any {
+export function ContainerWaitResponseToJSON(json: any): ContainerWaitResponse {
+  return ContainerWaitResponseToJSONTyped(json, false);
+}
+
+export function ContainerWaitResponseToJSONTyped(
+  value?: ContainerWaitResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     StatusCode: value["StatusCode"],
     Error: ContainerWaitExitErrorToJSON(value["Error"]),

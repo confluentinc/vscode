@@ -14,12 +14,18 @@
 
 import { mapValues } from "../runtime";
 import type { ErrorDetail } from "./ErrorDetail";
-import { ErrorDetailFromJSON, ErrorDetailFromJSONTyped, ErrorDetailToJSON } from "./ErrorDetail";
+import {
+  ErrorDetailFromJSON,
+  ErrorDetailFromJSONTyped,
+  ErrorDetailToJSON,
+  ErrorDetailToJSONTyped,
+} from "./ErrorDetail";
 import type { ProgressDetail } from "./ProgressDetail";
 import {
   ProgressDetailFromJSON,
   ProgressDetailFromJSONTyped,
   ProgressDetailToJSON,
+  ProgressDetailToJSONTyped,
 } from "./ProgressDetail";
 
 /**
@@ -95,10 +101,18 @@ export function CreateImageInfoFromJSONTyped(
   };
 }
 
-export function CreateImageInfoToJSON(value?: CreateImageInfo | null): any {
+export function CreateImageInfoToJSON(json: any): CreateImageInfo {
+  return CreateImageInfoToJSONTyped(json, false);
+}
+
+export function CreateImageInfoToJSONTyped(
+  value?: CreateImageInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     id: value["id"],
     error: value["error"],

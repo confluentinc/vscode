@@ -50,10 +50,18 @@ export function ServiceUpdateResponseFromJSONTyped(
   };
 }
 
-export function ServiceUpdateResponseToJSON(value?: ServiceUpdateResponse | null): any {
+export function ServiceUpdateResponseToJSON(json: any): ServiceUpdateResponse {
+  return ServiceUpdateResponseToJSONTyped(json, false);
+}
+
+export function ServiceUpdateResponseToJSONTyped(
+  value?: ServiceUpdateResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Warnings: value["Warnings"],
   };

@@ -75,10 +75,18 @@ export function PluginsInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function PluginsInfoToJSON(value?: PluginsInfo | null): any {
+export function PluginsInfoToJSON(json: any): PluginsInfo {
+  return PluginsInfoToJSONTyped(json, false);
+}
+
+export function PluginsInfoToJSONTyped(
+  value?: PluginsInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Volume: value["Volume"],
     Network: value["Network"],

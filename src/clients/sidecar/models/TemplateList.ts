@@ -18,9 +18,15 @@ import {
   CollectionMetadataFromJSON,
   CollectionMetadataFromJSONTyped,
   CollectionMetadataToJSON,
+  CollectionMetadataToJSONTyped,
 } from "./CollectionMetadata";
 import type { Template } from "./Template";
-import { TemplateFromJSON, TemplateFromJSONTyped, TemplateToJSON } from "./Template";
+import {
+  TemplateFromJSON,
+  TemplateFromJSONTyped,
+  TemplateToJSON,
+  TemplateToJSONTyped,
+} from "./Template";
 
 /**
  *
@@ -81,10 +87,18 @@ export function TemplateListFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function TemplateListToJSON(value?: TemplateList | null): any {
+export function TemplateListToJSON(json: any): TemplateList {
+  return TemplateListToJSONTyped(json, false);
+}
+
+export function TemplateListToJSONTyped(
+  value?: TemplateList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     api_version: value["api_version"],
     kind: value["kind"],

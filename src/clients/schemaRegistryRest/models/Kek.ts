@@ -96,10 +96,15 @@ export function KekFromJSONTyped(json: any, ignoreDiscriminator: boolean): Kek {
   };
 }
 
-export function KekToJSON(value?: Kek | null): any {
+export function KekToJSON(json: any): Kek {
+  return KekToJSONTyped(json, false);
+}
+
+export function KekToJSONTyped(value?: Kek | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     kmsType: value["kmsType"],

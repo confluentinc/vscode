@@ -14,15 +14,26 @@
 
 import { mapValues } from "../runtime";
 import type { AuthErrors } from "./AuthErrors";
-import { AuthErrorsFromJSON, AuthErrorsFromJSONTyped, AuthErrorsToJSON } from "./AuthErrors";
+import {
+  AuthErrorsFromJSON,
+  AuthErrorsFromJSONTyped,
+  AuthErrorsToJSON,
+  AuthErrorsToJSONTyped,
+} from "./AuthErrors";
 import type { ConnectedState } from "./ConnectedState";
 import {
   ConnectedStateFromJSON,
   ConnectedStateFromJSONTyped,
   ConnectedStateToJSON,
+  ConnectedStateToJSONTyped,
 } from "./ConnectedState";
 import type { UserInfo } from "./UserInfo";
-import { UserInfoFromJSON, UserInfoFromJSONTyped, UserInfoToJSON } from "./UserInfo";
+import {
+  UserInfoFromJSON,
+  UserInfoFromJSONTyped,
+  UserInfoToJSON,
+  UserInfoToJSONTyped,
+} from "./UserInfo";
 
 /**
  * The status related to the specified Schema Registry.
@@ -76,10 +87,18 @@ export function SchemaRegistryStatusFromJSONTyped(
   };
 }
 
-export function SchemaRegistryStatusToJSON(value?: SchemaRegistryStatus | null): any {
+export function SchemaRegistryStatusToJSON(json: any): SchemaRegistryStatus {
+  return SchemaRegistryStatusToJSONTyped(json, false);
+}
+
+export function SchemaRegistryStatusToJSONTyped(
+  value?: SchemaRegistryStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     state: ConnectedStateToJSON(value["state"]),
     user: UserInfoToJSON(value["user"]),

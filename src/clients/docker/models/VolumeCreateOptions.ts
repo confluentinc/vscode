@@ -18,6 +18,7 @@ import {
   ClusterVolumeSpecFromJSON,
   ClusterVolumeSpecFromJSONTyped,
   ClusterVolumeSpecToJSON,
+  ClusterVolumeSpecToJSONTyped,
 } from "./ClusterVolumeSpec";
 
 /**
@@ -91,10 +92,18 @@ export function VolumeCreateOptionsFromJSONTyped(
   };
 }
 
-export function VolumeCreateOptionsToJSON(value?: VolumeCreateOptions | null): any {
+export function VolumeCreateOptionsToJSON(json: any): VolumeCreateOptions {
+  return VolumeCreateOptionsToJSONTyped(json, false);
+}
+
+export function VolumeCreateOptionsToJSONTyped(
+  value?: VolumeCreateOptions | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Driver: value["Driver"],

@@ -18,24 +18,28 @@ import {
   SchemaRegistryStatusFromJSON,
   SchemaRegistryStatusFromJSONTyped,
   SchemaRegistryStatusToJSON,
+  SchemaRegistryStatusToJSONTyped,
 } from "./SchemaRegistryStatus";
 import type { Authentication } from "./Authentication";
 import {
   AuthenticationFromJSON,
   AuthenticationFromJSONTyped,
   AuthenticationToJSON,
+  AuthenticationToJSONTyped,
 } from "./Authentication";
 import type { CCloudStatus } from "./CCloudStatus";
 import {
   CCloudStatusFromJSON,
   CCloudStatusFromJSONTyped,
   CCloudStatusToJSON,
+  CCloudStatusToJSONTyped,
 } from "./CCloudStatus";
 import type { KafkaClusterStatus } from "./KafkaClusterStatus";
 import {
   KafkaClusterStatusFromJSON,
   KafkaClusterStatusFromJSONTyped,
   KafkaClusterStatusToJSON,
+  KafkaClusterStatusToJSONTyped,
 } from "./KafkaClusterStatus";
 
 /**
@@ -101,10 +105,18 @@ export function ConnectionStatusFromJSONTyped(
   };
 }
 
-export function ConnectionStatusToJSON(value?: ConnectionStatus | null): any {
+export function ConnectionStatusToJSON(json: any): ConnectionStatus {
+  return ConnectionStatusToJSONTyped(json, false);
+}
+
+export function ConnectionStatusToJSONTyped(
+  value?: ConnectionStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ccloud: CCloudStatusToJSON(value["ccloud"]),
     kafka_cluster: KafkaClusterStatusToJSON(value["kafka_cluster"]),

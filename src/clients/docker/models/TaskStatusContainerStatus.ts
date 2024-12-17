@@ -66,10 +66,18 @@ export function TaskStatusContainerStatusFromJSONTyped(
   };
 }
 
-export function TaskStatusContainerStatusToJSON(value?: TaskStatusContainerStatus | null): any {
+export function TaskStatusContainerStatusToJSON(json: any): TaskStatusContainerStatus {
+  return TaskStatusContainerStatusToJSONTyped(json, false);
+}
+
+export function TaskStatusContainerStatusToJSONTyped(
+  value?: TaskStatusContainerStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ContainerID: value["ContainerID"],
     PID: value["PID"],

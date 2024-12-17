@@ -14,15 +14,26 @@
 
 import { mapValues } from "../runtime";
 import type { AuthErrors } from "./AuthErrors";
-import { AuthErrorsFromJSON, AuthErrorsFromJSONTyped, AuthErrorsToJSON } from "./AuthErrors";
+import {
+  AuthErrorsFromJSON,
+  AuthErrorsFromJSONTyped,
+  AuthErrorsToJSON,
+  AuthErrorsToJSONTyped,
+} from "./AuthErrors";
 import type { ConnectedState } from "./ConnectedState";
 import {
   ConnectedStateFromJSON,
   ConnectedStateFromJSONTyped,
   ConnectedStateToJSON,
+  ConnectedStateToJSONTyped,
 } from "./ConnectedState";
 import type { UserInfo } from "./UserInfo";
-import { UserInfoFromJSON, UserInfoFromJSONTyped, UserInfoToJSON } from "./UserInfo";
+import {
+  UserInfoFromJSON,
+  UserInfoFromJSONTyped,
+  UserInfoToJSON,
+  UserInfoToJSONTyped,
+} from "./UserInfo";
 
 /**
  * The status related to CCloud.
@@ -83,10 +94,18 @@ export function CCloudStatusFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function CCloudStatusToJSON(value?: CCloudStatus | null): any {
+export function CCloudStatusToJSON(json: any): CCloudStatus {
+  return CCloudStatusToJSONTyped(json, false);
+}
+
+export function CCloudStatusToJSONTyped(
+  value?: CCloudStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     state: ConnectedStateToJSON(value["state"]),
     requires_authentication_at:

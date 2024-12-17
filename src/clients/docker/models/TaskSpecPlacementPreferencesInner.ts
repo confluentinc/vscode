@@ -18,6 +18,7 @@ import {
   TaskSpecPlacementPreferencesInnerSpreadFromJSON,
   TaskSpecPlacementPreferencesInnerSpreadFromJSONTyped,
   TaskSpecPlacementPreferencesInnerSpreadToJSON,
+  TaskSpecPlacementPreferencesInnerSpreadToJSONTyped,
 } from "./TaskSpecPlacementPreferencesInnerSpread";
 
 /**
@@ -65,11 +66,19 @@ export function TaskSpecPlacementPreferencesInnerFromJSONTyped(
 }
 
 export function TaskSpecPlacementPreferencesInnerToJSON(
+  json: any,
+): TaskSpecPlacementPreferencesInner {
+  return TaskSpecPlacementPreferencesInnerToJSONTyped(json, false);
+}
+
+export function TaskSpecPlacementPreferencesInnerToJSONTyped(
   value?: TaskSpecPlacementPreferencesInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Spread: TaskSpecPlacementPreferencesInnerSpreadToJSON(value["Spread"]),
   };

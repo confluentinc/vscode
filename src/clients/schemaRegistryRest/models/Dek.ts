@@ -107,10 +107,15 @@ export function DekFromJSONTyped(json: any, ignoreDiscriminator: boolean): Dek {
   };
 }
 
-export function DekToJSON(value?: Dek | null): any {
+export function DekToJSON(json: any): Dek {
+  return DekToJSONTyped(json, false);
+}
+
+export function DekToJSONTyped(value?: Dek | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     kekName: value["kekName"],
     subject: value["subject"],

@@ -58,10 +58,18 @@ export function PlatformFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function PlatformToJSON(value?: Platform | null): any {
+export function PlatformToJSON(json: any): Platform {
+  return PlatformToJSONTyped(json, false);
+}
+
+export function PlatformToJSONTyped(
+  value?: Platform | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Architecture: value["Architecture"],
     OS: value["OS"],

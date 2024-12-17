@@ -88,10 +88,18 @@ export function TaskSpecRestartPolicyFromJSONTyped(
   };
 }
 
-export function TaskSpecRestartPolicyToJSON(value?: TaskSpecRestartPolicy | null): any {
+export function TaskSpecRestartPolicyToJSON(json: any): TaskSpecRestartPolicy {
+  return TaskSpecRestartPolicyToJSONTyped(json, false);
+}
+
+export function TaskSpecRestartPolicyToJSONTyped(
+  value?: TaskSpecRestartPolicy | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Condition: value["Condition"],
     Delay: value["Delay"],

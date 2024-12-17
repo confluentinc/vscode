@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { ConfigData } from "./ConfigData";
-import { ConfigDataFromJSON, ConfigDataFromJSONTyped, ConfigDataToJSON } from "./ConfigData";
+import {
+  ConfigDataFromJSON,
+  ConfigDataFromJSONTyped,
+  ConfigDataToJSON,
+  ConfigDataToJSONTyped,
+} from "./ConfigData";
 
 /**
  *
@@ -83,10 +88,18 @@ export function CreateLinkRequestDataFromJSONTyped(
   };
 }
 
-export function CreateLinkRequestDataToJSON(value?: CreateLinkRequestData | null): any {
+export function CreateLinkRequestDataToJSON(json: any): CreateLinkRequestData {
+  return CreateLinkRequestDataToJSONTyped(json, false);
+}
+
+export function CreateLinkRequestDataToJSONTyped(
+  value?: CreateLinkRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     source_cluster_id: value["source_cluster_id"],
     destination_cluster_id: value["destination_cluster_id"],

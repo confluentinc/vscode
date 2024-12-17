@@ -76,12 +76,18 @@ export function SystemVersionComponentsInnerFromJSONTyped(
   };
 }
 
-export function SystemVersionComponentsInnerToJSON(
+export function SystemVersionComponentsInnerToJSON(json: any): SystemVersionComponentsInner {
+  return SystemVersionComponentsInnerToJSONTyped(json, false);
+}
+
+export function SystemVersionComponentsInnerToJSONTyped(
   value?: SystemVersionComponentsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Version: value["Version"],

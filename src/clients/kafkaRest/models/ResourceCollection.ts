@@ -18,6 +18,7 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 
 /**
@@ -66,10 +67,18 @@ export function ResourceCollectionFromJSONTyped(
   };
 }
 
-export function ResourceCollectionToJSON(value?: ResourceCollection | null): any {
+export function ResourceCollectionToJSON(json: any): ResourceCollection {
+  return ResourceCollectionToJSONTyped(json, false);
+}
+
+export function ResourceCollectionToJSONTyped(
+  value?: ResourceCollection | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

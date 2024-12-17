@@ -18,12 +18,14 @@ import {
   GenericResourcesInnerNamedResourceSpecFromJSON,
   GenericResourcesInnerNamedResourceSpecFromJSONTyped,
   GenericResourcesInnerNamedResourceSpecToJSON,
+  GenericResourcesInnerNamedResourceSpecToJSONTyped,
 } from "./GenericResourcesInnerNamedResourceSpec";
 import type { GenericResourcesInnerDiscreteResourceSpec } from "./GenericResourcesInnerDiscreteResourceSpec";
 import {
   GenericResourcesInnerDiscreteResourceSpecFromJSON,
   GenericResourcesInnerDiscreteResourceSpecFromJSONTyped,
   GenericResourcesInnerDiscreteResourceSpecToJSON,
+  GenericResourcesInnerDiscreteResourceSpecToJSONTyped,
 } from "./GenericResourcesInnerDiscreteResourceSpec";
 
 /**
@@ -76,10 +78,18 @@ export function GenericResourcesInnerFromJSONTyped(
   };
 }
 
-export function GenericResourcesInnerToJSON(value?: GenericResourcesInner | null): any {
+export function GenericResourcesInnerToJSON(json: any): GenericResourcesInner {
+  return GenericResourcesInnerToJSONTyped(json, false);
+}
+
+export function GenericResourcesInnerToJSONTyped(
+  value?: GenericResourcesInner | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NamedResourceSpec: GenericResourcesInnerNamedResourceSpecToJSON(value["NamedResourceSpec"]),
     DiscreteResourceSpec: GenericResourcesInnerDiscreteResourceSpecToJSON(

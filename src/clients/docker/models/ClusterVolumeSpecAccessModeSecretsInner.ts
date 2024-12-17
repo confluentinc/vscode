@@ -70,11 +70,19 @@ export function ClusterVolumeSpecAccessModeSecretsInnerFromJSONTyped(
 }
 
 export function ClusterVolumeSpecAccessModeSecretsInnerToJSON(
+  json: any,
+): ClusterVolumeSpecAccessModeSecretsInner {
+  return ClusterVolumeSpecAccessModeSecretsInnerToJSONTyped(json, false);
+}
+
+export function ClusterVolumeSpecAccessModeSecretsInnerToJSONTyped(
   value?: ClusterVolumeSpecAccessModeSecretsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Key: value["Key"],
     Secret: value["Secret"],

@@ -33,7 +33,7 @@ export type MirrorTopicStatus = (typeof MirrorTopicStatus)[keyof typeof MirrorTo
 export function instanceOfMirrorTopicStatus(value: any): boolean {
   for (const key in MirrorTopicStatus) {
     if (Object.prototype.hasOwnProperty.call(MirrorTopicStatus, key)) {
-      if ((MirrorTopicStatus as Record<string, MirrorTopicStatus>)[key] === value) {
+      if (MirrorTopicStatus[key as keyof typeof MirrorTopicStatus] === value) {
         return true;
       }
     }
@@ -54,4 +54,11 @@ export function MirrorTopicStatusFromJSONTyped(
 
 export function MirrorTopicStatusToJSON(value?: MirrorTopicStatus | null): any {
   return value as any;
+}
+
+export function MirrorTopicStatusToJSONTyped(
+  value: any,
+  ignoreDiscriminator: boolean,
+): MirrorTopicStatus {
+  return value as MirrorTopicStatus;
 }

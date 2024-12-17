@@ -18,9 +18,15 @@ import {
   TaskStatusContainerStatusFromJSON,
   TaskStatusContainerStatusFromJSONTyped,
   TaskStatusContainerStatusToJSON,
+  TaskStatusContainerStatusToJSONTyped,
 } from "./TaskStatusContainerStatus";
 import type { TaskState } from "./TaskState";
-import { TaskStateFromJSON, TaskStateFromJSONTyped, TaskStateToJSON } from "./TaskState";
+import {
+  TaskStateFromJSON,
+  TaskStateFromJSONTyped,
+  TaskStateToJSON,
+  TaskStateToJSONTyped,
+} from "./TaskState";
 
 /**
  *
@@ -87,10 +93,18 @@ export function TaskStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function TaskStatusToJSON(value?: TaskStatus | null): any {
+export function TaskStatusToJSON(json: any): TaskStatus {
+  return TaskStatusToJSONTyped(json, false);
+}
+
+export function TaskStatusToJSONTyped(
+  value?: TaskStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Timestamp: value["Timestamp"],
     State: TaskStateToJSON(value["State"]),

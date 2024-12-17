@@ -57,10 +57,18 @@ export function PluginConfigUserFromJSONTyped(
   };
 }
 
-export function PluginConfigUserToJSON(value?: PluginConfigUser | null): any {
+export function PluginConfigUserToJSON(json: any): PluginConfigUser {
+  return PluginConfigUserToJSONTyped(json, false);
+}
+
+export function PluginConfigUserToJSONTyped(
+  value?: PluginConfigUser | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     UID: value["UID"],
     GID: value["GID"],

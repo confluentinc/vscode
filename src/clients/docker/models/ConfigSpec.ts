@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 import type { Driver } from "./Driver";
-import { DriverFromJSON, DriverFromJSONTyped, DriverToJSON } from "./Driver";
+import { DriverFromJSON, DriverFromJSONTyped, DriverToJSON, DriverToJSONTyped } from "./Driver";
 
 /**
  *
@@ -73,10 +73,18 @@ export function ConfigSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function ConfigSpecToJSON(value?: ConfigSpec | null): any {
+export function ConfigSpecToJSON(json: any): ConfigSpec {
+  return ConfigSpecToJSONTyped(json, false);
+}
+
+export function ConfigSpecToJSONTyped(
+  value?: ConfigSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

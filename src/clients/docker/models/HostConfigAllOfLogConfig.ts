@@ -76,10 +76,18 @@ export function HostConfigAllOfLogConfigFromJSONTyped(
   };
 }
 
-export function HostConfigAllOfLogConfigToJSON(value?: HostConfigAllOfLogConfig | null): any {
+export function HostConfigAllOfLogConfigToJSON(json: any): HostConfigAllOfLogConfig {
+  return HostConfigAllOfLogConfigToJSONTyped(json, false);
+}
+
+export function HostConfigAllOfLogConfigToJSONTyped(
+  value?: HostConfigAllOfLogConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Type: value["Type"],
     Config: value["Config"],

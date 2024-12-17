@@ -18,6 +18,7 @@ import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -132,10 +133,18 @@ export function ListLinkConfigsResponseDataFromJSONTyped(
   };
 }
 
-export function ListLinkConfigsResponseDataToJSON(value?: ListLinkConfigsResponseData | null): any {
+export function ListLinkConfigsResponseDataToJSON(json: any): ListLinkConfigsResponseData {
+  return ListLinkConfigsResponseDataToJSONTyped(json, false);
+}
+
+export function ListLinkConfigsResponseDataToJSONTyped(
+  value?: ListLinkConfigsResponseData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

@@ -92,10 +92,18 @@ export function CreateKekRequestFromJSONTyped(
   };
 }
 
-export function CreateKekRequestToJSON(value?: CreateKekRequest | null): any {
+export function CreateKekRequestToJSON(json: any): CreateKekRequest {
+  return CreateKekRequestToJSONTyped(json, false);
+}
+
+export function CreateKekRequestToJSONTyped(
+  value?: CreateKekRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     kmsType: value["kmsType"],

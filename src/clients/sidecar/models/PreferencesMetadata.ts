@@ -51,10 +51,18 @@ export function PreferencesMetadataFromJSONTyped(
   };
 }
 
-export function PreferencesMetadataToJSON(value?: PreferencesMetadata | null): any {
+export function PreferencesMetadataToJSON(json: any): PreferencesMetadata {
+  return PreferencesMetadataToJSONTyped(json, false);
+}
+
+export function PreferencesMetadataToJSONTyped(
+  value?: PreferencesMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     self: value["self"],
   };

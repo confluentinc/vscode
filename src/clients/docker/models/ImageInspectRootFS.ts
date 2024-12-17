@@ -59,10 +59,18 @@ export function ImageInspectRootFSFromJSONTyped(
   };
 }
 
-export function ImageInspectRootFSToJSON(value?: ImageInspectRootFS | null): any {
+export function ImageInspectRootFSToJSON(json: any): ImageInspectRootFS {
+  return ImageInspectRootFSToJSONTyped(json, false);
+}
+
+export function ImageInspectRootFSToJSONTyped(
+  value?: ImageInspectRootFS | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Type: value["Type"],
     Layers: value["Layers"],

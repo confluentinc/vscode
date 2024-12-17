@@ -50,10 +50,18 @@ export function NetworkPruneResponseFromJSONTyped(
   };
 }
 
-export function NetworkPruneResponseToJSON(value?: NetworkPruneResponse | null): any {
+export function NetworkPruneResponseToJSON(json: any): NetworkPruneResponse {
+  return NetworkPruneResponseToJSONTyped(json, false);
+}
+
+export function NetworkPruneResponseToJSONTyped(
+  value?: NetworkPruneResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NetworksDeleted: value["NetworksDeleted"],
   };

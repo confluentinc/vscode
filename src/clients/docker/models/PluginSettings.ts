@@ -18,9 +18,15 @@ import {
   PluginDeviceFromJSON,
   PluginDeviceFromJSONTyped,
   PluginDeviceToJSON,
+  PluginDeviceToJSONTyped,
 } from "./PluginDevice";
 import type { PluginMount } from "./PluginMount";
-import { PluginMountFromJSON, PluginMountFromJSONTyped, PluginMountToJSON } from "./PluginMount";
+import {
+  PluginMountFromJSON,
+  PluginMountFromJSONTyped,
+  PluginMountToJSON,
+  PluginMountToJSONTyped,
+} from "./PluginMount";
 
 /**
  * Settings that can be modified by users.
@@ -84,10 +90,18 @@ export function PluginSettingsFromJSONTyped(
   };
 }
 
-export function PluginSettingsToJSON(value?: PluginSettings | null): any {
+export function PluginSettingsToJSON(json: any): PluginSettings {
+  return PluginSettingsToJSONTyped(json, false);
+}
+
+export function PluginSettingsToJSONTyped(
+  value?: PluginSettings | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Mounts: (value["Mounts"] as Array<any>).map(PluginMountToJSON),
     Env: value["Env"],

@@ -18,6 +18,7 @@ import {
   CreateTopicRequestDataConfigsInnerFromJSON,
   CreateTopicRequestDataConfigsInnerFromJSONTyped,
   CreateTopicRequestDataConfigsInnerToJSON,
+  CreateTopicRequestDataConfigsInnerToJSONTyped,
 } from "./CreateTopicRequestDataConfigsInner";
 
 /**
@@ -89,10 +90,18 @@ export function CreateTopicRequestDataFromJSONTyped(
   };
 }
 
-export function CreateTopicRequestDataToJSON(value?: CreateTopicRequestData | null): any {
+export function CreateTopicRequestDataToJSON(json: any): CreateTopicRequestData {
+  return CreateTopicRequestDataToJSONTyped(json, false);
+}
+
+export function CreateTopicRequestDataToJSONTyped(
+  value?: CreateTopicRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     topic_name: value["topic_name"],
     partitions_count: value["partitions_count"],

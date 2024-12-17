@@ -78,11 +78,19 @@ export function TaskSpecContainerSpecSecretsInnerFileFromJSONTyped(
 }
 
 export function TaskSpecContainerSpecSecretsInnerFileToJSON(
+  json: any,
+): TaskSpecContainerSpecSecretsInnerFile {
+  return TaskSpecContainerSpecSecretsInnerFileToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecSecretsInnerFileToJSONTyped(
   value?: TaskSpecContainerSpecSecretsInnerFile | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     UID: value["UID"],

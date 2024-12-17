@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { HealthCheck } from "./HealthCheck";
-import { HealthCheckFromJSON, HealthCheckFromJSONTyped, HealthCheckToJSON } from "./HealthCheck";
+import {
+  HealthCheckFromJSON,
+  HealthCheckFromJSONTyped,
+  HealthCheckToJSON,
+  HealthCheckToJSONTyped,
+} from "./HealthCheck";
 
 /**
  *
@@ -71,10 +76,18 @@ export function HealthResponseFromJSONTyped(
   };
 }
 
-export function HealthResponseToJSON(value?: HealthResponse | null): any {
+export function HealthResponseToJSON(json: any): HealthResponse {
+  return HealthResponseToJSONTyped(json, false);
+}
+
+export function HealthResponseToJSONTyped(
+  value?: HealthResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     checks:
       value["checks"] == null ? undefined : (value["checks"] as Array<any>).map(HealthCheckToJSON),

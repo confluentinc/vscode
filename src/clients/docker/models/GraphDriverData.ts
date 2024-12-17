@@ -65,10 +65,18 @@ export function GraphDriverDataFromJSONTyped(
   };
 }
 
-export function GraphDriverDataToJSON(value?: GraphDriverData | null): any {
+export function GraphDriverDataToJSON(json: any): GraphDriverData {
+  return GraphDriverDataToJSONTyped(json, false);
+}
+
+export function GraphDriverDataToJSONTyped(
+  value?: GraphDriverData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Data: value["Data"],

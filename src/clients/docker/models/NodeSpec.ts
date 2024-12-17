@@ -88,10 +88,18 @@ export function NodeSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function NodeSpecToJSON(value?: NodeSpec | null): any {
+export function NodeSpecToJSON(json: any): NodeSpec {
+  return NodeSpecToJSONTyped(json, false);
+}
+
+export function NodeSpecToJSONTyped(
+  value?: NodeSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

@@ -50,10 +50,18 @@ export function SidecarAccessTokenFromJSONTyped(
   };
 }
 
-export function SidecarAccessTokenToJSON(value?: SidecarAccessToken | null): any {
+export function SidecarAccessTokenToJSON(json: any): SidecarAccessToken {
+  return SidecarAccessTokenToJSONTyped(json, false);
+}
+
+export function SidecarAccessTokenToJSONTyped(
+  value?: SidecarAccessToken | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     auth_secret: value["auth_secret"],
   };

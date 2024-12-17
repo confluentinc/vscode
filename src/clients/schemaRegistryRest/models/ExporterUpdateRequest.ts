@@ -79,10 +79,18 @@ export function ExporterUpdateRequestFromJSONTyped(
   };
 }
 
-export function ExporterUpdateRequestToJSON(value?: ExporterUpdateRequest | null): any {
+export function ExporterUpdateRequestToJSON(json: any): ExporterUpdateRequest {
+  return ExporterUpdateRequestToJSONTyped(json, false);
+}
+
+export function ExporterUpdateRequestToJSONTyped(
+  value?: ExporterUpdateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     contextType: value["contextType"],
     context: value["context"],

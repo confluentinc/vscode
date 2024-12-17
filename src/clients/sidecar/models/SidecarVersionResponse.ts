@@ -50,10 +50,18 @@ export function SidecarVersionResponseFromJSONTyped(
   };
 }
 
-export function SidecarVersionResponseToJSON(value?: SidecarVersionResponse | null): any {
+export function SidecarVersionResponseToJSON(json: any): SidecarVersionResponse {
+  return SidecarVersionResponseToJSONTyped(json, false);
+}
+
+export function SidecarVersionResponseToJSONTyped(
+  value?: SidecarVersionResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     version: value["version"],
   };

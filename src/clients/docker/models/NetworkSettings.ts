@@ -14,14 +14,25 @@
 
 import { mapValues } from "../runtime";
 import type { PortBinding } from "./PortBinding";
-import { PortBindingFromJSON, PortBindingFromJSONTyped, PortBindingToJSON } from "./PortBinding";
+import {
+  PortBindingFromJSON,
+  PortBindingFromJSONTyped,
+  PortBindingToJSON,
+  PortBindingToJSONTyped,
+} from "./PortBinding";
 import type { Address } from "./Address";
-import { AddressFromJSON, AddressFromJSONTyped, AddressToJSON } from "./Address";
+import {
+  AddressFromJSON,
+  AddressFromJSONTyped,
+  AddressToJSON,
+  AddressToJSONTyped,
+} from "./Address";
 import type { EndpointSettings } from "./EndpointSettings";
 import {
   EndpointSettingsFromJSON,
   EndpointSettingsFromJSONTyped,
   EndpointSettingsToJSON,
+  EndpointSettingsToJSONTyped,
 } from "./EndpointSettings";
 
 /**
@@ -270,10 +281,18 @@ export function NetworkSettingsFromJSONTyped(
   };
 }
 
-export function NetworkSettingsToJSON(value?: NetworkSettings | null): any {
+export function NetworkSettingsToJSON(json: any): NetworkSettings {
+  return NetworkSettingsToJSONTyped(json, false);
+}
+
+export function NetworkSettingsToJSONTyped(
+  value?: NetworkSettings | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Bridge: value["Bridge"],
     SandboxID: value["SandboxID"],

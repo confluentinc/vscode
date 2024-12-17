@@ -58,10 +58,18 @@ export function AlterMirrorsRequestDataFromJSONTyped(
   };
 }
 
-export function AlterMirrorsRequestDataToJSON(value?: AlterMirrorsRequestData | null): any {
+export function AlterMirrorsRequestDataToJSON(json: any): AlterMirrorsRequestData {
+  return AlterMirrorsRequestDataToJSONTyped(json, false);
+}
+
+export function AlterMirrorsRequestDataToJSONTyped(
+  value?: AlterMirrorsRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     mirror_topic_names: value["mirror_topic_names"],
     mirror_topic_name_pattern: value["mirror_topic_name_pattern"],

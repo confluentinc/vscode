@@ -78,10 +78,18 @@ export function ImageSearchResponseItemFromJSONTyped(
   };
 }
 
-export function ImageSearchResponseItemToJSON(value?: ImageSearchResponseItem | null): any {
+export function ImageSearchResponseItemToJSON(json: any): ImageSearchResponseItem {
+  return ImageSearchResponseItemToJSONTyped(json, false);
+}
+
+export function ImageSearchResponseItemToJSONTyped(
+  value?: ImageSearchResponseItem | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     description: value["description"],
     is_official: value["is_official"],

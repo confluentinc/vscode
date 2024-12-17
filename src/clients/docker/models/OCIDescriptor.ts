@@ -66,10 +66,18 @@ export function OCIDescriptorFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function OCIDescriptorToJSON(value?: OCIDescriptor | null): any {
+export function OCIDescriptorToJSON(json: any): OCIDescriptor {
+  return OCIDescriptorToJSONTyped(json, false);
+}
+
+export function OCIDescriptorToJSONTyped(
+  value?: OCIDescriptor | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     mediaType: value["mediaType"],
     digest: value["digest"],

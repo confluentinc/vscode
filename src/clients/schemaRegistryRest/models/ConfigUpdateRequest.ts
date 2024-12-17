@@ -18,24 +18,28 @@ import {
   ConfigDefaultMetadataFromJSON,
   ConfigDefaultMetadataFromJSONTyped,
   ConfigDefaultMetadataToJSON,
+  ConfigDefaultMetadataToJSONTyped,
 } from "./ConfigDefaultMetadata";
 import type { ConfigOverrideMetadata } from "./ConfigOverrideMetadata";
 import {
   ConfigOverrideMetadataFromJSON,
   ConfigOverrideMetadataFromJSONTyped,
   ConfigOverrideMetadataToJSON,
+  ConfigOverrideMetadataToJSONTyped,
 } from "./ConfigOverrideMetadata";
 import type { ConfigDefaultRuleSet } from "./ConfigDefaultRuleSet";
 import {
   ConfigDefaultRuleSetFromJSON,
   ConfigDefaultRuleSetFromJSONTyped,
   ConfigDefaultRuleSetToJSON,
+  ConfigDefaultRuleSetToJSONTyped,
 } from "./ConfigDefaultRuleSet";
 import type { ConfigOverrideRuleSet } from "./ConfigOverrideRuleSet";
 import {
   ConfigOverrideRuleSetFromJSON,
   ConfigOverrideRuleSetFromJSONTyped,
   ConfigOverrideRuleSetToJSON,
+  ConfigOverrideRuleSetToJSONTyped,
 } from "./ConfigOverrideRuleSet";
 
 /**
@@ -141,10 +145,18 @@ export function ConfigUpdateRequestFromJSONTyped(
   };
 }
 
-export function ConfigUpdateRequestToJSON(value?: ConfigUpdateRequest | null): any {
+export function ConfigUpdateRequestToJSON(json: any): ConfigUpdateRequest {
+  return ConfigUpdateRequestToJSONTyped(json, false);
+}
+
+export function ConfigUpdateRequestToJSONTyped(
+  value?: ConfigUpdateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     alias: value["alias"],
     normalize: value["normalize"],

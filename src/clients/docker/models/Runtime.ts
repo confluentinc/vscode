@@ -65,10 +65,18 @@ export function RuntimeFromJSONTyped(json: any, ignoreDiscriminator: boolean): R
   };
 }
 
-export function RuntimeToJSON(value?: Runtime | null): any {
+export function RuntimeToJSON(json: any): Runtime {
+  return RuntimeToJSONTyped(json, false);
+}
+
+export function RuntimeToJSONTyped(
+  value?: Runtime | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     path: value["path"],
     runtimeArgs: value["runtimeArgs"],

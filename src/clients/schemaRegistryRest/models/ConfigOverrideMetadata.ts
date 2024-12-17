@@ -50,10 +50,18 @@ export function ConfigOverrideMetadataFromJSONTyped(
   };
 }
 
-export function ConfigOverrideMetadataToJSON(value?: ConfigOverrideMetadata | null): any {
+export function ConfigOverrideMetadataToJSON(json: any): ConfigOverrideMetadata {
+  return ConfigOverrideMetadataToJSONTyped(json, false);
+}
+
+export function ConfigOverrideMetadataToJSONTyped(
+  value?: ConfigOverrideMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     properties: value["properties"],
   };

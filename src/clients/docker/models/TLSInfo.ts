@@ -67,10 +67,18 @@ export function TLSInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean): T
   };
 }
 
-export function TLSInfoToJSON(value?: TLSInfo | null): any {
+export function TLSInfoToJSON(json: any): TLSInfo {
+  return TLSInfoToJSONTyped(json, false);
+}
+
+export function TLSInfoToJSONTyped(
+  value?: TLSInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     TrustRoot: value["TrustRoot"],
     CertIssuerSubject: value["CertIssuerSubject"],

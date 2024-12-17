@@ -55,12 +55,18 @@ export function UpdatePartitionCountRequestDataFromJSONTyped(
   };
 }
 
-export function UpdatePartitionCountRequestDataToJSON(
+export function UpdatePartitionCountRequestDataToJSON(json: any): UpdatePartitionCountRequestData {
+  return UpdatePartitionCountRequestDataToJSONTyped(json, false);
+}
+
+export function UpdatePartitionCountRequestDataToJSONTyped(
   value?: UpdatePartitionCountRequestData | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     partitions_count: value["partitions_count"],
   };

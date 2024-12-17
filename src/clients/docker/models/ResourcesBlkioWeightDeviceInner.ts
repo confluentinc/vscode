@@ -61,12 +61,18 @@ export function ResourcesBlkioWeightDeviceInnerFromJSONTyped(
   };
 }
 
-export function ResourcesBlkioWeightDeviceInnerToJSON(
+export function ResourcesBlkioWeightDeviceInnerToJSON(json: any): ResourcesBlkioWeightDeviceInner {
+  return ResourcesBlkioWeightDeviceInnerToJSONTyped(json, false);
+}
+
+export function ResourcesBlkioWeightDeviceInnerToJSONTyped(
   value?: ResourcesBlkioWeightDeviceInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Path: value["Path"],
     Weight: value["Weight"],

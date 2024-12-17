@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 import type { Health } from "./Health";
-import { HealthFromJSON, HealthFromJSONTyped, HealthToJSON } from "./Health";
+import { HealthFromJSON, HealthFromJSONTyped, HealthToJSON, HealthToJSONTyped } from "./Health";
 
 /**
  * ContainerState stores container's running state. It's part of ContainerJSONBase
@@ -161,10 +161,18 @@ export function ContainerStateFromJSONTyped(
   };
 }
 
-export function ContainerStateToJSON(value?: ContainerState | null): any {
+export function ContainerStateToJSON(json: any): ContainerState {
+  return ContainerStateToJSONTyped(json, false);
+}
+
+export function ContainerStateToJSONTyped(
+  value?: ContainerState | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Status: value["Status"],
     Running: value["Running"],

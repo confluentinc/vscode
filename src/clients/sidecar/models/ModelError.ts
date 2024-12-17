@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { JsonNode } from "./JsonNode";
-import { JsonNodeFromJSON, JsonNodeFromJSONTyped, JsonNodeToJSON } from "./JsonNode";
+import {
+  JsonNodeFromJSON,
+  JsonNodeFromJSONTyped,
+  JsonNodeToJSON,
+  JsonNodeToJSONTyped,
+} from "./JsonNode";
 
 /**
  * Describes a particular error encountered while performing an operation.
@@ -85,10 +90,18 @@ export function ModelErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function ModelErrorToJSON(value?: ModelError | null): any {
+export function ModelErrorToJSON(json: any): ModelError {
+  return ModelErrorToJSONTyped(json, false);
+}
+
+export function ModelErrorToJSONTyped(
+  value?: ModelError | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     code: value["code"],
     status: value["status"],
