@@ -45,6 +45,9 @@ export abstract class Environment extends Data implements IResourceBase {
   kafkaClusters!: KafkaCluster[];
   schemaRegistry?: SchemaRegistry | undefined;
 
+  // updated by the ResourceViewProvider from connectionLoading/connectionUsable events
+  isLoading: boolean = false;
+
   get hasClusters(): boolean {
     return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
   }
@@ -111,6 +114,7 @@ export class EnvironmentTreeItem extends TreeItem {
     super(resource.name, collapseState);
 
     // internal properties
+    this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
