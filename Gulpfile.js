@@ -645,9 +645,9 @@ export function functional(done) {
 
 apigen.description = "Generate API clients from OpenAPI specs.";
 export async function apigen() {
-  // Lock down the version of openapi-generator-cli to avoid breaking changes or surprises
+  // Lock down the version of openapi-generator to avoid breaking changes or surprises
   // per https://openapi-generator.tech/docs/installation/
-  const openapiGeneratorVersion = "7.7.0";
+  const openapiGeneratorVersion = "7.10.0";
 
   const lockResult = spawnSync(
     "npx",
