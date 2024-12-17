@@ -1,6 +1,11 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
-import { EXTENSION_VERSION, IconNames } from "../constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  EXTENSION_VERSION,
+  IconNames,
+  LOCAL_CONNECTION_ID,
+} from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import { DirectConnectionManager } from "../directConnectManager";
@@ -49,8 +54,7 @@ import { getResourceManager } from "../storage/resourceManager";
 const logger = new Logger("viewProviders.resources");
 
 type CCloudResources = CCloudEnvironment | CCloudKafkaCluster | CCloudSchemaRegistry;
-// TODO: add LocalEnvironment here?
-type LocalResources = LocalKafkaCluster | LocalSchemaRegistry;
+type LocalResources = LocalEnvironment | LocalKafkaCluster | LocalSchemaRegistry;
 type DirectResources = DirectEnvironment | DirectKafkaCluster | DirectSchemaRegistry;
 
 /**
@@ -74,17 +78,18 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  /** {@link Environment}s currently tracked by this provider, by their ID. */
-  environments: Map<string, Environment> = new Map();
-  /** {@link KafkaCluster}s currently tracked by this provider, by their ID. */
-  kafkaClusters: Map<string, KafkaCluster> = new Map();
-  /** {@link SchemaRegistry SchemaRegistries} currently tracked by this provider, by their ID. */
-  schemaRegistries: Map<string, SchemaRegistry> = new Map();
-
   /** Did the user use the 'refresh' button / command to force a deep refresh of the tree? */
   private forceDeepRefresh: boolean = false;
   /** Have we informed the sidecar of any direct connections saved in secret storage? */
   private rehydratedDirectConnections: boolean = false;
+
+  /**
+   * {@link Environment}s managed by this provider, stored by their environment IDs.
+   *
+   * (For local/direct connection resources, these keys are the same values as their `connectionId`s.)
+   */
+  environmentsMap: Map<string, CCloudEnvironment | LocalEnvironment | DirectEnvironment> =
+    new Map();
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -143,7 +148,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await this.getCCloudEnvironmentChildren(element);
+        return await getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
         const children: DirectResources[] = [];
         if (element.kafkaClusters)
@@ -212,12 +217,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
       logger.debug("connectionLoading event fired", { id });
-      // TODO: update the tree item for the connection to show a loading spinner
+      this.refreshConnection(id, true);
     });
 
     const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
       logger.debug("connectionUsable event fired", { id });
-      // TODO: update the tree item for the connection to show a "connected" status
+      this.refreshConnection(id, false);
     });
 
     return [
@@ -229,6 +234,43 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       connectionLoadingSub,
       connectionUsableSub,
     ];
+  }
+
+  async refreshConnection(id: ConnectionId, loading: boolean = false) {
+    switch (id) {
+      case CCLOUD_CONNECTION_ID:
+        throw new Error("Not implemented");
+      case LOCAL_CONNECTION_ID:
+        throw new Error("Not implemented");
+      default: {
+        // direct connections are treated as environments, so we can look up the direct "environment"
+        // by its connection ID
+        const environment = this.environmentsMap.get(id);
+        if (environment) {
+          if (!loading) {
+            // if the connection is usable, we need to refresh the children of the environment
+            // to potentially show the Kafka clusters and Schema Registry and update the collapsible
+            // state of the item
+            const directEnvs = await getDirectResources();
+            const directEnv = directEnvs.find((env) => env.id === id);
+            if (directEnv) {
+              environment.kafkaClusters = directEnv.kafkaClusters;
+              environment.schemaRegistry = directEnv.schemaRegistry;
+            }
+          }
+          environment.isLoading = loading;
+          // only update this environment in the tree view, not the entire view
+          this._onDidChangeTreeData.fire(environment);
+          logger.debug("updated direct environment", {
+            id,
+            environment: environment?.name,
+            loading,
+          });
+        } else {
+          logger.debug("could not find direct environment in map to update", { id });
+        }
+      }
+    }
   }
 }
 
@@ -384,4 +426,31 @@ export async function loadDirectResources(): Promise<DirectEnvironment[]> {
   const directEnvs = await getDirectResources();
   logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
   return directEnvs;
+}
+
+/**
+ * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
+ * Called when expanding a CCloud environment tree item.
+ *
+ * Fetches from the cached resources in the resource manager.
+ *
+ * @param environment: The CCloud environment to get children for
+ * @returns
+ */
+export async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
+  const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
+
+  const loader = CCloudResourceLoader.getInstance();
+
+  // Get the Kafka clusters for this environment. At worst be an empty array.
+  subItems.push(...(await loader.getKafkaClustersForEnvironmentId(environment.id)));
+
+  // Schema registry?
+  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(environment.id);
+  if (schemaRegistry) {
+    subItems.push(schemaRegistry);
+  }
+
+  // TODO: add flink compute pools here ?
+  return subItems;
 }
