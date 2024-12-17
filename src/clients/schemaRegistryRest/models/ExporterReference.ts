@@ -86,10 +86,18 @@ export function ExporterReferenceFromJSONTyped(
   };
 }
 
-export function ExporterReferenceToJSON(value?: ExporterReference | null): any {
+export function ExporterReferenceToJSON(json: any): ExporterReference {
+  return ExporterReferenceToJSONTyped(json, false);
+}
+
+export function ExporterReferenceToJSONTyped(
+  value?: ExporterReference | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     contextType: value["contextType"],

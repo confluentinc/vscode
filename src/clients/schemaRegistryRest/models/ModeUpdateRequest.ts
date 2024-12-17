@@ -50,10 +50,18 @@ export function ModeUpdateRequestFromJSONTyped(
   };
 }
 
-export function ModeUpdateRequestToJSON(value?: ModeUpdateRequest | null): any {
+export function ModeUpdateRequestToJSON(json: any): ModeUpdateRequest {
+  return ModeUpdateRequestToJSONTyped(json, false);
+}
+
+export function ModeUpdateRequestToJSONTyped(
+  value?: ModeUpdateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     mode: value["mode"],
   };

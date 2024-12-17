@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 import type { Rule } from "./Rule";
-import { RuleFromJSON, RuleFromJSONTyped, RuleToJSON } from "./Rule";
+import { RuleFromJSON, RuleFromJSONTyped, RuleToJSON, RuleToJSONTyped } from "./Rule";
 
 /**
  * Schema rule set
@@ -63,10 +63,18 @@ export function RuleSetFromJSONTyped(json: any, ignoreDiscriminator: boolean): R
   };
 }
 
-export function RuleSetToJSON(value?: RuleSet | null): any {
+export function RuleSetToJSON(json: any): RuleSet {
+  return RuleSetToJSONTyped(json, false);
+}
+
+export function RuleSetToJSONTyped(
+  value?: RuleSet | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     migrationRules:
       value["migrationRules"] == null

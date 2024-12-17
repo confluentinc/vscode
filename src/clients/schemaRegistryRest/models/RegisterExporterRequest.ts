@@ -18,6 +18,7 @@ import {
   ExporterReferenceFromJSON,
   ExporterReferenceFromJSONTyped,
   ExporterReferenceToJSON,
+  ExporterReferenceToJSONTyped,
 } from "./ExporterReference";
 
 /**
@@ -60,10 +61,18 @@ export function RegisterExporterRequestFromJSONTyped(
   };
 }
 
-export function RegisterExporterRequestToJSON(value?: RegisterExporterRequest | null): any {
+export function RegisterExporterRequestToJSON(json: any): RegisterExporterRequest {
+  return RegisterExporterRequestToJSONTyped(json, false);
+}
+
+export function RegisterExporterRequestToJSONTyped(
+  value?: RegisterExporterRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     references:
       value["references"] == null

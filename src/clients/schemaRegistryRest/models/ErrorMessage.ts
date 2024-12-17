@@ -54,10 +54,18 @@ export function ErrorMessageFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function ErrorMessageToJSON(value?: ErrorMessage | null): any {
+export function ErrorMessageToJSON(json: any): ErrorMessage {
+  return ErrorMessageToJSONTyped(json, false);
+}
+
+export function ErrorMessageToJSONTyped(
+  value?: ErrorMessage | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     error_code: value["error_code"],
     message: value["message"],
