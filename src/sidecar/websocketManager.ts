@@ -2,7 +2,7 @@ import { Disposable } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
 import { MessageRouter } from "../ws/messageRouter";
-import { Message, MessageHeaders, MessageType } from "../ws/messageTypes";
+import { Message, MessageHeaders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 import { SIDECAR_PORT } from "./constants";
 
@@ -91,28 +91,31 @@ export class WebsocketManager implements Disposable {
 
       websocket.on("error", (error) => {
         logger.error(`Websocket error: ${error}`);
+        // Go ahead and close the websocket, which will trigger the close event above.
+        websocket.close();
       });
 
       websocket.on("message", (data: WebSocket.Data) => {
         // Deserialize from JSON and deliver the message to the message router.
+        let message: Message<MessageType>;
         try {
-          // Deserialize the message from our possible gzipped websocket transport encoding.
-          const message = JSON.parse(data.toString()) as Message<any>;
-
-          const headers: MessageHeaders = message.headers;
-          const messageType: MessageType = message.headers.message_type;
-          const originator: string = headers.originator;
-          logger.debug(
-            `Recieved ${messageType} websocket message from originator ${originator}: ${JSON.stringify(message, null, 2)}`,
+          message = WebsocketManager.parseMessage(data);
+        } catch (e) {
+          logger.info(
+            `Unparseable websocket message from sidecar: ${(e as Error).message} from message '${data.toString()}'`,
           );
-
-          // Defer to the internal message router to deliver the message to the registered by-message-type async handler(s).
-          this.messageRouter.deliver(message).catch((e) => {
-            logger.error(`Error delivering message ${JSON.stringify(message, null, 2)}: ${e}`);
-          });
-        } catch {
-          logger.info(`Unparseable websocket message from sidecar: ${data.toString()}`);
+          return;
         }
+
+        const headers: MessageHeaders = message.headers;
+        logger.debug(
+          `Recieved ${headers.message_type} websocket message from originator ${headers.originator}: ${JSON.stringify(message, null, 2)}`,
+        );
+
+        // Defer to the internal message router to deliver the message to the registered by-message-type async handler(s).
+        this.messageRouter.deliver(message).catch((e) => {
+          logger.error(`Error delivering message ${JSON.stringify(message, null, 2)}: ${e}`);
+        });
       });
 
       this.disposables.push({
@@ -155,6 +158,47 @@ export class WebsocketManager implements Disposable {
   public dispose(): void {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
+  }
+
+  /** Parse a message recieved from websocket into a Message<T> or die trying *
+   */
+  static parseMessage(data: WebSocket.Data): Message<MessageType> {
+    const strMessage = data.toString();
+    const message = JSON.parse(strMessage) as Message<MessageType>;
+    // ensure the message has the required headers
+    const headers = message.headers;
+    if (!headers) {
+      throw new Error("Message missing headers: " + strMessage);
+    }
+    if (!message.headers.message_type) {
+      throw new Error("Message missing headers.message_type: " + strMessage);
+    }
+    // message type must be known
+    if (!MessageType[message.headers.message_type]) {
+      throw new Error("Unknown message type: " + message.headers.message_type);
+    }
+    if (!message.headers.originator) {
+      throw new Error("Message missing originator header: " + strMessage);
+    }
+    // originator must either be "sidecar" or a process id string
+    if (message.headers.originator !== "sidecar" && isNaN(parseInt(message.headers.originator))) {
+      throw new Error("Invalid originator value: " + message.headers.originator);
+    }
+
+    const body: any = message.body;
+
+    if (!body) {
+      throw new Error("Message missing body: " + strMessage);
+    }
+
+    if (typeof body !== "object") {
+      throw new Error("Message body must be an object: " + strMessage);
+    }
+
+    // Validate the body against the message type
+    validateMessageBody(message.headers.message_type, body);
+
+    return message;
   }
 }
 

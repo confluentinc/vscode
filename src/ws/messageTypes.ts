@@ -11,6 +11,7 @@ export enum MessageType {
   // When a new workspace connects and is granted access, or when a workspace disconnects,
   // sidecar will send this message to all workspaces.
   WORKSPACE_COUNT_CHANGED = "WORKSPACE_COUNT_CHANGED",
+  PROTOCOL_ERROR = "PROTOCOL_ERROR",
 }
 
 /** Header structure for websocket messages. */
@@ -65,9 +66,17 @@ export interface WorkspacesChangedBody {
   current_workspace_count: number;
 }
 
+/** Sidecar -> workspace message send if/when sidecar has detected an issue with what extension has said. Will be
+ * sent to the workspace that sent the message that caused the issue, then the websocket disconnected.
+ */
+export interface ProtocolErrorBody {
+  error: string;
+}
+
 /** Type mapping of message type -> corresponding message body type */
-type MessageBodyMap = {
+export type MessageBodyMap = {
   [MessageType.WORKSPACE_COUNT_CHANGED]: WorkspacesChangedBody;
+  [MessageType.PROTOCOL_ERROR]: ProtocolErrorBody;
 };
 
 /**
@@ -76,4 +85,32 @@ type MessageBodyMap = {
  */
 type MessageHeaderMap = {
   [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
+  [MessageType.PROTOCOL_ERROR]: ReplyMessageHeaders;
 };
+
+/**
+ *  Validate the fields of a message body having just come from JSON with its corresponding message type.
+ *  Alas, TypeScript doesn't have a way to enforce that the body is of the correct type for the message type,
+ *  so we have to do it manually.
+ */
+export function validateMessageBody(messageType: MessageType, body: unknown): void {
+  if (messageType === MessageType.WORKSPACE_COUNT_CHANGED) {
+    if (
+      typeof body !== "object" ||
+      !body ||
+      typeof (body as WorkspacesChangedBody).current_workspace_count !== "number"
+    ) {
+      throw new Error(`Invalid body for message type ${MessageType.WORKSPACE_COUNT_CHANGED}`);
+    }
+  } else if (messageType === MessageType.PROTOCOL_ERROR) {
+    if (
+      typeof body !== "object" ||
+      !body ||
+      typeof (body as ProtocolErrorBody).error !== "string"
+    ) {
+      throw new Error(`Invalid body for message type ${MessageType.PROTOCOL_ERROR}`);
+    }
+  } else {
+    throw new Error(`validateMessageBody(): Unknown message type: ${messageType}`);
+  }
+}
