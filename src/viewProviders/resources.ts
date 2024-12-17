@@ -7,6 +7,8 @@ import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
+  connectionLoading,
+  connectionUsable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -31,7 +33,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -72,6 +74,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     ResourceViewProviderData | undefined | void
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  /** {@link Environment}s currently tracked by this provider, by their ID. */
+  environments: Map<string, Environment> = new Map();
+  /** {@link KafkaCluster}s currently tracked by this provider, by their ID. */
+  kafkaClusters: Map<string, KafkaCluster> = new Map();
+  /** {@link SchemaRegistry SchemaRegistries} currently tracked by this provider, by their ID. */
+  schemaRegistries: Map<string, SchemaRegistry> = new Map();
 
   /** Did the user use the 'refresh' button / command to force a deep refresh of the tree? */
   private forceDeepRefresh: boolean = false;
@@ -137,7 +146,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await getCCloudEnvironmentChildren(element);
+        return await this.getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
         const children: DirectResources[] = [];
         if (element.kafkaClusters)
@@ -149,32 +158,26 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[] = [];
+      const resourcePromises: Promise<ResourceViewProviderData>[] = [
+        this.loadCCloudResources(this.forceDeepRefresh),
+        this.loadLocalResources(),
+      ];
 
-      // EXPERIMENTAL: check if direct connections are enabled in extension settings
+      // PREVIEW: check if direct connections are enabled in extension settings
+      // TODO(shoup): remove this once direct connections are enabled by default
       const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
       const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
       if (directConnectionsEnabled) {
-        resources.push(
-          ...(await Promise.all([
-            loadCCloudResources(this.forceDeepRefresh),
-            loadLocalResources(),
-            loadDirectConnectResources(),
-          ])),
-        );
-      } else {
-        resources.push(
-          ...(await Promise.all([
-            loadCCloudResources(this.forceDeepRefresh),
-            loadLocalResources(),
-          ])),
-        );
+        resourcePromises.push(this.loadDirectConnectResources());
       }
+
+      const resources: ResourceViewProviderData[] = await Promise.all(resourcePromises);
 
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
       }
+
       return resources;
     }
 
@@ -196,7 +199,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     });
 
     const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
-      logger.debug("directConnectionsChanged event fired");
+      logger.debug("directConnectionsChanged event fired, refreshing");
       this.refresh();
     });
 
@@ -214,204 +217,243 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       },
     );
 
+    const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
+      logger.debug("connectionLoading event fired", { id });
+      // TODO: update the tree item for the connection to show a loading spinner
+    });
+
+    const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
+      logger.debug("connectionUsable event fired", { id });
+      // TODO: update the tree item for the connection to show a "connected" status
+    });
+
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
+      connectionLoadingSub,
+      connectionUsableSub,
     ];
   }
-}
 
-/** Get the singleton instance of the {@link ResourceViewProvider} */
-export function getResourceViewProvider() {
-  return ResourceViewProvider.getInstance();
-}
+  setResource(
+    resource: Environment | KafkaCluster | SchemaRegistry,
+    map: Map<string, Environment | KafkaCluster | SchemaRegistry>,
+  ) {
+    const existing = map.get(resource.id);
+    if (existing) {
+      Object.assign(existing, resource);
+    } else {
+      map.set(resource.id, resource);
+    }
+    this.refresh();
+  }
 
-/**
- * Load the Confluent Cloud container and child resources based on CCloud connection status.
- *
- * If the user has an active CCloud connection, the container will be expanded to show the
- * CCloud environments and their sub-resources. The description will also change to show the
- * current organization name.
- *
- * Otherwise, the container will not be expandable and show a "No connection" message with an action to
- * connect to CCloud.
- */
-export async function loadCCloudResources(
-  forceDeepRefresh: boolean = false,
-): Promise<ContainerTreeItem<CCloudEnvironment>> {
-  // empty container item for the Confluent Cloud resources to start, whose `.id` will change
-  // depending on the user's CCloud connection status to adjust the collapsible state and actions
-  const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
-    ConnectionLabel.CCLOUD,
-    vscode.TreeItemCollapsibleState.None,
-    [],
-  );
-  cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-  cloudContainerItem.id = `ccloud-${EXTENSION_VERSION}`;
+  setEnvironment(env: Environment) {
+    this.setResource(env, this.environments);
+  }
 
-  if (hasCCloudAuthSession()) {
-    const loader = CCloudResourceLoader.getInstance();
-    // TODO: have this cached in the resource manager via the loader
-    const currentOrg = await getCurrentOrganization();
+  setKafkaCluster(cluster: KafkaCluster) {
+    this.setResource(cluster, this.kafkaClusters);
+  }
 
-    const ccloudEnvironments: CCloudEnvironment[] = [];
-    try {
-      const ccloudEnvs = await loader.getEnvironments(forceDeepRefresh);
-      logger.debug(`got ${ccloudEnvs.length} CCloud environment(s) from loader`);
-      ccloudEnvironments.push(...ccloudEnvs);
-    } catch (e) {
-      // if we fail to load CCloud environments, we need to get as much information as possible as to
-      // what went wrong since the user is effectively locked out of the CCloud resources for this org
-      const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
-      logger.error(msg, e);
-      Sentry.captureException(e);
-      vscode.window.showErrorMessage(msg, "Open Logs", "File Issue").then(async (action) => {
-        if (action === "Open Logs") {
-          vscode.commands.executeCommand("confluent.showOutputChannel");
-        } else if (action === "File Issue") {
-          vscode.commands.executeCommand("confluent.support.issue");
-        }
-      });
+  setSchemaRegistry(registry: SchemaRegistry) {
+    this.setResource(registry, this.schemaRegistries);
+  }
+
+  /**
+   * Load the Confluent Cloud container and child resources based on CCloud connection status.
+   *
+   * If the user has an active CCloud connection, the container will be expanded to show the
+   * CCloud environments and their sub-resources. The description will also change to show the
+   * current organization name.
+   *
+   * Otherwise, the container will not be expandable and show a "No connection" message with an action to
+   * connect to CCloud.
+   */
+  async loadCCloudResources(
+    forceDeepRefresh: boolean = false,
+  ): Promise<ContainerTreeItem<CCloudEnvironment>> {
+    // empty container item for the Confluent Cloud resources to start, whose `.id` will change
+    // depending on the user's CCloud connection status to adjust the collapsible state and actions
+    const cloudContainerItem = new ContainerTreeItem<CCloudEnvironment>(
+      ConnectionLabel.CCLOUD,
+      vscode.TreeItemCollapsibleState.None,
+      [],
+    );
+    cloudContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
+    cloudContainerItem.id = `ccloud-${EXTENSION_VERSION}`;
+
+    if (hasCCloudAuthSession()) {
+      const loader = CCloudResourceLoader.getInstance();
+      // TODO: have this cached in the resource manager via the loader
+      const currentOrg = await getCurrentOrganization();
+
+      const ccloudEnvironments: CCloudEnvironment[] = [];
+      try {
+        const ccloudEnvs = await loader.getEnvironments(forceDeepRefresh);
+        logger.debug(`got ${ccloudEnvs.length} CCloud environment(s) from loader`);
+        ccloudEnvironments.push(...ccloudEnvs);
+      } catch (e) {
+        // if we fail to load CCloud environments, we need to get as much information as possible as to
+        // what went wrong since the user is effectively locked out of the CCloud resources for this org
+        const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
+        logger.error(msg, e);
+        Sentry.captureException(e);
+        vscode.window.showErrorMessage(msg, "Open Logs", "File Issue").then(async (action) => {
+          if (action === "Open Logs") {
+            vscode.commands.executeCommand("confluent.showOutputChannel");
+          } else if (action === "File Issue") {
+            vscode.commands.executeCommand("confluent.support.issue");
+          }
+        });
+      }
+
+      cloudContainerItem.collapsibleState =
+        ccloudEnvironments.length > 0
+          ? vscode.TreeItemCollapsibleState.Expanded
+          : vscode.TreeItemCollapsibleState.None;
+      // removes the "Add Connection" action on hover and enables the "Change Organization" action
+      cloudContainerItem.contextValue = "resources-ccloud-container-connected";
+      cloudContainerItem.description = currentOrg?.name ?? "";
+      cloudContainerItem.children = ccloudEnvironments;
+      // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+      cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
+
+      // store the environments in the tree provider map for easy access later
+      ccloudEnvironments.forEach((env) => this.environments.set(env.id, env));
+    } else {
+      // enables the "Add Connection" action to be displayed on hover
+      cloudContainerItem.contextValue = "resources-ccloud-container";
+      cloudContainerItem.description = "(No connection)";
     }
 
-    cloudContainerItem.collapsibleState =
-      ccloudEnvironments.length > 0
-        ? vscode.TreeItemCollapsibleState.Expanded
-        : vscode.TreeItemCollapsibleState.None;
-    // removes the "Add Connection" action on hover and enables the "Change Organization" action
-    cloudContainerItem.contextValue = "resources-ccloud-container-connected";
-    cloudContainerItem.description = currentOrg?.name ?? "";
-    cloudContainerItem.children = ccloudEnvironments;
-    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
-    cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
-  } else {
-    // enables the "Add Connection" action to be displayed on hover
-    cloudContainerItem.contextValue = "resources-ccloud-container";
-    cloudContainerItem.description = "(No connection)";
+    return cloudContainerItem;
   }
 
-  return cloudContainerItem;
-}
+  // TODO(shoup): update this comment + underlying logic once we have local resource management actions
+  /**
+   * Load the local resources into a container tree item.
+   *
+   * @returns A container tree item with the local Kafka clusters as children
+   */
+  async loadLocalResources(): Promise<ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>> {
+    const localContainerItem = new ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>(
+      ConnectionLabel.LOCAL,
+      vscode.TreeItemCollapsibleState.None,
+      [],
+    );
+    localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
 
-// TODO(shoup): update this comment + underlying logic once we have local resource management actions
-/**
- * Load the local resources into a container tree item.
- *
- * @returns A container tree item with the local Kafka clusters as children
- */
-export async function loadLocalResources(): Promise<
-  ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
-> {
-  const localContainerItem = new ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>(
-    ConnectionLabel.LOCAL,
-    vscode.TreeItemCollapsibleState.None,
-    [],
-  );
-  localContainerItem.iconPath = new vscode.ThemeIcon(IconNames.LOCAL_RESOURCE_GROUP);
+    const notConnectedId = "local-container";
+    localContainerItem.id = `local-${EXTENSION_VERSION}`;
+    // enable the "Launch Local Resources" action
+    localContainerItem.contextValue = notConnectedId;
 
-  const notConnectedId = "local-container";
-  localContainerItem.id = `local-${EXTENSION_VERSION}`;
-  // enable the "Launch Local Resources" action
-  localContainerItem.contextValue = notConnectedId;
+    localContainerItem.description = "(Not running)";
+    localContainerItem.tooltip = new vscode.MarkdownString(
+      "Local Kafka clusters discoverable at port `8082` are shown here.",
+    );
 
-  localContainerItem.description = "(Not running)";
-  localContainerItem.tooltip = new vscode.MarkdownString(
-    "Local Kafka clusters discoverable at port `8082` are shown here.",
-  );
+    // before we try listing any resources (for possibly the first time), we need to check if any
+    // supported Schema Registry containers are running, then grab their REST proxy port to send to
+    // the sidecar for discovery before the GraphQL query kicks off
+    await updateLocalConnection();
 
-  // before we try listing any resources (for possibly the first time), we need to check if any
-  // supported Schema Registry containers are running, then grab their REST proxy port to send to
-  // the sidecar for discovery before the GraphQL query kicks off
-  await updateLocalConnection();
+    const localEnvs: LocalEnvironment[] = await getLocalResources();
+    logger.debug(`got ${localEnvs.length} local environment(s) from GQL query`);
+    if (localEnvs.length > 0) {
+      const connectedId = "local-container-connected";
+      // enable the "Stop Local Resources" action
+      localContainerItem.contextValue = connectedId;
+      // unpack the local resources to more easily update the UI elements
+      const localKafkaClusters: LocalKafkaCluster[] = [];
+      const localSchemaRegistries: LocalSchemaRegistry[] = [];
+      localEnvs.forEach((env: LocalEnvironment) => {
+        localKafkaClusters.push(...env.kafkaClusters);
+        if (env.schemaRegistry) {
+          localSchemaRegistries.push(env.schemaRegistry);
+        }
+      });
+      // update the UI based on whether or not we have local resources available
+      await Promise.all([
+        setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
+        setContextValue(
+          ContextValues.localSchemaRegistryAvailable,
+          localSchemaRegistries.length > 0,
+        ),
+      ]);
+      // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+      localContainerItem.id = `local-connected-${EXTENSION_VERSION}`;
+      localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+      // override the default "child item count" description
+      localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
+      // TODO: this should be handled in the loader once it (and ResourceManager) start handling
+      // local resources
+      getResourceManager().setLocalKafkaClusters(localKafkaClusters);
+      localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
 
-  const localEnvs: LocalEnvironment[] = await getLocalResources();
-  logger.debug(`got ${localEnvs.length} local environment(s) from GQL query`);
-  if (localEnvs.length > 0) {
-    const connectedId = "local-container-connected";
-    // enable the "Stop Local Resources" action
-    localContainerItem.contextValue = connectedId;
-    // unpack the local resources to more easily update the UI elements
-    const localKafkaClusters: LocalKafkaCluster[] = [];
-    const localSchemaRegistries: LocalSchemaRegistry[] = [];
-    localEnvs.forEach((env: LocalEnvironment) => {
-      localKafkaClusters.push(...env.kafkaClusters);
-      if (env.schemaRegistry) {
-        localSchemaRegistries.push(env.schemaRegistry);
-      }
-    });
-    // update the UI based on whether or not we have local resources available
-    await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
-      setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
-    ]);
-    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
-    localContainerItem.id = `local-connected-${EXTENSION_VERSION}`;
-    localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-    // override the default "child item count" description
-    localContainerItem.description = localKafkaClusters.map((cluster) => cluster.uri).join(", ");
-    // TODO: this should be handled in the loader once it (and ResourceManager) start handling
-    // local resources
-    getResourceManager().setLocalKafkaClusters(localKafkaClusters);
-    localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
+      // store the environments in the tree provider map for easy access later
+      localEnvs.forEach((env) => this.environments.set(env.id, env));
+    }
+
+    return localContainerItem;
   }
 
-  return localContainerItem;
-}
+  async loadDirectConnectResources(): Promise<ContainerTreeItem<DirectEnvironment>> {
+    const directContainerItem = new ContainerTreeItem<DirectEnvironment>(
+      ConnectionLabel.DIRECT,
+      vscode.TreeItemCollapsibleState.None,
+      [],
+    );
+    directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
+    directContainerItem.id = `direct-${EXTENSION_VERSION}`;
 
-export async function loadDirectConnectResources(): Promise<ContainerTreeItem<DirectEnvironment>> {
-  const directContainerItem = new ContainerTreeItem<DirectEnvironment>(
-    ConnectionLabel.DIRECT,
-    vscode.TreeItemCollapsibleState.None,
-    [],
-  );
-  directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
-  directContainerItem.id = `direct-${EXTENSION_VERSION}`;
+    // top-level container before each direct "environment" (connection)
+    directContainerItem.contextValue = "resources-direct-container";
+    directContainerItem.description = "(No connections)";
 
-  // top-level container before each direct "environment" (connection)
-  directContainerItem.contextValue = "resources-direct-container";
-  directContainerItem.description = "(No connections)";
+    // fetch all direct connections and their resources; each connection will be treated the same as a
+    // CCloud environment (connection ID and environment ID are the same)
+    const directEnvs = await getDirectResources();
+    logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
+    directContainerItem.children = directEnvs;
+    if (directContainerItem.children.length > 0) {
+      // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
+      directContainerItem.id = `direct-connected-${EXTENSION_VERSION}`;
+      directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+      directContainerItem.description = `(${directContainerItem.children.length})`;
+    }
 
-  // fetch all direct connections and their resources; each connection will be treated the same as a
-  // CCloud environment (connection ID and environment ID are the same)
-  const directEnvs = await getDirectResources();
-  logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
-  directContainerItem.children = directEnvs;
-  if (directContainerItem.children.length > 0) {
-    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
-    directContainerItem.id = `direct-connected-${EXTENSION_VERSION}`;
-    directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-    directContainerItem.description = `(${directContainerItem.children.length})`;
+    return directContainerItem;
   }
 
-  return directContainerItem;
-}
+  /**
+   * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
+   * Called when expanding a CCloud environment tree item.
+   *
+   * Fetches from the cached resources in the resource manager.
+   *
+   * @param environment: The CCloud environment to get children for
+   * @returns
+   */
+  async getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
+    const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
-/**
- * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
- * Called when expanding a CCloud environment tree item.
- *
- * Fetches from the cached resources in the resource manager.
- *
- * @param environment: The CCloud environment to get children for
- * @returns
- */
-async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
-  const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
+    const loader = CCloudResourceLoader.getInstance();
 
-  const loader = CCloudResourceLoader.getInstance();
+    // Get the Kafka clusters for this environment. At worst be an empty array.
+    subItems.push(...(await loader.getKafkaClustersForEnvironmentId(environment.id)));
 
-  // Get the Kafka clusters for this environment. At worst be an empty array.
-  subItems.push(...(await loader.getKafkaClustersForEnvironmentId(environment.id)));
+    // Schema registry?
+    const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(environment.id);
+    if (schemaRegistry) {
+      subItems.push(schemaRegistry);
+    }
 
-  // Schema registry?
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(environment.id);
-  if (schemaRegistry) {
-    subItems.push(schemaRegistry);
+    // TODO: add flink compute pools here ?
+    return subItems;
   }
-
-  // TODO: add flink compute pools here ?
-  return subItems;
 }
