@@ -431,7 +431,7 @@ export async function loadDirectConnectResources(): Promise<ContainerTreeItem<Di
  * @param environment: The CCloud environment to get children for
  * @returns
  */
-export async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
+async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
   const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
 
   const loader = CCloudResourceLoader.getInstance();
