@@ -120,7 +120,9 @@ export class EnvironmentTreeItem extends TreeItem {
 
     // user-facing properties
     this.description = this.resource.id;
-    this.iconPath = new ThemeIcon(this.resource.iconName);
+    this.iconPath = new ThemeIcon(
+      this.resource.isLoading ? IconNames.LOADING : this.resource.iconName,
+    );
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
 }
