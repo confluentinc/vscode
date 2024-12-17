@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from "../runtime";
+import type { SchemaRegistryConfigCredentials } from "./SchemaRegistryConfigCredentials";
+import {
+  SchemaRegistryConfigCredentialsFromJSON,
+  SchemaRegistryConfigCredentialsFromJSONTyped,
+  SchemaRegistryConfigCredentialsToJSON,
+} from "./SchemaRegistryConfigCredentials";
+
 /**
  * Schema Registry configuration.
  * @export
@@ -32,11 +39,11 @@ export interface SchemaRegistryConfig {
    */
   uri: string;
   /**
-   * The credentials for the Schema Registry, or null if no authentication is required
-   * @type {object}
+   *
+   * @type {SchemaRegistryConfigCredentials}
    * @memberof SchemaRegistryConfig
    */
-  credentials?: object | null;
+  credentials?: SchemaRegistryConfigCredentials | null;
 }
 
 /**
@@ -61,7 +68,10 @@ export function SchemaRegistryConfigFromJSONTyped(
   return {
     id: json["id"] == null ? undefined : json["id"],
     uri: json["uri"],
-    credentials: json["credentials"] == null ? undefined : json["credentials"],
+    credentials:
+      json["credentials"] == null
+        ? undefined
+        : SchemaRegistryConfigCredentialsFromJSON(json["credentials"]),
   };
 }
 
@@ -72,6 +82,6 @@ export function SchemaRegistryConfigToJSON(value?: SchemaRegistryConfig | null):
   return {
     id: value["id"],
     uri: value["uri"],
-    credentials: value["credentials"],
+    credentials: SchemaRegistryConfigCredentialsToJSON(value["credentials"]),
   };
 }
