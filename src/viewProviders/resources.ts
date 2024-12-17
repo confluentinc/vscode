@@ -7,6 +7,8 @@ import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
+  connectionLoading,
+  connectionUsable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -31,7 +33,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -71,6 +73,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     ResourceViewProviderData | undefined | void
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  /** {@link Environment}s currently tracked by this provider, by their ID. */
+  environments: Map<string, Environment> = new Map();
+  /** {@link KafkaCluster}s currently tracked by this provider, by their ID. */
+  kafkaClusters: Map<string, KafkaCluster> = new Map();
+  /** {@link SchemaRegistry SchemaRegistries} currently tracked by this provider, by their ID. */
+  schemaRegistries: Map<string, SchemaRegistry> = new Map();
 
   /** Did the user use the 'refresh' button / command to force a deep refresh of the tree? */
   private forceDeepRefresh: boolean = false;
@@ -134,7 +143,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
         return element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await getCCloudEnvironmentChildren(element);
+        return await this.getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
         const children: DirectResources[] = [];
         if (element.kafkaClusters)
@@ -183,7 +192,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     });
 
     const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
-      logger.debug("directConnectionsChanged event fired");
+      logger.debug("directConnectionsChanged event fired, refreshing");
       this.refresh();
     });
 
@@ -201,19 +210,26 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       },
     );
 
+    const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
+      logger.debug("connectionLoading event fired", { id });
+      // TODO: update the tree item for the connection to show a loading spinner
+    });
+
+    const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
+      logger.debug("connectionUsable event fired", { id });
+      // TODO: update the tree item for the connection to show a "connected" status
+    });
+
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
+      connectionLoadingSub,
+      connectionUsableSub,
     ];
   }
-}
-
-/** Get the singleton instance of the {@link ResourceViewProvider} */
-export function getResourceViewProvider() {
-  return ResourceViewProvider.getInstance();
 }
 
 /**
@@ -274,6 +290,9 @@ export async function loadCCloudResources(
     cloudContainerItem.children = ccloudEnvironments;
     // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
     cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
+
+    // store the environments in the tree provider map for easy access later
+    ccloudEnvironments.forEach((env) => this.environments.set(env.id, env));
   } else {
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
@@ -343,6 +362,9 @@ export async function loadLocalResources(): Promise<
     // local resources
     getResourceManager().setLocalKafkaClusters(localKafkaClusters);
     localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
+
+    // store the environments in the tree provider map for easy access later
+    localEnvs.forEach((env) => this.environments.set(env.id, env));
   }
 
   return localContainerItem;
@@ -362,31 +384,4 @@ export async function loadDirectResources(): Promise<DirectEnvironment[]> {
   const directEnvs = await getDirectResources();
   logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
   return directEnvs;
-}
-
-/**
- * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
- * Called when expanding a CCloud environment tree item.
- *
- * Fetches from the cached resources in the resource manager.
- *
- * @param environment: The CCloud environment to get children for
- * @returns
- */
-async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
-  const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
-
-  const loader = CCloudResourceLoader.getInstance();
-
-  // Get the Kafka clusters for this environment. At worst be an empty array.
-  subItems.push(...(await loader.getKafkaClustersForEnvironmentId(environment.id)));
-
-  // Schema registry?
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(environment.id);
-  if (schemaRegistry) {
-    subItems.push(schemaRegistry);
-  }
-
-  // TODO: add flink compute pools here ?
-  return subItems;
 }
