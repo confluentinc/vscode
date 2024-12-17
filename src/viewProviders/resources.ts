@@ -123,7 +123,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
     if (element instanceof Environment) {
-      return new EnvironmentTreeItem(element);
+      const envItem = new EnvironmentTreeItem(element);
+      envItem.iconPath = new vscode.ThemeIcon(
+        element.isLoading ? IconNames.LOADING : element.iconName,
+      );
+      return envItem;
     } else if (element instanceof KafkaCluster) {
       return new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {

@@ -140,6 +140,8 @@ export class EnvironmentTreeItem extends TreeItem {
     this.iconPath = new ThemeIcon(this.resource.iconName);
     if (isDirect(resource) && !resource.hasClusters) {
       this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsWarningIcon.foreground"));
+    } else if (this.resource.isLoading) {
+      this.iconPath = new ThemeIcon(IconNames.LOADING);
     }
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
