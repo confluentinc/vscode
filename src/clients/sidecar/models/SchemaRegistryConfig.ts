@@ -18,6 +18,7 @@ import {
   SchemaRegistryConfigCredentialsFromJSON,
   SchemaRegistryConfigCredentialsFromJSONTyped,
   SchemaRegistryConfigCredentialsToJSON,
+  SchemaRegistryConfigCredentialsToJSONTyped,
 } from "./SchemaRegistryConfigCredentials";
 
 /**

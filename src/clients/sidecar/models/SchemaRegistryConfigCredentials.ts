@@ -53,10 +53,17 @@ export function SchemaRegistryConfigCredentialsFromJSONTyped(
   if (instanceOfBasicCredentials(json)) {
     return BasicCredentialsFromJSONTyped(json, true);
   }
+
+  return {} as any;
 }
 
-export function SchemaRegistryConfigCredentialsToJSON(
+export function SchemaRegistryConfigCredentialsToJSON(json: any): any {
+  return SchemaRegistryConfigCredentialsToJSONTyped(json, false);
+}
+
+export function SchemaRegistryConfigCredentialsToJSONTyped(
   value?: SchemaRegistryConfigCredentials | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;

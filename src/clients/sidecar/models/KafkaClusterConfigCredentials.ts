@@ -51,10 +51,17 @@ export function KafkaClusterConfigCredentialsFromJSONTyped(
   if (instanceOfBasicCredentials(json)) {
     return BasicCredentialsFromJSONTyped(json, true);
   }
+
+  return {} as any;
 }
 
-export function KafkaClusterConfigCredentialsToJSON(
+export function KafkaClusterConfigCredentialsToJSON(json: any): any {
+  return KafkaClusterConfigCredentialsToJSONTyped(json, false);
+}
+
+export function KafkaClusterConfigCredentialsToJSONTyped(
   value?: KafkaClusterConfigCredentials | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;

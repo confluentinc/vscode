@@ -18,6 +18,7 @@ import {
   KafkaClusterConfigCredentialsFromJSON,
   KafkaClusterConfigCredentialsFromJSONTyped,
   KafkaClusterConfigCredentialsToJSON,
+  KafkaClusterConfigCredentialsToJSONTyped,
 } from "./KafkaClusterConfigCredentials";
 
 /**
