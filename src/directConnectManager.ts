@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { Disposable, ProgressLocation, SecretStorageChangeEvent, window } from "vscode";
 import {
   Connection,
@@ -6,9 +5,7 @@ import {
   ConnectionSpec,
   ConnectionsResourceApi,
   ConnectionType,
-  KafkaClusterConfig,
   ResponseError,
-  SchemaRegistryConfig,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { directConnectionsChanged, environmentChanged } from "./emitters";
@@ -33,7 +30,6 @@ import {
 import { logUsage, UserEvent } from "./telemetry/events";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
-import { FormConnectionType, PostResponse } from "./webview/direct-connect-form";
 
 const logger = new Logger("directConnectManager");
 
@@ -122,48 +118,29 @@ export class DirectConnectionManager {
 
   /**
    * Create a new direct connection with the configurations provided from the webview form.
-   * @see `src/webview/direct-connection-form.ts` for the form submission handling.
+   * @see `src/directConnect.ts` for the form data processing.
+   * @see `src/webview/direct-connection-form` for the form UI handling.
    */
   async createConnection(
-    kafkaClusterConfig: KafkaClusterConfig | undefined,
-    schemaRegistryConfig: SchemaRegistryConfig | undefined,
-    formConnectionType: FormConnectionType,
-    name?: string,
-  ): Promise<PostResponse> {
-    const connectionId = randomUUID() as ConnectionId;
-    const spec: CustomConnectionSpec = {
-      id: connectionId,
-      name: name || "New Connection",
-      type: ConnectionType.Direct, // TODO(shoup): update for MDS in follow-on branch
-      formConnectionType,
-    };
-
-    if (kafkaClusterConfig) {
-      spec.kafka_cluster = kafkaClusterConfig;
-    }
-    if (schemaRegistryConfig) {
-      spec.schema_registry = schemaRegistryConfig;
-    }
-
-    const { connection, errorMessage } = await this.createOrUpdateConnection(spec);
-    if (errorMessage || !connection) {
-      return { success: false, message: errorMessage };
-    }
+    spec: CustomConnectionSpec,
+    dryRun: boolean = false,
+  ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
+    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, false, dryRun);
 
     logUsage(UserEvent.DirectConnectionAction, {
-      type: formConnectionType,
-      action: "created",
-      withKafka: !!kafkaClusterConfig,
-      withSchemaRegistry: !!schemaRegistryConfig,
+      type: spec.formConnectionType,
+      action: dryRun ? "tested" : "created",
+      withKafka: !!spec.kafka_cluster,
+      withSchemaRegistry: !!spec.schema_registry,
     });
 
-    // save the new connection in secret storage
-    await getResourceManager().addDirectConnection(spec);
-    // create a new ResourceLoader instance for managing the new connection's resources
-    this.initResourceLoader(connectionId);
-
-    // `message` is hard-coded in the webview, so we don't actually use the connection object yet
-    return { success: true, message: JSON.stringify(connection) };
+    if (connection && !dryRun) {
+      // save the new connection in secret storage
+      await getResourceManager().addDirectConnection(spec);
+      // create a new ResourceLoader instance for managing the new connection's resources
+      this.initResourceLoader(spec.id);
+    }
+    return { connection, errorMessage };
   }
 
   async deleteConnection(id: ConnectionId): Promise<void> {
@@ -180,11 +157,14 @@ export class DirectConnectionManager {
     ResourceLoader.deregisterInstance(id);
   }
 
-  async updateConnection(spec: CustomConnectionSpec): Promise<PostResponse> {
+  async updateConnection(spec: CustomConnectionSpec): Promise<void> {
     // tell the sidecar about the updated spec
     const { connection, errorMessage } = await this.createOrUpdateConnection(spec, true);
     if (errorMessage || !connection) {
-      return { success: false, message: errorMessage };
+      window.showErrorMessage(
+        `Error: Failed to update connection. ${errorMessage ?? "No connection object returned"}`,
+      );
+      return;
     }
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
@@ -199,7 +179,7 @@ export class DirectConnectionManager {
     // notify subscribers that the "environment" has changed since direct connections are treated
     // as environment-specific resources
     environmentChanged.fire(mergedSpec.id);
-    return { success: true, message: JSON.stringify(connection) };
+    return; // TODO NC return value will likely change for Edit in the form
   }
 
   /**
@@ -214,21 +194,26 @@ export class DirectConnectionManager {
   private async createOrUpdateConnection(
     spec: ConnectionSpec,
     update: boolean = false,
+    dryRun: boolean = false,
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
     try {
-      connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
+      connection = update
+        ? await tryToUpdateConnection(spec)
+        : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
-      await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          title: `Waiting for "${connection.spec.name}" to be usable...`,
-        },
-        async () => {
-          await waitForConnectionToBeUsable(connectionId);
-        },
-      );
+      if (!dryRun) {
+        await window.withProgress(
+          {
+            location: ProgressLocation.Notification,
+            title: `Waiting for "${connection.spec.name}" to be usable...`,
+          },
+          async () => {
+            await waitForConnectionToBeUsable(connectionId);
+          },
+        );
+      }
     } catch (error) {
       // logging happens in the above call
       if (error instanceof ResponseError) {
@@ -236,9 +221,10 @@ export class DirectConnectionManager {
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      const msg = `Failed to ${update ? "update" : "create"} connection: ${errorMessage}`;
+      const msg = `Failed to ${update ? "update" : dryRun ? "test" : "create"} connection. ${errorMessage}`;
       logger.error(msg);
-      window.showErrorMessage(msg);
+      if (!dryRun) window.showErrorMessage(msg);
+      errorMessage = msg;
     }
     return { connection, errorMessage };
   }
