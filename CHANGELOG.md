@@ -7,6 +7,8 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - Produce message button and commmand enabling schemaless production of JSON messages
+- "Direct" connections in the Resources view will provide more information when unable to connect to
+  Kafka and/or Schema Registry
 
 ### Changed
 
@@ -15,6 +17,9 @@ All notable changes to this extension will be documented in this file.
   a file first.
 - Clicking a schema item in the Topics/Schemas view will now open the schema definition in a
   read-only document without needing to click on the "View Schema" action.
+- Connecting directly to Kafka and/or Schema Registry is now available from the navigation area of
+  the Resources view, and the connections will now appear at the top level of the Resources view,
+  with icons to indicate the type of connection chosen in the form.
 
 ## 0.22.1
 
