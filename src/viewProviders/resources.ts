@@ -54,8 +54,7 @@ import { getResourceManager } from "../storage/resourceManager";
 const logger = new Logger("viewProviders.resources");
 
 type CCloudResources = CCloudEnvironment | CCloudKafkaCluster | CCloudSchemaRegistry;
-// TODO: add LocalEnvironment here?
-type LocalResources = LocalKafkaCluster | LocalSchemaRegistry;
+type LocalResources = LocalEnvironment | LocalKafkaCluster | LocalSchemaRegistry;
 type DirectResources = DirectEnvironment | DirectKafkaCluster | DirectSchemaRegistry;
 
 /**
@@ -84,6 +83,14 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   private forceDeepRefresh: boolean = false;
   /** Have we informed the sidecar of any direct connections saved in secret storage? */
   private rehydratedDirectConnections: boolean = false;
+
+  /**
+   * {@link Environment}s managed by this provider, stored by their environment IDs.
+   *
+   * (For local/direct connection resources, these keys are the same values as their `connectionId`s.)
+   */
+  environmentsMap: Map<string, CCloudEnvironment | LocalEnvironment | DirectEnvironment> =
+    new Map();
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -116,6 +123,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
+    logger.debug("getTreeItem called", { element });
     if (element instanceof Environment) {
       const envItem = new EnvironmentTreeItem(element);
       envItem.iconPath = new vscode.ThemeIcon(
@@ -133,7 +141,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
     logger.debug("getChildren called", { element });
-    const resourceItems: ResourceViewProviderData[] = [];
 
     // if this is the first time we're loading the Resources view items, ensure we've told the sidecar
     // about any direct connections before the GraphQL queries kick off
@@ -174,17 +181,31 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         resourcePromises.push(loadDirectConnectResources());
       }
 
-      const resources: ResourceViewProviderData[] = await Promise.all(resourcePromises);
+      const [ccloudContainer, localContainer, directContainer]: ResourceViewProviderData[] =
+        await Promise.all(resourcePromises);
 
       if (this.forceDeepRefresh) {
         // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
       }
 
-      return resources;
+      if (ccloudContainer) {
+        const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).children;
+        ccloudEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
+      }
+      // TODO: we aren't tracking LocalEnvironments yet, so skip that here
+      if (directContainer) {
+        const directEnvs = (directContainer as ContainerTreeItem<DirectEnvironment>).children;
+        directEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
+      }
+      logger.debug("returning root-level container items", {
+        envMap: Array.from(this.environmentsMap.keys()),
+      });
+
+      return [ccloudContainer, localContainer, directContainer];
     }
 
-    return resourceItems;
+    return [];
   }
 
   /** Set up event listeners for this view provider. */
@@ -248,18 +269,20 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       case LOCAL_CONNECTION_ID:
         throw new Error("Not implemented");
       default: {
-        // direct connection ID
-        const connection = await getResourceManager().getDirectConnection(id);
-        if (connection) {
-          const directEnv = DirectEnvironment.create({
-            id: connection.id,
-            name: connection.name!,
-            connectionId: connection.id,
-            connectionType: connection.type,
-            isLoading: loading,
+        // direct connections are treated as environments, so we can look up the direct "environment"
+        // by its connection ID
+        const environment = this.environmentsMap.get(id);
+        if (environment) {
+          environment.isLoading = loading;
+          // only update this environment in the tree view, not the entire view
+          this._onDidChangeTreeData.fire(environment);
+          logger.debug("updated direct environment", {
+            id,
+            environment: environment?.name,
+            loading,
           });
-          // update only the direct connection that changed
-          this._onDidChangeTreeData.fire(directEnv);
+        } else {
+          logger.debug("could not find direct environment in map to update", { id });
         }
       }
     }
