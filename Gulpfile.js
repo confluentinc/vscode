@@ -758,7 +758,7 @@ async function prettier() {
 icongen.description = "Generate font files from SVG icons, and update package.json accordingly.";
 export async function icongen() {
   const result = await generateFonts({
-    name: "confluenticons",
+    name: "icons",
     prefix: "confluenticon",
     inputDir: "./resources/icons",
     outputDir: "./resources/dist",
