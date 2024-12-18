@@ -87,7 +87,7 @@ export class DirectEnvironment extends Environment {
   get iconName(): IconNames {
     switch (this.formConnectionType) {
       case "Apache Kafka": {
-        return IconNames.APACHE_LOGO;
+        return IconNames.APACHE_KAFKA_LOGO;
       }
       case "Confluent Cloud":
       case "Confluent Platform": {
