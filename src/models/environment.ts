@@ -160,7 +160,7 @@ export class EnvironmentTreeItem extends TreeItem {
     super(resource.name, collapseState);
 
     // internal properties
-    this.id = resource.id;
+    this.id = `${resource.connectionId}-${resource.id}${resource.isLoading ? "-loading" : ""}`;
     this.resource = resource;
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
