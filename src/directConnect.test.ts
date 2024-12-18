@@ -133,7 +133,7 @@ describe("directConnect.ts", () => {
     });
   });
 
-  describe.only("parseTestResult", () => {
+  describe("parseTestResult", () => {
     it("should return success: false if either connection is FAILED", () => {
       const result = parseTestResult({
         ...TEST_DIRECT_CONNECTION,
@@ -265,7 +265,7 @@ describe("directConnect.ts", () => {
       );
     });
 
-    it("should return messages from both kafka and schema registry connection errors", () => {
+    it("should return messages for both kafka and schema registry connection errors", () => {
       const connection = {
         ...TEST_DIRECT_CONNECTION,
         status: {
@@ -291,9 +291,14 @@ describe("directConnect.ts", () => {
 
       const result = parseTestResult(connection);
       assert.strictEqual(result.success, false);
+      assert.strictEqual(result.message, "One or more connections failed.");
       assert.strictEqual(
-        result.message,
-        "\nKafka State: FAILED\nInvalid username\nSchema Registry State: FAILED\nUnable to reach server",
+        result.testResults.schemaErrorMessage,
+        "Schema Registry failed to connect.\nUnable to reach server",
+      );
+      assert.strictEqual(
+        result.testResults.kafkaErrorMessage,
+        "Kafka failed to connect.\nInvalid username",
       );
     });
   });
