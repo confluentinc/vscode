@@ -28,7 +28,7 @@ export enum IconNames {
   TOPIC = "confluent-topic",
   TOPIC_WITHOUT_SCHEMA = "confluent-topic-without-schema",
   EXPERIMENTAL = "beaker",
-  LOADING = "sync~spin",
+  LOADING = "loading~spin",
 }
 
 export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
