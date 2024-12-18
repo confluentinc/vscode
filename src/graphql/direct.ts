@@ -71,7 +71,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         });
       }
 
-      const directEnv = DirectEnvironment.create({
+      const directEnv = new DirectEnvironment({
         id: connection.id,
         name: connection.name,
         kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
