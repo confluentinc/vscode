@@ -220,7 +220,7 @@ export class DirectConnectionManager {
     try {
       connection = update ? await tryToUpdateConnection(spec) : await tryToCreateConnection(spec);
       const connectionId = connection.spec.id as ConnectionId;
-      await window.withProgress(
+      window.withProgress(
         {
           location: ProgressLocation.Notification,
           title: `Waiting for "${connection.spec.name}" to be usable...`,
@@ -291,12 +291,11 @@ export class DirectConnectionManager {
     if (newConnectionPromises.length > 0) {
       // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
-      // ensure the new connections are usable before refreshing the Resources view
-      await Promise.all(connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)));
+      // kick off background checks to ensure the new connections are usable
+      Promise.all(connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)));
       logger.debug(
         `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );
-      directConnectionsChanged.fire();
     }
   }
 }
