@@ -25,6 +25,7 @@
               id="apache-kafka"
               name="platform"
               value="Apache Kafka"
+              data-attr-checked="this.platformType() === 'Apache Kafka' ? true : false"
               data-on-change="this.updateValue(event)"
             />
             <label for="apache-kafka">Apache Kafka®</label>
@@ -35,6 +36,7 @@
               id="confluent-cloud"
               name="platform"
               value="Confluent Cloud"
+              data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               data-on-change="this.updateValue(event)"
             />
             <label for="confluent-cloud">Confluent Cloud</label>
@@ -45,6 +47,7 @@
               id="confluent-platform"
               name="platform"
               value="Confluent Platform"
+              data-attr-checked="this.platformType() === 'Confluent Platform' ? true : false"
               data-on-change="this.updateValue(event)"
             />
             <label for="confluent-platform">Confluent Platform</label>
@@ -57,6 +60,7 @@
               value="Other"
               required
               data-on-change="this.updateValue(event)"
+              data-attr-checked="this.platformType() === 'Other' ? true : false"
             />
             <label for="other">Other</label>
             <template data-if="this.platformType() === 'Other'"
@@ -66,7 +70,9 @@
                 id="other"
                 name="other-platform"
                 type="text"
+                data-attr-value="this.otherPlatformType()"
                 data-attr-required="this.platformType() === 'Other' ? true : false"
+                data-on-change="this.updateValue(event)"
               />
             </template>
           </div>
@@ -106,7 +112,7 @@
                 type="text"
                 placeholder="host:port, host2:port2"
                 data-attr-value="this.kafkaBootstrapServers()"
-                data-on-change="this.updateValue(event)"
+                data-on-change="(event) => this.kafkaBootstrapServers(event.target.value)"
               />
             </div>
             <span class="description"
@@ -150,7 +156,7 @@
                 data-on-change="this.updateValue(event)"
                 data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
-              <label for="kafka-auth-api">API Credentials</label>
+              <label for="kafka-auth-api">FIXME API Credentials</label>
             </div>
           </div>
           <template data-if="this.kafkaAuthType() === 'Basic'">
