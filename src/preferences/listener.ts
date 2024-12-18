@@ -1,8 +1,8 @@
-import { ConfigurationChangeEvent, Disposable, WorkspaceConfiguration, workspace } from "vscode";
+import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
 import { isDirect } from "../models/resource";
-import { getResourceViewProvider } from "../viewProviders/resources";
+import { ResourceViewProvider } from "../viewProviders/resources";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import {
@@ -52,7 +52,7 @@ export function createConfigChangeListener(): Disposable {
         logger.debug(`"${ENABLE_DIRECT_CONNECTIONS}" config changed`, { enabled });
         setContextValue(ContextValues.directConnectionsEnabled, enabled);
         // "Other" container item will be toggled
-        getResourceViewProvider().refresh();
+        ResourceViewProvider.getInstance().refresh();
         // if the Topics/Schemas views are focused on a direct connection based resource, wipe them
         if (!enabled) {
           const topicsView = getTopicViewProvider();
