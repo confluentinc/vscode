@@ -82,6 +82,19 @@ export function openDirectConnectionForm(connection: ConnectionSpec | null): voi
     return parseTestResult(connection);
   }
 
+  async function updateConnection(body: any): Promise<PostResponse> {
+    const connectionId = connection?.id as ConnectionId;
+    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
+    const manager = DirectConnectionManager.getInstance();
+    try {
+      console.log("spec before send to update: ", spec);
+      await manager.updateConnection(spec);
+    } catch (error) {
+      return { success: false, message: JSON.stringify(error) };
+    }
+    return { success: true, message: "Connection updated successfully." };
+  }
+
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "Test":
@@ -100,14 +113,17 @@ export function openDirectConnectionForm(connection: ConnectionSpec | null): voi
   directConnectForm.onDidDispose(() => disposable.dispose());
 }
 
-export function getConnectionSpecFromFormData(formData: any): CustomConnectionSpec {
-  const connectionId = randomUUID() as ConnectionId;
+export function getConnectionSpecFromFormData(
+  formData: any,
+  connectionId?: ConnectionId,
+): CustomConnectionSpec {
   const spec: CustomConnectionSpec = {
-    id: connectionId,
+    id: connectionId ?? (randomUUID() as ConnectionId),
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
     formConnectionType: formData["platform"],
   };
+  console.log("before adding creds: ", spec);
 
   if (formData["bootstrap_servers"]) {
     spec.kafka_cluster = {

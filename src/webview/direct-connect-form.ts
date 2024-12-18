@@ -162,6 +162,8 @@ class DirectConnectFormViewModel extends ViewModel {
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test Connection") {
       result = await post("Test", data);
+    } else if (submitter.value === "Update Connection") {
+      result = await post("Update", data);
     } else result = await post("Submit", data);
     this.success(result.success);
     this.message(result.message ? result.message : "");
@@ -172,30 +174,6 @@ class DirectConnectFormViewModel extends ViewModel {
       this.schemaErrorMessage(result.testResults.schemaErrorMessage || "");
     }
     this.loading(false);
-  }
-
-  async handleUpdate(event: Event) {
-    event.preventDefault();
-    this.success(false);
-    this.errorMessage("");
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    if (!data["bootstrap_servers"] && !data["uri"]) {
-      this.errorMessage("Please provide either Kafka cluster or Schema Registry details");
-      return;
-    }
-    const [clusterConfig, schemaConfig] = processFormData(data);
-    const result = await post("Update", {
-      name: data.name,
-      platform: data.platform,
-      clusterConfig,
-      schemaConfig,
-    });
-    this.success(result.success);
-    if (!result.success) {
-      this.errorMessage(result.message ?? "Unknown error occurred");
-    }
   }
 }
 
