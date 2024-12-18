@@ -93,7 +93,6 @@ class DirectConnectFormViewModel extends ViewModel {
     const form = event.target as HTMLFormElement;
     const submitter = event.submitter as HTMLInputElement;
     const formData = new FormData(form);
-
     const data = Object.fromEntries(formData.entries());
 
     if (!data["bootstrap_servers"] && !data["uri"]) {
