@@ -659,6 +659,11 @@
       ],
       "view/title": [
         {
+          "command": "confluent.connections.direct",
+          "when": "view == confluent-resources && confluent.directConnectionsEnabled",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation@2"
@@ -763,11 +768,6 @@
         {
           "command": "confluent.connections.ccloud.logIn",
           "when": "viewItem == resources-ccloud-container",
-          "group": "inline@1"
-        },
-        {
-          "command": "confluent.connections.direct",
-          "when": "viewItem == resources-direct-container && confluent.directConnectionsEnabled",
           "group": "inline@1"
         },
         {
