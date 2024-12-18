@@ -144,7 +144,7 @@ describe("directConnect.ts", () => {
         },
       });
       assert.strictEqual(result.success, false);
-      assert.strictEqual(result.message, "\nKafka State: FAILED");
+      assert.strictEqual(result.message, "One or more connections failed.");
     });
 
     it("should return success: true if connection states are not FAILED", () => {
@@ -160,7 +160,7 @@ describe("directConnect.ts", () => {
       const result = parseTestResult(connection);
       assert.strictEqual(result.success, true);
     });
-    it("should return a combined message from the connection errors", () => {
+    it("should return a combined message from all kafka connection errors", () => {
       const connection = {
         ...TEST_DIRECT_CONNECTION,
         status: {
@@ -180,12 +180,36 @@ describe("directConnect.ts", () => {
       const result = parseTestResult(connection);
       assert.strictEqual(result.success, false);
       assert.strictEqual(
-        result.message,
-        "\nKafka State: FAILED\nInvalid username Invalid password Token refresh failed",
+        result.testResults.kafkaErrorMessage,
+        "Kafka failed to connect.\nInvalid username Invalid password Token refresh failed",
+      );
+    });
+    it("should return a combined message from all schema registry connection errors", () => {
+      const connection = {
+        ...TEST_DIRECT_CONNECTION,
+        status: {
+          kafka_cluster: { state: "CONNECTED" as ConnectedState },
+          schema_registry: {
+            state: "FAILED" as ConnectedState,
+            errors: {
+              auth_status_check: { message: "Invalid username" },
+              sign_in: { message: "Invalid password" },
+              token_refresh: { message: "Token refresh failed" },
+            },
+          },
+          authentication: { status: "NO_TOKEN" as Status },
+        },
+      };
+
+      const result = parseTestResult(connection);
+      assert.strictEqual(result.success, false);
+      assert.strictEqual(
+        result.testResults.schemaErrorMessage,
+        "Schema Registry failed to connect.\nInvalid username Invalid password Token refresh failed",
       );
     });
 
-    it("should return messages from both kafka and schema registry connection errors", () => {
+    it("should return messages for both kafka and schema registry connection errors", () => {
       const connection = {
         ...TEST_DIRECT_CONNECTION,
         status: {
@@ -211,9 +235,14 @@ describe("directConnect.ts", () => {
 
       const result = parseTestResult(connection);
       assert.strictEqual(result.success, false);
+      assert.strictEqual(result.message, "One or more connections failed.");
       assert.strictEqual(
-        result.message,
-        "\nKafka State: FAILED\nInvalid username\nSchema Registry State: FAILED\nUnable to reach server",
+        result.testResults.schemaErrorMessage,
+        "Schema Registry failed to connect.\nUnable to reach server",
+      );
+      assert.strictEqual(
+        result.testResults.kafkaErrorMessage,
+        "Kafka failed to connect.\nInvalid username",
       );
     });
   });

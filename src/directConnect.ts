@@ -139,7 +139,7 @@ export function parseTestResult(connection: Connection): TestResponse {
   const schemaState: ConnectedState | undefined = connection.status.schema_registry?.state;
   const schemaErrors: AuthErrors | undefined = connection.status.schema_registry?.errors;
   let result: TestResponse = {
-    success: false,
+    success: true,
     message: null,
     testResults: { kafkaState, schemaState },
   };
@@ -150,7 +150,7 @@ export function parseTestResult(connection: Connection): TestResponse {
   }
 
   if (kafkaState === "FAILED") {
-    result.testResults.kafkaErrorMessage = `Kafka failed to connect`;
+    result.testResults.kafkaErrorMessage = `Kafka failed to connect.`;
   }
   if (kafkaErrors) {
     const errorMessages = [
@@ -162,7 +162,7 @@ export function parseTestResult(connection: Connection): TestResponse {
   }
 
   if (schemaState === "FAILED") {
-    result.testResults.schemaErrorMessage = `Schema Registry failed to connect`;
+    result.testResults.schemaErrorMessage = `Schema Registry failed to connect.`;
   }
   if (schemaErrors) {
     const errorMessages = [
