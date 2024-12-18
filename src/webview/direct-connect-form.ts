@@ -17,14 +17,22 @@ addEventListener("DOMContentLoaded", () => {
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
-    return await post("GetConnectionSpec", {});
+    const fromHost = await post("GetConnectionSpec", {});
+    console.log("GetConnectionSpec", fromHost);
+    return fromHost;
   }, null);
 
   /** Form Input Values */
-  platformType = this.signal<FormConnectionType>("Apache Kafka");
+  platformType = this.derive<FormConnectionType>(() => {
+    return this.spec()?.formConnectionType || "Apache Kafka";
+  });
+  // TODO this is not used anywhere but could be extra metadata for telemetry
+  otherPlatformType = this.signal<string | undefined>(undefined);
   name = this.derive(() => {
     return this.spec()?.name || "";
   });
+
+  /** Kafka */
   kafkaBootstrapServers = this.derive(() => {
     return this.spec()?.kafka_cluster?.bootstrap_servers || "";
   });
@@ -32,7 +40,7 @@ class DirectConnectFormViewModel extends ViewModel {
     let authType = "None";
     // @ts-expect-error the types don't specify credentials beyond Object
     if (this.spec()?.kafka_cluster?.credentials?.api_key) {
-      console.log("credentials", this.spec()?.kafka_cluster?.credentials);
+      console.log("kafka credentials", this.spec()?.kafka_cluster?.credentials);
       // FIXME this is kinda dumb
       authType = "API";
       // @ts-expect-error the types don't specify credentials beyond Object
@@ -52,20 +60,17 @@ class DirectConnectFormViewModel extends ViewModel {
   kafkaSecret = this.derive(() => {
     return this.spec()?.kafka_cluster?.credentials ? "fakeplaceholdersecrethere" : "";
   });
+
+  /** Schema Registry */
   schemaUri = this.derive(() => {
     return this.spec()?.schema_registry?.uri || "";
   });
   schemaAuthType = this.derive(() => {
     let authType = "None";
     // @ts-expect-error the types don't specify credentials beyond Object
-    if (this.spec()?.schema_registry?.credentials?.api_key) {
-      console.log("credentials", this.spec()?.schema_registry?.credentials);
-      // FIXME this is kinda dumb
-      authType = "API";
-      // @ts-expect-error the types don't specify credentials beyond Object
-    } else if (this.spec()?.schema_registry?.credentials?.username) {
-      authType = "Basic";
-    }
+    if (this.spec()?.schema_registry?.credentials?.api_key) authType = "API";
+    // @ts-expect-error the types don't specify credentials beyond Object
+    else if (this.spec()?.schema_registry?.credentials?.username) authType = "Basic";
     return authType;
   });
   schemaUsername = this.derive(() => {
@@ -117,10 +122,16 @@ class DirectConnectFormViewModel extends ViewModel {
         if (input.value === "Confluent Cloud") {
           this.kafkaAuthType("API");
           this.schemaAuthType("API");
-        } else {
-          this.kafkaAuthType("None");
-          this.schemaAuthType("None");
         }
+        break;
+      case "other-platform":
+        this.otherPlatformType(input.value);
+        break;
+      case "name":
+        this.name(input.value);
+        break;
+      case "bootstrap_servers":
+        this.kafkaBootstrapServers(input.value);
         break;
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
@@ -131,12 +142,7 @@ class DirectConnectFormViewModel extends ViewModel {
       case "uri":
         this.schemaUri(input.value);
         break;
-      case "bootstrap_servers":
-        this.kafkaBootstrapServers(input.value);
-        break;
-      case "name":
-        this.name(input.value);
-        break;
+
       default:
         console.warn(`Unhandled input update: ${input.name}`);
     }
