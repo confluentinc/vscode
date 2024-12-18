@@ -34,7 +34,7 @@ import * as auth from "../sidecar/connections";
 import * as resourceManager from "../storage/resourceManager";
 import {
   loadCCloudResources,
-  loadDirectConnectResources,
+  loadDirectResources,
   loadLocalResources,
   ResourceViewProvider,
 } from "./resources";
@@ -171,7 +171,7 @@ describe("ResourceViewProvider loading functions", () => {
   it("loadDirectConnectResources() should return a direct connection placeholder item when no direct connections exist", async () => {
     sandbox.stub(direct, "getDirectResources").resolves([]);
 
-    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectConnectResources();
+    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectResources();
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.DIRECT);
@@ -189,7 +189,7 @@ describe("ResourceViewProvider loading functions", () => {
     });
     sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
 
-    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectConnectResources();
+    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectResources();
 
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.DIRECT);
