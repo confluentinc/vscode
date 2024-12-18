@@ -124,11 +124,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
     logger.debug("getTreeItem called", { element });
     if (element instanceof Environment) {
-      const envItem = new EnvironmentTreeItem(element);
-      envItem.iconPath = new vscode.ThemeIcon(
-        element.isLoading ? IconNames.LOADING : element.iconName,
-      );
-      return envItem;
+      return new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
       return new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
@@ -147,6 +143,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (element) {
+      logger.debug("getChildren called with element", { element });
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
