@@ -1,9 +1,0 @@
-{
-    "environment": 61697,
-    "flink-compute-pool": 61698,
-    "kafka-cluster": 61699,
-    "logo": 61700,
-    "schema-registry": 61701,
-    "topic-without-schema": 61702,
-    "topic": 61703
-}
