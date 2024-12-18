@@ -50,10 +50,9 @@ export function openDirectConnectionForm(): void {
     } else {
       result.success = true;
       // save and close the form
-      let name = body.data["name"] || "the connection";
       await window.showInformationMessage("New Connection Created", {
         modal: true,
-        detail: `View and interact with ${name} in the Resources sidebar`,
+        detail: `View and interact with it in the Resources sidebar`,
       });
       directConnectForm.dispose();
     }
@@ -147,6 +146,8 @@ export function parseTestResult(connection: Connection): TestResponse {
   if (kafkaState === "FAILED" || schemaState === "FAILED") {
     result.success = false;
     result.message = "One or more connections failed.";
+  } else {
+    result.message = "All connection tests successful.";
   }
 
   if (kafkaState === "FAILED") {

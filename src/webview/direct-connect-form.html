@@ -82,8 +82,11 @@
         </div>
         <fieldset>
           <legend>Kafka</legend>
-          <template data-if="this.kafkaErrorMessage()"
-            ><p class="info error" data-text="this.kafkaErrorMessage()"></p
+          <template data-if="this.kafkaStatusMessage()"
+            ><p
+              data-attr-class="this.kafkaErrorMessage() ? 'info error' : 'info'"
+              data-text="this.kafkaStatusMessage()"
+            ></p
           ></template>
           <div class="input-container">
             <div>
@@ -193,8 +196,11 @@
         </fieldset>
         <fieldset>
           <legend>Schema Registry</legend>
-          <template data-if="this.schemaErrorMessage()"
-            ><p class="info error" data-text="this.schemaErrorMessage()"></p
+          <template data-if="this.schemaStatusMessage()"
+            ><p
+              data-attr-class="this.schemaErrorMessage() ? 'info error' : 'info'"
+              data-text="this.schemaStatusMessage()"
+            ></p
           ></template>
           <div class="input-container">
             <div>
@@ -260,7 +266,7 @@
                     id="schema_username"
                     name="schema_username"
                     type="text"
-                    required
+                    data-attr-required="this.schemaUri() !== ''"
                   />
                 </div>
               </div>
@@ -272,7 +278,7 @@
                     id="schema_password"
                     name="schema_password"
                     type="password"
-                    required
+                    data-attr-required="this.schemaUri() !== ''"
                   />
                 </div>
               </div>
@@ -288,7 +294,7 @@
                     id="schema_api_key"
                     name="schema_api_key"
                     type="text"
-                    required
+                    data-attr-required="this.schemaUri() !== ''"
                   />
                 </div>
               </div>
@@ -300,7 +306,7 @@
                     id="schema_api_secret"
                     name="schema_api_secret"
                     type="password"
-                    required
+                    data-attr-required="this.schemaUri() !== ''"
                   />
                 </div>
               </div>
@@ -322,7 +328,7 @@
             class="button"
             type="submit"
             value="Save Connection"
-            data-attr-disabled="this.success() || this.loading()"
+            data-attr-disabled="this.loading()"
           />
         </div>
       </form>
@@ -435,12 +441,9 @@
       }
 
       .info {
-        color: var(--vscode-descriptionForeground);
+        color: var(--vscode-editorInfo-foreground);
         font-weight: 500;
         white-space: break-spaces;
-      }
-      .success {
-        color: var(--vscode-statusBar-foreground);
       }
       .error {
         color: var(--vscode-errorForeground);

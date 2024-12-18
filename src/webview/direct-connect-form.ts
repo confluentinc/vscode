@@ -28,9 +28,30 @@ class DirectConnectFormViewModel extends ViewModel {
 
   /** Connection state & errors (seen after testing) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
-  schemaState = this.signal<ConnectedState | undefined>(undefined);
   kafkaErrorMessage = this.signal<string | undefined>(undefined);
+  kafkaStatusMessage = this.derive(() => {
+    if (this.kafkaState() === "FAILED") {
+      return this.kafkaErrorMessage();
+    } else if (this.kafkaState()) return "Connection test succeeded";
+    else return undefined;
+  });
+  schemaState = this.signal<ConnectedState | undefined>(undefined);
   schemaErrorMessage = this.signal<string | undefined>(undefined);
+  schemaStatusMessage = this.derive(() => {
+    if (this.schemaState() === "FAILED") {
+      return this.schemaErrorMessage();
+    } else if (this.schemaState()) return "Connection test succeeded";
+    else return undefined;
+  });
+
+  resetTestResults() {
+    this.kafkaState(undefined);
+    this.kafkaErrorMessage(undefined);
+    this.kafkaStatusMessage(undefined);
+    this.schemaState(undefined);
+    this.schemaErrorMessage(undefined);
+    this.schemaStatusMessage(undefined);
+  }
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -65,14 +86,15 @@ class DirectConnectFormViewModel extends ViewModel {
   /** Submit all form data to the extension host */
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
+    this.resetTestResults();
     this.success(false);
     this.message("");
     this.loading(true);
     const form = event.target as HTMLFormElement;
     const submitter = event.submitter as HTMLInputElement;
     const formData = new FormData(form);
-
     const data = Object.fromEntries(formData.entries());
+
     if (!data["bootstrap_servers"] && !data["uri"]) {
       this.message("Please provide either Kafka cluster or Schema Registry details");
       this.loading(false);
@@ -88,8 +110,8 @@ class DirectConnectFormViewModel extends ViewModel {
     if ("testResults" in result) {
       this.kafkaState(result.testResults.kafkaState);
       this.schemaState(result.testResults.schemaState);
-      this.kafkaErrorMessage(result.testResults.kafkaErrorMessage);
-      this.schemaErrorMessage(result.testResults.schemaErrorMessage);
+      this.kafkaErrorMessage(result.testResults.kafkaErrorMessage || "");
+      this.schemaErrorMessage(result.testResults.schemaErrorMessage || "");
     }
     this.loading(false);
   }
