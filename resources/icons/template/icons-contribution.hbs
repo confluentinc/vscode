@@ -1,10 +1,10 @@
 {
 	"icons": {
 		{{#each codepoints}}
-		"confluent-{{@key}}": {
+		"{{@key}}": {
 			"description": "{{@key}} icon",
 			"default": {
-				"fontPath": "./resources/dist/confluenticons.woff2",
+				"fontPath": "./resources/dist/icons.woff2",
 				"fontCharacter": "\\\{{codepoint this}}"
 			}
 		{{#if @last}}
