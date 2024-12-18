@@ -4,7 +4,7 @@ import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./client
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import { post, PostResponse } from "./webview/direct-connect-form";
+import { post, PostResponse, TestResponse } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
 import { CustomConnectionSpec } from "./storage/resourceManager";
 import { ConnectionId } from "./models/resource";
@@ -36,43 +36,51 @@ export function openDirectConnectionForm(): void {
   /** Communicates with the webview Form & connection manager
    * Takes form data and processes it to send along to the directConnectManager.ts
    * Gets response from manager and passes back to Form in the PostResponse format */
-  async function testOrSaveConnection(body: {
-    data: any;
-    dryRun: boolean;
-  }): Promise<{ success: boolean; message: string | null }> {
-    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body.data);
+  async function saveConnection(body: any): Promise<PostResponse> {
+    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body);
 
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
-    const { connection, errorMessage } = await manager.createConnection(spec, body.dryRun);
+    const { connection, errorMessage } = await manager.createConnection(spec, false);
     if (errorMessage || !connection) {
       return {
         success: false,
-        message:
-          errorMessage ??
-          "Unknown error occurred. Please check the connection details and try again.",
+        message: errorMessage ?? "Unknown error while creating connection",
       };
-    }
-
-    if (body.dryRun) result = parseTestResult(connection);
-    else {
+    } else {
+      result.success = true;
       // save and close the form
       let name = body.data["name"] || "the connection";
-      if (result.success) {
-        await window.showInformationMessage(`🎉 New Connection Created`, {
-          modal: true,
-          detail: `View and interact with ${name} in the Resources sidebar`,
-        });
-        directConnectForm.dispose();
-      }
+      await window.showInformationMessage("New Connection Created", {
+        modal: true,
+        detail: `View and interact with ${name} in the Resources sidebar`,
+      });
+      directConnectForm.dispose();
     }
     return result;
   }
 
+  async function testConnection(body: any): Promise<TestResponse> {
+    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body);
+    const manager = DirectConnectionManager.getInstance();
+    const { connection, errorMessage } = await manager.createConnection(spec, true);
+    if (errorMessage || !connection) {
+      return {
+        success: false,
+        message: errorMessage ?? "Unknown error while testing connection.",
+        testResults: {},
+      };
+    }
+
+    return parseTestResult(connection);
+  }
+
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
+      case "Test":
+        return (await testConnection(body)) satisfies MessageResponse<"Test">;
       case "Submit":
-        return (await testOrSaveConnection(body)) satisfies MessageResponse<"Submit">;
+        return (await saveConnection(body)) satisfies MessageResponse<"Submit">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
@@ -125,45 +133,44 @@ export function getConnectionSpecFromFormData(formData: any): CustomConnectionSp
   return spec;
 }
 
-export function parseTestResult(connection: Connection): PostResponse {
-  let result: { success: boolean; message: string } = { success: false, message: "" };
-
+export function parseTestResult(connection: Connection): TestResponse {
   const kafkaState: ConnectedState | undefined = connection.status.kafka_cluster?.state;
   const kafkaErrors: AuthErrors | undefined = connection.status.kafka_cluster?.errors;
-  const schemaRegistryState: ConnectedState | undefined = connection.status.schema_registry?.state;
-  if (kafkaState === "FAILED" || schemaRegistryState === "FAILED") {
+  const schemaState: ConnectedState | undefined = connection.status.schema_registry?.state;
+  const schemaErrors: AuthErrors | undefined = connection.status.schema_registry?.errors;
+  let result: TestResponse = {
+    success: false,
+    message: null,
+    testResults: { kafkaState, schemaState },
+  };
+
+  if (kafkaState === "FAILED" || schemaState === "FAILED") {
     result.success = false;
-    if (kafkaState === "FAILED") {
-      result.message += `\nKafka State: ${kafkaState}`;
-      if (kafkaErrors) {
-        const errorMessages = [
-          kafkaErrors.auth_status_check?.message,
-          kafkaErrors.sign_in?.message,
-          kafkaErrors.token_refresh?.message,
-        ].filter((message) => message !== undefined);
-        result.message += `\n${errorMessages.join(" ")}`;
-      }
-    }
-    if (schemaRegistryState === "FAILED") {
-      result.message += `\nSchema Registry State: ${schemaRegistryState}`;
-      const schemaErrors = connection.status.schema_registry?.errors;
-      if (schemaErrors) {
-        const errorMessages = [
-          schemaErrors.auth_status_check?.message,
-          schemaErrors.sign_in?.message,
-          schemaErrors.token_refresh?.message,
-        ].filter((message) => message !== undefined);
-        result.message += `\n${errorMessages.join(" ")}`;
-      }
-    }
-  } else {
-    result.success = true;
-    if (kafkaState) {
-      result.message += `\nKafka State: ${JSON.stringify(connection.status.kafka_cluster?.state)}`;
-    }
-    if (schemaRegistryState) {
-      result.message += `\nSchema Registry State: ${JSON.stringify(connection.status.schema_registry?.state)}`;
-    }
+    result.message = "One or more connections failed.";
+  }
+
+  if (kafkaState === "FAILED") {
+    result.testResults.kafkaErrorMessage = `Kafka failed to connect`;
+  }
+  if (kafkaErrors) {
+    const errorMessages = [
+      kafkaErrors.auth_status_check?.message,
+      kafkaErrors.sign_in?.message,
+      kafkaErrors.token_refresh?.message,
+    ].filter((message) => message !== undefined);
+    result.testResults.kafkaErrorMessage += `\n${errorMessages.join(" ")}`;
+  }
+
+  if (schemaState === "FAILED") {
+    result.testResults.schemaErrorMessage = `Schema Registry failed to connect`;
+  }
+  if (schemaErrors) {
+    const errorMessages = [
+      schemaErrors.auth_status_check?.message,
+      schemaErrors.sign_in?.message,
+      schemaErrors.token_refresh?.message,
+    ].filter((message) => message !== undefined);
+    result.testResults.schemaErrorMessage += `\n${errorMessages.join(" ")}`;
   }
 
   return result;

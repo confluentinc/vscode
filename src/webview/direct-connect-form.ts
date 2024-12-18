@@ -2,6 +2,7 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
+import { ConnectedState } from "../clients/sidecar";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
@@ -24,6 +25,11 @@ class DirectConnectFormViewModel extends ViewModel {
   message = this.signal("");
   success = this.signal(false);
   loading = this.signal(false);
+
+  kafkaState = this.signal<ConnectedState | undefined>(undefined);
+  schemaState = this.signal<ConnectedState | undefined>(undefined);
+  kafkaErrorMessage = this.signal<string | undefined>(undefined);
+  schemaErrorMessage = this.signal<string | undefined>(undefined);
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -72,20 +78,36 @@ class DirectConnectFormViewModel extends ViewModel {
       return;
     }
 
-    let dryRun = submitter.value === "Test Connection";
-    const result = await post("Submit", {
-      data,
-      dryRun,
-    });
+    let result: PostResponse | TestResponse;
+    if (submitter.value === "Test Connection") {
+      result = await post("Test", data);
+    } else result = await post("Submit", data);
     this.success(result.success);
-    this.message(result.message ? result.message : result.success ? "Success!" : "Failed");
+    this.message(result.message ? result.message : "");
+    if ("testResults" in result) {
+      this.kafkaState(result.testResults.kafkaState);
+      this.schemaState(result.testResults.schemaState);
+      this.kafkaErrorMessage(result.testResults.kafkaErrorMessage);
+      this.schemaErrorMessage(result.testResults.schemaErrorMessage);
+    }
     this.loading(false);
   }
 }
 
 export type PostResponse = { success: boolean; message: string | null };
+export type TestResponse = {
+  success: boolean;
+  message: string | null;
+  testResults: {
+    kafkaState?: ConnectedState;
+    kafkaErrorMessage?: string;
+    schemaState?: ConnectedState;
+    schemaErrorMessage?: string;
+  };
+};
 
-export function post(type: "Submit", body: { data: any; dryRun: boolean }): Promise<PostResponse>;
+export function post(type: "Test", body: any): Promise<TestResponse>;
+export function post(type: "Submit", body: any): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
