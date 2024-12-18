@@ -52,14 +52,6 @@ export abstract class Environment implements IResourceBase {
   }
 }
 
-export interface CCloudEnvironmentProps {
-  id: string;
-  name: string;
-  streamGovernancePackage: string;
-  kafkaClusters: CCloudKafkaCluster[];
-  schemaRegistry?: CCloudSchemaRegistry | undefined;
-}
-
 /** A Confluent Cloud {@link Environment} with additional properties. */
 export class CCloudEnvironment extends Environment {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
@@ -67,11 +59,17 @@ export class CCloudEnvironment extends Environment {
 
   readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
-  kafkaClusters: CCloudKafkaCluster[]; // explicitly typed
-  schemaRegistry?: CCloudSchemaRegistry | undefined; // explicitly typed
   streamGovernancePackage: string;
+  // set explicit CCloud* typing
+  kafkaClusters: CCloudKafkaCluster[];
+  schemaRegistry?: CCloudSchemaRegistry | undefined;
 
-  constructor(props: CCloudEnvironmentProps) {
+  constructor(
+    props: Pick<
+      CCloudEnvironment,
+      "id" | "name" | "streamGovernancePackage" | "kafkaClusters" | "schemaRegistry"
+    >,
+  ) {
     super();
     this.id = props.id;
     this.name = props.name;
@@ -83,14 +81,6 @@ export class CCloudEnvironment extends Environment {
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
   }
-}
-
-export interface DirectEnvironmentProps {
-  connectionId: ConnectionId;
-  id: string;
-  name: string;
-  kafkaClusters: DirectKafkaCluster[];
-  schemaRegistry: DirectSchemaRegistry | undefined;
 }
 
 /**
@@ -109,20 +99,18 @@ export class DirectEnvironment extends Environment {
   kafkaClusters: DirectKafkaCluster[] = [];
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
 
-  constructor(props: DirectEnvironmentProps) {
+  constructor(
+    props: Pick<
+      DirectEnvironment,
+      "connectionId" | "id" | "name" | "kafkaClusters" | "schemaRegistry"
+    >,
+  ) {
     super();
     this.id = props.id;
     this.name = props.name;
     this.kafkaClusters = props.kafkaClusters;
     this.schemaRegistry = props.schemaRegistry;
   }
-}
-
-export interface LocalEnvironmentProps {
-  id: string;
-  name: string;
-  kafkaClusters: LocalKafkaCluster[];
-  schemaRegistry?: LocalSchemaRegistry | undefined;
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -132,13 +120,13 @@ export class LocalEnvironment extends Environment {
 
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 
-  name: string = LOCAL_ENVIRONMENT_NAME as string;
+  name: string = LOCAL_ENVIRONMENT_NAME;
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
   schemaRegistry?: LocalSchemaRegistry | undefined = undefined;
 
-  constructor(props: LocalEnvironmentProps) {
+  constructor(props: Pick<LocalEnvironment, "id" | "name" | "kafkaClusters" | "schemaRegistry">) {
     super();
     this.id = props.id;
     this.name = props.name;
