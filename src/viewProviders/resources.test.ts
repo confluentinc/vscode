@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import * as vscode from "vscode";
+import { TreeItemCollapsibleState, workspace } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -30,6 +30,7 @@ import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster"
 import { ContainerTreeItem } from "../models/main";
 import { ConnectionLabel } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
+import { ENABLE_DIRECT_CONNECTIONS } from "../preferences/constants";
 import * as auth from "../sidecar/connections";
 import * as resourceManager from "../storage/resourceManager";
 import {
@@ -81,7 +82,7 @@ describe("ResourceViewProvider methods", () => {
   it("getTreeItem() should pass ContainerTreeItems through directly", () => {
     const container = new ContainerTreeItem<CCloudEnvironment>(
       "test",
-      vscode.TreeItemCollapsibleState.Collapsed,
+      TreeItemCollapsibleState.Collapsed,
       [TEST_CCLOUD_ENVIRONMENT],
     );
     const treeItem = provider.getTreeItem(container);
@@ -117,7 +118,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.CCLOUD);
     assert.equal(result.id, `ccloud-connected-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
+    assert.equal(result.collapsibleState, TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_CCLOUD_ORGANIZATION.name);
     assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
   });
@@ -130,7 +131,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.CCLOUD);
     assert.equal(result.id, `ccloud-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
+    assert.equal(result.collapsibleState, TreeItemCollapsibleState.None);
     assert.equal(result.description, "(No connection)");
     assert.deepStrictEqual(result.children, []);
   });
@@ -149,7 +150,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.LOCAL);
     assert.equal(result.id, `local-connected-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
+    assert.equal(result.collapsibleState, TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
     assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY]);
   });
@@ -163,25 +164,34 @@ describe("ResourceViewProvider loading functions", () => {
     assert.ok(result instanceof ContainerTreeItem);
     assert.equal(result.label, ConnectionLabel.LOCAL);
     assert.equal(result.id, `local-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
+    assert.equal(result.collapsibleState, TreeItemCollapsibleState.None);
     assert.equal(result.description, "(Not running)");
     assert.deepStrictEqual(result.children, []);
   });
 
-  it("loadDirectConnectResources() should return a direct connection placeholder item when no direct connections exist", async () => {
+  it("loadDirectResources() should return an empty array when no direct connections exist", async () => {
+    // TODO(shoup): remove this once direct connections are enabled by default
+    // simulate the preview setting being enabled
+    const getConfigurationStub: sinon.SinonStub = sandbox.stub(workspace, "getConfiguration");
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(true),
+    });
+    // but no direct connections exist
     sandbox.stub(direct, "getDirectResources").resolves([]);
 
-    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectResources();
+    const result: DirectEnvironment[] = await loadDirectResources();
 
-    assert.ok(result instanceof ContainerTreeItem);
-    assert.equal(result.label, ConnectionLabel.DIRECT);
-    assert.equal(result.id, `direct-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.None);
-    assert.equal(result.description, "(No connections)");
-    assert.deepStrictEqual(result.children, []);
+    assert.deepStrictEqual(result, []);
   });
 
-  it("loadDirectConnectResources() should load direct connection resources under the Direct container tree item", async () => {
+  it("loadDirectResources() should return an empty array if the preview setting is disabled, even when direct connections exist", async () => {
+    // TODO(shoup): remove this once direct connections are enabled by default
+    // simulate the preview setting being disabled
+    const getConfigurationStub: sinon.SinonStub = sandbox.stub(workspace, "getConfiguration");
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(false),
+    });
+    // and direct connections exist
     const testDirectEnv: DirectEnvironment = DirectEnvironment.create({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
@@ -189,13 +199,28 @@ describe("ResourceViewProvider loading functions", () => {
     });
     sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
 
-    const result: ContainerTreeItem<DirectEnvironment> = await loadDirectResources();
+    const result: DirectEnvironment[] = await loadDirectResources();
 
-    assert.ok(result instanceof ContainerTreeItem);
-    assert.equal(result.label, ConnectionLabel.DIRECT);
-    assert.equal(result.id, `direct-connected-${EXTENSION_VERSION}`);
-    assert.equal(result.collapsibleState, vscode.TreeItemCollapsibleState.Expanded);
-    assert.equal(result.description, "(1)");
-    assert.deepStrictEqual(result.children, [testDirectEnv]);
+    assert.deepStrictEqual(result, []);
+  });
+
+  it("loadDirectResources() should return an array of direct 'environments' if direct connections exist and the preview setting is enabled", async () => {
+    // TODO(shoup): remove this once direct connections are enabled by default
+    // simulate the preview setting being disabled
+    const getConfigurationStub: sinon.SinonStub = sandbox.stub(workspace, "getConfiguration");
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(true),
+    });
+    // and direct connections exist
+    const testDirectEnv: DirectEnvironment = DirectEnvironment.create({
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
+    });
+    sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
+
+    const result: DirectEnvironment[] = await loadDirectResources();
+
+    assert.deepStrictEqual(result, [testDirectEnv]);
   });
 });
