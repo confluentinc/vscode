@@ -1,5 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
-import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { MarkdownString, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
@@ -7,6 +7,7 @@ import {
   LOCAL_CONNECTION_ID,
   LOCAL_ENVIRONMENT_NAME,
 } from "../constants";
+import { FormConnectionType } from "../webview/direct-connect-form";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -14,7 +15,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, IResourceBase, isCCloud, isDirect } from "./resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -76,12 +77,28 @@ export class DirectEnvironment extends Environment {
   readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
-  // TODO: update this based on feedback from product+design
-  readonly iconName = IconNames.EXPERIMENTAL;
-
   // set explicit Direct* typing
   kafkaClusters: DirectKafkaCluster[] = [];
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
+
+  /** What did the user choose as the source of this connection/environment? */
+  formConnectionType?: FormConnectionType | undefined;
+
+  get iconName(): IconNames {
+    switch (this.formConnectionType) {
+      case "Apache Kafka": {
+        return IconNames.APACHE_KAFKA_LOGO;
+      }
+      case "Confluent Cloud":
+      case "Confluent Platform": {
+        return IconNames.CONFLUENT_LOGO;
+      }
+      default: {
+        // "Other" or unknown
+        return IconNames.CONNECTION;
+      }
+    }
+  }
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -115,16 +132,24 @@ export class EnvironmentTreeItem extends TreeItem {
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
     // user-facing properties
-    this.description = this.resource.id;
+    this.description = isDirect(this.resource) ? "" : this.resource.id;
     this.iconPath = new ThemeIcon(this.resource.iconName);
+    if (isDirect(resource) && !resource.hasClusters) {
+      this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsWarningIcon.foreground"));
+    }
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
 }
 
 function createEnvironmentTooltip(resource: Environment): MarkdownString {
-  // Direct connections are treated like environments, but calling it an environment will feel weird
-  const resourceLabel =
-    resource.connectionType === ConnectionType.Direct ? "Connection" : "Environment";
+  let resourceLabel = "Environment";
+  const isDirectResource = isDirect(resource);
+  if (isDirectResource) {
+    // Direct connections are treated like environments, but calling it an environment will feel weird
+    const directEnv = resource as DirectEnvironment;
+    resourceLabel = `${directEnv.formConnectionType} Connection`;
+  }
+
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${resource.iconName}) ${resourceLabel}`)
     .appendMarkdown("\n\n---")
@@ -138,6 +163,12 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
       .appendMarkdown(
         `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
       );
+  } else if (isDirectResource && !resource.hasClusters) {
+    tooltip
+      .appendMarkdown("\n\n---")
+      .appendMarkdown(`\n\n⚠️ Unable to connect to Kafka and/or Schema Registry.`);
+    // TODO(shoup): add link to edit connection here
   }
+
   return tooltip;
 }
