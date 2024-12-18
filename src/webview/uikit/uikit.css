@@ -114,7 +114,7 @@
 
 .label {
   display: block;
-  color: var(--vscode-textPreformat-foreground);
+  color: var(--vscode-sideBarSectionHeader-foreground);
   cursor: pointer;
   font-size: var(--cflt-base-font-size);
   line-height: normal;
@@ -170,8 +170,8 @@
   text-decoration: none;
   border: 1px solid var(--vscode-input-border);
 }
-.input[type="submit"]:hover,
-.button:hover {
+.input[type="submit"]:hover:not(:disabled),
+.button:hover:not(:disabled) {
   background-color: var(--vscode-button-hoverBackground);
 }
 .button.secondary {
