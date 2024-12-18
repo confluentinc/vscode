@@ -62,7 +62,7 @@ export interface CCloudEnvironmentProps {
 }
 
 /** A Confluent Cloud {@link Environment} with additional properties. */
-export class CCloudEnvironment extends Environment implements CCloudEnvironmentProps {
+export class CCloudEnvironment extends Environment {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
@@ -99,7 +99,7 @@ export interface DirectEnvironmentProps {
  * - one {@link KafkaCluster}
  * - one {@link SchemaRegistry}
  */
-export class DirectEnvironment extends Environment implements DirectEnvironmentProps {
+export class DirectEnvironment extends Environment {
   readonly connectionId!: ConnectionId; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
@@ -143,7 +143,7 @@ export interface LocalEnvironmentProps {
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
-export class LocalEnvironment extends Environment implements LocalEnvironmentProps {
+export class LocalEnvironment extends Environment {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Local;
 
