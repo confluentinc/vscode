@@ -59,10 +59,18 @@ export function BasicCredentialsFromJSONTyped(
   };
 }
 
-export function BasicCredentialsToJSON(value?: BasicCredentials | null): any {
+export function BasicCredentialsToJSON(json: any): BasicCredentials {
+  return BasicCredentialsToJSONTyped(json, false);
+}
+
+export function BasicCredentialsToJSONTyped(
+  value?: BasicCredentials | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     username: value["username"],
     password: value["password"],

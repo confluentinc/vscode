@@ -50,10 +50,18 @@ export function ConfigOverrideRuleSetFromJSONTyped(
   };
 }
 
-export function ConfigOverrideRuleSetToJSON(value?: ConfigOverrideRuleSet | null): any {
+export function ConfigOverrideRuleSetToJSON(json: any): ConfigOverrideRuleSet {
+  return ConfigOverrideRuleSetToJSONTyped(json, false);
+}
+
+export function ConfigOverrideRuleSetToJSONTyped(
+  value?: ConfigOverrideRuleSet | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     properties: value["properties"],
   };

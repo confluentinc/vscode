@@ -18,38 +18,44 @@ import {
   ResourcesUlimitsInnerFromJSON,
   ResourcesUlimitsInnerFromJSONTyped,
   ResourcesUlimitsInnerToJSON,
+  ResourcesUlimitsInnerToJSONTyped,
 } from "./ResourcesUlimitsInner";
 import type { HealthConfig } from "./HealthConfig";
 import {
   HealthConfigFromJSON,
   HealthConfigFromJSONTyped,
   HealthConfigToJSON,
+  HealthConfigToJSONTyped,
 } from "./HealthConfig";
 import type { Mount } from "./Mount";
-import { MountFromJSON, MountFromJSONTyped, MountToJSON } from "./Mount";
+import { MountFromJSON, MountFromJSONTyped, MountToJSON, MountToJSONTyped } from "./Mount";
 import type { TaskSpecContainerSpecDNSConfig } from "./TaskSpecContainerSpecDNSConfig";
 import {
   TaskSpecContainerSpecDNSConfigFromJSON,
   TaskSpecContainerSpecDNSConfigFromJSONTyped,
   TaskSpecContainerSpecDNSConfigToJSON,
+  TaskSpecContainerSpecDNSConfigToJSONTyped,
 } from "./TaskSpecContainerSpecDNSConfig";
 import type { TaskSpecContainerSpecPrivileges } from "./TaskSpecContainerSpecPrivileges";
 import {
   TaskSpecContainerSpecPrivilegesFromJSON,
   TaskSpecContainerSpecPrivilegesFromJSONTyped,
   TaskSpecContainerSpecPrivilegesToJSON,
+  TaskSpecContainerSpecPrivilegesToJSONTyped,
 } from "./TaskSpecContainerSpecPrivileges";
 import type { TaskSpecContainerSpecConfigsInner } from "./TaskSpecContainerSpecConfigsInner";
 import {
   TaskSpecContainerSpecConfigsInnerFromJSON,
   TaskSpecContainerSpecConfigsInnerFromJSONTyped,
   TaskSpecContainerSpecConfigsInnerToJSON,
+  TaskSpecContainerSpecConfigsInnerToJSONTyped,
 } from "./TaskSpecContainerSpecConfigsInner";
 import type { TaskSpecContainerSpecSecretsInner } from "./TaskSpecContainerSpecSecretsInner";
 import {
   TaskSpecContainerSpecSecretsInnerFromJSON,
   TaskSpecContainerSpecSecretsInnerFromJSONTyped,
   TaskSpecContainerSpecSecretsInnerToJSON,
+  TaskSpecContainerSpecSecretsInnerToJSONTyped,
 } from "./TaskSpecContainerSpecSecretsInner";
 
 /**
@@ -341,10 +347,18 @@ export function TaskSpecContainerSpecFromJSONTyped(
   };
 }
 
-export function TaskSpecContainerSpecToJSON(value?: TaskSpecContainerSpec | null): any {
+export function TaskSpecContainerSpecToJSON(json: any): TaskSpecContainerSpec {
+  return TaskSpecContainerSpecToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecToJSONTyped(
+  value?: TaskSpecContainerSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Image: value["Image"],
     Labels: value["Labels"],

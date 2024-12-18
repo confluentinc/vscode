@@ -53,10 +53,18 @@ export function SwarmSpecOrchestrationFromJSONTyped(
   };
 }
 
-export function SwarmSpecOrchestrationToJSON(value?: SwarmSpecOrchestration | null): any {
+export function SwarmSpecOrchestrationToJSON(json: any): SwarmSpecOrchestration {
+  return SwarmSpecOrchestrationToJSONTyped(json, false);
+}
+
+export function SwarmSpecOrchestrationToJSONTyped(
+  value?: SwarmSpecOrchestration | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     TaskHistoryRetentionLimit: value["TaskHistoryRetentionLimit"],
   };

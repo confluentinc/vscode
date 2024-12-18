@@ -67,10 +67,18 @@ export function PluginInterfaceTypeFromJSONTyped(
   };
 }
 
-export function PluginInterfaceTypeToJSON(value?: PluginInterfaceType | null): any {
+export function PluginInterfaceTypeToJSON(json: any): PluginInterfaceType {
+  return PluginInterfaceTypeToJSONTyped(json, false);
+}
+
+export function PluginInterfaceTypeToJSONTyped(
+  value?: PluginInterfaceType | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Prefix: value["Prefix"],
     Capability: value["Capability"],

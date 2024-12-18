@@ -14,24 +14,32 @@
 
 import { mapValues } from "../runtime";
 import type { MirrorLag } from "./MirrorLag";
-import { MirrorLagFromJSON, MirrorLagFromJSONTyped, MirrorLagToJSON } from "./MirrorLag";
+import {
+  MirrorLagFromJSON,
+  MirrorLagFromJSONTyped,
+  MirrorLagToJSON,
+  MirrorLagToJSONTyped,
+} from "./MirrorLag";
 import type { MirrorTopicStatus } from "./MirrorTopicStatus";
 import {
   MirrorTopicStatusFromJSON,
   MirrorTopicStatusFromJSONTyped,
   MirrorTopicStatusToJSON,
+  MirrorTopicStatusToJSONTyped,
 } from "./MirrorTopicStatus";
 import type { LinkTaskError } from "./LinkTaskError";
 import {
   LinkTaskErrorFromJSON,
   LinkTaskErrorFromJSONTyped,
   LinkTaskErrorToJSON,
+  LinkTaskErrorToJSONTyped,
 } from "./LinkTaskError";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -148,12 +156,18 @@ export function ListMirrorTopicsResponseDataFromJSONTyped(
   };
 }
 
-export function ListMirrorTopicsResponseDataToJSON(
+export function ListMirrorTopicsResponseDataToJSON(json: any): ListMirrorTopicsResponseData {
+  return ListMirrorTopicsResponseDataToJSONTyped(json, false);
+}
+
+export function ListMirrorTopicsResponseDataToJSONTyped(
   value?: ListMirrorTopicsResponseData | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

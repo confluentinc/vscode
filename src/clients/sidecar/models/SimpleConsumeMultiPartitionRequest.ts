@@ -18,6 +18,7 @@ import {
   PartitionOffsetFromJSON,
   PartitionOffsetFromJSONTyped,
   PartitionOffsetToJSON,
+  PartitionOffsetToJSONTyped,
 } from "./PartitionOffset";
 
 /**
@@ -100,11 +101,19 @@ export function SimpleConsumeMultiPartitionRequestFromJSONTyped(
 }
 
 export function SimpleConsumeMultiPartitionRequestToJSON(
+  json: any,
+): SimpleConsumeMultiPartitionRequest {
+  return SimpleConsumeMultiPartitionRequestToJSONTyped(json, false);
+}
+
+export function SimpleConsumeMultiPartitionRequestToJSONTyped(
   value?: SimpleConsumeMultiPartitionRequest | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     offsets:
       value["offsets"] == null

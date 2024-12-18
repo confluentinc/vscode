@@ -130,7 +130,7 @@ export function RuleFromJSONTyped(json: any, ignoreDiscriminator: boolean): Rule
     kind: json["kind"] == null ? undefined : json["kind"],
     mode: json["mode"] == null ? undefined : json["mode"],
     type: json["type"] == null ? undefined : json["type"],
-    tags: json["tags"] == null ? undefined : json["tags"],
+    tags: json["tags"] == null ? undefined : new Set(json["tags"]),
     params: json["params"] == null ? undefined : json["params"],
     expr: json["expr"] == null ? undefined : json["expr"],
     onSuccess: json["onSuccess"] == null ? undefined : json["onSuccess"],
@@ -139,10 +139,15 @@ export function RuleFromJSONTyped(json: any, ignoreDiscriminator: boolean): Rule
   };
 }
 
-export function RuleToJSON(value?: Rule | null): any {
+export function RuleToJSON(json: any): Rule {
+  return RuleToJSONTyped(json, false);
+}
+
+export function RuleToJSONTyped(value?: Rule | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     doc: value["doc"],

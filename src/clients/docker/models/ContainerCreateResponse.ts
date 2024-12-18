@@ -59,10 +59,18 @@ export function ContainerCreateResponseFromJSONTyped(
   };
 }
 
-export function ContainerCreateResponseToJSON(value?: ContainerCreateResponse | null): any {
+export function ContainerCreateResponseToJSON(json: any): ContainerCreateResponse {
+  return ContainerCreateResponseToJSONTyped(json, false);
+}
+
+export function ContainerCreateResponseToJSONTyped(
+  value?: ContainerCreateResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     Warnings: value["Warnings"],

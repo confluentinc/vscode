@@ -90,10 +90,18 @@ export function CreateDekRequestFromJSONTyped(
   };
 }
 
-export function CreateDekRequestToJSON(value?: CreateDekRequest | null): any {
+export function CreateDekRequestToJSON(json: any): CreateDekRequest {
+  return CreateDekRequestToJSONTyped(json, false);
+}
+
+export function CreateDekRequestToJSONTyped(
+  value?: CreateDekRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     subject: value["subject"],
     version: value["version"],

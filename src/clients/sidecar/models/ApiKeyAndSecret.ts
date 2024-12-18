@@ -59,10 +59,18 @@ export function ApiKeyAndSecretFromJSONTyped(
   };
 }
 
-export function ApiKeyAndSecretToJSON(value?: ApiKeyAndSecret | null): any {
+export function ApiKeyAndSecretToJSON(json: any): ApiKeyAndSecret {
+  return ApiKeyAndSecretToJSONTyped(json, false);
+}
+
+export function ApiKeyAndSecretToJSONTyped(
+  value?: ApiKeyAndSecret | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     api_key: value["api_key"],
     api_secret: value["api_secret"],

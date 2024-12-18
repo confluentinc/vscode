@@ -18,6 +18,7 @@ import {
   ProcessConfigFromJSON,
   ProcessConfigFromJSONTyped,
   ProcessConfigToJSON,
+  ProcessConfigToJSONTyped,
 } from "./ProcessConfig";
 
 /**
@@ -128,10 +129,18 @@ export function ExecInspectResponseFromJSONTyped(
   };
 }
 
-export function ExecInspectResponseToJSON(value?: ExecInspectResponse | null): any {
+export function ExecInspectResponseToJSON(json: any): ExecInspectResponse {
+  return ExecInspectResponseToJSONTyped(json, false);
+}
+
+export function ExecInspectResponseToJSONTyped(
+  value?: ExecInspectResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     CanRemove: value["CanRemove"],
     DetachKeys: value["DetachKeys"],

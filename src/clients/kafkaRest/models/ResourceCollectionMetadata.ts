@@ -60,10 +60,18 @@ export function ResourceCollectionMetadataFromJSONTyped(
   };
 }
 
-export function ResourceCollectionMetadataToJSON(value?: ResourceCollectionMetadata | null): any {
+export function ResourceCollectionMetadataToJSON(json: any): ResourceCollectionMetadata {
+  return ResourceCollectionMetadataToJSONTyped(json, false);
+}
+
+export function ResourceCollectionMetadataToJSONTyped(
+  value?: ResourceCollectionMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     self: value["self"],
     next: value["next"],

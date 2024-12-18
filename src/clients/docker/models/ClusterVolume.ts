@@ -18,24 +18,28 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { ClusterVolumeSpec } from "./ClusterVolumeSpec";
 import {
   ClusterVolumeSpecFromJSON,
   ClusterVolumeSpecFromJSONTyped,
   ClusterVolumeSpecToJSON,
+  ClusterVolumeSpecToJSONTyped,
 } from "./ClusterVolumeSpec";
 import type { ClusterVolumeInfo } from "./ClusterVolumeInfo";
 import {
   ClusterVolumeInfoFromJSON,
   ClusterVolumeInfoFromJSONTyped,
   ClusterVolumeInfoToJSON,
+  ClusterVolumeInfoToJSONTyped,
 } from "./ClusterVolumeInfo";
 import type { ClusterVolumePublishStatusInner } from "./ClusterVolumePublishStatusInner";
 import {
   ClusterVolumePublishStatusInnerFromJSON,
   ClusterVolumePublishStatusInnerFromJSONTyped,
   ClusterVolumePublishStatusInnerToJSON,
+  ClusterVolumePublishStatusInnerToJSONTyped,
 } from "./ClusterVolumePublishStatusInner";
 
 /**
@@ -124,10 +128,18 @@ export function ClusterVolumeFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function ClusterVolumeToJSON(value?: ClusterVolume | null): any {
+export function ClusterVolumeToJSON(json: any): ClusterVolume {
+  return ClusterVolumeToJSONTyped(json, false);
+}
+
+export function ClusterVolumeToJSONTyped(
+  value?: ClusterVolume | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

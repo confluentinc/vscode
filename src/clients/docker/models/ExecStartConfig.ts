@@ -64,10 +64,18 @@ export function ExecStartConfigFromJSONTyped(
   };
 }
 
-export function ExecStartConfigToJSON(value?: ExecStartConfig | null): any {
+export function ExecStartConfigToJSON(json: any): ExecStartConfig {
+  return ExecStartConfigToJSONTyped(json, false);
+}
+
+export function ExecStartConfigToJSONTyped(
+  value?: ExecStartConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Detach: value["Detach"],
     Tty: value["Tty"],

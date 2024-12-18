@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { AuthError } from "./AuthError";
-import { AuthErrorFromJSON, AuthErrorFromJSONTyped, AuthErrorToJSON } from "./AuthError";
+import {
+  AuthErrorFromJSON,
+  AuthErrorFromJSONTyped,
+  AuthErrorToJSON,
+  AuthErrorToJSONTyped,
+} from "./AuthError";
 
 /**
  *
@@ -66,10 +71,18 @@ export function AuthErrorsFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function AuthErrorsToJSON(value?: AuthErrors | null): any {
+export function AuthErrorsToJSON(json: any): AuthErrors {
+  return AuthErrorsToJSONTyped(json, false);
+}
+
+export function AuthErrorsToJSONTyped(
+  value?: AuthErrors | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     auth_status_check: AuthErrorToJSON(value["auth_status_check"]),
     sign_in: AuthErrorToJSON(value["sign_in"]),

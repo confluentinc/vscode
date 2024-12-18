@@ -59,10 +59,18 @@ export function CompatibilityCheckResponseFromJSONTyped(
   };
 }
 
-export function CompatibilityCheckResponseToJSON(value?: CompatibilityCheckResponse | null): any {
+export function CompatibilityCheckResponseToJSON(json: any): CompatibilityCheckResponse {
+  return CompatibilityCheckResponseToJSONTyped(json, false);
+}
+
+export function CompatibilityCheckResponseToJSONTyped(
+  value?: CompatibilityCheckResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     is_compatible: value["is_compatible"],
     messages: value["messages"],

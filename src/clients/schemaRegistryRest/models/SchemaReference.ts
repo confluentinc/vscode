@@ -64,10 +64,18 @@ export function SchemaReferenceFromJSONTyped(
   };
 }
 
-export function SchemaReferenceToJSON(value?: SchemaReference | null): any {
+export function SchemaReferenceToJSON(json: any): SchemaReference {
+  return SchemaReferenceToJSONTyped(json, false);
+}
+
+export function SchemaReferenceToJSONTyped(
+  value?: SchemaReference | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     subject: value["subject"],

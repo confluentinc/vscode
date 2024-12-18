@@ -18,6 +18,7 @@ import {
   AclResourceTypeFromJSON,
   AclResourceTypeFromJSONTyped,
   AclResourceTypeToJSON,
+  AclResourceTypeToJSONTyped,
 } from "./AclResourceType";
 
 /**
@@ -106,10 +107,18 @@ export function CreateAclRequestDataFromJSONTyped(
   };
 }
 
-export function CreateAclRequestDataToJSON(value?: CreateAclRequestData | null): any {
+export function CreateAclRequestDataToJSON(json: any): CreateAclRequestData {
+  return CreateAclRequestDataToJSONTyped(json, false);
+}
+
+export function CreateAclRequestDataToJSONTyped(
+  value?: CreateAclRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     resource_type: AclResourceTypeToJSON(value["resource_type"]),
     resource_name: value["resource_name"],

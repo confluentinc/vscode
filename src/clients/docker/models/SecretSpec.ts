@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 import type { Driver } from "./Driver";
-import { DriverFromJSON, DriverFromJSONTyped, DriverToJSON } from "./Driver";
+import { DriverFromJSON, DriverFromJSONTyped, DriverToJSON, DriverToJSONTyped } from "./Driver";
 
 /**
  *
@@ -83,10 +83,18 @@ export function SecretSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function SecretSpecToJSON(value?: SecretSpec | null): any {
+export function SecretSpecToJSON(json: any): SecretSpec {
+  return SecretSpecToJSONTyped(json, false);
+}
+
+export function SecretSpecToJSONTyped(
+  value?: SecretSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

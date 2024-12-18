@@ -66,10 +66,18 @@ export function PluginPrivilegeFromJSONTyped(
   };
 }
 
-export function PluginPrivilegeToJSON(value?: PluginPrivilege | null): any {
+export function PluginPrivilegeToJSON(json: any): PluginPrivilege {
+  return PluginPrivilegeToJSONTyped(json, false);
+}
+
+export function PluginPrivilegeToJSONTyped(
+  value?: PluginPrivilege | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Description: value["Description"],

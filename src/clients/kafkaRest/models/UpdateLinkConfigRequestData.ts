@@ -53,10 +53,18 @@ export function UpdateLinkConfigRequestDataFromJSONTyped(
   };
 }
 
-export function UpdateLinkConfigRequestDataToJSON(value?: UpdateLinkConfigRequestData | null): any {
+export function UpdateLinkConfigRequestDataToJSON(json: any): UpdateLinkConfigRequestData {
+  return UpdateLinkConfigRequestDataToJSONTyped(json, false);
+}
+
+export function UpdateLinkConfigRequestDataToJSONTyped(
+  value?: UpdateLinkConfigRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     value: value["value"],
   };

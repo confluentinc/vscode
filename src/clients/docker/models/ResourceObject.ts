@@ -18,6 +18,7 @@ import {
   GenericResourcesInnerFromJSON,
   GenericResourcesInnerFromJSONTyped,
   GenericResourcesInnerToJSON,
+  GenericResourcesInnerToJSONTyped,
 } from "./GenericResourcesInner";
 
 /**
@@ -78,10 +79,18 @@ export function ResourceObjectFromJSONTyped(
   };
 }
 
-export function ResourceObjectToJSON(value?: ResourceObject | null): any {
+export function ResourceObjectToJSON(json: any): ResourceObject {
+  return ResourceObjectToJSONTyped(json, false);
+}
+
+export function ResourceObjectToJSONTyped(
+  value?: ResourceObject | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NanoCPUs: value["NanoCPUs"],
     MemoryBytes: value["MemoryBytes"],

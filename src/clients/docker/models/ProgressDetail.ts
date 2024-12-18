@@ -57,10 +57,18 @@ export function ProgressDetailFromJSONTyped(
   };
 }
 
-export function ProgressDetailToJSON(value?: ProgressDetail | null): any {
+export function ProgressDetailToJSON(json: any): ProgressDetail {
+  return ProgressDetailToJSONTyped(json, false);
+}
+
+export function ProgressDetailToJSONTyped(
+  value?: ProgressDetail | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     current: value["current"],
     total: value["total"],

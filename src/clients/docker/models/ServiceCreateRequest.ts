@@ -18,32 +18,42 @@ import {
   NetworkAttachmentConfigFromJSON,
   NetworkAttachmentConfigFromJSONTyped,
   NetworkAttachmentConfigToJSON,
+  NetworkAttachmentConfigToJSONTyped,
 } from "./NetworkAttachmentConfig";
 import type { ServiceSpecRollbackConfig } from "./ServiceSpecRollbackConfig";
 import {
   ServiceSpecRollbackConfigFromJSON,
   ServiceSpecRollbackConfigFromJSONTyped,
   ServiceSpecRollbackConfigToJSON,
+  ServiceSpecRollbackConfigToJSONTyped,
 } from "./ServiceSpecRollbackConfig";
 import type { ServiceSpecUpdateConfig } from "./ServiceSpecUpdateConfig";
 import {
   ServiceSpecUpdateConfigFromJSON,
   ServiceSpecUpdateConfigFromJSONTyped,
   ServiceSpecUpdateConfigToJSON,
+  ServiceSpecUpdateConfigToJSONTyped,
 } from "./ServiceSpecUpdateConfig";
 import type { EndpointSpec } from "./EndpointSpec";
 import {
   EndpointSpecFromJSON,
   EndpointSpecFromJSONTyped,
   EndpointSpecToJSON,
+  EndpointSpecToJSONTyped,
 } from "./EndpointSpec";
 import type { TaskSpec } from "./TaskSpec";
-import { TaskSpecFromJSON, TaskSpecFromJSONTyped, TaskSpecToJSON } from "./TaskSpec";
+import {
+  TaskSpecFromJSON,
+  TaskSpecFromJSONTyped,
+  TaskSpecToJSON,
+  TaskSpecToJSONTyped,
+} from "./TaskSpec";
 import type { ServiceSpecMode } from "./ServiceSpecMode";
 import {
   ServiceSpecModeFromJSON,
   ServiceSpecModeFromJSONTyped,
   ServiceSpecModeToJSON,
+  ServiceSpecModeToJSONTyped,
 } from "./ServiceSpecMode";
 
 /**
@@ -142,10 +152,18 @@ export function ServiceCreateRequestFromJSONTyped(
   };
 }
 
-export function ServiceCreateRequestToJSON(value?: ServiceCreateRequest | null): any {
+export function ServiceCreateRequestToJSON(json: any): ServiceCreateRequest {
+  return ServiceCreateRequestToJSONTyped(json, false);
+}
+
+export function ServiceCreateRequestToJSONTyped(
+  value?: ServiceCreateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

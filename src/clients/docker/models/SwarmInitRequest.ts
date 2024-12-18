@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { SwarmSpec } from "./SwarmSpec";
-import { SwarmSpecFromJSON, SwarmSpecFromJSONTyped, SwarmSpecToJSON } from "./SwarmSpec";
+import {
+  SwarmSpecFromJSON,
+  SwarmSpecFromJSONTyped,
+  SwarmSpecToJSON,
+  SwarmSpecToJSONTyped,
+} from "./SwarmSpec";
 
 /**
  *
@@ -131,10 +136,18 @@ export function SwarmInitRequestFromJSONTyped(
   };
 }
 
-export function SwarmInitRequestToJSON(value?: SwarmInitRequest | null): any {
+export function SwarmInitRequestToJSON(json: any): SwarmInitRequest {
+  return SwarmInitRequestToJSONTyped(json, false);
+}
+
+export function SwarmInitRequestToJSONTyped(
+  value?: SwarmInitRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ListenAddr: value["ListenAddr"],
     AdvertiseAddr: value["AdvertiseAddr"],

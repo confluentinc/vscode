@@ -68,10 +68,18 @@ export function NetworkAttachmentConfigFromJSONTyped(
   };
 }
 
-export function NetworkAttachmentConfigToJSON(value?: NetworkAttachmentConfig | null): any {
+export function NetworkAttachmentConfigToJSON(json: any): NetworkAttachmentConfig {
+  return NetworkAttachmentConfigToJSONTyped(json, false);
+}
+
+export function NetworkAttachmentConfigToJSONTyped(
+  value?: NetworkAttachmentConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Target: value["Target"],
     Aliases: value["Aliases"],

@@ -65,10 +65,18 @@ export function MirrorLagFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function MirrorLagToJSON(value?: MirrorLag | null): any {
+export function MirrorLagToJSON(json: any): MirrorLag {
+  return MirrorLagToJSONTyped(json, false);
+}
+
+export function MirrorLagToJSONTyped(
+  value?: MirrorLag | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     partition: value["partition"],
     lag: value["lag"],

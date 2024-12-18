@@ -18,18 +18,21 @@ import {
   ConnectionSpecFromJSON,
   ConnectionSpecFromJSONTyped,
   ConnectionSpecToJSON,
+  ConnectionSpecToJSONTyped,
 } from "./ConnectionSpec";
 import type { ConnectionMetadata } from "./ConnectionMetadata";
 import {
   ConnectionMetadataFromJSON,
   ConnectionMetadataFromJSONTyped,
   ConnectionMetadataToJSON,
+  ConnectionMetadataToJSONTyped,
 } from "./ConnectionMetadata";
 import type { ConnectionStatus } from "./ConnectionStatus";
 import {
   ConnectionStatusFromJSON,
   ConnectionStatusFromJSONTyped,
   ConnectionStatusToJSON,
+  ConnectionStatusToJSONTyped,
 } from "./ConnectionStatus";
 
 /**
@@ -107,10 +110,18 @@ export function ConnectionFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function ConnectionToJSON(value?: Connection | null): any {
+export function ConnectionToJSON(json: any): Connection {
+  return ConnectionToJSONTyped(json, false);
+}
+
+export function ConnectionToJSONTyped(
+  value?: Connection | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     api_version: value["api_version"],
     kind: value["kind"],

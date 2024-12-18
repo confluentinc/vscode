@@ -18,12 +18,14 @@ import {
   PreferencesMetadataFromJSON,
   PreferencesMetadataFromJSONTyped,
   PreferencesMetadataToJSON,
+  PreferencesMetadataToJSONTyped,
 } from "./PreferencesMetadata";
 import type { PreferencesSpec } from "./PreferencesSpec";
 import {
   PreferencesSpecFromJSON,
   PreferencesSpecFromJSONTyped,
   PreferencesSpecToJSON,
+  PreferencesSpecToJSONTyped,
 } from "./PreferencesSpec";
 
 /**
@@ -84,10 +86,18 @@ export function PreferencesFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function PreferencesToJSON(value?: Preferences | null): any {
+export function PreferencesToJSON(json: any): Preferences {
+  return PreferencesToJSONTyped(json, false);
+}
+
+export function PreferencesToJSONTyped(
+  value?: Preferences | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     api_version: value["api_version"],
     kind: value["kind"],

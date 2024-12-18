@@ -18,6 +18,7 @@ import {
   AlterConfigBatchRequestDataDataInnerFromJSON,
   AlterConfigBatchRequestDataDataInnerFromJSONTyped,
   AlterConfigBatchRequestDataDataInnerToJSON,
+  AlterConfigBatchRequestDataDataInnerToJSONTyped,
 } from "./AlterConfigBatchRequestDataDataInner";
 
 /**
@@ -67,10 +68,18 @@ export function AlterConfigBatchRequestDataFromJSONTyped(
   };
 }
 
-export function AlterConfigBatchRequestDataToJSON(value?: AlterConfigBatchRequestData | null): any {
+export function AlterConfigBatchRequestDataToJSON(json: any): AlterConfigBatchRequestData {
+  return AlterConfigBatchRequestDataToJSONTyped(json, false);
+}
+
+export function AlterConfigBatchRequestDataToJSONTyped(
+  value?: AlterConfigBatchRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     data: (value["data"] as Array<any>).map(AlterConfigBatchRequestDataDataInnerToJSON),
     validate_only: value["validate_only"],

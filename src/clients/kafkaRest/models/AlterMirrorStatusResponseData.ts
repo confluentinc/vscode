@@ -14,12 +14,18 @@
 
 import { mapValues } from "../runtime";
 import type { MirrorLag } from "./MirrorLag";
-import { MirrorLagFromJSON, MirrorLagFromJSONTyped, MirrorLagToJSON } from "./MirrorLag";
+import {
+  MirrorLagFromJSON,
+  MirrorLagFromJSONTyped,
+  MirrorLagToJSON,
+  MirrorLagToJSONTyped,
+} from "./MirrorLag";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -102,12 +108,18 @@ export function AlterMirrorStatusResponseDataFromJSONTyped(
   };
 }
 
-export function AlterMirrorStatusResponseDataToJSON(
+export function AlterMirrorStatusResponseDataToJSON(json: any): AlterMirrorStatusResponseData {
+  return AlterMirrorStatusResponseDataToJSONTyped(json, false);
+}
+
+export function AlterMirrorStatusResponseDataToJSONTyped(
   value?: AlterMirrorStatusResponseData | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

@@ -50,10 +50,18 @@ export function UnlockKeyResponseFromJSONTyped(
   };
 }
 
-export function UnlockKeyResponseToJSON(value?: UnlockKeyResponse | null): any {
+export function UnlockKeyResponseToJSON(json: any): UnlockKeyResponse {
+  return UnlockKeyResponseToJSONTyped(json, false);
+}
+
+export function UnlockKeyResponseToJSONTyped(
+  value?: UnlockKeyResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     UnlockKey: value["UnlockKey"],
   };

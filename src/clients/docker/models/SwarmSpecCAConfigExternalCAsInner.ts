@@ -93,11 +93,19 @@ export function SwarmSpecCAConfigExternalCAsInnerFromJSONTyped(
 }
 
 export function SwarmSpecCAConfigExternalCAsInnerToJSON(
+  json: any,
+): SwarmSpecCAConfigExternalCAsInner {
+  return SwarmSpecCAConfigExternalCAsInnerToJSONTyped(json, false);
+}
+
+export function SwarmSpecCAConfigExternalCAsInnerToJSONTyped(
   value?: SwarmSpecCAConfigExternalCAsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Protocol: value["Protocol"],
     URL: value["URL"],

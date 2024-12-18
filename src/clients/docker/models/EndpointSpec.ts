@@ -18,6 +18,7 @@ import {
   EndpointPortConfigFromJSON,
   EndpointPortConfigFromJSONTyped,
   EndpointPortConfigToJSON,
+  EndpointPortConfigToJSONTyped,
 } from "./EndpointPortConfig";
 
 /**
@@ -76,10 +77,18 @@ export function EndpointSpecFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function EndpointSpecToJSON(value?: EndpointSpec | null): any {
+export function EndpointSpecToJSON(json: any): EndpointSpec {
+  return EndpointSpecToJSONTyped(json, false);
+}
+
+export function EndpointSpecToJSONTyped(
+  value?: EndpointSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Mode: value["Mode"],
     Ports:

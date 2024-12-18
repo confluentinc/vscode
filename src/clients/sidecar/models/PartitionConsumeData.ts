@@ -18,6 +18,7 @@ import {
   PartitionConsumeRecordFromJSON,
   PartitionConsumeRecordFromJSONTyped,
   PartitionConsumeRecordToJSON,
+  PartitionConsumeRecordToJSONTyped,
 } from "./PartitionConsumeRecord";
 
 /**
@@ -74,10 +75,18 @@ export function PartitionConsumeDataFromJSONTyped(
   };
 }
 
-export function PartitionConsumeDataToJSON(value?: PartitionConsumeData | null): any {
+export function PartitionConsumeDataToJSON(json: any): PartitionConsumeData {
+  return PartitionConsumeDataToJSONTyped(json, false);
+}
+
+export function PartitionConsumeDataToJSONTyped(
+  value?: PartitionConsumeData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     partition_id: value["partition_id"],
     next_offset: value["next_offset"],

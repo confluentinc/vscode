@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 import type { Volume } from "./Volume";
-import { VolumeFromJSON, VolumeFromJSONTyped, VolumeToJSON } from "./Volume";
+import { VolumeFromJSON, VolumeFromJSONTyped, VolumeToJSON, VolumeToJSONTyped } from "./Volume";
 
 /**
  * Volume list response
@@ -62,10 +62,18 @@ export function VolumeListResponseFromJSONTyped(
   };
 }
 
-export function VolumeListResponseToJSON(value?: VolumeListResponse | null): any {
+export function VolumeListResponseToJSON(json: any): VolumeListResponse {
+  return VolumeListResponseToJSONTyped(json, false);
+}
+
+export function VolumeListResponseToJSONTyped(
+  value?: VolumeListResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Volumes:
       value["Volumes"] == null ? undefined : (value["Volumes"] as Array<any>).map(VolumeToJSON),

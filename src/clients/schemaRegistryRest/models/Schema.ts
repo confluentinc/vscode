@@ -18,11 +18,22 @@ import {
   SchemaReferenceFromJSON,
   SchemaReferenceFromJSONTyped,
   SchemaReferenceToJSON,
+  SchemaReferenceToJSONTyped,
 } from "./SchemaReference";
 import type { RuleSet } from "./RuleSet";
-import { RuleSetFromJSON, RuleSetFromJSONTyped, RuleSetToJSON } from "./RuleSet";
+import {
+  RuleSetFromJSON,
+  RuleSetFromJSONTyped,
+  RuleSetToJSON,
+  RuleSetToJSONTyped,
+} from "./RuleSet";
 import type { Metadata } from "./Metadata";
-import { MetadataFromJSON, MetadataFromJSONTyped, MetadataToJSON } from "./Metadata";
+import {
+  MetadataFromJSON,
+  MetadataFromJSONTyped,
+  MetadataToJSON,
+  MetadataToJSONTyped,
+} from "./Metadata";
 
 /**
  * Schema
@@ -110,10 +121,18 @@ export function SchemaFromJSONTyped(json: any, ignoreDiscriminator: boolean): Sc
   };
 }
 
-export function SchemaToJSON(value?: Schema | null): any {
+export function SchemaToJSON(json: any): Schema {
+  return SchemaToJSONTyped(json, false);
+}
+
+export function SchemaToJSONTyped(
+  value?: Schema | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     subject: value["subject"],
     version: value["version"],

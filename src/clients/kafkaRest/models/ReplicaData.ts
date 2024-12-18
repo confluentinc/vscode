@@ -18,12 +18,14 @@ import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -125,10 +127,18 @@ export function ReplicaDataFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function ReplicaDataToJSON(value?: ReplicaData | null): any {
+export function ReplicaDataToJSON(json: any): ReplicaData {
+  return ReplicaDataToJSONTyped(json, false);
+}
+
+export function ReplicaDataToJSONTyped(
+  value?: ReplicaData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

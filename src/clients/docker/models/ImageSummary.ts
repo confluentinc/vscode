@@ -165,10 +165,18 @@ export function ImageSummaryFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function ImageSummaryToJSON(value?: ImageSummary | null): any {
+export function ImageSummaryToJSON(json: any): ImageSummary {
+  return ImageSummaryToJSONTyped(json, false);
+}
+
+export function ImageSummaryToJSONTyped(
+  value?: ImageSummary | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     ParentId: value["ParentId"],

@@ -54,10 +54,18 @@ export function SwarmSpecEncryptionConfigFromJSONTyped(
   };
 }
 
-export function SwarmSpecEncryptionConfigToJSON(value?: SwarmSpecEncryptionConfig | null): any {
+export function SwarmSpecEncryptionConfigToJSON(json: any): SwarmSpecEncryptionConfig {
+  return SwarmSpecEncryptionConfigToJSONTyped(json, false);
+}
+
+export function SwarmSpecEncryptionConfigToJSONTyped(
+  value?: SwarmSpecEncryptionConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     AutoLockManagers: value["AutoLockManagers"],
   };

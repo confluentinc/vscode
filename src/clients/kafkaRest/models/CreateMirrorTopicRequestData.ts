@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { ConfigData } from "./ConfigData";
-import { ConfigDataFromJSON, ConfigDataFromJSONTyped, ConfigDataToJSON } from "./ConfigData";
+import {
+  ConfigDataFromJSON,
+  ConfigDataFromJSONTyped,
+  ConfigDataToJSON,
+  ConfigDataToJSONTyped,
+} from "./ConfigData";
 
 /**
  *
@@ -78,12 +83,18 @@ export function CreateMirrorTopicRequestDataFromJSONTyped(
   };
 }
 
-export function CreateMirrorTopicRequestDataToJSON(
+export function CreateMirrorTopicRequestDataToJSON(json: any): CreateMirrorTopicRequestData {
+  return CreateMirrorTopicRequestDataToJSONTyped(json, false);
+}
+
+export function CreateMirrorTopicRequestDataToJSONTyped(
   value?: CreateMirrorTopicRequestData | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     source_topic_name: value["source_topic_name"],
     mirror_topic_name: value["mirror_topic_name"],

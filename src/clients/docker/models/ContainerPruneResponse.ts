@@ -57,10 +57,18 @@ export function ContainerPruneResponseFromJSONTyped(
   };
 }
 
-export function ContainerPruneResponseToJSON(value?: ContainerPruneResponse | null): any {
+export function ContainerPruneResponseToJSON(json: any): ContainerPruneResponse {
+  return ContainerPruneResponseToJSONTyped(json, false);
+}
+
+export function ContainerPruneResponseToJSONTyped(
+  value?: ContainerPruneResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ContainersDeleted: value["ContainersDeleted"],
     SpaceReclaimed: value["SpaceReclaimed"],

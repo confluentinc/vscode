@@ -70,12 +70,18 @@ export function TaskSpecContainerSpecDNSConfigFromJSONTyped(
   };
 }
 
-export function TaskSpecContainerSpecDNSConfigToJSON(
+export function TaskSpecContainerSpecDNSConfigToJSON(json: any): TaskSpecContainerSpecDNSConfig {
+  return TaskSpecContainerSpecDNSConfigToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecDNSConfigToJSONTyped(
   value?: TaskSpecContainerSpecDNSConfig | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Nameservers: value["Nameservers"],
     Search: value["Search"],

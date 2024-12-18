@@ -18,12 +18,14 @@ import {
   TaskSpecContainerSpecPrivilegesCredentialSpecFromJSON,
   TaskSpecContainerSpecPrivilegesCredentialSpecFromJSONTyped,
   TaskSpecContainerSpecPrivilegesCredentialSpecToJSON,
+  TaskSpecContainerSpecPrivilegesCredentialSpecToJSONTyped,
 } from "./TaskSpecContainerSpecPrivilegesCredentialSpec";
 import type { TaskSpecContainerSpecPrivilegesSELinuxContext } from "./TaskSpecContainerSpecPrivilegesSELinuxContext";
 import {
   TaskSpecContainerSpecPrivilegesSELinuxContextFromJSON,
   TaskSpecContainerSpecPrivilegesSELinuxContextFromJSONTyped,
   TaskSpecContainerSpecPrivilegesSELinuxContextToJSON,
+  TaskSpecContainerSpecPrivilegesSELinuxContextToJSONTyped,
 } from "./TaskSpecContainerSpecPrivilegesSELinuxContext";
 
 /**
@@ -80,12 +82,18 @@ export function TaskSpecContainerSpecPrivilegesFromJSONTyped(
   };
 }
 
-export function TaskSpecContainerSpecPrivilegesToJSON(
+export function TaskSpecContainerSpecPrivilegesToJSON(json: any): TaskSpecContainerSpecPrivileges {
+  return TaskSpecContainerSpecPrivilegesToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecPrivilegesToJSONTyped(
   value?: TaskSpecContainerSpecPrivileges | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     CredentialSpec: TaskSpecContainerSpecPrivilegesCredentialSpecToJSON(value["CredentialSpec"]),
     SELinuxContext: TaskSpecContainerSpecPrivilegesSELinuxContextToJSON(value["SELinuxContext"]),

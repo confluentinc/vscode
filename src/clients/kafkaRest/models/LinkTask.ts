@@ -18,6 +18,7 @@ import {
   LinkTaskErrorFromJSON,
   LinkTaskErrorFromJSONTyped,
   LinkTaskErrorToJSON,
+  LinkTaskErrorToJSONTyped,
 } from "./LinkTaskError";
 
 /**
@@ -71,10 +72,18 @@ export function LinkTaskFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function LinkTaskToJSON(value?: LinkTask | null): any {
+export function LinkTaskToJSON(json: any): LinkTask {
+  return LinkTaskToJSONTyped(json, false);
+}
+
+export function LinkTaskToJSONTyped(
+  value?: LinkTask | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     task_name: value["task_name"],
     state: value["state"],

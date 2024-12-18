@@ -78,10 +78,18 @@ export function DeviceRequestFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function DeviceRequestToJSON(value?: DeviceRequest | null): any {
+export function DeviceRequestToJSON(json: any): DeviceRequest {
+  return DeviceRequestToJSONTyped(json, false);
+}
+
+export function DeviceRequestToJSONTyped(
+  value?: DeviceRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Driver: value["Driver"],
     Count: value["Count"],

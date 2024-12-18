@@ -18,48 +18,56 @@ import {
   NetworkAttachmentConfigFromJSON,
   NetworkAttachmentConfigFromJSONTyped,
   NetworkAttachmentConfigToJSON,
+  NetworkAttachmentConfigToJSONTyped,
 } from "./NetworkAttachmentConfig";
 import type { TaskSpecContainerSpec } from "./TaskSpecContainerSpec";
 import {
   TaskSpecContainerSpecFromJSON,
   TaskSpecContainerSpecFromJSONTyped,
   TaskSpecContainerSpecToJSON,
+  TaskSpecContainerSpecToJSONTyped,
 } from "./TaskSpecContainerSpec";
 import type { TaskSpecPluginSpec } from "./TaskSpecPluginSpec";
 import {
   TaskSpecPluginSpecFromJSON,
   TaskSpecPluginSpecFromJSONTyped,
   TaskSpecPluginSpecToJSON,
+  TaskSpecPluginSpecToJSONTyped,
 } from "./TaskSpecPluginSpec";
 import type { TaskSpecRestartPolicy } from "./TaskSpecRestartPolicy";
 import {
   TaskSpecRestartPolicyFromJSON,
   TaskSpecRestartPolicyFromJSONTyped,
   TaskSpecRestartPolicyToJSON,
+  TaskSpecRestartPolicyToJSONTyped,
 } from "./TaskSpecRestartPolicy";
 import type { TaskSpecResources } from "./TaskSpecResources";
 import {
   TaskSpecResourcesFromJSON,
   TaskSpecResourcesFromJSONTyped,
   TaskSpecResourcesToJSON,
+  TaskSpecResourcesToJSONTyped,
 } from "./TaskSpecResources";
 import type { TaskSpecLogDriver } from "./TaskSpecLogDriver";
 import {
   TaskSpecLogDriverFromJSON,
   TaskSpecLogDriverFromJSONTyped,
   TaskSpecLogDriverToJSON,
+  TaskSpecLogDriverToJSONTyped,
 } from "./TaskSpecLogDriver";
 import type { TaskSpecNetworkAttachmentSpec } from "./TaskSpecNetworkAttachmentSpec";
 import {
   TaskSpecNetworkAttachmentSpecFromJSON,
   TaskSpecNetworkAttachmentSpecFromJSONTyped,
   TaskSpecNetworkAttachmentSpecToJSON,
+  TaskSpecNetworkAttachmentSpecToJSONTyped,
 } from "./TaskSpecNetworkAttachmentSpec";
 import type { TaskSpecPlacement } from "./TaskSpecPlacement";
 import {
   TaskSpecPlacementFromJSON,
   TaskSpecPlacementFromJSONTyped,
   TaskSpecPlacementToJSON,
+  TaskSpecPlacementToJSONTyped,
 } from "./TaskSpecPlacement";
 
 /**
@@ -175,10 +183,18 @@ export function TaskSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function TaskSpecToJSON(value?: TaskSpec | null): any {
+export function TaskSpecToJSON(json: any): TaskSpec {
+  return TaskSpecToJSONTyped(json, false);
+}
+
+export function TaskSpecToJSONTyped(
+  value?: TaskSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     PluginSpec: TaskSpecPluginSpecToJSON(value["PluginSpec"]),
     ContainerSpec: TaskSpecContainerSpecToJSON(value["ContainerSpec"]),

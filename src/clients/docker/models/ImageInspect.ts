@@ -18,26 +18,35 @@ import {
   ContainerConfigFromJSON,
   ContainerConfigFromJSONTyped,
   ContainerConfigToJSON,
+  ContainerConfigToJSONTyped,
 } from "./ContainerConfig";
 import type { ImageConfig } from "./ImageConfig";
-import { ImageConfigFromJSON, ImageConfigFromJSONTyped, ImageConfigToJSON } from "./ImageConfig";
+import {
+  ImageConfigFromJSON,
+  ImageConfigFromJSONTyped,
+  ImageConfigToJSON,
+  ImageConfigToJSONTyped,
+} from "./ImageConfig";
 import type { ImageInspectMetadata } from "./ImageInspectMetadata";
 import {
   ImageInspectMetadataFromJSON,
   ImageInspectMetadataFromJSONTyped,
   ImageInspectMetadataToJSON,
+  ImageInspectMetadataToJSONTyped,
 } from "./ImageInspectMetadata";
 import type { ImageInspectRootFS } from "./ImageInspectRootFS";
 import {
   ImageInspectRootFSFromJSON,
   ImageInspectRootFSFromJSONTyped,
   ImageInspectRootFSToJSON,
+  ImageInspectRootFSToJSONTyped,
 } from "./ImageInspectRootFS";
 import type { GraphDriverData } from "./GraphDriverData";
 import {
   GraphDriverDataFromJSON,
   GraphDriverDataFromJSONTyped,
   GraphDriverDataToJSON,
+  GraphDriverDataToJSONTyped,
 } from "./GraphDriverData";
 
 /**
@@ -264,10 +273,18 @@ export function ImageInspectFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function ImageInspectToJSON(value?: ImageInspect | null): any {
+export function ImageInspectToJSON(json: any): ImageInspect {
+  return ImageInspectToJSONTyped(json, false);
+}
+
+export function ImageInspectToJSONTyped(
+  value?: ImageInspect | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     RepoTags: value["RepoTags"],

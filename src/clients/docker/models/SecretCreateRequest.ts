@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 import type { Driver } from "./Driver";
-import { DriverFromJSON, DriverFromJSONTyped, DriverToJSON } from "./Driver";
+import { DriverFromJSON, DriverFromJSONTyped, DriverToJSON, DriverToJSONTyped } from "./Driver";
 
 /**
  *
@@ -86,10 +86,18 @@ export function SecretCreateRequestFromJSONTyped(
   };
 }
 
-export function SecretCreateRequestToJSON(value?: SecretCreateRequest | null): any {
+export function SecretCreateRequestToJSON(json: any): SecretCreateRequest {
+  return SecretCreateRequestToJSONTyped(json, false);
+}
+
+export function SecretCreateRequestToJSONTyped(
+  value?: SecretCreateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

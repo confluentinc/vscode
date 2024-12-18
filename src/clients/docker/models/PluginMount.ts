@@ -96,10 +96,18 @@ export function PluginMountFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function PluginMountToJSON(value?: PluginMount | null): any {
+export function PluginMountToJSON(json: any): PluginMount {
+  return PluginMountToJSONTyped(json, false);
+}
+
+export function PluginMountToJSONTyped(
+  value?: PluginMount | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Description: value["Description"],

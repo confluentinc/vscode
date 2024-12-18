@@ -57,10 +57,18 @@ export function ThrottleDeviceFromJSONTyped(
   };
 }
 
-export function ThrottleDeviceToJSON(value?: ThrottleDevice | null): any {
+export function ThrottleDeviceToJSON(json: any): ThrottleDevice {
+  return ThrottleDeviceToJSONTyped(json, false);
+}
+
+export function ThrottleDeviceToJSONTyped(
+  value?: ThrottleDevice | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Path: value["Path"],
     Rate: value["Rate"],

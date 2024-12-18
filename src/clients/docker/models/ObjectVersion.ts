@@ -57,10 +57,18 @@ export function ObjectVersionFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function ObjectVersionToJSON(value?: ObjectVersion | null): any {
+export function ObjectVersionToJSON(json: any): ObjectVersion {
+  return ObjectVersionToJSONTyped(json, false);
+}
+
+export function ObjectVersionToJSONTyped(
+  value?: ObjectVersion | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Index: value["_Index"],
   };

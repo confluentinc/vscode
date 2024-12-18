@@ -55,10 +55,18 @@ export function PeerNodeFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function PeerNodeToJSON(value?: PeerNode | null): any {
+export function PeerNodeToJSON(json: any): PeerNode {
+  return PeerNodeToJSONTyped(json, false);
+}
+
+export function PeerNodeToJSONTyped(
+  value?: PeerNode | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NodeID: value["NodeID"],
     Addr: value["Addr"],

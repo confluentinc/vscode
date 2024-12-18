@@ -69,11 +69,19 @@ export function ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSONType
 }
 
 export function ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSON(
+  json: any,
+): ClusterVolumeSpecAccessModeAccessibilityRequirements {
+  return ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSONTyped(json, false);
+}
+
+export function ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSONTyped(
   value?: ClusterVolumeSpecAccessModeAccessibilityRequirements | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Requisite: value["Requisite"],
     Preferred: value["Preferred"],

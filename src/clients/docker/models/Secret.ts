@@ -18,9 +18,15 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { SecretSpec } from "./SecretSpec";
-import { SecretSpecFromJSON, SecretSpecFromJSONTyped, SecretSpecToJSON } from "./SecretSpec";
+import {
+  SecretSpecFromJSON,
+  SecretSpecFromJSONTyped,
+  SecretSpecToJSON,
+  SecretSpecToJSONTyped,
+} from "./SecretSpec";
 
 /**
  *
@@ -84,10 +90,18 @@ export function SecretFromJSONTyped(json: any, ignoreDiscriminator: boolean): Se
   };
 }
 
-export function SecretToJSON(value?: Secret | null): any {
+export function SecretToJSON(json: any): Secret {
+  return SecretToJSONTyped(json, false);
+}
+
+export function SecretToJSONTyped(
+  value?: Secret | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

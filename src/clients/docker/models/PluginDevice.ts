@@ -72,10 +72,18 @@ export function PluginDeviceFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function PluginDeviceToJSON(value?: PluginDevice | null): any {
+export function PluginDeviceToJSON(json: any): PluginDevice {
+  return PluginDeviceToJSONTyped(json, false);
+}
+
+export function PluginDeviceToJSONTyped(
+  value?: PluginDevice | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Description: value["Description"],

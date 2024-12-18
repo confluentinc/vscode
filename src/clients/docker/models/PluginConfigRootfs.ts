@@ -57,10 +57,18 @@ export function PluginConfigRootfsFromJSONTyped(
   };
 }
 
-export function PluginConfigRootfsToJSON(value?: PluginConfigRootfs | null): any {
+export function PluginConfigRootfsToJSON(json: any): PluginConfigRootfs {
+  return PluginConfigRootfsToJSONTyped(json, false);
+}
+
+export function PluginConfigRootfsToJSONTyped(
+  value?: PluginConfigRootfs | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     type: value["type"],
     diff_ids: value["diff_ids"],

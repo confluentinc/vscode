@@ -18,6 +18,7 @@ import {
   PluginPrivilegeFromJSON,
   PluginPrivilegeFromJSONTyped,
   PluginPrivilegeToJSON,
+  PluginPrivilegeToJSONTyped,
 } from "./PluginPrivilege";
 
 /**
@@ -89,10 +90,18 @@ export function TaskSpecPluginSpecFromJSONTyped(
   };
 }
 
-export function TaskSpecPluginSpecToJSON(value?: TaskSpecPluginSpec | null): any {
+export function TaskSpecPluginSpecToJSON(json: any): TaskSpecPluginSpec {
+  return TaskSpecPluginSpecToJSONTyped(json, false);
+}
+
+export function TaskSpecPluginSpecToJSONTyped(
+  value?: TaskSpecPluginSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Remote: value["Remote"],

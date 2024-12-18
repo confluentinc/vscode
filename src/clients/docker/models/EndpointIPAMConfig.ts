@@ -65,10 +65,18 @@ export function EndpointIPAMConfigFromJSONTyped(
   };
 }
 
-export function EndpointIPAMConfigToJSON(value?: EndpointIPAMConfig | null): any {
+export function EndpointIPAMConfigToJSON(json: any): EndpointIPAMConfig {
+  return EndpointIPAMConfigToJSONTyped(json, false);
+}
+
+export function EndpointIPAMConfigToJSONTyped(
+  value?: EndpointIPAMConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     IPv4Address: value["IPv4Address"],
     IPv6Address: value["IPv6Address"],

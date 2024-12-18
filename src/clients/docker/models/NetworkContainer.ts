@@ -78,10 +78,18 @@ export function NetworkContainerFromJSONTyped(
   };
 }
 
-export function NetworkContainerToJSON(value?: NetworkContainer | null): any {
+export function NetworkContainerToJSON(json: any): NetworkContainer {
+  return NetworkContainerToJSONTyped(json, false);
+}
+
+export function NetworkContainerToJSONTyped(
+  value?: NetworkContainer | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     EndpointID: value["EndpointID"],

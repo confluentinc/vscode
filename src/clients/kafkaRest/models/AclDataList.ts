@@ -18,9 +18,15 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { AclData } from "./AclData";
-import { AclDataFromJSON, AclDataFromJSONTyped, AclDataToJSON } from "./AclData";
+import {
+  AclDataFromJSON,
+  AclDataFromJSONTyped,
+  AclDataToJSON,
+  AclDataToJSONTyped,
+} from "./AclData";
 
 /**
  *
@@ -73,10 +79,18 @@ export function AclDataListFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function AclDataListToJSON(value?: AclDataList | null): any {
+export function AclDataListToJSON(json: any): AclDataList {
+  return AclDataListToJSONTyped(json, false);
+}
+
+export function AclDataListToJSONTyped(
+  value?: AclDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

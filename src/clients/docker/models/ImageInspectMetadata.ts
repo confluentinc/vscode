@@ -57,10 +57,18 @@ export function ImageInspectMetadataFromJSONTyped(
   };
 }
 
-export function ImageInspectMetadataToJSON(value?: ImageInspectMetadata | null): any {
+export function ImageInspectMetadataToJSON(json: any): ImageInspectMetadata {
+  return ImageInspectMetadataToJSONTyped(json, false);
+}
+
+export function ImageInspectMetadataToJSONTyped(
+  value?: ImageInspectMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     LastTagTime: value["LastTagTime"],
   };

@@ -91,10 +91,18 @@ export function HistoryResponseItemFromJSONTyped(
   };
 }
 
-export function HistoryResponseItemToJSON(value?: HistoryResponseItem | null): any {
+export function HistoryResponseItemToJSON(json: any): HistoryResponseItem {
+  return HistoryResponseItemToJSONTyped(json, false);
+}
+
+export function HistoryResponseItemToJSONTyped(
+  value?: HistoryResponseItem | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     Created: value["Created"],

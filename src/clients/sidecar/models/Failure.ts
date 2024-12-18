@@ -75,10 +75,18 @@ export function FailureFromJSONTyped(json: any, ignoreDiscriminator: boolean): F
   };
 }
 
-export function FailureToJSON(value?: Failure | null): any {
+export function FailureToJSON(json: any): Failure {
+  return FailureToJSONTyped(json, false);
+}
+
+export function FailureToJSONTyped(
+  value?: Failure | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     status: value["status"],
     code: value["code"],

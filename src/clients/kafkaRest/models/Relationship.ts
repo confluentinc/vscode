@@ -48,10 +48,18 @@ export function RelationshipFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function RelationshipToJSON(value?: Relationship | null): any {
+export function RelationshipToJSON(json: any): Relationship {
+  return RelationshipToJSONTyped(json, false);
+}
+
+export function RelationshipToJSONTyped(
+  value?: Relationship | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     related: value["related"],
   };

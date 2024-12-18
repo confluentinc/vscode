@@ -57,10 +57,18 @@ export function ServiceCreateResponseFromJSONTyped(
   };
 }
 
-export function ServiceCreateResponseToJSON(value?: ServiceCreateResponse | null): any {
+export function ServiceCreateResponseToJSON(json: any): ServiceCreateResponse {
+  return ServiceCreateResponseToJSONTyped(json, false);
+}
+
+export function ServiceCreateResponseToJSONTyped(
+  value?: ServiceCreateResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Warning: value["Warning"],

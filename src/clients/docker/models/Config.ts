@@ -18,9 +18,15 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { ConfigSpec } from "./ConfigSpec";
-import { ConfigSpecFromJSON, ConfigSpecFromJSONTyped, ConfigSpecToJSON } from "./ConfigSpec";
+import {
+  ConfigSpecFromJSON,
+  ConfigSpecFromJSONTyped,
+  ConfigSpecToJSON,
+  ConfigSpecToJSONTyped,
+} from "./ConfigSpec";
 
 /**
  *
@@ -84,10 +90,18 @@ export function ConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean): Co
   };
 }
 
-export function ConfigToJSON(value?: Config | null): any {
+export function ConfigToJSON(json: any): Config {
+  return ConfigToJSONTyped(json, false);
+}
+
+export function ConfigToJSONTyped(
+  value?: Config | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

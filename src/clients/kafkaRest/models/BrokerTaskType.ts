@@ -25,7 +25,7 @@ export type BrokerTaskType = (typeof BrokerTaskType)[keyof typeof BrokerTaskType
 export function instanceOfBrokerTaskType(value: any): boolean {
   for (const key in BrokerTaskType) {
     if (Object.prototype.hasOwnProperty.call(BrokerTaskType, key)) {
-      if ((BrokerTaskType as Record<string, BrokerTaskType>)[key] === value) {
+      if (BrokerTaskType[key as keyof typeof BrokerTaskType] === value) {
         return true;
       }
     }
@@ -46,4 +46,11 @@ export function BrokerTaskTypeFromJSONTyped(
 
 export function BrokerTaskTypeToJSON(value?: BrokerTaskType | null): any {
   return value as any;
+}
+
+export function BrokerTaskTypeToJSONTyped(
+  value: any,
+  ignoreDiscriminator: boolean,
+): BrokerTaskType {
+  return value as BrokerTaskType;
 }

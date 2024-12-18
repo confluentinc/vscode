@@ -18,6 +18,7 @@ import {
   PartitionConsumeDataFromJSON,
   PartitionConsumeDataFromJSONTyped,
   PartitionConsumeDataToJSON,
+  PartitionConsumeDataToJSONTyped,
 } from "./PartitionConsumeData";
 
 /**
@@ -79,11 +80,19 @@ export function SimpleConsumeMultiPartitionResponseFromJSONTyped(
 }
 
 export function SimpleConsumeMultiPartitionResponseToJSON(
+  json: any,
+): SimpleConsumeMultiPartitionResponse {
+  return SimpleConsumeMultiPartitionResponseToJSONTyped(json, false);
+}
+
+export function SimpleConsumeMultiPartitionResponseToJSONTyped(
   value?: SimpleConsumeMultiPartitionResponse | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     cluster_id: value["cluster_id"],
     topic_name: value["topic_name"],

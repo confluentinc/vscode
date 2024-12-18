@@ -57,10 +57,18 @@ export function JoinTokensFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function JoinTokensToJSON(value?: JoinTokens | null): any {
+export function JoinTokensToJSON(json: any): JoinTokens {
+  return JoinTokensToJSONTyped(json, false);
+}
+
+export function JoinTokensToJSONTyped(
+  value?: JoinTokens | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Worker: value["Worker"],
     Manager: value["Manager"],

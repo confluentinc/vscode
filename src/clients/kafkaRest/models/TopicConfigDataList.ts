@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { TopicConfigData } from "./TopicConfigData";
 import {
   TopicConfigDataFromJSON,
   TopicConfigDataFromJSONTyped,
   TopicConfigDataToJSON,
+  TopicConfigDataToJSONTyped,
 } from "./TopicConfigData";
 
 /**
@@ -80,10 +82,18 @@ export function TopicConfigDataListFromJSONTyped(
   };
 }
 
-export function TopicConfigDataListToJSON(value?: TopicConfigDataList | null): any {
+export function TopicConfigDataListToJSON(json: any): TopicConfigDataList {
+  return TopicConfigDataListToJSONTyped(json, false);
+}
+
+export function TopicConfigDataListToJSONTyped(
+  value?: TopicConfigDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

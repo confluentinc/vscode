@@ -68,11 +68,19 @@ export function ClusterVolumeSpecAccessModeCapacityRangeFromJSONTyped(
 }
 
 export function ClusterVolumeSpecAccessModeCapacityRangeToJSON(
+  json: any,
+): ClusterVolumeSpecAccessModeCapacityRange {
+  return ClusterVolumeSpecAccessModeCapacityRangeToJSONTyped(json, false);
+}
+
+export function ClusterVolumeSpecAccessModeCapacityRangeToJSONTyped(
   value?: ClusterVolumeSpecAccessModeCapacityRange | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     RequiredBytes: value["RequiredBytes"],
     LimitBytes: value["LimitBytes"],

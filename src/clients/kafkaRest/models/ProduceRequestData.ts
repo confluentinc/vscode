@@ -79,10 +79,18 @@ export function ProduceRequestDataFromJSONTyped(
   };
 }
 
-export function ProduceRequestDataToJSON(value?: ProduceRequestData | null): any {
+export function ProduceRequestDataToJSON(json: any): ProduceRequestData {
+  return ProduceRequestDataToJSONTyped(json, false);
+}
+
+export function ProduceRequestDataToJSONTyped(
+  value?: ProduceRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     type: value["type"],
     subject: value["subject"],
