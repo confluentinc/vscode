@@ -2,7 +2,8 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { ConnectedState, ConnectionSpec } from "../clients/sidecar";
+import { ConnectedState } from "../clients/sidecar";
+import { CustomConnectionSpec } from "../storage/resourceManager";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
@@ -191,7 +192,7 @@ export type TestResponse = {
 
 export function post(type: "Test", body: any): Promise<TestResponse>;
 export function post(type: "Submit", body: any): Promise<PostResponse>;
-export function post(type: "GetConnectionSpec", body: any): Promise<ConnectionSpec | null>;
+export function post(type: "GetConnectionSpec", body: any): Promise<CustomConnectionSpec | null>;
 export function post(type: "Update", body: { [key: string]: unknown }): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);

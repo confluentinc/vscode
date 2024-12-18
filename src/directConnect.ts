@@ -1,12 +1,6 @@
 import { randomUUID } from "crypto";
 import { ViewColumn, window } from "vscode";
-import {
-  AuthErrors,
-  ConnectedState,
-  Connection,
-  ConnectionSpec,
-  ConnectionType,
-} from "./clients/sidecar";
+import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -22,7 +16,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 
 const directConnectWebviewCache = new WebviewPanelCache();
 
-export function openDirectConnectionForm(connection: ConnectionSpec | null): void {
+export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
   console.log("EDIT:", connection?.id);
   const connectionUUID = connection?.id || randomUUID();
   // Set up the webview, checking for existing form for this connection
@@ -203,7 +197,7 @@ export function parseTestResult(connection: Connection): TestResponse {
   return result;
 }
 // Remove sensitive fields from the connection spec before sending to the webview form
-function cleanSpec(connection: ConnectionSpec): ConnectionSpec {
+function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
   const clean = { ...connection };
   // @ts-expect-error - these fields are not in the TypeScript definition
   delete clean.kafka_cluster?.credentials?.password;
