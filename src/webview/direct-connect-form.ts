@@ -68,6 +68,7 @@ class DirectConnectFormViewModel extends ViewModel {
     const data = Object.fromEntries(formData.entries());
     if (!data["bootstrap_servers"] && !data["uri"]) {
       this.message("Please provide either Kafka cluster or Schema Registry details");
+      this.loading(false);
       return;
     }
 
