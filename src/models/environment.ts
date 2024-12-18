@@ -1,4 +1,3 @@
-import { Data, type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
@@ -28,13 +27,13 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment extends Data implements IResourceBase {
+export abstract class Environment implements IResourceBase {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
 
-  id!: Enforced<string>;
-  name!: Enforced<string>;
+  id!: string;
+  name!: string;
 
   /**
    * Has at least one Kafka cluster or Schema Registry.
@@ -44,6 +43,9 @@ export abstract class Environment extends Data implements IResourceBase {
    */
   kafkaClusters!: KafkaCluster[];
   schemaRegistry?: SchemaRegistry | undefined;
+
+  // updated by the ResourceViewProvider from connectionLoading/connectionUsable events
+  isLoading: boolean = false;
 
   get hasClusters(): boolean {
     return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
@@ -57,10 +59,24 @@ export class CCloudEnvironment extends Environment {
 
   readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
-  streamGovernancePackage!: Enforced<string>;
+  streamGovernancePackage: string;
   // set explicit CCloud* typing
-  kafkaClusters: CCloudKafkaCluster[] = [];
-  schemaRegistry: CCloudSchemaRegistry | undefined = undefined;
+  kafkaClusters: CCloudKafkaCluster[];
+  schemaRegistry?: CCloudSchemaRegistry | undefined;
+
+  constructor(
+    props: Pick<
+      CCloudEnvironment,
+      "id" | "name" | "streamGovernancePackage" | "kafkaClusters" | "schemaRegistry"
+    >,
+  ) {
+    super();
+    this.id = props.id;
+    this.name = props.name;
+    this.streamGovernancePackage = props.streamGovernancePackage;
+    this.kafkaClusters = props.kafkaClusters;
+    this.schemaRegistry = props.schemaRegistry;
+  }
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
@@ -73,7 +89,7 @@ export class CCloudEnvironment extends Environment {
  * - one {@link SchemaRegistry}
  */
 export class DirectEnvironment extends Environment {
-  readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
+  readonly connectionId!: ConnectionId; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
   // TODO: update this based on feedback from product+design
@@ -82,6 +98,19 @@ export class DirectEnvironment extends Environment {
   // set explicit Direct* typing
   kafkaClusters: DirectKafkaCluster[] = [];
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
+
+  constructor(
+    props: Pick<
+      DirectEnvironment,
+      "connectionId" | "id" | "name" | "kafkaClusters" | "schemaRegistry"
+    >,
+  ) {
+    super();
+    this.id = props.id;
+    this.name = props.name;
+    this.kafkaClusters = props.kafkaClusters;
+    this.schemaRegistry = props.schemaRegistry;
+  }
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -91,11 +120,19 @@ export class LocalEnvironment extends Environment {
 
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 
-  name: Enforced<string> = LOCAL_ENVIRONMENT_NAME as Enforced<string>;
+  name: string = LOCAL_ENVIRONMENT_NAME;
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
   schemaRegistry?: LocalSchemaRegistry | undefined = undefined;
+
+  constructor(props: Pick<LocalEnvironment, "id" | "name" | "kafkaClusters" | "schemaRegistry">) {
+    super();
+    this.id = props.id;
+    this.name = props.name;
+    this.kafkaClusters = props.kafkaClusters;
+    this.schemaRegistry = props.schemaRegistry;
+  }
 }
 
 /** The representation of an {@link Environment} as a {@link TreeItem} in the VS Code UI. */
@@ -111,12 +148,15 @@ export class EnvironmentTreeItem extends TreeItem {
     super(resource.name, collapseState);
 
     // internal properties
+    this.id = `${resource.connectionId}-${resource.id}${resource.isLoading ? "-loading" : ""}`;
     this.resource = resource;
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
     // user-facing properties
     this.description = this.resource.id;
-    this.iconPath = new ThemeIcon(this.resource.iconName);
+    this.iconPath = new ThemeIcon(
+      this.resource.isLoading ? IconNames.LOADING : this.resource.iconName,
+    );
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
 }

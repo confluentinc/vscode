@@ -5,31 +5,27 @@ import {
 } from "../../../src/models/environment";
 import { TEST_DIRECT_CONNECTION_ID, TEST_LOCAL_CONNECTION } from "./connection";
 
-const TEST_ENVIRONMENT_BODY = {
-  id: "abc123",
-  name: "test-environment",
-  kafkaClusters: [],
-  schemaRegistry: undefined,
-};
-
-export const TEST_CCLOUD_ENVIRONMENT: CCloudEnvironment = CCloudEnvironment.create({
-  ...TEST_ENVIRONMENT_BODY,
+export const TEST_CCLOUD_ENVIRONMENT: CCloudEnvironment = new CCloudEnvironment({
   id: "env-abc123",
   name: "test-cloud-environment",
   streamGovernancePackage: "NONE",
+  kafkaClusters: [],
+  schemaRegistry: undefined,
 });
 
-export const TEST_DIRECT_ENVIRONMENT: DirectEnvironment = DirectEnvironment.create({
-  ...TEST_ENVIRONMENT_BODY,
+export const TEST_DIRECT_ENVIRONMENT: DirectEnvironment = new DirectEnvironment({
+  connectionId: TEST_DIRECT_CONNECTION_ID,
   id: "test-direct-connection",
   name: "test-direct-environment",
-  connectionId: TEST_DIRECT_CONNECTION_ID,
+  kafkaClusters: [],
+  schemaRegistry: undefined,
 });
 
-export const TEST_LOCAL_ENVIRONMENT: LocalEnvironment = LocalEnvironment.create({
-  ...TEST_ENVIRONMENT_BODY,
+export const TEST_LOCAL_ENVIRONMENT: LocalEnvironment = new LocalEnvironment({
   id: TEST_LOCAL_CONNECTION.id,
   name: "test-local-environment",
+  kafkaClusters: [],
+  schemaRegistry: undefined,
 });
 
 // not tied to the CCloud Environment specifically, but used by CCloud Kafka clusters and Schema Registry

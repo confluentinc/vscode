@@ -136,7 +136,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadLocalResources() should load local resources under the Local container tree item when clusters are discoverable", async () => {
-    const testLocalEnv: LocalEnvironment = LocalEnvironment.create({
+    const testLocalEnv: LocalEnvironment = new LocalEnvironment({
       ...TEST_LOCAL_ENVIRONMENT,
       kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
       schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
@@ -182,7 +182,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadDirectConnectResources() should load direct connection resources under the Direct container tree item", async () => {
-    const testDirectEnv: DirectEnvironment = DirectEnvironment.create({
+    const testDirectEnv: DirectEnvironment = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
       schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,

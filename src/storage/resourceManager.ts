@@ -131,7 +131,7 @@ export class ResourceManager {
       )) ?? [];
 
     // Promote each member to be an instance of CCloudEnvironment
-    return plain_json_environments.map((env) => CCloudEnvironment.create(env));
+    return plain_json_environments.map((env) => new CCloudEnvironment(env));
   }
 
   /**

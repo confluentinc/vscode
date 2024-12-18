@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { KafkaCluster } from "./models/kafkaCluster";
+import { ConnectionId } from "./models/resource";
 import { SchemaRegistry } from "./models/schemaRegistry";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
@@ -36,3 +37,6 @@ export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster |
  * (or CCloud organization) change.
  */
 export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistry | null>();
+
+export const connectionLoading = new vscode.EventEmitter<ConnectionId>();
+export const connectionUsable = new vscode.EventEmitter<ConnectionId>();
