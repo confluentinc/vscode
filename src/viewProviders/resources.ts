@@ -60,7 +60,6 @@ type ResourceViewProviderData =
   | CCloudResources
   | ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
   | LocalResources
-  | ContainerTreeItem<DirectEnvironment>
   | DirectResources;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
@@ -121,8 +120,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
-    const resourceItems: ResourceViewProviderData[] = [];
-
     // if this is the first time we're loading the Resources view items, ensure we've told the sidecar
     // about any direct connections before the GraphQL queries kick off
     if (!this.rehydratedDirectConnections) {
@@ -149,36 +146,26 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded
-      const resources: ResourceViewProviderData[] = [];
+      const resourcePromises: [
+        Promise<ContainerTreeItem<CCloudEnvironment>>,
+        Promise<ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>>,
+        Promise<DirectEnvironment[]>,
+      ] = [loadCCloudResources(this.forceDeepRefresh), loadLocalResources(), loadDirectResources()];
 
-      // EXPERIMENTAL: check if direct connections are enabled in extension settings
-      const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-      const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
-      if (directConnectionsEnabled) {
-        resources.push(
-          ...(await Promise.all([
-            loadCCloudResources(this.forceDeepRefresh),
-            loadLocalResources(),
-            loadDirectConnectResources(),
-          ])),
-        );
-      } else {
-        resources.push(
-          ...(await Promise.all([
-            loadCCloudResources(this.forceDeepRefresh),
-            loadLocalResources(),
-          ])),
-        );
-      }
+      const [ccloudEnvironments, localResources, directEnvironments]: [
+        ContainerTreeItem<CCloudEnvironment>,
+        ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>,
+        DirectEnvironment[],
+      ] = await Promise.all(resourcePromises);
 
       if (this.forceDeepRefresh) {
-        // Clear this, we've just fulfilled its intent.
         this.forceDeepRefresh = false;
       }
-      return resources;
+
+      return [ccloudEnvironments, localResources, ...directEnvironments];
     }
 
-    return resourceItems;
+    return [];
   }
 
   /** Set up event listeners for this view provider. */
@@ -361,32 +348,20 @@ export async function loadLocalResources(): Promise<
   return localContainerItem;
 }
 
-export async function loadDirectConnectResources(): Promise<ContainerTreeItem<DirectEnvironment>> {
-  const directContainerItem = new ContainerTreeItem<DirectEnvironment>(
-    ConnectionLabel.DIRECT,
-    vscode.TreeItemCollapsibleState.None,
-    [],
-  );
-  directContainerItem.iconPath = new vscode.ThemeIcon(IconNames.CONNECTION);
-  directContainerItem.id = `direct-${EXTENSION_VERSION}`;
-
-  // top-level container before each direct "environment" (connection)
-  directContainerItem.contextValue = "resources-direct-container";
-  directContainerItem.description = "(No connections)";
+export async function loadDirectResources(): Promise<DirectEnvironment[]> {
+  // PREVIEW: check if direct connections are enabled in extension settings
+  // TODO(shoup): remove this once direct connections are enabled by default
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
+  if (!directConnectionsEnabled) {
+    return [];
+  }
 
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
   const directEnvs = await getDirectResources();
   logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
-  directContainerItem.children = directEnvs;
-  if (directContainerItem.children.length > 0) {
-    // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
-    directContainerItem.id = `direct-connected-${EXTENSION_VERSION}`;
-    directContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-    directContainerItem.description = `(${directContainerItem.children.length})`;
-  }
-
-  return directContainerItem;
+  return directEnvs;
 }
 
 /**
