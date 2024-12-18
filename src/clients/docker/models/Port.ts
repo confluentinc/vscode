@@ -80,10 +80,15 @@ export function PortFromJSONTyped(json: any, ignoreDiscriminator: boolean): Port
   };
 }
 
-export function PortToJSON(value?: Port | null): any {
+export function PortToJSON(json: any): Port {
+  return PortToJSONTyped(json, false);
+}
+
+export function PortToJSONTyped(value?: Port | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     IP: value["IP"],
     PrivatePort: value["PrivatePort"],

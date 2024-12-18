@@ -136,10 +136,18 @@ export function MountPointFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function MountPointToJSON(value?: MountPoint | null): any {
+export function MountPointToJSON(json: any): MountPoint {
+  return MountPointToJSONTyped(json, false);
+}
+
+export function MountPointToJSONTyped(
+  value?: MountPoint | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Type: value["Type"],
     Name: value["Name"],

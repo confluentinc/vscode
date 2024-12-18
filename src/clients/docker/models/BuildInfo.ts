@@ -14,15 +14,26 @@
 
 import { mapValues } from "../runtime";
 import type { ErrorDetail } from "./ErrorDetail";
-import { ErrorDetailFromJSON, ErrorDetailFromJSONTyped, ErrorDetailToJSON } from "./ErrorDetail";
+import {
+  ErrorDetailFromJSON,
+  ErrorDetailFromJSONTyped,
+  ErrorDetailToJSON,
+  ErrorDetailToJSONTyped,
+} from "./ErrorDetail";
 import type { ProgressDetail } from "./ProgressDetail";
 import {
   ProgressDetailFromJSON,
   ProgressDetailFromJSONTyped,
   ProgressDetailToJSON,
+  ProgressDetailToJSONTyped,
 } from "./ProgressDetail";
 import type { ImageID } from "./ImageID";
-import { ImageIDFromJSON, ImageIDFromJSONTyped, ImageIDToJSON } from "./ImageID";
+import {
+  ImageIDFromJSON,
+  ImageIDFromJSONTyped,
+  ImageIDToJSON,
+  ImageIDToJSONTyped,
+} from "./ImageID";
 
 /**
  *
@@ -108,10 +119,18 @@ export function BuildInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function BuildInfoToJSON(value?: BuildInfo | null): any {
+export function BuildInfoToJSON(json: any): BuildInfo {
+  return BuildInfoToJSONTyped(json, false);
+}
+
+export function BuildInfoToJSONTyped(
+  value?: BuildInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     id: value["id"],
     stream: value["stream"],

@@ -18,6 +18,7 @@ import {
   EngineDescriptionPluginsInnerFromJSON,
   EngineDescriptionPluginsInnerFromJSONTyped,
   EngineDescriptionPluginsInnerToJSON,
+  EngineDescriptionPluginsInnerToJSONTyped,
 } from "./EngineDescriptionPluginsInner";
 
 /**
@@ -74,10 +75,18 @@ export function EngineDescriptionFromJSONTyped(
   };
 }
 
-export function EngineDescriptionToJSON(value?: EngineDescription | null): any {
+export function EngineDescriptionToJSON(json: any): EngineDescription {
+  return EngineDescriptionToJSONTyped(json, false);
+}
+
+export function EngineDescriptionToJSONTyped(
+  value?: EngineDescription | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     EngineVersion: value["EngineVersion"],
     Labels: value["Labels"],

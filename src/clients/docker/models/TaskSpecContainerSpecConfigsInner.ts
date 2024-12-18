@@ -18,6 +18,7 @@ import {
   TaskSpecContainerSpecConfigsInnerFileFromJSON,
   TaskSpecContainerSpecConfigsInnerFileFromJSONTyped,
   TaskSpecContainerSpecConfigsInnerFileToJSON,
+  TaskSpecContainerSpecConfigsInnerFileToJSONTyped,
 } from "./TaskSpecContainerSpecConfigsInnerFile";
 
 /**
@@ -98,11 +99,19 @@ export function TaskSpecContainerSpecConfigsInnerFromJSONTyped(
 }
 
 export function TaskSpecContainerSpecConfigsInnerToJSON(
+  json: any,
+): TaskSpecContainerSpecConfigsInner {
+  return TaskSpecContainerSpecConfigsInnerToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecConfigsInnerToJSONTyped(
   value?: TaskSpecContainerSpecConfigsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     File: TaskSpecContainerSpecConfigsInnerFileToJSON(value["File"]),
     Runtime: value["Runtime"],

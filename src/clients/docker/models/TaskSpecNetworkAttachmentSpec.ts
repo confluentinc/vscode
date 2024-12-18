@@ -61,12 +61,18 @@ export function TaskSpecNetworkAttachmentSpecFromJSONTyped(
   };
 }
 
-export function TaskSpecNetworkAttachmentSpecToJSON(
+export function TaskSpecNetworkAttachmentSpecToJSON(json: any): TaskSpecNetworkAttachmentSpec {
+  return TaskSpecNetworkAttachmentSpecToJSONTyped(json, false);
+}
+
+export function TaskSpecNetworkAttachmentSpecToJSONTyped(
   value?: TaskSpecNetworkAttachmentSpec | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     ContainerID: value["ContainerID"],
   };

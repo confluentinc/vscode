@@ -56,11 +56,19 @@ export function TaskSpecPlacementPreferencesInnerSpreadFromJSONTyped(
 }
 
 export function TaskSpecPlacementPreferencesInnerSpreadToJSON(
+  json: any,
+): TaskSpecPlacementPreferencesInnerSpread {
+  return TaskSpecPlacementPreferencesInnerSpreadToJSONTyped(json, false);
+}
+
+export function TaskSpecPlacementPreferencesInnerSpreadToJSONTyped(
   value?: TaskSpecPlacementPreferencesInnerSpread | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     SpreadDescriptor: value["SpreadDescriptor"],
   };

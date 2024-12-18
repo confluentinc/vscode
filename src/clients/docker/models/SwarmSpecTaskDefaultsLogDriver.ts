@@ -67,12 +67,18 @@ export function SwarmSpecTaskDefaultsLogDriverFromJSONTyped(
   };
 }
 
-export function SwarmSpecTaskDefaultsLogDriverToJSON(
+export function SwarmSpecTaskDefaultsLogDriverToJSON(json: any): SwarmSpecTaskDefaultsLogDriver {
+  return SwarmSpecTaskDefaultsLogDriverToJSONTyped(json, false);
+}
+
+export function SwarmSpecTaskDefaultsLogDriverToJSONTyped(
   value?: SwarmSpecTaskDefaultsLogDriver | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Options: value["Options"],

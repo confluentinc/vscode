@@ -64,10 +64,18 @@ export function UpdateKekRequestFromJSONTyped(
   };
 }
 
-export function UpdateKekRequestToJSON(value?: UpdateKekRequest | null): any {
+export function UpdateKekRequestToJSON(json: any): UpdateKekRequest {
+  return UpdateKekRequestToJSONTyped(json, false);
+}
+
+export function UpdateKekRequestToJSONTyped(
+  value?: UpdateKekRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kmsProps: value["kmsProps"],
     doc: value["doc"],

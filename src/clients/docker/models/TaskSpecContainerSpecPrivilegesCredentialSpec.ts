@@ -100,11 +100,19 @@ export function TaskSpecContainerSpecPrivilegesCredentialSpecFromJSONTyped(
 }
 
 export function TaskSpecContainerSpecPrivilegesCredentialSpecToJSON(
+  json: any,
+): TaskSpecContainerSpecPrivilegesCredentialSpec {
+  return TaskSpecContainerSpecPrivilegesCredentialSpecToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecPrivilegesCredentialSpecToJSONTyped(
   value?: TaskSpecContainerSpecPrivilegesCredentialSpec | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Config: value["Config"],
     File: value["File"],

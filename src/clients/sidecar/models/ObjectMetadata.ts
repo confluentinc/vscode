@@ -57,10 +57,18 @@ export function ObjectMetadataFromJSONTyped(
   };
 }
 
-export function ObjectMetadataToJSON(value?: ObjectMetadata | null): any {
+export function ObjectMetadataToJSON(json: any): ObjectMetadata {
+  return ObjectMetadataToJSONTyped(json, false);
+}
+
+export function ObjectMetadataToJSONTyped(
+  value?: ObjectMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     self: value["self"],
     resource_name: value["resource_name"],

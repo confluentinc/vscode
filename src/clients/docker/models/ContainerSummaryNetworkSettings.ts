@@ -18,6 +18,7 @@ import {
   EndpointSettingsFromJSON,
   EndpointSettingsFromJSONTyped,
   EndpointSettingsToJSON,
+  EndpointSettingsToJSONTyped,
 } from "./EndpointSettings";
 
 /**
@@ -62,12 +63,18 @@ export function ContainerSummaryNetworkSettingsFromJSONTyped(
   };
 }
 
-export function ContainerSummaryNetworkSettingsToJSON(
+export function ContainerSummaryNetworkSettingsToJSON(json: any): ContainerSummaryNetworkSettings {
+  return ContainerSummaryNetworkSettingsToJSONTyped(json, false);
+}
+
+export function ContainerSummaryNetworkSettingsToJSONTyped(
   value?: ContainerSummaryNetworkSettings | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Networks:
       value["Networks"] == null ? undefined : mapValues(value["Networks"], EndpointSettingsToJSON),

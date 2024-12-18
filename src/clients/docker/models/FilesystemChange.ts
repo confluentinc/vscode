@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { ChangeType } from "./ChangeType";
-import { ChangeTypeFromJSON, ChangeTypeFromJSONTyped, ChangeTypeToJSON } from "./ChangeType";
+import {
+  ChangeTypeFromJSON,
+  ChangeTypeFromJSONTyped,
+  ChangeTypeToJSON,
+  ChangeTypeToJSONTyped,
+} from "./ChangeType";
 
 /**
  * Change in the container's filesystem.
@@ -64,10 +69,18 @@ export function FilesystemChangeFromJSONTyped(
   };
 }
 
-export function FilesystemChangeToJSON(value?: FilesystemChange | null): any {
+export function FilesystemChangeToJSON(json: any): FilesystemChange {
+  return FilesystemChangeToJSONTyped(json, false);
+}
+
+export function FilesystemChangeToJSONTyped(
+  value?: FilesystemChange | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Path: value["Path"],
     Kind: ChangeTypeToJSON(value["Kind"]),

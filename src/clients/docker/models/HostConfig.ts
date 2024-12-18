@@ -18,46 +18,58 @@ import {
   ResourcesUlimitsInnerFromJSON,
   ResourcesUlimitsInnerFromJSONTyped,
   ResourcesUlimitsInnerToJSON,
+  ResourcesUlimitsInnerToJSONTyped,
 } from "./ResourcesUlimitsInner";
 import type { PortBinding } from "./PortBinding";
-import { PortBindingFromJSON, PortBindingFromJSONTyped, PortBindingToJSON } from "./PortBinding";
+import {
+  PortBindingFromJSON,
+  PortBindingFromJSONTyped,
+  PortBindingToJSON,
+  PortBindingToJSONTyped,
+} from "./PortBinding";
 import type { ThrottleDevice } from "./ThrottleDevice";
 import {
   ThrottleDeviceFromJSON,
   ThrottleDeviceFromJSONTyped,
   ThrottleDeviceToJSON,
+  ThrottleDeviceToJSONTyped,
 } from "./ThrottleDevice";
 import type { DeviceMapping } from "./DeviceMapping";
 import {
   DeviceMappingFromJSON,
   DeviceMappingFromJSONTyped,
   DeviceMappingToJSON,
+  DeviceMappingToJSONTyped,
 } from "./DeviceMapping";
 import type { Mount } from "./Mount";
-import { MountFromJSON, MountFromJSONTyped, MountToJSON } from "./Mount";
+import { MountFromJSON, MountFromJSONTyped, MountToJSON, MountToJSONTyped } from "./Mount";
 import type { HostConfigAllOfLogConfig } from "./HostConfigAllOfLogConfig";
 import {
   HostConfigAllOfLogConfigFromJSON,
   HostConfigAllOfLogConfigFromJSONTyped,
   HostConfigAllOfLogConfigToJSON,
+  HostConfigAllOfLogConfigToJSONTyped,
 } from "./HostConfigAllOfLogConfig";
 import type { RestartPolicy } from "./RestartPolicy";
 import {
   RestartPolicyFromJSON,
   RestartPolicyFromJSONTyped,
   RestartPolicyToJSON,
+  RestartPolicyToJSONTyped,
 } from "./RestartPolicy";
 import type { DeviceRequest } from "./DeviceRequest";
 import {
   DeviceRequestFromJSON,
   DeviceRequestFromJSONTyped,
   DeviceRequestToJSON,
+  DeviceRequestToJSONTyped,
 } from "./DeviceRequest";
 import type { ResourcesBlkioWeightDeviceInner } from "./ResourcesBlkioWeightDeviceInner";
 import {
   ResourcesBlkioWeightDeviceInnerFromJSON,
   ResourcesBlkioWeightDeviceInnerFromJSONTyped,
   ResourcesBlkioWeightDeviceInnerToJSON,
+  ResourcesBlkioWeightDeviceInnerToJSONTyped,
 } from "./ResourcesBlkioWeightDeviceInner";
 
 /**
@@ -816,10 +828,18 @@ export function HostConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function HostConfigToJSON(value?: HostConfig | null): any {
+export function HostConfigToJSON(json: any): HostConfig {
+  return HostConfigToJSONTyped(json, false);
+}
+
+export function HostConfigToJSONTyped(
+  value?: HostConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     CpuShares: value["CpuShares"],
     Memory: value["Memory"],

@@ -64,10 +64,18 @@ export function ResourcesUlimitsInnerFromJSONTyped(
   };
 }
 
-export function ResourcesUlimitsInnerToJSON(value?: ResourcesUlimitsInner | null): any {
+export function ResourcesUlimitsInnerToJSON(json: any): ResourcesUlimitsInner {
+  return ResourcesUlimitsInnerToJSONTyped(json, false);
+}
+
+export function ResourcesUlimitsInnerToJSONTyped(
+  value?: ResourcesUlimitsInner | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Soft: value["Soft"],

@@ -18,6 +18,7 @@ import {
   PluginInterfaceTypeFromJSON,
   PluginInterfaceTypeFromJSONTyped,
   PluginInterfaceTypeToJSON,
+  PluginInterfaceTypeToJSONTyped,
 } from "./PluginInterfaceType";
 
 /**
@@ -83,10 +84,18 @@ export function PluginConfigInterfaceFromJSONTyped(
   };
 }
 
-export function PluginConfigInterfaceToJSON(value?: PluginConfigInterface | null): any {
+export function PluginConfigInterfaceToJSON(json: any): PluginConfigInterface {
+  return PluginConfigInterfaceToJSONTyped(json, false);
+}
+
+export function PluginConfigInterfaceToJSONTyped(
+  value?: PluginConfigInterface | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Types: (value["Types"] as Array<any>).map(PluginInterfaceTypeToJSON),
     Socket: value["Socket"],

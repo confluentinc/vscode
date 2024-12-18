@@ -57,14 +57,22 @@ export function MetadataFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   return {
     tags: json["tags"] == null ? undefined : json["tags"],
     properties: json["properties"] == null ? undefined : json["properties"],
-    sensitive: json["sensitive"] == null ? undefined : json["sensitive"],
+    sensitive: json["sensitive"] == null ? undefined : new Set(json["sensitive"]),
   };
 }
 
-export function MetadataToJSON(value?: Metadata | null): any {
+export function MetadataToJSON(json: any): Metadata {
+  return MetadataToJSONTyped(json, false);
+}
+
+export function MetadataToJSONTyped(
+  value?: Metadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     tags: value["tags"],
     properties: value["properties"],

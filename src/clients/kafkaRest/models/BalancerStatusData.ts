@@ -18,12 +18,14 @@ import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -118,10 +120,18 @@ export function BalancerStatusDataFromJSONTyped(
   };
 }
 
-export function BalancerStatusDataToJSON(value?: BalancerStatusData | null): any {
+export function BalancerStatusDataToJSON(json: any): BalancerStatusData {
+  return BalancerStatusDataToJSONTyped(json, false);
+}
+
+export function BalancerStatusDataToJSONTyped(
+  value?: BalancerStatusData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

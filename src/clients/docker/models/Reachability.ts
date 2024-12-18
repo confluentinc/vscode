@@ -26,7 +26,7 @@ export type Reachability = (typeof Reachability)[keyof typeof Reachability];
 export function instanceOfReachability(value: any): boolean {
   for (const key in Reachability) {
     if (Object.prototype.hasOwnProperty.call(Reachability, key)) {
-      if ((Reachability as Record<string, Reachability>)[key] === value) {
+      if (Reachability[key as keyof typeof Reachability] === value) {
         return true;
       }
     }
@@ -44,4 +44,8 @@ export function ReachabilityFromJSONTyped(json: any, ignoreDiscriminator: boolea
 
 export function ReachabilityToJSON(value?: Reachability | null): any {
   return value as any;
+}
+
+export function ReachabilityToJSONTyped(value: any, ignoreDiscriminator: boolean): Reachability {
+  return value as Reachability;
 }

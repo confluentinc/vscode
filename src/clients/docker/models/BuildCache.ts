@@ -145,10 +145,18 @@ export function BuildCacheFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function BuildCacheToJSON(value?: BuildCache | null): any {
+export function BuildCacheToJSON(json: any): BuildCache {
+  return BuildCacheToJSONTyped(json, false);
+}
+
+export function BuildCacheToJSONTyped(
+  value?: BuildCache | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Parent: value["Parent"],

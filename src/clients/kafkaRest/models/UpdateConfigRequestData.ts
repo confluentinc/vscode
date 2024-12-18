@@ -50,10 +50,18 @@ export function UpdateConfigRequestDataFromJSONTyped(
   };
 }
 
-export function UpdateConfigRequestDataToJSON(value?: UpdateConfigRequestData | null): any {
+export function UpdateConfigRequestDataToJSON(json: any): UpdateConfigRequestData {
+  return UpdateConfigRequestDataToJSONTyped(json, false);
+}
+
+export function UpdateConfigRequestDataToJSONTyped(
+  value?: UpdateConfigRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     value: value["value"],
   };

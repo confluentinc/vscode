@@ -47,10 +47,15 @@ export function ModeFromJSONTyped(json: any, ignoreDiscriminator: boolean): Mode
   };
 }
 
-export function ModeToJSON(value?: Mode | null): any {
+export function ModeToJSON(json: any): Mode {
+  return ModeToJSONTyped(json, false);
+}
+
+export function ModeToJSONTyped(value?: Mode | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     mode: value["mode"],
   };

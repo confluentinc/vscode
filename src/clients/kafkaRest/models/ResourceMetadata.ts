@@ -58,10 +58,18 @@ export function ResourceMetadataFromJSONTyped(
   };
 }
 
-export function ResourceMetadataToJSON(value?: ResourceMetadata | null): any {
+export function ResourceMetadataToJSON(json: any): ResourceMetadata {
+  return ResourceMetadataToJSONTyped(json, false);
+}
+
+export function ResourceMetadataToJSONTyped(
+  value?: ResourceMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     self: value["self"],
     resource_name: value["resource_name"],

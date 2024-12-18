@@ -57,10 +57,18 @@ export function EventActorFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function EventActorToJSON(value?: EventActor | null): any {
+export function EventActorToJSON(json: any): EventActor {
+  return EventActorToJSONTyped(json, false);
+}
+
+export function EventActorToJSONTyped(
+  value?: EventActor | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Attributes: value["Attributes"],

@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from "../runtime";
+import type { KafkaClusterConfigCredentials } from "./KafkaClusterConfigCredentials";
+import {
+  KafkaClusterConfigCredentialsFromJSON,
+  KafkaClusterConfigCredentialsFromJSONTyped,
+  KafkaClusterConfigCredentialsToJSON,
+  KafkaClusterConfigCredentialsToJSONTyped,
+} from "./KafkaClusterConfigCredentials";
+
 /**
  * Kafka cluster configuration.
  * @export
@@ -26,11 +34,11 @@ export interface KafkaClusterConfig {
    */
   bootstrap_servers: string;
   /**
-   * The credentials for the Kafka cluster, or null if no authentication is required
-   * @type {object}
+   *
+   * @type {KafkaClusterConfigCredentials}
    * @memberof KafkaClusterConfig
    */
-  credentials?: object | null;
+  credentials?: KafkaClusterConfigCredentials | null;
   /**
    * Whether to communicate with the Kafka cluster over TLS/SSL. Defaults to 'true', but set to 'false' when the Kafka cluster does not support TLS/SSL.
    * @type {boolean}
@@ -66,20 +74,31 @@ export function KafkaClusterConfigFromJSONTyped(
   }
   return {
     bootstrap_servers: json["bootstrap_servers"],
-    credentials: json["credentials"] == null ? undefined : json["credentials"],
+    credentials:
+      json["credentials"] == null
+        ? undefined
+        : KafkaClusterConfigCredentialsFromJSON(json["credentials"]),
     ssl: json["ssl"] == null ? undefined : json["ssl"],
     verify_ssl_certificates:
       json["verify_ssl_certificates"] == null ? undefined : json["verify_ssl_certificates"],
   };
 }
 
-export function KafkaClusterConfigToJSON(value?: KafkaClusterConfig | null): any {
+export function KafkaClusterConfigToJSON(json: any): KafkaClusterConfig {
+  return KafkaClusterConfigToJSONTyped(json, false);
+}
+
+export function KafkaClusterConfigToJSONTyped(
+  value?: KafkaClusterConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     bootstrap_servers: value["bootstrap_servers"],
-    credentials: value["credentials"],
+    credentials: KafkaClusterConfigCredentialsToJSON(value["credentials"]),
     ssl: value["ssl"],
     verify_ssl_certificates: value["verify_ssl_certificates"],
   };

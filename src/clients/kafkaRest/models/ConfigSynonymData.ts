@@ -66,10 +66,18 @@ export function ConfigSynonymDataFromJSONTyped(
   };
 }
 
-export function ConfigSynonymDataToJSON(value?: ConfigSynonymData | null): any {
+export function ConfigSynonymDataToJSON(json: any): ConfigSynonymData {
+  return ConfigSynonymDataToJSONTyped(json, false);
+}
+
+export function ConfigSynonymDataToJSONTyped(
+  value?: ConfigSynonymData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     value: value["value"],

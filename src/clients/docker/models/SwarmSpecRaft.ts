@@ -90,10 +90,18 @@ export function SwarmSpecRaftFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function SwarmSpecRaftToJSON(value?: SwarmSpecRaft | null): any {
+export function SwarmSpecRaftToJSON(json: any): SwarmSpecRaft {
+  return SwarmSpecRaftToJSONTyped(json, false);
+}
+
+export function SwarmSpecRaftToJSONTyped(
+  value?: SwarmSpecRaft | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     SnapshotInterval: value["SnapshotInterval"],
     KeepOldSnapshots: value["KeepOldSnapshots"],

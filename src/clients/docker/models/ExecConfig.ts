@@ -125,10 +125,18 @@ export function ExecConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function ExecConfigToJSON(value?: ExecConfig | null): any {
+export function ExecConfigToJSON(json: any): ExecConfig {
+  return ExecConfigToJSONTyped(json, false);
+}
+
+export function ExecConfigToJSONTyped(
+  value?: ExecConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     AttachStdin: value["AttachStdin"],
     AttachStdout: value["AttachStdout"],

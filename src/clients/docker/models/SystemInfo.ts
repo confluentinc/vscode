@@ -14,31 +14,49 @@
 
 import { mapValues } from "../runtime";
 import type { PluginsInfo } from "./PluginsInfo";
-import { PluginsInfoFromJSON, PluginsInfoFromJSONTyped, PluginsInfoToJSON } from "./PluginsInfo";
+import {
+  PluginsInfoFromJSON,
+  PluginsInfoFromJSONTyped,
+  PluginsInfoToJSON,
+  PluginsInfoToJSONTyped,
+} from "./PluginsInfo";
 import type { GenericResourcesInner } from "./GenericResourcesInner";
 import {
   GenericResourcesInnerFromJSON,
   GenericResourcesInnerFromJSONTyped,
   GenericResourcesInnerToJSON,
+  GenericResourcesInnerToJSONTyped,
 } from "./GenericResourcesInner";
 import type { Runtime } from "./Runtime";
-import { RuntimeFromJSON, RuntimeFromJSONTyped, RuntimeToJSON } from "./Runtime";
+import {
+  RuntimeFromJSON,
+  RuntimeFromJSONTyped,
+  RuntimeToJSON,
+  RuntimeToJSONTyped,
+} from "./Runtime";
 import type { SystemInfoDefaultAddressPoolsInner } from "./SystemInfoDefaultAddressPoolsInner";
 import {
   SystemInfoDefaultAddressPoolsInnerFromJSON,
   SystemInfoDefaultAddressPoolsInnerFromJSONTyped,
   SystemInfoDefaultAddressPoolsInnerToJSON,
+  SystemInfoDefaultAddressPoolsInnerToJSONTyped,
 } from "./SystemInfoDefaultAddressPoolsInner";
 import type { Commit } from "./Commit";
-import { CommitFromJSON, CommitFromJSONTyped, CommitToJSON } from "./Commit";
+import { CommitFromJSON, CommitFromJSONTyped, CommitToJSON, CommitToJSONTyped } from "./Commit";
 import type { RegistryServiceConfig } from "./RegistryServiceConfig";
 import {
   RegistryServiceConfigFromJSON,
   RegistryServiceConfigFromJSONTyped,
   RegistryServiceConfigToJSON,
+  RegistryServiceConfigToJSONTyped,
 } from "./RegistryServiceConfig";
 import type { SwarmInfo } from "./SwarmInfo";
-import { SwarmInfoFromJSON, SwarmInfoFromJSONTyped, SwarmInfoToJSON } from "./SwarmInfo";
+import {
+  SwarmInfoFromJSON,
+  SwarmInfoFromJSONTyped,
+  SwarmInfoToJSON,
+  SwarmInfoToJSONTyped,
+} from "./SwarmInfo";
 
 /**
  *
@@ -694,10 +712,18 @@ export function SystemInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function SystemInfoToJSON(value?: SystemInfo | null): any {
+export function SystemInfoToJSON(json: any): SystemInfo {
+  return SystemInfoToJSONTyped(json, false);
+}
+
+export function SystemInfoToJSONTyped(
+  value?: SystemInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Containers: value["Containers"],

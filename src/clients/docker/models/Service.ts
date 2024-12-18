@@ -18,32 +18,42 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { ServiceServiceStatus } from "./ServiceServiceStatus";
 import {
   ServiceServiceStatusFromJSON,
   ServiceServiceStatusFromJSONTyped,
   ServiceServiceStatusToJSON,
+  ServiceServiceStatusToJSONTyped,
 } from "./ServiceServiceStatus";
 import type { ServiceJobStatus } from "./ServiceJobStatus";
 import {
   ServiceJobStatusFromJSON,
   ServiceJobStatusFromJSONTyped,
   ServiceJobStatusToJSON,
+  ServiceJobStatusToJSONTyped,
 } from "./ServiceJobStatus";
 import type { ServiceSpec } from "./ServiceSpec";
-import { ServiceSpecFromJSON, ServiceSpecFromJSONTyped, ServiceSpecToJSON } from "./ServiceSpec";
+import {
+  ServiceSpecFromJSON,
+  ServiceSpecFromJSONTyped,
+  ServiceSpecToJSON,
+  ServiceSpecToJSONTyped,
+} from "./ServiceSpec";
 import type { ServiceUpdateStatus } from "./ServiceUpdateStatus";
 import {
   ServiceUpdateStatusFromJSON,
   ServiceUpdateStatusFromJSONTyped,
   ServiceUpdateStatusToJSON,
+  ServiceUpdateStatusToJSONTyped,
 } from "./ServiceUpdateStatus";
 import type { ServiceEndpoint } from "./ServiceEndpoint";
 import {
   ServiceEndpointFromJSON,
   ServiceEndpointFromJSONTyped,
   ServiceEndpointToJSON,
+  ServiceEndpointToJSONTyped,
 } from "./ServiceEndpoint";
 
 /**
@@ -140,10 +150,18 @@ export function ServiceFromJSONTyped(json: any, ignoreDiscriminator: boolean): S
   };
 }
 
-export function ServiceToJSON(value?: Service | null): any {
+export function ServiceToJSON(json: any): Service {
+  return ServiceToJSONTyped(json, false);
+}
+
+export function ServiceToJSONTyped(
+  value?: Service | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

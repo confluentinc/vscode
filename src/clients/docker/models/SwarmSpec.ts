@@ -18,36 +18,42 @@ import {
   SwarmSpecDispatcherFromJSON,
   SwarmSpecDispatcherFromJSONTyped,
   SwarmSpecDispatcherToJSON,
+  SwarmSpecDispatcherToJSONTyped,
 } from "./SwarmSpecDispatcher";
 import type { SwarmSpecOrchestration } from "./SwarmSpecOrchestration";
 import {
   SwarmSpecOrchestrationFromJSON,
   SwarmSpecOrchestrationFromJSONTyped,
   SwarmSpecOrchestrationToJSON,
+  SwarmSpecOrchestrationToJSONTyped,
 } from "./SwarmSpecOrchestration";
 import type { SwarmSpecCAConfig } from "./SwarmSpecCAConfig";
 import {
   SwarmSpecCAConfigFromJSON,
   SwarmSpecCAConfigFromJSONTyped,
   SwarmSpecCAConfigToJSON,
+  SwarmSpecCAConfigToJSONTyped,
 } from "./SwarmSpecCAConfig";
 import type { SwarmSpecTaskDefaults } from "./SwarmSpecTaskDefaults";
 import {
   SwarmSpecTaskDefaultsFromJSON,
   SwarmSpecTaskDefaultsFromJSONTyped,
   SwarmSpecTaskDefaultsToJSON,
+  SwarmSpecTaskDefaultsToJSONTyped,
 } from "./SwarmSpecTaskDefaults";
 import type { SwarmSpecRaft } from "./SwarmSpecRaft";
 import {
   SwarmSpecRaftFromJSON,
   SwarmSpecRaftFromJSONTyped,
   SwarmSpecRaftToJSON,
+  SwarmSpecRaftToJSONTyped,
 } from "./SwarmSpecRaft";
 import type { SwarmSpecEncryptionConfig } from "./SwarmSpecEncryptionConfig";
 import {
   SwarmSpecEncryptionConfigFromJSON,
   SwarmSpecEncryptionConfigFromJSONTyped,
   SwarmSpecEncryptionConfigToJSON,
+  SwarmSpecEncryptionConfigToJSONTyped,
 } from "./SwarmSpecEncryptionConfig";
 
 /**
@@ -143,10 +149,18 @@ export function SwarmSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function SwarmSpecToJSON(value?: SwarmSpec | null): any {
+export function SwarmSpecToJSON(json: any): SwarmSpec {
+  return SwarmSpecToJSONTyped(json, false);
+}
+
+export function SwarmSpecToJSONTyped(
+  value?: SwarmSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

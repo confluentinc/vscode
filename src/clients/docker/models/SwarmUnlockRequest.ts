@@ -50,10 +50,18 @@ export function SwarmUnlockRequestFromJSONTyped(
   };
 }
 
-export function SwarmUnlockRequestToJSON(value?: SwarmUnlockRequest | null): any {
+export function SwarmUnlockRequestToJSON(json: any): SwarmUnlockRequest {
+  return SwarmUnlockRequestToJSONTyped(json, false);
+}
+
+export function SwarmUnlockRequestToJSONTyped(
+  value?: SwarmUnlockRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     UnlockKey: value["UnlockKey"],
   };

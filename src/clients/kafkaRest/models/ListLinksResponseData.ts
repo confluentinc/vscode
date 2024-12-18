@@ -14,12 +14,18 @@
 
 import { mapValues } from "../runtime";
 import type { LinkTask } from "./LinkTask";
-import { LinkTaskFromJSON, LinkTaskFromJSONTyped, LinkTaskToJSON } from "./LinkTask";
+import {
+  LinkTaskFromJSON,
+  LinkTaskFromJSONTyped,
+  LinkTaskToJSON,
+  LinkTaskToJSONTyped,
+} from "./LinkTask";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -150,10 +156,18 @@ export function ListLinksResponseDataFromJSONTyped(
   };
 }
 
-export function ListLinksResponseDataToJSON(value?: ListLinksResponseData | null): any {
+export function ListLinksResponseDataToJSON(json: any): ListLinksResponseData {
+  return ListLinksResponseDataToJSONTyped(json, false);
+}
+
+export function ListLinksResponseDataToJSONTyped(
+  value?: ListLinksResponseData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

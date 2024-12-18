@@ -18,12 +18,14 @@ import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -135,12 +137,18 @@ export function AnyUnevenLoadDataFromJSONTyped(
   };
 }
 
-export function AnyUnevenLoadDataToJSON(
+export function AnyUnevenLoadDataToJSON(json: any): AnyUnevenLoadData {
+  return AnyUnevenLoadDataToJSONTyped(json, false);
+}
+
+export function AnyUnevenLoadDataToJSONTyped(
   value?: Omit<AnyUnevenLoadData, "status_updated_at" | "previous_status_updated_at"> | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

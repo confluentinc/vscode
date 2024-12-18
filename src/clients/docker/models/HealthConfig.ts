@@ -90,10 +90,18 @@ export function HealthConfigFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function HealthConfigToJSON(value?: HealthConfig | null): any {
+export function HealthConfigToJSON(json: any): HealthConfig {
+  return HealthConfigToJSONTyped(json, false);
+}
+
+export function HealthConfigToJSONTyped(
+  value?: HealthConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Test: value["Test"],
     Interval: value["Interval"],

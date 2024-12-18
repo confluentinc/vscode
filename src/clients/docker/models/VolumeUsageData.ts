@@ -67,10 +67,18 @@ export function VolumeUsageDataFromJSONTyped(
   };
 }
 
-export function VolumeUsageDataToJSON(value?: VolumeUsageData | null): any {
+export function VolumeUsageDataToJSON(json: any): VolumeUsageData {
+  return VolumeUsageDataToJSONTyped(json, false);
+}
+
+export function VolumeUsageDataToJSONTyped(
+  value?: VolumeUsageData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Size: value["Size"],
     RefCount: value["RefCount"],

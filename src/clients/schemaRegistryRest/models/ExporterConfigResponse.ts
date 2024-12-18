@@ -69,10 +69,18 @@ export function ExporterConfigResponseFromJSONTyped(
   };
 }
 
-export function ExporterConfigResponseToJSON(value?: ExporterConfigResponse | null): any {
+export function ExporterConfigResponseToJSON(json: any): ExporterConfigResponse {
+  return ExporterConfigResponseToJSONTyped(json, false);
+}
+
+export function ExporterConfigResponseToJSONTyped(
+  value?: ExporterConfigResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     "schema.registry.url": value["schema_registry_url"],
     "basic.auth.credentials.source": value["basic_auth_credentials_source"],

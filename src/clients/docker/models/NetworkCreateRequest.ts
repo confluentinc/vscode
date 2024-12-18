@@ -14,12 +14,13 @@
 
 import { mapValues } from "../runtime";
 import type { IPAM } from "./IPAM";
-import { IPAMFromJSON, IPAMFromJSONTyped, IPAMToJSON } from "./IPAM";
+import { IPAMFromJSON, IPAMFromJSONTyped, IPAMToJSON, IPAMToJSONTyped } from "./IPAM";
 import type { ConfigReference } from "./ConfigReference";
 import {
   ConfigReferenceFromJSON,
   ConfigReferenceFromJSONTyped,
   ConfigReferenceToJSON,
+  ConfigReferenceToJSONTyped,
 } from "./ConfigReference";
 
 /**
@@ -162,10 +163,18 @@ export function NetworkCreateRequestFromJSONTyped(
   };
 }
 
-export function NetworkCreateRequestToJSON(value?: NetworkCreateRequest | null): any {
+export function NetworkCreateRequestToJSON(json: any): NetworkCreateRequest {
+  return NetworkCreateRequestToJSONTyped(json, false);
+}
+
+export function NetworkCreateRequestToJSONTyped(
+  value?: NetworkCreateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     CheckDuplicate: value["CheckDuplicate"],

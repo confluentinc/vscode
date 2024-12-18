@@ -50,10 +50,18 @@ export function ConfigDefaultMetadataFromJSONTyped(
   };
 }
 
-export function ConfigDefaultMetadataToJSON(value?: ConfigDefaultMetadata | null): any {
+export function ConfigDefaultMetadataToJSON(json: any): ConfigDefaultMetadata {
+  return ConfigDefaultMetadataToJSONTyped(json, false);
+}
+
+export function ConfigDefaultMetadataToJSONTyped(
+  value?: ConfigDefaultMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     properties: value["properties"],
   };

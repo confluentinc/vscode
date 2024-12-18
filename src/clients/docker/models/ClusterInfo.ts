@@ -18,11 +18,22 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { TLSInfo } from "./TLSInfo";
-import { TLSInfoFromJSON, TLSInfoFromJSONTyped, TLSInfoToJSON } from "./TLSInfo";
+import {
+  TLSInfoFromJSON,
+  TLSInfoFromJSONTyped,
+  TLSInfoToJSON,
+  TLSInfoToJSONTyped,
+} from "./TLSInfo";
 import type { SwarmSpec } from "./SwarmSpec";
-import { SwarmSpecFromJSON, SwarmSpecFromJSONTyped, SwarmSpecToJSON } from "./SwarmSpec";
+import {
+  SwarmSpecFromJSON,
+  SwarmSpecFromJSONTyped,
+  SwarmSpecToJSON,
+  SwarmSpecToJSONTyped,
+} from "./SwarmSpec";
 
 /**
  * ClusterInfo represents information about the swarm as is returned by the
@@ -136,10 +147,18 @@ export function ClusterInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function ClusterInfoToJSON(value?: ClusterInfo | null): any {
+export function ClusterInfoToJSON(json: any): ClusterInfo {
+  return ClusterInfoToJSONTyped(json, false);
+}
+
+export function ClusterInfoToJSONTyped(
+  value?: ClusterInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

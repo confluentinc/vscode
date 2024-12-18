@@ -18,6 +18,7 @@ import {
   TaskSpecContainerSpecSecretsInnerFileFromJSON,
   TaskSpecContainerSpecSecretsInnerFileFromJSONTyped,
   TaskSpecContainerSpecSecretsInnerFileToJSON,
+  TaskSpecContainerSpecSecretsInnerFileToJSONTyped,
 } from "./TaskSpecContainerSpecSecretsInnerFile";
 
 /**
@@ -84,11 +85,19 @@ export function TaskSpecContainerSpecSecretsInnerFromJSONTyped(
 }
 
 export function TaskSpecContainerSpecSecretsInnerToJSON(
+  json: any,
+): TaskSpecContainerSpecSecretsInner {
+  return TaskSpecContainerSpecSecretsInnerToJSONTyped(json, false);
+}
+
+export function TaskSpecContainerSpecSecretsInnerToJSONTyped(
   value?: TaskSpecContainerSpecSecretsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     File: TaskSpecContainerSpecSecretsInnerFileToJSON(value["File"]),
     SecretID: value["SecretID"],

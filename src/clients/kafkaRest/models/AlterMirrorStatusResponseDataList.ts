@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { AlterMirrorStatusResponseData } from "./AlterMirrorStatusResponseData";
 import {
   AlterMirrorStatusResponseDataFromJSON,
   AlterMirrorStatusResponseDataFromJSONTyped,
   AlterMirrorStatusResponseDataToJSON,
+  AlterMirrorStatusResponseDataToJSONTyped,
 } from "./AlterMirrorStatusResponseData";
 
 /**
@@ -85,11 +87,19 @@ export function AlterMirrorStatusResponseDataListFromJSONTyped(
 }
 
 export function AlterMirrorStatusResponseDataListToJSON(
+  json: any,
+): AlterMirrorStatusResponseDataList {
+  return AlterMirrorStatusResponseDataListToJSONTyped(json, false);
+}
+
+export function AlterMirrorStatusResponseDataListToJSONTyped(
   value?: AlterMirrorStatusResponseDataList | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

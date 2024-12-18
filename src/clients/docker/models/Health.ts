@@ -18,6 +18,7 @@ import {
   HealthcheckResultFromJSON,
   HealthcheckResultFromJSONTyped,
   HealthcheckResultToJSON,
+  HealthcheckResultToJSONTyped,
 } from "./HealthcheckResult";
 
 /**
@@ -88,10 +89,18 @@ export function HealthFromJSONTyped(json: any, ignoreDiscriminator: boolean): He
   };
 }
 
-export function HealthToJSON(value?: Health | null): any {
+export function HealthToJSON(json: any): Health {
+  return HealthToJSONTyped(json, false);
+}
+
+export function HealthToJSONTyped(
+  value?: Health | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Status: value["Status"],
     FailingStreak: value["FailingStreak"],

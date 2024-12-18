@@ -18,6 +18,7 @@ import {
   BrokerReplicaExclusionRequestDataFromJSON,
   BrokerReplicaExclusionRequestDataFromJSONTyped,
   BrokerReplicaExclusionRequestDataToJSON,
+  BrokerReplicaExclusionRequestDataToJSONTyped,
 } from "./BrokerReplicaExclusionRequestData";
 
 /**
@@ -63,11 +64,19 @@ export function BrokerReplicaExclusionBatchRequestDataFromJSONTyped(
 }
 
 export function BrokerReplicaExclusionBatchRequestDataToJSON(
+  json: any,
+): BrokerReplicaExclusionBatchRequestData {
+  return BrokerReplicaExclusionBatchRequestDataToJSONTyped(json, false);
+}
+
+export function BrokerReplicaExclusionBatchRequestDataToJSONTyped(
   value?: BrokerReplicaExclusionBatchRequestData | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     data: (value["data"] as Array<any>).map(BrokerReplicaExclusionRequestDataToJSON),
   };

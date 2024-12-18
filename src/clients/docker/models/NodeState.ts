@@ -27,7 +27,7 @@ export type NodeState = (typeof NodeState)[keyof typeof NodeState];
 export function instanceOfNodeState(value: any): boolean {
   for (const key in NodeState) {
     if (Object.prototype.hasOwnProperty.call(NodeState, key)) {
-      if ((NodeState as Record<string, NodeState>)[key] === value) {
+      if (NodeState[key as keyof typeof NodeState] === value) {
         return true;
       }
     }
@@ -45,4 +45,8 @@ export function NodeStateFromJSONTyped(json: any, ignoreDiscriminator: boolean):
 
 export function NodeStateToJSON(value?: NodeState | null): any {
   return value as any;
+}
+
+export function NodeStateToJSONTyped(value: any, ignoreDiscriminator: boolean): NodeState {
+  return value as NodeState;
 }

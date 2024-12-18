@@ -50,10 +50,18 @@ export function ExporterResponseFromJSONTyped(
   };
 }
 
-export function ExporterResponseToJSON(value?: ExporterResponse | null): any {
+export function ExporterResponseToJSON(json: any): ExporterResponse {
+  return ExporterResponseToJSONTyped(json, false);
+}
+
+export function ExporterResponseToJSONTyped(
+  value?: ExporterResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
   };

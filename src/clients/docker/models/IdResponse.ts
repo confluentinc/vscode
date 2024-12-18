@@ -48,10 +48,18 @@ export function IdResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function IdResponseToJSON(value?: IdResponse | null): any {
+export function IdResponseToJSON(json: any): IdResponse {
+  return IdResponseToJSONTyped(json, false);
+}
+
+export function IdResponseToJSONTyped(
+  value?: IdResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
   };

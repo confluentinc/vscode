@@ -62,11 +62,19 @@ export function SystemInfoDefaultAddressPoolsInnerFromJSONTyped(
 }
 
 export function SystemInfoDefaultAddressPoolsInnerToJSON(
+  json: any,
+): SystemInfoDefaultAddressPoolsInner {
+  return SystemInfoDefaultAddressPoolsInnerToJSONTyped(json, false);
+}
+
+export function SystemInfoDefaultAddressPoolsInnerToJSONTyped(
   value?: SystemInfoDefaultAddressPoolsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Base: value["Base"],
     Size: value["Size"],

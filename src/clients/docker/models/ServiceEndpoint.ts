@@ -18,18 +18,21 @@ import {
   ServiceEndpointVirtualIPsInnerFromJSON,
   ServiceEndpointVirtualIPsInnerFromJSONTyped,
   ServiceEndpointVirtualIPsInnerToJSON,
+  ServiceEndpointVirtualIPsInnerToJSONTyped,
 } from "./ServiceEndpointVirtualIPsInner";
 import type { EndpointSpec } from "./EndpointSpec";
 import {
   EndpointSpecFromJSON,
   EndpointSpecFromJSONTyped,
   EndpointSpecToJSON,
+  EndpointSpecToJSONTyped,
 } from "./EndpointSpec";
 import type { EndpointPortConfig } from "./EndpointPortConfig";
 import {
   EndpointPortConfigFromJSON,
   EndpointPortConfigFromJSONTyped,
   EndpointPortConfigToJSON,
+  EndpointPortConfigToJSONTyped,
 } from "./EndpointPortConfig";
 
 /**
@@ -89,10 +92,18 @@ export function ServiceEndpointFromJSONTyped(
   };
 }
 
-export function ServiceEndpointToJSON(value?: ServiceEndpoint | null): any {
+export function ServiceEndpointToJSON(json: any): ServiceEndpoint {
+  return ServiceEndpointToJSONTyped(json, false);
+}
+
+export function ServiceEndpointToJSONTyped(
+  value?: ServiceEndpoint | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Spec: EndpointSpecToJSON(value["Spec"]),
     Ports:

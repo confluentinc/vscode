@@ -59,12 +59,18 @@ export function MountVolumeOptionsDriverConfigFromJSONTyped(
   };
 }
 
-export function MountVolumeOptionsDriverConfigToJSON(
+export function MountVolumeOptionsDriverConfigToJSON(json: any): MountVolumeOptionsDriverConfig {
+  return MountVolumeOptionsDriverConfigToJSONTyped(json, false);
+}
+
+export function MountVolumeOptionsDriverConfigToJSONTyped(
   value?: MountVolumeOptionsDriverConfig | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Options: value["Options"],

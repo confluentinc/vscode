@@ -18,9 +18,15 @@ import {
   CollectionMetadataFromJSON,
   CollectionMetadataFromJSONTyped,
   CollectionMetadataToJSON,
+  CollectionMetadataToJSONTyped,
 } from "./CollectionMetadata";
 import type { Connection } from "./Connection";
-import { ConnectionFromJSON, ConnectionFromJSONTyped, ConnectionToJSON } from "./Connection";
+import {
+  ConnectionFromJSON,
+  ConnectionFromJSONTyped,
+  ConnectionToJSON,
+  ConnectionToJSONTyped,
+} from "./Connection";
 
 /**
  *
@@ -84,10 +90,18 @@ export function ConnectionsListFromJSONTyped(
   };
 }
 
-export function ConnectionsListToJSON(value?: ConnectionsList | null): any {
+export function ConnectionsListToJSON(json: any): ConnectionsList {
+  return ConnectionsListToJSONTyped(json, false);
+}
+
+export function ConnectionsListToJSONTyped(
+  value?: ConnectionsList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     api_version: value["api_version"],
     kind: value["kind"],

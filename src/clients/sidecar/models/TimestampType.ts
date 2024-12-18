@@ -26,7 +26,7 @@ export type TimestampType = (typeof TimestampType)[keyof typeof TimestampType];
 export function instanceOfTimestampType(value: any): boolean {
   for (const key in TimestampType) {
     if (Object.prototype.hasOwnProperty.call(TimestampType, key)) {
-      if ((TimestampType as Record<string, TimestampType>)[key] === value) {
+      if (TimestampType[key as keyof typeof TimestampType] === value) {
         return true;
       }
     }
@@ -44,4 +44,8 @@ export function TimestampTypeFromJSONTyped(json: any, ignoreDiscriminator: boole
 
 export function TimestampTypeToJSON(value?: TimestampType | null): any {
   return value as any;
+}
+
+export function TimestampTypeToJSONTyped(value: any, ignoreDiscriminator: boolean): TimestampType {
+  return value as TimestampType;
 }

@@ -18,18 +18,21 @@ import {
   BrokerTaskTypeFromJSON,
   BrokerTaskTypeFromJSONTyped,
   BrokerTaskTypeToJSON,
+  BrokerTaskTypeToJSONTyped,
 } from "./BrokerTaskType";
 import type { Relationship } from "./Relationship";
 import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -163,12 +166,18 @@ export function BrokerTaskDataFromJSONTyped(
   };
 }
 
-export function BrokerTaskDataToJSON(
+export function BrokerTaskDataToJSON(json: any): BrokerTaskData {
+  return BrokerTaskDataToJSONTyped(json, false);
+}
+
+export function BrokerTaskDataToJSONTyped(
   value?: Omit<BrokerTaskData, "created_at" | "updated_at"> | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

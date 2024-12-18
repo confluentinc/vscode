@@ -18,6 +18,7 @@ import {
   HealthConfigFromJSON,
   HealthConfigFromJSONTyped,
   HealthConfigToJSON,
+  HealthConfigToJSONTyped,
 } from "./HealthConfig";
 
 /**
@@ -256,10 +257,18 @@ export function ContainerConfigFromJSONTyped(
   };
 }
 
-export function ContainerConfigToJSON(value?: ContainerConfig | null): any {
+export function ContainerConfigToJSON(json: any): ContainerConfig {
+  return ContainerConfigToJSONTyped(json, false);
+}
+
+export function ContainerConfigToJSONTyped(
+  value?: ContainerConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Hostname: value["Hostname"],
     Domainname: value["Domainname"],

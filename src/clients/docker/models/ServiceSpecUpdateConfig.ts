@@ -118,10 +118,18 @@ export function ServiceSpecUpdateConfigFromJSONTyped(
   };
 }
 
-export function ServiceSpecUpdateConfigToJSON(value?: ServiceSpecUpdateConfig | null): any {
+export function ServiceSpecUpdateConfigToJSON(json: any): ServiceSpecUpdateConfig {
+  return ServiceSpecUpdateConfigToJSONTyped(json, false);
+}
+
+export function ServiceSpecUpdateConfigToJSONTyped(
+  value?: ServiceSpecUpdateConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Parallelism: value["Parallelism"],
     Delay: value["Delay"],

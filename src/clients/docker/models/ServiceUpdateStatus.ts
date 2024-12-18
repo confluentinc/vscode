@@ -82,10 +82,18 @@ export function ServiceUpdateStatusFromJSONTyped(
   };
 }
 
-export function ServiceUpdateStatusToJSON(value?: ServiceUpdateStatus | null): any {
+export function ServiceUpdateStatusToJSON(json: any): ServiceUpdateStatus {
+  return ServiceUpdateStatusToJSONTyped(json, false);
+}
+
+export function ServiceUpdateStatusToJSONTyped(
+  value?: ServiceUpdateStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     State: value["State"],
     StartedAt: value["StartedAt"],

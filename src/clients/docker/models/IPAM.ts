@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { IPAMConfig } from "./IPAMConfig";
-import { IPAMConfigFromJSON, IPAMConfigFromJSONTyped, IPAMConfigToJSON } from "./IPAMConfig";
+import {
+  IPAMConfigFromJSON,
+  IPAMConfigFromJSONTyped,
+  IPAMConfigToJSON,
+  IPAMConfigToJSONTyped,
+} from "./IPAMConfig";
 
 /**
  *
@@ -70,10 +75,15 @@ export function IPAMFromJSONTyped(json: any, ignoreDiscriminator: boolean): IPAM
   };
 }
 
-export function IPAMToJSON(value?: IPAM | null): any {
+export function IPAMToJSON(json: any): IPAM {
+  return IPAMToJSONTyped(json, false);
+}
+
+export function IPAMToJSONTyped(value?: IPAM | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     Driver: value["Driver"],
     Config:

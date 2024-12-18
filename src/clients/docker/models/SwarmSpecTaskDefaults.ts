@@ -18,6 +18,7 @@ import {
   SwarmSpecTaskDefaultsLogDriverFromJSON,
   SwarmSpecTaskDefaultsLogDriverFromJSONTyped,
   SwarmSpecTaskDefaultsLogDriverToJSON,
+  SwarmSpecTaskDefaultsLogDriverToJSONTyped,
 } from "./SwarmSpecTaskDefaultsLogDriver";
 
 /**
@@ -60,10 +61,18 @@ export function SwarmSpecTaskDefaultsFromJSONTyped(
   };
 }
 
-export function SwarmSpecTaskDefaultsToJSON(value?: SwarmSpecTaskDefaults | null): any {
+export function SwarmSpecTaskDefaultsToJSON(json: any): SwarmSpecTaskDefaults {
+  return SwarmSpecTaskDefaultsToJSONTyped(json, false);
+}
+
+export function SwarmSpecTaskDefaultsToJSONTyped(
+  value?: SwarmSpecTaskDefaults | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     LogDriver: SwarmSpecTaskDefaultsLogDriverToJSON(value["LogDriver"]),
   };

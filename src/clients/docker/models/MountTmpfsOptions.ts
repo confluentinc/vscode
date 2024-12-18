@@ -57,10 +57,18 @@ export function MountTmpfsOptionsFromJSONTyped(
   };
 }
 
-export function MountTmpfsOptionsToJSON(value?: MountTmpfsOptions | null): any {
+export function MountTmpfsOptionsToJSON(json: any): MountTmpfsOptions {
+  return MountTmpfsOptionsToJSONTyped(json, false);
+}
+
+export function MountTmpfsOptionsToJSONTyped(
+  value?: MountTmpfsOptions | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     SizeBytes: value["SizeBytes"],
     Mode: value["Mode"],

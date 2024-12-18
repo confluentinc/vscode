@@ -18,6 +18,7 @@ import {
   ProgressDetailFromJSON,
   ProgressDetailFromJSONTyped,
   ProgressDetailToJSON,
+  ProgressDetailToJSONTyped,
 } from "./ProgressDetail";
 
 /**
@@ -76,10 +77,18 @@ export function PushImageInfoFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function PushImageInfoToJSON(value?: PushImageInfo | null): any {
+export function PushImageInfoToJSON(json: any): PushImageInfo {
+  return PushImageInfoToJSONTyped(json, false);
+}
+
+export function PushImageInfoToJSONTyped(
+  value?: PushImageInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     error: value["error"],
     status: value["status"],

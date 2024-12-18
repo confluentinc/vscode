@@ -18,12 +18,14 @@ import {
   ServiceSpecModeReplicatedFromJSON,
   ServiceSpecModeReplicatedFromJSONTyped,
   ServiceSpecModeReplicatedToJSON,
+  ServiceSpecModeReplicatedToJSONTyped,
 } from "./ServiceSpecModeReplicated";
 import type { ServiceSpecModeReplicatedJob } from "./ServiceSpecModeReplicatedJob";
 import {
   ServiceSpecModeReplicatedJobFromJSON,
   ServiceSpecModeReplicatedJobFromJSONTyped,
   ServiceSpecModeReplicatedJobToJSON,
+  ServiceSpecModeReplicatedJobToJSONTyped,
 } from "./ServiceSpecModeReplicatedJob";
 
 /**
@@ -92,10 +94,18 @@ export function ServiceSpecModeFromJSONTyped(
   };
 }
 
-export function ServiceSpecModeToJSON(value?: ServiceSpecMode | null): any {
+export function ServiceSpecModeToJSON(json: any): ServiceSpecMode {
+  return ServiceSpecModeToJSONTyped(json, false);
+}
+
+export function ServiceSpecModeToJSONTyped(
+  value?: ServiceSpecMode | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Replicated: ServiceSpecModeReplicatedToJSON(value["Replicated"]),
     Global: value["Global"],

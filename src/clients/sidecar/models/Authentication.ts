@@ -14,11 +14,21 @@
 
 import { mapValues } from "../runtime";
 import type { Status } from "./Status";
-import { StatusFromJSON, StatusFromJSONTyped, StatusToJSON } from "./Status";
+import { StatusFromJSON, StatusFromJSONTyped, StatusToJSON, StatusToJSONTyped } from "./Status";
 import type { AuthErrors } from "./AuthErrors";
-import { AuthErrorsFromJSON, AuthErrorsFromJSONTyped, AuthErrorsToJSON } from "./AuthErrors";
+import {
+  AuthErrorsFromJSON,
+  AuthErrorsFromJSONTyped,
+  AuthErrorsToJSON,
+  AuthErrorsToJSONTyped,
+} from "./AuthErrors";
 import type { UserInfo } from "./UserInfo";
-import { UserInfoFromJSON, UserInfoFromJSONTyped, UserInfoToJSON } from "./UserInfo";
+import {
+  UserInfoFromJSON,
+  UserInfoFromJSONTyped,
+  UserInfoToJSON,
+  UserInfoToJSONTyped,
+} from "./UserInfo";
 
 /**
  * The authentication-related status (deprecated).
@@ -82,10 +92,18 @@ export function AuthenticationFromJSONTyped(
   };
 }
 
-export function AuthenticationToJSON(value?: Authentication | null): any {
+export function AuthenticationToJSON(json: any): Authentication {
+  return AuthenticationToJSONTyped(json, false);
+}
+
+export function AuthenticationToJSONTyped(
+  value?: Authentication | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     status: StatusToJSON(value["status"]),
     requires_authentication_at:

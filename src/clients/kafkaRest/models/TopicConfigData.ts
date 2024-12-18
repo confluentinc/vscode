@@ -18,12 +18,14 @@ import {
   ConfigSynonymDataFromJSON,
   ConfigSynonymDataFromJSONTyped,
   ConfigSynonymDataToJSON,
+  ConfigSynonymDataToJSONTyped,
 } from "./ConfigSynonymData";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -143,10 +145,18 @@ export function TopicConfigDataFromJSONTyped(
   };
 }
 
-export function TopicConfigDataToJSON(value?: TopicConfigData | null): any {
+export function TopicConfigDataToJSON(json: any): TopicConfigData {
+  return TopicConfigDataToJSONTyped(json, false);
+}
+
+export function TopicConfigDataToJSONTyped(
+  value?: TopicConfigData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

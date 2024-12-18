@@ -18,6 +18,7 @@ import {
   EndpointSettingsFromJSON,
   EndpointSettingsFromJSONTyped,
   EndpointSettingsToJSON,
+  EndpointSettingsToJSONTyped,
 } from "./EndpointSettings";
 
 /**
@@ -65,10 +66,18 @@ export function NetworkingConfigFromJSONTyped(
   };
 }
 
-export function NetworkingConfigToJSON(value?: NetworkingConfig | null): any {
+export function NetworkingConfigToJSON(json: any): NetworkingConfig {
+  return NetworkingConfigToJSONTyped(json, false);
+}
+
+export function NetworkingConfigToJSONTyped(
+  value?: NetworkingConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     EndpointsConfig:
       value["EndpointsConfig"] == null

@@ -60,10 +60,18 @@ export function TaskSpecLogDriverFromJSONTyped(
   };
 }
 
-export function TaskSpecLogDriverToJSON(value?: TaskSpecLogDriver | null): any {
+export function TaskSpecLogDriverToJSON(json: any): TaskSpecLogDriver {
+  return TaskSpecLogDriverToJSONTyped(json, false);
+}
+
+export function TaskSpecLogDriverToJSONTyped(
+  value?: TaskSpecLogDriver | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Options: value["Options"],

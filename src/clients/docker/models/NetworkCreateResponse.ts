@@ -57,10 +57,18 @@ export function NetworkCreateResponseFromJSONTyped(
   };
 }
 
-export function NetworkCreateResponseToJSON(value?: NetworkCreateResponse | null): any {
+export function NetworkCreateResponseToJSON(json: any): NetworkCreateResponse {
+  return NetworkCreateResponseToJSONTyped(json, false);
+}
+
+export function NetworkCreateResponseToJSONTyped(
+  value?: NetworkCreateResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Id: value["Id"],
     Warning: value["Warning"],

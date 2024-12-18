@@ -54,10 +54,8 @@ describe("KafkaTopicTreeItem constructor", () => {
 
   function hasOperationContextFlag(topicTreeItem: KafkaTopicTreeItem, operation: string): boolean {
     const contextValue = topicTreeItem.contextValue ?? "";
-    // 'READ' -> 'Read' ...
-    const operationTitleCase = operation.toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
-    // "-authzRead"
-    const expectedContextSubstring = `-authz${operationTitleCase}`;
+    // "-authzREAD"
+    const expectedContextSubstring = `-authz${operation}`;
     return contextValue.includes(expectedContextSubstring);
   }
 

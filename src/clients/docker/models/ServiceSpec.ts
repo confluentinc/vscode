@@ -18,32 +18,42 @@ import {
   NetworkAttachmentConfigFromJSON,
   NetworkAttachmentConfigFromJSONTyped,
   NetworkAttachmentConfigToJSON,
+  NetworkAttachmentConfigToJSONTyped,
 } from "./NetworkAttachmentConfig";
 import type { ServiceSpecRollbackConfig } from "./ServiceSpecRollbackConfig";
 import {
   ServiceSpecRollbackConfigFromJSON,
   ServiceSpecRollbackConfigFromJSONTyped,
   ServiceSpecRollbackConfigToJSON,
+  ServiceSpecRollbackConfigToJSONTyped,
 } from "./ServiceSpecRollbackConfig";
 import type { ServiceSpecUpdateConfig } from "./ServiceSpecUpdateConfig";
 import {
   ServiceSpecUpdateConfigFromJSON,
   ServiceSpecUpdateConfigFromJSONTyped,
   ServiceSpecUpdateConfigToJSON,
+  ServiceSpecUpdateConfigToJSONTyped,
 } from "./ServiceSpecUpdateConfig";
 import type { EndpointSpec } from "./EndpointSpec";
 import {
   EndpointSpecFromJSON,
   EndpointSpecFromJSONTyped,
   EndpointSpecToJSON,
+  EndpointSpecToJSONTyped,
 } from "./EndpointSpec";
 import type { TaskSpec } from "./TaskSpec";
-import { TaskSpecFromJSON, TaskSpecFromJSONTyped, TaskSpecToJSON } from "./TaskSpec";
+import {
+  TaskSpecFromJSON,
+  TaskSpecFromJSONTyped,
+  TaskSpecToJSON,
+  TaskSpecToJSONTyped,
+} from "./TaskSpec";
 import type { ServiceSpecMode } from "./ServiceSpecMode";
 import {
   ServiceSpecModeFromJSON,
   ServiceSpecModeFromJSONTyped,
   ServiceSpecModeToJSON,
+  ServiceSpecModeToJSONTyped,
 } from "./ServiceSpecMode";
 
 /**
@@ -139,10 +149,18 @@ export function ServiceSpecFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function ServiceSpecToJSON(value?: ServiceSpec | null): any {
+export function ServiceSpecToJSON(json: any): ServiceSpec {
+  return ServiceSpecToJSONTyped(json, false);
+}
+
+export function ServiceSpecToJSONTyped(
+  value?: ServiceSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Labels: value["Labels"],

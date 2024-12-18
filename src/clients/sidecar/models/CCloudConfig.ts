@@ -48,10 +48,18 @@ export function CCloudConfigFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function CCloudConfigToJSON(value?: CCloudConfig | null): any {
+export function CCloudConfigToJSON(json: any): CCloudConfig {
+  return CCloudConfigToJSONTyped(json, false);
+}
+
+export function CCloudConfigToJSONTyped(
+  value?: CCloudConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     organization_id: value["organization_id"],
   };
