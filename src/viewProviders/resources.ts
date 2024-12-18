@@ -271,6 +271,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         // by its connection ID
         const environment = this.environmentsMap.get(id);
         if (environment) {
+          if (!loading) {
+            // if the connection is usable, we need to refresh the children of the environment
+            // to potentially show the Kafka clusters and Schema Registry and update the collapsible
+            // state of the item
+            const directEnvs = await getDirectResources();
+            const directEnv = directEnvs.find((env) => env.id === id);
+            if (directEnv) {
+              environment.kafkaClusters = directEnv.kafkaClusters;
+              environment.schemaRegistry = directEnv.schemaRegistry;
+            }
+          }
           environment.isLoading = loading;
           // only update this environment in the tree view, not the entire view
           this._onDidChangeTreeData.fire(environment);
