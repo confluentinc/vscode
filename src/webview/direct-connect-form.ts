@@ -26,6 +26,7 @@ class DirectConnectFormViewModel extends ViewModel {
   success = this.signal(false);
   loading = this.signal(false);
 
+  /** Connection state & errors (seen after testing) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
   schemaState = this.signal<ConnectedState | undefined>(undefined);
   kafkaErrorMessage = this.signal<string | undefined>(undefined);

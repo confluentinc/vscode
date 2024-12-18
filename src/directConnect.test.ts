@@ -181,7 +181,7 @@ describe("directConnect.ts", () => {
       assert.strictEqual(result.success, false);
       assert.strictEqual(
         result.testResults.kafkaErrorMessage,
-        "Kafka failed to connect.\nInvalid username Invalid password Token refresh failed",
+        "Invalid username Invalid password Token refresh failed",
       );
     });
     it("should return a combined message from all schema registry connection errors", () => {
@@ -205,7 +205,7 @@ describe("directConnect.ts", () => {
       assert.strictEqual(result.success, false);
       assert.strictEqual(
         result.testResults.schemaErrorMessage,
-        "Schema Registry failed to connect.\nInvalid username Invalid password Token refresh failed",
+        "Invalid username Invalid password Token refresh failed",
       );
     });
 
@@ -236,14 +236,8 @@ describe("directConnect.ts", () => {
       const result = parseTestResult(connection);
       assert.strictEqual(result.success, false);
       assert.strictEqual(result.message, "One or more connections failed.");
-      assert.strictEqual(
-        result.testResults.schemaErrorMessage,
-        "Schema Registry failed to connect.\nUnable to reach server",
-      );
-      assert.strictEqual(
-        result.testResults.kafkaErrorMessage,
-        "Kafka failed to connect.\nInvalid username",
-      );
+      assert.strictEqual(result.testResults.schemaErrorMessage, "Unable to reach server");
+      assert.strictEqual(result.testResults.kafkaErrorMessage, "Invalid username");
     });
   });
 });

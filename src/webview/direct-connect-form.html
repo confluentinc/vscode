@@ -59,7 +59,8 @@
               data-on-change="this.updateValue(event)"
             />
             <label for="other">Other</label>
-            <template data-if="this.platformType() === 'Other'">
+            <template data-if="this.platformType() === 'Other'"
+              >&nbsp;&nbsp;
               <input
                 class="input"
                 id="other"
@@ -81,7 +82,9 @@
         </div>
         <fieldset>
           <legend>Kafka</legend>
-          <p class="info error" data-text="this.kafkaErrorMessage()"></p>
+          <template data-if="this.kafkaErrorMessage()"
+            ><p class="info error" data-text="this.kafkaErrorMessage()"></p
+          ></template>
           <div class="input-container">
             <div>
               <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
@@ -190,7 +193,9 @@
         </fieldset>
         <fieldset>
           <legend>Schema Registry</legend>
-          <p class="info error" data-text="this.schemaErrorMessage()"></p>
+          <template data-if="this.schemaErrorMessage()"
+            ><p class="info error" data-text="this.schemaErrorMessage()"></p
+          ></template>
           <div class="input-container">
             <div>
               <label for="uri" class="label">URL</label>
@@ -313,7 +318,12 @@
             data-attr-value="this.loading() ? 'Testing...' : 'Test Connection'"
             data-attr-disabled="this.loading()"
           />
-          <input class="button" type="submit" value="Save" data-attr-disabled="this.success()" />
+          <input
+            class="button"
+            type="submit"
+            value="Save Connection"
+            data-attr-disabled="this.success() || this.loading()"
+          />
         </div>
       </form>
     </main>
@@ -355,7 +365,7 @@
         gap: 16px;
         width: 100%;
       }
-      @media screen and (max-width: 1000px) {
+      @media screen and (max-width: 800px) {
         .input-container {
           flex-wrap: wrap;
           gap: 8px;
@@ -364,6 +374,9 @@
       }
       .input-container > input {
         min-width: 8rem;
+      }
+      .input-container > * {
+        flex-basis: 50%;
       }
       .input-container > * > * {
         width: 100%;
@@ -395,9 +408,13 @@
         font-weight: 500;
         margin-bottom: 0.5rem;
       }
-      input:not([type="submit"]):not([type="radio"]),
-      .dropdown > * {
-        width: 250px;
+      fieldset > p {
+        margin: 0;
+        height: min-content;
+      }
+
+      input::placeholder {
+        color: var(--vscode-input-placeholderForeground);
       }
       input:disabled {
         background-color: var(--vscode-disabledForeground);
@@ -419,8 +436,7 @@
 
       .info {
         color: var(--vscode-descriptionForeground);
-        font-weight: 700;
-        font-style: italic;
+        font-weight: 500;
         white-space: break-spaces;
       }
       .success {

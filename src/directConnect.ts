@@ -150,28 +150,24 @@ export function parseTestResult(connection: Connection): TestResponse {
   }
 
   if (kafkaState === "FAILED") {
-    result.testResults.kafkaErrorMessage = `Kafka failed to connect.`;
+    if (kafkaErrors) {
+      const errorMessages = [
+        kafkaErrors.auth_status_check?.message,
+        kafkaErrors.sign_in?.message,
+        kafkaErrors.token_refresh?.message,
+      ].filter((message) => message !== undefined);
+      result.testResults.kafkaErrorMessage = `${errorMessages.join(" ")}`;
+    }
   }
-  if (kafkaErrors) {
-    const errorMessages = [
-      kafkaErrors.auth_status_check?.message,
-      kafkaErrors.sign_in?.message,
-      kafkaErrors.token_refresh?.message,
-    ].filter((message) => message !== undefined);
-    result.testResults.kafkaErrorMessage += `\n${errorMessages.join(" ")}`;
-  }
-
   if (schemaState === "FAILED") {
-    result.testResults.schemaErrorMessage = `Schema Registry failed to connect.`;
+    if (schemaErrors) {
+      const errorMessages = [
+        schemaErrors.auth_status_check?.message,
+        schemaErrors.sign_in?.message,
+        schemaErrors.token_refresh?.message,
+      ].filter((message) => message !== undefined);
+      result.testResults.schemaErrorMessage = `${errorMessages.join(" ")}`;
+    }
   }
-  if (schemaErrors) {
-    const errorMessages = [
-      schemaErrors.auth_status_check?.message,
-      schemaErrors.sign_in?.message,
-      schemaErrors.token_refresh?.message,
-    ].filter((message) => message !== undefined);
-    result.testResults.schemaErrorMessage += `\n${errorMessages.join(" ")}`;
-  }
-
   return result;
 }
