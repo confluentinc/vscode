@@ -8,7 +8,6 @@ import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { getResourceViewProvider } from "../viewProviders/resources";
-import { ConnectionSpec } from "../clients/sidecar";
 
 const logger = new Logger("commands.connections");
 
@@ -61,7 +60,7 @@ export async function addSSLPemPath() {
 
 export async function showDirectConnectionForm(item?: DirectEnvironment) {
   // TODO: add more context here for editing connections?
-  const spec: ConnectionSpec | null = item
+  const spec: CustomConnectionSpec | null = item
     ? await getResourceManager().getDirectConnection(item.connectionId)
     : null;
   openDirectConnectionForm(spec);
