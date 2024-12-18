@@ -1,4 +1,3 @@
-import { Data, type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
@@ -29,13 +28,13 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment extends Data implements IResourceBase {
+export abstract class Environment implements IResourceBase {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
 
-  id!: Enforced<string>;
-  name!: Enforced<string>;
+  id!: string;
+  name!: string;
 
   /**
    * Has at least one Kafka cluster or Schema Registry.
@@ -54,21 +53,45 @@ export abstract class Environment extends Data implements IResourceBase {
   }
 }
 
+export interface CCloudEnvironmentProps {
+  id: string;
+  name: string;
+  streamGovernancePackage: string;
+  kafkaClusters: CCloudKafkaCluster[];
+  schemaRegistry?: CCloudSchemaRegistry | undefined;
+}
+
 /** A Confluent Cloud {@link Environment} with additional properties. */
-export class CCloudEnvironment extends Environment {
+export class CCloudEnvironment extends Environment implements CCloudEnvironmentProps {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
   readonly iconName: IconNames = IconNames.CCLOUD_ENVIRONMENT;
 
-  streamGovernancePackage!: Enforced<string>;
-  // set explicit CCloud* typing
-  kafkaClusters: CCloudKafkaCluster[] = [];
-  schemaRegistry: CCloudSchemaRegistry | undefined = undefined;
+  kafkaClusters: CCloudKafkaCluster[]; // explicitly typed
+  schemaRegistry?: CCloudSchemaRegistry | undefined; // explicitly typed
+  streamGovernancePackage: string;
+
+  constructor(props: CCloudEnvironmentProps) {
+    super();
+    this.id = props.id;
+    this.name = props.name;
+    this.streamGovernancePackage = props.streamGovernancePackage;
+    this.kafkaClusters = props.kafkaClusters;
+    this.schemaRegistry = props.schemaRegistry;
+  }
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters`;
   }
+}
+
+export interface DirectEnvironmentProps {
+  connectionId: ConnectionId;
+  id: string;
+  name: string;
+  kafkaClusters: DirectKafkaCluster[];
+  schemaRegistry: DirectSchemaRegistry | undefined;
 }
 
 /**
@@ -76,8 +99,8 @@ export class CCloudEnvironment extends Environment {
  * - one {@link KafkaCluster}
  * - one {@link SchemaRegistry}
  */
-export class DirectEnvironment extends Environment {
-  readonly connectionId!: Enforced<ConnectionId>; // dynamically assigned at connection creation time
+export class DirectEnvironment extends Environment implements DirectEnvironmentProps {
+  readonly connectionId!: ConnectionId; // dynamically assigned at connection creation time
   readonly connectionType: ConnectionType = ConnectionType.Direct;
 
   // set explicit Direct* typing
@@ -86,6 +109,14 @@ export class DirectEnvironment extends Environment {
 
   /** What did the user choose as the source of this connection/environment? */
   formConnectionType: FormConnectionType = "Other";
+
+  constructor(props: DirectEnvironmentProps) {
+    super();
+    this.id = props.id;
+    this.name = props.name;
+    this.kafkaClusters = props.kafkaClusters;
+    this.schemaRegistry = props.schemaRegistry;
+  }
 
   get iconName(): IconNames {
     switch (this.formConnectionType) {
@@ -104,18 +135,33 @@ export class DirectEnvironment extends Environment {
   }
 }
 
+export interface LocalEnvironmentProps {
+  id: string;
+  name: string;
+  kafkaClusters: LocalKafkaCluster[];
+  schemaRegistry?: LocalSchemaRegistry | undefined;
+}
+
 /** A "local" {@link Environment} manageable by the extension via Docker. */
-export class LocalEnvironment extends Environment {
+export class LocalEnvironment extends Environment implements LocalEnvironmentProps {
   readonly connectionId: ConnectionId = LOCAL_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Local;
 
   readonly iconName = IconNames.LOCAL_RESOURCE_GROUP;
 
-  name: Enforced<string> = LOCAL_ENVIRONMENT_NAME as Enforced<string>;
+  name: string = LOCAL_ENVIRONMENT_NAME as string;
 
   // set explicit Local* typing
   kafkaClusters: LocalKafkaCluster[] = [];
   schemaRegistry?: LocalSchemaRegistry | undefined = undefined;
+
+  constructor(props: LocalEnvironmentProps) {
+    super();
+    this.id = props.id;
+    this.name = props.name;
+    this.kafkaClusters = props.kafkaClusters;
+    this.schemaRegistry = props.schemaRegistry;
+  }
 }
 
 /** The representation of an {@link Environment} as a {@link TreeItem} in the VS Code UI. */

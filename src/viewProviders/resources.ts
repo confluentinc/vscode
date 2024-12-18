@@ -122,6 +122,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
+    logger.debug("getTreeItem called", { element });
     if (element instanceof Environment) {
       const envItem = new EnvironmentTreeItem(element);
       envItem.iconPath = new vscode.ThemeIcon(
@@ -170,7 +171,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         Promise<DirectEnvironment[]>,
       ] = [loadCCloudResources(this.forceDeepRefresh), loadLocalResources(), loadDirectResources()];
 
-      const [ccloudEnvironments, localResources, directEnvironments]: [
+      const [ccloudContainer, localContainer, directEnvironments]: [
         ContainerTreeItem<CCloudEnvironment>,
         ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>,
         DirectEnvironment[],
@@ -180,7 +181,16 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         this.forceDeepRefresh = false;
       }
 
-      return [ccloudEnvironments, localResources, ...directEnvironments];
+      if (ccloudContainer) {
+        const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).children;
+        ccloudEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
+      }
+      // TODO: we aren't tracking LocalEnvironments yet, so skip that here
+      if (directEnvironments) {
+        directEnvironments.forEach((env) => this.environmentsMap.set(env.id, env));
+      }
+
+      return [ccloudContainer, localContainer, ...directEnvironments];
     }
 
     return [];
@@ -336,9 +346,6 @@ export async function loadCCloudResources(
     cloudContainerItem.children = ccloudEnvironments;
     // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
     cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
-
-    // store the environments in the tree provider map for easy access later
-    ccloudEnvironments.forEach((env) => this.environments.set(env.id, env));
   } else {
     // enables the "Add Connection" action to be displayed on hover
     cloudContainerItem.contextValue = "resources-ccloud-container";
@@ -408,9 +415,6 @@ export async function loadLocalResources(): Promise<
     // local resources
     getResourceManager().setLocalKafkaClusters(localKafkaClusters);
     localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
-
-    // store the environments in the tree provider map for easy access later
-    localEnvs.forEach((env) => this.environments.set(env.id, env));
   }
 
   return localContainerItem;
