@@ -33,6 +33,7 @@ models/HealthResponse.ts
 models/JsonNode.ts
 models/JsonNodeType.ts
 models/KafkaClusterConfig.ts
+models/KafkaClusterConfigCredentials.ts
 models/KafkaClusterStatus.ts
 models/LocalConfig.ts
 models/ModelError.ts
@@ -46,6 +47,7 @@ models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
 models/SchemaRegistryConfig.ts
+models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
