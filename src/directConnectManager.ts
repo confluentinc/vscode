@@ -278,7 +278,7 @@ export class DirectConnectionManager {
       // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
       // kick off background checks to ensure the new connections are usable
-      Promise.all(connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id)));
+      connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id));
       logger.debug(
         `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );
