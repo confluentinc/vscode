@@ -219,6 +219,17 @@ export function generateSchemaSubjectGroups(
 
     schemaGroups.push(schemaContainerItem);
   }
+
+  // sort multiple groups by subject
+  if (schemaGroups.length > 1) {
+    schemaGroups.sort((a, b) => {
+      // compare as strings, not TreeItemLabels
+      const labelA = a.label! as string;
+      const labelB = b.label! as string;
+      return labelA.localeCompare(labelB);
+    });
+  }
+
   return schemaGroups;
 }
 
