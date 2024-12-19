@@ -297,7 +297,7 @@
       },
       {
         "command": "confluent.topic.consume",
-        "icon": "$(debug-start)",
+        "icon": "$(play-circle)",
         "title": "Browse Messages",
         "category": "Confluent: Topic"
       },

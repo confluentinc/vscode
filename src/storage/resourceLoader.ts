@@ -175,6 +175,11 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
     }
   }
 
+  // sort multiple topics by name
+  if (topicsResp.data.length > 1) {
+    topicsResp.data.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+  }
+
   return topicsResp.data;
 }
 
