@@ -103,7 +103,7 @@ export class DirectEnvironment extends Environment {
   constructor(
     props: Pick<
       DirectEnvironment,
-      "connectionId" | "id" | "name" | "kafkaClusters" | "schemaRegistry"
+      "connectionId" | "id" | "name" | "kafkaClusters" | "schemaRegistry" | "formConnectionType"
     >,
   ) {
     super();
