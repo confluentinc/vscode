@@ -96,5 +96,11 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
       directResources.push(directEnv);
     });
   }
+
+  // sort multiple environments by name
+  if (directResources.length > 1) {
+    directResources.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   return directResources;
 }
