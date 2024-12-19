@@ -167,12 +167,16 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
   } catch (error) {
     if (error instanceof ResponseError) {
       // XXX todo improve this, raise a more specific error type.
-      const body = await error.response.json();
-
-      throw new TopicFetchError(JSON.stringify(body));
+      const body = await error.response.text();
+      throw new TopicFetchError(body);
     } else {
       throw new TopicFetchError(JSON.stringify(error));
     }
+  }
+
+  // sort multiple topics by name
+  if (topicsResp.data.length > 1) {
+    topicsResp.data.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
   }
 
   return topicsResp.data;
@@ -254,5 +258,6 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
       isHighestVersion: schema.version === subjectToHighestVersion.get(schema.subject!),
     });
   });
+
   return schemas;
 }
