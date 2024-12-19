@@ -98,7 +98,7 @@ export class DirectEnvironment extends Environment {
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
 
   /** What did the user choose as the source of this connection/environment? */
-  formConnectionType: FormConnectionType = "Other";
+  formConnectionType?: FormConnectionType = "Other";
 
   constructor(
     props: Pick<
@@ -111,6 +111,7 @@ export class DirectEnvironment extends Environment {
     this.name = props.name;
     this.kafkaClusters = props.kafkaClusters;
     this.schemaRegistry = props.schemaRegistry;
+    if (props.formConnectionType) this.formConnectionType = props.formConnectionType;
   }
 
   get iconName(): IconNames {
