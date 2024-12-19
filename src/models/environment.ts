@@ -82,7 +82,7 @@ export class DirectEnvironment extends Environment {
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
 
   /** What did the user choose as the source of this connection/environment? */
-  formConnectionType?: FormConnectionType | undefined;
+  formConnectionType: FormConnectionType = "Other";
 
   get iconName(): IconNames {
     switch (this.formConnectionType) {
