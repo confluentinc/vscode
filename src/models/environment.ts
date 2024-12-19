@@ -173,10 +173,10 @@ export class EnvironmentTreeItem extends TreeItem {
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;
     this.iconPath = new ThemeIcon(this.resource.iconName);
-    if (isDirect(resource) && !resource.hasClusters) {
-      this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsWarningIcon.foreground"));
-    } else if (this.resource.isLoading) {
+    if (this.resource.isLoading) {
       this.iconPath = new ThemeIcon(IconNames.LOADING);
+    } else if (isDirect(resource) && !resource.hasClusters) {
+      this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsWarningIcon.foreground"));
     }
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
