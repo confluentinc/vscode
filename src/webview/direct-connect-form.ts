@@ -2,7 +2,11 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { ConnectedState } from "../clients/sidecar";
+import {
+  ConnectedState,
+  instanceOfApiKeyAndSecret,
+  instanceOfBasicCredentials,
+} from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
 
 /** Instantiate the Inertial scope, document root,
@@ -26,7 +30,7 @@ class DirectConnectFormViewModel extends ViewModel {
   platformType = this.derive<FormConnectionType>(() => {
     return this.spec()?.formConnectionType || "Apache Kafka";
   });
-  // TODO this is not used anywhere but could be extra metadata for telemetry
+  // TODO this is not used anywhere but could be extra metadata for telemetry. We'll have to save it in the spec.
   otherPlatformType = this.signal<string | undefined>(undefined);
   name = this.derive(() => {
     return this.spec()?.name || "";
@@ -36,50 +40,42 @@ class DirectConnectFormViewModel extends ViewModel {
   kafkaBootstrapServers = this.derive(() => {
     return this.spec()?.kafka_cluster?.bootstrap_servers || "";
   });
+  kafkaCreds = this.derive(() => {
+    return this.spec()?.kafka_cluster?.credentials;
+  });
   kafkaAuthType = this.derive(() => {
-    let authType = "None";
-    // @ts-expect-error the types don't specify credentials beyond Object
-    if (this.spec()?.kafka_cluster?.credentials?.api_key) {
-      console.log("kafka credentials", this.spec()?.kafka_cluster?.credentials);
-      // FIXME this is kinda dumb
-      authType = "API";
-      // @ts-expect-error the types don't specify credentials beyond Object
-    } else if (this.spec()?.kafka_cluster?.credentials?.username) {
-      authType = "Basic";
-    }
-    return authType;
+    return this.getCredentialsType(this.kafkaCreds());
   });
   kafkaUsername = this.derive(() => {
-    // @ts-expect-error the types don't specify credentials
-    return this.spec()?.kafka_cluster?.credentials?.username || "";
+    // @ts-expect-error the types don't know which credentials are present
+    return this.kafkaCreds()?.username || "";
   });
   kafkaApiKey = this.derive(() => {
-    // @ts-expect-error the types don't specify credentials
-    return this.spec()?.kafka_cluster?.credentials?.api_key || "";
+    // @ts-expect-error the types don't know which credentials are present
+    return this.kafkaCreds()?.api_key || "";
   });
   kafkaSecret = this.derive(() => {
-    return this.spec()?.kafka_cluster?.credentials ? "fakeplaceholdersecrethere" : "";
+    // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
+    return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
   });
 
   /** Schema Registry */
   schemaUri = this.derive(() => {
     return this.spec()?.schema_registry?.uri || "";
   });
+  schemaCreds = this.derive(() => {
+    return this.spec()?.schema_registry?.credentials;
+  });
   schemaAuthType = this.derive(() => {
-    let authType = "None";
-    // @ts-expect-error the types don't specify credentials beyond Object
-    if (this.spec()?.schema_registry?.credentials?.api_key) authType = "API";
-    // @ts-expect-error the types don't specify credentials beyond Object
-    else if (this.spec()?.schema_registry?.credentials?.username) authType = "Basic";
-    return authType;
+    return this.getCredentialsType(this.schemaCreds());
   });
   schemaUsername = this.derive(() => {
-    // @ts-expect-error the types don't specify credentials
-    return this.spec()?.schema_registry?.credentials?.username || "";
+    // @ts-expect-error the types don't know which credentials are present
+    return this.schemaCreds()?.username || "";
   });
   schemaApikey = this.derive(() => {
-    // @ts-expect-error the types don't specify credentials
-    return this.spec()?.schema_registry?.credentials?.api_key || "";
+    // @ts-expect-error the types don't know which credentials are present
+    return this.schemaCreds()?.api_key || "";
   });
 
   /** Form State */
@@ -105,6 +101,12 @@ class DirectConnectFormViewModel extends ViewModel {
     else return undefined;
   });
 
+  getCredentialsType(creds: any) {
+    if (!creds || typeof creds !== "object") return "None";
+    if (instanceOfBasicCredentials(creds)) return "Basic";
+    if (instanceOfApiKeyAndSecret(creds)) return "API";
+    return "None";
+  }
   resetTestResults() {
     this.kafkaState(undefined);
     this.kafkaErrorMessage(undefined);
