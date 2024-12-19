@@ -10,7 +10,7 @@ import { DirectEnvironment, EnvironmentTreeItem } from "./environment";
 
 describe("EnvironmentTreeItem", () => {
   it("should be collapsed when the environment has clusters", () => {
-    const env = DirectEnvironment.create({
+    const env = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
       schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
@@ -29,7 +29,7 @@ describe("EnvironmentTreeItem", () => {
   });
 
   it("should use a warning icon if it's a direct environment with no clusters", () => {
-    const env = DirectEnvironment.create({
+    const env = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [],
       schemaRegistry: undefined,
@@ -61,7 +61,7 @@ describe("EnvironmentTreeItem", () => {
   });
 
   it("should not include a warning in the tooltip for a direct environment with clusters", () => {
-    const directEnv = DirectEnvironment.create({
+    const directEnv = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
     });
@@ -78,7 +78,7 @@ describe("EnvironmentTreeItem", () => {
 
     // with a formConnectionType set
     const formConnectionType = "Apache Kafka";
-    const directEnvWithType = DirectEnvironment.create({
+    const directEnvWithType = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       formConnectionType: formConnectionType,
     });
