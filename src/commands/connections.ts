@@ -59,7 +59,6 @@ export async function addSSLPemPath() {
 }
 
 export async function showDirectConnectionForm(item?: DirectEnvironment) {
-  // TODO: add more context here for editing connections?
   const spec: CustomConnectionSpec | null = item
     ? await getResourceManager().getDirectConnection(item.connectionId)
     : null;

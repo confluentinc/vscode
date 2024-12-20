@@ -112,7 +112,7 @@
                 type="text"
                 placeholder="host:port, host2:port2"
                 data-attr-value="this.kafkaBootstrapServers()"
-                data-on-change="(event) => this.kafkaBootstrapServers(event.target.value)"
+                data-on-change="this.updateValue(event)"
               />
             </div>
             <span class="description"

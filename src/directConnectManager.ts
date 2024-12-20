@@ -305,14 +305,12 @@ function mergeSecrets(
   if (incomingKafkaCreds) {
     if ("password" in incomingKafkaCreds) {
       if (incomingKafkaCreds.password === "fakeplaceholdersecrethere") {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore FIXME NC - for now this might not work on changing cred type
+        // @ts-expect-error the types don't know which credentials are present
         incomingKafkaCreds.password = currentKafkaCreds.password;
       }
     } else if ("api_secret" in incomingKafkaCreds) {
       if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore FIXME NC - for now this might not work on changing cred type
+        // @ts-expect-error the types don't know which credentials are present
         incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
       }
     }
@@ -323,14 +321,12 @@ function mergeSecrets(
   if (incomingSchemaCreds) {
     if ("password" in incomingSchemaCreds) {
       if (incomingSchemaCreds.password === "fakeplaceholdersecrethere") {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore FIXME NC - for now this might not work on changing cred type
+        // @ts-expect-error the types don't know which credentials are present
         incomingSchemaCreds.password = currentSchemaCreds.password;
       }
     } else if ("api_secret" in incomingSchemaCreds) {
       if (incomingSchemaCreds.api_secret === "fakeplaceholdersecrethere") {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore FIXME NC - for now this might not work on changing cred type
+        // @ts-expect-error the types don't know which credentials are present
         incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
       }
     }
