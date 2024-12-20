@@ -63,7 +63,25 @@ export class WebsocketManager implements Disposable {
       );
 
       websocket.on("open", () => {
-        logger.info("Websocket connected to sidecar");
+        logger.info("Websocket connected to sidecar, saying hello ...");
+
+        // send the hello message
+        const helloMessage: Message<MessageType.WORKSPACE_HELLO> = {
+          headers: {
+            message_type: MessageType.WORKSPACE_HELLO,
+            originator: process.pid.toString(),
+            message_id: "1",
+          },
+          body: {
+            workspace_id: process.pid,
+          },
+        };
+
+        // this.websocket isn't assigned yet, so explicitly pass it in
+        this.send(helloMessage, websocket);
+
+        // Now await the first WORKSPACE_COUNT_CHANGED message, will be sent
+        // to all workspaces when any connect+hello or disconnect happens.
 
         // Resolve when we have gotten the first WORKSPACE_COUNT_CHANGED message. Will be sent
         // when any connect/disconnect happens, even ours.
@@ -72,7 +90,7 @@ export class WebsocketManager implements Disposable {
           MessageType.WORKSPACE_COUNT_CHANGED,
           async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
             logger.info(
-              "Received initial WORKSPACE_COUNT_CHANGED message, resolving connection promise",
+              "Received initial WORKSPACE_COUNT_CHANGED message, websocket now fully connected.",
             );
             this.websocket = websocket;
             this.peerWorkspaceCount = m.body.current_workspace_count - 1;
@@ -134,16 +152,26 @@ export class WebsocketManager implements Disposable {
    * The websocket send is ultimately async underneath the hood.
    * @throws {WebsocketClosedError} if the websocket is not connected.
    */
-  public send<T extends MessageType>(message: Message<T>): void {
-    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-      const payload = JSON.stringify(message);
+  public send<T extends MessageType>(
+    message: Message<T>,
+    websocket: WebSocket | undefined = undefined,
+  ): void {
+    if (!websocket) {
+      if (!this.websocket) {
+        logger.error("Websocket not assigned or provided, cannot send message");
+        throw new WebsocketClosedError();
+      }
+      websocket = this.websocket;
+    }
 
+    if (websocket && websocket.readyState === WebSocket.OPEN) {
+      const payload = JSON.stringify(message);
       if (payload.length > 64 * 1024) {
         logger.error(`Cannot send websocket message, too large: ${payload.length} bytes`);
         throw new Error("Payload too large");
       }
-      logger.debug(`Sending ${payload.length} byte message`);
-      this.websocket.send(payload);
+      logger.debug(`Sending ${payload.length} byte ${message.headers.message_type} message`);
+      websocket.send(payload);
     } else {
       logger.error("Websocket not assigned + open, cannot send message");
       throw new WebsocketClosedError();

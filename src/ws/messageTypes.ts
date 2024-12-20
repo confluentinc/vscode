@@ -8,9 +8,14 @@ import { randomUUID } from "crypto";
  * directed at a single workspace or to sidecar or broadcast to all workspaces.
  */
 export enum MessageType {
-  // When a new workspace connects and is granted access, or when a workspace disconnects,
-  // sidecar will send this message to all workspaces.
+  /** When workspace makes websocket connection, it must then pass its process id over in a HELLO message. */
+  WORKSPACE_HELLO = "WORKSPACE_HELLO",
+
+  /**  When a new workspace connects and is granted access, or when a workspace disconnects,
+    sidecar will send this message to all workspaces. */
   WORKSPACE_COUNT_CHANGED = "WORKSPACE_COUNT_CHANGED",
+
+  /** Sidecar didn't like something we said or did and is telling us about it right before it hangs up. */
   PROTOCOL_ERROR = "PROTOCOL_ERROR",
 }
 
@@ -59,6 +64,14 @@ export interface ResponseMessage<T extends MessageType> extends Message<T> {
 }
 
 /**
+ * Workspace -> sidecar message body, sent when a workspace connects to sidecar,
+ * corresponding to message_type {@link MessageType.WORKSPACE_HELLO}
+ */
+export interface WorkspaceHelloBody {
+  workspace_id: number;
+}
+
+/**
  * Sidecar -> workspaces message body, sent whenever the total number of authorized websocket connections to sidecar changes.
  * Corresponds to message_type {@link MessageType.WORKSPACE_COUNT_CHANGED}
  */
@@ -75,6 +88,7 @@ export interface ProtocolErrorBody {
 
 /** Type mapping of message type -> corresponding message body type */
 export type MessageBodyMap = {
+  [MessageType.WORKSPACE_HELLO]: WorkspaceHelloBody;
   [MessageType.WORKSPACE_COUNT_CHANGED]: WorkspacesChangedBody;
   [MessageType.PROTOCOL_ERROR]: ProtocolErrorBody;
 };
@@ -84,6 +98,7 @@ export type MessageBodyMap = {
  * Dictates which messages whose headers should have `response_to_id` field.`
  */
 type MessageHeaderMap = {
+  [MessageType.WORKSPACE_HELLO]: MessageHeaders;
   [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
   [MessageType.PROTOCOL_ERROR]: ReplyMessageHeaders;
 };

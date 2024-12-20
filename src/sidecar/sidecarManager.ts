@@ -24,6 +24,7 @@ import { normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
+import { SecretStorageKeys } from "../storage/constants";
 
 /**
  * Output channel for viewing sidecar logs.
@@ -35,7 +36,6 @@ export const sidecarOutputChannel: vscode.OutputChannel =
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
-const SIDECAR_AUTH_TOKEN_SECRET_KEY = "CONFLUENT_SIDECAR_AUTH_SECRET";
 const MOMENTARY_PAUSE_MS = 500; // half a second.
 
 const logger = new Logger("sidecarManager");
@@ -429,7 +429,7 @@ export class SidecarManager {
             }
           }
         }
-        await getStorageManager().setSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY, accessToken);
+        await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
         logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
 
         resolve(accessToken);
@@ -506,7 +506,9 @@ export class SidecarManager {
    * Get the auth token secret from the storage manager. Returns empty string if none found.
    **/
   async getAuthTokenFromSecretStore(): Promise<string> {
-    const existing_secret = await getStorageManager().getSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY);
+    const existing_secret = await getStorageManager().getSecret(
+      SecretStorageKeys.SIDECAR_AUTH_TOKEN,
+    );
     if (existing_secret) {
       return existing_secret;
     }
