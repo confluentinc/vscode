@@ -1,4 +1,4 @@
-import { ImageApi, ImageInspect, ImageSummary, ResponseError } from "../clients/docker";
+import { ImageApi, ImageSummary, ResponseError } from "../clients/docker";
 import { Logger } from "../logging";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { defaultRequestInit } from "./configs";
