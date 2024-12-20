@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { ApiResponse, ImageApi, ImageInspect, ResponseError } from "../clients/docker";
+import { ApiResponse, ImageApi, ImageSummary } from "../clients/docker";
 import { imageExists, pullImage } from "./images";
 
 describe("docker/images.ts ImageApi wrappers", () => {
@@ -24,8 +24,21 @@ describe("docker/images.ts ImageApi wrappers", () => {
     sandbox.restore();
   });
 
-  it("imageExists() should return true if the image exists", async () => {
-    const fakeResponse: ImageInspect = { RepoTags: ["repo:tag"] };
+  it("imageExists() should return true if the image repo+tag exists in the image listing", async () => {
+    const fakeResponse: ImageSummary[] = [
+      {
+        Id: "sha256:abc123",
+        ParentId: "",
+        RepoTags: ["repo:tag", "example:latest"],
+        RepoDigests: [],
+        Created: 123,
+        Size: 123,
+        SharedSize: 123,
+        VirtualSize: 123,
+        Labels: {},
+        Containers: 1,
+      },
+    ];
     imageInspectStub.resolves(fakeResponse);
 
     const result = await imageExists("repo", "tag");
@@ -34,19 +47,22 @@ describe("docker/images.ts ImageApi wrappers", () => {
     assert.ok(imageInspectStub.calledOnce);
   });
 
-  it("imageExists() should return false if the image does not exist", async () => {
-    const fakeError = new ResponseError(new Response(null, { status: 404 }));
-    imageInspectStub.rejects(fakeError);
-
-    const result = await imageExists("repo", "tag");
-
-    assert.strictEqual(result, false);
-    assert.ok(imageInspectStub.calledOnce);
-  });
-
-  it("imageExists() should return false if there is an error other than 404", async () => {
-    const fakeError = new ResponseError(new Response(null, { status: 500 }));
-    imageInspectStub.rejects(fakeError);
+  it("imageExists() should return false if the image repo+tag does not exist in the image listing", async () => {
+    const fakeResponse: ImageSummary[] = [
+      {
+        Id: "sha256:abc123",
+        ParentId: "",
+        RepoTags: ["example:latest"],
+        RepoDigests: [],
+        Created: 123,
+        Size: 123,
+        SharedSize: 123,
+        VirtualSize: 123,
+        Labels: {},
+        Containers: 1,
+      },
+    ];
+    imageInspectStub.resolves(fakeResponse);
 
     const result = await imageExists("repo", "tag");
 
