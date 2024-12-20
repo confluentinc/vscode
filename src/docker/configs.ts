@@ -1,4 +1,7 @@
-import { normalize } from "path";
+import { execSync } from "child_process";
+import { readFileSync } from "fs";
+import { homedir } from "os";
+import { join, normalize } from "path";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
 import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
@@ -63,8 +66,54 @@ export function getLocalSchemaRegistryImageTag(): string {
   return configs.get(LOCAL_SCHEMA_REGISTRY_IMAGE_TAG, DEFAULT_SCHEMA_REGISTRY_TAG);
 }
 
+/**
+ * Look up the name of the `credsStore` from the local Docker config, if it's set.
+ * @see https://docs.docker.com/reference/cli/docker/login/#credential-stores
+ */
+function getDockerCredsStore(): string | undefined {
+  try {
+    const dockerConfigPath = join(homedir(), ".docker", "config.json");
+    const dockerConfig = JSON.parse(readFileSync(dockerConfigPath, "utf-8"));
+    return dockerConfig.credsStore;
+  } catch (error) {
+    logger.debug("failed to read Docker config:", error);
+  }
+}
+
+/**
+ * Get the Docker credentials for the current user, provided a `credsStore` is set.
+ * @returns A base64-encoded string of the Docker credentials, or `undefined` if the credentials
+ * could not be retrieved.
+ * @see https://docs.docker.com/reference/cli/docker/login/#credential-stores
+ */
+function getDockerCredentials(): string | undefined {
+  const credsStore = getDockerCredsStore();
+  if (!credsStore) {
+    return;
+  }
+
+  try {
+    // unfortunately, there isn't a way to get the credentials directly from the store, so we have
+    // to try calling the `docker-credential-<store> get` command and parse the output
+    const creds = execSync(`docker-credential-${credsStore} get`, {
+      input: "https://index.docker.io/v1/",
+      encoding: "utf-8",
+    });
+    const { Username, Secret } = JSON.parse(creds);
+    const authConfig = {
+      username: Username,
+      password: Secret,
+      serveraddress: "https://index.docker.io/v1/",
+    };
+    return Buffer.from(JSON.stringify(authConfig)).toString("base64");
+  } catch (error) {
+    logger.debug("failed to load Docker credentials:", error);
+  }
+}
+
 /** Default request options for Docker API requests, to be used with service class methods from `src/clients/docker/*`. */
 export function defaultRequestInit(): RequestInit {
+  const creds = getDockerCredentials();
   // NOTE: This looks weird because our openapi-generator client code (in `src/clients/**`) relies on
   // RequestInit from `@types/node/globals.d.ts` which TypeScript complains about since it thinks
   // "dispatcher" doesn't exist (which it does).
@@ -75,6 +124,7 @@ export function defaultRequestInit(): RequestInit {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      ...(creds && { "X-Registry-Auth": creds }),
     },
     dispatcher: new Agent({
       connect: {
