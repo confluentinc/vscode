@@ -31,7 +31,7 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.formConnectionType || "Apache Kafka";
   });
   // TODO this is not used anywhere but could be extra metadata for telemetry. We'll have to save it in the spec.
-  otherPlatformType = this.signal<string | undefined>(undefined);
+  // otherPlatformType = this.signal<string | undefined>(undefined);
   name = this.derive(() => {
     return this.spec()?.name || "";
   });
@@ -73,9 +73,13 @@ class DirectConnectFormViewModel extends ViewModel {
     // @ts-expect-error the types don't know which credentials are present
     return this.schemaCreds()?.username || "";
   });
-  schemaApikey = this.derive(() => {
+  schemaApiKey = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
     return this.schemaCreds()?.api_key || "";
+  });
+  schemaSecret = this.derive(() => {
+    // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
+    return this.schemaCreds() ? "fakeplaceholdersecrethere" : "";
   });
 
   /** Form State */
@@ -126,9 +130,9 @@ class DirectConnectFormViewModel extends ViewModel {
           this.schemaAuthType("API");
         }
         break;
-      case "other-platform":
-        this.otherPlatformType(input.value);
-        break;
+      // case "other-platform":
+      //   this.otherPlatformType(input.value);
+      //   break;
       case "name":
         this.name(input.value);
         break;
@@ -137,17 +141,42 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
+        this.clearKafkaCreds();
         break;
       case "schema_auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
+        this.clearSchemaCreds();
         break;
       case "uri":
         this.schemaUri(input.value);
         break;
-
+      case "kafka_username":
+        this.kafkaUsername(input.value);
+        break;
+      case "kafka_api_key":
+        this.kafkaApiKey(input.value);
+        break;
+      case "schema_username":
+        this.schemaUsername(input.value);
+        break;
+      case "schema_api_key":
+        this.schemaApiKey(input.value);
+        break;
       default:
         console.warn(`Unhandled input update: ${input.name}`);
     }
+  }
+
+  clearKafkaCreds() {
+    this.kafkaUsername("");
+    this.kafkaApiKey("");
+    this.kafkaSecret("");
+  }
+
+  clearSchemaCreds() {
+    this.schemaUsername("");
+    this.schemaApiKey("");
+    this.schemaSecret("");
   }
 
   /** Submit all form data to the extension host */

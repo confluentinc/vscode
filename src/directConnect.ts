@@ -17,7 +17,6 @@ type MessageResponse<MessageType extends string> = Awaited<
 const directConnectWebviewCache = new WebviewPanelCache();
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
-  console.log("EDIT:", connection?.id);
   const connectionUUID = connection?.id || randomUUID();
   // Set up the webview, checking for existing form for this connection
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
@@ -78,11 +77,10 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
 
   async function updateConnection(body: any): Promise<PostResponse> {
     const connectionId = connection?.id as ConnectionId;
-    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
+    let newSpec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
     const manager = DirectConnectionManager.getInstance();
     try {
-      console.log("spec before send to update: ", spec);
-      await manager.updateConnection(spec);
+      await manager.updateConnection(newSpec);
     } catch (error) {
       return { success: false, message: JSON.stringify(error) };
     }
@@ -196,16 +194,32 @@ export function parseTestResult(connection: Connection): TestResponse {
   }
   return result;
 }
-// Remove sensitive fields from the connection spec before sending to the webview form
+// Replace any sensitive fields from the connection spec before sending to the webview form
 function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
   const clean = { ...connection };
-  // @ts-expect-error - these fields are not in the TypeScript definition
-  delete clean.kafka_cluster?.credentials?.password;
-  // @ts-expect-error - these fields are not in the TypeScript definition
-  delete clean.kafka_cluster?.credentials?.api_secret;
-  // @ts-expect-error - these fields are not in the TypeScript definition
-  delete clean.schema_registry?.credentials?.password;
-  // @ts-expect-error - these fields are not in the TypeScript definition
-  delete clean.schema_registry?.credentials?.api_secret;
+  if (clean.kafka_cluster?.credentials) {
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.kafka_cluster.credentials.password) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.kafka_cluster.credentials.password = "fakeplaceholdersecrethere";
+    }
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.kafka_cluster.credentials.api_secret) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
+    }
+  }
+  if (clean.schema_registry?.credentials) {
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.schema_registry.credentials.password) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.schema_registry.credentials.password = "fakeplaceholdersecrethere";
+    }
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.schema_registry.credentials.api_secret) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.schema_registry.credentials.api_secret = "fakeplaceholdersecrethere";
+    }
+  }
   return clean;
 }

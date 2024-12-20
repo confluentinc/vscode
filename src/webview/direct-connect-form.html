@@ -63,7 +63,7 @@
               data-attr-checked="this.platformType() === 'Other' ? true : false"
             />
             <label for="other">Other</label>
-            <template data-if="this.platformType() === 'Other'"
+            <!-- <template data-if="this.platformType() === 'Other'"
               >&nbsp;&nbsp;
               <input
                 class="input"
@@ -74,7 +74,7 @@
                 data-attr-required="this.platformType() === 'Other' ? true : false"
                 data-on-change="this.updateValue(event)"
               />
-            </template>
+            </template> -->
           </div>
         </div>
         <div class="input-container">
@@ -152,11 +152,10 @@
                 id="kafka-auth-api"
                 name="kafka_auth_type"
                 value="API"
-                data-attr-checked="this.kafkaAuthType() === 'API' ? true : false"
+                data-attr-checked="this.kafkaAuthType() === 'API' || this.platformType() === 'Confluent Cloud' ? true : false"
                 data-on-change="this.updateValue(event)"
-                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
-              <label for="kafka-auth-api">FIXME API Credentials</label>
+              <label for="kafka-auth-api">API Credentials</label>
             </div>
           </div>
           <template data-if="this.kafkaAuthType() === 'Basic'">
@@ -257,6 +256,7 @@
                 value="None"
                 data-attr-required="this.schemaUri() !== ''"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.schemaAuthType() === 'None' ? true : false"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-none">None</label>
@@ -268,6 +268,7 @@
                 name="schema_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.schemaAuthType() === 'Basic' ? true : false"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-basic">Username & Password</label>
@@ -279,7 +280,7 @@
                 name="schema_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
-                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
+                data-attr-checked="this.schemaAuthType() === 'API' || this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-api">API Credentials</label>
             </div>
@@ -294,7 +295,9 @@
                     id="schema_username"
                     name="schema_username"
                     type="text"
+                    data-attr-value="this.schemaUsername()"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-on-change="this.updateValue(event)"
                   />
                 </div>
               </div>
@@ -307,6 +310,7 @@
                     name="schema_password"
                     type="password"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-attr-value="this.schemaSecret()"
                   />
                 </div>
               </div>
@@ -323,6 +327,8 @@
                     name="schema_api_key"
                     type="text"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-attr-value="this.schemaApiKey()"
+                    data-on-change="this.updateValue(event)"
                   />
                 </div>
               </div>
@@ -335,6 +341,7 @@
                     name="schema_api_secret"
                     type="password"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-attr-value="this.schemaSecret()"
                   />
                 </div>
               </div>
