@@ -18,6 +18,7 @@ import {
   SwarmSpecCAConfigExternalCAsInnerFromJSON,
   SwarmSpecCAConfigExternalCAsInnerFromJSONTyped,
   SwarmSpecCAConfigExternalCAsInnerToJSON,
+  SwarmSpecCAConfigExternalCAsInnerToJSONTyped,
 } from "./SwarmSpecCAConfigExternalCAsInner";
 
 /**
@@ -97,10 +98,18 @@ export function SwarmSpecCAConfigFromJSONTyped(
   };
 }
 
-export function SwarmSpecCAConfigToJSON(value?: SwarmSpecCAConfig | null): any {
+export function SwarmSpecCAConfigToJSON(json: any): SwarmSpecCAConfig {
+  return SwarmSpecCAConfigToJSONTyped(json, false);
+}
+
+export function SwarmSpecCAConfigToJSONTyped(
+  value?: SwarmSpecCAConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NodeCertExpiry: value["NodeCertExpiry"],
     ExternalCAs:

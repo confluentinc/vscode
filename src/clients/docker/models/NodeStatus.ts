@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { NodeState } from "./NodeState";
-import { NodeStateFromJSON, NodeStateFromJSONTyped, NodeStateToJSON } from "./NodeState";
+import {
+  NodeStateFromJSON,
+  NodeStateFromJSONTyped,
+  NodeStateToJSON,
+  NodeStateToJSONTyped,
+} from "./NodeState";
 
 /**
  * NodeStatus represents the status of a node.
@@ -67,10 +72,18 @@ export function NodeStatusFromJSONTyped(json: any, ignoreDiscriminator: boolean)
   };
 }
 
-export function NodeStatusToJSON(value?: NodeStatus | null): any {
+export function NodeStatusToJSON(json: any): NodeStatus {
+  return NodeStatusToJSONTyped(json, false);
+}
+
+export function NodeStatusToJSONTyped(
+  value?: NodeStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     State: NodeStateToJSON(value["State"]),
     Message: value["Message"],

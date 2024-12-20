@@ -76,10 +76,18 @@ export function ServiceServiceStatusFromJSONTyped(
   };
 }
 
-export function ServiceServiceStatusToJSON(value?: ServiceServiceStatus | null): any {
+export function ServiceServiceStatusToJSON(json: any): ServiceServiceStatus {
+  return ServiceServiceStatusToJSONTyped(json, false);
+}
+
+export function ServiceServiceStatusToJSONTyped(
+  value?: ServiceServiceStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     RunningTasks: value["RunningTasks"],
     DesiredTasks: value["DesiredTasks"],

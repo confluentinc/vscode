@@ -52,10 +52,18 @@ export function ServiceSpecModeReplicatedFromJSONTyped(
   };
 }
 
-export function ServiceSpecModeReplicatedToJSON(value?: ServiceSpecModeReplicated | null): any {
+export function ServiceSpecModeReplicatedToJSON(json: any): ServiceSpecModeReplicated {
+  return ServiceSpecModeReplicatedToJSONTyped(json, false);
+}
+
+export function ServiceSpecModeReplicatedToJSONTyped(
+  value?: ServiceSpecModeReplicated | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Replicas: value["Replicas"],
   };

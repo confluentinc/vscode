@@ -18,12 +18,14 @@ import {
   RelationshipFromJSON,
   RelationshipFromJSONTyped,
   RelationshipToJSON,
+  RelationshipToJSONTyped,
 } from "./Relationship";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -116,10 +118,18 @@ export function PartitionDataFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function PartitionDataToJSON(value?: PartitionData | null): any {
+export function PartitionDataToJSON(json: any): PartitionData {
+  return PartitionDataToJSONTyped(json, false);
+}
+
+export function PartitionDataToJSONTyped(
+  value?: PartitionData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

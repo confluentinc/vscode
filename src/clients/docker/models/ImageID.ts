@@ -47,10 +47,18 @@ export function ImageIDFromJSONTyped(json: any, ignoreDiscriminator: boolean): I
   };
 }
 
-export function ImageIDToJSON(value?: ImageID | null): any {
+export function ImageIDToJSON(json: any): ImageID {
+  return ImageIDToJSONTyped(json, false);
+}
+
+export function ImageIDToJSONTyped(
+  value?: ImageID | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
   };

@@ -82,10 +82,18 @@ export function HealthcheckResultFromJSONTyped(
   };
 }
 
-export function HealthcheckResultToJSON(value?: HealthcheckResult | null): any {
+export function HealthcheckResultToJSON(json: any): HealthcheckResult {
+  return HealthcheckResultToJSONTyped(json, false);
+}
+
+export function HealthcheckResultToJSONTyped(
+  value?: HealthcheckResult | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Start: value["Start"] == null ? undefined : value["Start"].toISOString(),
     End: value["End"],

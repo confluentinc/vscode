@@ -85,10 +85,18 @@ export function OCIPlatformFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function OCIPlatformToJSON(value?: OCIPlatform | null): any {
+export function OCIPlatformToJSON(json: any): OCIPlatform {
+  return OCIPlatformToJSONTyped(json, false);
+}
+
+export function OCIPlatformToJSONTyped(
+  value?: OCIPlatform | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     architecture: value["architecture"],
     os: value["os"],

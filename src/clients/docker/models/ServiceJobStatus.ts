@@ -18,6 +18,7 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 
 /**
@@ -71,10 +72,18 @@ export function ServiceJobStatusFromJSONTyped(
   };
 }
 
-export function ServiceJobStatusToJSON(value?: ServiceJobStatus | null): any {
+export function ServiceJobStatusToJSON(json: any): ServiceJobStatus {
+  return ServiceJobStatusToJSONTyped(json, false);
+}
+
+export function ServiceJobStatusToJSONTyped(
+  value?: ServiceJobStatus | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     JobIteration: ObjectVersionToJSON(value["JobIteration"]),
     LastExecution: value["LastExecution"],

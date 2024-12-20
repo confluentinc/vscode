@@ -48,10 +48,18 @@ export function LocalConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function LocalConfigToJSON(value?: LocalConfig | null): any {
+export function LocalConfigToJSON(json: any): LocalConfig {
+  return LocalConfigToJSONTyped(json, false);
+}
+
+export function LocalConfigToJSONTyped(
+  value?: LocalConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     "schema-registry-uri": value["schema_registry_uri"],
   };

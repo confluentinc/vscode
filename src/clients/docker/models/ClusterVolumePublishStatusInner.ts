@@ -88,12 +88,18 @@ export function ClusterVolumePublishStatusInnerFromJSONTyped(
   };
 }
 
-export function ClusterVolumePublishStatusInnerToJSON(
+export function ClusterVolumePublishStatusInnerToJSON(json: any): ClusterVolumePublishStatusInner {
+  return ClusterVolumePublishStatusInnerToJSONTyped(json, false);
+}
+
+export function ClusterVolumePublishStatusInnerToJSONTyped(
   value?: ClusterVolumePublishStatusInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     NodeID: value["NodeID"],
     State: value["State"],

@@ -71,10 +71,18 @@ export function HealthCheckFromJSONTyped(json: any, ignoreDiscriminator: boolean
   };
 }
 
-export function HealthCheckToJSON(value?: HealthCheck | null): any {
+export function HealthCheckToJSON(json: any): HealthCheck {
+  return HealthCheckToJSONTyped(json, false);
+}
+
+export function HealthCheckToJSONTyped(
+  value?: HealthCheck | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     status: value["status"],
     data: value["data"],

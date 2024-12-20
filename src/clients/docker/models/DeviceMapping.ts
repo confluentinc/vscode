@@ -61,10 +61,18 @@ export function DeviceMappingFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function DeviceMappingToJSON(value?: DeviceMapping | null): any {
+export function DeviceMappingToJSON(json: any): DeviceMapping {
+  return DeviceMappingToJSONTyped(json, false);
+}
+
+export function DeviceMappingToJSONTyped(
+  value?: DeviceMapping | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     PathOnHost: value["PathOnHost"],
     PathInContainer: value["PathInContainer"],

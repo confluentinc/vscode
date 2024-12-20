@@ -18,18 +18,21 @@ import {
   ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSON,
   ClusterVolumeSpecAccessModeAccessibilityRequirementsFromJSONTyped,
   ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSON,
+  ClusterVolumeSpecAccessModeAccessibilityRequirementsToJSONTyped,
 } from "./ClusterVolumeSpecAccessModeAccessibilityRequirements";
 import type { ClusterVolumeSpecAccessModeSecretsInner } from "./ClusterVolumeSpecAccessModeSecretsInner";
 import {
   ClusterVolumeSpecAccessModeSecretsInnerFromJSON,
   ClusterVolumeSpecAccessModeSecretsInnerFromJSONTyped,
   ClusterVolumeSpecAccessModeSecretsInnerToJSON,
+  ClusterVolumeSpecAccessModeSecretsInnerToJSONTyped,
 } from "./ClusterVolumeSpecAccessModeSecretsInner";
 import type { ClusterVolumeSpecAccessModeCapacityRange } from "./ClusterVolumeSpecAccessModeCapacityRange";
 import {
   ClusterVolumeSpecAccessModeCapacityRangeFromJSON,
   ClusterVolumeSpecAccessModeCapacityRangeFromJSONTyped,
   ClusterVolumeSpecAccessModeCapacityRangeToJSON,
+  ClusterVolumeSpecAccessModeCapacityRangeToJSONTyped,
 } from "./ClusterVolumeSpecAccessModeCapacityRange";
 
 /**
@@ -194,10 +197,18 @@ export function ClusterVolumeSpecAccessModeFromJSONTyped(
   };
 }
 
-export function ClusterVolumeSpecAccessModeToJSON(value?: ClusterVolumeSpecAccessMode | null): any {
+export function ClusterVolumeSpecAccessModeToJSON(json: any): ClusterVolumeSpecAccessMode {
+  return ClusterVolumeSpecAccessModeToJSONTyped(json, false);
+}
+
+export function ClusterVolumeSpecAccessModeToJSONTyped(
+  value?: ClusterVolumeSpecAccessMode | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Scope: value["Scope"],
     Sharing: value["Sharing"],

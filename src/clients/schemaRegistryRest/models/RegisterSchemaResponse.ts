@@ -50,10 +50,18 @@ export function RegisterSchemaResponseFromJSONTyped(
   };
 }
 
-export function RegisterSchemaResponseToJSON(value?: RegisterSchemaResponse | null): any {
+export function RegisterSchemaResponseToJSON(json: any): RegisterSchemaResponse {
+  return RegisterSchemaResponseToJSONTyped(json, false);
+}
+
+export function RegisterSchemaResponseToJSONTyped(
+  value?: RegisterSchemaResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     id: value["id"],
   };

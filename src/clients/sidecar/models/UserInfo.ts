@@ -82,10 +82,18 @@ export function UserInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function UserInfoToJSON(value?: UserInfo | null): any {
+export function UserInfoToJSON(json: any): UserInfo {
+  return UserInfoToJSONTyped(json, false);
+}
+
+export function UserInfoToJSONTyped(
+  value?: UserInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     id: value["id"],
     username: value["username"],

@@ -56,10 +56,18 @@ export function LinkTaskErrorFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function LinkTaskErrorToJSON(value?: LinkTaskError | null): any {
+export function LinkTaskErrorToJSON(json: any): LinkTaskError {
+  return LinkTaskErrorToJSONTyped(json, false);
+}
+
+export function LinkTaskErrorToJSONTyped(
+  value?: LinkTaskError | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     error_code: value["error_code"],
     error_message: value["error_message"],

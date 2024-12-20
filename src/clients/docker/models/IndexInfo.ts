@@ -83,10 +83,18 @@ export function IndexInfoFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function IndexInfoToJSON(value?: IndexInfo | null): any {
+export function IndexInfoToJSON(json: any): IndexInfo {
+  return IndexInfoToJSONTyped(json, false);
+}
+
+export function IndexInfoToJSONTyped(
+  value?: IndexInfo | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Mirrors: value["Mirrors"],

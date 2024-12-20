@@ -59,10 +59,18 @@ export function ContainerTopResponseFromJSONTyped(
   };
 }
 
-export function ContainerTopResponseToJSON(value?: ContainerTopResponse | null): any {
+export function ContainerTopResponseToJSON(json: any): ContainerTopResponse {
+  return ContainerTopResponseToJSONTyped(json, false);
+}
+
+export function ContainerTopResponseToJSONTyped(
+  value?: ContainerTopResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Titles: value["Titles"],
     Processes: value["Processes"],

@@ -59,12 +59,18 @@ export function ServiceEndpointVirtualIPsInnerFromJSONTyped(
   };
 }
 
-export function ServiceEndpointVirtualIPsInnerToJSON(
+export function ServiceEndpointVirtualIPsInnerToJSON(json: any): ServiceEndpointVirtualIPsInner {
+  return ServiceEndpointVirtualIPsInnerToJSONTyped(json, false);
+}
+
+export function ServiceEndpointVirtualIPsInnerToJSONTyped(
   value?: ServiceEndpointVirtualIPsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     NetworkID: value["NetworkID"],
     Addr: value["Addr"],

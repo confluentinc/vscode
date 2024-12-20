@@ -63,10 +63,15 @@ export function LimitFromJSONTyped(json: any, ignoreDiscriminator: boolean): Lim
   };
 }
 
-export function LimitToJSON(value?: Limit | null): any {
+export function LimitToJSON(json: any): Limit {
+  return LimitToJSONTyped(json, false);
+}
+
+export function LimitToJSONTyped(value?: Limit | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     NanoCPUs: value["NanoCPUs"],
     MemoryBytes: value["MemoryBytes"],

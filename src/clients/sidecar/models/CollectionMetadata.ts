@@ -64,10 +64,18 @@ export function CollectionMetadataFromJSONTyped(
   };
 }
 
-export function CollectionMetadataToJSON(value?: CollectionMetadata | null): any {
+export function CollectionMetadataToJSON(json: any): CollectionMetadata {
+  return CollectionMetadataToJSONTyped(json, false);
+}
+
+export function CollectionMetadataToJSONTyped(
+  value?: CollectionMetadata | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     self: value["self"],
     next: value["next"],

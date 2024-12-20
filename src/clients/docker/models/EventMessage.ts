@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { EventActor } from "./EventActor";
-import { EventActorFromJSON, EventActorFromJSONTyped, EventActorToJSON } from "./EventActor";
+import {
+  EventActorFromJSON,
+  EventActorFromJSONTyped,
+  EventActorToJSON,
+  EventActorToJSONTyped,
+} from "./EventActor";
 
 /**
  * EventMessage represents the information an event contains.
@@ -116,10 +121,18 @@ export function EventMessageFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function EventMessageToJSON(value?: EventMessage | null): any {
+export function EventMessageToJSON(json: any): EventMessage {
+  return EventMessageToJSONTyped(json, false);
+}
+
+export function EventMessageToJSONTyped(
+  value?: EventMessage | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Type: value["Type"],
     Action: value["Action"],

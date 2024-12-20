@@ -18,12 +18,14 @@ import {
   ConfigSynonymDataFromJSON,
   ConfigSynonymDataFromJSONTyped,
   ConfigSynonymDataToJSON,
+  ConfigSynonymDataToJSONTyped,
 } from "./ConfigSynonymData";
 import type { ResourceMetadata } from "./ResourceMetadata";
 import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -143,10 +145,18 @@ export function BrokerConfigDataFromJSONTyped(
   };
 }
 
-export function BrokerConfigDataToJSON(value?: BrokerConfigData | null): any {
+export function BrokerConfigDataToJSON(json: any): BrokerConfigData {
+  return BrokerConfigDataToJSONTyped(json, false);
+}
+
+export function BrokerConfigDataToJSONTyped(
+  value?: BrokerConfigData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

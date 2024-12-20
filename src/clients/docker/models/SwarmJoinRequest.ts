@@ -98,10 +98,18 @@ export function SwarmJoinRequestFromJSONTyped(
   };
 }
 
-export function SwarmJoinRequestToJSON(value?: SwarmJoinRequest | null): any {
+export function SwarmJoinRequestToJSON(json: any): SwarmJoinRequest {
+  return SwarmJoinRequestToJSONTyped(json, false);
+}
+
+export function SwarmJoinRequestToJSONTyped(
+  value?: SwarmJoinRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     ListenAddr: value["ListenAddr"],
     AdvertiseAddr: value["AdvertiseAddr"],

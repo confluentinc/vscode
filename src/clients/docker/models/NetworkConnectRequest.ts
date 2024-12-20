@@ -18,6 +18,7 @@ import {
   EndpointSettingsFromJSON,
   EndpointSettingsFromJSONTyped,
   EndpointSettingsToJSON,
+  EndpointSettingsToJSONTyped,
 } from "./EndpointSettings";
 
 /**
@@ -65,10 +66,18 @@ export function NetworkConnectRequestFromJSONTyped(
   };
 }
 
-export function NetworkConnectRequestToJSON(value?: NetworkConnectRequest | null): any {
+export function NetworkConnectRequestToJSON(json: any): NetworkConnectRequest {
+  return NetworkConnectRequestToJSONTyped(json, false);
+}
+
+export function NetworkConnectRequestToJSONTyped(
+  value?: NetworkConnectRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Container: value["Container"],
     EndpointConfig: EndpointSettingsToJSON(value["EndpointConfig"]),

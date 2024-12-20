@@ -18,9 +18,15 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { ReplicaData } from "./ReplicaData";
-import { ReplicaDataFromJSON, ReplicaDataFromJSONTyped, ReplicaDataToJSON } from "./ReplicaData";
+import {
+  ReplicaDataFromJSON,
+  ReplicaDataFromJSONTyped,
+  ReplicaDataToJSON,
+  ReplicaDataToJSONTyped,
+} from "./ReplicaData";
 
 /**
  *
@@ -76,10 +82,18 @@ export function ReplicaDataListFromJSONTyped(
   };
 }
 
-export function ReplicaDataListToJSON(value?: ReplicaDataList | null): any {
+export function ReplicaDataListToJSON(json: any): ReplicaDataList {
+  return ReplicaDataListToJSONTyped(json, false);
+}
+
+export function ReplicaDataListToJSONTyped(
+  value?: ReplicaDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

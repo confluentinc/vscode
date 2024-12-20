@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { BrokerRemovalData } from "./BrokerRemovalData";
 import {
   BrokerRemovalDataFromJSON,
   BrokerRemovalDataFromJSONTyped,
   BrokerRemovalDataToJSON,
+  BrokerRemovalDataToJSONTyped,
 } from "./BrokerRemovalData";
 
 /**
@@ -80,10 +82,18 @@ export function BrokerRemovalDataListFromJSONTyped(
   };
 }
 
-export function BrokerRemovalDataListToJSON(value?: BrokerRemovalDataList | null): any {
+export function BrokerRemovalDataListToJSON(json: any): BrokerRemovalDataList {
+  return BrokerRemovalDataListToJSONTyped(json, false);
+}
+
+export function BrokerRemovalDataListToJSONTyped(
+  value?: BrokerRemovalDataList | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

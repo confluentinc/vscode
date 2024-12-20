@@ -18,6 +18,7 @@ import {
   ProduceResponseDataFromJSON,
   ProduceResponseDataFromJSONTyped,
   ProduceResponseDataToJSON,
+  ProduceResponseDataToJSONTyped,
 } from "./ProduceResponseData";
 
 /**
@@ -114,10 +115,18 @@ export function ProduceResponseFromJSONTyped(
   };
 }
 
-export function ProduceResponseToJSON(value?: ProduceResponse | null): any {
+export function ProduceResponseToJSON(json: any): ProduceResponse {
+  return ProduceResponseToJSONTyped(json, false);
+}
+
+export function ProduceResponseToJSONTyped(
+  value?: ProduceResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     error_code: value["error_code"],
     message: value["message"],

@@ -29,7 +29,7 @@ export type LocalNodeState = (typeof LocalNodeState)[keyof typeof LocalNodeState
 export function instanceOfLocalNodeState(value: any): boolean {
   for (const key in LocalNodeState) {
     if (Object.prototype.hasOwnProperty.call(LocalNodeState, key)) {
-      if ((LocalNodeState as Record<string, LocalNodeState>)[key] === value) {
+      if (LocalNodeState[key as keyof typeof LocalNodeState] === value) {
         return true;
       }
     }
@@ -50,4 +50,11 @@ export function LocalNodeStateFromJSONTyped(
 
 export function LocalNodeStateToJSON(value?: LocalNodeState | null): any {
   return value as any;
+}
+
+export function LocalNodeStateToJSONTyped(
+  value: any,
+  ignoreDiscriminator: boolean,
+): LocalNodeState {
+  return value as LocalNodeState;
 }

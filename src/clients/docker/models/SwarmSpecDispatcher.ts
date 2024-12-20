@@ -51,10 +51,18 @@ export function SwarmSpecDispatcherFromJSONTyped(
   };
 }
 
-export function SwarmSpecDispatcherToJSON(value?: SwarmSpecDispatcher | null): any {
+export function SwarmSpecDispatcherToJSON(json: any): SwarmSpecDispatcher {
+  return SwarmSpecDispatcherToJSONTyped(json, false);
+}
+
+export function SwarmSpecDispatcherToJSONTyped(
+  value?: SwarmSpecDispatcher | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     HeartbeatPeriod: value["HeartbeatPeriod"],
   };

@@ -78,10 +78,18 @@ export function ExporterStatusResponseFromJSONTyped(
   };
 }
 
-export function ExporterStatusResponseToJSON(value?: ExporterStatusResponse | null): any {
+export function ExporterStatusResponseToJSON(json: any): ExporterStatusResponse {
+  return ExporterStatusResponseToJSONTyped(json, false);
+}
+
+export function ExporterStatusResponseToJSONTyped(
+  value?: ExporterStatusResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     state: value["state"],

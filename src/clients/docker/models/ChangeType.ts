@@ -33,7 +33,7 @@ export type ChangeType = (typeof ChangeType)[keyof typeof ChangeType];
 export function instanceOfChangeType(value: any): boolean {
   for (const key in ChangeType) {
     if (Object.prototype.hasOwnProperty.call(ChangeType, key)) {
-      if ((ChangeType as Record<string, ChangeType>)[key] === value) {
+      if (ChangeType[key as keyof typeof ChangeType] === value) {
         return true;
       }
     }
@@ -51,4 +51,8 @@ export function ChangeTypeFromJSONTyped(json: any, ignoreDiscriminator: boolean)
 
 export function ChangeTypeToJSON(value?: ChangeType | null): any {
   return value as any;
+}
+
+export function ChangeTypeToJSONTyped(value: any, ignoreDiscriminator: boolean): ChangeType {
+  return value as ChangeType;
 }

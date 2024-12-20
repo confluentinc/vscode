@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { IndexInfo } from "./IndexInfo";
-import { IndexInfoFromJSON, IndexInfoFromJSONTyped, IndexInfoToJSON } from "./IndexInfo";
+import {
+  IndexInfoFromJSON,
+  IndexInfoFromJSONTyped,
+  IndexInfoToJSON,
+  IndexInfoToJSONTyped,
+} from "./IndexInfo";
 
 /**
  * RegistryServiceConfig stores daemon registry services configuration.
@@ -156,10 +161,18 @@ export function RegistryServiceConfigFromJSONTyped(
   };
 }
 
-export function RegistryServiceConfigToJSON(value?: RegistryServiceConfig | null): any {
+export function RegistryServiceConfigToJSON(json: any): RegistryServiceConfig {
+  return RegistryServiceConfigToJSONTyped(json, false);
+}
+
+export function RegistryServiceConfigToJSONTyped(
+  value?: RegistryServiceConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     AllowNondistributableArtifactsCIDRs: value["AllowNondistributableArtifactsCIDRs"],
     AllowNondistributableArtifactsHostnames: value["AllowNondistributableArtifactsHostnames"],

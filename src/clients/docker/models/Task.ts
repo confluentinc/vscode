@@ -18,19 +18,36 @@ import {
   GenericResourcesInnerFromJSON,
   GenericResourcesInnerFromJSONTyped,
   GenericResourcesInnerToJSON,
+  GenericResourcesInnerToJSONTyped,
 } from "./GenericResourcesInner";
 import type { ObjectVersion } from "./ObjectVersion";
 import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { TaskSpec } from "./TaskSpec";
-import { TaskSpecFromJSON, TaskSpecFromJSONTyped, TaskSpecToJSON } from "./TaskSpec";
+import {
+  TaskSpecFromJSON,
+  TaskSpecFromJSONTyped,
+  TaskSpecToJSON,
+  TaskSpecToJSONTyped,
+} from "./TaskSpec";
 import type { TaskStatus } from "./TaskStatus";
-import { TaskStatusFromJSON, TaskStatusFromJSONTyped, TaskStatusToJSON } from "./TaskStatus";
+import {
+  TaskStatusFromJSON,
+  TaskStatusFromJSONTyped,
+  TaskStatusToJSON,
+  TaskStatusToJSONTyped,
+} from "./TaskStatus";
 import type { TaskState } from "./TaskState";
-import { TaskStateFromJSON, TaskStateFromJSONTyped, TaskStateToJSON } from "./TaskState";
+import {
+  TaskStateFromJSON,
+  TaskStateFromJSONTyped,
+  TaskStateToJSON,
+  TaskStateToJSONTyped,
+} from "./TaskState";
 
 /**
  *
@@ -164,10 +181,15 @@ export function TaskFromJSONTyped(json: any, ignoreDiscriminator: boolean): Task
   };
 }
 
-export function TaskToJSON(value?: Task | null): any {
+export function TaskToJSON(json: any): Task {
+  return TaskToJSONTyped(json, false);
+}
+
+export function TaskToJSONTyped(value?: Task | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

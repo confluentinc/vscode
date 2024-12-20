@@ -14,7 +14,12 @@
 
 import { mapValues } from "../runtime";
 import type { AclData } from "./AclData";
-import { AclDataFromJSON, AclDataFromJSONTyped, AclDataToJSON } from "./AclData";
+import {
+  AclDataFromJSON,
+  AclDataFromJSONTyped,
+  AclDataToJSON,
+  AclDataToJSONTyped,
+} from "./AclData";
 
 /**
  *
@@ -56,10 +61,18 @@ export function DeleteKafkaAcls200ResponseFromJSONTyped(
   };
 }
 
-export function DeleteKafkaAcls200ResponseToJSON(value?: DeleteKafkaAcls200Response | null): any {
+export function DeleteKafkaAcls200ResponseToJSON(json: any): DeleteKafkaAcls200Response {
+  return DeleteKafkaAcls200ResponseToJSONTyped(json, false);
+}
+
+export function DeleteKafkaAcls200ResponseToJSONTyped(
+  value?: DeleteKafkaAcls200Response | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     data: (value["data"] as Array<any>).map(AclDataToJSON),
   };

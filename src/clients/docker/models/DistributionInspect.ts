@@ -18,9 +18,15 @@ import {
   OCIDescriptorFromJSON,
   OCIDescriptorFromJSONTyped,
   OCIDescriptorToJSON,
+  OCIDescriptorToJSONTyped,
 } from "./OCIDescriptor";
 import type { OCIPlatform } from "./OCIPlatform";
-import { OCIPlatformFromJSON, OCIPlatformFromJSONTyped, OCIPlatformToJSON } from "./OCIPlatform";
+import {
+  OCIPlatformFromJSON,
+  OCIPlatformFromJSONTyped,
+  OCIPlatformToJSON,
+  OCIPlatformToJSONTyped,
+} from "./OCIPlatform";
 
 /**
  * Describes the result obtained from contacting the registry to retrieve
@@ -71,10 +77,18 @@ export function DistributionInspectFromJSONTyped(
   };
 }
 
-export function DistributionInspectToJSON(value?: DistributionInspect | null): any {
+export function DistributionInspectToJSON(json: any): DistributionInspect {
+  return DistributionInspectToJSONTyped(json, false);
+}
+
+export function DistributionInspectToJSONTyped(
+  value?: DistributionInspect | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Descriptor: OCIDescriptorToJSON(value["Descriptor"]),
     Platforms: (value["Platforms"] as Array<any>).map(OCIPlatformToJSON),

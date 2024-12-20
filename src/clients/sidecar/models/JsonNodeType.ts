@@ -32,7 +32,7 @@ export type JsonNodeType = (typeof JsonNodeType)[keyof typeof JsonNodeType];
 export function instanceOfJsonNodeType(value: any): boolean {
   for (const key in JsonNodeType) {
     if (Object.prototype.hasOwnProperty.call(JsonNodeType, key)) {
-      if ((JsonNodeType as Record<string, JsonNodeType>)[key] === value) {
+      if (JsonNodeType[key as keyof typeof JsonNodeType] === value) {
         return true;
       }
     }
@@ -50,4 +50,8 @@ export function JsonNodeTypeFromJSONTyped(json: any, ignoreDiscriminator: boolea
 
 export function JsonNodeTypeToJSON(value?: JsonNodeType | null): any {
   return value as any;
+}
+
+export function JsonNodeTypeToJSONTyped(value: any, ignoreDiscriminator: boolean): JsonNodeType {
+  return value as JsonNodeType;
 }

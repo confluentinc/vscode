@@ -54,10 +54,18 @@ export function ClusterConfigFromJSONTyped(json: any, ignoreDiscriminator: boole
   };
 }
 
-export function ClusterConfigToJSON(value?: ClusterConfig | null): any {
+export function ClusterConfigToJSON(json: any): ClusterConfig {
+  return ClusterConfigToJSONTyped(json, false);
+}
+
+export function ClusterConfigToJSONTyped(
+  value?: ClusterConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     maxSchemas: value["maxSchemas"],
     maxRequestsPerSec: value["maxRequestsPerSec"],

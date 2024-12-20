@@ -18,16 +18,28 @@ import {
   ResourceObjectFromJSON,
   ResourceObjectFromJSONTyped,
   ResourceObjectToJSON,
+  ResourceObjectToJSONTyped,
 } from "./ResourceObject";
 import type { Platform } from "./Platform";
-import { PlatformFromJSON, PlatformFromJSONTyped, PlatformToJSON } from "./Platform";
+import {
+  PlatformFromJSON,
+  PlatformFromJSONTyped,
+  PlatformToJSON,
+  PlatformToJSONTyped,
+} from "./Platform";
 import type { TLSInfo } from "./TLSInfo";
-import { TLSInfoFromJSON, TLSInfoFromJSONTyped, TLSInfoToJSON } from "./TLSInfo";
+import {
+  TLSInfoFromJSON,
+  TLSInfoFromJSONTyped,
+  TLSInfoToJSON,
+  TLSInfoToJSONTyped,
+} from "./TLSInfo";
 import type { EngineDescription } from "./EngineDescription";
 import {
   EngineDescriptionFromJSON,
   EngineDescriptionFromJSONTyped,
   EngineDescriptionToJSON,
+  EngineDescriptionToJSONTyped,
 } from "./EngineDescription";
 
 /**
@@ -97,10 +109,18 @@ export function NodeDescriptionFromJSONTyped(
   };
 }
 
-export function NodeDescriptionToJSON(value?: NodeDescription | null): any {
+export function NodeDescriptionToJSON(json: any): NodeDescription {
+  return NodeDescriptionToJSONTyped(json, false);
+}
+
+export function NodeDescriptionToJSONTyped(
+  value?: NodeDescription | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Hostname: value["Hostname"],
     Platform: PlatformToJSON(value["Platform"]),

@@ -64,12 +64,18 @@ export function ServiceSpecModeReplicatedJobFromJSONTyped(
   };
 }
 
-export function ServiceSpecModeReplicatedJobToJSON(
+export function ServiceSpecModeReplicatedJobToJSON(json: any): ServiceSpecModeReplicatedJob {
+  return ServiceSpecModeReplicatedJobToJSONTyped(json, false);
+}
+
+export function ServiceSpecModeReplicatedJobToJSONTyped(
   value?: ServiceSpecModeReplicatedJob | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     MaxConcurrent: value["MaxConcurrent"],
     TotalCompletions: value["TotalCompletions"],

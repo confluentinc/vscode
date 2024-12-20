@@ -5,6 +5,11 @@ import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
+import {
+  CustomConnectionSpec,
+  DirectConnectionsById,
+  getResourceManager,
+} from "../storage/resourceManager";
 
 const logger = new Logger("graphql.direct");
 
@@ -40,6 +45,10 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
   }
 
   if (response.directConnections) {
+    // look up the connectionId:spec map from storage
+    const directConnectionMap: DirectConnectionsById =
+      await getResourceManager().getDirectConnections();
+
     response.directConnections.forEach((connection) => {
       if (!connection) {
         return;
@@ -71,15 +80,27 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         });
       }
 
+      // combine the connection returned from GraphQL with the webview form augmented spec in storage
+      const directSpec: CustomConnectionSpec | undefined = directConnectionMap.get(
+        connection.id as ConnectionId,
+      );
+
       const directEnv = DirectEnvironment.create({
         id: connection.id,
         name: connection.name,
         kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
         schemaRegistry,
+        formConnectionType: directSpec?.formConnectionType,
         ...connectionInfo,
       });
       directResources.push(directEnv);
     });
   }
+
+  // sort multiple environments by name
+  if (directResources.length > 1) {
+    directResources.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   return directResources;
 }

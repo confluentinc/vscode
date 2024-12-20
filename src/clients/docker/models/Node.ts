@@ -18,23 +18,36 @@ import {
   ObjectVersionFromJSON,
   ObjectVersionFromJSONTyped,
   ObjectVersionToJSON,
+  ObjectVersionToJSONTyped,
 } from "./ObjectVersion";
 import type { NodeDescription } from "./NodeDescription";
 import {
   NodeDescriptionFromJSON,
   NodeDescriptionFromJSONTyped,
   NodeDescriptionToJSON,
+  NodeDescriptionToJSONTyped,
 } from "./NodeDescription";
 import type { ManagerStatus } from "./ManagerStatus";
 import {
   ManagerStatusFromJSON,
   ManagerStatusFromJSONTyped,
   ManagerStatusToJSON,
+  ManagerStatusToJSONTyped,
 } from "./ManagerStatus";
 import type { NodeSpec } from "./NodeSpec";
-import { NodeSpecFromJSON, NodeSpecFromJSONTyped, NodeSpecToJSON } from "./NodeSpec";
+import {
+  NodeSpecFromJSON,
+  NodeSpecFromJSONTyped,
+  NodeSpecToJSON,
+  NodeSpecToJSONTyped,
+} from "./NodeSpec";
 import type { NodeStatus } from "./NodeStatus";
-import { NodeStatusFromJSON, NodeStatusFromJSONTyped, NodeStatusToJSON } from "./NodeStatus";
+import {
+  NodeStatusFromJSON,
+  NodeStatusFromJSONTyped,
+  NodeStatusToJSON,
+  NodeStatusToJSONTyped,
+} from "./NodeStatus";
 
 /**
  *
@@ -125,10 +138,15 @@ export function NodeFromJSONTyped(json: any, ignoreDiscriminator: boolean): Node
   };
 }
 
-export function NodeToJSON(value?: Node | null): any {
+export function NodeToJSON(json: any): Node {
+  return NodeToJSONTyped(json, false);
+}
+
+export function NodeToJSONTyped(value?: Node | null, ignoreDiscriminator: boolean = false): any {
   if (value == null) {
     return value;
   }
+
   return {
     ID: value["ID"],
     Version: ObjectVersionToJSON(value["Version"]),

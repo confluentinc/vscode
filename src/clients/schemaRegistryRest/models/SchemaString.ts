@@ -18,6 +18,7 @@ import {
   SchemaReferenceFromJSON,
   SchemaReferenceFromJSONTyped,
   SchemaReferenceToJSON,
+  SchemaReferenceToJSONTyped,
 } from "./SchemaReference";
 
 /**
@@ -78,10 +79,18 @@ export function SchemaStringFromJSONTyped(json: any, ignoreDiscriminator: boolea
   };
 }
 
-export function SchemaStringToJSON(value?: SchemaString | null): any {
+export function SchemaStringToJSON(json: any): SchemaString {
+  return SchemaStringToJSONTyped(json, false);
+}
+
+export function SchemaStringToJSONTyped(
+  value?: SchemaString | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     schemaType: value["schemaType"],
     schema: value["schema"],

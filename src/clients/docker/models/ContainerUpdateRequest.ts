@@ -18,36 +18,42 @@ import {
   ResourcesUlimitsInnerFromJSON,
   ResourcesUlimitsInnerFromJSONTyped,
   ResourcesUlimitsInnerToJSON,
+  ResourcesUlimitsInnerToJSONTyped,
 } from "./ResourcesUlimitsInner";
 import type { ThrottleDevice } from "./ThrottleDevice";
 import {
   ThrottleDeviceFromJSON,
   ThrottleDeviceFromJSONTyped,
   ThrottleDeviceToJSON,
+  ThrottleDeviceToJSONTyped,
 } from "./ThrottleDevice";
 import type { DeviceMapping } from "./DeviceMapping";
 import {
   DeviceMappingFromJSON,
   DeviceMappingFromJSONTyped,
   DeviceMappingToJSON,
+  DeviceMappingToJSONTyped,
 } from "./DeviceMapping";
 import type { RestartPolicy } from "./RestartPolicy";
 import {
   RestartPolicyFromJSON,
   RestartPolicyFromJSONTyped,
   RestartPolicyToJSON,
+  RestartPolicyToJSONTyped,
 } from "./RestartPolicy";
 import type { DeviceRequest } from "./DeviceRequest";
 import {
   DeviceRequestFromJSON,
   DeviceRequestFromJSONTyped,
   DeviceRequestToJSON,
+  DeviceRequestToJSONTyped,
 } from "./DeviceRequest";
 import type { ResourcesBlkioWeightDeviceInner } from "./ResourcesBlkioWeightDeviceInner";
 import {
   ResourcesBlkioWeightDeviceInnerFromJSON,
   ResourcesBlkioWeightDeviceInnerFromJSONTyped,
   ResourcesBlkioWeightDeviceInnerToJSON,
+  ResourcesBlkioWeightDeviceInnerToJSONTyped,
 } from "./ResourcesBlkioWeightDeviceInner";
 
 /**
@@ -400,10 +406,18 @@ export function ContainerUpdateRequestFromJSONTyped(
   };
 }
 
-export function ContainerUpdateRequestToJSON(value?: ContainerUpdateRequest | null): any {
+export function ContainerUpdateRequestToJSON(json: any): ContainerUpdateRequest {
+  return ContainerUpdateRequestToJSONTyped(json, false);
+}
+
+export function ContainerUpdateRequestToJSONTyped(
+  value?: ContainerUpdateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     CpuShares: value["CpuShares"],
     Memory: value["Memory"],

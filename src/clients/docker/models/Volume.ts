@@ -18,12 +18,14 @@ import {
   VolumeUsageDataFromJSON,
   VolumeUsageDataFromJSONTyped,
   VolumeUsageDataToJSON,
+  VolumeUsageDataToJSONTyped,
 } from "./VolumeUsageData";
 import type { ClusterVolume } from "./ClusterVolume";
 import {
   ClusterVolumeFromJSON,
   ClusterVolumeFromJSONTyped,
   ClusterVolumeToJSON,
+  ClusterVolumeToJSONTyped,
 } from "./ClusterVolume";
 
 /**
@@ -148,10 +150,18 @@ export function VolumeFromJSONTyped(json: any, ignoreDiscriminator: boolean): Vo
   };
 }
 
-export function VolumeToJSON(value?: Volume | null): any {
+export function VolumeToJSON(json: any): Volume {
+  return VolumeToJSONTyped(json, false);
+}
+
+export function VolumeToJSONTyped(
+  value?: Volume | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
     Driver: value["Driver"],

@@ -14,20 +14,27 @@
 
 import { mapValues } from "../runtime";
 import type { BuildCache } from "./BuildCache";
-import { BuildCacheFromJSON, BuildCacheFromJSONTyped, BuildCacheToJSON } from "./BuildCache";
+import {
+  BuildCacheFromJSON,
+  BuildCacheFromJSONTyped,
+  BuildCacheToJSON,
+  BuildCacheToJSONTyped,
+} from "./BuildCache";
 import type { ImageSummary } from "./ImageSummary";
 import {
   ImageSummaryFromJSON,
   ImageSummaryFromJSONTyped,
   ImageSummaryToJSON,
+  ImageSummaryToJSONTyped,
 } from "./ImageSummary";
 import type { Volume } from "./Volume";
-import { VolumeFromJSON, VolumeFromJSONTyped, VolumeToJSON } from "./Volume";
+import { VolumeFromJSON, VolumeFromJSONTyped, VolumeToJSON, VolumeToJSONTyped } from "./Volume";
 import type { ContainerSummary } from "./ContainerSummary";
 import {
   ContainerSummaryFromJSON,
   ContainerSummaryFromJSONTyped,
   ContainerSummaryToJSON,
+  ContainerSummaryToJSONTyped,
 } from "./ContainerSummary";
 
 /**
@@ -103,10 +110,18 @@ export function SystemDataUsageResponseFromJSONTyped(
   };
 }
 
-export function SystemDataUsageResponseToJSON(value?: SystemDataUsageResponse | null): any {
+export function SystemDataUsageResponseToJSON(json: any): SystemDataUsageResponse {
+  return SystemDataUsageResponseToJSONTyped(json, false);
+}
+
+export function SystemDataUsageResponseToJSONTyped(
+  value?: SystemDataUsageResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     LayersSize: value["LayersSize"],
     Images:

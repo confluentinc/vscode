@@ -57,10 +57,18 @@ export function PartitionOffsetFromJSONTyped(
   };
 }
 
-export function PartitionOffsetToJSON(value?: PartitionOffset | null): any {
+export function PartitionOffsetToJSON(json: any): PartitionOffset {
+  return PartitionOffsetToJSONTyped(json, false);
+}
+
+export function PartitionOffsetToJSONTyped(
+  value?: PartitionOffset | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     partition_id: value["partition_id"],
     offset: value["offset"],

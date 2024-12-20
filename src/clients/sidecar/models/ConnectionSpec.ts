@@ -18,26 +18,35 @@ import {
   SchemaRegistryConfigFromJSON,
   SchemaRegistryConfigFromJSONTyped,
   SchemaRegistryConfigToJSON,
+  SchemaRegistryConfigToJSONTyped,
 } from "./SchemaRegistryConfig";
 import type { ConnectionType } from "./ConnectionType";
 import {
   ConnectionTypeFromJSON,
   ConnectionTypeFromJSONTyped,
   ConnectionTypeToJSON,
+  ConnectionTypeToJSONTyped,
 } from "./ConnectionType";
 import type { LocalConfig } from "./LocalConfig";
-import { LocalConfigFromJSON, LocalConfigFromJSONTyped, LocalConfigToJSON } from "./LocalConfig";
+import {
+  LocalConfigFromJSON,
+  LocalConfigFromJSONTyped,
+  LocalConfigToJSON,
+  LocalConfigToJSONTyped,
+} from "./LocalConfig";
 import type { CCloudConfig } from "./CCloudConfig";
 import {
   CCloudConfigFromJSON,
   CCloudConfigFromJSONTyped,
   CCloudConfigToJSON,
+  CCloudConfigToJSONTyped,
 } from "./CCloudConfig";
 import type { KafkaClusterConfig } from "./KafkaClusterConfig";
 import {
   KafkaClusterConfigFromJSON,
   KafkaClusterConfigFromJSONTyped,
   KafkaClusterConfigToJSON,
+  KafkaClusterConfigToJSONTyped,
 } from "./KafkaClusterConfig";
 
 /**
@@ -125,10 +134,18 @@ export function ConnectionSpecFromJSONTyped(
   };
 }
 
-export function ConnectionSpecToJSON(value?: ConnectionSpec | null): any {
+export function ConnectionSpecToJSON(json: any): ConnectionSpec {
+  return ConnectionSpecToJSONTyped(json, false);
+}
+
+export function ConnectionSpecToJSONTyped(
+  value?: ConnectionSpec | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     id: value["id"],
     name: value["name"],

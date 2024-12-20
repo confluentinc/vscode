@@ -18,15 +18,22 @@ import {
   NetworkingConfigFromJSON,
   NetworkingConfigFromJSONTyped,
   NetworkingConfigToJSON,
+  NetworkingConfigToJSONTyped,
 } from "./NetworkingConfig";
 import type { HealthConfig } from "./HealthConfig";
 import {
   HealthConfigFromJSON,
   HealthConfigFromJSONTyped,
   HealthConfigToJSON,
+  HealthConfigToJSONTyped,
 } from "./HealthConfig";
 import type { HostConfig } from "./HostConfig";
-import { HostConfigFromJSON, HostConfigFromJSONTyped, HostConfigToJSON } from "./HostConfig";
+import {
+  HostConfigFromJSON,
+  HostConfigFromJSONTyped,
+  HostConfigToJSON,
+  HostConfigToJSONTyped,
+} from "./HostConfig";
 
 /**
  *
@@ -273,10 +280,18 @@ export function ContainerCreateRequestFromJSONTyped(
   };
 }
 
-export function ContainerCreateRequestToJSON(value?: ContainerCreateRequest | null): any {
+export function ContainerCreateRequestToJSON(json: any): ContainerCreateRequest {
+  return ContainerCreateRequestToJSONTyped(json, false);
+}
+
+export function ContainerCreateRequestToJSONTyped(
+  value?: ContainerCreateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Hostname: value["Hostname"],
     Domainname: value["Domainname"],

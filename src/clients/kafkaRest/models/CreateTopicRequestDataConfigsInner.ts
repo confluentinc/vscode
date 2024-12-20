@@ -63,11 +63,19 @@ export function CreateTopicRequestDataConfigsInnerFromJSONTyped(
 }
 
 export function CreateTopicRequestDataConfigsInnerToJSON(
+  json: any,
+): CreateTopicRequestDataConfigsInner {
+  return CreateTopicRequestDataConfigsInnerToJSONTyped(json, false);
+}
+
+export function CreateTopicRequestDataConfigsInnerToJSONTyped(
   value?: CreateTopicRequestDataConfigsInner | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     name: value["name"],
     value: value["value"],

@@ -101,10 +101,18 @@ export function OptionPropertiesFromJSONTyped(
   };
 }
 
-export function OptionPropertiesToJSON(value?: OptionProperties | null): any {
+export function OptionPropertiesToJSON(json: any): OptionProperties {
+  return OptionPropertiesToJSONTyped(json, false);
+}
+
+export function OptionPropertiesToJSONTyped(
+  value?: OptionProperties | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     display_name: value["display_name"],
     description: value["description"],

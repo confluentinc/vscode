@@ -57,10 +57,18 @@ export function BuildPruneResponseFromJSONTyped(
   };
 }
 
-export function BuildPruneResponseToJSON(value?: BuildPruneResponse | null): any {
+export function BuildPruneResponseToJSON(json: any): BuildPruneResponse {
+  return BuildPruneResponseToJSONTyped(json, false);
+}
+
+export function BuildPruneResponseToJSONTyped(
+  value?: BuildPruneResponse | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     CachesDeleted: value["CachesDeleted"],
     SpaceReclaimed: value["SpaceReclaimed"],

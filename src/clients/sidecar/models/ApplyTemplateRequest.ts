@@ -51,10 +51,18 @@ export function ApplyTemplateRequestFromJSONTyped(
   };
 }
 
-export function ApplyTemplateRequestToJSON(value?: ApplyTemplateRequest | null): any {
+export function ApplyTemplateRequestToJSON(json: any): ApplyTemplateRequest {
+  return ApplyTemplateRequestToJSONTyped(json, false);
+}
+
+export function ApplyTemplateRequestToJSONTyped(
+  value?: ApplyTemplateRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     options: value["options"],
   };

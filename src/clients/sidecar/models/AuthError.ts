@@ -61,10 +61,18 @@ export function AuthErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean):
   };
 }
 
-export function AuthErrorToJSON(value?: AuthError | null): any {
+export function AuthErrorToJSON(json: any): AuthError {
+  return AuthErrorToJSONTyped(json, false);
+}
+
+export function AuthErrorToJSONTyped(
+  value?: AuthError | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     created_at: value["created_at"] == null ? undefined : value["created_at"].toISOString(),
     message: value["message"],

@@ -693,8 +693,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Connection"
-    Credentials:
-      type: object
     Error:
       description: Describes a particular error encountered while performing an operation.
       type: object
@@ -813,9 +811,6 @@ components:
         credentials:
           description: "The credentials for the Kafka cluster, or null if no authentication\
             \ is required"
-          type: object
-          allOf:
-          - $ref: "#/components/schemas/Credentials"
           oneOf:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
@@ -1007,9 +1002,6 @@ components:
         credentials:
           description: "The credentials for the Schema Registry, or null if no authentication\
             \ is required"
-          type: object
-          allOf:
-          - $ref: "#/components/schemas/Credentials"
           oneOf:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"

@@ -52,10 +52,18 @@ export function ContainerSummaryHostConfigFromJSONTyped(
   };
 }
 
-export function ContainerSummaryHostConfigToJSON(value?: ContainerSummaryHostConfig | null): any {
+export function ContainerSummaryHostConfigToJSON(json: any): ContainerSummaryHostConfig {
+  return ContainerSummaryHostConfigToJSONTyped(json, false);
+}
+
+export function ContainerSummaryHostConfigToJSONTyped(
+  value?: ContainerSummaryHostConfig | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     NetworkMode: value["NetworkMode"],
   };

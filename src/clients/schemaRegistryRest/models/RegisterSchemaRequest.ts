@@ -18,11 +18,22 @@ import {
   SchemaReferenceFromJSON,
   SchemaReferenceFromJSONTyped,
   SchemaReferenceToJSON,
+  SchemaReferenceToJSONTyped,
 } from "./SchemaReference";
 import type { RuleSet } from "./RuleSet";
-import { RuleSetFromJSON, RuleSetFromJSONTyped, RuleSetToJSON } from "./RuleSet";
+import {
+  RuleSetFromJSON,
+  RuleSetFromJSONTyped,
+  RuleSetToJSON,
+  RuleSetToJSONTyped,
+} from "./RuleSet";
 import type { Metadata } from "./Metadata";
-import { MetadataFromJSON, MetadataFromJSONTyped, MetadataToJSON } from "./Metadata";
+import {
+  MetadataFromJSON,
+  MetadataFromJSONTyped,
+  MetadataToJSON,
+  MetadataToJSONTyped,
+} from "./Metadata";
 
 /**
  * Schema register request
@@ -106,10 +117,18 @@ export function RegisterSchemaRequestFromJSONTyped(
   };
 }
 
-export function RegisterSchemaRequestToJSON(value?: RegisterSchemaRequest | null): any {
+export function RegisterSchemaRequestToJSON(json: any): RegisterSchemaRequest {
+  return RegisterSchemaRequestToJSONTyped(json, false);
+}
+
+export function RegisterSchemaRequestToJSONTyped(
+  value?: RegisterSchemaRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     version: value["version"],
     id: value["id"],

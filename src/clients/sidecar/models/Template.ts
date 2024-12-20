@@ -18,12 +18,14 @@ import {
   TemplateManifestFromJSON,
   TemplateManifestFromJSONTyped,
   TemplateManifestToJSON,
+  TemplateManifestToJSONTyped,
 } from "./TemplateManifest";
 import type { ObjectMetadata } from "./ObjectMetadata";
 import {
   ObjectMetadataFromJSON,
   ObjectMetadataFromJSONTyped,
   ObjectMetadataToJSON,
+  ObjectMetadataToJSONTyped,
 } from "./ObjectMetadata";
 
 /**
@@ -93,10 +95,18 @@ export function TemplateFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
   };
 }
 
-export function TemplateToJSON(value?: Template | null): any {
+export function TemplateToJSON(json: any): Template {
+  return TemplateToJSONTyped(json, false);
+}
+
+export function TemplateToJSONTyped(
+  value?: Template | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     api_version: value["api_version"],
     kind: value["kind"],

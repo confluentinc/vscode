@@ -18,12 +18,14 @@ import {
   ResourceCollectionMetadataFromJSON,
   ResourceCollectionMetadataFromJSONTyped,
   ResourceCollectionMetadataToJSON,
+  ResourceCollectionMetadataToJSONTyped,
 } from "./ResourceCollectionMetadata";
 import type { AlterBrokerReplicaExclusionData } from "./AlterBrokerReplicaExclusionData";
 import {
   AlterBrokerReplicaExclusionDataFromJSON,
   AlterBrokerReplicaExclusionDataFromJSONTyped,
   AlterBrokerReplicaExclusionDataToJSON,
+  AlterBrokerReplicaExclusionDataToJSONTyped,
 } from "./AlterBrokerReplicaExclusionData";
 
 /**
@@ -85,11 +87,19 @@ export function AlterBrokerReplicaExclusionDataListFromJSONTyped(
 }
 
 export function AlterBrokerReplicaExclusionDataListToJSON(
+  json: any,
+): AlterBrokerReplicaExclusionDataList {
+  return AlterBrokerReplicaExclusionDataListToJSONTyped(json, false);
+}
+
+export function AlterBrokerReplicaExclusionDataListToJSONTyped(
   value?: AlterBrokerReplicaExclusionDataList | null,
+  ignoreDiscriminator: boolean = false,
 ): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceCollectionMetadataToJSON(value["metadata"]),

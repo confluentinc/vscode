@@ -12,6 +12,7 @@ export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.
  * @remarks Any custom icon IDs must match the `contributes.icons` section of package.json.
  */
 export enum IconNames {
+  APACHE_KAFKA_LOGO = "apache-kafka",
   CURRENT_RESOURCE = "check",
   CONNECTION = "plug",
   ORGANIZATION = "account",

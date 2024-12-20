@@ -57,10 +57,18 @@ export function SubjectVersionFromJSONTyped(
   };
 }
 
-export function SubjectVersionToJSON(value?: SubjectVersion | null): any {
+export function SubjectVersionToJSON(json: any): SubjectVersion {
+  return SubjectVersionToJSONTyped(json, false);
+}
+
+export function SubjectVersionToJSONTyped(
+  value?: SubjectVersion | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     subject: value["subject"],
     version: value["version"],

@@ -57,10 +57,18 @@ export function ExceededFieldsFromJSONTyped(
   };
 }
 
-export function ExceededFieldsToJSON(value?: ExceededFields | null): any {
+export function ExceededFieldsToJSON(json: any): ExceededFields {
+  return ExceededFieldsToJSONTyped(json, false);
+}
+
+export function ExceededFieldsToJSONTyped(
+  value?: ExceededFields | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     key: value["key"],
     value: value["value"],

@@ -51,10 +51,18 @@ export function SystemVersionPlatformFromJSONTyped(
   };
 }
 
-export function SystemVersionPlatformToJSON(value?: SystemVersionPlatform | null): any {
+export function SystemVersionPlatformToJSON(json: any): SystemVersionPlatform {
+  return SystemVersionPlatformToJSONTyped(json, false);
+}
+
+export function SystemVersionPlatformToJSONTyped(
+  value?: SystemVersionPlatform | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     Name: value["Name"],
   };

@@ -53,10 +53,18 @@ export function RemoveBrokersRequestDataFromJSONTyped(
   };
 }
 
-export function RemoveBrokersRequestDataToJSON(value?: RemoveBrokersRequestData | null): any {
+export function RemoveBrokersRequestDataToJSON(json: any): RemoveBrokersRequestData {
+  return RemoveBrokersRequestDataToJSONTyped(json, false);
+}
+
+export function RemoveBrokersRequestDataToJSONTyped(
+  value?: RemoveBrokersRequestData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     broker_ids: value["broker_ids"],
   };

@@ -18,12 +18,14 @@ import {
   ProduceRequestHeaderFromJSON,
   ProduceRequestHeaderFromJSONTyped,
   ProduceRequestHeaderToJSON,
+  ProduceRequestHeaderToJSONTyped,
 } from "./ProduceRequestHeader";
 import type { ProduceRequestData } from "./ProduceRequestData";
 import {
   ProduceRequestDataFromJSON,
   ProduceRequestDataFromJSONTyped,
   ProduceRequestDataToJSON,
+  ProduceRequestDataToJSONTyped,
 } from "./ProduceRequestData";
 
 /**
@@ -94,10 +96,18 @@ export function ProduceRequestFromJSONTyped(
   };
 }
 
-export function ProduceRequestToJSON(value?: ProduceRequest | null): any {
+export function ProduceRequestToJSON(json: any): ProduceRequest {
+  return ProduceRequestToJSONTyped(json, false);
+}
+
+export function ProduceRequestToJSONTyped(
+  value?: ProduceRequest | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     partition_id: value["partition_id"],
     headers:

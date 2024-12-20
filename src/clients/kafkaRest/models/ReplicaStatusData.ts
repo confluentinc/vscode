@@ -18,6 +18,7 @@ import {
   ResourceMetadataFromJSON,
   ResourceMetadataFromJSONTyped,
   ResourceMetadataToJSON,
+  ResourceMetadataToJSONTyped,
 } from "./ResourceMetadata";
 
 /**
@@ -178,10 +179,18 @@ export function ReplicaStatusDataFromJSONTyped(
   };
 }
 
-export function ReplicaStatusDataToJSON(value?: ReplicaStatusData | null): any {
+export function ReplicaStatusDataToJSON(json: any): ReplicaStatusData {
+  return ReplicaStatusDataToJSONTyped(json, false);
+}
+
+export function ReplicaStatusDataToJSONTyped(
+  value?: ReplicaStatusData | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     kind: value["kind"],
     metadata: ResourceMetadataToJSON(value["metadata"]),

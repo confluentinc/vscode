@@ -18,6 +18,7 @@ import {
   EndpointIPAMConfigFromJSON,
   EndpointIPAMConfigFromJSONTyped,
   EndpointIPAMConfigToJSON,
+  EndpointIPAMConfigToJSONTyped,
 } from "./EndpointIPAMConfig";
 
 /**
@@ -154,10 +155,18 @@ export function EndpointSettingsFromJSONTyped(
   };
 }
 
-export function EndpointSettingsToJSON(value?: EndpointSettings | null): any {
+export function EndpointSettingsToJSON(json: any): EndpointSettings {
+  return EndpointSettingsToJSONTyped(json, false);
+}
+
+export function EndpointSettingsToJSONTyped(
+  value?: EndpointSettings | null,
+  ignoreDiscriminator: boolean = false,
+): any {
   if (value == null) {
     return value;
   }
+
   return {
     IPAMConfig: EndpointIPAMConfigToJSON(value["IPAMConfig"]),
     Links: value["Links"],

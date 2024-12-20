@@ -38,7 +38,7 @@ export type TaskState = (typeof TaskState)[keyof typeof TaskState];
 export function instanceOfTaskState(value: any): boolean {
   for (const key in TaskState) {
     if (Object.prototype.hasOwnProperty.call(TaskState, key)) {
-      if ((TaskState as Record<string, TaskState>)[key] === value) {
+      if (TaskState[key as keyof typeof TaskState] === value) {
         return true;
       }
     }
@@ -56,4 +56,8 @@ export function TaskStateFromJSONTyped(json: any, ignoreDiscriminator: boolean):
 
 export function TaskStateToJSON(value?: TaskState | null): any {
   return value as any;
+}
+
+export function TaskStateToJSONTyped(value: any, ignoreDiscriminator: boolean): TaskState {
+  return value as TaskState;
 }
