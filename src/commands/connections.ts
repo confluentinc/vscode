@@ -89,41 +89,41 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().deleteConnection(item.connectionId);
 }
 
-// export async function renameDirectConnection(item: DirectEnvironment) {
-//   if (!(item instanceof DirectEnvironment)) {
-//     return;
-//   }
-//   const newName = await window.showInputBox({
-//     placeHolder: "Enter a new name for this connection",
-//     value: item.name,
-//     ignoreFocusOut: true,
-//   });
-//   if (!newName) {
-//     return;
-//   }
-
-//   // look up the associated ConnectionSpec
-//   const spec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
-//     item.connectionId,
-//   );
-//   if (!spec) {
-//     logger.error("Direct connection not found, can't rename");
-//     // possibly stale Resources view? this shouldn't happen
-//     window.showErrorMessage("Connection not found.");
-//     getResourceViewProvider().refresh();
-//     return;
-//   }
-
-//   // update and send it to the manager to update the sidecar + secret storage
-//   const updatedSpec: ConnectionSpec = {
-//     ...spec,
-//     name: newName,
-//   };
-//   await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
-// }
-
-// FIXME rename command
+// XXX: the UI for this was replaced by editDirectConnection. Keeping in case we want to expose it again in the future elsewhere.
 export async function renameDirectConnection(item: DirectEnvironment) {
+  if (!(item instanceof DirectEnvironment)) {
+    return;
+  }
+  const newName = await window.showInputBox({
+    placeHolder: "Enter a new name for this connection",
+    value: item.name,
+    ignoreFocusOut: true,
+  });
+  if (!newName) {
+    return;
+  }
+
+  // look up the associated ConnectionSpec
+  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+    item.connectionId,
+  );
+  if (!spec) {
+    logger.error("Direct connection not found, can't rename");
+    // possibly stale Resources view? this shouldn't happen
+    window.showErrorMessage("Connection not found.");
+    getResourceViewProvider().refresh();
+    return;
+  }
+
+  // update and send it to the manager to update the sidecar + secret storage
+  const updatedSpec: CustomConnectionSpec = {
+    ...spec,
+    name: newName,
+  };
+  await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
+}
+
+export async function editDirectConnection(item: DirectEnvironment) {
   if (!(item instanceof DirectEnvironment)) {
     return;
   }
@@ -149,7 +149,8 @@ export function registerConnectionCommands(): Disposable[] {
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
     registerCommandWithLogging("confluent.connections.direct", showDirectConnectionForm),
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
-    registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
+    // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
+    registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
   ];
 }
 

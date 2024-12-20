@@ -163,8 +163,7 @@ export class DirectConnectionManager {
       incomingSpec.id,
     );
     if (!currentSpec) {
-      logger.error("Direct connection not found, can't rename");
-      //FIXME NC handle this case
+      logger.error("Direct connection not found in resources, can't update");
       return;
     }
     const updatedSpec: ConnectionSpec = mergeSecrets(currentSpec, incomingSpec);
