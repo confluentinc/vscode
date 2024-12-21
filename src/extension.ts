@@ -61,7 +61,7 @@ import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
-import { disposeLogWriteStream, Logger, outputChannel } from "./logging";
+import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_DIRECT_CONNECTIONS,
   ENABLE_PRODUCE_MESSAGES,
@@ -376,7 +376,6 @@ function setupDocumentProviders(): vscode.Disposable[] {
 // This method is called when your extension is deactivated or when VSCode is shutting down
 export function deactivate() {
   getTelemetryLogger().dispose();
-  disposeLogWriteStream();
 
   logger.info("Extension deactivated");
 }
