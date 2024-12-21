@@ -7,7 +7,7 @@ import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { LOGFILE_PATH, Logger } from "../logging";
+import { LOGFILE_NAME, LOGFILE_PATH, Logger } from "../logging";
 import { SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
 
 const logger = new Logger("commands.support");
@@ -63,7 +63,7 @@ function openSettings() {
  */
 async function downloadLogs() {
   // prompt where to save the file, using the home directory as the default
-  const defaultPath = join(homedir(), "vscode-confluent.log");
+  const defaultPath = join(homedir(), LOGFILE_NAME);
   const saveUri = await window.showSaveDialog({ defaultUri: Uri.file(defaultPath) });
   if (saveUri) {
     await handleLogFileSave(saveUri, Uri.parse(LOGFILE_PATH), true);

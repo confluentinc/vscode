@@ -1,16 +1,17 @@
-import { createWriteStream, WriteStream } from "fs";
+import { createWriteStream } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LogOutputChannel, OutputChannel, window } from "vscode";
 
+export const LOGFILE_NAME = `vscode-confluent-${process.pid}.log`;
 /**
  * Default path to store downloadable log files for this extension instance.
  *
  * The main difference between this and the ExtensionContext.logUri (where LogOutputChannel lines
  * are written) is this will include ALL log levels, not just the ones enabled in the output channel.
  */
-export let LOGFILE_PATH: string = join(tmpdir(), "vscode-confluent.log");
+export const LOGFILE_PATH: string = join(tmpdir(), LOGFILE_NAME);
 
 /**
  * Main "Confluent" output channel.
@@ -27,9 +28,7 @@ const callpointCounter = new Map<string, number>();
  * associated log file.
  */
 export class Logger {
-  constructor(private name: string) {
-    ensureLogWriteStream();
-  }
+  constructor(private name: string) {}
 
   /** Returns a new 'bound' logger with a common prefix to correlate a sequence of calls with */
   public withCallpoint(callpoint: string): Logger {
@@ -84,54 +83,30 @@ export class Logger {
     message: string,
     ...args: any[]
   ): void {
-    this.writeToLogFile(prefix, message, ...args);
     try {
       func(`[${this.name}] ${message}`, ...args);
+      // not awaiting this, as it's not critical to the operation
+      this.writeToLogFile(prefix, message, ...args);
     } catch {
-      // ignore if the channel is disposed
+      // ignore if the channel is disposed or the log file write fails
     }
   }
 
-  private async writeToLogFile(prefix: string, message: string, ...args: any[]) {
-    if (!logWriteStream) {
-      console.error("Log write stream not initialized");
-      return;
-    }
+  private writeToLogFile(prefix: string, message: string, ...args: any[]) {
     const argString = args.map((arg) => JSON.stringify(arg)).join(" ");
     const formattedMessage = `${prefix} ${message} ${argString}\n`;
+
     return new Promise<void>((resolve, reject) => {
-      logWriteStream!.write(Buffer.from(formattedMessage), (error) => {
+      const logWriteStream = createWriteStream(LOGFILE_PATH, { flags: "a" });
+      logWriteStream.write(Buffer.from(formattedMessage), (error) => {
         if (error) {
+          console.error("Error writing to log file:", error);
           reject(error);
-        } else {
-          resolve();
         }
       });
+      logWriteStream.close(() => {
+        resolve();
+      });
     });
-  }
-}
-
-/** The stream used to write to the log file. */
-let logWriteStream: WriteStream | undefined;
-
-/** Initialize the log write stream if not already created. */
-function ensureLogWriteStream() {
-  if (!logWriteStream) {
-    logWriteStream = createWriteStream(LOGFILE_PATH, { flags: "a" });
-    logWriteStream.on("error", (err) => {
-      console.error("Error writing to log file:", err);
-    });
-  }
-}
-
-/**
- * "Dispose of" the {@link WriteStream} for this extension instance's log file, used during this
- * extension instance's deactivation process.
- */
-export function disposeLogWriteStream() {
-  if (logWriteStream) {
-    console.info("Closing log file write stream");
-    logWriteStream.end();
-    logWriteStream = undefined;
   }
 }
