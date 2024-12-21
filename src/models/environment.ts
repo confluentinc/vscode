@@ -107,6 +107,7 @@ export class DirectEnvironment extends Environment {
     >,
   ) {
     super();
+    this.connectionId = props.connectionId;
     this.id = props.id;
     this.name = props.name;
     this.kafkaClusters = props.kafkaClusters;
