@@ -1046,10 +1046,11 @@
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
+    "@types/node": "^18.19.67",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.87.0",
+    "@types/ws": "^8.5.13",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
     "@vscode/vsce": "^3.1.0",
@@ -1089,6 +1090,7 @@
     "inertial": "^0.4.1",
     "tail": "^2.2.6",
     "undici": "^6.19.8",
-    "unzipit": "^1.4.3"
+    "unzipit": "^1.4.3",
+    "ws": "^8.18.0"
   }
 }
