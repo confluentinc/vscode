@@ -90,7 +90,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
     }
 
     envs.push(
-      LocalEnvironment.create({
+      new LocalEnvironment({
         id: connection.id,
         name: LOCAL_ENVIRONMENT_NAME,
         kafkaClusters,
