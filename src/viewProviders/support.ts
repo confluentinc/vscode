@@ -21,7 +21,7 @@ export class SupportViewProvider implements vscode.TreeDataProvider<vscode.TreeI
 
   // no expansions allowed here, just a flat list of static items
   getChildren(): vscode.TreeItem[] {
-    return [walkthroughItem, feedbackItem, issueItem, scaffoldItem, settingsItem];
+    return [walkthroughItem, feedbackItem, issueItem, zipItem, scaffoldItem, settingsItem];
   }
 }
 
@@ -47,6 +47,14 @@ issueItem.command = {
   command: "confluent.support.issue",
   title: "Report an Issue",
   tooltip: "Click to Report an Issue",
+};
+
+const zipItem: vscode.TreeItem = new vscode.TreeItem("Download Support Files");
+zipItem.iconPath = new vscode.ThemeIcon("file-zip");
+zipItem.command = {
+  command: "confluent.support.downloadSupportZip",
+  title: "Download Support .zip",
+  tooltip: "Click to Download Support .zip",
 };
 
 const scaffoldItem: vscode.TreeItem = new vscode.TreeItem("Generate Project from Template");
