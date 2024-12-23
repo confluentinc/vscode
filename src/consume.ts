@@ -668,7 +668,7 @@ function messageViewerStartPollingCommand(
             preserveFocus: false,
           })
           .then((editor) => {
-            languages.setTextDocumentLanguage(editor.document, "jsonc");
+            languages.setTextDocumentLanguage(editor.document, "json");
           });
         return null;
       }
