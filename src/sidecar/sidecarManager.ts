@@ -110,7 +110,7 @@ export class SidecarManager {
       const logPrefix = `getHandlePromise(${callnum} loop ${i})`;
 
       try {
-        if (await this.healthcheck(accessToken)) {
+        if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
           // 1. The sidecar is running and healthy, in which case we're probably done.
           // (this is the only path that may resolve this promise successfully)
           const handle = new SidecarHandle(
@@ -264,9 +264,10 @@ export class SidecarManager {
     }
 
     // Connects websocket to the sidecar.
-    await this.websocketManager.connect(authToken);
+    await this.websocketManager.connect(`localhost:${SIDECAR_PORT}`, authToken);
   }
 
+  /** Called whenever websocket connection goes CONNECTED or DISCONNECTED. */
   private onWebsocketStateChange(event: WebsocketStateEvent) {
     if (event === WebsocketStateEvent.DISCONNECTED) {
       // Try to get a new sidecar handle, which will start a new sidecar process

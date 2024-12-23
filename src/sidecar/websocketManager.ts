@@ -4,14 +4,7 @@ import { Logger } from "../logging";
 import { MessageRouter } from "../ws/messageRouter";
 import { Message, MessageHeaders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
-import { SIDECAR_PORT } from "./constants";
-
 const logger = new Logger("websocketManager");
-
-export enum WebsocketStateEvent {
-  CONNECTED = "connected",
-  DISCONNECTED = "disconnected",
-}
 
 export class WebsocketManager implements Disposable {
   static instance: WebsocketManager | null = null;
@@ -42,6 +35,11 @@ export class WebsocketManager implements Disposable {
     });
   }
 
+  /** Are we currently connected to sidecar via websocket? */
+  public isConnected(): boolean {
+    return this.websocket !== null && this.websocket.readyState === WebSocket.OPEN;
+  }
+
   /** Register a listener for WebsocketStateEvent.CONNECTED and DISCONNECTED events. */
   public registerStateChangeHandler(listener: (event: WebsocketStateEvent) => any): Disposable {
     return this.websocketStateEmitter.event(listener);
@@ -53,7 +51,7 @@ export class WebsocketManager implements Disposable {
    * @param access_token
    * @returns
    */
-  async connect(accessToken: string): Promise<void> {
+  async connect(hostPortFragment: string, accessToken: string): Promise<void> {
     return new Promise<void>((resolve) => {
       if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
         logger.info("Websocket already connected");
@@ -63,16 +61,9 @@ export class WebsocketManager implements Disposable {
 
       logger.info("Setting up websocket to sidecar");
 
-      // Quarkus likes knowing what workspace id is connecting at websocket level, but
-      // its websocket framework doesn't let it see request headers. So we pass it in the query string.
-      // (We MUST pass the access token in the headers to pass through the sidecar auth filter, which filters on headers.
-      //  Is just that the headers we pass are not visible to the Quarkus websocket framework.)
-      const websocket = new WebSocket(
-        `ws://localhost:${SIDECAR_PORT}/ws?workspace_id=${process.pid}`,
-        {
-          headers: { authorization: `Bearer ${accessToken}` },
-        },
-      );
+      const websocket = new WebSocket(`ws://${hostPortFragment}/ws`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
 
       websocket.on("open", () => {
         logger.info("Websocket connected to sidecar, saying hello ...");
@@ -253,4 +244,10 @@ class WebsocketClosedError extends Error {
     super("Websocket closed");
     this.name = "WebsocketClosedError";
   }
+}
+
+/** Events emitted by WebsocketManager.websocketStateEmitter whenever connection state changes. */
+export enum WebsocketStateEvent {
+  CONNECTED = "connected",
+  DISCONNECTED = "disconnected",
 }
