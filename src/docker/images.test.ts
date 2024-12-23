@@ -3,6 +3,22 @@ import * as sinon from "sinon";
 import { ApiResponse, ImageApi, ImageSummary } from "../clients/docker";
 import { imageExists, pullImage } from "./images";
 
+const fakeImageRepo = "repo";
+const fakeImageTag = "tag";
+const fakeImageRepoTag = `${fakeImageRepo}:${fakeImageTag}`;
+const fakeImageSummary: ImageSummary = {
+  Id: "sha256:abc123",
+  ParentId: "",
+  RepoTags: ["example:latest"],
+  RepoDigests: [],
+  Created: 123,
+  Size: 123,
+  SharedSize: 123,
+  VirtualSize: 123,
+  Labels: {},
+  Containers: 1,
+};
+
 describe("docker/images.ts ImageApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
 
@@ -25,46 +41,22 @@ describe("docker/images.ts ImageApi wrappers", () => {
   });
 
   it("imageExists() should return true if the image repo+tag exists in the image listing", async () => {
-    const fakeResponse: ImageSummary[] = [
-      {
-        Id: "sha256:abc123",
-        ParentId: "",
-        RepoTags: ["repo:tag", "example:latest"],
-        RepoDigests: [],
-        Created: 123,
-        Size: 123,
-        SharedSize: 123,
-        VirtualSize: 123,
-        Labels: {},
-        Containers: 1,
-      },
-    ];
+    const summary = { ...fakeImageSummary, RepoTags: [fakeImageRepoTag] };
+    const fakeResponse: ImageSummary[] = [summary];
     imageListStub.resolves(fakeResponse);
 
-    const result = await imageExists("repo", "tag");
+    const result = await imageExists(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, true);
     assert.ok(imageListStub.calledOnce);
   });
 
   it("imageExists() should return false if the image repo+tag does not exist in the image listing", async () => {
-    const fakeResponse: ImageSummary[] = [
-      {
-        Id: "sha256:abc123",
-        ParentId: "",
-        RepoTags: ["example:latest"],
-        RepoDigests: [],
-        Created: 123,
-        Size: 123,
-        SharedSize: 123,
-        VirtualSize: 123,
-        Labels: {},
-        Containers: 1,
-      },
-    ];
+    // don't include repo:tag by default
+    const fakeResponse: ImageSummary[] = [fakeImageSummary];
     imageListStub.resolves(fakeResponse);
 
-    const result = await imageExists("repo", "tag");
+    const result = await imageExists(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, false);
     assert.ok(imageListStub.calledOnce);
@@ -74,7 +66,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     const fakeError = new Error("Some other error");
     imageListStub.rejects(fakeError);
 
-    const result = await imageExists("repo", "tag");
+    const result = await imageExists(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, false);
     assert.ok(imageListStub.calledOnce);
@@ -89,18 +81,18 @@ describe("docker/images.ts ImageApi wrappers", () => {
     };
     imageCreateRawStub.resolves(fakeRawResponse);
 
-    const result = await pullImage("repo", "tag");
+    const result = await pullImage(fakeImageRepo, fakeImageTag);
 
     assert.strictEqual(result, undefined);
     assert.ok(imageCreateRawStub.calledOnce);
-    assert.ok(imageCreateRawStub.calledWithMatch({ fromImage: "repo:tag" }));
+    assert.ok(imageCreateRawStub.calledWithMatch({ fromImage: fakeImageRepoTag }));
   });
 
   it("pullImage() should re-throw any error from .imageCreate", async () => {
     const fakeError = new Error("Error pulling image");
     imageCreateRawStub.rejects(fakeError);
 
-    await assert.rejects(pullImage("repo", "tag"), fakeError);
+    await assert.rejects(pullImage(fakeImageRepo, fakeImageTag), fakeError);
     assert.ok(imageCreateRawStub.calledOnce);
   });
 });
