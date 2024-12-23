@@ -21,7 +21,7 @@ export class SupportViewProvider implements vscode.TreeDataProvider<vscode.TreeI
 
   // no expansions allowed here, just a flat list of static items
   getChildren(): vscode.TreeItem[] {
-    return [walkthroughItem, feedbackItem, issueItem, zipItem, scaffoldItem, settingsItem];
+    return supportItems;
   }
 }
 
@@ -72,3 +72,12 @@ settingsItem.command = {
   title: "Open Settings",
   tooltip: "Click to open the Confluent Extension settings",
 };
+
+const supportItems = [
+  walkthroughItem,
+  feedbackItem,
+  issueItem,
+  zipItem,
+  scaffoldItem,
+  settingsItem,
+];
