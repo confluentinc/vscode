@@ -21,6 +21,11 @@ All notable changes to this extension will be documented in this file.
   the Resources view, and the connections will now appear at the top level of the Resources view,
   with icons to indicate the type of connection chosen in the form.
 
+### Fixed
+
+- Waiting for "direct" connections (to Kafka and/or Schema Registry) to be usable will no longer
+  block loading other items or interacting with the Resources view.
+
 ## 0.22.1
 
 - Additional information is now provided when attempting to start/stop local resources and the
