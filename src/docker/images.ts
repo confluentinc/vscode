@@ -1,4 +1,4 @@
-import { ImageApi, ImageInspect, ResponseError } from "../clients/docker";
+import { ImageApi, ImageSummary, ResponseError } from "../clients/docker";
 import { Logger } from "../logging";
 import { UserEvent, logUsage } from "../telemetry/events";
 import { defaultRequestInit } from "./configs";
@@ -13,26 +13,17 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
   const init: RequestInit = defaultRequestInit();
 
   try {
-    const response: ImageInspect = await client.imageInspect({ name: repo }, init);
-    const repoTagFound = `${response.RepoTags}`.includes(repoTag);
-    logger.debug(`Checked "${repoTag}" in available repo+tags:`, {
-      repoTagFound,
-      repoTag,
-      responseRepoTags: response.RepoTags,
-    });
-    return repoTagFound;
+    const response: ImageSummary[] = await client.imageList({}, init);
+    const matchingImage = response.find((imageSummary) => imageSummary.RepoTags.includes(repoTag));
+    logger.debug(`"${repoTag}" image exists:`, !!matchingImage);
+    return !!matchingImage;
   } catch (error) {
     if (error instanceof ResponseError) {
-      if (error.response.status === 404) {
-        // image not found, callers will probably need to pull it after this returns
-        return false;
-      } else {
-        logger.error("Error response inspecting image:", {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          body: await error.response.clone().text(),
-        });
-      }
+      logger.error("Error response listing images:", {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        body: await error.response.clone().text(),
+      });
     } else {
       logger.error("Error inspecting image:", error);
     }
