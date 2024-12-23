@@ -20,6 +20,8 @@ All notable changes to this extension will be documented in this file.
 - Connecting directly to Kafka and/or Schema Registry is now available from the navigation area of
   the Resources view, and the connections will now appear at the top level of the Resources view,
   with icons to indicate the type of connection chosen in the form.
+- Double-clicking on an event/message row in the topic message viewer will now open a read-only
+  (preview) document with the message content.
 
 ## 0.22.1
 
