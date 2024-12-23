@@ -6,7 +6,7 @@ import { imageExists, pullImage } from "./images";
 describe("docker/images.ts ImageApi wrappers", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let imageInspectStub: sinon.SinonStub;
+  let imageListStub: sinon.SinonStub;
   let imageCreateRawStub: sinon.SinonStub;
 
   beforeEach(() => {
@@ -16,7 +16,7 @@ describe("docker/images.ts ImageApi wrappers", () => {
     // because the functions below are constructing new instances of the ImageApi class each time
     // and if we stubbed the instance, the stubs would not be applied to the new instances and the
     // tests would try to call the real methods
-    imageInspectStub = sandbox.stub(ImageApi.prototype, "imageInspect");
+    imageListStub = sandbox.stub(ImageApi.prototype, "imageList");
     imageCreateRawStub = sandbox.stub(ImageApi.prototype, "imageCreateRaw");
   });
 
@@ -39,12 +39,12 @@ describe("docker/images.ts ImageApi wrappers", () => {
         Containers: 1,
       },
     ];
-    imageInspectStub.resolves(fakeResponse);
+    imageListStub.resolves(fakeResponse);
 
     const result = await imageExists("repo", "tag");
 
     assert.strictEqual(result, true);
-    assert.ok(imageInspectStub.calledOnce);
+    assert.ok(imageListStub.calledOnce);
   });
 
   it("imageExists() should return false if the image repo+tag does not exist in the image listing", async () => {
@@ -62,22 +62,22 @@ describe("docker/images.ts ImageApi wrappers", () => {
         Containers: 1,
       },
     ];
-    imageInspectStub.resolves(fakeResponse);
+    imageListStub.resolves(fakeResponse);
 
     const result = await imageExists("repo", "tag");
 
     assert.strictEqual(result, false);
-    assert.ok(imageInspectStub.calledOnce);
+    assert.ok(imageListStub.calledOnce);
   });
 
   it("imageExists() should return false if there is a non-ResponseError error", async () => {
     const fakeError = new Error("Some other error");
-    imageInspectStub.rejects(fakeError);
+    imageListStub.rejects(fakeError);
 
     const result = await imageExists("repo", "tag");
 
     assert.strictEqual(result, false);
-    assert.ok(imageInspectStub.calledOnce);
+    assert.ok(imageListStub.calledOnce);
   });
 
   it("pullImage() should return nothing after successfully pulling an image", async () => {
