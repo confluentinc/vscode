@@ -41,13 +41,13 @@ export class Logger {
   trace(message: string, ...args: any[]) {
     const prefix = this.logPrefix("trace");
     console.debug(prefix, message, ...args);
-    this.appendToOutputChannel(outputChannel.trace, prefix, message, ...args);
+    this.logToOutputChannelAndFile(outputChannel.trace, prefix, message, ...args);
   }
 
   debug(message: string, ...args: any[]) {
     const prefix = this.logPrefix("debug");
     console.debug(prefix, message, ...args);
-    this.appendToOutputChannel(outputChannel.debug, prefix, message, ...args);
+    this.logToOutputChannelAndFile(outputChannel.debug, prefix, message, ...args);
   }
 
   log(message: string, ...args: any[]) {
@@ -57,19 +57,19 @@ export class Logger {
   info(message: string, ...args: any[]) {
     const prefix = this.logPrefix("info");
     console.info(prefix, message, ...args);
-    this.appendToOutputChannel(outputChannel.info, prefix, message, ...args);
+    this.logToOutputChannelAndFile(outputChannel.info, prefix, message, ...args);
   }
 
   warn(message: string, ...args: any[]) {
     const prefix = this.logPrefix("warning");
     console.warn(prefix, message, ...args);
-    this.appendToOutputChannel(outputChannel.warn, prefix, message, ...args);
+    this.logToOutputChannelAndFile(outputChannel.warn, prefix, message, ...args);
   }
 
   error(message: string, ...args: any[]) {
     const prefix = this.logPrefix("error");
     console.error(prefix, message, ...args);
-    this.appendToOutputChannel(outputChannel.error, prefix, message, ...args);
+    this.logToOutputChannelAndFile(outputChannel.error, prefix, message, ...args);
   }
 
   private logPrefix(level: string): string {
@@ -77,7 +77,7 @@ export class Logger {
     return `${timestamp} [${level}] [${this.name}]`;
   }
 
-  private appendToOutputChannel(
+  private logToOutputChannelAndFile(
     func: (message: string, ...args: any[]) => void,
     prefix: string,
     message: string,
@@ -92,20 +92,27 @@ export class Logger {
     }
   }
 
+  /** Create a stream to write to the log file in "append" mode, write the log contents to it, and
+   * then close the stream. */
   private writeToLogFile(prefix: string, message: string, ...args: any[]) {
     const argString = args.map((arg) => JSON.stringify(arg)).join(" ");
     const formattedMessage = `${prefix} ${message} ${argString}\n`;
 
     return new Promise<void>((resolve, reject) => {
       const logWriteStream = createWriteStream(LOGFILE_PATH, { flags: "a" });
+      logWriteStream.once("error", (error) => {
+        console.error("Error writing to log file:", error);
+        logWriteStream.end();
+        reject(error);
+      });
       logWriteStream.write(Buffer.from(formattedMessage), (error) => {
         if (error) {
           console.error("Error writing to log file:", error);
+          logWriteStream.end();
           reject(error);
         }
-      });
-      logWriteStream.close(() => {
-        resolve();
+        // waits for any remaining data to be written to the file before closing the stream
+        logWriteStream.end(() => resolve());
       });
     });
   }
