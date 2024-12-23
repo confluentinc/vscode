@@ -37,7 +37,7 @@ export enum SecretStorageKeys {
   /**
    * Key holding the auth token to communicate with ide-sidecar.
    */
-  SIDECAR_AUTH_TOKEN_SECRET_KEY = "sidecarAuthToken",
+  SIDECAR_AUTH_TOKEN = "sidecarAuthToken",
 
   /**
    * Indicate the outcome of the last CCloud authentication attempt.

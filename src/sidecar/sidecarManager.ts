@@ -18,7 +18,7 @@ import {
 } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
-import { WebsocketManager } from "./websocketManager";
+import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
 import { normalize } from "path";
 import { Tail } from "tail";
@@ -260,11 +260,19 @@ export class SidecarManager {
   private async setupWebsocketManager(authToken: string): Promise<void> {
     if (!this.websocketManager) {
       this.websocketManager = WebsocketManager.getInstance();
+      this.websocketManager.registerStateChangeHandler(this.onWebsocketStateChange.bind(this));
     }
 
-    // Connect and authorize a websocket to the sidecar.
-    // will raise if the ACCESS_REQUEST / ACCESS_RESPONSE pair doesn't complete successfully in 5s.
+    // Connects websocket to the sidecar.
     await this.websocketManager.connect(authToken);
+  }
+
+  private onWebsocketStateChange(event: WebsocketStateEvent) {
+    if (event === WebsocketStateEvent.DISCONNECTED) {
+      // Try to get a new sidecar handle, which will start a new sidecar process
+      // and reconnect websocket.
+      this.getHandle();
+    }
   }
 
   /**

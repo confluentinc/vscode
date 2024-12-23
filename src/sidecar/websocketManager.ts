@@ -1,4 +1,4 @@
-import { Disposable } from "vscode";
+import { Disposable, EventEmitter } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
 import { MessageRouter } from "../ws/messageRouter";
@@ -7,6 +7,11 @@ import { Message, MessageHeaders, MessageType, validateMessageBody } from "../ws
 import { SIDECAR_PORT } from "./constants";
 
 const logger = new Logger("websocketManager");
+
+export enum WebsocketStateEvent {
+  CONNECTED = "connected",
+  DISCONNECTED = "disconnected",
+}
 
 export class WebsocketManager implements Disposable {
   static instance: WebsocketManager | null = null;
@@ -19,6 +24,8 @@ export class WebsocketManager implements Disposable {
   }
 
   private websocket: WebSocket | null = null;
+  // Emits WebsocketStateEvent.CONNECTED and DISCONNECTED events.
+  private websocketStateEmitter = new EventEmitter<WebsocketStateEvent>();
   private disposables: Disposable[] = [];
   private messageRouter = MessageRouter.getInstance();
   private peerWorkspaceCount = 0;
@@ -33,6 +40,11 @@ export class WebsocketManager implements Disposable {
       // The reply is inclusive of the current workspace, but we want peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
     });
+  }
+
+  /** Register a listener for WebsocketStateEvent.CONNECTED and DISCONNECTED events. */
+  public registerStateChangeHandler(listener: (event: WebsocketStateEvent) => any): Disposable {
+    return this.websocketStateEmitter.event(listener);
   }
 
   /**
@@ -94,6 +106,9 @@ export class WebsocketManager implements Disposable {
             );
             this.websocket = websocket;
             this.peerWorkspaceCount = m.body.current_workspace_count - 1;
+            // Emit an event to let the extension know the websocket has closed.
+            // This will get picked up by sidecarManager, which will then attempt to reconnect.
+            this.websocketStateEmitter.fire(WebsocketStateEvent.CONNECTED);
             resolve();
           },
         );
@@ -104,7 +119,10 @@ export class WebsocketManager implements Disposable {
 
         // do additional cleanup here
         this.websocket = null;
-        this.dispose();
+
+        // Emit an event to let the extension know the websocket has closed.
+        // This will get picked up by sidecarManager, which will then attempt to reconnect.
+        this.websocketStateEmitter.fire(WebsocketStateEvent.DISCONNECTED);
       });
 
       websocket.on("error", (error) => {
