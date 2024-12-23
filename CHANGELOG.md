@@ -23,6 +23,11 @@ All notable changes to this extension will be documented in this file.
 - Double-clicking on an event/message row in the topic message viewer will now open a read-only
   (preview) document with the message content.
 
+### Fixed
+
+- Waiting for "direct" connections (to Kafka and/or Schema Registry) to be usable will no longer
+  block loading other items or interacting with the Resources view.
+
 ## 0.22.1
 
 - Additional information is now provided when attempting to start/stop local resources and the
