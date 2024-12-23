@@ -6,6 +6,7 @@ import {
   commands,
   env,
   ExtensionContext,
+  languages,
   Uri,
   ViewColumn,
   WebviewPanel,
@@ -26,6 +27,7 @@ import {
 import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
+import { MessageDocumentProvider } from "./documentProviders/message";
 import { Logger } from "./logging";
 import { ConnectionId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
@@ -656,18 +658,17 @@ function messageViewerStartPollingCommand(
           serialized.value.includes(index),
         );
 
-        // i want to drop the comment in favor of filename and possibly do a preview tab
-        workspace
-          .openTextDocument({
-            content: `// message ${message.key} from ${topic.name}\n${JSON.stringify(payload, null, 2)}`,
-            language: "jsonc",
+        // read-only document buffer with the message content
+        const filename = `${topic.name}-message-${index}.json`;
+        const uri: Uri = new MessageDocumentProvider().resourceToUri(payload, filename);
+        window
+          .showTextDocument(uri, {
+            preview: true,
+            viewColumn: ViewColumn.Beside,
+            preserveFocus: false,
           })
-          .then((preview) => {
-            return window.showTextDocument(preview, {
-              preview: false,
-              viewColumn: ViewColumn.Beside,
-              preserveFocus: false,
-            });
+          .then((editor) => {
+            languages.setTextDocumentLanguage(editor.document, "jsonc");
           });
         return null;
       }
