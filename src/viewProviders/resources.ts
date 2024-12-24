@@ -122,7 +122,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
-    logger.debug("getTreeItem called", { element });
     if (element instanceof Environment) {
       return new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
@@ -143,7 +142,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (element) {
-      logger.debug("getChildren called with element", { element });
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
@@ -227,12 +225,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     );
 
     const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
-      logger.debug("connectionLoading event fired", { id });
       this.refreshConnection(id, true);
     });
 
     const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
-      logger.debug("connectionUsable event fired", { id });
       this.refreshConnection(id, false);
     });
 
@@ -272,11 +268,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           environment.isLoading = loading;
           // only update this environment in the tree view, not the entire view
           this._onDidChangeTreeData.fire(environment);
-          logger.debug("updated direct environment", {
-            id,
-            environment: environment?.name,
-            loading,
-          });
         } else {
           logger.debug("could not find direct environment in map to update", { id });
         }
