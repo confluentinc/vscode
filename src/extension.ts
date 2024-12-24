@@ -73,7 +73,8 @@ import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
-import { StorageManager } from "./storage";
+import { getStorageManager, StorageManager } from "./storage";
+import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
 import { logUsage, UserEvent } from "./telemetry/events";
@@ -215,6 +216,8 @@ async function _activateExtension(
 
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
+  // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
+  getStorageManager().deleteSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
