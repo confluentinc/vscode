@@ -117,7 +117,7 @@ async function getDockerCredentials(): Promise<string | undefined> {
       serveraddress: "https://index.docker.io/v1/",
     };
     const encodedCreds: string = Buffer.from(JSON.stringify(authConfig)).toString("base64");
-    storageManager.setSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY, encodedCreds);
+    await storageManager.setSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY, encodedCreds);
     return encodedCreds;
   } catch (error) {
     logger.debug("failed to load Docker credentials:", error);
