@@ -58,9 +58,11 @@ export async function addSSLPemPath() {
   }
 }
 
-export async function showDirectConnectionForm() {
-  // TODO: add more context here for editing connections?
-  openDirectConnectionForm();
+export async function showDirectConnectionForm(item?: DirectEnvironment) {
+  const spec: CustomConnectionSpec | null = item
+    ? await getResourceManager().getDirectConnection(item.connectionId)
+    : null;
+  openDirectConnectionForm(spec);
 }
 
 export async function deleteDirectConnection(item: DirectEnvironment) {
@@ -86,11 +88,11 @@ export async function deleteDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().deleteConnection(item.connectionId);
 }
 
+// XXX: the UI for this was replaced by editDirectConnection. Keeping in case we want to expose it again in the future elsewhere.
 export async function renameDirectConnection(item: DirectEnvironment) {
   if (!(item instanceof DirectEnvironment)) {
     return;
   }
-
   const newName = await window.showInputBox({
     placeHolder: "Enter a new name for this connection",
     value: item.name,
@@ -120,13 +122,34 @@ export async function renameDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 }
 
+export async function editDirectConnection(item: DirectEnvironment) {
+  if (!(item instanceof DirectEnvironment)) {
+    return;
+  }
+
+  // look up the associated ConnectionSpec
+  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+    item.connectionId,
+  );
+  if (!spec) {
+    logger.error("Direct connection not found, can't edit");
+    // possibly stale Resources view? this shouldn't happen
+    window.showErrorMessage("Connection not found.");
+    getResourceViewProvider().refresh();
+    return;
+  }
+
+  openDirectConnectionForm(spec);
+}
+
 export function registerConnectionCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.connections.ccloud.logIn", createCCloudConnection),
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
     registerCommandWithLogging("confluent.connections.direct", showDirectConnectionForm),
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
-    registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
+    // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
+    registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
   ];
 }
 
