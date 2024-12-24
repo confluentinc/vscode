@@ -10,7 +10,7 @@ export async function imageExists(repo: string, tag: string): Promise<boolean> {
   const repoTag = `${repo}:${tag}`;
 
   const client = new ImageApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
 
   try {
     const response: ImageSummary[] = await client.imageList({}, init);
@@ -36,7 +36,7 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
   const repoTag = `${repo}:${tag}`;
 
   const client = new ImageApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
 
   try {
     // use the `imageCreateRaw` method to get the raw response text, because otherwise we get a void response

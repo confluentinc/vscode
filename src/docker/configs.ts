@@ -14,6 +14,8 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../preferences/constants";
+import { getStorageManager } from "../storage";
+import { SecretStorageKeys } from "../storage/constants";
 import {
   DEFAULT_KAFKA_IMAGE_REPO,
   DEFAULT_KAFKA_IMAGE_TAG,
@@ -82,11 +84,20 @@ function getDockerCredsStore(): string | undefined {
 
 /**
  * Get the Docker credentials for the current user, provided a `credsStore` is set.
+ * This function will cache the credentials in SecretStorage for future use.
  * @returns A base64-encoded string of the Docker credentials, or `undefined` if the credentials
  * could not be retrieved.
  * @see https://docs.docker.com/reference/cli/docker/login/#credential-stores
  */
-function getDockerCredentials(): string | undefined {
+async function getDockerCredentials(): Promise<string | undefined> {
+  const storageManager = getStorageManager();
+  const cachedDockerCreds: string | undefined = await storageManager.getSecret(
+    SecretStorageKeys.DOCKER_CREDS_SECRET_KEY,
+  );
+  if (cachedDockerCreds) {
+    return cachedDockerCreds;
+  }
+
   const credsStore = getDockerCredsStore();
   if (!credsStore) {
     return;
@@ -105,15 +116,17 @@ function getDockerCredentials(): string | undefined {
       password: Secret,
       serveraddress: "https://index.docker.io/v1/",
     };
-    return Buffer.from(JSON.stringify(authConfig)).toString("base64");
+    const encodedCreds: string = Buffer.from(JSON.stringify(authConfig)).toString("base64");
+    storageManager.setSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY, encodedCreds);
+    return encodedCreds;
   } catch (error) {
     logger.debug("failed to load Docker credentials:", error);
   }
 }
 
 /** Default request options for Docker API requests, to be used with service class methods from `src/clients/docker/*`. */
-export function defaultRequestInit(): RequestInit {
-  const creds = getDockerCredentials();
+export async function defaultRequestInit(): Promise<RequestInit> {
+  const creds: string | undefined = await getDockerCredentials();
   // NOTE: This looks weird because our openapi-generator client code (in `src/clients/**`) relies on
   // RequestInit from `@types/node/globals.d.ts` which TypeScript complains about since it thinks
   // "dispatcher" doesn't exist (which it does).
@@ -145,7 +158,7 @@ export function defaultRequestInit(): RequestInit {
  */
 export async function isDockerAvailable(showNotification: boolean = false): Promise<boolean> {
   const client = new SystemApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
   try {
     const resp: string = await client.systemPing(init);
     logger.debug("docker ping response:", resp);
