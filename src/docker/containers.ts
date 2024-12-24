@@ -18,7 +18,7 @@ export async function getContainersForImage(
   request: ContainerListRequest,
 ): Promise<ContainerSummary[]> {
   const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
   try {
     const response: ContainerSummary[] = await client.containerList(request, init);
     const containerIdsAndNames = response.map((container) => ({
@@ -56,7 +56,7 @@ export async function createContainer(
   request.body.Labels[MANAGED_CONTAINER_LABEL] = "true";
 
   const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
   try {
     const response: ContainerCreateResponse = await client.containerCreate(request, init);
     logger.info("Container created successfully:", response);
@@ -77,7 +77,7 @@ export async function createContainer(
 
 export async function startContainer(containerId: string): Promise<void> {
   const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
 
   try {
     await client.containerStart({ id: containerId }, init);
@@ -97,7 +97,7 @@ export async function startContainer(containerId: string): Promise<void> {
 
 export async function stopContainer(id: string): Promise<void> {
   const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
 
   try {
     logger.debug("Stopping container", { id });
@@ -123,7 +123,7 @@ export async function restartContainer(id: string) {
 
 export async function getContainer(id: string): Promise<ContainerInspectResponse> {
   const client = new ContainerApi();
-  const init: RequestInit = defaultRequestInit();
+  const init: RequestInit = await defaultRequestInit();
 
   try {
     return await client.containerInspect({ id }, init);

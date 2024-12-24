@@ -140,7 +140,7 @@ export class EventListener {
     const queryParams: SystemEventsRequest = {
       filters: JSON.stringify(EVENT_FILTERS),
     };
-    const init: RequestInit = defaultRequestInit();
+    const init: RequestInit = await defaultRequestInit();
 
     let stream: ReadableStream<Uint8Array> | null = null;
     try {
@@ -396,7 +396,7 @@ export class EventListener {
     state: ContainerStateStatusEnum,
   ): Promise<boolean> {
     const client = new ContainerApi();
-    const init: RequestInit = defaultRequestInit();
+    const init: RequestInit = await defaultRequestInit();
     try {
       const container: ContainerInspectResponse = await client.containerInspect(
         { id: containerId },
@@ -426,7 +426,7 @@ export class EventListener {
     let logLineFound = false;
 
     const client = new ContainerApi();
-    const init: RequestInit = defaultRequestInit();
+    const init: RequestInit = await defaultRequestInit();
 
     let stream: ReadableStream<Uint8Array> | null = null;
     try {
