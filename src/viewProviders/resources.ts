@@ -225,12 +225,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     );
 
     const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
-      logger.debug("connectionLoading event fired", { id });
       this.refreshConnection(id, true);
     });
 
     const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
-      logger.debug("connectionUsable event fired", { id });
       this.refreshConnection(id, false);
     });
 
