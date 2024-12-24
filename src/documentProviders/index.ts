@@ -15,7 +15,6 @@ export abstract class ResourceDocumentProvider implements vscode.TextDocumentCon
 
   /**
    * Convert a resource object to a URI that can be used to display the resource in a read-only editor.
-   * @param kind The kind of resource (e.g. "schema")
    * @param resource The resource object
    * @param filename The filename to use for the URI
    */
