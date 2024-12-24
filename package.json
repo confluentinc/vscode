@@ -281,18 +281,18 @@
         "category": "Confluent: Support"
       },
       {
-        "command": "confluent.support.downloadLogs",
-        "title": "Download Logs",
+        "command": "confluent.support.saveLogs",
+        "title": "Save Logs",
         "category": "Confluent: Support"
       },
       {
-        "command": "confluent.support.downloadSidecarLogs",
-        "title": "Download Sidecar Logs",
+        "command": "confluent.support.saveSidecarLogs",
+        "title": "Save Sidecar Logs",
         "category": "Confluent: Support"
       },
       {
-        "command": "confluent.support.downloadSupportZip",
-        "title": "Download Support File (.zip)",
+        "command": "confluent.support.saveSupportZip",
+        "title": "Save Support File (.zip)",
         "category": "Confluent: Support"
       },
       {

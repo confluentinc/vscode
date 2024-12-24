@@ -49,12 +49,12 @@ issueItem.command = {
   tooltip: "Click to Report an Issue",
 };
 
-const zipItem: vscode.TreeItem = new vscode.TreeItem("Download Support Files");
+const zipItem: vscode.TreeItem = new vscode.TreeItem("Save Support Files");
 zipItem.iconPath = new vscode.ThemeIcon("file-zip");
 zipItem.command = {
-  command: "confluent.support.downloadSupportZip",
-  title: "Download Support .zip",
-  tooltip: "Click to Download Support .zip",
+  command: "confluent.support.saveSupportZip",
+  title: "Save Support .zip",
+  tooltip: "Click to Save Support .zip",
 };
 
 const scaffoldItem: vscode.TreeItem = new vscode.TreeItem("Generate Project from Template");
