@@ -658,9 +658,16 @@ function messageViewerStartPollingCommand(
           serialized.value.includes(index),
         );
 
-        // read-only document buffer with the message content
+        // use a single-instance provider to display a read-only document buffer with the message
+        // content
         const filename = `${topic.name}-message-${index}.json`;
-        const uri: Uri = new MessageDocumentProvider().resourceToUri(payload, filename);
+        const provider = new MessageDocumentProvider();
+        MessageDocumentProvider.message = JSON.stringify(payload, null, 2);
+        // this is really only used for the filename:
+        const uri: Uri = provider.resourceToUri(
+          { partition: payload.partition_id, offset: payload.offset },
+          filename,
+        );
         window
           .showTextDocument(uri, {
             preview: true,
