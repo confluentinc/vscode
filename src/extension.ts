@@ -73,6 +73,7 @@ import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
+import { WebsocketManager } from "./sidecar/websocketManager";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
@@ -200,6 +201,7 @@ async function _activateExtension(
 
   context.subscriptions.push(
     uriHandler,
+    WebsocketManager.getInstance(),
     ...authProviderDisposables,
     ...viewProviderDisposables,
     ...registeredCommands,
