@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from "../runtime";
+import type { TLSConfig } from "./TLSConfig";
+import {
+  TLSConfigFromJSON,
+  TLSConfigFromJSONTyped,
+  TLSConfigToJSON,
+  TLSConfigToJSONTyped,
+} from "./TLSConfig";
 import type { SchemaRegistryConfigCredentials } from "./SchemaRegistryConfigCredentials";
 import {
   SchemaRegistryConfigCredentialsFromJSON,
@@ -45,6 +52,12 @@ export interface SchemaRegistryConfig {
    * @memberof SchemaRegistryConfig
    */
   credentials?: SchemaRegistryConfigCredentials | null;
+  /**
+   * The SSL configuration for connecting to Schema Registry. If null, the connection will use SSL with the default settings. To disable, set `enabled` to false.
+   * @type {TLSConfig}
+   * @memberof SchemaRegistryConfig
+   */
+  ssl?: TLSConfig | null;
 }
 
 /**
@@ -73,6 +86,7 @@ export function SchemaRegistryConfigFromJSONTyped(
       json["credentials"] == null
         ? undefined
         : SchemaRegistryConfigCredentialsFromJSON(json["credentials"]),
+    ssl: json["ssl"] == null ? undefined : TLSConfigFromJSON(json["ssl"]),
   };
 }
 
@@ -92,5 +106,6 @@ export function SchemaRegistryConfigToJSONTyped(
     id: value["id"],
     uri: value["uri"],
     credentials: SchemaRegistryConfigCredentialsToJSON(value["credentials"]),
+    ssl: TLSConfigToJSON(value["ssl"]),
   };
 }
