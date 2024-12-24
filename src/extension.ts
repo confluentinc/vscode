@@ -76,7 +76,7 @@ import { getCCloudAuthSession } from "./sidecar/connections";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
-import { UserEvent, logUsage } from "./telemetry/events";
+import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
