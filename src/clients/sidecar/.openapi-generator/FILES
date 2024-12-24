@@ -35,8 +35,10 @@ models/JsonNodeType.ts
 models/KafkaClusterConfig.ts
 models/KafkaClusterConfigCredentials.ts
 models/KafkaClusterStatus.ts
+models/KeyStore.ts
 models/LocalConfig.ts
 models/ModelError.ts
+models/OAuthCredentials.ts
 models/ObjectMetadata.ts
 models/OptionProperties.ts
 models/PartitionConsumeData.ts
@@ -54,10 +56,13 @@ models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts
 models/SimpleConsumeMultiPartitionResponse.ts
 models/Status.ts
+models/StoreType.ts
+models/TLSConfig.ts
 models/Template.ts
 models/TemplateList.ts
 models/TemplateManifest.ts
 models/TimestampType.ts
+models/TrustStore.ts
 models/UserInfo.ts
 models/index.ts
 runtime.ts
