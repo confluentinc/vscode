@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.23.0-15",
+  "version": "0.23.0-18",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -278,6 +278,21 @@
       {
         "command": "confluent.support.confluent-walkthrough.launch",
         "title": "Get Started with Kafka",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.saveLogs",
+        "title": "Save Logs",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.saveSidecarLogs",
+        "title": "Save Sidecar Logs",
+        "category": "Confluent: Support"
+      },
+      {
+        "command": "confluent.support.saveSupportZip",
+        "title": "Save Support File (.zip)",
         "category": "Confluent: Support"
       },
       {
@@ -1042,6 +1057,7 @@
     "@rollup/plugin-replace": "^5.0.7",
     "@rollup/plugin-virtual": "^3.0.2",
     "@twbs/fantasticon": "3.0.0",
+    "@types/archiver": "^6.0.3",
     "@types/d3": "^7.4.3",
     "@types/eslint__js": "^8.42.3",
     "@types/gulp": "^4.0.17",
@@ -1082,6 +1098,7 @@
     "@sentry/rollup-plugin": "^2.21.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
+    "archiver": "^7.0.1",
     "async-mutex": "^0.5.0",
     "d3": "^7.9.0",
     "dataclass": "^3.0.0-beta.1",

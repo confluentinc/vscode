@@ -59,6 +59,7 @@ import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
+import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import {
@@ -76,7 +77,7 @@ import { WebsocketManager } from "./sidecar/websocketManager";
 import { StorageManager } from "./storage";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
-import { UserEvent, logUsage } from "./telemetry/events";
+import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -363,7 +364,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
 function setupDocumentProviders(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   // any document providers set here must provide their own `scheme` to register with
-  const providerClasses = [SchemaDocumentProvider];
+  const providerClasses = [SchemaDocumentProvider, MessageDocumentProvider];
   for (const providerClass of providerClasses) {
     const provider = new providerClass();
     disposables.push(
