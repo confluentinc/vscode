@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { version } from "ide-sidecar";
+import { env } from "vscode";
 import { observabilityContext } from "./observability";
 
 describe("ObservabilityContext", () => {
@@ -8,6 +9,7 @@ describe("ObservabilityContext", () => {
     // only check the first few rows of the table since the rest will be adjusted as needed
     const expectedTableHead = `| Key | Value |
 | --- | --- |
+| extensionUriScheme | "${env.uriScheme}" |
 | extensionVersion | "" |
 | extensionActivated | false |
 | sidecarVersion | "${version}" |`;
