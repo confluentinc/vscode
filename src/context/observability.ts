@@ -1,4 +1,5 @@
 import { version } from "ide-sidecar";
+import { env } from "vscode";
 import { Status } from "../clients/sidecar";
 /**
  * Per-extension-instance singleton object for storing basic data to help debug issues, errors, etc.
@@ -17,6 +18,8 @@ import { Status } from "../clients/sidecar";
  */
 class ObservabilityContext {
   constructor(
+    /** Was this from VS Code, VS Code Insiders, Code OSS, or something else? */
+    public extensionUriScheme: string = env.uriScheme,
     /** The version of the activated extension instance, from `package.json`. */
     public extensionVersion: string = "",
     /** Whether or not the extension activated successfully. */
