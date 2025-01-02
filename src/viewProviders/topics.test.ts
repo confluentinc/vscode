@@ -7,6 +7,7 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
 import { getTestStorageManager } from "../../tests/unit/testUtils";
+import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
@@ -56,9 +57,14 @@ describe("TopicViewProvider helper functions", () => {
   let storageManager: StorageManager;
   const ccloudResourceLoader = CCloudResourceLoader.getInstance();
 
+  const logger = new Logger("TopicViewProviderTest");
+
   before(async () => {
+    logger.info("before() called, setting up test storage manager");
     storageManager = await getTestStorageManager();
+    logger.info("test storage manager set up, constructing resource loader singletons");
     constructResourceLoaderSingletons();
+    logger.info("resource loader singletons constructed, done with before()");
   });
 
   beforeEach(async () => {
@@ -73,6 +79,9 @@ describe("TopicViewProvider helper functions", () => {
 
   // TODO: update this once local schemas are supported
   it("loadTopicSchemas() should not return schemas for topics w/o any known related schemas", async () => {
+    logger.info(
+      "Start of loadTopicSchemas() should not return schemas for topics w/o any known related schemas",
+    );
     // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
 
     // TODO: This actually tries to talk out through to docker / local schema registry now.
@@ -88,6 +97,9 @@ describe("TopicViewProvider helper functions", () => {
 
   it("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
     // preload Schema Registry + schemas (usually done when loading environments)
+    logger.info(
+      "Start of loadTopicSchemas() should return schemas for CCloud Kafka topics when available",
+    );
     const resourceManager = getResourceManager();
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, preloadedSchemas);
