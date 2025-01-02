@@ -7,7 +7,7 @@ import {
   TEST_CCLOUD_CONNECTION,
   TEST_CCLOUD_USER,
 } from "../../tests/unit/testResources/connection";
-import { getExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import { Connection } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getSidecar } from "../sidecar";
@@ -45,7 +45,7 @@ describe("ConfluentCloudAuthProvider", () => {
   >;
 
   before(async () => {
-    await getExtensionContext();
+    await getTestExtensionContext();
 
     uriHandler = getUriHandler();
   });
