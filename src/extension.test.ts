@@ -1,7 +1,12 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { getAndActivateExtension, getExtensionContext } from "../tests/unit/testUtils";
+import { getAndActivateExtension, getTestExtensionContext } from "../tests/unit/testUtils";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
+import {
+  clearExtensionContext,
+  getExtensionContext,
+  setExtensionContext,
+} from "./context/extension";
 import { ExtensionContextNotSetError } from "./errors";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
@@ -13,41 +18,65 @@ describe("Base Extension Test", () => {
   it("should activate the extension", async () => {
     await getAndActivateExtension();
   });
+});
+
+describe("ExtensionContext", () => {
+  // we don't have any good way of actually deactivating an extension instance, so we have to reset
+  // the extension context (and any singleton instances) for this test suite
+  let origExtensionContext: vscode.ExtensionContext | undefined;
+
+  before(() => {
+    origExtensionContext = getExtensionContext();
+    clearExtensionContext();
+  });
+
+  after(() => {
+    if (origExtensionContext) {
+      setExtensionContext(origExtensionContext);
+    }
+  });
 
   it("should not allow ExtensionContext-dependent singletons to be created before extension activation", async () => {
     const extensionContextSingletons = [
       {
         callable: () => ResourceViewProvider.getInstance(),
         source: "ResourceViewProvider",
+        clear: () => (ResourceViewProvider["instance"] = null),
       },
       {
         callable: () => TopicViewProvider.getInstance(),
         source: "TopicViewProvider",
+        clear: () => (TopicViewProvider["instance"] = null),
       },
       {
         callable: () => SchemasViewProvider.getInstance(),
         source: "SchemasViewProvider",
+        clear: () => (SchemasViewProvider["instance"] = null),
       },
       {
         callable: () => ConfluentCloudAuthProvider.getInstance(),
         source: "ConfluentCloudAuthProvider",
+        clear: () => (ConfluentCloudAuthProvider["instance"] = null),
       },
       {
         callable: () => StorageManager.getInstance(),
         source: "StorageManager",
+        clear: () => (StorageManager["instance"] = null),
       },
       {
         callable: () => ResourceManager.getInstance(),
         source: "ResourceManager",
+        clear: () => (ResourceManager["instance"] = null),
       },
     ];
 
-    extensionContextSingletons.forEach(({ callable, source }) => {
+    extensionContextSingletons.forEach(({ callable, source, clear }) => {
+      clear();
       assertThrowsExtensionContextNotSetError(callable, source);
     });
 
     // activate the extension and setExtensionContext()
-    await getExtensionContext();
+    await getTestExtensionContext();
 
     extensionContextSingletons.forEach(({ callable, source }) => {
       assertDoesNotThrowExtensionContextNotSetError(callable, source);
@@ -73,7 +102,7 @@ describe("Extension manifest tests", () => {
   let context: vscode.ExtensionContext;
 
   before(async () => {
-    context = await getExtensionContext();
+    context = await getTestExtensionContext();
   });
 
   it("should show the correct version format", async () => {
@@ -132,7 +161,7 @@ describe("ExtensionContext subscription tests", () => {
   let context: vscode.ExtensionContext;
 
   before(async () => {
-    context = await getExtensionContext();
+    context = await getTestExtensionContext();
   });
 
   it("should have at least one subscription", async () => {

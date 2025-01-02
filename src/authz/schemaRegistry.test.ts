@@ -6,7 +6,7 @@ import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ResponseError, SubjectsV1Api } from "../clients/schemaRegistryRest";
 import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import * as sidecar from "../sidecar";
@@ -21,7 +21,7 @@ describe("authz.schemaRegistry", function () {
 
   beforeEach(async function () {
     // preload the schema registry in extension state
-    await getExtensionContext();
+    await getTestExtensionContext();
     resourceManager = getResourceManager();
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
 

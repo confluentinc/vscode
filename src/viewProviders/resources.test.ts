@@ -15,7 +15,7 @@ import {
   TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources/schemaRegistry";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { EXTENSION_VERSION } from "../constants";
 import * as direct from "../graphql/direct";
 import * as local from "../graphql/local";
@@ -45,7 +45,7 @@ describe("ResourceViewProvider methods", () => {
 
   before(async () => {
     // ensure extension context is available for the ResourceViewProvider
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {
@@ -95,7 +95,7 @@ describe("ResourceViewProvider loading functions", () => {
 
   before(async () => {
     // activate the extension once before this test suite runs
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {

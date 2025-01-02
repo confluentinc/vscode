@@ -3,7 +3,7 @@ import { configDotenv } from "dotenv";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connection";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { Connection, Status } from "../clients/sidecar";
 import { nonInvalidTokenStatus } from "../emitters";
 import * as connections from "../sidecar/connections";
@@ -106,7 +106,7 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
   it("should show an error notification if auth has expired", async () => {
     // expired auth will cycle the CCloud connection, which requires the auth provider to be set up,
     // which requires the extension context to be available
-    await getExtensionContext();
+    await getTestExtensionContext();
     // check against a connection that expired already (5min ago)
     const expiredConnection = createFakeConnection(-5);
 
@@ -122,7 +122,7 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
   it("should show a warning notification and then an error notification if auth expiration is ignored long enough", async () => {
     // expired auth will cycle the CCloud connection, which requires the auth provider to be set up,
     // which requires the extension context to be available
-    await getExtensionContext();
+    await getTestExtensionContext();
     // simulate a user clicking "Reauthenticate" so we don't reset `.reauthWarningPromptOpen`
     showWarningMessageStub.resolves(REAUTH_BUTTON_TEXT);
 
@@ -173,7 +173,7 @@ describe("authn/ccloudPolling.ts watchCCloudConnectionStatus()", () => {
   let pollSlowStub: sinon.SinonStub;
 
   before(async () => {
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {

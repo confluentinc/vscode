@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ApiResponse,
   ContainerApi,
@@ -26,7 +26,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
   let eventListener: EventListener;
 
   before(async function () {
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(function () {
