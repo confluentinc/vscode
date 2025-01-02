@@ -6,7 +6,7 @@ const logger = new Logger("docker.networks");
 
 export async function createNetwork(name: string, driver: string = "bridge"): Promise<void> {
   const networkClient = new NetworkApi();
-  const init = defaultRequestInit();
+  const init = await defaultRequestInit();
 
   try {
     await networkClient.networkCreate({ networkConfig: { Name: name, Driver: driver } }, init);
