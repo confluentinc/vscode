@@ -4,11 +4,7 @@ import { setExtensionContext } from "../../src/context/extension";
 import { Logger } from "../../src/logging";
 import { StorageManager } from "../../src/storage";
 
-<<<<<<< HEAD
-const logger = new Logger("testUtils");
-=======
 const logger = new Logger("tests.testUtils");
->>>>>>> origin/main
 
 /**
  * Convenience function to get the extension.
