@@ -23,7 +23,6 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
-import external from "rollup-plugin-auto-external";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
@@ -33,7 +32,7 @@ const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
-export const test = series(clean, build, testBuild, testRun);
+export const test = series(clean, testBuild, testRun);
 export const liveTest = series(clean, build, testBuild);
 liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
@@ -548,17 +547,17 @@ export async function testBuild() {
   const testInput = {
     input: {
       ...entryMap,
+      extension: "src/extension.ts",
       sidecar: "ide-sidecar",
     },
     plugins: [
       sidecar(),
       pkgjson(),
+      node({ preferBuiltins: true, exportConditions: ["node"] }),
+      commonjs(),
       esbuild({ sourceMap: true, minify: false }),
       template({ include: ["**/*.html"] }),
-      node(),
       json(),
-      // dependencies are installed via npm so they don't need to be bundled
-      external(),
       coverage({
         enabled: reportCoverage,
         include: ["src/**/*.ts"],
