@@ -54,4 +54,8 @@ export enum SecretStorageKeys {
 
   /** A map of connection id:ConnectionSpec */
   DIRECT_CONNECTIONS = "directConnections",
+
+  /** Any user credentials gathered from `docker-credential-*` to pass via the X-Registry-Auth
+   * header to Docker engine API requests. */
+  DOCKER_CREDS_SECRET_KEY = "docker-creds",
 }

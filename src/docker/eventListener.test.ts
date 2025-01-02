@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
+import { getExtensionContext } from "../../tests/unit/testUtils";
 import {
   ApiResponse,
   ContainerApi,
@@ -24,6 +25,10 @@ describe("docker/eventListener.ts EventListener methods", function () {
   let clock: sinon.SinonFakeTimers;
   let eventListener: EventListener;
 
+  before(async function () {
+    await getExtensionContext();
+  });
+
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     // IMPORTANT: we need to use the fake timers here so we can control the timing of the event listener
@@ -31,12 +36,14 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // is we're using a polling mechanism to check for events, and we want to be able to advance the
     // clock in a controlled way to ensure that the polling logic executes as expected
     clock = sandbox.useFakeTimers(Date.now());
-    // reset the singleton instance so we can re-instantiate it with fresh properties between tests
-    EventListener["instance"] = null;
+    // stub defaultRequestInit() so we don't try to load Docker credentials or the socket path
+    sandbox.stub(configs, "defaultRequestInit").resolves({});
     eventListener = EventListener.getInstance();
   });
 
   afterEach(function () {
+    // reset the singleton instance so we can re-instantiate it with fresh properties between tests
+    EventListener["instance"] = null;
     sandbox.restore();
   });
 
