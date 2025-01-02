@@ -57,7 +57,6 @@ export class SidecarHandle {
 
   defaultHeaders: Record<string, string>;
   defaultClientConfigParams: ConfigurationParameters;
-  private websocketManager: WebsocketManager;
 
   constructor(
     public auth_secret: string,
@@ -69,8 +68,6 @@ export class SidecarHandle {
     this.myPid = myPid;
     // perhaps will be useful in future logging?
     this.myId = handleId;
-
-    this.websocketManager = websocketManager;
 
     // used for client creation for individual service (class) methods, merged with any custom
     // config parameters provided by the caller
@@ -113,7 +110,7 @@ export class SidecarHandle {
       );
     }
 
-    this.websocketManager.send(message);
+    WebsocketManager.getInstance().send(message);
   }
 
   // future method for sending message to all peer workspaces, when needed and we

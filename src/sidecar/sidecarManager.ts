@@ -113,12 +113,7 @@ export class SidecarManager {
         if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
           // 1. The sidecar is running and healthy, in which case we're probably done.
           // (this is the only path that may resolve this promise successfully)
-          const handle = new SidecarHandle(
-            accessToken,
-            this.myPid,
-            this.handleIdSource++,
-            this.websocketManager!,
-          );
+          const handle = new SidecarHandle(accessToken, this.myPid, this.handleIdSource++);
 
           if (!this.sidecarContacted) {
             // Do the one-time-only things re/this sidecar process, whether or not
