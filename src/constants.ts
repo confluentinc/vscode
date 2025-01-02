@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { extensions } from "vscode";
 import { ConnectionSpec } from "./clients/sidecar";
 import { ConnectionId } from "./models/resource";
@@ -5,6 +6,8 @@ import { ConnectionId } from "./models/resource";
 export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */
 export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.packageJSON.version;
+
+export const EXTENSION_INSTANCE_ID = randomUUID();
 
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources

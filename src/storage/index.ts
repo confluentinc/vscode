@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
+import { EXTENSION_INSTANCE_ID } from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ExtensionContextNotSetError } from "../errors";
+import { Logger } from "../logging";
 
 export class StorageManager {
   private globalState: vscode.Memento;
@@ -20,6 +22,8 @@ export class StorageManager {
 
   static getInstance(): StorageManager {
     if (!StorageManager.instance) {
+      const logger = new Logger("StorageManager");
+      logger.info("Creating new StorageManager instance", { instanceId: EXTENSION_INSTANCE_ID });
       StorageManager.instance = new StorageManager();
     }
     return StorageManager.instance;
