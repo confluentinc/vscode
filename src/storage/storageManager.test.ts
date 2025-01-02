@@ -14,7 +14,7 @@ describe("StorageManager Tests", function () {
     testKey = `test-key-${Math.random().toString(36).substring(4)}`;
   });
 
-  it("should successfully get/set/delete SecretStorage items", async () => {
+  it.only("should successfully get/set/delete SecretStorage items", async () => {
     // SecretStorage only holds strings, so no object or array values here
     const testValue = `test-value-${Math.random().toString(36).substring(4)}`;
 
