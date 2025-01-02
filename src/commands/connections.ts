@@ -135,7 +135,7 @@ export async function editDirectConnection(item: DirectEnvironment) {
     logger.error("Direct connection not found, can't edit");
     // possibly stale Resources view? this shouldn't happen
     window.showErrorMessage("Connection not found.");
-    getResourceViewProvider().refresh();
+    ResourceViewProvider.getInstance().refresh();
     return;
   }
 
