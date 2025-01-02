@@ -83,14 +83,6 @@ export function build(done) {
     setupSentry();
   }
 
-  /** @type {import("rollup").LogHandlerWithDefault} */
-  const handleBuildLog = (level, log, handler) => {
-    // skip log messages about circular dependencies inside node_modules
-    if (log.code === "CIRCULAR_DEPENDENCY" && log.ids.every((id) => id.includes("node_modules")))
-      return;
-    handler(level, log);
-  };
-
   /** @type {import("rollup").RollupOptions} */
   const extInput = {
     input: {
@@ -207,6 +199,14 @@ export function build(done) {
       .then(() => rollup(extInput))
       .then((bundle) => bundle.write(extOutput));
   }
+}
+
+/** @type {import("rollup").LogHandlerWithDefault} */
+function handleBuildLog(level, log, handler) {
+  // skip log messages about circular dependencies inside node_modules
+  if (log.code === "CIRCULAR_DEPENDENCY" && log.ids.every((id) => id.includes("node_modules")))
+    return;
+  handler(level, log);
 }
 
 /** Used by Sentry rollup plugin during build, we need a version to identify releases in Sentry so they can line up with source map uploads
@@ -564,6 +564,7 @@ export async function testBuild() {
         exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
       }),
     ],
+    onLog: handleBuildLog,
     external: ["vscode", "assert", "winston", "mocha", "@playwright/test", "dotenv", "glob"],
   };
   /** @type {import("rollup").OutputOptions} */
