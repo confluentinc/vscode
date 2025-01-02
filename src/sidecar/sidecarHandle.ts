@@ -62,7 +62,6 @@ export class SidecarHandle {
     public auth_secret: string,
     myPid: string,
     handleId: number,
-    websocketManager: WebsocketManager,
   ) {
     this.authToken = auth_secret;
     this.myPid = myPid;
