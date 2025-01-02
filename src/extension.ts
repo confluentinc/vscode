@@ -59,6 +59,7 @@ import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
+import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { Logger, outputChannel } from "./logging";
 import {
@@ -72,10 +73,11 @@ import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
-import { StorageManager } from "./storage";
+import { getStorageManager, StorageManager } from "./storage";
+import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
-import { UserEvent, logUsage } from "./telemetry/events";
+import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -214,6 +216,8 @@ async function _activateExtension(
 
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
+  // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
+  getStorageManager().deleteSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
@@ -361,7 +365,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
 function setupDocumentProviders(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   // any document providers set here must provide their own `scheme` to register with
-  const providerClasses = [SchemaDocumentProvider];
+  const providerClasses = [SchemaDocumentProvider, MessageDocumentProvider];
   for (const providerClass of providerClasses) {
     const provider = new providerClass();
     disposables.push(

@@ -40,8 +40,8 @@ describe("ResourceManager (CCloud) environment methods", function () {
     // extension needs to be activated before storage manager can be used
     storageManager = await getTestStorageManager();
     environments = [
-      CCloudEnvironment.create({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-1" }),
-      CCloudEnvironment.create({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-2" }),
+      new CCloudEnvironment({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-1" }),
+      new CCloudEnvironment({ ...TEST_CCLOUD_ENVIRONMENT, id: "test-env-id-2" }),
     ];
   });
 

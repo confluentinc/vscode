@@ -75,7 +75,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
     }
 
     envs.push(
-      CCloudEnvironment.create({
+      new CCloudEnvironment({
         id: env.id,
         name: env.name,
         streamGovernancePackage: env.governancePackage,

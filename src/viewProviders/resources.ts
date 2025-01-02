@@ -1,12 +1,19 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
-import { EXTENSION_VERSION, IconNames } from "../constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  EXTENSION_VERSION,
+  IconNames,
+  LOCAL_CONNECTION_ID,
+} from "../constants";
 import { getExtensionContext } from "../context/extension";
 import { ContextValues, setContextValue } from "../context/values";
 import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
+  connectionLoading,
+  connectionUsable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -31,7 +38,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -47,8 +54,7 @@ import { getResourceManager } from "../storage/resourceManager";
 const logger = new Logger("viewProviders.resources");
 
 type CCloudResources = CCloudEnvironment | CCloudKafkaCluster | CCloudSchemaRegistry;
-// TODO: add LocalEnvironment here?
-type LocalResources = LocalKafkaCluster | LocalSchemaRegistry;
+type LocalResources = LocalEnvironment | LocalKafkaCluster | LocalSchemaRegistry;
 type DirectResources = DirectEnvironment | DirectKafkaCluster | DirectSchemaRegistry;
 
 /**
@@ -76,6 +82,14 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   private forceDeepRefresh: boolean = false;
   /** Have we informed the sidecar of any direct connections saved in secret storage? */
   private rehydratedDirectConnections: boolean = false;
+
+  /**
+   * {@link Environment}s managed by this provider, stored by their environment IDs.
+   *
+   * (For local/direct connection resources, these keys are the same values as their `connectionId`s.)
+   */
+  environmentsMap: Map<string, CCloudEnvironment | LocalEnvironment | DirectEnvironment> =
+    new Map();
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -152,7 +166,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         Promise<DirectEnvironment[]>,
       ] = [loadCCloudResources(this.forceDeepRefresh), loadLocalResources(), loadDirectResources()];
 
-      const [ccloudEnvironments, localResources, directEnvironments]: [
+      const [ccloudContainer, localContainer, directEnvironments]: [
         ContainerTreeItem<CCloudEnvironment>,
         ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>,
         DirectEnvironment[],
@@ -162,7 +176,16 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         this.forceDeepRefresh = false;
       }
 
-      return [ccloudEnvironments, localResources, ...directEnvironments];
+      if (ccloudContainer) {
+        const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).children;
+        ccloudEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
+      }
+      // TODO: we aren't tracking LocalEnvironments yet, so skip that here
+      if (directEnvironments) {
+        directEnvironments.forEach((env) => this.environmentsMap.set(env.id, env));
+      }
+
+      return [ccloudContainer, localContainer, ...directEnvironments];
     }
 
     return [];
@@ -183,7 +206,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     });
 
     const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
-      logger.debug("directConnectionsChanged event fired");
+      logger.debug("directConnectionsChanged event fired, refreshing");
       this.refresh();
     });
 
@@ -201,19 +224,56 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       },
     );
 
+    const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
+      this.refreshConnection(id, true);
+    });
+
+    const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
+      this.refreshConnection(id, false);
+    });
+
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
+      connectionLoadingSub,
+      connectionUsableSub,
     ];
   }
-}
 
-/** Get the singleton instance of the {@link ResourceViewProvider} */
-export function getResourceViewProvider() {
-  return ResourceViewProvider.getInstance();
+  async refreshConnection(id: ConnectionId, loading: boolean = false) {
+    switch (id) {
+      case CCLOUD_CONNECTION_ID:
+        throw new Error("Not implemented");
+      case LOCAL_CONNECTION_ID:
+        throw new Error("Not implemented");
+      default: {
+        // direct connections are treated as environments, so we can look up the direct "environment"
+        // by its connection ID
+        const environment = this.environmentsMap.get(id);
+        if (environment) {
+          if (!loading) {
+            // if the connection is usable, we need to refresh the children of the environment
+            // to potentially show the Kafka clusters and Schema Registry and update the collapsible
+            // state of the item
+            const directEnvs = await getDirectResources();
+            const directEnv = directEnvs.find((env) => env.id === id);
+            if (directEnv) {
+              environment.kafkaClusters = directEnv.kafkaClusters;
+              environment.schemaRegistry = directEnv.schemaRegistry;
+            }
+          }
+          environment.isLoading = loading;
+          // only update this environment in the tree view, not the entire view
+          this._onDidChangeTreeData.fire(environment);
+        } else {
+          logger.debug("could not find direct environment in map to update", { id });
+        }
+      }
+    }
+  }
 }
 
 /**

@@ -7,7 +7,7 @@ import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { getCCloudAuthSession } from "../sidecar/connections";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
-import { getResourceViewProvider } from "../viewProviders/resources";
+import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 
@@ -110,7 +110,7 @@ export async function renameDirectConnection(item: DirectEnvironment) {
     logger.error("Direct connection not found, can't rename");
     // possibly stale Resources view? this shouldn't happen
     window.showErrorMessage("Connection not found.");
-    getResourceViewProvider().refresh();
+    ResourceViewProvider.getInstance().refresh();
     return;
   }
 

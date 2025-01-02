@@ -53,10 +53,10 @@ describe("docker/configs functions", function () {
     assert.ok(getConfigStub.calledOnce);
   });
 
-  it("defaultRequestInit() should set the dispatcher as an Agent", function () {
+  it("defaultRequestInit() should set the dispatcher as an Agent", async function () {
     sandbox.stub(configs, "getSocketPath").returns("/var/run/docker.sock");
 
-    const init = configs.defaultRequestInit() as UndiciRequestInit;
+    const init = (await configs.defaultRequestInit()) as UndiciRequestInit;
 
     assert.ok(init.dispatcher);
     assert.ok(init.dispatcher instanceof Agent);

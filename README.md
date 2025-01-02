@@ -5,7 +5,7 @@ Confluent technology. This extension provides a robust, delightful experience fo
 [Confluent Cloud](https://confluent.cloud/) products from within the
 [Visual Studio Code](https://code.visualstudio.com/) (VS Code) editor desktop environment.
 
-![](resources/readme-screenshot-dark.png)
+![](resources/readme-screenshot-light.png)
 
 Visit the [Confluent Developer site](https://developer.confluent.io/) for more about developing with
 Confluent, and read the docs at the [Confluent documentation](https://docs.confluent.io/) site.
@@ -50,6 +50,8 @@ Confluent for VS Code supports accessing your Apache Kafka® clusters locally or
 
 #### Resources
 
+![](resources/readme-resources-screenshot-light.png)
+
 The **Resources** view lists Confluent Cloud environments and associated Kafka and Schema Registry
 clusters, as well as local Kafka clusters.
 
@@ -57,6 +59,8 @@ clusters, as well as local Kafka clusters.
 - Click a Schema Registry to load the associated schemas for that registry in the Schemas view.
 
 #### Topics
+
+![](resources/readme-play-screenshot-light.png)
 
 Click the **play** icon next to the topic name to open the **Message Viewer**, which enables
 searching and exploring messages in a topic. Within Message Viewer, you can:
@@ -69,6 +73,8 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 - toggle partitions on/off to show/hide messages from specific partitions
 
 #### Schemas
+
+![](resources/readme-schema-screenshot-light.png)
 
 ##### View
 
@@ -93,6 +99,8 @@ Search the marketplace for extensions to validate your Avro, JSON schema, or Pro
 needed.
 
 #### Support
+
+![](resources/readme-support-screenshot-light.png)
 
 The **Support** panel provides links to the extension walkthrough, issue reporting, general
 feedback, and options to generate Kafka projects using a template.

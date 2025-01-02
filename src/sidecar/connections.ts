@@ -25,7 +25,12 @@ import {
 } from "../docker/configs";
 import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
-import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
+import {
+  connectionLoading,
+  connectionUsable,
+  currentKafkaClusterChanged,
+  currentSchemaRegistryChanged,
+} from "../emitters";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { ConnectionId } from "../models/resource";
@@ -226,6 +231,10 @@ export async function waitForConnectionToBeUsable(
 ): Promise<Connection | null> {
   let connection: Connection | null = null;
 
+  let kafkaFailed: string | undefined;
+  let schemaRegistryFailed: string | undefined;
+  let ccloudFailed: string | undefined;
+
   const startTime = Date.now();
   while (Date.now() - startTime < timeoutMs) {
     const checkedConnection = await tryToGetConnection(id);
@@ -245,6 +254,7 @@ export async function waitForConnectionToBeUsable(
         const schemaRegistryState: ConnectedState | undefined = status.schema_registry?.state;
         const isAttempting = kafkaState === "ATTEMPTING" || schemaRegistryState === "ATTEMPTING";
         if (isAttempting) {
+          connectionLoading.fire(id);
           logger.debug("still waiting for connection to be usable", {
             id,
             type,
@@ -253,6 +263,13 @@ export async function waitForConnectionToBeUsable(
           });
           await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
           continue;
+        }
+        connectionUsable.fire(id);
+        if (kafkaState === "FAILED") {
+          kafkaFailed = status.kafka_cluster?.errors?.sign_in?.message;
+        }
+        if (schemaRegistryState === "FAILED") {
+          schemaRegistryFailed = status.schema_registry?.errors?.sign_in?.message;
         }
         break;
       }
@@ -265,6 +282,9 @@ export async function waitForConnectionToBeUsable(
           await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
           continue;
         }
+        if (ccloudState === "FAILED") {
+          ccloudFailed = status.ccloud?.errors?.sign_in?.message;
+        }
         break;
       }
       // TODO: check local connections?
@@ -276,8 +296,11 @@ export async function waitForConnectionToBeUsable(
       id,
       type,
       ccloud: status.ccloud?.state,
+      ccloudFailed,
       kafka: status.kafka_cluster?.state,
+      kafkaFailed,
       schemaRegistry: status.schema_registry?.state,
+      schemaRegistryFailed,
     });
     connection = checkedConnection;
     break;
