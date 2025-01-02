@@ -11,7 +11,7 @@
   </head>
   <body>
     <main class="container">
-      <h1>Create a new connection</h1>
+      <h1 data-text="this.spec() ? 'Edit connection details' : 'Create a new connection'"></h1>
       <p>
         Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
         cancel all changes.
@@ -25,6 +25,7 @@
               id="apache-kafka"
               name="platform"
               value="Apache Kafka"
+              data-attr-checked="this.platformType() === 'Apache Kafka' ? true : false"
               data-on-change="this.updateValue(event)"
             />
             <label for="apache-kafka">Apache Kafka®</label>
@@ -35,6 +36,7 @@
               id="confluent-cloud"
               name="platform"
               value="Confluent Cloud"
+              data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               data-on-change="this.updateValue(event)"
             />
             <label for="confluent-cloud">Confluent Cloud</label>
@@ -45,6 +47,7 @@
               id="confluent-platform"
               name="platform"
               value="Confluent Platform"
+              data-attr-checked="this.platformType() === 'Confluent Platform' ? true : false"
               data-on-change="this.updateValue(event)"
             />
             <label for="confluent-platform">Confluent Platform</label>
@@ -57,24 +60,35 @@
               value="Other"
               required
               data-on-change="this.updateValue(event)"
+              data-attr-checked="this.platformType() === 'Other' ? true : false"
             />
             <label for="other">Other</label>
-            <template data-if="this.platformType() === 'Other'"
+            <!-- <template data-if="this.platformType() === 'Other'"
               >&nbsp;&nbsp;
               <input
                 class="input"
                 id="other"
                 name="other-platform"
                 type="text"
+                data-attr-value="this.otherPlatformType()"
                 data-attr-required="this.platformType() === 'Other' ? true : false"
+                data-on-change="this.updateValue(event)"
               />
-            </template>
+            </template> -->
           </div>
         </div>
         <div class="input-container">
           <div>
             <label for="name" class="label">Connection Name</label>
-            <input class="input" id="name" name="name" type="text" placeholder="New Connection" />
+            <input
+              class="input"
+              id="name"
+              name="name"
+              type="text"
+              placeholder="New Connection"
+              data-attr-value="this.name()"
+              data-on-change="this.updateValue(event)"
+            />
           </div>
           <span class="description"
             >An easy to remember name to reference this connection in the future</span
@@ -113,7 +127,7 @@
                 type="radio"
                 id="kafka-auth-none"
                 name="kafka_auth_type"
-                value="None"
+                data-attr-checked="this.kafkaAuthType() === 'None' ? true : false"
                 data-attr-required="this.kafkaBootstrapServers() !== ''"
                 data-on-change="this.updateValue(event)"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
@@ -126,6 +140,7 @@
                 id="kafka-auth-basic"
                 name="kafka_auth_type"
                 value="Basic"
+                data-attr-checked="this.kafkaAuthType() === 'Basic' ? true : false"
                 data-on-change="this.updateValue(event)"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
@@ -137,8 +152,8 @@
                 id="kafka-auth-api"
                 name="kafka_auth_type"
                 value="API"
+                data-attr-checked="this.kafkaAuthType() === 'API' || this.platformType() === 'Confluent Cloud' ? true : false"
                 data-on-change="this.updateValue(event)"
-                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="kafka-auth-api">API Credentials</label>
             </div>
@@ -153,6 +168,8 @@
                     id="kafka_username"
                     name="kafka_username"
                     type="text"
+                    data-attr-value="this.kafkaUsername()"
+                    data-on-change="this.updateValue(event)"
                     required
                   />
                 </div>
@@ -165,6 +182,7 @@
                     id="kafka_password"
                     name="kafka_password"
                     type="password"
+                    data-attr-value="this.kafkaSecret()"
                     required
                   />
                 </div>
@@ -176,7 +194,15 @@
               <div class="input-container">
                 <div>
                   <label for="kafka_api_key" class="label">Key</label>
-                  <input class="input" id="api_key" name="kafka_api_key" type="text" required />
+                  <input
+                    class="input"
+                    id="api_key"
+                    name="kafka_api_key"
+                    type="text"
+                    required
+                    data-attr-value="this.kafkaApiKey()"
+                    data-on-change="this.updateValue(event)"
+                  />
                 </div>
               </div>
               <div class="input-container">
@@ -186,6 +212,7 @@
                     class="input"
                     id="api_secret"
                     name="kafka_api_secret"
+                    data-attr-value="this.kafkaSecret()"
                     type="password"
                     required
                   />
@@ -229,6 +256,7 @@
                 value="None"
                 data-attr-required="this.schemaUri() !== ''"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.schemaAuthType() === 'None' ? true : false"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-none">None</label>
@@ -240,6 +268,7 @@
                 name="schema_auth_type"
                 value="Basic"
                 data-on-change="this.updateValue(event)"
+                data-attr-checked="this.schemaAuthType() === 'Basic' ? true : false"
                 data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-basic">Username & Password</label>
@@ -251,7 +280,7 @@
                 name="schema_auth_type"
                 value="API"
                 data-on-change="this.updateValue(event)"
-                data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
+                data-attr-checked="this.schemaAuthType() === 'API' || this.platformType() === 'Confluent Cloud' ? true : false"
               />
               <label for="schema-auth-api">API Credentials</label>
             </div>
@@ -266,7 +295,9 @@
                     id="schema_username"
                     name="schema_username"
                     type="text"
+                    data-attr-value="this.schemaUsername()"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-on-change="this.updateValue(event)"
                   />
                 </div>
               </div>
@@ -279,6 +310,7 @@
                     name="schema_password"
                     type="password"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-attr-value="this.schemaSecret()"
                   />
                 </div>
               </div>
@@ -295,6 +327,8 @@
                     name="schema_api_key"
                     type="text"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-attr-value="this.schemaApiKey()"
+                    data-on-change="this.updateValue(event)"
                   />
                 </div>
               </div>
@@ -307,6 +341,7 @@
                     name="schema_api_secret"
                     type="password"
                     data-attr-required="this.schemaUri() !== ''"
+                    data-attr-value="this.schemaSecret()"
                   />
                 </div>
               </div>
@@ -327,7 +362,7 @@
           <input
             class="button"
             type="submit"
-            value="Save Connection"
+            data-attr-value="this.spec() ? 'Update Connection' : 'Save Connection'"
             data-attr-disabled="this.loading()"
           />
         </div>
