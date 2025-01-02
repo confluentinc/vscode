@@ -3,7 +3,7 @@ import { Logger } from "../logging";
 
 const logger = new Logger("context.extension");
 
-let context: ExtensionContext;
+let context: ExtensionContext | undefined;
 
 export function setExtensionContext(value: ExtensionContext) {
   logger.info(`Setting extension context: ${value}`);
@@ -11,6 +11,10 @@ export function setExtensionContext(value: ExtensionContext) {
 }
 
 export function getExtensionContext(): ExtensionContext {
-  logger.info(`Getting extension context: ${context}`);
-  return context;
+  return context!;
+}
+
+// XXX: should not be used outside of test environments
+export function clearExtensionContext() {
+  context = undefined;
 }

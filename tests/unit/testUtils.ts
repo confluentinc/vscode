@@ -4,13 +4,17 @@ import { setExtensionContext } from "../../src/context/extension";
 import { Logger } from "../../src/logging";
 import { StorageManager } from "../../src/storage";
 
+<<<<<<< HEAD
 const logger = new Logger("testUtils");
+=======
+const logger = new Logger("tests.testUtils");
+>>>>>>> origin/main
 
 /**
  * Convenience function to get the extension.
  * @remarks This does not activate the extension, so the {@link vscode.ExtensionContext} will not be
  * available. Use {@link getAndActivateExtension} to activate the extension, or
- * {@link getExtensionContext} to get the context directly.
+ * {@link getTestExtensionContext} to get the context directly.
  * @param id The extension ID to get. Defaults to the Confluent extension.
  * @returns A {@link vscode.Extension} instance.
  */
@@ -32,8 +36,12 @@ export async function getAndActivateExtension(
 ): Promise<vscode.Extension<any>> {
   logger.info(`Activating extension with ID "${id}"`);
   const extension = await getExtension(id);
-  await extension.activate();
-  logger.info(`Activated extension with ID "${id}"`);
+  if (!extension.isActive) {
+    logger.info(`Activating extension: ${id}`);
+    await extension.activate();
+  } else {
+    logger.info(`Extension already activated: ${id}`);
+  }
   return extension;
 }
 
@@ -41,7 +49,7 @@ export async function getAndActivateExtension(
  * Convenience function to get the extension context for testing.
  * @returns A {@link vscode.ExtensionContext} instance.
  */
-export async function getExtensionContext(
+export async function getTestExtensionContext(
   id: string = EXTENSION_ID,
 ): Promise<vscode.ExtensionContext> {
   const extension = await getAndActivateExtension(id);
@@ -55,8 +63,12 @@ export async function getExtensionContext(
 
 export async function getTestStorageManager(): Promise<StorageManager> {
   // the extension needs to be activated before we can use the StorageManager
+<<<<<<< HEAD
   logger.info("Getting test StorageManager");
   await getExtensionContext();
   logger.info("Got extension context, returning StorageManager.getInstance()");
+=======
+  await getTestExtensionContext();
+>>>>>>> origin/main
   return StorageManager.getInstance();
 }

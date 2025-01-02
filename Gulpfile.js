@@ -23,7 +23,6 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { rimrafSync } from "rimraf";
 import { rollup, watch } from "rollup";
-import external from "rollup-plugin-auto-external";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
@@ -33,7 +32,7 @@ const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
 export const ci = parallel(check, build, lint);
-export const test = series(clean, build, testBuild, testRun);
+export const test = series(clean, testBuild, testRun);
 export const liveTest = series(clean, build, testBuild);
 liveTest.description =
   "Rebuild the out/ directory after codebase or test suite changes for live breakpoint debugging.";
@@ -83,14 +82,6 @@ export function build(done) {
     setupSegment();
     setupSentry();
   }
-
-  /** @type {import("rollup").LogHandlerWithDefault} */
-  const handleBuildLog = (level, log, handler) => {
-    // skip log messages about circular dependencies inside node_modules
-    if (log.code === "CIRCULAR_DEPENDENCY" && log.ids.every((id) => id.includes("node_modules")))
-      return;
-    handler(level, log);
-  };
 
   /** @type {import("rollup").RollupOptions} */
   const extInput = {
@@ -208,6 +199,14 @@ export function build(done) {
       .then(() => rollup(extInput))
       .then((bundle) => bundle.write(extOutput));
   }
+}
+
+/** @type {import("rollup").LogHandlerWithDefault} */
+function handleBuildLog(level, log, handler) {
+  // skip log messages about circular dependencies inside node_modules
+  if (log.code === "CIRCULAR_DEPENDENCY" && log.ids.every((id) => id.includes("node_modules")))
+    return;
+  handler(level, log);
 }
 
 /** Used by Sentry rollup plugin during build, we need a version to identify releases in Sentry so they can line up with source map uploads
@@ -548,24 +547,25 @@ export async function testBuild() {
   const testInput = {
     input: {
       ...entryMap,
+      extension: "src/extension.ts",
       sidecar: "ide-sidecar",
     },
     plugins: [
       sidecar(),
       pkgjson(),
+      node({ preferBuiltins: true, exportConditions: ["node"] }),
+      commonjs(),
       esbuild({ sourceMap: true, minify: false }),
       template({ include: ["**/*.html"] }),
-      node(),
       json(),
-      // dependencies are installed via npm so they don't need to be bundled
-      external(),
       coverage({
         enabled: reportCoverage,
         include: ["src/**/*.ts"],
         exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
       }),
     ],
-    external: ["vscode", "assert", "ws", "mocha", "@playwright/test", "dotenv", "glob"],
+    onLog: handleBuildLog,
+    external: ["vscode", "assert", "winston", "mocha", "@playwright/test", "dotenv", "glob"],
   };
   /** @type {import("rollup").OutputOptions} */
   const testOutput = {
