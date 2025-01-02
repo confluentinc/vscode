@@ -102,34 +102,25 @@ export class SidecarHandle {
   // Websocket sending methods
 
   /**
-   * Send an Audience.WORKSPACES message to all workspaces over the websocket.
-   * In the future, if no peers are connected, the message will not be sent.
+   * Send a message to / through sidecar over the websocket.
    * The websocket send is ultimately async underneath the hood.
    * @throws {WebsocketClosedError} if the websocket is not connected.
    */
-  public wsBroadcastToPeers<T extends MessageType>(message: Message<T>): void {
+  public wsSend<T extends MessageType>(message: Message<T>): void {
     if (message.headers.originator !== this.myPid) {
       throw new Error(
         `Expected message originator to be '${this.myPid}', got ${message.headers.originator}`,
       );
     }
 
-    if (this.websocketManager.getPeerWorkspaceCount() === 0) {
-      logger.debug("No peers connected, not sending broadcast message");
-      return;
-    }
-
     this.websocketManager.send(message);
   }
 
-  /**
-   * Send a message to / through sidecar over the websocket.
-   * The websocket send is ultimately async underneath the hood.
-   * @throws {WebsocketClosedError} if the websocket is not connected.
-   */
-  public wsSend<T extends MessageType>(message: Message<T>): void {
-    this.websocketManager.send(message);
-  }
+  // future method for sending message to all peer workspaces, when needed and we
+  // have a known subset of message types enumerating those messages. Can skip
+  // sending the message if the known workspace peer count == 0.
+  // public wsBroadcastToPeers<T extends BroadcastMessageType>(message: Message<T>): void {
+  // ...
 
   // === OPENAPI CLIENT METHODS ===
 
