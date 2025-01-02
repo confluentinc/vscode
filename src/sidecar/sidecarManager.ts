@@ -18,11 +18,13 @@ import {
 } from "./constants";
 import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
+import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
 import { normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
+import { SecretStorageKeys } from "../storage/constants";
 
 /**
  * Output channel for viewing sidecar logs.
@@ -34,7 +36,6 @@ export const sidecarOutputChannel: vscode.OutputChannel =
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
-const SIDECAR_AUTH_TOKEN_SECRET_KEY = "CONFLUENT_SIDECAR_AUTH_SECRET";
 const MOMENTARY_PAUSE_MS = 500; // half a second.
 
 const logger = new Logger("sidecarManager");
@@ -43,6 +44,8 @@ const logger = new Logger("sidecarManager");
 // which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
 // we won't be in position to restart / rehandshake with the sidecar if needed.
 export class SidecarManager {
+  private static instance: SidecarManager | null = null;
+
   // Counters for logging purposes.
   private getHandleCallNumSource: number = 0;
   private handleIdSource: number = 0;
@@ -56,6 +59,21 @@ export class SidecarManager {
   private logTailer: Tail | null = null;
 
   private sidecarContacted: boolean = false;
+  private websocketManager: WebsocketManager | null = null;
+
+  static getInstance(): SidecarManager {
+    if (!SidecarManager.instance) {
+      logger.info("getInstance(): Creating new SidecarManager instance");
+      SidecarManager.instance = new SidecarManager();
+    } else {
+      logger.info("getInstance(): Returning existing SidecarManager instance");
+    }
+    return SidecarManager.instance;
+  }
+
+  private constructor() {
+    logger.info("SidecarManager instance created");
+  }
 
   /** Construct or return reference to already running sidecar process.
    * Code should _not_ retain the return result here for more than a single direct action, in that
@@ -94,6 +112,8 @@ export class SidecarManager {
     // (When starting the extension from scratch, we'll go through path two and then later on path one. Path three only needed
     //  if something goes wrong with managing the access token or someone )
 
+    const logger = new Logger("getHandlePromise");
+    logger.info("called");
     // TODO: We don't need to get the access token from secret store every time?
     let accessToken: string | undefined = await this.getAuthTokenFromSecretStore();
 
@@ -108,10 +128,19 @@ export class SidecarManager {
       const logPrefix = `getHandlePromise(${callnum} loop ${i})`;
 
       try {
-        if (await this.healthcheck(accessToken)) {
+        logger.info(
+          `this.websocketManager?.isConnected(): ${this.websocketManager?.isConnected()}`,
+        );
+        logger.info(`this.sidecarContacted: ${this.sidecarContacted}`);
+        if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
           // 1. The sidecar is running and healthy, in which case we're probably done.
           // (this is the only path that may resolve this promise successfully)
-          const handle = new SidecarHandle(accessToken, this.myPid, this.handleIdSource++);
+          const handle = new SidecarHandle(
+            accessToken,
+            this.myPid,
+            this.handleIdSource++,
+            this.websocketManager!,
+          );
 
           if (!this.sidecarContacted) {
             // Do the one-time-only things re/this sidecar process, whether or not
@@ -186,8 +215,11 @@ export class SidecarManager {
     // This is a non-fatal issue, but we want the user to know and have the option to restart the sidecar.
     // If sidecar gets restarted, then we won't complete successfully, and a new sidecar will be started up
     // outside of this function.
+
+    logger.info("Top of firstSidecarContactActions()");
     var version_result: SidecarVersionResponse | undefined = undefined;
     try {
+      logger.info("Trying to get sidecar version...");
       version_result = await handle.getVersionResourceApi().gatewayV1VersionGet();
       logger.info(`Sidecar version: ${version_result.version}`);
     } catch (e) {
@@ -246,11 +278,34 @@ export class SidecarManager {
       await this.getHandle();
     }
 
+    logger.info("Setting up websocket manager...");
+    await this.setupWebsocketManager(handle.authToken);
+    logger.info("Websocket manager set up, marking sidecarContacted=true.");
     this.sidecarContacted = true;
   }
 
+  private async setupWebsocketManager(authToken: string): Promise<void> {
+    if (!this.websocketManager) {
+      this.websocketManager = WebsocketManager.getInstance();
+      // Whenever the websocket connection goes down, we want to try to get a new sidecar handle.
+      this.websocketManager.registerStateChangeHandler(this.onWebsocketStateChange.bind(this));
+    }
+
+    // Connects websocket to the sidecar.
+    await this.websocketManager.connect(`localhost:${SIDECAR_PORT}`, authToken);
+  }
+
+  /** Called whenever websocket connection goes CONNECTED or DISCONNECTED. */
+  private onWebsocketStateChange(event: WebsocketStateEvent) {
+    if (event === WebsocketStateEvent.DISCONNECTED) {
+      // Try to get a new sidecar handle, which will start a new sidecar process
+      // and reconnect websocket.
+      this.getHandle();
+    }
+  }
+
   /**
-   * Make a healthcheck request to the sidecar. Returns true if the sidecar is healthy.
+   * Make a healthcheck HTTP request to the sidecar. Returns true if the sidecar is healthy.
    * Will find out if the sidecar is healthy, or if it's not running, or if it's running but rejects our auth token.
    **/
   private async healthcheck(accessToken: string): Promise<boolean> {
@@ -411,7 +466,7 @@ export class SidecarManager {
             }
           }
         }
-        await getStorageManager().setSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY, accessToken);
+        await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
         logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
 
         resolve(accessToken);
@@ -488,7 +543,9 @@ export class SidecarManager {
    * Get the auth token secret from the storage manager. Returns empty string if none found.
    **/
   async getAuthTokenFromSecretStore(): Promise<string> {
-    const existing_secret = await getStorageManager().getSecret(SIDECAR_AUTH_TOKEN_SECRET_KEY);
+    const existing_secret = await getStorageManager().getSecret(
+      SecretStorageKeys.SIDECAR_AUTH_TOKEN,
+    );
     if (existing_secret) {
       return existing_secret;
     }

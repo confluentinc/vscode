@@ -565,7 +565,7 @@ export async function testBuild() {
         exclude: [/node_modules/, /\.test.ts$/, /src\/clients/],
       }),
     ],
-    external: ["vscode", "assert", "winston", "mocha", "@playwright/test", "dotenv", "glob"],
+    external: ["vscode", "assert", "ws", "mocha", "@playwright/test", "dotenv", "glob"],
   };
   /** @type {import("rollup").OutputOptions} */
   const testOutput = {

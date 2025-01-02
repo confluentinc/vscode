@@ -1,5 +1,6 @@
 // toplevel exports for the sidecarManager module
 
+import { Logger } from "../logging";
 import { SidecarHandle } from "./sidecarHandle";
 import { SidecarManager } from "./sidecarManager";
 
@@ -28,15 +29,12 @@ export { sidecarOutputChannel } from "./sidecarManager";
   
 */
 
-// Singleton instance of the SidecarManager class.
-var _manager: SidecarManager | null = null;
-
+const logger = new Logger("sidecar.index");
 export async function getSidecar(): Promise<SidecarHandle> {
-  if (!_manager) {
-    _manager = new SidecarManager();
-  }
-
   // Defer to the manager to get a useful, configured handle and all configuration side-effects fired off
   // to a running sidecar process.
-  return await _manager.getHandle();
+
+  const manager: SidecarManager = SidecarManager.getInstance();
+  logger.info("Returning new handle from SidecarManager");
+  return await manager.getHandle();
 }
