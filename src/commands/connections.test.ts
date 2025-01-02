@@ -2,7 +2,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_DIRECT_ENVIRONMENT } from "../../tests/unit/testResources";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { DirectConnectionManager } from "../directConnectManager";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import * as connections from "./connections";
@@ -15,7 +15,7 @@ describe("commands/connections.ts", function () {
 
   before(async () => {
     // needed for the DirectConnectionManager to be initialized
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(function () {

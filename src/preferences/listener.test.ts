@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { ConfigurationChangeEvent, workspace } from "vscode";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import {
   ENABLE_DIRECT_CONNECTIONS,
@@ -21,7 +21,7 @@ describe("preferences/listener", function () {
   before(async () => {
     // ResourceViewProvider interactions require the extension context to be set (used during changes
     // in the direct connection preview setting)
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(function () {
