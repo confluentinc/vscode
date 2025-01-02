@@ -14,7 +14,7 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
-import { getExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import { ConnectionSpec } from "../clients/sidecar";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -970,7 +970,7 @@ describe("ResourceManager direct connection methods", function () {
 
   before(async () => {
     // extension needs to be activated before storage manager(s) can be used
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(async () => {

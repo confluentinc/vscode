@@ -5,7 +5,7 @@ import {
   TEST_BROKER_CONFIGS,
   TEST_CANCELLATION_TOKEN,
 } from "../../../tests/unit/testResources/docker";
-import { getExtensionContext } from "../../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import {
   ContainerCreateResponse,
   ContainerInspectResponse,
@@ -49,7 +49,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
   before(async () => {
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {

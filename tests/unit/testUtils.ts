@@ -10,7 +10,7 @@ const logger = new Logger("tests.testUtils");
  * Convenience function to get the extension.
  * @remarks This does not activate the extension, so the {@link vscode.ExtensionContext} will not be
  * available. Use {@link getAndActivateExtension} to activate the extension, or
- * {@link getExtensionContext} to get the context directly.
+ * {@link getTestExtensionContext} to get the context directly.
  * @param id The extension ID to get. Defaults to the Confluent extension.
  * @returns A {@link vscode.Extension} instance.
  */
@@ -44,7 +44,7 @@ export async function getAndActivateExtension(
  * Convenience function to get the extension context for testing.
  * @returns A {@link vscode.ExtensionContext} instance.
  */
-export async function getExtensionContext(
+export async function getTestExtensionContext(
   id: string = EXTENSION_ID,
 ): Promise<vscode.ExtensionContext> {
   const extension = await getAndActivateExtension(id);
@@ -56,6 +56,6 @@ export async function getExtensionContext(
 
 export async function getTestStorageManager(): Promise<StorageManager> {
   // the extension needs to be activated before we can use the StorageManager
-  await getExtensionContext();
+  await getTestExtensionContext();
   return StorageManager.getInstance();
 }

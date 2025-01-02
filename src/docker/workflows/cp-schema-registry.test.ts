@@ -6,7 +6,7 @@ import {
   TEST_CANCELLATION_TOKEN,
   TEST_KAFKA_CONTAINERS,
 } from "../../../tests/unit/testResources/docker";
-import { getExtensionContext } from "../../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import {
   ContainerCreateOperationRequest,
   ContainerCreateResponse,
@@ -63,7 +63,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   let updateLocalConnectionStub: sinon.SinonStub;
 
   before(async () => {
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {

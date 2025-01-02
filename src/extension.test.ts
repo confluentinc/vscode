@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { getAndActivateExtension, getExtensionContext } from "../tests/unit/testUtils";
+import { getAndActivateExtension, getTestExtensionContext } from "../tests/unit/testUtils";
 import { ConfluentCloudAuthProvider } from "./authn/ccloudProvider";
 import { ExtensionContextNotSetError } from "./errors";
 import { StorageManager } from "./storage";
@@ -47,7 +47,7 @@ describe("Base Extension Test", () => {
     });
 
     // activate the extension and setExtensionContext()
-    await getExtensionContext();
+    await getTestExtensionContext();
 
     extensionContextSingletons.forEach(({ callable, source }) => {
       assertDoesNotThrowExtensionContextNotSetError(callable, source);
@@ -73,7 +73,7 @@ describe("Extension manifest tests", () => {
   let context: vscode.ExtensionContext;
 
   before(async () => {
-    context = await getExtensionContext();
+    context = await getTestExtensionContext();
   });
 
   it("should show the correct version format", async () => {
@@ -132,7 +132,7 @@ describe("ExtensionContext subscription tests", () => {
   let context: vscode.ExtensionContext;
 
   before(async () => {
-    context = await getExtensionContext();
+    context = await getTestExtensionContext();
   });
 
   it("should have at least one subscription", async () => {
