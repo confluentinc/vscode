@@ -1,10 +1,7 @@
 import * as vscode from "vscode";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
-import { Logger } from "../../src/logging";
 import { StorageManager } from "../../src/storage";
-
-const logger = new Logger("tests.testUtils");
 
 /**
  * Convenience function to get the extension.
@@ -30,14 +27,8 @@ export async function getExtension(id: string = EXTENSION_ID): Promise<vscode.Ex
 export async function getAndActivateExtension(
   id: string = EXTENSION_ID,
 ): Promise<vscode.Extension<any>> {
-  logger.info(`Activating extension with ID "${id}"`);
   const extension = await getExtension(id);
-  if (!extension.isActive) {
-    logger.info(`Activating extension: ${id}`);
-    await extension.activate();
-  } else {
-    logger.info(`Extension already activated: ${id}`);
-  }
+  await extension.activate();
   return extension;
 }
 
@@ -51,9 +42,7 @@ export async function getTestExtensionContext(
   const extension = await getAndActivateExtension(id);
   // this only works because we explicitly return the ExtensionContext in our activate() function
   const context = extension.exports;
-  logger.info(`Setting the global extension context with context ${context}`);
   setExtensionContext(context);
-  logger.info("Returning from getExtensionContext()");
   return context;
 }
 

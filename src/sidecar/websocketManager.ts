@@ -33,8 +33,6 @@ export class WebsocketManager implements Disposable {
       // The reply is inclusive of the current workspace, but we want peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
     });
-
-    this.messageRouter.subscribe(MessageType.PROTOCOL_ERROR, this.onProtocolError.bind(this));
   }
 
   /** Are we currently connected to sidecar via websocket? */
@@ -156,10 +154,6 @@ export class WebsocketManager implements Disposable {
         },
       });
     });
-  }
-
-  private async onProtocolError(message: Message<MessageType.PROTOCOL_ERROR>): Promise<void> {
-    logger.error(`Sidecar reported a websocket protocol error: ${message.body.error}.`);
   }
 
   /**

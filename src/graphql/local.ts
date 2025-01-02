@@ -10,7 +10,6 @@ import { createLocalConnection, getLocalConnection } from "../sidecar/connection
 const logger = new Logger("graphql.local");
 
 export async function getLocalResources(): Promise<LocalEnvironment[]> {
-  logger.info("getLocalResources: calling getSidecar()");
   const sidecar = await getSidecar();
 
   let envs: LocalEnvironment[] = [];

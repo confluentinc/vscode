@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
 import { getExtensionContext } from "../context/extension";
 import { ExtensionContextNotSetError } from "../errors";
-import { Logger } from "../logging";
-
-const logger = new Logger("StorageManager");
 
 export class StorageManager {
   private globalState: vscode.Memento;
@@ -12,7 +9,6 @@ export class StorageManager {
 
   private static instance: StorageManager | null = null;
   private constructor() {
-    logger.info("Creating StorageManager instance, getting extension context ...");
     const context = getExtensionContext();
     if (!context) {
       throw new ExtensionContextNotSetError("StorageManager");
