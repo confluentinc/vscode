@@ -34,8 +34,20 @@ describe("WebsocketManager tests", () => {
   });
 
   it("Sending when websocket is not open should throw an error", async () => {
-    // Arrange
     const websocketManager = WebsocketManager.getInstance();
+    let originalWebsocket: any;
+
+    before(() => {
+      // ensure websocket smells not connected at this point
+      originalWebsocket = websocketManager["websocket"];
+      websocketManager["websocket"] = null;
+    });
+
+    after(() => {
+      // restore the websocket
+      websocketManager["websocket"] = originalWebsocket;
+    });
+
     const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
       headers: {
         message_type: MessageType.WORKSPACE_COUNT_CHANGED,
@@ -49,13 +61,9 @@ describe("WebsocketManager tests", () => {
 
     // Act
     // Assert raises
-    try {
-      websocketManager.send(message);
-      assert.fail("Expected an error to be thrown");
-    } catch (e) {
-      // should be type WebsocketClosedError
-      assert.strictEqual((e as Error).name, "WebsocketClosedError");
-    }
+    assert.rejects(async () => {
+      await websocketManager.send(message);
+    }, "Websocket not assigned or provided, cannot send message");
   });
 });
 
