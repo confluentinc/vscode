@@ -20,6 +20,8 @@ class DirectConnectFormViewModel extends ViewModel {
   schemaAuthType = this.signal<SupportedAuthTypes>("None");
   schemaUri = this.signal("");
   kafkaBootstrapServers = this.signal("");
+  kafkaSslEnabled = this.derive(() => this.platformType() === "Confluent Cloud");
+  schemaSslEnabled = this.derive(() => this.platformType() === "Confluent Cloud");
 
   /** Form State */
   message = this.signal("");
@@ -61,6 +63,8 @@ class DirectConnectFormViewModel extends ViewModel {
         if (input.value === "Confluent Cloud") {
           this.kafkaAuthType("API");
           this.schemaAuthType("API");
+          this.kafkaSslEnabled(true);
+          this.schemaSslEnabled(true);
         } else {
           this.kafkaAuthType("None");
           this.schemaAuthType("None");
@@ -68,6 +72,9 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
+        break;
+      case "kafka_ssl":
+        this.kafkaSslEnabled(input.checked);
         break;
       case "schema_auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
@@ -77,6 +84,9 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "bootstrap_servers":
         this.kafkaBootstrapServers(input.value);
+        break;
+      case "schema_ssl":
+        this.schemaSslEnabled(input.checked);
         break;
       default:
         console.warn(`Unhandled key: ${input.name}`);
