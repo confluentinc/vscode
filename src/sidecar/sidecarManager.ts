@@ -450,7 +450,9 @@ export class SidecarManager {
     try {
       this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
     } catch (e) {
-      sidecarOutputChannel.appendLine(`Failed to tail sidecar log file: ${e}`);
+      sidecarOutputChannel.appendLine(
+        `Failed to tail sidecar log file "${SIDECAR_LOGFILE_PATH}": ${e}`,
+      );
       return;
     }
 
