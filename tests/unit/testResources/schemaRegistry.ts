@@ -28,7 +28,7 @@ export const TEST_DIRECT_SCHEMA_REGISTRY: DirectSchemaRegistry = DirectSchemaReg
 });
 
 export const TEST_LOCAL_SCHEMA_REGISTRY: LocalSchemaRegistry = LocalSchemaRegistry.create({
-  id: "local-abc123",
+  id: "local-schema-registry-abc123",
   uri: "http://localhost:8081",
   environmentId: TEST_LOCAL_ENVIRONMENT.id,
 });

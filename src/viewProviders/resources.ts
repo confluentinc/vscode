@@ -146,7 +146,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
-        return element.children;
+        return element.getChildren();
       } else if (element instanceof CCloudEnvironment) {
         return await getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
@@ -177,7 +177,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       }
 
       if (ccloudContainer) {
-        const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).children;
+        const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).getChildren();
         ccloudEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
       }
       // TODO: we aren't tracking LocalEnvironments yet, so skip that here
@@ -331,7 +331,7 @@ export async function loadCCloudResources(
     // removes the "Add Connection" action on hover and enables the "Change Organization" action
     cloudContainerItem.contextValue = "resources-ccloud-container-connected";
     cloudContainerItem.description = currentOrg?.name ?? "";
-    cloudContainerItem.children = ccloudEnvironments;
+    cloudContainerItem.setChildren(ccloudEnvironments);
     // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
     cloudContainerItem.id = `ccloud-connected-${EXTENSION_VERSION}`;
   } else {
@@ -402,7 +402,7 @@ export async function loadLocalResources(): Promise<
     // TODO: this should be handled in the loader once it (and ResourceManager) start handling
     // local resources
     getResourceManager().setLocalKafkaClusters(localKafkaClusters);
-    localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
+    localContainerItem.setChildren([...localKafkaClusters, ...localSchemaRegistries]);
   }
 
   return localContainerItem;

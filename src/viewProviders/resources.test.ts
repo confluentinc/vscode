@@ -120,7 +120,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.equal(result.id, `ccloud-connected-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_CCLOUD_ORGANIZATION.name);
-    assert.deepStrictEqual(result.children, [TEST_CCLOUD_ENVIRONMENT]);
+    assert.deepStrictEqual(result.getChildren(), [TEST_CCLOUD_ENVIRONMENT]);
   });
 
   it("loadCCloudResources() should return a CCloud placeholder item when not connected", async () => {
@@ -133,7 +133,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.equal(result.id, `ccloud-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, TreeItemCollapsibleState.None);
     assert.equal(result.description, "(No connection)");
-    assert.deepStrictEqual(result.children, []);
+    assert.deepStrictEqual(result.getChildren(), []);
   });
 
   it("loadLocalResources() should load local resources under the Local container tree item when clusters are discoverable", async () => {
@@ -152,7 +152,10 @@ describe("ResourceViewProvider loading functions", () => {
     assert.equal(result.id, `local-connected-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
-    assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY]);
+    assert.deepStrictEqual(result.getChildren(), [
+      TEST_LOCAL_KAFKA_CLUSTER,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+    ]);
   });
 
   it("loadLocalResources() should return a Local placeholder when no clusters are discoverable", async () => {
@@ -166,7 +169,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.equal(result.id, `local-${EXTENSION_VERSION}`);
     assert.equal(result.collapsibleState, TreeItemCollapsibleState.None);
     assert.equal(result.description, "(Not running)");
-    assert.deepStrictEqual(result.children, []);
+    assert.deepStrictEqual(result.getChildren(), []);
   });
 
   it("loadDirectResources() should return an empty array when no direct connections exist", async () => {

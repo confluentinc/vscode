@@ -10,6 +10,7 @@ export const TEST_CCLOUD_SCHEMA = Schema.create({
   environmentId: TEST_CCLOUD_SCHEMA_REGISTRY.environmentId,
   connectionId: TEST_CCLOUD_SCHEMA_REGISTRY.connectionId,
   connectionType: TEST_CCLOUD_SCHEMA_REGISTRY.connectionType,
+  isHighestVersion: true,
 });
 
 export const TEST_LOCAL_SCHEMA = Schema.create({
@@ -20,4 +21,5 @@ export const TEST_LOCAL_SCHEMA = Schema.create({
   schemaRegistryId: TEST_LOCAL_SCHEMA_REGISTRY.id,
   connectionId: TEST_LOCAL_SCHEMA_REGISTRY.connectionId,
   connectionType: TEST_LOCAL_SCHEMA_REGISTRY.connectionType,
+  isHighestVersion: true,
 });
