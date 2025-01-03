@@ -105,7 +105,7 @@ export class SidecarHandle {
   public wsSend<T extends MessageType>(message: Message<T>): void {
     if (message.headers.originator !== this.myPid) {
       throw new Error(
-        `Expected message originator to be '${this.myPid}', got ${message.headers.originator}`,
+        `Expected message originator to be '${this.myPid}', got '${message.headers.originator}'`,
       );
     }
 

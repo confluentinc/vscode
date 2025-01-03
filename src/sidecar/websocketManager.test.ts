@@ -6,7 +6,7 @@ import { WebsocketManager } from "./websocketManager";
 
 // tests over WebsocketManager
 
-describe("WebsocketManager tests", () => {
+describe("WebsocketManager peerWorkspaceCount tests", () => {
   it("peerWorkspaceCount should be updated when WORKSPACE_COUNT_CHANGED message is received", async () => {
     // Arrange
     const messageRouter = MessageRouter.getInstance();
@@ -32,22 +32,24 @@ describe("WebsocketManager tests", () => {
       websocketManager.getPeerWorkspaceCount(),
     );
   });
+});
+
+describe("WebsocketManager disconnected tests", () => {
+  const websocketManager = WebsocketManager.getInstance();
+  let originalWebsocket: any;
+
+  before(() => {
+    // ensure websocket smells not connected at this point
+    originalWebsocket = websocketManager["websocket"];
+    websocketManager["websocket"] = null;
+  });
+
+  after(() => {
+    // restore the websocket
+    websocketManager["websocket"] = originalWebsocket;
+  });
 
   it("Sending when websocket is not open should throw an error", async () => {
-    const websocketManager = WebsocketManager.getInstance();
-    let originalWebsocket: any;
-
-    before(() => {
-      // ensure websocket smells not connected at this point
-      originalWebsocket = websocketManager["websocket"];
-      websocketManager["websocket"] = null;
-    });
-
-    after(() => {
-      // restore the websocket
-      websocketManager["websocket"] = originalWebsocket;
-    });
-
     const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
       headers: {
         message_type: MessageType.WORKSPACE_COUNT_CHANGED,
@@ -61,9 +63,12 @@ describe("WebsocketManager tests", () => {
 
     // Act
     // Assert raises
-    assert.rejects(async () => {
-      await websocketManager.send(message);
-    }, "Websocket not assigned or provided, cannot send message");
+    assert.throws(
+      () => {
+        websocketManager.send(message);
+      },
+      { message: "Websocket closed" },
+    );
   });
 });
 
