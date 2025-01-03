@@ -99,7 +99,7 @@ export function getConnectionSpecFromFormData(formData: any): CustomConnectionSp
     spec.kafka_cluster = {
       bootstrap_servers: formData["bootstrap_servers"],
       ssl: {
-        // formData will not have the SSL toggle if it's disabled, so we check that CCloud always enables SSL
+        // formData will not have the SSL toggle if the input disabled, so we check that CCloud always enables SSL
         enabled: formData["kafka_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
       },
     };
@@ -120,7 +120,7 @@ export function getConnectionSpecFromFormData(formData: any): CustomConnectionSp
     spec.schema_registry = {
       uri: formData["uri"],
       ssl: {
-        // formData will not have the SSL toggle if it's disabled, so we check that CCloud always enables SSL
+        // formData will not have the SSL toggle if the input is disabled, so we check that CCloud always enables SSL
         enabled: formData["schema_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
       },
     };
