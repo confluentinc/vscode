@@ -235,18 +235,19 @@ async function produceMessageFromFile(topic: KafkaTopic) {
         )
         .then((selection) => {
           if (selection) {
-            // open the message viewer to show the last ~15sec of messages for the topic
-            // with the message key used to search, and partition filtered if available
+            // open the message viewer to show a ~1sec window around the produced message
+            const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
+            // ...with the message key used to search, and partition filtered if available
             const messageViewerConfig = MessageViewerConfig.create({
               // don't change the consume query params, just filter to show this last message
-              timestampFilter: [Date.now() - 15_000, Date.now()],
+              timestampFilter: [msgTime, msgTime + 500],
               partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
               textFilter: String(message.key),
             });
             vscode.commands.executeCommand(
               "confluent.topic.consume",
               topic,
-              true,
+              true, // duplicate MV to show updated filters
               messageViewerConfig,
             );
           }
