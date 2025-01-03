@@ -1,5 +1,6 @@
 import assert from "assert";
 import "mocha";
+import { getSidecar } from ".";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MessageRouter } from "../ws/messageRouter";
 import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
@@ -95,6 +96,33 @@ describe("WebsocketManager connected tests", () => {
 
     const websocketManager = WebsocketManager.getInstance();
     websocketManager.send(message);
+  });
+});
+
+describe("WebsocketManager dispose tests", () => {
+  before(async () => {
+    // Will ensure that at onset of these tests, the websocket is connected
+    await getTestExtensionContext();
+  });
+
+  it("WebsocketManager.dispose() should close websocket", async () => {
+    const websocketManager = WebsocketManager.getInstance();
+    assert.equal(true, websocketManager.isConnected());
+    websocketManager.dispose();
+    assert.equal(false, websocketManager.isConnected());
+    assert.equal(null, websocketManager["websocket"]);
+  });
+
+  after(async () => {
+    // getting sidecar handle should kick off websocket reconnection
+    await getSidecar();
+
+    const websocketManager = WebsocketManager.getInstance();
+    assert.equal(
+      true,
+      websocketManager.isConnected(),
+      "Websocket should be connected after reconnection",
+    );
   });
 });
 

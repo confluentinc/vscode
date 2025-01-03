@@ -121,6 +121,12 @@ export class SidecarManager {
             await this.firstSidecarContactActions(handle);
           }
 
+          // websocket connection may need connecting or reconnecting
+          // independent of first sidecar contact.
+          if (!this.websocketManager?.isConnected()) {
+            await this.setupWebsocketManager(accessToken);
+          }
+
           // This client is good to go. Resolve the promise with it.
           this.pendingHandlePromise = null;
 
@@ -247,8 +253,6 @@ export class SidecarManager {
       logger.info("Restarting sidecar after shutting down old version...");
       await this.getHandle();
     }
-
-    await this.setupWebsocketManager(handle.authToken);
     this.sidecarContacted = true;
   }
 

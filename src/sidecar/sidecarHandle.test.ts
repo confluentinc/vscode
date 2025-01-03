@@ -149,17 +149,11 @@ describe("sidecarHandle websocket tests", () => {
 
   describe("wsSend() when disconnected tests", () => {
     const websocketManager = WebsocketManager.getInstance();
-    let originalWebsocket: any;
 
-    before(() => {
-      // ensure websocket smells not connected at this point
-      originalWebsocket = websocketManager["websocket"];
-      websocketManager["websocket"] = null;
-    });
-
-    after(() => {
-      // restore the websocket
-      websocketManager["websocket"] = originalWebsocket;
+    after(async () => {
+      // restore the websocket as side-effect of getting sidecar handle
+      await sidecar.getSidecar();
+      assert.equal(true, websocketManager.isConnected());
     });
 
     it("wsSend() should raise exception when disconnected", async () => {
@@ -171,6 +165,10 @@ describe("sidecarHandle websocket tests", () => {
       };
 
       const handle = await sidecar.getSidecar();
+
+      // Disconnect the websocket after having gotten the sidecar handle
+      websocketManager.dispose();
+      assert.equal(false, websocketManager.isConnected());
 
       // Act
       // Assert raises
