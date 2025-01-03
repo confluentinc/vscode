@@ -1,18 +1,25 @@
-import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
 import * as fs from "fs";
-import { Logger } from "../logging";
+import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import {
+  ProduceRecordRequest,
+  ProduceRequest,
+  ProduceRequestData,
+  ProduceRequestHeader,
+  ResponseError,
+  type UpdateKafkaTopicConfigBatchRequest,
+} from "../clients/kafkaRest";
+import { logResponseError } from "../errors";
+import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { KafkaTopic } from "../models/topic";
+import { getSidecar } from "../sidecar";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
-import { KafkaTopic } from "../models/topic";
-import topicFormTemplate from "../webview/topic-config-form.html";
-import { getSidecar } from "../sidecar";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import { post } from "../webview/topic-config-form";
-import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
-import { logResponseError } from "../errors";
+import topicFormTemplate from "../webview/topic-config-form.html";
 
 const logger = new Logger("topics");
 
@@ -192,32 +199,47 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     }
 
     const sidecar = await getSidecar();
-    const clusterId = topic.clusterId;
-    const connectionId = topic.connectionId;
-    const topicName = topic.name;
+    const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
 
-    const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
+    // convert headers to the correct format, ensuring the value is base64-encoded
+    const headers: ProduceRequestHeader[] = message.headers.map(
+      (header: any): ProduceRequestHeader => ({
+        name: header.key ? header.key : header.name,
+        value: Buffer.from(header.value).toString("base64"),
+      }),
+    );
 
-    const msgKeyAndVal = {
-      key: { data: message.key },
-      value: { data: message.value },
+    // TEMPORARY: remove this warning once the sidecar supports producing records with headers
+    if (headers.length > 0) {
+      const yesButton = "Produce without headers";
+      const confirmation = await vscode.window.showWarningMessage(
+        `Producing messages with headers is not yet supported. Do you want to produce this message anyway?`,
+        { modal: true },
+        yesButton,
+        // "Cancel" is added by default
+      );
+      if (confirmation !== yesButton) {
+        return;
+      }
+    }
+
+    // TODO: add schema information here once we have it
+    const key: ProduceRequestData = { data: message.key };
+    const value: ProduceRequestData = { data: message.value };
+
+    const produceRequest: ProduceRequest = {
+      headers,
+      key,
+      value,
+    };
+    const request: ProduceRecordRequest = {
+      topic_name: topic.name,
+      cluster_id: topic.clusterId,
+      ProduceRequest: produceRequest,
     };
 
     try {
-      await recordsApi.produceRecord({
-        topic_name: topicName,
-        cluster_id: clusterId,
-        ProduceRequest: {
-          headers: message.headers.map((header: any) => ({
-            name: header.key ? header.key : header.name,
-            value: header.value,
-          })),
-          key: msgKeyAndVal.key,
-          value: msgKeyAndVal.value,
-        },
-      });
-
-      vscode.window.showInformationMessage(`Success: Produced message to topic ${topic.name}.`);
+      await recordsApi.produceRecord(request);
     } catch (error: any) {
       logResponseError(error, "topic produce from file"); // not sending to Sentry by default
       if (error instanceof ResponseError) {
