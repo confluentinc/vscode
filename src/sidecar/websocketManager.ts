@@ -1,4 +1,4 @@
-import { Disposable, EventEmitter } from "vscode";
+import { Disposable, EventEmitter, window } from "vscode";
 import WebSocket from "ws";
 import { Logger } from "../logging";
 import { MessageRouter } from "../ws/messageRouter";
@@ -27,7 +27,7 @@ export class WebsocketManager implements Disposable {
     // Install handler for WORKSPACE_COUNT_CHANGED messages. Will get one when connected, and whenever
     // any other workspaces connect or disconnect.
     this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
-      logger.info(
+      logger.debug(
         `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
       );
       // The reply is inclusive of the current workspace, but we want peer count.
@@ -46,7 +46,7 @@ export class WebsocketManager implements Disposable {
   }
 
   /**
-   * Connect websocket to the sidecar, then send an ACCESS_REQUEST message containing the access_token.
+   * Connect websocket to the sidecar, then send a WORKSPACE_HELLO message with the workspace process id.
    * Resolves the promise upon successful authorization.
    * @param access_token
    * @returns
@@ -176,8 +176,10 @@ export class WebsocketManager implements Disposable {
     if (websocket && websocket.readyState === WebSocket.OPEN) {
       const payload = JSON.stringify(message);
       if (payload.length > 64 * 1024) {
-        logger.error(`Cannot send websocket message, too large: ${payload.length} bytes`);
-        throw new Error("Payload too large");
+        const errorMessage = `Cannot send websocket message, too large: ${payload.length} bytes`;
+        logger.error(errorMessage);
+        window.showErrorMessage(errorMessage);
+        throw new Error(errorMessage);
       }
       logger.debug(`Sending ${payload.length} byte ${message.headers.message_type} message`);
       websocket.send(payload);

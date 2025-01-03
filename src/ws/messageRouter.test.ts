@@ -59,8 +59,6 @@ describe("MessageRouter tests", () => {
     // deliver message, should call both callbacks
     await messageRouter.deliver(simpleMessage);
 
-    console.log("after deliver");
-
     assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
     assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
 

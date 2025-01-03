@@ -8,14 +8,29 @@ import { randomUUID } from "crypto";
  * directed at a single workspace or to sidecar or broadcast to all workspaces.
  */
 export enum MessageType {
-  /** When workspace makes websocket connection, it must then pass its process id over in a HELLO message. */
+  /**
+   * When workspace makes websocket connection, it must then pass its process id over in a HELLO message.
+   *
+   * Workspace -> Sidecar message.
+   */
   WORKSPACE_HELLO = "WORKSPACE_HELLO",
 
-  /**  When a new workspace connects and is granted access, or when a workspace disconnects,
-    sidecar will send this message to all workspaces. */
+  /**
+   * When a new workspace connects and is granted access, or when a workspace disconnects,
+   * sidecar will send this message to all workspaces.
+   *
+   * Sidecar -> All Workspaces message.
+   */
   WORKSPACE_COUNT_CHANGED = "WORKSPACE_COUNT_CHANGED",
 
-  /** Sidecar didn't like something we said or did and is telling us about it right before it hangs up. */
+  /**
+   * Sidecar didn't like something we said or did and is telling us about it right before it hangs up.
+   * May be in response to a particular message, in which case it will have a response_to_id field,
+   * or may be independent (such as if extension were to not send a HELLO message at all at connection
+   * startup, etc.).
+   *
+   * Sidecar -> Workspace message.
+   */
   PROTOCOL_ERROR = "PROTOCOL_ERROR",
 }
 
@@ -36,7 +51,7 @@ export interface ReplyMessageHeaders extends MessageHeaders {
   response_to_id: string;
 }
 
-/** Construct and return either a MessageHeaders or ReplyMessageHeaders given the message type, audience, and possible response_to_id value. */
+/** Construct and return either a MessageHeaders or ReplyMessageHeaders given the message type and possible response_to_id value. */
 export function newMessageHeaders<T extends MessageType>(
   message_type: T,
   response_to_id?: string,
