@@ -1,13 +1,13 @@
 import assert from "assert";
 import { EventEmitter } from "node:events";
-import { MessageRouter, populateEmittersMap } from "./messageRouter";
+import { MessageRouter, createMessageRouterEventEmitter } from "./messageRouter";
 import { Message, MessageType, WorkspacesChangedBody } from "./messageTypes";
 
 // tests over MessageRouter
 
 describe("MessageRouter tests", () => {
   const messageRouter = MessageRouter.getInstance();
-  let stashedEmitters: Map<MessageType, EventEmitter>;
+  let stashedEmitter: EventEmitter;
 
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
@@ -22,19 +22,15 @@ describe("MessageRouter tests", () => {
 
   beforeEach(() => {
     // Stash the current emitters
-    stashedEmitters = messageRouter["emitters"];
+    stashedEmitter = messageRouter["emitter"];
 
-    // build new empty emitters
-    const newEmitters = new Map<MessageType, EventEmitter>();
-    populateEmittersMap(newEmitters);
-
-    // and inject them.
-    messageRouter["emitters"] = newEmitters;
+    // build new empty emitter and inject it
+    messageRouter["emitter"] = createMessageRouterEventEmitter();
   });
 
   afterEach(() => {
-    // Restore the stashed callbacks
-    messageRouter["emitters"] = stashedEmitters;
+    // Restore the stashed event emitter.
+    messageRouter["emitter"] = stashedEmitter;
   });
 
   // test subscribe, deliver lifecycle.

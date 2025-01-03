@@ -24,11 +24,10 @@ export class MessageRouter {
    * Map of message type -> EventEmitter with callbacks registered via either
    * subscribe() or once().
    */
-  private emitters: Map<MessageType, EventEmitter> = new Map();
+  private emitter: EventEmitter;
 
   private constructor() {
-    this.emitters = new Map();
-    populateEmittersMap(this.emitters);
+    this.emitter = createMessageRouterEventEmitter();
   }
 
   /**
@@ -36,12 +35,7 @@ export class MessageRouter {
    * will be called and awaited every time a message of the given type is delivered.
    **/
   subscribe<T extends MessageType>(messageType: T, callback: MessageCallback<T>): void {
-    const emitter = this.emitters.get(messageType);
-    if (emitter === undefined) {
-      throw new Error(`MessageRouter::subscribe(): unknown message type ${messageType}`);
-    }
-
-    emitter.on("message", callback);
+    this.emitter.on(messageType, callback);
   }
 
   /**
@@ -49,11 +43,7 @@ export class MessageRouter {
    * delivery of the next message of that type.
    **/
   once<T extends MessageType>(messageType: T, callback: MessageCallback<T>): void {
-    const emitter = this.emitters.get(messageType);
-    if (emitter === undefined) {
-      throw new Error(`MessageRouter::once(): unknown message type ${messageType}`);
-    }
-    emitter.once("message", callback);
+    this.emitter.once(messageType, callback);
   }
 
   /**
@@ -61,25 +51,20 @@ export class MessageRouter {
    * @param message The message to deliver.
    **/
   async deliver<T extends MessageType>(message: Message<T>): Promise<void> {
-    logger.info(`Delivering message of type ${message.headers.message_type}`);
+    const messageType = message.headers.message_type;
+    logger.info(`Delivering message of type ${messageType}`);
 
-    const emitter = this.emitters.get(message.headers.message_type);
-    if (emitter === undefined) {
-      logger.warn(`Unknown message type ${message.headers.message_type}`);
-      return;
-    }
-
-    const initialCallbackCount = emitter.listenerCount("message");
+    const initialCallbackCount = this.emitter.listenerCount(messageType);
     logger.debug(
       `Delivering message of type ${message.headers.message_type} to ${initialCallbackCount} callback(s).`,
     );
 
-    emitter.emit("message", message);
+    this.emitter.emit(messageType, message);
 
     logger.debug(
       `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
     );
-    const remainingCallbackCount = emitter.listenerCount("message");
+    const remainingCallbackCount = this.emitter.listenerCount(messageType);
     if (remainingCallbackCount !== initialCallbackCount) {
       logger.debug(
         `Removed ${initialCallbackCount - remainingCallbackCount} one-time callback(s) for message type ${message.headers.message_type}`,
@@ -89,19 +74,18 @@ export class MessageRouter {
 }
 
 /**
- * Construct EventEmitters for each message type
+ * Construct the EventEmitter used by the MessageRouter, handling async message handlers.
  *
  * (Exported so that test suite can use also)
  * @param emitters
  */
-export function populateEmittersMap(emitters: Map<MessageType, EventEmitter>): void {
-  for (const messageType in MessageType) {
-    // Set up a new EventEmitter for each message type, with captureRejections enabled
-    // to log any errors thrown by the async message handlers.
-    const perTypeEmitter = new EventEmitter({ captureRejections: true });
-    perTypeEmitter.on("error", (error: any) => {
-      logger.error(`Error delivering message to message handler for ${messageType}: ${error}`);
-    });
-    emitters.set(messageType as MessageType, perTypeEmitter);
-  }
+export function createMessageRouterEventEmitter(): EventEmitter {
+  // Set up a new EventEmitter for all message types, with captureRejections enabled
+  // to log any errors thrown by the async message handlers.
+  const emitter = new EventEmitter({ captureRejections: true });
+  emitter.on("error", (error: any) => {
+    logger.error(`Error delivering message to message handler: ${error}`);
+  });
+
+  return emitter;
 }
