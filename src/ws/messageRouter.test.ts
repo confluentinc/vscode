@@ -83,7 +83,7 @@ describe("MessageRouter tests", () => {
 
     // subscribe both callbacks, but one is 'once' and should be removed after single message delivery.
     messageRouter.once(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
-    const tokenTwo = messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
+    messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
 
     // deliver, should call both callbacks
     await messageRouter.deliver(simpleMessage);
