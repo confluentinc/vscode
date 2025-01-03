@@ -58,6 +58,9 @@ class DirectConnectFormViewModel extends ViewModel {
     // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
     return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
   });
+  kafkaSslEnabled = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+  });
 
   /** Schema Registry */
   schemaUri = this.derive(() => {
@@ -80,6 +83,9 @@ class DirectConnectFormViewModel extends ViewModel {
   schemaSecret = this.derive(() => {
     // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
     return this.schemaCreds() ? "fakeplaceholdersecrethere" : "";
+  });
+  schemaSslEnabled = this.derive(() => {
+    return this.spec()?.schema_registry?.ssl?.enabled || this.platformType() === "Confluent Cloud";
   });
 
   /** Form State */
@@ -128,6 +134,8 @@ class DirectConnectFormViewModel extends ViewModel {
         if (input.value === "Confluent Cloud") {
           this.kafkaAuthType("API");
           this.schemaAuthType("API");
+          this.kafkaSslEnabled(true);
+          this.schemaSslEnabled(true);
         }
         break;
       // case "other-platform":
@@ -142,6 +150,9 @@ class DirectConnectFormViewModel extends ViewModel {
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         this.clearKafkaCreds();
+        break;
+      case "kafka_ssl":
+        this.kafkaSslEnabled(input.checked);
         break;
       case "schema_auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
@@ -161,6 +172,9 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "schema_api_key":
         this.schemaApiKey(input.value);
+        break;
+      case "schema_ssl":
+        this.schemaSslEnabled(input.checked);
         break;
       default:
         console.warn(`Unhandled input update: ${input.name}`);
