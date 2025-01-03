@@ -31,6 +31,14 @@ export { sidecarOutputChannel } from "./sidecarManager";
 // Singleton instance of the SidecarManager class.
 var _manager: SidecarManager | null = null;
 
+export function getSidecarManager(): SidecarManager {
+  if (!_manager) {
+    _manager = new SidecarManager();
+  }
+
+  return _manager;
+}
+
 export async function getSidecar(): Promise<SidecarHandle> {
   if (!_manager) {
     _manager = new SidecarManager();
@@ -38,5 +46,5 @@ export async function getSidecar(): Promise<SidecarHandle> {
 
   // Defer to the manager to get a useful, configured handle and all configuration side-effects fired off
   // to a running sidecar process.
-  return await _manager.getHandle();
+  return await getSidecarManager().getHandle();
 }
