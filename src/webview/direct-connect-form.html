@@ -106,6 +106,18 @@
               comma-separated list for more than one server)</span
             >
           </div>
+          <div class="toggle-container">
+            <label class="label" for="kafka_ssl">SSL enabled?</label>
+            <input
+              type="checkbox"
+              id="kafka_ssl"
+              name="kafka_ssl"
+              title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the cluster?'"
+              data-attr-checked="this.kafkaSslEnabled() ? true : false"
+              data-on-change="this.updateValue(event)"
+              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+            />
+          </div>
           <div class="radio-container">
             <legend class="label">Authentication Type</legend>
             <div>
@@ -218,6 +230,18 @@
               />
             </div>
             <span class="description">The URL of the Schema Registry to use for serialization</span>
+          </div>
+          <div class="toggle-container">
+            <label class="label" for="schema_ssl">SSL enabled?</label>
+            <input
+              type="checkbox"
+              id="schema_ssl"
+              name="schema_ssl"
+              title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the registry?'"
+              data-attr-checked="this.schemaSslEnabled() ? true : false"
+              data-on-change="this.updateValue(event)"
+              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+            />
           </div>
           <div class="radio-container">
             <legend class="label">Authentication Type</legend>
@@ -386,6 +410,14 @@
       }
       .input-container > * > * {
         width: 100%;
+      }
+      .toggle-container {
+        display: inline-flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .toggle-container > .label {
+        margin-bottom: 0;
       }
       .radio-container {
         display: flex;
