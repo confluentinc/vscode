@@ -158,7 +158,7 @@ export class DirectConnectionManager {
   }
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
-    // at this point incoming spec has placeholder passwords... look up the associated ConnectionSpec
+    // at this point incoming spec has placeholder secrets... look up the associated ConnectionSpec
     const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
       incomingSpec.id,
     );

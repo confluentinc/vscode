@@ -115,7 +115,6 @@ export function getConnectionSpecFromFormData(
     type: ConnectionType.Direct,
     formConnectionType: formData["platform"],
   };
-  console.log("before adding creds: ", spec);
 
   if (formData["bootstrap_servers"]) {
     spec.kafka_cluster = {
