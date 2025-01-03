@@ -126,16 +126,16 @@ type MessageHeaderMap = {
 export function validateMessageBody(messageType: MessageType, body: unknown): void {
   if (messageType === MessageType.WORKSPACE_COUNT_CHANGED) {
     if (
-      typeof body !== "object" ||
       !body ||
+      typeof body !== "object" ||
       typeof (body as WorkspacesChangedBody).current_workspace_count !== "number"
     ) {
       throw new Error(`Invalid body for message type ${MessageType.WORKSPACE_COUNT_CHANGED}`);
     }
   } else if (messageType === MessageType.PROTOCOL_ERROR) {
     if (
-      typeof body !== "object" ||
       !body ||
+      typeof body !== "object" ||
       typeof (body as ProtocolErrorBody).error !== "string"
     ) {
       throw new Error(`Invalid body for message type ${MessageType.PROTOCOL_ERROR}`);
