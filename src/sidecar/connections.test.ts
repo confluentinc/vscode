@@ -6,7 +6,7 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
 } from "../../tests/unit/testResources/connection";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import {
   ConnectedState,
   Connection,
@@ -101,7 +101,7 @@ describe("sidecar/connections.ts", () => {
 
   it("clearCurrentCCloudResources() should clear resources and fire events", async () => {
     // just needed for this test, otherwise we'd put this in the before() block
-    await getExtensionContext();
+    await getTestExtensionContext();
 
     const resourceManager = getResourceManager();
     const deleteCCloudResourcesStub = sandbox.stub(resourceManager, "deleteCCloudResources");

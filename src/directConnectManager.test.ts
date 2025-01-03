@@ -5,7 +5,7 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
 } from "../tests/unit/testResources/connection";
-import { getExtensionContext } from "../tests/unit/testUtils";
+import { getTestExtensionContext } from "../tests/unit/testUtils";
 import {
   ConnectionsList,
   ConnectionSpec,
@@ -50,7 +50,7 @@ describe("DirectConnectionManager behavior", () => {
 
   before(async () => {
     // DirectConnectionManager requires the extension context to be set
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { getExtensionContext } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { RequestContext } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudAuthSessionInvalidated } from "../emitters";
@@ -31,7 +31,7 @@ describe("CCloudAuthStatusMiddleware behavior", () => {
   let ccloudAuthSessionInvalidatedStub: sinon.SinonStub;
 
   before(async () => {
-    await getExtensionContext();
+    await getTestExtensionContext();
   });
 
   beforeEach(() => {

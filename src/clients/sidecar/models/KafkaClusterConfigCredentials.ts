@@ -26,13 +26,20 @@ import {
   BasicCredentialsFromJSONTyped,
   BasicCredentialsToJSON,
 } from "./BasicCredentials";
+import type { OAuthCredentials } from "./OAuthCredentials";
+import {
+  instanceOfOAuthCredentials,
+  OAuthCredentialsFromJSON,
+  OAuthCredentialsFromJSONTyped,
+  OAuthCredentialsToJSON,
+} from "./OAuthCredentials";
 
 /**
  * @type KafkaClusterConfigCredentials
  * The credentials for the Kafka cluster, or null if no authentication is required
  * @export
  */
-export type KafkaClusterConfigCredentials = ApiKeyAndSecret | BasicCredentials;
+export type KafkaClusterConfigCredentials = ApiKeyAndSecret | BasicCredentials | OAuthCredentials;
 
 export function KafkaClusterConfigCredentialsFromJSON(json: any): KafkaClusterConfigCredentials {
   return KafkaClusterConfigCredentialsFromJSONTyped(json, false);
@@ -50,6 +57,9 @@ export function KafkaClusterConfigCredentialsFromJSONTyped(
   }
   if (instanceOfBasicCredentials(json)) {
     return BasicCredentialsFromJSONTyped(json, true);
+  }
+  if (instanceOfOAuthCredentials(json)) {
+    return OAuthCredentialsFromJSONTyped(json, true);
   }
 
   return {} as any;
@@ -72,6 +82,9 @@ export function KafkaClusterConfigCredentialsToJSONTyped(
   }
   if (instanceOfBasicCredentials(value)) {
     return BasicCredentialsToJSON(value as BasicCredentials);
+  }
+  if (instanceOfOAuthCredentials(value)) {
+    return OAuthCredentialsToJSON(value as OAuthCredentials);
   }
 
   return {};
