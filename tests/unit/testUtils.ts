@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
+import { Logger } from "../../src/logging";
 import { StorageManager } from "../../src/storage";
+
+const logger = new Logger("tests.testUtils");
 
 /**
  * Convenience function to get the extension.
@@ -28,7 +31,12 @@ export async function getAndActivateExtension(
   id: string = EXTENSION_ID,
 ): Promise<vscode.Extension<any>> {
   const extension = await getExtension(id);
-  await extension.activate();
+  if (!extension.isActive) {
+    logger.info(`Activating extension: ${id}`);
+    await extension.activate();
+  } else {
+    logger.info(`Extension already activated: ${id}`);
+  }
   return extension;
 }
 
