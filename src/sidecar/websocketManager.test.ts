@@ -1,5 +1,4 @@
 import assert from "assert";
-import "mocha";
 import { getSidecar } from ".";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MessageRouter } from "../ws/messageRouter";
