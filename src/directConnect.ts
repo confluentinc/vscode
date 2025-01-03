@@ -16,12 +16,13 @@ type MessageResponse<MessageType extends string> = Awaited<
 
 const directConnectWebviewCache = new WebviewPanelCache();
 
-export function openDirectConnectionForm(): void {
+export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
+  const connectionUUID = connection?.id || randomUUID();
   // Set up the webview, checking for existing form for this connection
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
-    { id: randomUUID(), multiple: false, template: connectionFormTemplate }, // TODO change the UUID handling when we start allowing Edit
-    "direct-connect-form",
-    `New Connection`,
+    { id: connectionUUID, multiple: false, template: connectionFormTemplate },
+    `direct-connect-${connectionUUID}`,
+    connection?.id ? "Edit Connection" : "New Connection",
     ViewColumn.One,
     {
       enableScripts: true,
@@ -60,10 +61,13 @@ export function openDirectConnectionForm(): void {
   }
 
   async function testConnection(body: any): Promise<TestResponse> {
-    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body);
+    let connectionId = undefined;
+    // for a Test on "Edit" form; sending the id so we can look up secrets
+    if (connection) connectionId = connection?.id as ConnectionId;
+    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
     const manager = DirectConnectionManager.getInstance();
-    const { connection, errorMessage } = await manager.createConnection(spec, true);
-    if (errorMessage || !connection) {
+    const { connection: testConnection, errorMessage } = await manager.createConnection(spec, true);
+    if (errorMessage || !testConnection) {
       return {
         success: false,
         message: errorMessage ?? "Unknown error while testing connection.",
@@ -71,7 +75,19 @@ export function openDirectConnectionForm(): void {
       };
     }
 
-    return parseTestResult(connection);
+    return parseTestResult(testConnection);
+  }
+
+  async function updateConnection(body: any): Promise<PostResponse> {
+    const connectionId = connection?.id as ConnectionId;
+    let newSpec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
+    const manager = DirectConnectionManager.getInstance();
+    try {
+      await manager.updateConnection(newSpec);
+    } catch (error) {
+      return { success: false, message: JSON.stringify(error) };
+    }
+    return { success: true, message: "Connection updated successfully." };
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
@@ -80,16 +96,24 @@ export function openDirectConnectionForm(): void {
         return (await testConnection(body)) satisfies MessageResponse<"Test">;
       case "Submit":
         return (await saveConnection(body)) satisfies MessageResponse<"Submit">;
+      case "GetConnectionSpec": {
+        const spec = connection ? cleanSpec(connection) : null;
+        return spec satisfies MessageResponse<"GetConnectionSpec">;
+      }
+      case "Update":
+        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
   directConnectForm.onDidDispose(() => disposable.dispose());
 }
 
-export function getConnectionSpecFromFormData(formData: any): CustomConnectionSpec {
-  const connectionId = randomUUID() as ConnectionId;
+export function getConnectionSpecFromFormData(
+  formData: any,
+  connectionId?: ConnectionId,
+): CustomConnectionSpec {
   const spec: CustomConnectionSpec = {
-    id: connectionId,
+    id: connectionId ?? (randomUUID() as ConnectionId),
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
     formConnectionType: formData["platform"],
@@ -171,4 +195,33 @@ export function parseTestResult(connection: Connection): TestResponse {
     }
   }
   return result;
+}
+// Replace any sensitive fields from the connection spec before sending to the webview form
+function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
+  const clean = { ...connection };
+  if (clean.kafka_cluster?.credentials) {
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.kafka_cluster.credentials.password) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.kafka_cluster.credentials.password = "fakeplaceholdersecrethere";
+    }
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.kafka_cluster.credentials.api_secret) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
+    }
+  }
+  if (clean.schema_registry?.credentials) {
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.schema_registry.credentials.password) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.schema_registry.credentials.password = "fakeplaceholdersecrethere";
+    }
+    // @ts-expect-error the types don't know which credentials are present
+    if (clean.schema_registry.credentials.api_secret) {
+      // @ts-expect-error the types don't know which credentials are present
+      clean.schema_registry.credentials.api_secret = "fakeplaceholdersecrethere";
+    }
+  }
+  return clean;
 }
