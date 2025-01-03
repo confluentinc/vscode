@@ -157,9 +157,18 @@ export class DirectConnectionManager {
     ResourceLoader.deregisterInstance(id);
   }
 
-  async updateConnection(spec: CustomConnectionSpec): Promise<void> {
+  async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
+    // at this point incoming spec has placeholder secrets... look up the associated ConnectionSpec
+    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+      incomingSpec.id,
+    );
+    if (!currentSpec) {
+      logger.error("Direct connection not found in resources, can't update");
+      return;
+    }
+    const updatedSpec: ConnectionSpec = mergeSecrets(currentSpec, incomingSpec);
     // tell the sidecar about the updated spec
-    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, true);
+    const { connection, errorMessage } = await this.createOrUpdateConnection(updatedSpec, true);
     if (errorMessage || !connection) {
       window.showErrorMessage(
         `Error: Failed to update connection. ${errorMessage ?? "No connection object returned"}`,
@@ -170,16 +179,16 @@ export class DirectConnectionManager {
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
     // (spec comes first because the ConnectionSpec will try to override `id` as a string)
     const mergedSpec: CustomConnectionSpec = {
-      ...connection.spec,
-      id: spec.id,
-      formConnectionType: spec.formConnectionType,
+      ...updatedSpec,
+      id: incomingSpec.id,
+      formConnectionType: incomingSpec.formConnectionType,
     };
     // update the connection in secret storage (via full replace of the connection by its id)
     await getResourceManager().addDirectConnection(mergedSpec);
     // notify subscribers that the "environment" has changed since direct connections are treated
     // as environment-specific resources
     environmentChanged.fire(mergedSpec.id);
-    return; // TODO NC return value will likely change for Edit in the form
+    return;
   }
 
   /**
@@ -284,4 +293,53 @@ export class DirectConnectionManager {
       );
     }
   }
+}
+function mergeSecrets(
+  currentSpec: ConnectionSpec,
+  incomingSpec: CustomConnectionSpec,
+): ConnectionSpec {
+  const incomingKafkaCreds = incomingSpec.kafka_cluster?.credentials;
+  const currentKafkaCreds = currentSpec.kafka_cluster?.credentials;
+  // if there are kafka credentials we need to check/replace the secrets
+  if (incomingKafkaCreds) {
+    if ("password" in incomingKafkaCreds) {
+      if (incomingKafkaCreds.password === "fakeplaceholdersecrethere") {
+        // @ts-expect-error the types don't know which credentials are present
+        incomingKafkaCreds.password = currentKafkaCreds.password;
+      }
+    } else if ("api_secret" in incomingKafkaCreds) {
+      if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
+        // @ts-expect-error the types don't know which credentials are present
+        incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
+      }
+    }
+  }
+  // if there are schema registry credentials we need to check/replace the secrets
+  const incomingSchemaCreds = incomingSpec.schema_registry?.credentials;
+  const currentSchemaCreds = currentSpec.schema_registry?.credentials;
+  if (incomingSchemaCreds) {
+    if ("password" in incomingSchemaCreds) {
+      if (incomingSchemaCreds.password === "fakeplaceholdersecrethere") {
+        // @ts-expect-error the types don't know which credentials are present
+        incomingSchemaCreds.password = currentSchemaCreds.password;
+      }
+    } else if ("api_secret" in incomingSchemaCreds) {
+      if (incomingSchemaCreds.api_secret === "fakeplaceholdersecrethere") {
+        // @ts-expect-error the types don't know which credentials are present
+        incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
+      }
+    }
+  }
+  const mergedSpec: ConnectionSpec = {
+    ...incomingSpec,
+    kafka_cluster: incomingSpec.kafka_cluster && {
+      ...incomingSpec.kafka_cluster,
+      credentials: incomingKafkaCreds,
+    },
+    schema_registry: incomingSpec.schema_registry && {
+      ...incomingSpec.schema_registry,
+      credentials: incomingSchemaCreds,
+    },
+  };
+  return mergedSpec;
 }
