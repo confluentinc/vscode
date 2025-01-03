@@ -447,7 +447,14 @@ export class SidecarManager {
       fs.writeFileSync(SIDECAR_LOGFILE_PATH, "");
     }
 
-    this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
+    try {
+      this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
+    } catch (e) {
+      sidecarOutputChannel.appendLine(
+        `Failed to tail sidecar log file "${SIDECAR_LOGFILE_PATH}": ${e}`,
+      );
+      return;
+    }
 
     sidecarOutputChannel.appendLine(
       `Tailing the extension's sidecar logs from "${SIDECAR_LOGFILE_PATH}" ...`,
@@ -500,6 +507,15 @@ export class SidecarManager {
   private async pause(): Promise<void> {
     // pause an iota
     await new Promise((timeout_resolve) => setTimeout(timeout_resolve, MOMENTARY_PAUSE_MS));
+  }
+
+  dispose() {
+    if (this.logTailer) {
+      this.logTailer.unwatch();
+      this.logTailer = null;
+    }
+
+    // Leave the sidecar running. It will garbage collect itself when all workspaces are closed.
   }
 }
 
