@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from "../runtime";
+import type { TLSConfig } from "./TLSConfig";
+import {
+  TLSConfigFromJSON,
+  TLSConfigFromJSONTyped,
+  TLSConfigToJSON,
+  TLSConfigToJSONTyped,
+} from "./TLSConfig";
 import type { KafkaClusterConfigCredentials } from "./KafkaClusterConfigCredentials";
 import {
   KafkaClusterConfigCredentialsFromJSON,
@@ -40,17 +47,11 @@ export interface KafkaClusterConfig {
    */
   credentials?: KafkaClusterConfigCredentials | null;
   /**
-   * Whether to communicate with the Kafka cluster over TLS/SSL. Defaults to 'true', but set to 'false' when the Kafka cluster does not support TLS/SSL.
-   * @type {boolean}
+   * The SSL configuration for connecting to the Kafka cluster. To disable, set `enabled` to false. To use the default SSL settings, set `enabled` to true and leave the `truststore` and `keystore` fields unset.
+   * @type {TLSConfig}
    * @memberof KafkaClusterConfig
    */
-  ssl?: boolean | null;
-  /**
-   * Whether to verify the Kafka cluster certificates. Defaults to 'true', but set to 'false' when the Kafka cluster has self-signed certificates.
-   * @type {boolean}
-   * @memberof KafkaClusterConfig
-   */
-  verify_ssl_certificates?: boolean | null;
+  ssl?: TLSConfig | null;
 }
 
 /**
@@ -78,9 +79,7 @@ export function KafkaClusterConfigFromJSONTyped(
       json["credentials"] == null
         ? undefined
         : KafkaClusterConfigCredentialsFromJSON(json["credentials"]),
-    ssl: json["ssl"] == null ? undefined : json["ssl"],
-    verify_ssl_certificates:
-      json["verify_ssl_certificates"] == null ? undefined : json["verify_ssl_certificates"],
+    ssl: json["ssl"] == null ? undefined : TLSConfigFromJSON(json["ssl"]),
   };
 }
 
@@ -99,7 +98,6 @@ export function KafkaClusterConfigToJSONTyped(
   return {
     bootstrap_servers: value["bootstrap_servers"],
     credentials: KafkaClusterConfigCredentialsToJSON(value["credentials"]),
-    ssl: value["ssl"],
-    verify_ssl_certificates: value["verify_ssl_certificates"],
+    ssl: TLSConfigToJSON(value["ssl"]),
   };
 }

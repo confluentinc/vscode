@@ -445,7 +445,7 @@ paths:
 components:
   schemas:
     ApiKeyAndSecret:
-      description: Basic authentication credentials
+      description: API key and secret authentication credentials
       required:
       - api_key
       - api_secret
@@ -814,20 +814,16 @@ components:
           oneOf:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
+          - $ref: "#/components/schemas/OAuthCredentials"
           nullable: true
         ssl:
-          description: "Whether to communicate with the Kafka cluster over TLS/SSL.\
-            \ Defaults to 'true', but set to 'false' when the Kafka cluster does not\
-            \ support TLS/SSL."
-          default: true
-          type: boolean
-          nullable: true
-        verify_ssl_certificates:
-          description: "Whether to verify the Kafka cluster certificates. Defaults\
-            \ to 'true', but set to 'false' when the Kafka cluster has self-signed\
-            \ certificates."
-          default: true
-          type: boolean
+          description: "The SSL configuration for connecting to the Kafka cluster.\
+            \ To disable, set `enabled` to false. To use the default SSL settings,\
+            \ set `enabled` to true and leave the `truststore` and `keystore` fields\
+            \ unset."
+          type: object
+          allOf:
+          - $ref: "#/components/schemas/TLSConfig"
           nullable: true
     KafkaClusterStatus:
       description: The status related to the specified Kafka cluster.
@@ -850,6 +846,38 @@ components:
           type: object
           allOf:
           - $ref: "#/components/schemas/AuthErrors"
+    KeyStore:
+      required:
+      - path
+      type: object
+      properties:
+        path:
+          description: The path to the local key store file. Only specified if client
+            needs to be authenticated by the server (mutual TLS).
+          maxLength: 256
+          type: string
+        password:
+          description: "The password for the local key store file. If a password is\
+            \ not set, key store file configured will still be used, but integrity\
+            \ checking is disabled. A key store password is not supported for PEM\
+            \ format."
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/Password"
+          nullable: true
+        type:
+          description: The file format of the local key store file.
+          default: JKS
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/StoreType"
+          nullable: true
+        key_password:
+          description: The password of the private key in the local key store file.
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/Password"
+          nullable: true
     LocalConfig:
       description: Configuration when using Confluent Local and optionally a local
         Schema Registry.
@@ -858,6 +886,46 @@ components:
         schema-registry-uri:
           description: The URL of the Schema Registry running locally.
           maxLength: 512
+          type: string
+    OAuthCredentials:
+      description: OAuth 2.0 authentication credentials
+      required:
+      - tokens_url
+      - client_id
+      type: object
+      properties:
+        tokens_url:
+          description: The URL of the OAuth 2.0 identity provider's token endpoint.
+          maxLength: 256
+          type: string
+        client_id:
+          description: The public identifier for the application as registered with
+            the OAuth 2.0 identity provider.
+          maxLength: 128
+          minLength: 1
+          type: string
+        client_secret:
+          description: The client secret known only to the application and the OAuth
+            2.0 identity provider.
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/Password"
+        scope:
+          description: The scope to use. The scope is optional and required only when
+            your identity provider doesn't have a default scope or your groups claim
+            is linked to a scope path to use when connecting to the external service.
+          maxLength: 256
+          type: string
+        connect_timeout_millis:
+          format: int32
+          description: The timeout in milliseconds when connecting to your identity
+            provider.
+          minimum: 0
+          type: integer
+        identityPool:
+          description: "Additional property that can be added in the request header\
+            \ to identify the principal ID for authorization. For example, this may\
+            \ bea Confluent Cloud identity pool."
           type: string
     ObjectMetadata:
       type: object
@@ -1005,6 +1073,15 @@ components:
           oneOf:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
+          - $ref: "#/components/schemas/OAuthCredentials"
+          nullable: true
+        ssl:
+          description: "The SSL configuration for connecting to Schema Registry. If\
+            \ null, the connection will use SSL with the default settings. To disable,\
+            \ set `enabled` to false."
+          type: object
+          allOf:
+          - $ref: "#/components/schemas/TLSConfig"
           nullable: true
     SchemaRegistryStatus:
       description: The status related to the specified Schema Registry.
@@ -1076,6 +1153,42 @@ components:
       - INVALID_TOKEN
       - FAILED
       type: string
+    StoreType:
+      enum:
+      - JKS
+      - PKCS12
+      - PEM
+      - UNKNOWN
+      type: string
+    TLSConfig:
+      description: SSL configuration
+      required:
+      - enabled
+      type: object
+      properties:
+        verify_hostname:
+          description: Whether to verify the server certificate hostname. Defaults
+            to true if not set.
+          default: true
+          type: boolean
+        enabled:
+          description: "Whether SSL is enabled. If not set, defaults to true."
+          default: true
+          type: boolean
+        truststore:
+          description: The trust store configuration for authenticating the server's
+            certificate.
+          type: object
+          allOf:
+          - $ref: "#/components/schemas/TrustStore"
+          nullable: true
+        keystore:
+          description: "The key store configuration that will identify and authenticate\
+            \ the client to the server, required for mutual TLS (mTLS)"
+          type: object
+          allOf:
+          - $ref: "#/components/schemas/KeyStore"
+          nullable: true
     Template:
       required:
       - api_version
@@ -1150,6 +1263,32 @@ components:
       - CREATE_TIME
       - LOG_APPEND_TIME
       type: string
+    TrustStore:
+      required:
+      - path
+      type: object
+      properties:
+        path:
+          description: The path to the local trust store file. Required for authenticating
+            the server's certificate.
+          maxLength: 256
+          type: string
+        password:
+          description: "The password for the local trust store file. If a password\
+            \ is not set, trust store file configured will still be used, but integrity\
+            \ checking is disabled. A trust store password is not supported for PEM\
+            \ format."
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/Password"
+          nullable: true
+        type:
+          description: The file format of the local trust store file
+          default: JKS
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/StoreType"
+          nullable: true
     UserInfo:
       type: object
       properties:
