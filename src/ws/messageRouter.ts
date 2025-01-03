@@ -1,21 +1,12 @@
 /** Event subscribing / routing for recieved websocket messages */
 
-import { randomUUID } from "node:crypto";
+// Internally using node's EventEmitter for .once() support, lacking in VSCode's EventEmitter implementation
+import { EventEmitter } from "node:events";
 import { Logger } from "../logging";
 import { Message, MessageType } from "./messageTypes";
 
 /** Type describing message handler callbacks to whom messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
-
-/** Type keeping track of a per-message-type callbacks. */
-export type CallbackEntry<T extends MessageType> = {
-  callback: MessageCallback<T>; // Callback to be called when a message of this type is recieved.
-  once: boolean; // Indicates if the callback should be called only once, then removed. This featurette might never be used.
-  registrationToken: string; // Unique token to identify the callback for removal.
-};
-
-/** Type for a map of message type -> array of callback entries.*/
-export type CallbackMap = Map<MessageType, CallbackEntry<any>[]>;
 
 const logger = new Logger("messageRouter");
 
@@ -30,57 +21,39 @@ export class MessageRouter {
   }
 
   /**
-   * Map of message type -> array of (many|once) callbacks registered via either
+   * Map of message type -> EventEmitter with callbacks registered via either
    * subscribe() or once().
    */
-  private callbacks: CallbackMap;
+  private emitters: Map<MessageType, EventEmitter> = new Map();
 
   private constructor() {
-    this.callbacks = new Map();
-    for (const messageType in MessageType) {
-      this.callbacks.set(messageType as MessageType, []);
-    }
+    this.emitters = new Map();
+    populateEmittersMap(this.emitters);
   }
 
   /**
-   * Register an async callback for messages of the given type.
-   * @returns A registration token that can be used to unsubscribe the callback.
+   * Register an async callback for messages of the given type. The callback
+   * will be called and awaited every time a message of the given type is delivered.
    **/
-  subscribe<T extends MessageType>(messageType: T, callback: MessageCallback<T>): string {
-    const registrationToken = this.generateRegistrationToken();
-    const callbacks = this.callbacks.get(messageType);
-    if (callbacks === undefined) {
+  subscribe<T extends MessageType>(messageType: T, callback: MessageCallback<T>): void {
+    const emitter = this.emitters.get(messageType);
+    if (emitter === undefined) {
       throw new Error(`MessageRouter::subscribe(): unknown message type ${messageType}`);
     }
 
-    callbacks.push({ callback, once: false, registrationToken });
-
-    return registrationToken;
+    emitter.on("message", callback);
   }
 
   /**
-   * Register an async callback for messages of the given type, to be called only once.
-   * @returns A registration token that can be used to unsubscribe the callback (before it is called).
+   * Register an async callback for messages of the given type, to be called only once upon
+   * delivery of the next message of that type.
    **/
-  once<T extends MessageType>(messageType: T, callback: MessageCallback<T>): string {
-    const registrationToken = this.generateRegistrationToken();
-    this.callbacks.get(messageType)!.push({ callback, once: true, registrationToken });
-    return registrationToken;
-  }
-
-  /**
-   * Unsubscribe a callback from receiving messages of the given type.
-   * @param registrationToken The token returned by the subscribe() or once() call.
-   **/
-  unsubscribe(registrationToken: string): void {
-    for (const callbacks of this.callbacks.values()) {
-      for (let i = 0; i < callbacks.length; i++) {
-        if (callbacks[i].registrationToken === registrationToken) {
-          callbacks.splice(i, 1);
-          return;
-        }
-      }
+  once<T extends MessageType>(messageType: T, callback: MessageCallback<T>): void {
+    const emitter = this.emitters.get(messageType);
+    if (emitter === undefined) {
+      throw new Error(`MessageRouter::once(): unknown message type ${messageType}`);
     }
+    emitter.once("message", callback);
   }
 
   /**
@@ -90,68 +63,45 @@ export class MessageRouter {
   async deliver<T extends MessageType>(message: Message<T>): Promise<void> {
     logger.info(`Delivering message of type ${message.headers.message_type}`);
 
-    // Deliver the message to all registered general by-message-type callbacks.
-    const callbacks = this.callbacks.get(message.headers.message_type);
-    if (callbacks === undefined) {
-      // Wacky! We got a message type that we don't have callbacks array in map for.
-      // Mismatch between what sidecar is sending and what the extension is expecting?
-      logger.warn(
-        `MessageRouter::deliver(): unexpected message type ${message.headers.message_type}!`,
-      );
+    const emitter = this.emitters.get(message.headers.message_type);
+    if (emitter === undefined) {
+      logger.warn(`Unknown message type ${message.headers.message_type}`);
       return;
     }
 
-    const initialCallbackCount = callbacks.length;
-    if (initialCallbackCount === 0) {
-      logger.warn(`No callbacks for message type ${message.headers.message_type}`);
-      return;
-    } else {
-      logger.info(
-        `Found ${initialCallbackCount} callbacks for message type ${message.headers.message_type}`,
-      );
-    }
+    const initialCallbackCount = emitter.listenerCount("message");
+    logger.debug(
+      `Delivering message of type ${message.headers.message_type} to ${initialCallbackCount} callback(s).`,
+    );
 
-    const callbackPromises: Promise<void>[] = [];
-
-    // Collect all the promises from the per-message-type callbacks. Clean out any one-time callbacks as we go.
-    for (let i = 0; i < callbacks.length; i++) {
-      const { callback, once } = callbacks[i];
-      callbackPromises.push(callback(message));
-      if (once) {
-        // Remove this one-time callback. We're mutating the array in the map.
-        callbacks.splice(i, 1);
-        // Because we're iterating over what we just mutated, we need to decrement the index again.
-        i--;
-      }
-    }
-
-    // Wait for all the promises to resolve concurrently, using allSettled() to wrap them
-    // all so that any errors raised by callbacks won't cause the us to reject or to skip remaining callbacks.
-    const results = await Promise.allSettled(callbackPromises);
-    const errors = results
-      .filter((r) => r.status === "rejected")
-      .map((r) => (r as PromiseRejectedResult).reason as Error);
-
-    if (errors.length > 0) {
-      // Log all the errors, but don't let them bubble up.
-      logger.error(
-        `Errors delivering message of type ${message.headers.message_type}: ${errors
-          .map((e) => e.message)
-          .join(", ")}`,
-      );
-    }
+    emitter.emit("message", message);
 
     logger.debug(
       `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
     );
-    if (callbacks.length !== initialCallbackCount) {
+    const remainingCallbackCount = emitter.listenerCount("message");
+    if (remainingCallbackCount !== initialCallbackCount) {
       logger.debug(
-        `Removed ${initialCallbackCount - callbacks.length} one-time callback(s) for message type ${message.headers.message_type}`,
+        `Removed ${initialCallbackCount - remainingCallbackCount} one-time callback(s) for message type ${message.headers.message_type}`,
       );
     }
   }
+}
 
-  private generateRegistrationToken(): string {
-    return randomUUID().toString();
+/**
+ * Construct EventEmitters for each message type
+ *
+ * (Exported so that test suite can use also)
+ * @param emitters
+ */
+export function populateEmittersMap(emitters: Map<MessageType, EventEmitter>): void {
+  for (const messageType in MessageType) {
+    // Set up a new EventEmitter for each message type, with captureRejections enabled
+    // to log any errors thrown by the async message handlers.
+    const perTypeEmitter = new EventEmitter({ captureRejections: true });
+    perTypeEmitter.on("error", (error: any) => {
+      logger.error(`Error delivering message to message handler for ${messageType}: ${error}`);
+    });
+    emitters.set(messageType as MessageType, perTypeEmitter);
   }
 }

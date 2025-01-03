@@ -1,13 +1,13 @@
 import assert from "assert";
-import "mocha";
-import { CallbackEntry, CallbackMap, MessageRouter } from "./messageRouter";
+import { EventEmitter } from "node:events";
+import { MessageRouter, populateEmittersMap } from "./messageRouter";
 import { Message, MessageType, WorkspacesChangedBody } from "./messageTypes";
 
 // tests over MessageRouter
 
 describe("MessageRouter tests", () => {
   const messageRouter = MessageRouter.getInstance();
-  let stashedCallbacks: CallbackMap;
+  let stashedEmitters: Map<MessageType, EventEmitter>;
 
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
@@ -21,26 +21,24 @@ describe("MessageRouter tests", () => {
   };
 
   beforeEach(() => {
-    // Stash the current callbacks
-    stashedCallbacks = messageRouter["callbacks"];
+    // Stash the current emitters
+    stashedEmitters = messageRouter["emitters"];
 
-    // build new empty callbacks
-    const newCallbacks: CallbackMap = new Map();
-    for (const messageType in MessageType) {
-      newCallbacks.set(messageType as MessageType, []);
-    }
+    // build new empty emitters
+    const newEmitters = new Map<MessageType, EventEmitter>();
+    populateEmittersMap(newEmitters);
 
     // and inject them.
-    messageRouter["callbacks"] = newCallbacks;
+    messageRouter["emitters"] = newEmitters;
   });
 
   afterEach(() => {
     // Restore the stashed callbacks
-    messageRouter["callbacks"] = stashedCallbacks;
+    messageRouter["emitters"] = stashedEmitters;
   });
 
-  // test subscribe, deliver, unsubscribe lifecycle.
-  it("subscribe() and unsubscribe() tests", async () => {
+  // test subscribe, deliver lifecycle.
+  it("subscribe() tests", async () => {
     let callbackOneCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
     let callbackTwoCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
 
@@ -53,8 +51,8 @@ describe("MessageRouter tests", () => {
     };
 
     // subscribe both callbacks.
-    const tokenOne = messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
-    const tokenTwo = messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
+    messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
+    messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
 
     // deliver message, should call both callbacks
     await messageRouter.deliver(simpleMessage);
@@ -62,25 +60,14 @@ describe("MessageRouter tests", () => {
     assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
     assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
 
-    // unsubscribe callback one.
-    messageRouter.unsubscribe(tokenOne);
-
-    // clear called withs, then redilver. Should only call callbackTwo.
+    // deliver again, should call both callbacks again.
     callbackOneCalledWith = null;
     callbackTwoCalledWith = null;
 
     await messageRouter.deliver(simpleMessage);
 
-    // callback one should not have been called, since was unsubscribed.
-    assert.deepStrictEqual(null, callbackOneCalledWith);
-    // but callback two should have been called.
+    assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
     assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
-
-    // unsubscribe callback two.
-    messageRouter.unsubscribe(tokenTwo);
-
-    // the callbacks for this type should be empty now.
-    assert.deepStrictEqual([], messageRouter["callbacks"].get(MessageType.WORKSPACE_COUNT_CHANGED));
   });
 
   // test once() behavior auto-removing after delivering a single message.
@@ -108,19 +95,6 @@ describe("MessageRouter tests", () => {
     assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
     assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
 
-    // the callbacks for this type should just have a registration for callbackTwo. callbackOne should have been removed.
-    const remainingCallbacks = messageRouter["callbacks"].get(MessageType.WORKSPACE_COUNT_CHANGED);
-    assert.deepStrictEqual(
-      [
-        {
-          callback: callbackTwo,
-          once: false,
-          registrationToken: tokenTwo,
-        } as CallbackEntry<MessageType.WORKSPACE_COUNT_CHANGED>,
-      ],
-      remainingCallbacks,
-    );
-
     // deliver again, will only call callbackTwo.
     callbackOneCalledWith = null;
     callbackTwoCalledWith = null;
@@ -146,7 +120,7 @@ describe("MessageRouter tests", () => {
     await messageRouter.deliver(simpleMessage);
   });
 
-  it("test errors raised by some callbacks do not prevent other callbacks from being called", async () => {
+  it("Errors raised by some callbacks do not prevent other callbacks from being called", async () => {
     let callbackTwoCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
     let callbackThreeCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
     let raised = false;
