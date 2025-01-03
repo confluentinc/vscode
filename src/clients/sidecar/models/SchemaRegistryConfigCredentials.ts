@@ -26,13 +26,20 @@ import {
   BasicCredentialsFromJSONTyped,
   BasicCredentialsToJSON,
 } from "./BasicCredentials";
+import type { OAuthCredentials } from "./OAuthCredentials";
+import {
+  instanceOfOAuthCredentials,
+  OAuthCredentialsFromJSON,
+  OAuthCredentialsFromJSONTyped,
+  OAuthCredentialsToJSON,
+} from "./OAuthCredentials";
 
 /**
  * @type SchemaRegistryConfigCredentials
  * The credentials for the Schema Registry, or null if no authentication is required
  * @export
  */
-export type SchemaRegistryConfigCredentials = ApiKeyAndSecret | BasicCredentials;
+export type SchemaRegistryConfigCredentials = ApiKeyAndSecret | BasicCredentials | OAuthCredentials;
 
 export function SchemaRegistryConfigCredentialsFromJSON(
   json: any,
@@ -52,6 +59,9 @@ export function SchemaRegistryConfigCredentialsFromJSONTyped(
   }
   if (instanceOfBasicCredentials(json)) {
     return BasicCredentialsFromJSONTyped(json, true);
+  }
+  if (instanceOfOAuthCredentials(json)) {
+    return OAuthCredentialsFromJSONTyped(json, true);
   }
 
   return {} as any;
@@ -74,6 +84,9 @@ export function SchemaRegistryConfigCredentialsToJSONTyped(
   }
   if (instanceOfBasicCredentials(value)) {
     return BasicCredentialsToJSON(value as BasicCredentials);
+  }
+  if (instanceOfOAuthCredentials(value)) {
+    return OAuthCredentialsToJSON(value as OAuthCredentials);
   }
 
   return {};
