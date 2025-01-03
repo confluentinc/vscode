@@ -71,7 +71,7 @@ import {
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
-import { sidecarOutputChannel } from "./sidecar";
+import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
 import { getCCloudAuthSession } from "./sidecar/connections";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
@@ -215,6 +215,7 @@ async function _activateExtension(
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());
+  context.subscriptions.push(getSidecarManager());
 
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
