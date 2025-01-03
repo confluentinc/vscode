@@ -27,6 +27,8 @@ All notable changes to this extension will be documented in this file.
 
 - Waiting for "direct" connections (to Kafka and/or Schema Registry) to be usable will no longer
   block loading other items or interacting with the Resources view.
+- Handle errors when setting up the sidecar logs tailing output channel. Clean up the log tailing
+  when disposing of the sidecar manager.
 
 ## 0.22.1
 

@@ -122,6 +122,10 @@ export function getConnectionSpecFromFormData(
   if (formData["bootstrap_servers"]) {
     spec.kafka_cluster = {
       bootstrap_servers: formData["bootstrap_servers"],
+      ssl: {
+        // formData will not have the SSL toggle if the input disabled, so we check that CCloud always enables SSL
+        enabled: formData["kafka_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
+      },
     };
     if (formData.kafka_auth_type === "Basic") {
       spec.kafka_cluster.credentials = {
@@ -139,6 +143,10 @@ export function getConnectionSpecFromFormData(
   if (formData["uri"]) {
     spec.schema_registry = {
       uri: formData["uri"],
+      ssl: {
+        // formData will not have the SSL toggle if the input is disabled, so we check that CCloud always enables SSL
+        enabled: formData["schema_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
+      },
     };
     if (formData.schema_auth_type === "Basic") {
       spec.schema_registry.credentials = {
