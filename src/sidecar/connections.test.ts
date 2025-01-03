@@ -182,7 +182,7 @@ describe("sidecar/connections.ts", () => {
       assert.deepStrictEqual(connection, testConnection);
     });
 
-    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should throw an error if the connection does not become usable within the timeout`, async () => {
+    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should return null if the connection does not become usable within the timeout`, async () => {
       // use fake timers so we can control the time and "time out" quickly
       clock = sandbox.useFakeTimers(Date.now());
 
@@ -205,14 +205,10 @@ describe("sidecar/connections.ts", () => {
         shortTimeoutMs / 2,
       );
       // "wait" for the timeout to occur
-      await clock.tickAsync(100);
-
-      await assert.rejects(
-        connectionPromise,
-        new Error(
-          `Connection ${testConnection.id} did not become usable within ${shortTimeoutMs}ms`,
-        ),
-      );
+      await clock.tickAsync(300);
+      await assert.doesNotReject(connectionPromise);
+      const result = await connectionPromise;
+      assert.strictEqual(result, null);
     });
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should continue polling if the connection is not found initially`, async () => {
