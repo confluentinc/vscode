@@ -166,7 +166,7 @@ describe("sidecarHandle websocket tests", () => {
       const message: Message<MessageType.WORKSPACE_HELLO> = {
         headers: newMessageHeaders(MessageType.WORKSPACE_HELLO),
         body: {
-          workspace_id: 1234,
+          workspace_id: process.pid,
         },
       };
 

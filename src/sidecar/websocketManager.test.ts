@@ -1,7 +1,8 @@
 import assert from "assert";
 import "mocha";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MessageRouter } from "../ws/messageRouter";
-import { Message, MessageType } from "../ws/messageTypes";
+import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
 import { WebsocketManager } from "./websocketManager";
 
 // tests over WebsocketManager
@@ -49,6 +50,10 @@ describe("WebsocketManager disconnected tests", () => {
     websocketManager["websocket"] = originalWebsocket;
   });
 
+  it("Should not smell connected when websocket is null", () => {
+    assert.equal(false, websocketManager.isConnected());
+  });
+
   it("Sending when websocket is not open should throw an error", async () => {
     const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
       headers: {
@@ -61,14 +66,35 @@ describe("WebsocketManager disconnected tests", () => {
       },
     };
 
-    // Act
-    // Assert raises
     assert.throws(
       () => {
         websocketManager.send(message);
       },
       { message: "Websocket closed" },
     );
+  });
+});
+
+describe("WebsocketManager connected tests", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("Should smell connected when websocket is open", async () => {
+    const websocketManager = WebsocketManager.getInstance();
+    assert.equal(true, websocketManager.isConnected());
+  });
+
+  it("Sending when websocket is open should not throw an error", async () => {
+    const message: Message<MessageType.WORKSPACE_HELLO> = {
+      headers: newMessageHeaders(MessageType.WORKSPACE_HELLO),
+      body: {
+        workspace_id: process.pid,
+      },
+    };
+
+    const websocketManager = WebsocketManager.getInstance();
+    websocketManager.send(message);
   });
 });
 
