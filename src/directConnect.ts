@@ -122,6 +122,9 @@ export function getConnectionSpecFromFormData(
   if (formData["bootstrap_servers"]) {
     spec.kafka_cluster = {
       bootstrap_servers: formData["bootstrap_servers"],
+      ssl: {
+        enabled: formData["kafka_ssl"] === "on",
+      },
     };
     if (formData.kafka_auth_type === "Basic") {
       spec.kafka_cluster.credentials = {
@@ -139,6 +142,9 @@ export function getConnectionSpecFromFormData(
   if (formData["uri"]) {
     spec.schema_registry = {
       uri: formData["uri"],
+      ssl: {
+        enabled: formData["schema_ssl"] === "on",
+      },
     };
     if (formData.schema_auth_type === "Basic") {
       spec.schema_registry.credentials = {
