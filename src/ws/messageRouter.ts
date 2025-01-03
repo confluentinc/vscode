@@ -10,6 +10,7 @@ export type MessageCallback<T extends MessageType> = (message: Message<T>) => Pr
 
 const logger = new Logger("messageRouter");
 
+/** Message router used to deliver websocket messages to async callbacks within the extension. */
 export class MessageRouter {
   private static instance: MessageRouter | null = null;
 
