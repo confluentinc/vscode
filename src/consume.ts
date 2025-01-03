@@ -906,7 +906,7 @@ function prepare(
  * Represents static snapshot of message viewer state that can be serialized.
  * Provides static method to deserialize the snapshot from a URI's query.
  */
-class MessageViewerConfig extends Data {
+export class MessageViewerConfig extends Data {
   consumeMode: "beginning" | "latest" | "timestamp" = "beginning";
   consumeTimestamp: number | null = null;
   partitionConsumed: number[] | null = null;

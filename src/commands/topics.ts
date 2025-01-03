@@ -7,9 +7,11 @@ import {
   ProduceRequest,
   ProduceRequestData,
   ProduceRequestHeader,
+  ProduceResponse,
   ResponseError,
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
+import { MessageViewerConfig } from "../consume";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -225,7 +227,30 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     };
 
     try {
-      await recordsApi.produceRecord(request);
+      const resp: ProduceResponse = await recordsApi.produceRecord(request);
+      vscode.window
+        .showInformationMessage(
+          `Success: Produced message to topic "${topic.name}".`,
+          "View in Topic Messages",
+        )
+        .then((selection) => {
+          if (selection) {
+            // open the message viewer to show the last ~15sec of messages for the topic
+            // with the message key used to search, and partition filtered if available
+            const messageViewerConfig = MessageViewerConfig.create({
+              // don't change the consume query params, just filter to show this last message
+              timestampFilter: [Date.now() - 15_000, Date.now()],
+              partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
+              textFilter: String(message.key),
+            });
+            vscode.commands.executeCommand(
+              "confluent.topic.consume",
+              topic,
+              true,
+              messageViewerConfig,
+            );
+          }
+        });
     } catch (error: any) {
       logResponseError(error, "topic produce from file"); // not sending to Sentry by default
       if (error instanceof ResponseError) {
