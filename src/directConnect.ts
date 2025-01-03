@@ -61,10 +61,13 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   }
 
   async function testConnection(body: any): Promise<TestResponse> {
-    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body);
+    let connectionId = undefined;
+    // for a Test on "Edit" form; sending the id so we can look up secrets
+    if (connection) connectionId = connection?.id as ConnectionId;
+    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
     const manager = DirectConnectionManager.getInstance();
-    const { connection, errorMessage } = await manager.createConnection(spec, true);
-    if (errorMessage || !connection) {
+    const { connection: testConnection, errorMessage } = await manager.createConnection(spec, true);
+    if (errorMessage || !testConnection) {
       return {
         success: false,
         message: errorMessage ?? "Unknown error while testing connection.",
@@ -72,7 +75,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       };
     }
 
-    return parseTestResult(connection);
+    return parseTestResult(testConnection);
   }
 
   async function updateConnection(body: any): Promise<PostResponse> {

@@ -30,6 +30,7 @@ import {
 import { logUsage, UserEvent } from "./telemetry/events";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
+import { randomUUID } from "crypto";
 
 const logger = new Logger("directConnectManager");
 
@@ -125,7 +126,20 @@ export class DirectConnectionManager {
     spec: CustomConnectionSpec,
     dryRun: boolean = false,
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
-    const { connection, errorMessage } = await this.createOrUpdateConnection(spec, false, dryRun);
+    let incomingSpec: ConnectionSpec = spec;
+    // check for an existing ConnectionSpec - if this is a dryRun on the Edit form we need to get the secrets
+    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+      spec.id,
+    );
+    if (dryRun && currentSpec) {
+      incomingSpec = mergeSecrets(currentSpec, spec);
+      incomingSpec.id = randomUUID() as ConnectionId; // dryRun must have unique ID
+    }
+    const { connection, errorMessage } = await this.createOrUpdateConnection(
+      incomingSpec,
+      false,
+      dryRun,
+    );
 
     logUsage(UserEvent.DirectConnectionAction, {
       type: spec.formConnectionType,
