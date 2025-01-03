@@ -14,7 +14,7 @@
 
 import { mapValues } from "../runtime";
 /**
- * Basic authentication credentials
+ * API key and secret authentication credentials
  * @export
  * @interface ApiKeyAndSecret
  */
