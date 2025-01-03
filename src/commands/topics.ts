@@ -209,20 +209,6 @@ async function produceMessageFromFile(topic: KafkaTopic) {
       }),
     );
 
-    // TEMPORARY: remove this warning once the sidecar supports producing records with headers
-    if (headers.length > 0) {
-      const yesButton = "Produce without headers";
-      const confirmation = await vscode.window.showWarningMessage(
-        `Producing messages with headers is not yet supported. Do you want to produce this message anyway?`,
-        { modal: true },
-        yesButton,
-        // "Cancel" is added by default
-      );
-      if (confirmation !== yesButton) {
-        return;
-      }
-    }
-
     // TODO: add schema information here once we have it
     const key: ProduceRequestData = { data: message.key };
     const value: ProduceRequestData = { data: message.value };
