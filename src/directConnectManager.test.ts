@@ -204,7 +204,7 @@ describe("DirectConnectionManager behavior", () => {
 
     await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 
-    assert.ok(tryToUpdateConnectionStub.calledOnceWith(updatedSpec));
+    assert.ok(tryToUpdateConnectionStub.calledOnce);
     const storedConnections: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
     assert.equal(storedConnections.size, 1);

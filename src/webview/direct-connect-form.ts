@@ -2,7 +2,12 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { ConnectedState } from "../clients/sidecar";
+import {
+  ConnectedState,
+  instanceOfApiKeyAndSecret,
+  instanceOfBasicCredentials,
+} from "../clients/sidecar";
+import { CustomConnectionSpec } from "../storage/resourceManager";
 
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
@@ -14,14 +19,74 @@ addEventListener("DOMContentLoaded", () => {
 });
 
 class DirectConnectFormViewModel extends ViewModel {
+  /** Load connection spec if it exists (for Edit) */
+  spec = this.resolve(async () => {
+    const fromHost = await post("GetConnectionSpec", {});
+    console.log("GetConnectionSpec", fromHost);
+    return fromHost;
+  }, null);
+
   /** Form Input Values */
-  platformType = this.signal<FormConnectionType>("Apache Kafka");
-  kafkaAuthType = this.signal<SupportedAuthTypes>("None");
-  schemaAuthType = this.signal<SupportedAuthTypes>("None");
-  schemaUri = this.signal("");
-  kafkaBootstrapServers = this.signal("");
-  kafkaSslEnabled = this.derive(() => this.platformType() === "Confluent Cloud");
-  schemaSslEnabled = this.derive(() => this.platformType() === "Confluent Cloud");
+  platformType = this.derive<FormConnectionType>(() => {
+    return this.spec()?.formConnectionType || "Apache Kafka";
+  });
+  // TODO this is not used anywhere but could be extra metadata for telemetry. We'll have to save it in the spec.
+  // otherPlatformType = this.signal<string | undefined>(undefined);
+  name = this.derive(() => {
+    return this.spec()?.name || "";
+  });
+
+  /** Kafka */
+  kafkaBootstrapServers = this.derive(() => {
+    return this.spec()?.kafka_cluster?.bootstrap_servers || "";
+  });
+  kafkaCreds = this.derive(() => {
+    return this.spec()?.kafka_cluster?.credentials;
+  });
+  kafkaAuthType = this.derive(() => {
+    return this.getCredentialsType(this.kafkaCreds());
+  });
+  kafkaUsername = this.derive(() => {
+    // @ts-expect-error the types don't know which credentials are present
+    return this.kafkaCreds()?.username || "";
+  });
+  kafkaApiKey = this.derive(() => {
+    // @ts-expect-error the types don't know which credentials are present
+    return this.kafkaCreds()?.api_key || "";
+  });
+  kafkaSecret = this.derive(() => {
+    // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
+    return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
+  });
+  kafkaSslEnabled = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+  });
+
+  /** Schema Registry */
+  schemaUri = this.derive(() => {
+    return this.spec()?.schema_registry?.uri || "";
+  });
+  schemaCreds = this.derive(() => {
+    return this.spec()?.schema_registry?.credentials;
+  });
+  schemaAuthType = this.derive(() => {
+    return this.getCredentialsType(this.schemaCreds());
+  });
+  schemaUsername = this.derive(() => {
+    // @ts-expect-error the types don't know which credentials are present
+    return this.schemaCreds()?.username || "";
+  });
+  schemaApiKey = this.derive(() => {
+    // @ts-expect-error the types don't know which credentials are present
+    return this.schemaCreds()?.api_key || "";
+  });
+  schemaSecret = this.derive(() => {
+    // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
+    return this.schemaCreds() ? "fakeplaceholdersecrethere" : "";
+  });
+  schemaSslEnabled = this.derive(() => {
+    return this.spec()?.schema_registry?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+  });
 
   /** Form State */
   message = this.signal("");
@@ -46,6 +111,12 @@ class DirectConnectFormViewModel extends ViewModel {
     else return undefined;
   });
 
+  getCredentialsType(creds: any) {
+    if (!creds || typeof creds !== "object") return "None";
+    if (instanceOfBasicCredentials(creds)) return "Basic";
+    if (instanceOfApiKeyAndSecret(creds)) return "API";
+    return "None";
+  }
   resetTestResults() {
     this.kafkaState(undefined);
     this.kafkaErrorMessage(undefined);
@@ -65,32 +136,61 @@ class DirectConnectFormViewModel extends ViewModel {
           this.schemaAuthType("API");
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
-        } else {
-          this.kafkaAuthType("None");
-          this.schemaAuthType("None");
         }
+        break;
+      // case "other-platform":
+      //   this.otherPlatformType(input.value);
+      //   break;
+      case "name":
+        this.name(input.value);
+        break;
+      case "bootstrap_servers":
+        this.kafkaBootstrapServers(input.value);
         break;
       case "kafka_auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
-        break;
-      case "kafka_ssl":
-        this.kafkaSslEnabled(input.checked);
+        this.clearKafkaCreds();
         break;
       case "schema_auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
+        this.clearSchemaCreds();
         break;
       case "uri":
         this.schemaUri(input.value);
         break;
-      case "bootstrap_servers":
-        this.kafkaBootstrapServers(input.value);
+      case "kafka_username":
+        this.kafkaUsername(input.value);
+        break;
+      case "kafka_api_key":
+        this.kafkaApiKey(input.value);
+        break;
+      case "schema_username":
+        this.schemaUsername(input.value);
+        break;
+      case "schema_api_key":
+        this.schemaApiKey(input.value);
+        break;
+      case "kafka_ssl":
+        this.kafkaSslEnabled(input.checked);
         break;
       case "schema_ssl":
         this.schemaSslEnabled(input.checked);
         break;
       default:
-        console.warn(`Unhandled key: ${input.name}`);
+        console.warn(`Unhandled input update: ${input.name}`);
     }
+  }
+
+  clearKafkaCreds() {
+    this.kafkaUsername("");
+    this.kafkaApiKey("");
+    this.kafkaSecret("");
+  }
+
+  clearSchemaCreds() {
+    this.schemaUsername("");
+    this.schemaApiKey("");
+    this.schemaSecret("");
   }
 
   /** Submit all form data to the extension host */
@@ -114,6 +214,8 @@ class DirectConnectFormViewModel extends ViewModel {
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test Connection") {
       result = await post("Test", data);
+    } else if (submitter.value === "Update Connection") {
+      result = await post("Update", data);
     } else result = await post("Submit", data);
     this.success(result.success);
     this.message(result.message ? result.message : "");
@@ -141,6 +243,8 @@ export type TestResponse = {
 
 export function post(type: "Test", body: any): Promise<TestResponse>;
 export function post(type: "Submit", body: any): Promise<PostResponse>;
+export function post(type: "GetConnectionSpec", body: any): Promise<CustomConnectionSpec | null>;
+export function post(type: "Update", body: { [key: string]: unknown }): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }

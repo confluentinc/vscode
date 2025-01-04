@@ -77,9 +77,9 @@
         "category": "Confluent: Connections"
       },
       {
-        "command": "confluent.connections.direct.rename",
+        "command": "confluent.connections.direct.edit",
         "icon": "$(pencil)",
-        "title": "Rename Connection",
+        "title": "Edit Connection",
         "category": "Confluent: Connections"
       },
       {
@@ -541,7 +541,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.connections.direct.rename",
+          "command": "confluent.connections.direct.edit",
           "when": "false"
         },
         {
@@ -791,7 +791,7 @@
           "group": "inline@3"
         },
         {
-          "command": "confluent.connections.direct.rename",
+          "command": "confluent.connections.direct.edit",
           "when": "viewItem == direct-environment && confluent.directConnectionsEnabled",
           "group": "inline@2"
         },

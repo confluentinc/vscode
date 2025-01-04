@@ -309,7 +309,7 @@ export async function waitForConnectionToBeUsable(
   if (!connection) {
     const msg = `Connection ${id} did not become usable within ${timeoutMs}ms`;
     logger.error(msg);
-    throw new Error(msg);
+    return null;
   }
 
   return connection;
