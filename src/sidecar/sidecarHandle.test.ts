@@ -1,9 +1,12 @@
-import sinon from "sinon";
-import "mocha";
 import * as assert from "assert";
+import "mocha";
+import sinon from "sinon";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import * as sidecar from "../sidecar";
+import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
 import { SIDECAR_PROCESS_ID_HEADER } from "./constants";
+import { WebsocketManager } from "./websocketManager";
 
 describe("getSidecarPid() tests", () => {
   let sandbox: sinon.SinonSandbox;
@@ -89,5 +92,94 @@ describe("getSidecarPid() tests", () => {
       sidecarHandle.getSidecarPid(),
       /Failed to get sidecar PID: healthcheck did not raise 401 Unauthorized/,
     );
+  });
+});
+
+describe("sidecarHandle websocket tests", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  describe("wsSend() tests", () => {
+    it("wsSend() hates messages with wrong originator", async () => {
+      const badOriginatorMessage: Message<MessageType.WORKSPACE_HELLO> = {
+        headers: {
+          message_type: MessageType.WORKSPACE_HELLO,
+          originator: "bad",
+          message_id: "1",
+        },
+        body: {
+          workspace_id: 1234,
+        },
+      };
+
+      const handle = await sidecar.getSidecar();
+
+      assert.throws(
+        () => {
+          handle.wsSend(badOriginatorMessage);
+        },
+        {
+          message: `Expected message originator to be '${process.pid}', got 'bad'`,
+        },
+      );
+    });
+
+    it("wsSend() works with good message when connected", async () => {
+      const goodMessage: Message<MessageType.WORKSPACE_HELLO> = {
+        headers: newMessageHeaders(MessageType.WORKSPACE_HELLO),
+        body: {
+          workspace_id: 1234,
+        },
+      };
+
+      const handle = await sidecar.getSidecar();
+
+      // wsSend() will actually send message to sidecar, which will then
+      // at this time consider relaying it to other workspaces,
+      // but there aren't any, so will just evaporate there.
+
+      // If/when sidecar message routing gets smarter and perhaps needs
+      // a different message type to tickle that behavior (when we have
+      // them), then we will need to switch this message type for this test.
+
+      handle.wsSend(goodMessage);
+    });
+  });
+
+  describe("wsSend() when disconnected tests", () => {
+    const websocketManager = WebsocketManager.getInstance();
+
+    after(async () => {
+      // restore the websocket as side-effect of getting sidecar handle
+      await sidecar.getSidecar();
+      assert.equal(true, websocketManager.isConnected());
+    });
+
+    it("wsSend() should raise exception when disconnected", async () => {
+      const message: Message<MessageType.WORKSPACE_HELLO> = {
+        headers: newMessageHeaders(MessageType.WORKSPACE_HELLO),
+        body: {
+          workspace_id: process.pid,
+        },
+      };
+
+      const handle = await sidecar.getSidecar();
+
+      // Disconnect the websocket after having gotten the sidecar handle
+      websocketManager.dispose();
+      assert.equal(false, websocketManager.isConnected());
+
+      // Act
+      // Assert raises
+      assert.throws(
+        () => {
+          handle.wsSend(message);
+        },
+        {
+          message: "Websocket closed",
+        },
+      );
+    });
   });
 });
