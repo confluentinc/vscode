@@ -54,3 +54,7 @@ export enum SecretStorageKeys {
    * header to Docker engine API requests. */
   DOCKER_CREDS_SECRET_KEY = "docker-creds",
 }
+
+/** Key used to store the current storage version across global/workspace state and SecretStorage. */
+export const DURABLE_STORAGE_VERSION_KEY = "storageVersion";
+export type MigrationStorageType = "global" | "workspace" | "secret";
