@@ -15,7 +15,11 @@ import {
   Status,
 } from "../clients/sidecar";
 import { ContextValues, setContextValue } from "../context/values";
-import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../emitters";
+import {
+  connectionUsable,
+  currentKafkaClusterChanged,
+  currentSchemaRegistryChanged,
+} from "../emitters";
 import { ConnectionId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
 import {
@@ -32,6 +36,7 @@ describe("sidecar/connections.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let stubConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
   let clock: sinon.SinonFakeTimers;
+  let connectionUsableFireStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -42,6 +47,8 @@ describe("sidecar/connections.ts", () => {
     stubSidecarHandle.getConnectionsResourceApi.returns(stubConnectionsResourceApi);
     // stub the getSidecar function to return the stub sidecar handle
     sandbox.stub(sidecar, "getSidecar").resolves(stubSidecarHandle);
+    // stub the event emitter
+    connectionUsableFireStub = sandbox.stub(connectionUsable, "fire");
   });
 
   afterEach(() => {
@@ -213,6 +220,8 @@ describe("sidecar/connections.ts", () => {
           `Connection ${testConnection.id} did not become usable within ${shortTimeoutMs}ms`,
         ),
       );
+      // even if we hit a timeout, we need to stop the "loading" state
+      assert.ok(connectionUsableFireStub.calledOnce);
     });
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should continue polling if the connection is not found initially`, async () => {

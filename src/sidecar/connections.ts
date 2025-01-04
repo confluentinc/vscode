@@ -308,6 +308,8 @@ export async function waitForConnectionToBeUsable(
 
   if (!connection) {
     const msg = `Connection ${id} did not become usable within ${timeoutMs}ms`;
+    // reset any "loading" state for this connection
+    connectionUsable.fire(id);
     logger.error(msg);
     throw new Error(msg);
   }
