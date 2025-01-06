@@ -83,7 +83,7 @@ function getMigrationVersions(
   versions: number[];
   isUpgrade: boolean;
 } {
-  // either the source version or the lowest migration version (1)
+  // either the source version or the lowest migration version (2)
   const current: number = sourceVersion ?? Math.min(...migrationVersions);
   const isUpgrade = current < targetVersion;
   const versions: number[] = isUpgrade
