@@ -34,8 +34,9 @@ export async function migrateGlobalState(manager: StorageManager): Promise<void>
     );
     await executeMigrations(globalStorageVersion, CODEBASE_STORAGE_VERSION, "global");
     await manager.setGlobalState(DURABLE_STORAGE_VERSION_KEY, CODEBASE_STORAGE_VERSION);
+    logger.debug(`global storage version set to "${CODEBASE_STORAGE_VERSION}"`);
   } else {
-    logger.debug(`global storage storage version is correct: "${globalStorageVersion}"`);
+    logger.debug(`global storage version is correct: "${globalStorageVersion}"`);
   }
 }
 
@@ -50,8 +51,9 @@ export async function migrateWorkspaceState(manager: StorageManager): Promise<vo
     );
     await executeMigrations(workspaceStorageVersion, CODEBASE_STORAGE_VERSION, "workspace");
     await manager.setWorkspaceState(DURABLE_STORAGE_VERSION_KEY, CODEBASE_STORAGE_VERSION);
+    logger.debug(`workspace storage version set to "${CODEBASE_STORAGE_VERSION}"`);
   } else {
-    logger.debug(`workspace storage storage version is correct: v${workspaceStorageVersion}`);
+    logger.debug(`workspace storage version is correct: ${workspaceStorageVersion}`);
   }
 }
 
@@ -66,6 +68,7 @@ export async function migrateSecretStorage(manager: StorageManager): Promise<voi
     );
     await executeMigrations(Number(secretStorageVersion), CODEBASE_STORAGE_VERSION, "secret");
     await manager.setSecret(DURABLE_STORAGE_VERSION_KEY, String(CODEBASE_STORAGE_VERSION));
+    logger.debug(`secret storage version set to "${CODEBASE_STORAGE_VERSION}"`);
   } else {
     logger.debug(`secret storage version is correct: "${secretStorageVersion}"`);
   }
