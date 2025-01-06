@@ -46,7 +46,6 @@ import {
   SchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
-import { ENABLE_DIRECT_CONNECTIONS } from "../preferences/constants";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { getResourceManager } from "../storage/resourceManager";
@@ -409,14 +408,6 @@ export async function loadLocalResources(): Promise<
 }
 
 export async function loadDirectResources(): Promise<DirectEnvironment[]> {
-  // PREVIEW: check if direct connections are enabled in extension settings
-  // TODO(shoup): remove this once direct connections are enabled by default
-  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-  const directConnectionsEnabled: boolean = config.get(ENABLE_DIRECT_CONNECTIONS, false);
-  if (!directConnectionsEnabled) {
-    return [];
-  }
-
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
   const directEnvs = await getDirectResources();

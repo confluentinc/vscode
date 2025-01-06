@@ -4,7 +4,6 @@ import { ConfigurationChangeEvent, workspace } from "vscode";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
 import {
-  ENABLE_DIRECT_CONNECTIONS,
   ENABLE_PRODUCE_MESSAGES,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
@@ -87,7 +86,6 @@ describe("preferences/listener", function () {
   });
 
   for (const [previewSetting, previewContextValue] of [
-    [ENABLE_DIRECT_CONNECTIONS, contextValues.ContextValues.directConnectionsEnabled],
     [ENABLE_PRODUCE_MESSAGES, contextValues.ContextValues.produceMessagesEnabled],
   ]) {
     for (const enabled of [true, false]) {

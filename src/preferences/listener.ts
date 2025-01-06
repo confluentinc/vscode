@@ -1,12 +1,7 @@
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
-import { isDirect } from "../models/resource";
-import { ResourceViewProvider } from "../viewProviders/resources";
-import { getSchemasViewProvider } from "../viewProviders/schemas";
-import { getTopicViewProvider } from "../viewProviders/topics";
 import {
-  ENABLE_DIRECT_CONNECTIONS,
   ENABLE_PRODUCE_MESSAGES,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
@@ -45,27 +40,6 @@ export function createConfigChangeListener(): Disposable {
       // --- PREVIEW SETTINGS --
       // Remove the sections below once the behavior is enabled by default and a setting is no
       // longer needed to opt-in to the feature.
-
-      if (event.affectsConfiguration(ENABLE_DIRECT_CONNECTIONS)) {
-        // user toggled the "Enable Direct Connections" preview setting
-        const enabled = configs.get(ENABLE_DIRECT_CONNECTIONS, false);
-        logger.debug(`"${ENABLE_DIRECT_CONNECTIONS}" config changed`, { enabled });
-        setContextValue(ContextValues.directConnectionsEnabled, enabled);
-        // "Other" container item will be toggled
-        ResourceViewProvider.getInstance().refresh();
-        // if the Topics/Schemas views are focused on a direct connection based resource, wipe them
-        if (!enabled) {
-          const topicsView = getTopicViewProvider();
-          if (topicsView.kafkaCluster && isDirect(topicsView.kafkaCluster)) {
-            topicsView.reset();
-          }
-          const schemasView = getSchemasViewProvider();
-          if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
-            schemasView.reset();
-          }
-        }
-        return;
-      }
 
       if (event.affectsConfiguration(ENABLE_PRODUCE_MESSAGES)) {
         // user toggled the "Enable Produce Messages" preview setting
