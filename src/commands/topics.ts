@@ -231,7 +231,7 @@ async function produceMessageFromFile(topic: KafkaTopic) {
       vscode.window
         .showInformationMessage(
           `Success: Produced message to topic "${topic.name}".`,
-          "View in Topic Messages",
+          "View Message",
         )
         .then((selection) => {
           if (selection) {
