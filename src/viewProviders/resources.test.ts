@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { TreeItemCollapsibleState, workspace } from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
@@ -30,7 +30,6 @@ import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster"
 import { ContainerTreeItem } from "../models/main";
 import { ConnectionLabel } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
-import { ENABLE_DIRECT_CONNECTIONS } from "../preferences/constants";
 import * as auth from "../sidecar/connections";
 import * as resourceManager from "../storage/resourceManager";
 import {
@@ -170,13 +169,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadDirectResources() should return an empty array when no direct connections exist", async () => {
-    // TODO(shoup): remove this once direct connections are enabled by default
-    // simulate the preview setting being enabled
-    const getConfigurationStub: sinon.SinonStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(true),
-    });
-    // but no direct connections exist
+    // no direct connections exist
     sandbox.stub(direct, "getDirectResources").resolves([]);
 
     const result: DirectEnvironment[] = await loadDirectResources();
@@ -184,34 +177,8 @@ describe("ResourceViewProvider loading functions", () => {
     assert.deepStrictEqual(result, []);
   });
 
-  it("loadDirectResources() should return an empty array if the preview setting is disabled, even when direct connections exist", async () => {
-    // TODO(shoup): remove this once direct connections are enabled by default
-    // simulate the preview setting being disabled
-    const getConfigurationStub: sinon.SinonStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(false),
-    });
-    // and direct connections exist
-    const testDirectEnv: DirectEnvironment = new DirectEnvironment({
-      ...TEST_DIRECT_ENVIRONMENT,
-      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
-      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
-    });
-    sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
-
-    const result: DirectEnvironment[] = await loadDirectResources();
-
-    assert.deepStrictEqual(result, []);
-  });
-
-  it("loadDirectResources() should return an array of direct 'environments' if direct connections exist and the preview setting is enabled", async () => {
-    // TODO(shoup): remove this once direct connections are enabled by default
-    // simulate the preview setting being disabled
-    const getConfigurationStub: sinon.SinonStub = sandbox.stub(workspace, "getConfiguration");
-    getConfigurationStub.returns({
-      get: sandbox.stub().withArgs(ENABLE_DIRECT_CONNECTIONS).returns(true),
-    });
-    // and direct connections exist
+  it("loadDirectResources() should return an array of direct 'environments' if direct connections exist", async () => {
+    // direct connections exist
     const testDirectEnv: DirectEnvironment = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
