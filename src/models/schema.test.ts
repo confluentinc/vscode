@@ -77,36 +77,42 @@ describe("Schema helper functions", () => {
       subject: valueSubject,
       version: 1,
       type: SchemaType.Avro,
+      id: "1",
     }),
     Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: valueSubject,
       version: 2,
       type: SchemaType.Avro,
+      id: "2",
     }),
     Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: keySubject,
       version: 1,
       type: SchemaType.Protobuf,
+      id: "3",
     }),
     Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: otherSubject,
       version: 1,
       type: SchemaType.Json,
+      id: "4",
     }),
     Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: otherSubject,
       version: 3,
       type: SchemaType.Json,
+      id: "5",
     }),
     Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: otherSubject,
       version: 2,
       type: SchemaType.Json,
+      id: "6",
     }),
   ];
 
@@ -131,15 +137,15 @@ describe("Schema helper functions", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
     const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children as Schema[];
+    const testTopicSchemas = testTopicGroup!.children;
     assert.equal(testTopicSchemas.length, 2);
 
     const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children as Schema[];
+    const anotherTopicSchemas = anotherTopicGroup!.children;
     assert.equal(anotherTopicSchemas.length, 1);
 
     const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children as Schema[];
+    const extraTopicSchemas = extraTopicGroup!.children;
     assert.equal(extraTopicSchemas.length, 3);
   });
 
@@ -160,7 +166,7 @@ describe("Schema helper functions", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
     const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children as Schema[];
+    const testTopicSchemas = testTopicGroup!.children;
     assert.equal(
       testTopicSchemas[0].version,
       2,
@@ -168,7 +174,7 @@ describe("Schema helper functions", () => {
     );
 
     const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children as Schema[];
+    const anotherTopicSchemas = anotherTopicGroup!.children;
     assert.equal(
       anotherTopicSchemas[0].version,
       1,
@@ -176,7 +182,7 @@ describe("Schema helper functions", () => {
     );
 
     const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children as Schema[];
+    const extraTopicSchemas = extraTopicGroup!.children;
     assert.equal(
       extraTopicSchemas[0].version,
       3,

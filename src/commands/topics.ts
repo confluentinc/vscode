@@ -1,18 +1,27 @@
-import * as vscode from "vscode";
 import * as Sentry from "@sentry/node";
 import * as fs from "fs";
-import { Logger } from "../logging";
+import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import {
+  ProduceRecordRequest,
+  ProduceRequest,
+  ProduceRequestData,
+  ProduceRequestHeader,
+  ProduceResponse,
+  ResponseError,
+  type UpdateKafkaTopicConfigBatchRequest,
+} from "../clients/kafkaRest";
+import { MessageViewerConfig } from "../consume";
+import { logResponseError } from "../errors";
+import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { KafkaTopic } from "../models/topic";
+import { getSidecar } from "../sidecar";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
-import { KafkaTopic } from "../models/topic";
-import topicFormTemplate from "../webview/topic-config-form.html";
-import { getSidecar } from "../sidecar";
 import { handleWebviewMessage } from "../webview/comms/comms";
 import { post } from "../webview/topic-config-form";
-import { ResponseError, type UpdateKafkaTopicConfigBatchRequest } from "../clients/kafkaRest";
-import { logResponseError } from "../errors";
+import topicFormTemplate from "../webview/topic-config-form.html";
 
 const logger = new Logger("topics");
 
@@ -192,32 +201,57 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     }
 
     const sidecar = await getSidecar();
-    const clusterId = topic.clusterId;
-    const connectionId = topic.connectionId;
-    const topicName = topic.name;
+    const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
 
-    const recordsApi = sidecar.getRecordsV3Api(clusterId, connectionId);
+    // convert headers to the correct format, ensuring the value is base64-encoded
+    const headers: ProduceRequestHeader[] = message.headers.map(
+      (header: any): ProduceRequestHeader => ({
+        name: header.key ? header.key : header.name,
+        value: Buffer.from(header.value).toString("base64"),
+      }),
+    );
 
-    const msgKeyAndVal = {
-      key: { data: message.key },
-      value: { data: message.value },
+    // TODO: add schema information here once we have it
+    const key: ProduceRequestData = { data: message.key };
+    const value: ProduceRequestData = { data: message.value };
+
+    const produceRequest: ProduceRequest = {
+      headers,
+      key,
+      value,
+    };
+    const request: ProduceRecordRequest = {
+      topic_name: topic.name,
+      cluster_id: topic.clusterId,
+      ProduceRequest: produceRequest,
     };
 
     try {
-      await recordsApi.produceRecord({
-        topic_name: topicName,
-        cluster_id: clusterId,
-        ProduceRequest: {
-          headers: message.headers.map((header: any) => ({
-            name: header.key ? header.key : header.name,
-            value: header.value,
-          })),
-          key: msgKeyAndVal.key,
-          value: msgKeyAndVal.value,
-        },
-      });
-
-      vscode.window.showInformationMessage(`Success: Produced message to topic ${topic.name}.`);
+      const resp: ProduceResponse = await recordsApi.produceRecord(request);
+      vscode.window
+        .showInformationMessage(
+          `Success: Produced message to topic "${topic.name}".`,
+          "View Message",
+        )
+        .then((selection) => {
+          if (selection) {
+            // open the message viewer to show a ~1sec window around the produced message
+            const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
+            // ...with the message key used to search, and partition filtered if available
+            const messageViewerConfig = MessageViewerConfig.create({
+              // don't change the consume query params, just filter to show this last message
+              timestampFilter: [msgTime, msgTime + 500],
+              partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
+              textFilter: String(message.key),
+            });
+            vscode.commands.executeCommand(
+              "confluent.topic.consume",
+              topic,
+              true, // duplicate MV to show updated filters
+              messageViewerConfig,
+            );
+          }
+        });
     } catch (error: any) {
       logResponseError(error, "topic produce from file"); // not sending to Sentry by default
       if (error instanceof ResponseError) {

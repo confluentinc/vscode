@@ -42,17 +42,20 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
       ...TEST_CCLOUD_SCHEMA,
       subject: "my-topic-value",
       version: 0,
+      id: "1",
     });
 
     const olderSchemaVersion = Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: "my-topic-value",
       version: 1,
+      id: "2",
     });
     const latestSchemaVersion = Schema.create({
       ...TEST_CCLOUD_SCHEMA,
       subject: "my-topic-value",
       version: 2,
+      id: "3",
     });
     const schemaGroup = new ContainerTreeItem<Schema>(
       "my-topic-value",
