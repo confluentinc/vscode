@@ -1,5 +1,5 @@
 import assert from "assert";
-import { EventEmitter as NodeEventEmitter } from "node:events";
+import * as sinon from "sinon";
 import { getSidecar } from ".";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { Message, MessageType, newMessageHeaders, WorkspacesChangedBody } from "../ws/messageTypes";
@@ -36,17 +36,16 @@ describe("WebsocketManager peerWorkspaceCount tests", () => {
 
 describe("WebsocketManager disconnected tests", () => {
   const websocketManager = WebsocketManager.getInstance();
-  let originalWebsocket: any;
+  let websocketStub: sinon.SinonStub;
 
   before(() => {
     // ensure websocket smells not connected at this point
-    originalWebsocket = websocketManager["websocket"];
-    websocketManager["websocket"] = null;
+    websocketStub = sinon.stub(websocketManager as any, "websocket").value(null);
   });
 
   after(() => {
-    // restore the websocket
-    websocketManager["websocket"] = originalWebsocket;
+    // restore the original websocket
+    websocketStub.restore();
   });
 
   it("Should not smell connected when websocket is null", () => {
@@ -190,7 +189,7 @@ describe("WebsocketManager.parseMessage tests", () => {
 
 describe("WebsocketManager message recepit + callback routing tests (messageRouter interactions)", () => {
   const manager = WebsocketManager.getInstance();
-  let stashedRouter: NodeEventEmitter;
+  let messageRouterStub: sinon.SinonStub;
 
   const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
     headers: {
@@ -204,16 +203,13 @@ describe("WebsocketManager message recepit + callback routing tests (messageRout
   };
 
   beforeEach(() => {
-    // Stash the currently configured event emitter.
-    stashedRouter = manager["messageRouter"];
-
-    // Build new empty emitter and wire it into the websocket manager.
-    manager["messageRouter"] = constructMessageRouter();
+    // overlay the messageRouter member with an empty event emitter.
+    messageRouterStub = sinon.stub(manager as any, "messageRouter").value(constructMessageRouter());
   });
 
   afterEach(() => {
     // Restore the stashed event emitter.
-    manager["messageRouter"] = stashedRouter;
+    messageRouterStub.restore();
   });
 
   // test subscribe, deliver lifecycle.
