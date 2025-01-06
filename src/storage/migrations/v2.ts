@@ -19,13 +19,20 @@ export class MigrationV2 extends BaseMigration {
     const connectionSpecs: DirectConnectionsById = await rm.getDirectConnections();
     const connectionSpecUpdates: Promise<void>[] = [];
     for (const spec of connectionSpecs.values()) {
+      let shouldMigrate: boolean = false;
+      const isCCloud = spec.formConnectionType === "Confluent Cloud";
       if (spec.kafka_cluster && spec.kafka_cluster.ssl === undefined) {
-        spec.kafka_cluster.ssl = { enabled: spec.formConnectionType === "Confluent Cloud" };
+        spec.kafka_cluster.ssl = { enabled: isCCloud };
+        shouldMigrate = true;
       }
       if (spec.schema_registry && spec.schema_registry.ssl === undefined) {
-        spec.schema_registry.ssl = { enabled: spec.formConnectionType === "Confluent Cloud" };
+        spec.schema_registry.ssl = { enabled: isCCloud };
+        shouldMigrate = true;
       }
-      connectionSpecUpdates.push(rm.addDirectConnection(spec));
+
+      if (shouldMigrate) {
+        connectionSpecUpdates.push(rm.addDirectConnection(spec));
+      }
     }
 
     if (connectionSpecUpdates.length > 0) {
@@ -46,13 +53,18 @@ export class MigrationV2 extends BaseMigration {
     const connectionSpecs: DirectConnectionsById = await rm.getDirectConnections();
     const connectionSpecUpdates: Promise<void>[] = [];
     for (const spec of connectionSpecs.values()) {
+      let shouldMigrate: boolean = false;
       if (spec.kafka_cluster && spec.kafka_cluster.ssl !== undefined) {
         delete spec.kafka_cluster.ssl;
+        shouldMigrate = true;
       }
       if (spec.schema_registry && spec.schema_registry.ssl !== undefined) {
         delete spec.schema_registry.ssl;
+        shouldMigrate = true;
       }
-      connectionSpecUpdates.push(rm.addDirectConnection(spec));
+      if (shouldMigrate) {
+        connectionSpecUpdates.push(rm.addDirectConnection(spec));
+      }
     }
 
     if (connectionSpecUpdates.length > 0) {
