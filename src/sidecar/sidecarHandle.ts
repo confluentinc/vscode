@@ -28,6 +28,7 @@ import {
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
+import { Message, MessageType } from "../ws/messageTypes";
 import {
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
@@ -41,6 +42,7 @@ import {
   ErrorResponseMiddleware,
   setDebugOutputChannel,
 } from "./middlewares";
+import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecarHandle");
 
@@ -92,6 +94,29 @@ export class SidecarHandle {
       middleware: middleware,
     };
   }
+
+  // Websocket sending methods
+
+  /**
+   * Send a message to / through sidecar over the websocket.
+   * The websocket send is ultimately async underneath the hood.
+   * @throws {WebsocketClosedError} if the websocket is not connected.
+   */
+  public wsSend<T extends MessageType>(message: Message<T>): void {
+    if (message.headers.originator !== this.myPid) {
+      throw new Error(
+        `Expected message originator to be '${this.myPid}', got '${message.headers.originator}'`,
+      );
+    }
+
+    WebsocketManager.getInstance().send(message);
+  }
+
+  // future method for sending message to all peer workspaces, when needed and we
+  // have a known subset of message types enumerating those messages. Can skip
+  // sending the message if the known workspace peer count == 0.
+  // public wsBroadcastToPeers<T extends BroadcastMessageType>(message: Message<T>): void {
+  // ...
 
   // === OPENAPI CLIENT METHODS ===
 
