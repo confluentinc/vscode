@@ -126,7 +126,7 @@ type MessageHeaderMap = {
 export function validateMessageBody(messageType: MessageType, body: unknown): void {
   if (messageType === MessageType.WORKSPACE_COUNT_CHANGED) {
     if (
-      !body ||
+      body == null ||
       typeof body !== "object" ||
       typeof (body as WorkspacesChangedBody).current_workspace_count !== "number"
     ) {
@@ -134,7 +134,7 @@ export function validateMessageBody(messageType: MessageType, body: unknown): vo
     }
   } else if (messageType === MessageType.PROTOCOL_ERROR) {
     if (
-      !body ||
+      body == null ||
       typeof body !== "object" ||
       typeof (body as ProtocolErrorBody).error !== "string"
     ) {
