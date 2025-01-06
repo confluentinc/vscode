@@ -177,21 +177,7 @@ describe("ResourceViewProvider loading functions", () => {
     assert.deepStrictEqual(result, []);
   });
 
-  it("loadDirectResources() should return an empty array if the preview setting is disabled, even when direct connections exist", async () => {
-    // direct connections exist
-    const testDirectEnv: DirectEnvironment = new DirectEnvironment({
-      ...TEST_DIRECT_ENVIRONMENT,
-      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
-      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
-    });
-    sandbox.stub(direct, "getDirectResources").resolves([testDirectEnv]);
-
-    const result: DirectEnvironment[] = await loadDirectResources();
-
-    assert.deepStrictEqual(result, []);
-  });
-
-  it("loadDirectResources() should return an array of direct 'environments' if direct connections exist and the preview setting is enabled", async () => {
+  it("loadDirectResources() should return an array of direct 'environments' if direct connections exist", async () => {
     // direct connections exist
     const testDirectEnv: DirectEnvironment = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
