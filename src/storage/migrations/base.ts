@@ -7,7 +7,7 @@ export abstract class BaseMigration {
   logger = new Logger("storage.migrations");
 
   async run(isUpgrade: boolean = true, storageType: MigrationStorageType): Promise<void> {
-    const logMsg = `${storageType} storage to version "${this.version}"`;
+    const logMsg = `${storageType} storage to version "${isUpgrade ? this.version : this.version - 1}"`;
 
     this.logger.debug(`${isUpgrade ? "upgrading" : "downgrading"} ${logMsg}...`);
     try {
