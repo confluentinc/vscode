@@ -30,6 +30,7 @@ import {
   connectionUsable,
   currentKafkaClusterChanged,
   currentSchemaRegistryChanged,
+  environmentChanged,
 } from "../emitters";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
@@ -265,6 +266,9 @@ export async function waitForConnectionToBeUsable(
           continue;
         }
         connectionUsable.fire(id);
+        // notify subscribers that the "environment" has changed since direct connections are treated
+        // as environment-specific resources
+        environmentChanged.fire(id);
         if (kafkaState === "FAILED") {
           kafkaFailed = status.kafka_cluster?.errors?.sign_in?.message;
         }
@@ -308,8 +312,13 @@ export async function waitForConnectionToBeUsable(
 
   if (!connection) {
     const msg = `Connection ${id} did not become usable within ${timeoutMs}ms`;
+    // reset any "loading" state for this connection
+    connectionUsable.fire(id);
+    // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
+    // old data
+    environmentChanged.fire(id);
     logger.error(msg);
-    throw new Error(msg);
+    return null;
   }
 
   return connection;

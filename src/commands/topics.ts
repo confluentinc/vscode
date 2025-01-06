@@ -7,9 +7,11 @@ import {
   ProduceRequest,
   ProduceRequestData,
   ProduceRequestHeader,
+  ProduceResponse,
   ResponseError,
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
+import { MessageViewerConfig } from "../consume";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -209,20 +211,6 @@ async function produceMessageFromFile(topic: KafkaTopic) {
       }),
     );
 
-    // TEMPORARY: remove this warning once the sidecar supports producing records with headers
-    if (headers.length > 0) {
-      const yesButton = "Produce without headers";
-      const confirmation = await vscode.window.showWarningMessage(
-        `Producing messages with headers is not yet supported. Do you want to produce this message anyway?`,
-        { modal: true },
-        yesButton,
-        // "Cancel" is added by default
-      );
-      if (confirmation !== yesButton) {
-        return;
-      }
-    }
-
     // TODO: add schema information here once we have it
     const key: ProduceRequestData = { data: message.key };
     const value: ProduceRequestData = { data: message.value };
@@ -239,7 +227,31 @@ async function produceMessageFromFile(topic: KafkaTopic) {
     };
 
     try {
-      await recordsApi.produceRecord(request);
+      const resp: ProduceResponse = await recordsApi.produceRecord(request);
+      vscode.window
+        .showInformationMessage(
+          `Success: Produced message to topic "${topic.name}".`,
+          "View Message",
+        )
+        .then((selection) => {
+          if (selection) {
+            // open the message viewer to show a ~1sec window around the produced message
+            const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
+            // ...with the message key used to search, and partition filtered if available
+            const messageViewerConfig = MessageViewerConfig.create({
+              // don't change the consume query params, just filter to show this last message
+              timestampFilter: [msgTime, msgTime + 500],
+              partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
+              textFilter: String(message.key),
+            });
+            vscode.commands.executeCommand(
+              "confluent.topic.consume",
+              topic,
+              true, // duplicate MV to show updated filters
+              messageViewerConfig,
+            );
+          }
+        });
     } catch (error: any) {
       logResponseError(error, "topic produce from file"); // not sending to Sentry by default
       if (error instanceof ResponseError) {
