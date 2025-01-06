@@ -9,6 +9,8 @@ All notable changes to this extension will be documented in this file.
 - Produce message button and commmand enabling schemaless production of JSON messages
 - "Direct" connections in the Resources view will provide more information when unable to connect to
   Kafka and/or Schema Registry
+- Storage migration for any previously-created "direct" connections to include `ssl` defaults based
+  on whether or not they were set to "Confluent Cloud" connections.
 
 ### Changed
 
