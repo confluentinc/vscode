@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Disposable, ProgressLocation, SecretStorageChangeEvent, window } from "vscode";
 import {
   Connection,
@@ -8,7 +9,7 @@ import {
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
-import { directConnectionsChanged, environmentChanged } from "./emitters";
+import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
@@ -30,7 +31,6 @@ import {
 import { logUsage, UserEvent } from "./telemetry/events";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
-import { randomUUID } from "crypto";
 
 const logger = new Logger("directConnectManager");
 
@@ -199,9 +199,6 @@ export class DirectConnectionManager {
     };
     // update the connection in secret storage (via full replace of the connection by its id)
     await getResourceManager().addDirectConnection(mergedSpec);
-    // notify subscribers that the "environment" has changed since direct connections are treated
-    // as environment-specific resources
-    environmentChanged.fire(mergedSpec.id);
     return;
   }
 
