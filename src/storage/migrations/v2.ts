@@ -19,14 +19,15 @@ export class MigrationV2 extends BaseMigration {
     const connectionSpecs: DirectConnectionsById = await rm.getDirectConnections();
     const connectionSpecUpdates: Promise<void>[] = [];
     for (const spec of connectionSpecs.values()) {
-      if (spec.kafka_cluster) {
+      if (spec.kafka_cluster && spec.kafka_cluster.ssl === undefined) {
         spec.kafka_cluster.ssl = { enabled: spec.formConnectionType === "Confluent Cloud" };
       }
-      if (spec.schema_registry) {
+      if (spec.schema_registry && spec.schema_registry.ssl === undefined) {
         spec.schema_registry.ssl = { enabled: spec.formConnectionType === "Confluent Cloud" };
       }
       connectionSpecUpdates.push(rm.addDirectConnection(spec));
     }
+
     if (connectionSpecUpdates.length > 0) {
       logger.debug(`Adding 'ssl' defaults to ${connectionSpecUpdates.length} ConnectionSpec(s)`);
       await Promise.all(connectionSpecUpdates);
@@ -45,14 +46,15 @@ export class MigrationV2 extends BaseMigration {
     const connectionSpecs: DirectConnectionsById = await rm.getDirectConnections();
     const connectionSpecUpdates: Promise<void>[] = [];
     for (const spec of connectionSpecs.values()) {
-      if (spec.kafka_cluster) {
+      if (spec.kafka_cluster && spec.kafka_cluster.ssl !== undefined) {
         delete spec.kafka_cluster.ssl;
       }
-      if (spec.schema_registry) {
+      if (spec.schema_registry && spec.schema_registry.ssl !== undefined) {
         delete spec.schema_registry.ssl;
       }
       connectionSpecUpdates.push(rm.addDirectConnection(spec));
     }
+
     if (connectionSpecUpdates.length > 0) {
       logger.debug(
         `Removing 'ssl' defaults from ${connectionSpecUpdates.length} ConnectionSpec(s)`,
