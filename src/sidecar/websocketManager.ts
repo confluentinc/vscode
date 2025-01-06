@@ -1,10 +1,14 @@
-import { Disposable, EventEmitter, window } from "vscode";
+import { Disposable, EventEmitter as VscodeEventEmitter, window } from "vscode";
+// our message callback routing internally using node's EventEmitter for .once() support + per-event-type callbacks, lacking in VSCode's EventEmitter implementation
+import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
 import { Logger } from "../logging";
-import { MessageRouter } from "../ws/messageRouter";
 import { Message, MessageHeaders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 const logger = new Logger("websocketManager");
+
+/** Type describing message handler callbacks to whom recieved messages are routed. */
+export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
 export class WebsocketManager implements Disposable {
   static instance: WebsocketManager | null = null;
@@ -17,21 +21,38 @@ export class WebsocketManager implements Disposable {
   }
 
   private websocket: WebSocket | null = null;
-  // Emits WebsocketStateEvent.CONNECTED and DISCONNECTED events.
-  private websocketStateEmitter = new EventEmitter<WebsocketStateEvent>();
+
+  /**  Emits WebsocketStateEvent.CONNECTED and DISCONNECTED events on 'event' key. **/
+  private websocketStateEmitter = new VscodeEventEmitter<WebsocketStateEvent>();
+
+  /**
+   * Delivers recieved messages to registered async calbacks based on the message type.
+   *  @see {@link subscribe()}, {@link once()}, and {@link deliverToCallbacks()} methods.
+   */
+  private messageRouter: NodeEventEmitter;
   private disposables: Disposable[] = [];
-  private messageRouter = MessageRouter.getInstance();
   private peerWorkspaceCount = 0;
 
   private constructor() {
-    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will get one when connected, and whenever
+    // Set up a NodeJS EventEmitter to route recieved websocket messages to the appropriate async handlers
+    // based on the message type.
+    this.messageRouter = constructMessageRouter();
+
+    // Install handler for WORKSPACE_COUNT_CHANGED messages. Will recieve one when connected, and whenever
     // any other workspaces connect or disconnect.
-    this.messageRouter.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
+    this.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
       logger.debug(
         `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
       );
-      // The reply is inclusive of the current workspace, but we want peer count.
+      // The reply is inclusive of the current workspace, but we want to retain the peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
+    });
+
+    // Deregister all message handlers when we're disposed of.
+    this.disposables.push({
+      dispose: () => {
+        this.messageRouter.removeAllListeners();
+      },
     });
   }
 
@@ -40,7 +61,10 @@ export class WebsocketManager implements Disposable {
     return this.websocket !== null && this.websocket.readyState === WebSocket.OPEN;
   }
 
-  /** Register a listener for WebsocketStateEvent.CONNECTED and DISCONNECTED events. */
+  /**
+   * Register a listener for WebsocketStateEvent.CONNECTED and DISCONNECTED events. Primarily
+   * used by the sidecarManager to know when to attempt to reconnect.
+   */
   public registerStateChangeHandler(listener: (event: WebsocketStateEvent) => any): Disposable {
     return this.websocketStateEmitter.event(listener);
   }
@@ -80,16 +104,10 @@ export class WebsocketManager implements Disposable {
           },
         };
 
-        // this.websocket isn't assigned yet, so explicitly pass it in
-        this.send(helloMessage, websocket);
-
-        // Now await the first WORKSPACE_COUNT_CHANGED message, will be sent
-        // to all workspaces when any connect+hello or disconnect happens.
-
         // Resolve when we have gotten the first WORKSPACE_COUNT_CHANGED message. Will be sent
         // when any connect/disconnect happens, even ours.
         // Install a one-time handler for this message type.
-        this.messageRouter.once(
+        this.once(
           MessageType.WORKSPACE_COUNT_CHANGED,
           async (m: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
             logger.info(
@@ -103,6 +121,13 @@ export class WebsocketManager implements Disposable {
             resolve();
           },
         );
+
+        // Now send the hello message (after the handler is installed)
+        // (this.websocket isn't assigned yet, so explicitly pass it to send())
+        this.send(helloMessage, websocket);
+
+        // Will now wait for the WORKSPACE_COUNT_CHANGED message to resolve the promise
+        // in the above once() handler.
       });
 
       websocket.on("close", () => {
@@ -139,14 +164,15 @@ export class WebsocketManager implements Disposable {
           `Recieved ${headers.message_type} websocket message from originator ${headers.originator}: ${JSON.stringify(message, null, 2)}`,
         );
 
-        // Defer to the internal message router to deliver the message to the registered by-message-type async handler(s).
-        this.messageRouter.deliver(message).catch((e) => {
+        // Defer to the NodeJS EventEmitter to deliver the message to the registered by-message-type async handler(s).
+        this.deliverToCallbacks(message).catch((e) => {
           logger.error(`Error delivering message ${JSON.stringify(message, null, 2)}: ${e}`);
         });
       });
 
       this.disposables.push({
         dispose: () => {
+          // Close the websocket when we're disposed of.
           if (this.websocket && this.websocket.readyState !== WebSocket.CLOSED) {
             this.websocket.close();
             this.websocket = null;
@@ -194,6 +220,50 @@ export class WebsocketManager implements Disposable {
     return this.peerWorkspaceCount;
   }
 
+  // Subsciption and delivery of messages to the appropriate async handlers
+
+  /**
+   * Register an async callback for messages of the given type. The callback
+   * will be called by `deliverToCallbacks()` and awaited every time a message of the given type is delivered.
+   **/
+  public subscribe<T extends MessageType>(messageType: T, callback: MessageCallback<T>): void {
+    this.messageRouter.on(messageType, callback);
+  }
+
+  /**
+   * Register an async callback for messages of the given type, to be called only once by
+   * `deliverToCallbacks` upon  delivery of the next message of that type.
+   **/
+  public once<T extends MessageType>(messageType: T, callback: MessageCallback<T>): void {
+    this.messageRouter.once(messageType, callback);
+  }
+
+  /**
+   * Deliver a recieved-from-websocket message to all registered callbacks for the message type.
+   * @param message The message to deliver.
+   **/
+  public async deliverToCallbacks<T extends MessageType>(message: Message<T>): Promise<void> {
+    const messageType = message.headers.message_type;
+    logger.info(`Delivering message of type ${messageType}`);
+
+    const initialCallbackCount = this.messageRouter.listenerCount(messageType);
+    logger.debug(
+      `Delivering message of type ${message.headers.message_type} to ${initialCallbackCount} callback(s).`,
+    );
+
+    this.messageRouter.emit(messageType, message);
+
+    logger.debug(
+      `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
+    );
+    const remainingCallbackCount = this.messageRouter.listenerCount(messageType);
+    if (remainingCallbackCount !== initialCallbackCount) {
+      logger.debug(
+        `Removed ${initialCallbackCount - remainingCallbackCount} one-time callback(s) for message type ${message.headers.message_type}`,
+      );
+    }
+  }
+
   public dispose(): void {
     this.disposables.forEach((d) => d.dispose());
     this.disposables = [];
@@ -239,6 +309,16 @@ export class WebsocketManager implements Disposable {
 
     return message;
   }
+}
+
+export function constructMessageRouter(): NodeEventEmitter {
+  // Portion of WebsocketManager constructor exported for test suite purposes.
+  const messageRouter = new NodeEventEmitter({ captureRejections: true });
+  messageRouter.on("error", (error: any) => {
+    logger.error(`Error delivering message to message handler: ${error}`);
+  });
+
+  return messageRouter;
 }
 
 class WebsocketClosedError extends Error {

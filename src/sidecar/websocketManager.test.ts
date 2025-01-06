@@ -1,16 +1,15 @@
 import assert from "assert";
+import { EventEmitter as NodeEventEmitter } from "node:events";
 import { getSidecar } from ".";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { MessageRouter } from "../ws/messageRouter";
-import { Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
-import { WebsocketManager } from "./websocketManager";
+import { Message, MessageType, newMessageHeaders, WorkspacesChangedBody } from "../ws/messageTypes";
+import { constructMessageRouter, WebsocketManager } from "./websocketManager";
 
 // tests over WebsocketManager
 
 describe("WebsocketManager peerWorkspaceCount tests", () => {
   it("peerWorkspaceCount should be updated when WORKSPACE_COUNT_CHANGED message is received", async () => {
     // Arrange
-    const messageRouter = MessageRouter.getInstance();
     const websocketManager = WebsocketManager.getInstance();
 
     const message: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
@@ -25,7 +24,7 @@ describe("WebsocketManager peerWorkspaceCount tests", () => {
     };
 
     // Act
-    await messageRouter.deliver(message);
+    await websocketManager.deliverToCallbacks(message);
 
     // Assert
     assert.strictEqual(
@@ -186,5 +185,149 @@ describe("WebsocketManager.parseMessage tests", () => {
       const message = WebsocketManager.parseMessage(JSON.stringify(testCase));
       assert.deepStrictEqual(message, testCase);
     }
+  });
+});
+
+describe("WebsocketManager message recepit + callback routing tests (messageRouter interactions)", () => {
+  const manager = WebsocketManager.getInstance();
+  let stashedRouter: NodeEventEmitter;
+
+  const simpleMessage: Message<MessageType.WORKSPACE_COUNT_CHANGED> = {
+    headers: {
+      message_type: MessageType.WORKSPACE_COUNT_CHANGED,
+      originator: "sidecar",
+      message_id: "1",
+    },
+    body: {
+      current_workspace_count: 1,
+    },
+  };
+
+  beforeEach(() => {
+    // Stash the currently configured event emitter.
+    stashedRouter = manager["messageRouter"];
+
+    // Build new empty emitter and wire it into the websocket manager.
+    manager["messageRouter"] = constructMessageRouter();
+  });
+
+  afterEach(() => {
+    // Restore the stashed event emitter.
+    manager["messageRouter"] = stashedRouter;
+  });
+
+  // test subscribe, deliver lifecycle.
+  it("subscribe() tests", async () => {
+    let callbackOneCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+    let callbackTwoCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+
+    const callbackOne = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackOneCalledWith = message;
+    };
+
+    const callbackTwo = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackTwoCalledWith = message;
+    };
+
+    // subscribe both callbacks.
+    manager.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
+    manager.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
+
+    // deliver message, should call both callbacks
+    await manager.deliverToCallbacks(simpleMessage);
+
+    assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+
+    // deliver again, should call both callbacks again.
+    callbackOneCalledWith = null;
+    callbackTwoCalledWith = null;
+
+    await manager.deliverToCallbacks(simpleMessage);
+
+    assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+  });
+
+  // test once() behavior auto-removing after delivering a single message.
+  it("once() tests", async () => {
+    let callbackOneCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+    let callbackTwoCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+
+    // Will be registered with just 'once'
+    const callbackOne = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackOneCalledWith = message;
+    };
+
+    // Will be durably registered with subscribe
+    const callbackTwo = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackTwoCalledWith = message;
+    };
+
+    // subscribe both callbacks, but one is 'once' and should be removed after single message delivery.
+    manager.once(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
+    manager.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
+
+    // deliver, should call both callbacks
+    await manager.deliverToCallbacks(simpleMessage);
+
+    assert.deepStrictEqual(simpleMessage, callbackOneCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+
+    // deliver again, will only call callbackTwo.
+    callbackOneCalledWith = null;
+    callbackTwoCalledWith = null;
+    await manager.deliverToCallbacks(simpleMessage);
+    assert.deepStrictEqual(null, callbackOneCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+  });
+
+  it("Delivery of unknown message type should not raise any error", async () => {
+    const unknownMessageTypeMessage: Message<MessageType> = {
+      headers: {
+        message_type: "UNKNOWN" as MessageType,
+        originator: "sidecar",
+        message_id: "1",
+      },
+      body: {} as WorkspacesChangedBody,
+    };
+
+    await manager.deliverToCallbacks(unknownMessageTypeMessage);
+  });
+
+  it("Delivering message when no callbacks are registered should not raise any error", async () => {
+    await manager.deliverToCallbacks(simpleMessage);
+  });
+
+  it("Errors raised by some callbacks do not prevent other callbacks from being called", async () => {
+    let callbackTwoCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+    let callbackThreeCalledWith: Message<MessageType.WORKSPACE_COUNT_CHANGED> | null = null;
+    let raised = false;
+
+    const callbackOne = async () => {
+      raised = true;
+      throw new Error("callbackOne error");
+    };
+
+    const callbackTwo = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackTwoCalledWith = message;
+    };
+
+    const callbackThree = async (message: Message<MessageType.WORKSPACE_COUNT_CHANGED>) => {
+      callbackThreeCalledWith = message;
+    };
+
+    //
+    manager.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackOne);
+    manager.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackTwo);
+    manager.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, callbackThree);
+
+    // Should call all callbacks, starting with callbackOne, which will raise an error.
+    // The error should not prevent the other callbacks from being called.
+    await manager.deliverToCallbacks(simpleMessage);
+
+    assert.deepStrictEqual(simpleMessage, callbackTwoCalledWith);
+    assert.deepStrictEqual(simpleMessage, callbackThreeCalledWith);
+    assert.strictEqual(true, raised);
   });
 });
