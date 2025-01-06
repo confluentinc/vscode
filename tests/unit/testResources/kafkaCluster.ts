@@ -7,7 +7,7 @@ import { TEST_DIRECT_CONNECTION_ID } from "./connection";
 import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
 
 export const TEST_LOCAL_KAFKA_CLUSTER: LocalKafkaCluster = LocalKafkaCluster.create({
-  id: "local-abc123",
+  id: "local-kafka-cluster-abc123",
   bootstrapServers: "localhost:9092",
   uri: "http://localhost:8082",
   name: "test-local-kafka-cluster",

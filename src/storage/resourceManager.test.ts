@@ -678,7 +678,7 @@ describe("ResourceManager schema tests", function () {
       }),
       Schema.create({
         ...TEST_CCLOUD_SCHEMA,
-        id: "100055",
+        id: "100056",
         subject: "test-ccloud-topic-abc-value",
         version: 1,
       }),
@@ -1097,7 +1097,7 @@ describe("ResourceManager general utility methods", function () {
       }),
       Schema.create({
         ...TEST_CCLOUD_SCHEMA,
-        id: "100055",
+        id: "100056",
         subject: "test-ccloud-topic-abc-value",
         version: 1,
       }),

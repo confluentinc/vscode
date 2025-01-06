@@ -92,7 +92,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     if (element instanceof Schema) {
       // if we're a schema, our parent is (an equivalent) container tree item (that will have the right label (the schema subject))
-      return { label: element.subject, children: [] };
+      return new ContainerTreeItem<Schema>(
+        element.subject,
+        vscode.TreeItemCollapsibleState.Collapsed,
+        [],
+      );
     }
     // Otherwise the parent of a container tree item is the root.
     return null;

@@ -48,9 +48,9 @@ describe("TopicViewProvider helper functions", () => {
   const topicName = "test-topic";
   const valueSubject = `${topicName}-value`;
   const preloadedSchemas: Schema[] = [
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 1 }),
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 2 }),
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1 }),
+    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 1, id: "1" }),
+    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 2, id: "2" }),
+    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1, id: "3" }),
   ];
 
   let storageManager: StorageManager;
