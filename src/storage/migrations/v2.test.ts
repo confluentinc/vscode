@@ -12,7 +12,7 @@ import { FormConnectionType } from "../../webview/direct-connect-form";
 import { CustomConnectionSpec, DirectConnectionsById } from "../resourceManager";
 import { MigrationV2 } from "./v2";
 
-describe("MigrationV2", () => {
+describe("storage/migrations/v2", () => {
   let sandbox: sinon.SinonSandbox;
   let secretsGetStub: sinon.SinonStub;
   let secretsStoreStub: sinon.SinonStub;
