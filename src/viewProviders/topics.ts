@@ -105,7 +105,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
         // Local / CCloud containers, just return the topic tree items
-        return element.getChildren();
+        return element.children;
       } else if (element instanceof KafkaTopic) {
         return await loadTopicSchemas(element);
       }

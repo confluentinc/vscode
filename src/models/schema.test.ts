@@ -137,15 +137,15 @@ describe("Schema helper functions", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
     const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.getChildren();
+    const testTopicSchemas = testTopicGroup!.children;
     assert.equal(testTopicSchemas.length, 2);
 
     const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.getChildren();
+    const anotherTopicSchemas = anotherTopicGroup!.children;
     assert.equal(anotherTopicSchemas.length, 1);
 
     const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.getChildren();
+    const extraTopicSchemas = extraTopicGroup!.children;
     assert.equal(extraTopicSchemas.length, 3);
   });
 
@@ -166,7 +166,7 @@ describe("Schema helper functions", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
     const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.getChildren();
+    const testTopicSchemas = testTopicGroup!.children;
     assert.equal(
       testTopicSchemas[0].version,
       2,
@@ -174,7 +174,7 @@ describe("Schema helper functions", () => {
     );
 
     const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.getChildren();
+    const anotherTopicSchemas = anotherTopicGroup!.children;
     assert.equal(
       anotherTopicSchemas[0].version,
       1,
@@ -182,7 +182,7 @@ describe("Schema helper functions", () => {
     );
 
     const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.getChildren();
+    const extraTopicSchemas = extraTopicGroup!.children;
     assert.equal(
       extraTopicSchemas[0].version,
       3,

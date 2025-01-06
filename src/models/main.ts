@@ -1,11 +1,8 @@
 import * as vscode from "vscode";
-import { Logger } from "../logging";
 
-const logger = new Logger("models.main");
-
-/** Anything with an id property */
+/** Anything with an `id` string property */
 export interface IdItem {
-  id: string;
+  readonly id: string;
 }
 
 /**
@@ -14,17 +11,17 @@ export interface IdItem {
  * items nested under a single resource.
  */
 export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem {
-  private children: T[] = [];
+  private _children: T[] = [];
 
   constructor(label: string, collapsibleState: vscode.TreeItemCollapsibleState, children: T[]) {
     super(label, collapsibleState);
 
     this.description = `(${children.length})`;
 
-    this.setChildren(children);
+    this.children = children;
   }
 
-  setChildren(children: T[]) {
+  set children(children: T[]) {
     // ensure that children ids are unique
     const ids = new Set<string>();
     for (const child of children) {
@@ -34,12 +31,11 @@ export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem {
       ids.add(child.id);
     }
 
-    logger.info(`Updated container tree item with ${children.length} children`);
-    this.children = children;
+    this._children = children;
   }
 
-  getChildren(): T[] {
-    return this.children;
+  get children(): T[] {
+    return this._children;
   }
 }
 
