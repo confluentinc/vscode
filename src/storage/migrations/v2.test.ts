@@ -63,7 +63,6 @@ describe("MigrationV2", () => {
           formConnectionType,
         },
       ];
-      console.info("***TEST SPECS***", testSpecs[0]);
       const testV1Map: DirectConnectionsById = new Map(
         testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
       );
