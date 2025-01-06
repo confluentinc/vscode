@@ -1,5 +1,7 @@
+import { ExtensionContext } from "vscode";
+import { getExtensionContext } from "../../context/extension";
 import { Logger } from "../../logging";
-import { DirectConnectionsById, getResourceManager } from "../resourceManager";
+import { SecretStorageKeys } from "../constants";
 import { BaseMigration } from "./base";
 
 const logger = new Logger("storage.migrations.v2");
@@ -13,31 +15,55 @@ export class MigrationV2 extends BaseMigration {
    *  the `formConnectionType` field.
    */
   async upgradeSecretStorage(): Promise<void> {
-    const rm = getResourceManager();
+    const context: ExtensionContext = getExtensionContext();
 
-    // direct connection `ssl` defaults: `enabled` if `formConnectionType` is "Confluent Cloud"
-    const connectionSpecs: DirectConnectionsById = await rm.getDirectConnections();
-    const connectionSpecUpdates: Promise<void>[] = [];
-    for (const spec of connectionSpecs.values()) {
-      let shouldMigrate: boolean = false;
-      const isCCloud = spec.formConnectionType === "Confluent Cloud";
+    // NOTE: we aren't using other helper methods, types, interfaces, etc. here to avoid having to
+    // migrate those as well, but the storage key should be fine on its own
+    const connectionSpecsStr: string | undefined = await context.secrets.get(
+      SecretStorageKeys.DIRECT_CONNECTIONS,
+    );
+    if (!connectionSpecsStr) {
+      logger.debug("no ConnectionSpecs to check for upgrade");
+      return;
+    }
+
+    // should be a map-like structure of connection ID -> ConnectionSpec
+    const connectionSpecs = JSON.parse(connectionSpecsStr);
+    if (typeof connectionSpecs !== "object" || connectionSpecs === null) {
+      throw new Error("ConnectionSpecs must be an object");
+    }
+
+    // copy over existing+updated specs into a new map to write once later
+    const updatedConnectionSpecs: Map<string, any> = new Map();
+    const specs: any[] = Object.values(connectionSpecs);
+    for (const spec of specs) {
+      if (typeof spec !== "object" || spec === null || !spec.id) {
+        continue;
+      }
+
+      // direct connection `ssl` defaults: `enabled` if `formConnectionType` is "Confluent Cloud",
+      // defaulting to "true" otherwise (users should be able to adjust this for non-CCloud
+      // connections anyway)
+      const isCCloud = spec.formConnectionType
+        ? spec.formConnectionType === "Confluent Cloud"
+        : true;
+
       if (spec.kafka_cluster && spec.kafka_cluster.ssl === undefined) {
         spec.kafka_cluster.ssl = { enabled: isCCloud };
-        shouldMigrate = true;
       }
       if (spec.schema_registry && spec.schema_registry.ssl === undefined) {
         spec.schema_registry.ssl = { enabled: isCCloud };
-        shouldMigrate = true;
       }
 
-      if (shouldMigrate) {
-        connectionSpecUpdates.push(rm.addDirectConnection(spec));
-      }
+      updatedConnectionSpecs.set(spec.id, spec);
     }
 
-    if (connectionSpecUpdates.length > 0) {
-      logger.debug(`Adding 'ssl' defaults to ${connectionSpecUpdates.length} ConnectionSpec(s)`);
-      await Promise.all(connectionSpecUpdates);
+    if (updatedConnectionSpecs.size > 0) {
+      logger.debug(`Adding 'ssl' defaults to ${updatedConnectionSpecs.size} ConnectionSpec(s)`);
+      await context.secrets.store(
+        SecretStorageKeys.DIRECT_CONNECTIONS,
+        JSON.stringify(Object.fromEntries(updatedConnectionSpecs)),
+      );
     } else {
       logger.debug("No ConnectionSpecs to upgrade");
     }
@@ -48,30 +74,48 @@ export class MigrationV2 extends BaseMigration {
    * - Remove `ssl` fields from ConnectionSpecs' `kafka_cluster` and `schema_registry` configs.
    */
   async downgradeSecretStorage(): Promise<void> {
-    const rm = getResourceManager();
+    const context: ExtensionContext = getExtensionContext();
 
-    const connectionSpecs: DirectConnectionsById = await rm.getDirectConnections();
-    const connectionSpecUpdates: Promise<void>[] = [];
-    for (const spec of connectionSpecs.values()) {
-      let shouldMigrate: boolean = false;
+    // NOTE: we aren't using other helper methods, types, interfaces, etc. here to avoid having to
+    // migrate those as well, but the storage key should be fine on its own
+    const connectionSpecsStr: string | undefined = await context.secrets.get(
+      SecretStorageKeys.DIRECT_CONNECTIONS,
+    );
+    if (!connectionSpecsStr) {
+      logger.debug("no ConnectionSpecs to check for downgrade");
+      return;
+    }
+
+    // should be a map-like structure of connection ID -> ConnectionSpec
+    const connectionSpecs = JSON.parse(connectionSpecsStr);
+    if (typeof connectionSpecs !== "object" || connectionSpecs === null) {
+      throw new Error("ConnectionSpecs must be an object");
+    }
+
+    // copy over existing+updated specs into a new map to write once later
+    const updatedConnectionSpecs: Map<string, any> = new Map();
+    const specs: any[] = Object.values(connectionSpecs);
+    for (const spec of specs) {
+      if (typeof spec !== "object" || spec === null || !spec.id) {
+        continue;
+      }
+
       if (spec.kafka_cluster && spec.kafka_cluster.ssl !== undefined) {
         delete spec.kafka_cluster.ssl;
-        shouldMigrate = true;
       }
       if (spec.schema_registry && spec.schema_registry.ssl !== undefined) {
         delete spec.schema_registry.ssl;
-        shouldMigrate = true;
       }
-      if (shouldMigrate) {
-        connectionSpecUpdates.push(rm.addDirectConnection(spec));
-      }
+
+      updatedConnectionSpecs.set(spec.id, spec);
     }
 
-    if (connectionSpecUpdates.length > 0) {
-      logger.debug(
-        `Removing 'ssl' defaults from ${connectionSpecUpdates.length} ConnectionSpec(s)`,
+    if (updatedConnectionSpecs.size > 0) {
+      logger.debug(`Removing 'ssl' defaults from ${updatedConnectionSpecs.size} ConnectionSpec(s)`);
+      await context.secrets.store(
+        SecretStorageKeys.DIRECT_CONNECTIONS,
+        JSON.stringify(Object.fromEntries(updatedConnectionSpecs)),
       );
-      await Promise.all(connectionSpecUpdates);
     } else {
       logger.debug("No ConnectionSpecs to downgrade");
     }
