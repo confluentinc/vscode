@@ -129,9 +129,15 @@ blocks:
           - $Env:PATH += ";C:\Program Files\GitHub CLI\"
           - gh --version
           - |
+            if ([string]::IsNullOrEmpty($Env:GITHUB_TOKEN)) {
+                Write-Host "GITHUB_TOKEN environment variable is missing or empty"
+                exit 1
+            } else {
+                Write-Host "GITHUB_TOKEN environment variable is set and not empty"
+            }
             $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
             gh config set prompt disabled
-            gh auth login
+            $Env:GH_TOKEN | Out-String | gh auth login --with-token
             gh auth status
           - npm ci --include=dev
       jobs:
