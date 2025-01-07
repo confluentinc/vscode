@@ -176,6 +176,7 @@ blocks:
       prologue:
         commands:
           - checkout
+          - . vault-setup
           - artifact pull workflow packaged-vsix-files/
       jobs:
         - name: "Upload VSIX files to GitHub"
