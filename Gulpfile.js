@@ -842,12 +842,14 @@ export async function downloadSidecar() {
       ["-ExecutionPolicy", "Bypass", "-File", "./scripts/windows/download-sidecar-executable.ps1"],
       { stdio: "inherit", shell: IS_WINDOWS },
     );
+    if (result.error) throw result.error;
   } else {
     // Use the make target to download the sidecar executable
     result = spawnSync("make", ["download-sidecar-executable"], {
       stdio: "inherit",
       shell: IS_WINDOWS,
     });
+    if (result.error) throw result.error;
   }
 
   return result;
