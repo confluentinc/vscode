@@ -22,8 +22,7 @@ if ($SKIP_DOWNLOAD_EXECUTABLE) {
     Write-Host "Downloading sidecar executable from Release $IDE_SIDECAR_VERSION"
     gh release download $IDE_SIDECAR_VERSION --repo $IDE_SIDECAR_REPO --pattern=$EXECUTABLE_PATH --output $EXECUTABLE_DOWNLOAD_PATH --clobber
     if (-not (Test-Path $EXECUTABLE_DOWNLOAD_PATH -PathType Leaf)) {
-        Write-Host "Failed to download sidecar executable."
-        exit 1
+        throw "Failed to download sidecar executable."
     }
 
     # Set the executable permissions
