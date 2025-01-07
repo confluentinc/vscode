@@ -1,7 +1,7 @@
 import { TopicData } from "../clients/kafkaRest";
 import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
-=import { DirectEnvironment } from "../models/environment";
+import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, isDirect } from "../models/resource";
 import { Schema } from "../models/schema";
