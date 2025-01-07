@@ -129,10 +129,19 @@ blocks:
           - $Env:PATH += ";C:\Program Files\GitHub CLI\"
           - gh --version
           - |
-            $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
-            gh config set prompt disabled
-            gh auth login
-            gh auth status
+            if (Test-Path "$HOME/.gh-token") {
+              $Env:GH_TOKEN = Get-Content "$HOME/.gh-token" -Raw | ForEach-Object { $_.Trim() }
+              if ([string]::IsNullOrEmpty($Env:GH_TOKEN)) {
+                  Write-Error "Token file exists but is empty"
+                  exit 1
+              }
+              gh config set prompt disabled
+              $Env:GH_TOKEN | gh auth login --with-token
+              gh auth status
+            } else {
+                Write-Error "Token file not found at $HOME/.gh-token"
+                exit 1
+            }
           - npm ci --include=dev
       jobs:
         - name: "Package VSIX"
