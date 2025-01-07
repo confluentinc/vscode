@@ -74,9 +74,6 @@ export function build(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
-  const result = downloadSidecar();
-  if (result.error) throw result.error;
-
   if (production) {
     process.env.SENTRY_ENV = "production";
     setupSegment();
@@ -87,10 +84,8 @@ export function build(done) {
   const extInput = {
     input: {
       extension: "src/extension.ts",
-      sidecar: "ide-sidecar",
     },
     plugins: [
-      sidecar(),
       pkgjson(),
       node({ preferBuiltins: true, exportConditions: ["node"] }),
       commonjs(),
@@ -343,11 +338,11 @@ function pkgjson() {
 }
 
 /**
- * Bundles sidecar binary of appropriate version.
  * Provides `ide-sidecar` module for the source code to use.
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
+  // this will be downloaded on extension activation if it doesn't exist already:
   const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
 
   return [
@@ -356,7 +351,6 @@ function sidecar() {
     }),
     copy({
       copyOnce: true,
-      targets: [{ src: `bin/${sidecarFilename}`, dest: DESTINATION }],
     }),
   ];
 }
@@ -831,24 +825,4 @@ export function install(done) {
     shell: IS_WINDOWS,
   });
   return done(result.status);
-}
-
-export async function downloadSidecar() {
-  let result;
-  if (IS_WINDOWS) {
-    result = spawnSync(
-      "powershell.exe",
-      // Add "-ExecutionPolicy", "Bypass" if necessary
-      ["-ExecutionPolicy", "Bypass", "-File", "./scripts/windows/download-sidecar-executable.ps1"],
-      { stdio: "inherit", shell: IS_WINDOWS },
-    );
-  } else {
-    // Use the make target to download the sidecar executable
-    result = spawnSync("make", ["download-sidecar-executable"], {
-      stdio: "inherit",
-      shell: IS_WINDOWS,
-    });
-  }
-
-  return result;
 }
