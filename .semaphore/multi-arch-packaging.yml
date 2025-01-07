@@ -131,7 +131,7 @@ blocks:
           - |
             $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
             gh config set prompt disabled
-            gh auth login --with-token $Env:GH_TOKEN
+            $Env:GH_TOKEN | gh auth login --with-token
             gh auth status
           - npm ci --include=dev
       jobs:
