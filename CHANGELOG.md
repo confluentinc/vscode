@@ -24,6 +24,8 @@ All notable changes to this extension will be documented in this file.
   with icons to indicate the type of connection chosen in the form.
 - Double-clicking on an event/message row in the topic message viewer will now open a read-only
   (preview) document with the message content.
+- Functionality to connect directly to Kafka and/or Schema Registry is now available by default, and
+  the associated "preview" setting has been removed.
 
 ### Fixed
 
