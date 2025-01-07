@@ -128,11 +128,16 @@ blocks:
           - choco install gh -y
           - $Env:PATH += ";C:\Program Files\GitHub CLI\"
           - gh --version
-          - gh auth status
           - |
-            $Env:GH_TOKEN = [Environment]::GetEnvironmentVariable('GITHUB_TOKEN', 'Machine')
+            $Env:GH_TOKEN = $Env:GITHUB_TOKEN
             gh config set prompt disabled
-            $Env:GH_TOKEN | gh auth login --with-token
+            if ([string]::IsNullOrEmpty($Env:GH_TOKEN)) {
+                Write-Host "GH_TOKEN environment variable is missing or empty"
+                exit 1
+            } else {
+                Write-Host "GH_TOKEN environment variable is set and not empty"
+            }
+            $Env:GH_TOKEN | Out-String | gh auth login --with-token
             gh auth status
           - npm ci --include=dev
       jobs:
