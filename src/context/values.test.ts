@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as sinon from "sinon";
+import sinon from "sinon";
 import { commands } from "vscode";
 import { ContextValues, getContextValue, setContextValue } from "./values";
 
@@ -14,6 +14,16 @@ describe("ContextValue functions", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  it("setContextValue() should correctly context value and execute the setContext command", async () => {
+    const key = ContextValues.resourceSelectedForCompare;
+    const value = true;
+
+    await setContextValue(key, value);
+
+    assert.ok(executeCommandStub.calledWith("setContext", key, value));
+    assert.deepStrictEqual(getContextValue<boolean>(key), value);
   });
 
   it("setContextValue() should throw an error for an untracked context value", async () => {
