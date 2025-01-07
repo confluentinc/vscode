@@ -4,9 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-## 0.23.1
+## 0.23.1 - 0.23.2
 
-(Fixed issue with Windows builds in CI process. No user-facing changes.)
+(Fixed issues with Windows builds in CI process. No user-facing changes.)
 
 ## 0.23.0
 
