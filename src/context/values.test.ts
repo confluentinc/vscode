@@ -1,21 +1,7 @@
 import * as assert from "assert";
-import * as sinon from "sinon";
-import { commands } from "vscode";
 import { ContextValues, getContextValue, setContextValue } from "./values";
 
 describe("ContextValue functions", () => {
-  let sandbox: sinon.SinonSandbox;
-  let executeCommandStub: sinon.SinonStub;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    executeCommandStub = sandbox.stub(commands, "executeCommand");
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
   it("setContextValue() should throw an error for an untracked context value", async () => {
     await assert.rejects(
       () => setContextValue("invalidKey" as ContextValues, "value"),
