@@ -1,8 +1,7 @@
 import { TopicData } from "../clients/kafkaRest";
 import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
-import { Logger } from "../logging";
-import { DirectEnvironment } from "../models/environment";
+=import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, isDirect } from "../models/resource";
 import { Schema } from "../models/schema";
@@ -14,8 +13,6 @@ import {
   fetchTopics,
   ResourceLoader,
 } from "./resourceLoader";
-
-const logger = new Logger("storage.directResourceLoader");
 
 /**
  * {@link ResourceLoader} implementation for direct connections.
