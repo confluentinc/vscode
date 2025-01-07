@@ -19,9 +19,14 @@ if ($SKIP_DOWNLOAD_EXECUTABLE) {
     $EXECUTABLE_PATH = "ide-sidecar-$IDE_SIDECAR_VERSION_NO_V-runner-$SIDECAR_OS_ARCH.exe"
 
     # Download the executable using GitHub CLI (gh)
+    Write-Host "Downloading sidecar executable from Release $IDE_SIDECAR_VERSION"
     gh release download $IDE_SIDECAR_VERSION --repo $IDE_SIDECAR_REPO --pattern=$EXECUTABLE_PATH --output $EXECUTABLE_DOWNLOAD_PATH --clobber
+    if (-not (Test-Path $EXECUTABLE_DOWNLOAD_PATH -PathType Leaf)) {
+        throw "Failed to download sidecar executable."
+    }
 
     # Set the executable permissions
+    Write-Host "Setting permissions for the downloaded sidecar executable"
     icacls $EXECUTABLE_DOWNLOAD_PATH /grant Everyone:"(X)"
 
     Write-Host "Downloaded sidecar executable to $EXECUTABLE_DOWNLOAD_PATH"
