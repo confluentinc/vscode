@@ -6,6 +6,8 @@ import {
   ConnectionSpec,
   ConnectionsResourceApi,
   ConnectionType,
+  instanceOfApiKeyAndSecret,
+  instanceOfBasicCredentials,
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
@@ -305,7 +307,7 @@ export class DirectConnectionManager {
     }
   }
 }
-function mergeSecrets(
+export function mergeSecrets(
   currentSpec: ConnectionSpec,
   incomingSpec: CustomConnectionSpec,
 ): ConnectionSpec {
@@ -313,12 +315,14 @@ function mergeSecrets(
   const currentKafkaCreds = currentSpec.kafka_cluster?.credentials;
   // if there are kafka credentials we need to check/replace the secrets
   if (incomingKafkaCreds) {
-    if ("password" in incomingKafkaCreds) {
+    if (instanceOfBasicCredentials(incomingKafkaCreds)) {
       if (incomingKafkaCreds.password === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingKafkaCreds.password = currentKafkaCreds.password;
+        // FIXME what happens if they change the type of credentials?
+        if (currentKafkaCreds && instanceOfBasicCredentials(currentKafkaCreds)) {
+          incomingKafkaCreds.password = currentKafkaCreds.password;
+        }
       }
-    } else if ("api_secret" in incomingKafkaCreds) {
+    } else if (instanceOfApiKeyAndSecret(incomingKafkaCreds)) {
       if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
         // @ts-expect-error the types don't know which credentials are present
         incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
@@ -329,12 +333,12 @@ function mergeSecrets(
   const incomingSchemaCreds = incomingSpec.schema_registry?.credentials;
   const currentSchemaCreds = currentSpec.schema_registry?.credentials;
   if (incomingSchemaCreds) {
-    if ("password" in incomingSchemaCreds) {
+    if (instanceOfBasicCredentials(incomingSchemaCreds)) {
       if (incomingSchemaCreds.password === "fakeplaceholdersecrethere") {
         // @ts-expect-error the types don't know which credentials are present
         incomingSchemaCreds.password = currentSchemaCreds.password;
       }
-    } else if ("api_secret" in incomingSchemaCreds) {
+    } else if (instanceOfApiKeyAndSecret(incomingSchemaCreds)) {
       if (incomingSchemaCreds.api_secret === "fakeplaceholdersecrethere") {
         // @ts-expect-error the types don't know which credentials are present
         incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
