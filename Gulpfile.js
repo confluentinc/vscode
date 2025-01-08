@@ -84,8 +84,10 @@ export function build(done) {
   const extInput = {
     input: {
       extension: "src/extension.ts",
+      sidecar: "ide-sidecar",
     },
     plugins: [
+      sidecar(),
       pkgjson(),
       node({ preferBuiltins: true, exportConditions: ["node"] }),
       commonjs(),
@@ -342,15 +344,12 @@ function pkgjson() {
  */
 function sidecar() {
   const sidecarVersion = readFileSync(".versions/ide-sidecar.txt", "utf-8").replace(/[v\n\s]/g, "");
-  // this will be downloaded on extension activation if it doesn't exist already:
-  const sidecarFilename = `ide-sidecar-${sidecarVersion}-runner${IS_WINDOWS ? ".exe" : ""}`;
-
   return [
     virtual({
-      "ide-sidecar": `export const version = "${sidecarVersion}"; export default decodeURIComponent(new URL("./${sidecarFilename}", import.meta.url).pathname);`,
-    }),
-    copy({
-      copyOnce: true,
+      "ide-sidecar": `
+        export const version = "${sidecarVersion}";
+        export default { version };
+      `,
     }),
   ];
 }
