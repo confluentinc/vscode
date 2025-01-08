@@ -4,6 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.23.2
+
+(The specified sidecar version did not have an associated Windows executable to build the VSIX with.
+Again, no user-facing changes.)
+
+## 0.23.1
+
+(Fixed issue with Windows builds in CI process. No user-facing changes.)
+
 ## 0.23.0
 
 ### Added
