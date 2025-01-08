@@ -1,7 +1,11 @@
 import { Disposable } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
+import {
+  ResponseError as SchemaRegistryResponseError,
+  Schema as ResponseSchema,
+  SchemasV1Api,
+} from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -224,12 +228,7 @@ export function correlateTopicsWithSchemas(
  * @returns An array of all the schemas in the environment's Schema Registry.
  */
 export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
-  const sidecarHandle = await getSidecar();
-  const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(
-    schemaRegistry.id,
-    schemaRegistry.connectionId,
-  );
-  const schemaListRespData: ResponseSchema[] = await client.getSchemas();
+  const schemaListRespData: ResponseSchema[] = await listSchemas(schemaRegistry);
 
   // Keep track of the highest version number for each subject to determine if a schema is the latest version,
   // needed for context value setting (only the most recent versions are evolvable, see package.json).
@@ -260,4 +259,47 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
     });
   });
   return schemas;
+}
+
+/**
+ * Tries to get all schemas from the Schema Registry. If the GET /schemas endpoint is not available,
+ * it will fall back to fetching subjects and their latest versions.
+ */
+async function listSchemas(schemaRegistry: SchemaRegistry): Promise<ResponseSchema[]> {
+  const sidecarHandle = await getSidecar();
+
+  try {
+    const schemasClient: SchemasV1Api = sidecarHandle.getSchemasV1Api(
+      schemaRegistry.id,
+      schemaRegistry.connectionId,
+    );
+    // Try to get all schemas
+    return await schemasClient.getSchemas();
+  } catch (error) {
+    if (error instanceof SchemaRegistryResponseError && error.response.status === 404) {
+      // If 404 error, fallback to fetching subjects and their versions
+      const subjectsClient = sidecarHandle.getSubjectsV1Api(
+        schemaRegistry.id,
+        schemaRegistry.connectionId,
+      );
+      const subjects: string[] = await subjectsClient.list();
+
+      // Get latest schema for each subject
+      const getSchemaPromises: Promise<ResponseSchema>[] = [];
+      for (const subject of subjects) {
+        const versions: number[] = await subjectsClient.listVersions({ subject });
+        const latestVersion: number = Math.max(...versions);
+        getSchemaPromises.push(
+          subjectsClient.getSchemaByVersion({
+            subject,
+            version: latestVersion.toString(),
+          }),
+        );
+      }
+
+      return await Promise.all(getSchemaPromises);
+    } else {
+      throw error;
+    }
+  }
 }
