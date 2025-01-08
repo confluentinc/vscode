@@ -81,7 +81,7 @@ describe("ResourceViewProvider methods", () => {
     TEST_DIRECT_KAFKA_CLUSTER,
     TEST_LOCAL_KAFKA_CLUSTER,
   ]) {
-    it(`getTreeItem() should return a KafkaClusterTreeItem for a ${cluster.connectionType} Kafka cluster instance`, async () => {
+    it(`getTreeItem() should return a KafkaClusterTreeItem for a ${cluster.constructor.name} instance`, async () => {
       const treeItem = await provider.getTreeItem(cluster);
       assert.ok(treeItem instanceof KafkaClusterTreeItem);
     });
@@ -92,7 +92,7 @@ describe("ResourceViewProvider methods", () => {
     TEST_DIRECT_SCHEMA_REGISTRY,
     TEST_LOCAL_SCHEMA_REGISTRY,
   ]) {
-    it(`getTreeItem() should return a SchemaRegistryTreeItem for a ${registry.connectionType} Schema Registry instance`, async () => {
+    it(`getTreeItem() should return a SchemaRegistryTreeItem for a ${registry.constructor.name} instance`, async () => {
       const treeItem = await provider.getTreeItem(registry);
       assert.ok(treeItem instanceof SchemaRegistryTreeItem);
     });
