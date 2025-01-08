@@ -38,7 +38,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel, isDirect } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -48,7 +48,7 @@ import {
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
+import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -93,6 +93,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
+    // update the UI for any added/removed direct environments
+    this.updateEnvironmentContextValues();
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -120,8 +122,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     return ResourceViewProvider.instance;
   }
 
-  getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
+  async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
     if (element instanceof Environment) {
+      if (isDirect(element)) {
+        // update contextValues for all known direct environments, not just the one that was updated
+        await this.updateEnvironmentContextValues();
+      }
       return new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
       return new KafkaClusterTreeItem(element);
@@ -204,10 +210,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.refresh(true);
     });
 
-    const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
-      logger.debug("directConnectionsChanged event fired, refreshing");
-      this.refresh();
-    });
+    const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(
+      async () => {
+        logger.debug("directConnectionsChanged event fired, refreshing");
+        await this.removeUnusedEnvironments();
+        this.refresh();
+      },
+    );
 
     const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
       (connected: boolean) => {
@@ -272,6 +281,41 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         }
       }
     }
+  }
+
+  /** Update the context values for the current environment's resource availability. This is used
+   * to change the empty state of our primary resource views and toggle actions in the UI. */
+  async updateEnvironmentContextValues() {
+    const envs: Environment[] = Array.from(this.environmentsMap.values());
+    // currently just updating for direct environments, but if we start updating individual CCloud
+    // or local environments, we can update those context values here as well
+    const directEnvs: DirectEnvironment[] = envs.filter(
+      (env): env is DirectEnvironment => env instanceof DirectEnvironment,
+    );
+    await Promise.all([
+      setContextValue(
+        ContextValues.directKafkaClusterAvailable,
+        directEnvs.some((env) => env.kafkaClusters.length > 0),
+      ),
+      setContextValue(
+        ContextValues.directSchemaRegistryAvailable,
+        directEnvs.some((env) => !!env.schemaRegistry),
+      ),
+    ]);
+  }
+
+  /** Remove any environments from {@linkcode environmentsMap} that are no longer present in storage. */
+  async removeUnusedEnvironments() {
+    // only handling direct environments for now
+    const specs: DirectConnectionsById = await getResourceManager().getDirectConnections();
+    const currentIds: string[] = Array.from(this.environmentsMap.keys());
+    currentIds.forEach((id) => {
+      // environment ID and connection ID are the same for direct connections
+      if (!specs.has(id as ConnectionId)) {
+        logger.debug(`removing direct environment "${id}" from map`);
+        this.environmentsMap.delete(id);
+      }
+    });
   }
 }
 
@@ -411,7 +455,7 @@ export async function loadDirectResources(): Promise<DirectEnvironment[]> {
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
   const directEnvs = await getDirectResources();
-  logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
+  logger.info(`got ${directEnvs.length} direct environment(s) from GQL query`);
   return directEnvs;
 }
 
