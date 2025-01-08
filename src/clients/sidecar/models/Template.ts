@@ -13,13 +13,13 @@
  */
 
 import { mapValues } from "../runtime";
-import type { TemplateManifest } from "./TemplateManifest";
+import type { ScaffoldV1TemplateSpec } from "./ScaffoldV1TemplateSpec";
 import {
-  TemplateManifestFromJSON,
-  TemplateManifestFromJSONTyped,
-  TemplateManifestToJSON,
-  TemplateManifestToJSONTyped,
-} from "./TemplateManifest";
+  ScaffoldV1TemplateSpecFromJSON,
+  ScaffoldV1TemplateSpecFromJSONTyped,
+  ScaffoldV1TemplateSpecToJSON,
+  ScaffoldV1TemplateSpecToJSONTyped,
+} from "./ScaffoldV1TemplateSpec";
 import type { ObjectMetadata } from "./ObjectMetadata";
 import {
   ObjectMetadataFromJSON,
@@ -60,10 +60,10 @@ export interface Template {
   metadata: ObjectMetadata;
   /**
    *
-   * @type {TemplateManifest}
+   * @type {ScaffoldV1TemplateSpec}
    * @memberof Template
    */
-  spec: TemplateManifest;
+  spec: ScaffoldV1TemplateSpec;
 }
 
 /**
@@ -91,7 +91,7 @@ export function TemplateFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
     kind: json["kind"],
     id: json["id"],
     metadata: ObjectMetadataFromJSON(json["metadata"]),
-    spec: TemplateManifestFromJSON(json["spec"]),
+    spec: ScaffoldV1TemplateSpecFromJSON(json["spec"]),
   };
 }
 
@@ -112,6 +112,6 @@ export function TemplateToJSONTyped(
     kind: value["kind"],
     id: value["id"],
     metadata: ObjectMetadataToJSON(value["metadata"]),
-    spec: TemplateManifestToJSON(value["spec"]),
+    spec: ScaffoldV1TemplateSpecToJSON(value["spec"]),
   };
 }

@@ -5,7 +5,7 @@ import esbuild from "rollup-plugin-esbuild";
 import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
 import { SinonStub } from "sinon";
-import { TemplateManifest } from "../clients/sidecar";
+import { ScaffoldV1TemplateSpec } from "../clients/sidecar";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
 
@@ -50,8 +50,7 @@ test("dummy form submission", async ({ execute, page }) => {
   });
 
   await execute(async (stub) => {
-    const dummy: TemplateManifest = {
-      template_api_version: "0.0.1",
+    const dummy: ScaffoldV1TemplateSpec = {
       name: "go-consumer",
       display_name: "Go Consumer Application",
       description:
@@ -111,7 +110,7 @@ test("dummy form submission", async ({ execute, page }) => {
         : {};
     stub.withArgs("GetOptionValues").resolves(transformedOptions);
     stub.withArgs("SetOptionValue").resolves(null);
-    stub.withArgs("GetTemplateSpec").resolves(dummy satisfies TemplateManifest);
+    stub.withArgs("GetTemplateSpec").resolves(dummy satisfies ScaffoldV1TemplateSpec);
     stub.withArgs("Submit").resolves(null);
   }, sendWebviewMessage);
 
