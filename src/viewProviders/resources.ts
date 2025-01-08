@@ -455,7 +455,7 @@ export async function loadDirectResources(): Promise<DirectEnvironment[]> {
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
   const directEnvs = await getDirectResources();
-  logger.info(`got ${directEnvs.length} direct environment(s) from GQL query`);
+  logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
   return directEnvs;
 }
 
