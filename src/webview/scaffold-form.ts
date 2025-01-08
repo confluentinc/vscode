@@ -1,7 +1,7 @@
 import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
-import { OptionProperties, TemplateManifest } from "../clients/sidecar";
+import { ScaffoldV1TemplateOption, ScaffoldV1TemplateSpec } from "../clients/sidecar";
 import { sendWebviewMessage } from "./comms/comms";
 
 addEventListener("DOMContentLoaded", () => {
@@ -41,7 +41,7 @@ class ScaffoldFormViewModel extends ViewModel {
     return true;
   });
 
-  isEnumField(field: [string, OptionProperties]) {
+  isEnumField(field: [string, ScaffoldV1TemplateOption]) {
     return field[1]._enum;
   }
 
@@ -66,7 +66,7 @@ export function post(
   body: { key: string; value: string },
 ): Promise<unknown>;
 export function post(type: "GetOptionValues", body: any): Promise<{ [key: string]: unknown }>;
-export function post(type: "GetTemplateSpec", body: any): Promise<TemplateManifest | null>;
+export function post(type: "GetTemplateSpec", body: any): Promise<ScaffoldV1TemplateSpec | null>;
 export function post(type: "Submit", body: { data: { [key: string]: unknown } }): Promise<unknown>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);

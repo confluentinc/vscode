@@ -28,6 +28,7 @@ models/ConnectionType.ts
 models/ConnectionsList.ts
 models/ExceededFields.ts
 models/Failure.ts
+models/GlobalObjectReference.ts
 models/HealthCheck.ts
 models/HealthResponse.ts
 models/JsonNode.ts
@@ -40,7 +41,6 @@ models/LocalConfig.ts
 models/ModelError.ts
 models/OAuthCredentials.ts
 models/ObjectMetadata.ts
-models/OptionProperties.ts
 models/PartitionConsumeData.ts
 models/PartitionConsumeRecord.ts
 models/PartitionConsumeRecordHeader.ts
@@ -48,6 +48,8 @@ models/PartitionOffset.ts
 models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
+models/ScaffoldV1TemplateOption.ts
+models/ScaffoldV1TemplateSpec.ts
 models/SchemaRegistryConfig.ts
 models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
@@ -60,7 +62,6 @@ models/StoreType.ts
 models/TLSConfig.ts
 models/Template.ts
 models/TemplateList.ts
-models/TemplateManifest.ts
 models/TimestampType.ts
 models/TrustStore.ts
 models/UserInfo.ts

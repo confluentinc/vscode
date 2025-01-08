@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 
 import { posix } from "path";
 import { unzip } from "unzipit";
-import { Template, TemplateList, TemplateManifest, TemplatesApi } from "./clients/sidecar";
+import { Template, TemplateList, ScaffoldV1TemplateSpec, TemplatesApi } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
@@ -53,7 +53,7 @@ export const scaffoldProjectRequest = async () => {
   }
 
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
-    { id: pickedTemplate.spec.name, template: scaffoldFormTemplate },
+    { id: pickedTemplate.spec.name as string, template: scaffoldFormTemplate },
     "template-options-form",
     `Generate ${pickedTemplate.spec.display_name} Template`,
     ViewColumn.One,
@@ -69,7 +69,7 @@ export const scaffoldProjectRequest = async () => {
    * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
    */
   let optionValues: { [key: string]: string | boolean } = {};
-  let options = (pickedTemplate.spec.options as TemplateManifest["options"]) || {};
+  let options = (pickedTemplate.spec.options as ScaffoldV1TemplateSpec["options"]) || {};
   Object.entries(options).map(([option, properties]) => {
     optionValues[option] = properties.initial_value ?? "";
   });
@@ -221,12 +221,14 @@ async function pathExists(path: string) {
 
 async function pickTemplate(templateList: Template[]): Promise<vscode.QuickPickItem | undefined> {
   const sortedList = templateList.sort((a, b) => {
-    return a.spec.display_name.toLowerCase().localeCompare(b.spec.display_name.toLowerCase());
+    return (a.spec.display_name as string)
+      .toLowerCase()
+      .localeCompare((b.spec.display_name as string).toLowerCase());
   });
   const quickPickItems: vscode.QuickPickItem[] = sortedList.map((templateItem: Template) => {
     const tags = templateItem.spec?.tags ? `[${templateItem.spec.tags.join(", ")}]` : "";
     return {
-      label: templateItem.spec.display_name,
+      label: templateItem.spec.display_name as string,
       description: tags,
       detail: templateItem.spec.description,
     };
