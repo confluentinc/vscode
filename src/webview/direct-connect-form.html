@@ -211,7 +211,7 @@
                     id="api_key"
                     name="kafka_api_key"
                     type="text"
-                    required
+                    data-attr-required="this.kafkaBootstrapServers() !== ''"
                     data-attr-value="this.kafkaApiKey()"
                     data-on-change="this.updateValue(event)"
                   />
@@ -226,7 +226,7 @@
                     name="kafka_api_secret"
                     data-attr-value="this.kafkaSecret()"
                     type="password"
-                    required
+                    data-attr-required="this.kafkaBootstrapServers() !== ''"
                   />
                 </div>
               </div>
