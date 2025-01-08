@@ -60,7 +60,7 @@ export async function addSSLPemPath() {
 
 export async function createNewDirectConnection() {
   // ignore any arguments passed through this command function (e.g. if something was highlighted
-  // in the Resources view) so we always open a "Create new connection"
+  // in the Resources view) so we always open the "Create a new connection" form
   openDirectConnectionForm(null);
 }
 
