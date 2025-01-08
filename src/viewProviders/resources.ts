@@ -213,6 +213,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(
       async () => {
         logger.debug("directConnectionsChanged event fired, refreshing");
+        // remove any unused environments from the environmentsMap before refreshing the tree so
+        // contextValue changes are accurately reflected in the UI
         await this.removeUnusedEnvironments();
         this.refresh();
       },
