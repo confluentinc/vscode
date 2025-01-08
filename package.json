@@ -489,7 +489,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+        "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Schema Registry locally with Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)\nOr connect to a Schema Registry instance directly.\n[Add New Connection](command:confluent.connections.direct)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable)"
       },
       {
@@ -504,7 +504,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Kafka locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Kafka locally with Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)\nOr connect to a Kafka cluster directly.\n[Add New Connection](command:confluent.connections.direct)",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)"
       },
       {
