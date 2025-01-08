@@ -47,6 +47,8 @@ export class DirectConnectionManager {
    * cleaned up on extension deactivation. */
   disposables: Disposable[] = [];
 
+  // Map of connection ID to {current from-websocket-event state, event emitter when said state changes}
+
   // singleton instance to prevent multiple listeners and single source of connection management
   private static instance: DirectConnectionManager | null = null;
   private constructor() {
