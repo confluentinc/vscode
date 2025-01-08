@@ -2,9 +2,9 @@ import { Disposable } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import {
+  ResponseError as SchemaRegistryResponseError,
   Schema as ResponseSchema,
   SchemasV1Api,
-  ResponseError as SchemaRegistryResponseError,
 } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
@@ -283,20 +283,21 @@ async function listSchemas(schemaRegistry: SchemaRegistry): Promise<ResponseSche
         schemaRegistry.connectionId,
       );
       const subjects: string[] = await subjectsClient.list();
-      const schemas: ResponseSchema[] = [];
 
       // Get latest schema for each subject
+      const getSchemaPromises: Promise<ResponseSchema>[] = [];
       for (const subject of subjects) {
         const versions: number[] = await subjectsClient.listVersions({ subject });
         const latestVersion: number = Math.max(...versions);
-        const schema: ResponseSchema = await subjectsClient.getSchemaByVersion({
-          subject,
-          version: latestVersion.toString(),
-        });
-        schemas.push(schema);
+        getSchemaPromises.push(
+          subjectsClient.getSchemaByVersion({
+            subject,
+            version: latestVersion.toString(),
+          }),
+        );
       }
 
-      return schemas;
+      return await Promise.all(getSchemaPromises);
     } else {
       throw error;
     }
