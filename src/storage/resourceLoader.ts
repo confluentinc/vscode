@@ -283,38 +283,40 @@ async function listSchemas(schemaRegistry: SchemaRegistry): Promise<ResponseSche
         schemaRegistry.connectionId,
       );
       const subjects: string[] = await subjectsClient.list();
-
-      // Get latest schema for each subject
-      const getSchemaPromises: Promise<ResponseSchema>[] = [];
-      const schemas: ResponseSchema[] = [];
-
-      for (const subject of subjects) {
-        const versions: number[] = await subjectsClient.listVersions({ subject });
-        const latestVersion: number = Math.max(...versions);
-        getSchemaPromises.push(
-          subjectsClient.getSchemaByVersion({
-            subject,
-            version: latestVersion.toString(),
-          }),
-        );
-
-        // Chunk the promises by 20 at a time
-        const CHUNK_SIZE = 20;
-        if (getSchemaPromises.length >= CHUNK_SIZE) {
-          schemas.push(...(await Promise.all(getSchemaPromises)));
-          // Clear the array
-          getSchemaPromises.length = 0;
-        }
-      }
-
-      // Await any remaining promises
-      if (getSchemaPromises.length > 0) {
-        schemas.push(...(await Promise.all(getSchemaPromises)));
-      }
-
-      return schemas;
+      return await fetchLatestSchemasBySubjects(subjects, subjectsClient);
     } else {
       throw error;
     }
   }
+}
+
+/**
+ * Fetch the latest schema for each subject.
+ */
+async function fetchLatestSchemasBySubjects(
+  subjects: string[],
+  subjectsClient: any,
+): Promise<ResponseSchema[]> {
+  return await processInChunks(subjects, 20, async (subject) => {
+    const versions: number[] = await subjectsClient.listVersions({ subject });
+    const latestVersion: number = Math.max(...versions);
+    return subjectsClient.getSchemaByVersion({
+      subject,
+      version: latestVersion.toString(),
+    });
+  });
+}
+
+async function processInChunks<T, R>(
+  items: T[],
+  chunkSize: number,
+  callback: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const chunkResults = await Promise.all(chunk.map(callback));
+    results.push(...chunkResults);
+  }
+  return results;
 }
