@@ -1,9 +1,9 @@
 // sidecar manager module
 
 import { spawn } from "child_process";
-import fs from "fs";
+import fs, { createWriteStream } from "fs";
 
-import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
+import { version as currentSidecarVersion } from "ide-sidecar";
 import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
@@ -20,11 +20,14 @@ import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
-import { normalize } from "path";
+import { chmod } from "fs/promises";
+import { join, normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { SecretStorageKeys } from "../storage/constants";
+
+const sidecarExecutableFilename = `ide-sidecar-${currentSidecarVersion}-runner${process.platform === "win32" ? ".exe" : ""}`;
 
 /**
  * Output channel for viewing sidecar logs.
@@ -345,10 +348,12 @@ export class SidecarManager {
     observabilityContext.sidecarStartCount++;
     return new Promise<string>((resolve, reject) => {
       (async () => {
+        await ensureSidecarExecutableExists();
+
         const logPrefix = `startSidecar(${callnum})`;
         logger.info(`${logPrefix}: Starting new sidecar process`);
 
-        let executablePath = sidecarExecutablePath;
+        let executablePath = join(__dirname, sidecarExecutableFilename);
         // check platform and adjust the path, so we don't end up with paths like:
         // "C:/c:/Users/.../ide-sidecar-0.26.0-runner.exe"
         if (process.platform === "win32") {
@@ -642,5 +647,144 @@ export function killSidecar(process_id: number) {
   } else {
     process.kill(process_id, "SIGTERM");
     logger.debug(`Killed old sidecar process ${process_id}`);
+  }
+}
+
+/** Convert `process.platform` to the sidecar executable platform names. */
+const SIDECAR_PLATFORM_MAP: Record<string, string> = {
+  darwin: "macos",
+  win32: "windows",
+};
+
+/**
+ * Fetch the sidecar executable from public GitHub release artifact if it doesn't already exist
+ * in the extension's current directory.
+ */
+export async function ensureSidecarExecutableExists(): Promise<void> {
+  // look in __dirname for a file that matches `ide-sidecar-${currentSidecarVersion}-runner.*`
+  // (for normal installations, this is usually `$HOME/.vscode/extensions/<extensionId>`, but for
+  // development installations, this is the `out` directory for the cloned extension repo)
+  const existingFiles = fs.readdirSync(__dirname);
+  const existingSidecarExecutable = existingFiles.find((f) =>
+    f.startsWith(`ide-sidecar-${currentSidecarVersion}-runner`),
+  );
+  if (existingSidecarExecutable) {
+    logger.debug(`ide-sidecar executable found: ${existingSidecarExecutable}, skipping download`);
+    return;
+  }
+
+  // list releases to get the specified version, in order to look up the release ID
+  const releasesUrl = "https://api.github.com/repos/confluentinc/ide-sidecar/releases";
+  const releasesResponse = await fetch(releasesUrl);
+  const releases = await releasesResponse.json();
+  const release = releases.find((r: any) => r.tag_name === `v${currentSidecarVersion}`);
+  if (!release || !release.id) {
+    const releaseErrorMsg = `Release v${currentSidecarVersion} not found in https://github.com/confluentinc/ide-sidecar/releases`;
+    logger.error(releaseErrorMsg);
+    throw new Error(releaseErrorMsg);
+  }
+
+  // list artifacts for the release to get the executable (asset) download URL
+  const releaseId = release.id;
+  const artifactsUrl = `https://api.github.com/repos/confluentinc/ide-sidecar/releases/${releaseId}/assets`;
+  const artifactsResponse = await fetch(artifactsUrl);
+  const artifacts = await artifactsResponse.json();
+  // determine the executable asset name based on the current platform+architecture
+  const platform = SIDECAR_PLATFORM_MAP[process.platform] || process.platform;
+  const ext = process.platform === "win32" ? ".exe" : "";
+  const executableAssetName = `ide-sidecar-${currentSidecarVersion}-runner-${platform}-${process.arch}${ext}`;
+  const artifact = artifacts.find((a: any) => a.name === executableAssetName);
+  if (!artifact || !artifact.browser_download_url) {
+    const artifactErrorMsg = `Artifact "${executableAssetName}" not found in release: https://github.com/confluentinc/ide-sidecar/releases/tag/v${currentSidecarVersion}`;
+    logger.error(artifactErrorMsg);
+    throw new Error(artifactErrorMsg);
+  }
+
+  // download and save the executable to the extension's current directory under its "generic" name
+  const downloadUrl = artifact.browser_download_url;
+  const downloadResponse = await fetch(downloadUrl);
+  if (!downloadResponse.ok) {
+    const downloadErrorMsg = `Error response downloading sidecar executable: ${downloadResponse.status} ${downloadResponse.statusText}`;
+    logger.error(downloadErrorMsg);
+    throw new Error(downloadErrorMsg);
+  }
+  // show a progress notification while actually downloading
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Downloading sidecar executable from [GitHub](https://github.com/confluentinc/ide-sidecar/releases/tag/v${currentSidecarVersion})...`,
+      cancellable: false,
+    },
+    async (progress) => {
+      progress.report({ increment: 0 });
+      logger.debug(`downloading ${executableAssetName} executable from ${downloadUrl}`);
+      try {
+        await downloadSidecarExecutableAsset(downloadResponse, progress);
+        progress.report({ increment: 100 });
+      } catch (error) {
+        progress.report({ increment: 0 });
+        if (error instanceof Error) {
+          logger.error(`failed to download sidecar executable: ${error.message}`);
+        }
+        throw error;
+      }
+    },
+  );
+}
+
+/** Downloads the sidecar executable asset from the response stream and saves it to the extension's
+ * current directory. */
+async function downloadSidecarExecutableAsset(
+  response: Response,
+  progress: vscode.Progress<{ increment: number }>,
+) {
+  const executablePath = join(__dirname, sidecarExecutableFilename);
+  const fileStream = createWriteStream(executablePath);
+  const totalBytes = parseInt(response.headers.get("content-length") ?? "0", 10);
+
+  try {
+    if (!response.body) {
+      throw new Error("No response body available");
+    }
+
+    let downloadedBytes = 0;
+    let progressValue = 0;
+
+    const reader: ReadableStreamDefaultReader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      fileStream.write(Buffer.from(value));
+      downloadedBytes += value.length;
+      const newProgressValue = Math.floor((downloadedBytes / totalBytes) * 100);
+      if (newProgressValue > progressValue) {
+        // increment progress notification by the difference in progress values since the last update
+        progress.report({ increment: newProgressValue - progressValue });
+        progressValue = newProgressValue;
+      }
+    }
+
+    await new Promise((resolve, reject) => {
+      fileStream.end();
+      fileStream.on("finish", resolve);
+      fileStream.on("error", reject);
+    });
+
+    // set executable permissions on Unix-like systems
+    if (process.platform !== "win32") {
+      await chmod(executablePath, "755");
+    }
+
+    logger.debug(`ide-sidecar executable downloaded and saved to "${executablePath}"`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Failed to download sidecar executable: ${errorMessage}`);
+    await vscode.window.showErrorMessage(`Failed to download sidecar executable: ${errorMessage}`);
+    throw error;
+  } finally {
+    fileStream.destroy();
   }
 }
