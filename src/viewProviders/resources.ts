@@ -38,7 +38,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel, isDirect } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -120,8 +120,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     return ResourceViewProvider.instance;
   }
 
-  getTreeItem(element: ResourceViewProviderData): vscode.TreeItem {
+  async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
     if (element instanceof Environment) {
+      if (isDirect(element)) {
+        // update contextValues for all known direct environments, not just the one that was updated
+        await this.updateEnvironmentContextValues();
+      }
       return new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
       return new KafkaClusterTreeItem(element);
@@ -272,6 +276,27 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         }
       }
     }
+  }
+
+  /** Update the context values for the current environment's resource availability. This is used
+   * to change the empty state of our primary resource views and toggle actions in the UI. */
+  async updateEnvironmentContextValues() {
+    const envs: Environment[] = Array.from(this.environmentsMap.values());
+    // currently just updating for direct environments, but if we start updating individual CCloud
+    // or local environments, we can update those context values here as well
+    const directEnvs: DirectEnvironment[] = envs.filter(
+      (env): env is DirectEnvironment => env instanceof DirectEnvironment,
+    );
+    await Promise.all([
+      setContextValue(
+        ContextValues.directKafkaClusterAvailable,
+        directEnvs.some((env) => env.kafkaClusters.length > 0),
+      ),
+      setContextValue(
+        ContextValues.directSchemaRegistryAvailable,
+        directEnvs.some((env) => !!env.schemaRegistry),
+      ),
+    ]);
   }
 }
 
