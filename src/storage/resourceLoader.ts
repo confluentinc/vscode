@@ -286,6 +286,8 @@ async function listSchemas(schemaRegistry: SchemaRegistry): Promise<ResponseSche
 
       // Get latest schema for each subject
       const getSchemaPromises: Promise<ResponseSchema>[] = [];
+      const schemas: ResponseSchema[] = [];
+
       for (const subject of subjects) {
         const versions: number[] = await subjectsClient.listVersions({ subject });
         const latestVersion: number = Math.max(...versions);
@@ -295,9 +297,22 @@ async function listSchemas(schemaRegistry: SchemaRegistry): Promise<ResponseSche
             version: latestVersion.toString(),
           }),
         );
+
+        // Chunk the promises by 20 at a time
+        const CHUNK_SIZE = 20;
+        if (getSchemaPromises.length >= CHUNK_SIZE) {
+          schemas.push(...(await Promise.all(getSchemaPromises)));
+          // Clear the array
+          getSchemaPromises.length = 0;
+        }
       }
 
-      return await Promise.all(getSchemaPromises);
+      // Await any remaining promises
+      if (getSchemaPromises.length > 0) {
+        schemas.push(...(await Promise.all(getSchemaPromises)));
+      }
+
+      return schemas;
     } else {
       throw error;
     }
