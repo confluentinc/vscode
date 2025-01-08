@@ -337,4 +337,23 @@ describe("ResourceViewProvider context value updates", () => {
       ),
     );
   });
+
+  it("refresh() should update context values correctly when no direct environments exist", () => {
+    provider.environmentsMap = new Map();
+
+    provider.refresh();
+
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directKafkaClusterAvailable,
+        false,
+      ),
+    );
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        false,
+      ),
+    );
+  });
 });
