@@ -16,6 +16,16 @@ describe("ContextValue functions", () => {
     sandbox.restore();
   });
 
+  it("setContextValue() should correctly context value and execute the setContext command", async () => {
+    const key = ContextValues.resourceSelectedForCompare;
+    const value = true;
+
+    await setContextValue(key, value);
+
+    assert.ok(executeCommandStub.calledWith("setContext", key, value));
+    assert.deepStrictEqual(getContextValue<boolean>(key), value);
+  });
+
   it("setContextValue() should throw an error for an untracked context value", async () => {
     await assert.rejects(
       () => setContextValue("invalidKey" as ContextValues, "value"),
