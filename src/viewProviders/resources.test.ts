@@ -56,36 +56,46 @@ describe("ResourceViewProvider methods", () => {
     ResourceViewProvider["instance"] = null;
   });
 
-  // TODO: add LocalEnvironment if/when we start showing that in the Resources view
-  for (const resource of [TEST_CCLOUD_ENVIRONMENT, TEST_DIRECT_ENVIRONMENT]) {
-    it(`getTreeItem() should return an EnvironmentTreeItem for a ${resource.constructor.name} instance`, () => {
-      const treeItem = provider.getTreeItem(resource);
+  for (const resource of [
+    TEST_CCLOUD_ENVIRONMENT,
+    TEST_LOCAL_ENVIRONMENT,
+    TEST_DIRECT_ENVIRONMENT,
+  ]) {
+    it(`getTreeItem() should return an EnvironmentTreeItem for a ${resource.constructor.name} instance`, async () => {
+      const treeItem = await provider.getTreeItem(resource);
       assert.ok(treeItem instanceof EnvironmentTreeItem);
     });
   }
 
-  it("getTreeItem() should return a KafkaClusterTreeItem for a LocalKafkaCluster instance", () => {
-    const treeItem = provider.getTreeItem(TEST_LOCAL_KAFKA_CLUSTER);
-    assert.ok(treeItem instanceof KafkaClusterTreeItem);
-  });
+  for (const cluster of [
+    TEST_CCLOUD_KAFKA_CLUSTER,
+    TEST_DIRECT_KAFKA_CLUSTER,
+    TEST_LOCAL_KAFKA_CLUSTER,
+  ]) {
+    it(`getTreeItem() should return a KafkaClusterTreeItem for a ${cluster.connectionType} Kafka cluster instance`, async () => {
+      const treeItem = await provider.getTreeItem(cluster);
+      assert.ok(treeItem instanceof KafkaClusterTreeItem);
+    });
+  }
 
-  it("getTreeItem() should return a KafkaClusterTreeItem for a CCloudKafkaCluster instance", () => {
-    const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_CLUSTER);
-    assert.ok(treeItem instanceof KafkaClusterTreeItem);
-  });
+  for (const registry of [
+    TEST_CCLOUD_SCHEMA_REGISTRY,
+    TEST_DIRECT_SCHEMA_REGISTRY,
+    TEST_LOCAL_SCHEMA_REGISTRY,
+  ]) {
+    it(`getTreeItem() should return a SchemaRegistryTreeItem for a ${registry.connectionType} Schema Registry instance`, async () => {
+      const treeItem = await provider.getTreeItem(registry);
+      assert.ok(treeItem instanceof SchemaRegistryTreeItem);
+    });
+  }
 
-  it("getTreeItem() should return a SchemaRegistryTreeItem for a SchemaRegistry instance", () => {
-    const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.ok(treeItem instanceof SchemaRegistryTreeItem);
-  });
-
-  it("getTreeItem() should pass ContainerTreeItems through directly", () => {
+  it("getTreeItem() should pass ContainerTreeItems through directly", async () => {
     const container = new ContainerTreeItem<CCloudEnvironment>(
       "test",
       TreeItemCollapsibleState.Collapsed,
       [TEST_CCLOUD_ENVIRONMENT],
     );
-    const treeItem = provider.getTreeItem(container);
+    const treeItem = await provider.getTreeItem(container);
     assert.deepStrictEqual(treeItem, container);
   });
 });
