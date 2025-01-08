@@ -48,7 +48,7 @@ import {
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
-import { getResourceManager } from "../storage/resourceManager";
+import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -93,6 +93,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
+    // update the UI for any added/removed direct environments
+    this.updateEnvironmentContextValues();
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -208,10 +210,20 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.refresh(true);
     });
 
-    const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(() => {
-      logger.debug("directConnectionsChanged event fired, refreshing");
-      this.refresh();
-    });
+    const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(
+      async () => {
+        logger.debug("directConnectionsChanged event fired, refreshing");
+        // check the stored direct environments and remove any that are no longer present from the map
+        const specs: DirectConnectionsById = await getResourceManager().getDirectConnections();
+        this.environmentsMap.forEach((_, id) => {
+          // environment ID and connection ID are the same for direct connections
+          if (!specs.has(id as ConnectionId)) {
+            this.environmentsMap.delete(id);
+          }
+        });
+        this.refresh();
+      },
+    );
 
     const localKafkaConnectedSub: vscode.Disposable = localKafkaConnected.event(
       (connected: boolean) => {
