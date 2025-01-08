@@ -213,14 +213,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     const directConnectionsChangedSub: vscode.Disposable = directConnectionsChanged.event(
       async () => {
         logger.debug("directConnectionsChanged event fired, refreshing");
-        // check the stored direct environments and remove any that are no longer present from the map
-        const specs: DirectConnectionsById = await getResourceManager().getDirectConnections();
-        this.environmentsMap.forEach((_, id) => {
-          // environment ID and connection ID are the same for direct connections
-          if (!specs.has(id as ConnectionId)) {
-            this.environmentsMap.delete(id);
-          }
-        });
+        await this.removeUnusedEnvironments();
         this.refresh();
       },
     );
@@ -309,6 +302,20 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         directEnvs.some((env) => !!env.schemaRegistry),
       ),
     ]);
+  }
+
+  /** Remove any environments from {@linkcode environmentsMap} that are no longer present in storage. */
+  async removeUnusedEnvironments() {
+    // only handling direct environments for now
+    const specs: DirectConnectionsById = await getResourceManager().getDirectConnections();
+    const currentIds: string[] = Array.from(this.environmentsMap.keys());
+    currentIds.forEach((id) => {
+      // environment ID and connection ID are the same for direct connections
+      if (!specs.has(id as ConnectionId)) {
+        logger.debug(`removing direct environment "${id}" from map`);
+        this.environmentsMap.delete(id);
+      }
+    });
   }
 }
 
@@ -448,7 +455,7 @@ export async function loadDirectResources(): Promise<DirectEnvironment[]> {
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
   const directEnvs = await getDirectResources();
-  logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
+  logger.info(`got ${directEnvs.length} direct environment(s) from GQL query`);
   return directEnvs;
 }
 
