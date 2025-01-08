@@ -490,32 +490,32 @@
       {
         "view": "confluent-schemas",
         "contents": "Not connected to Confluent Cloud. Click below to get started.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Schema Registry locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
-        "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable)"
+        "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable)"
       },
       {
         "view": "confluent-schemas",
         "contents": "No Schema Registry selected. Click below to get started.\n[Select Schema Registry](command:confluent.resources.schema-registry.select)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && !confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && !confluent.schemaRegistrySelected"
       },
       {
         "view": "confluent-schemas",
         "contents": "No schemas found.\n[Create Schema](command:confluent.schemas.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
       },
       {
         "view": "confluent-topics",
         "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nOr start Kafka locally through Docker.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
-        "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable)"
+        "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)"
       },
       {
         "view": "confluent-topics",
         "contents": "No Kafka cluster selected. Click below to get started.\n[Select Kafka Cluster](command:confluent.resources.kafka-cluster.select)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable) && !confluent.kafkaClusterSelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && !confluent.kafkaClusterSelected"
       },
       {
         "view": "confluent-topics",
         "contents": "No topics found.\n[Create Topic](command:confluent.topics.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable) && confluent.kafkaClusterSelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected"
       }
     ],
     "menus": {
