@@ -29,6 +29,7 @@ if (process.env.SENTRY_DSN) {
       "ENOENT: no such file or directory",
       "EPERM: operation not permitted",
       "Cancelled",
+      "captureException", // only ever floated by the Sentry SDK itself
     ],
   });
 }
