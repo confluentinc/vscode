@@ -42,6 +42,8 @@ import {
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let getDirectConnectionsStub: sinon.SinonStub;
 
   before(async () => {
     // ensure extension context is available for the ResourceViewProvider
@@ -49,10 +51,17 @@ describe("ResourceViewProvider methods", () => {
   });
 
   beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    getDirectConnectionsStub = sandbox.stub(
+      resourceManager.getResourceManager(),
+      "getDirectConnections",
+    );
+
     provider = ResourceViewProvider.getInstance();
   });
 
   afterEach(() => {
+    sandbox.restore();
     ResourceViewProvider["instance"] = null;
   });
 
@@ -97,6 +106,23 @@ describe("ResourceViewProvider methods", () => {
     );
     const treeItem = await provider.getTreeItem(container);
     assert.deepStrictEqual(treeItem, container);
+  });
+
+  it("removeUnusedDirectEnvironments() should update the environmentsMap to remove any deleted direct connections", async () => {
+    provider.environmentsMap = new Map([
+      [TEST_DIRECT_ENVIRONMENT.id, TEST_DIRECT_ENVIRONMENT],
+      ["env2", new DirectEnvironment({ ...TEST_DIRECT_ENVIRONMENT, id: "env2" })],
+    ]);
+    // simulate "env2" being deleted from storage and GQL
+    getDirectConnectionsStub.resolves(
+      new Map([[TEST_DIRECT_ENVIRONMENT.id, TEST_DIRECT_ENVIRONMENT]]),
+    );
+    sandbox.stub(direct, "getDirectResources").resolves([TEST_DIRECT_ENVIRONMENT]);
+
+    await provider.removeUnusedEnvironments();
+
+    assert.strictEqual(provider.environmentsMap.size, 1);
+    assert.ok(provider.environmentsMap.has(TEST_DIRECT_ENVIRONMENT.id));
   });
 });
 
