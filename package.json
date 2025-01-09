@@ -489,7 +489,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nAlternatively, [start Schema Registry locally ](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Schema Registry instance.",
+        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nAlternatively, [start Schema Registry locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Schema Registry instance.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable)"
       },
       {
@@ -703,7 +703,7 @@
         },
         {
           "command": "confluent.resources.kafka-cluster.select",
-          "when": "view == confluent-topics && (confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.localSchemaRegistryAvailable)",
+          "when": "view == confluent-topics && (confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)",
           "group": "navigation@2"
         },
         {
