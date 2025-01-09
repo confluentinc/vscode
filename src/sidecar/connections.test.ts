@@ -29,7 +29,7 @@ import {
   tryToCreateConnection,
   tryToDeleteConnection,
   tryToUpdateConnection,
-  waitForConnectionToBeUsable,
+  waitForConnectionToBeStable,
 } from "./connections";
 
 describe("sidecar/connections.ts", () => {
@@ -184,7 +184,7 @@ describe("sidecar/connections.ts", () => {
       };
       stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(testConnection);
 
-      const connection = await waitForConnectionToBeUsable(testConnectionId);
+      const connection = await waitForConnectionToBeStable(testConnectionId);
 
       assert.deepStrictEqual(connection, testConnection);
     });
@@ -206,7 +206,7 @@ describe("sidecar/connections.ts", () => {
 
       // set a short timeout, even though we're using fake timers
       const shortTimeoutMs = 10;
-      const connectionPromise: Promise<Connection | null> = waitForConnectionToBeUsable(
+      const connectionPromise: Promise<Connection | null> = waitForConnectionToBeStable(
         testConnectionId,
         shortTimeoutMs,
         shortTimeoutMs / 2,
@@ -235,7 +235,7 @@ describe("sidecar/connections.ts", () => {
         .rejects(new ResponseError(new Response(null, { status: 404 })));
       stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.onSecondCall().resolves(testConnection);
 
-      const connection = await waitForConnectionToBeUsable(testConnectionId);
+      const connection = await waitForConnectionToBeStable(testConnectionId);
 
       assert.deepStrictEqual(connection, testConnection);
     });
@@ -267,7 +267,7 @@ describe("sidecar/connections.ts", () => {
         .onSecondCall()
         .resolves(usableConnection);
 
-      const connection = await waitForConnectionToBeUsable(testConnectionId, 10, 5);
+      const connection = await waitForConnectionToBeStable(testConnectionId, 10, 5);
 
       assert.deepStrictEqual(connection, usableConnection);
     });
