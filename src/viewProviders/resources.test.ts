@@ -17,6 +17,7 @@ import {
 } from "../../tests/unit/testResources/schemaRegistry";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { EXTENSION_VERSION } from "../constants";
+import * as contextValues from "../context/values";
 import * as direct from "../graphql/direct";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
@@ -41,6 +42,8 @@ import {
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let getDirectConnectionsStub: sinon.SinonStub;
 
   before(async () => {
     // ensure extension context is available for the ResourceViewProvider
@@ -48,44 +51,78 @@ describe("ResourceViewProvider methods", () => {
   });
 
   beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    getDirectConnectionsStub = sandbox.stub(
+      resourceManager.getResourceManager(),
+      "getDirectConnections",
+    );
+
     provider = ResourceViewProvider.getInstance();
   });
 
   afterEach(() => {
+    sandbox.restore();
     ResourceViewProvider["instance"] = null;
   });
 
-  // TODO: add LocalEnvironment if/when we start showing that in the Resources view
-  for (const resource of [TEST_CCLOUD_ENVIRONMENT, TEST_DIRECT_ENVIRONMENT]) {
-    it(`getTreeItem() should return an EnvironmentTreeItem for a ${resource.constructor.name} instance`, () => {
-      const treeItem = provider.getTreeItem(resource);
+  for (const resource of [
+    TEST_CCLOUD_ENVIRONMENT,
+    TEST_LOCAL_ENVIRONMENT,
+    TEST_DIRECT_ENVIRONMENT,
+  ]) {
+    it(`getTreeItem() should return an EnvironmentTreeItem for a ${resource.constructor.name} instance`, async () => {
+      const treeItem = await provider.getTreeItem(resource);
       assert.ok(treeItem instanceof EnvironmentTreeItem);
     });
   }
 
-  it("getTreeItem() should return a KafkaClusterTreeItem for a LocalKafkaCluster instance", () => {
-    const treeItem = provider.getTreeItem(TEST_LOCAL_KAFKA_CLUSTER);
-    assert.ok(treeItem instanceof KafkaClusterTreeItem);
-  });
+  for (const cluster of [
+    TEST_CCLOUD_KAFKA_CLUSTER,
+    TEST_DIRECT_KAFKA_CLUSTER,
+    TEST_LOCAL_KAFKA_CLUSTER,
+  ]) {
+    it(`getTreeItem() should return a KafkaClusterTreeItem for a ${cluster.constructor.name} instance`, async () => {
+      const treeItem = await provider.getTreeItem(cluster);
+      assert.ok(treeItem instanceof KafkaClusterTreeItem);
+    });
+  }
 
-  it("getTreeItem() should return a KafkaClusterTreeItem for a CCloudKafkaCluster instance", () => {
-    const treeItem = provider.getTreeItem(TEST_CCLOUD_KAFKA_CLUSTER);
-    assert.ok(treeItem instanceof KafkaClusterTreeItem);
-  });
+  for (const registry of [
+    TEST_CCLOUD_SCHEMA_REGISTRY,
+    TEST_DIRECT_SCHEMA_REGISTRY,
+    TEST_LOCAL_SCHEMA_REGISTRY,
+  ]) {
+    it(`getTreeItem() should return a SchemaRegistryTreeItem for a ${registry.constructor.name} instance`, async () => {
+      const treeItem = await provider.getTreeItem(registry);
+      assert.ok(treeItem instanceof SchemaRegistryTreeItem);
+    });
+  }
 
-  it("getTreeItem() should return a SchemaRegistryTreeItem for a SchemaRegistry instance", () => {
-    const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA_REGISTRY);
-    assert.ok(treeItem instanceof SchemaRegistryTreeItem);
-  });
-
-  it("getTreeItem() should pass ContainerTreeItems through directly", () => {
+  it("getTreeItem() should pass ContainerTreeItems through directly", async () => {
     const container = new ContainerTreeItem<CCloudEnvironment>(
       "test",
       TreeItemCollapsibleState.Collapsed,
       [TEST_CCLOUD_ENVIRONMENT],
     );
-    const treeItem = provider.getTreeItem(container);
+    const treeItem = await provider.getTreeItem(container);
     assert.deepStrictEqual(treeItem, container);
+  });
+
+  it("removeUnusedDirectEnvironments() should update the environmentsMap to remove any deleted direct connections", async () => {
+    provider.environmentsMap = new Map([
+      [TEST_DIRECT_ENVIRONMENT.id, TEST_DIRECT_ENVIRONMENT],
+      ["env2", new DirectEnvironment({ ...TEST_DIRECT_ENVIRONMENT, id: "env2" })],
+    ]);
+    // simulate "env2" being deleted from storage and GQL
+    getDirectConnectionsStub.resolves(
+      new Map([[TEST_DIRECT_ENVIRONMENT.id, TEST_DIRECT_ENVIRONMENT]]),
+    );
+    sandbox.stub(direct, "getDirectResources").resolves([TEST_DIRECT_ENVIRONMENT]);
+
+    await provider.removeUnusedEnvironments();
+
+    assert.strictEqual(provider.environmentsMap.size, 1);
+    assert.ok(provider.environmentsMap.has(TEST_DIRECT_ENVIRONMENT.id));
   });
 });
 
@@ -189,5 +226,160 @@ describe("ResourceViewProvider loading functions", () => {
     const result: DirectEnvironment[] = await loadDirectResources();
 
     assert.deepStrictEqual(result, [testDirectEnv]);
+  });
+});
+
+describe("ResourceViewProvider context value updates", () => {
+  let provider: ResourceViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let setContextValueStub: sinon.SinonStub;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    provider = ResourceViewProvider.getInstance();
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+    ResourceViewProvider["instance"] = null;
+  });
+
+  it("getTreeItem() should update context values correctly when a direct environment has no resources", async () => {
+    const emptyDirectEnv = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [],
+      schemaRegistry: undefined,
+    });
+    provider.environmentsMap.set(emptyDirectEnv.id, emptyDirectEnv);
+
+    await provider.getTreeItem(emptyDirectEnv);
+
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directKafkaClusterAvailable,
+        false,
+      ),
+    );
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        false,
+      ),
+    );
+  });
+
+  it("getTreeItem() should update context values correctly when a direct environment only has a Kafka cluster", async () => {
+    const kafkaOnlyDirectEnv = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+      schemaRegistry: undefined,
+    });
+    provider.environmentsMap.set(kafkaOnlyDirectEnv.id, kafkaOnlyDirectEnv);
+
+    await provider.getTreeItem(kafkaOnlyDirectEnv);
+
+    assert.ok(
+      setContextValueStub.calledWith(contextValues.ContextValues.directKafkaClusterAvailable, true),
+    );
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        false,
+      ),
+    );
+  });
+
+  it("getTreeItem() should update context values correctly when a direct environment only has a Schema Registry", async () => {
+    const srOnlyDirectEnv = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      kafkaClusters: [],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
+    });
+    provider.environmentsMap.set(srOnlyDirectEnv.id, srOnlyDirectEnv);
+
+    await provider.getTreeItem(srOnlyDirectEnv);
+
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directKafkaClusterAvailable,
+        false,
+      ),
+    );
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        true,
+      ),
+    );
+  });
+
+  it("getTreeItem() should handle multiple direct environments correctly when updating context values", async () => {
+    const env1 = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      id: "env1",
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+      schemaRegistry: undefined,
+    });
+    const env2 = new DirectEnvironment({
+      ...TEST_DIRECT_ENVIRONMENT,
+      id: "env2",
+      kafkaClusters: [],
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
+    });
+
+    provider.environmentsMap.set(env1.id, env1);
+    provider.environmentsMap.set(env2.id, env2);
+
+    await provider.getTreeItem(env1);
+
+    // from env1
+    assert.ok(
+      setContextValueStub.calledWith(contextValues.ContextValues.directKafkaClusterAvailable, true),
+    );
+    // from env2
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        true,
+      ),
+    );
+    // should not set `false` since env1 has a Kafka cluster
+    assert.ok(
+      setContextValueStub.neverCalledWith(
+        contextValues.ContextValues.directKafkaClusterAvailable,
+        false,
+      ),
+    );
+    // should not set `false` since env2 has a Schema Registry
+    assert.ok(
+      setContextValueStub.neverCalledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        false,
+      ),
+    );
+  });
+
+  it("refresh() should update context values correctly when no direct environments exist", () => {
+    provider.environmentsMap = new Map();
+
+    provider.refresh();
+
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directKafkaClusterAvailable,
+        false,
+      ),
+    );
+    assert.ok(
+      setContextValueStub.calledWith(
+        contextValues.ContextValues.directSchemaRegistryAvailable,
+        false,
+      ),
+    );
   });
 });
