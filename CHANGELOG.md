@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Topics and Schemas views' empty states should now correctly indicate when a Kafka cluster or
+  Schema Registry is available through a direct connection.
+
 ## 0.23.2
 
 (The specified sidecar version did not have an associated Windows executable to build the VSIX with.
