@@ -36,6 +36,9 @@ async function selectKafkaClusterCommand(cluster?: KafkaCluster) {
 }
 
 async function deleteTopicCommand(topic: KafkaTopic) {
+  if (!(topic instanceof KafkaTopic)) {
+    return;
+  }
   // We won't have even gotten here if we didn't think the user has DELETE permissions on the topic.
   // BUT that was at the time we fetched the topic list, so we should check again before proceeding.
   const authorizedOperations = await fetchTopicAuthorizedOperations(topic);
