@@ -71,9 +71,12 @@ export class WebsocketManager implements Disposable {
 
   /**
    * Connect websocket to the sidecar, then send a WORKSPACE_HELLO message with the workspace process id.
-   * Resolves the promise upon successful authorization.
-   * @param access_token
-   * @returns
+   * Resolves the promise upon successfully connecting, have the WORKSPACE_HELLO message accepted by
+   * sidecar, and sidecar sending the expected WORKSPACE_COUNT_CHANGED message, informing us of if there
+   * are other workspaces online (aka the general workspace -> sidecar websocket handshaking process).
+   *
+   * @param hostPortFragment The host and port fragment to connect to, e.g. "localhost:8080".
+   * @param accessToken The access token to use for authorization.
    */
   async connect(hostPortFragment: string, accessToken: string): Promise<void> {
     return new Promise<void>((resolve) => {
