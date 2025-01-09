@@ -145,9 +145,10 @@ type MessageHeaderMap = {
  *  so we have to do it manually.
  */
 export function validateMessageBody(messageType: MessageType, body: unknown): void {
-  if (body == null || typeof body !== "object") {
+  if (typeof body !== "object") {
     throw new Error("validateMessageBody(): Invalid body");
   }
+
   if (messageType === MessageType.WORKSPACE_COUNT_CHANGED) {
     if (typeof (body as WorkspacesChangedBody).current_workspace_count !== "number") {
       throw new Error(`Invalid body for message type ${MessageType.WORKSPACE_COUNT_CHANGED}`);

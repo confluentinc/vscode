@@ -22,8 +22,10 @@ import {
 } from "../emitters";
 import { ConnectionId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
+import { ConnectionEventAction, Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
 import {
   clearCurrentCCloudResources,
+  ConnectionStateWatcher,
   getLocalConnection,
   hasCCloudAuthSession,
   tryToCreateConnection,
@@ -32,11 +34,11 @@ import {
   waitForConnectionToBeStable,
 } from "./connections";
 
+import * as connectionStatusUtils from "./connectionStatusUtils";
+
 describe("sidecar/connections.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let stubConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
-  let clock: sinon.SinonFakeTimers;
-  let connectionUsableFireStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -133,6 +135,40 @@ describe("sidecar/connections.ts", () => {
     setContextValue(ContextValues.ccloudConnectionAvailable, true);
     assert.strictEqual(hasCCloudAuthSession(), true);
   });
+});
+
+describe("sidecar/connections.ts waitForConnectionToBeUsable() tests", () => {
+  const connectionStateWatcher = ConnectionStateWatcher.getInstance();
+
+  let sandbox: sinon.SinonSandbox;
+  let clock: sinon.SinonFakeTimers;
+  let connectionUsableFireStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    // stub the event emitter
+    connectionUsableFireStub = sandbox.stub(connectionUsable, "fire");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  function announceConnectionState(connection: Connection): void {
+    // inject a event to updated the connection state
+    // as if sent from sidecar from websocket.
+    const websocketMessage: Message<MessageType.CONNECTION_EVENT> = {
+      headers: newMessageHeaders(MessageType.CONNECTION_EVENT),
+      body: {
+        action: ConnectionEventAction.UPDATED,
+        connection: connection,
+      },
+    };
+
+    // As if had been just sent from sidecar.
+    connectionStateWatcher.handleConnectionUpdateEvent(websocketMessage);
+  }
 
   // dynamically set up tests for `waitForConnectionToBeUsable()` using different connections and states
   type ConnectionStateMatches = [
@@ -182,7 +218,8 @@ describe("sidecar/connections.ts", () => {
           ...testAuthStatus,
         },
       };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(testConnection);
+
+      announceConnectionState(testConnection);
 
       const connection = await waitForConnectionToBeStable(testConnectionId);
 
@@ -202,14 +239,13 @@ describe("sidecar/connections.ts", () => {
           ...testAuthStatus,
         },
       };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(testConnection);
+      announceConnectionState(testConnection);
 
       // set a short timeout, even though we're using fake timers
       const shortTimeoutMs = 10;
       const connectionPromise: Promise<Connection | null> = waitForConnectionToBeStable(
         testConnectionId,
         shortTimeoutMs,
-        shortTimeoutMs / 2,
       );
       // "wait" for the timeout to occur
       await clock.tickAsync(300);
@@ -220,7 +256,7 @@ describe("sidecar/connections.ts", () => {
       assert.ok(connectionUsableFireStub.calledOnce);
     });
 
-    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should continue polling if the connection is not found initially`, async () => {
+    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should wait for websocket event if the connection is not found initially`, async () => {
       const testConnection = {
         ...baseConnection,
         status: {
@@ -230,46 +266,43 @@ describe("sidecar/connections.ts", () => {
           ...testAuthStatus,
         },
       };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet
-        .onFirstCall()
-        .rejects(new ResponseError(new Response(null, { status: 404 })));
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.onSecondCall().resolves(testConnection);
 
-      const connection = await waitForConnectionToBeStable(testConnectionId);
+      // wrap a spy around isConnectionStable so we can check when it's called
+      const isConnectionStableSpy = sandbox.spy(connectionStatusUtils, "isConnectionStable");
 
-      assert.deepStrictEqual(connection, testConnection);
-    });
+      // clear out prior connection state so that top of ConnectionStateWatcher.waitForConnectionUpdate will be a cache
+      // miss and it has to wait for an update.
+      connectionStateWatcher.purgeCachedConnectionState(testConnectionId);
 
-    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should wait for a connection to be usable`, async () => {
-      const pendingConnection = {
-        ...baseConnection,
-        status: {
-          kafka_cluster: { state: pendingState },
-          schema_registry: { state: pendingState },
-          ccloud: { state: pendingState },
-          ...testAuthStatus,
-        },
-      };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet
-        .onFirstCall()
-        .resolves(pendingConnection);
+      clock = sandbox.useFakeTimers(Date.now());
 
-      const usableConnection = {
-        ...pendingConnection,
-        status: {
-          kafka_cluster: { state: usableKafkaClusterState },
-          schema_registry: { state: usableSchemaRegistryState },
-          ccloud: { state: usableCcloudState },
-          ...testAuthStatus,
-        },
-      };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet
-        .onSecondCall()
-        .resolves(usableConnection);
+      async function scriptEventFlow() {
+        // let time pass some ...
+        await clock.tickAsync(100);
 
-      const connection = await waitForConnectionToBeStable(testConnectionId, 10, 5);
+        // isConnectionStableSpy should not have been called yet.
+        assert.ok(isConnectionStableSpy.notCalled);
 
-      assert.deepStrictEqual(connection, usableConnection);
+        // simulate a websocket event that updates the connection state to this new stable state.
+        announceConnectionState(testConnection);
+
+        // And now isConnectionStable should have been called.
+        assert.ok(isConnectionStableSpy.calledOnce);
+        // and it should have returned true
+        assert.ok(isConnectionStableSpy.returned(true));
+      }
+
+      // await both the script and waitForConnectionToBeStable
+      const results = await Promise.all([
+        scriptEventFlow(),
+        waitForConnectionToBeStable(testConnectionId),
+      ]);
+
+      // waitForConnectionToBeStable should have returned the connection
+      assert.deepStrictEqual(results[1], testConnection);
+      // and that isDirectConnectionStable was called (after the websocket event)
+      // log number of calls.
+      assert.ok(isConnectionStableSpy.calledOnce);
     });
   }
 });

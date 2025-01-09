@@ -34,6 +34,7 @@ import { Logger } from "../logging";
 import { ConnectionId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
 import { Message, MessageType } from "../ws/messageTypes";
+import { isConnectionStable } from "./connectionStatusUtils";
 import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecar.connections");
@@ -314,50 +315,6 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   }
   logger.debug("Discovered Schema Registry REST proxy port", { schemaRegistryPort });
   return `http://localhost:${restProxyPort}`;
-}
-
-export function isConnectionStable(connection: Connection): boolean {
-  const type = connection.spec.type!;
-
-  switch (type) {
-    case ConnectionType.Ccloud:
-      return isCCloudConnectionStable(connection);
-    case ConnectionType.Direct:
-      return isDirectConnectionStable(connection);
-    default:
-      logger.warn(`isConnectionStable: unhandled connection type ${type}`);
-      throw new Error(`Unhandled connection type ${type}`);
-  }
-}
-
-function isCCloudConnectionStable(connection: Connection): boolean {
-  const status = connection.status;
-  const ccloudState = status.ccloud!.state;
-
-  const rv = ccloudState !== "NONE";
-
-  const ccloudFailed = status.ccloud?.errors?.sign_in?.message;
-  if (ccloudFailed) {
-    logger.error(`isCCloudConnectionStable(): auth failed with error: ${ccloudFailed}`);
-  }
-
-  logger.debug(`isCCloudConnectionStable(): returning ${rv} based on state ${ccloudState}`);
-
-  return rv;
-}
-
-function isDirectConnectionStable(connection: Connection): boolean {
-  const status = connection.status;
-  const kafkaState = status.kafka_cluster?.state;
-  const schemaRegistryState = status.schema_registry?.state;
-
-  const rv = kafkaState !== "ATTEMPTING" && schemaRegistryState !== "ATTEMPTING";
-
-  logger.debug(
-    `isDirectConnectionStable(): returning ${rv} for connection ${connection.id} based on kafkaState ${kafkaState} and schemaRegistryState ${schemaRegistryState}`,
-  );
-
-  return rv;
 }
 
 /**
