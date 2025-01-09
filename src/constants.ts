@@ -1,4 +1,4 @@
-import { extensions } from "vscode";
+import { env, extensions } from "vscode";
 import { ConnectionSpec } from "./clients/sidecar";
 import { ConnectionId } from "./models/resource";
 
@@ -40,9 +40,12 @@ export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
 
 /** Single CCloud connection spec to be used with the sidecar Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
-  id: "vscode-confluent-cloud-connection",
+  id: `${env.uriScheme}-confluent-cloud-connection`,
   name: "Confluent Cloud",
   type: "CCLOUD",
+  ccloud_config: {
+    uri_scheme: env.uriScheme,
+  },
 };
 // these two avoid the need to use `CCLOUD_CONNECTION_SPEC.id!` or `CCLOUD_CONNECTION_SPEC.name!`
 // everywhere in the codebase
@@ -51,7 +54,7 @@ export const CCLOUD_CONNECTION_NAME = CCLOUD_CONNECTION_SPEC.name!;
 
 /** Single local connection spec to be used with the sidecar Connections API. */
 export const LOCAL_CONNECTION_SPEC: ConnectionSpec = {
-  id: "vscode-local-connection",
+  id: `${env.uriScheme}-local-connection`,
   name: "Local",
   type: "LOCAL",
 };

@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { env } from "vscode";
 import { Connection, ConnectionType, UserInfo } from "../../../src/clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
@@ -34,6 +35,7 @@ export const TEST_CCLOUD_CONNECTION: Connection = {
     ...CCLOUD_CONNECTION_SPEC,
     ccloud_config: {
       organization_id: TEST_CCLOUD_ORGANIZATION.id,
+      uri_scheme: env.uriScheme,
     },
   },
   status: {
