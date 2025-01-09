@@ -58,11 +58,10 @@ export async function addSSLPemPath() {
   }
 }
 
-export async function showDirectConnectionForm(item?: DirectEnvironment) {
-  const spec: CustomConnectionSpec | null = item
-    ? await getResourceManager().getDirectConnection(item.connectionId)
-    : null;
-  openDirectConnectionForm(spec);
+export async function createNewDirectConnection() {
+  // ignore any arguments passed through this command function (e.g. if something was highlighted
+  // in the Resources view) so we always open the "Create a new connection" form
+  openDirectConnectionForm(null);
 }
 
 export async function deleteDirectConnection(item: DirectEnvironment) {
@@ -146,7 +145,7 @@ export function registerConnectionCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.connections.ccloud.logIn", createCCloudConnection),
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
-    registerCommandWithLogging("confluent.connections.direct", showDirectConnectionForm),
+    registerCommandWithLogging("confluent.connections.direct", createNewDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
     // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
