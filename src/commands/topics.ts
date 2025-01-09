@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/node";
-import * as fs from "fs";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
@@ -12,10 +11,12 @@ import {
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
+import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { KafkaTopic } from "../models/topic";
+import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
@@ -177,91 +178,97 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   editConfigForm.onDidDispose(() => disposable.dispose());
 }
 
-async function produceMessageFromFile(topic: KafkaTopic) {
+async function produceMessageFromDocument(topic: KafkaTopic) {
   if (!topic) {
     vscode.window.showErrorMessage("No topic selected.");
     return;
   }
-  const options: vscode.OpenDialogOptions = {
-    canSelectMany: false,
-    openLabel: "Select JSON file",
-    filters: {
-      "JSON files": ["json"],
-    },
+
+  // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes
+  const uriSchemes = ["file", "untitled", MESSAGE_URI_SCHEME];
+  const languageIds = ["json"];
+  const fileFilters = {
+    "JSON files": ["json"],
+  };
+  const messageUri: vscode.Uri | undefined = await uriQuickpick(
+    uriSchemes,
+    languageIds,
+    fileFilters,
+  );
+  if (!messageUri) {
+    return;
+  }
+
+  const docContent: LoadedDocumentContent = await loadDocumentContent(messageUri);
+  if (docContent.content === undefined) {
+    vscode.window.showErrorMessage("Could not read JSON file");
+    return;
+  }
+
+  const message = JSON.parse(docContent.content);
+  if (!message.key || !message.value || !Array.isArray(message.headers)) {
+    vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
+    return;
+  }
+
+  const sidecar = await getSidecar();
+  const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
+
+  // convert headers to the correct format, ensuring the value is base64-encoded
+  const headers: ProduceRequestHeader[] = message.headers.map(
+    (header: any): ProduceRequestHeader => ({
+      name: header.key ? header.key : header.name,
+      value: Buffer.from(header.value).toString("base64"),
+    }),
+  );
+
+  // TODO: add schema information here once we have it
+  const key: ProduceRequestData = { data: message.key };
+  const value: ProduceRequestData = { data: message.value };
+
+  const produceRequest: ProduceRequest = {
+    headers,
+    key,
+    value,
+  };
+  const request: ProduceRecordRequest = {
+    topic_name: topic.name,
+    cluster_id: topic.clusterId,
+    ProduceRequest: produceRequest,
   };
 
-  const fileUri = await vscode.window.showOpenDialog(options);
-  if (fileUri && fileUri[0]) {
-    const filePath = fileUri[0].fsPath;
-    const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-
-    if (!message.key || !message.value || !Array.isArray(message.headers)) {
-      vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
-      return;
-    }
-
-    const sidecar = await getSidecar();
-    const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
-
-    // convert headers to the correct format, ensuring the value is base64-encoded
-    const headers: ProduceRequestHeader[] = message.headers.map(
-      (header: any): ProduceRequestHeader => ({
-        name: header.key ? header.key : header.name,
-        value: Buffer.from(header.value).toString("base64"),
-      }),
-    );
-
-    // TODO: add schema information here once we have it
-    const key: ProduceRequestData = { data: message.key };
-    const value: ProduceRequestData = { data: message.value };
-
-    const produceRequest: ProduceRequest = {
-      headers,
-      key,
-      value,
-    };
-    const request: ProduceRecordRequest = {
-      topic_name: topic.name,
-      cluster_id: topic.clusterId,
-      ProduceRequest: produceRequest,
-    };
-
-    try {
-      const resp: ProduceResponse = await recordsApi.produceRecord(request);
-      vscode.window
-        .showInformationMessage(
-          `Success: Produced message to topic "${topic.name}".`,
-          "View Message",
-        )
-        .then((selection) => {
-          if (selection) {
-            // open the message viewer to show a ~1sec window around the produced message
-            const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
-            // ...with the message key used to search, and partition filtered if available
-            const messageViewerConfig = MessageViewerConfig.create({
-              // don't change the consume query params, just filter to show this last message
-              timestampFilter: [msgTime, msgTime + 500],
-              partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
-              textFilter: String(message.key),
-            });
-            vscode.commands.executeCommand(
-              "confluent.topic.consume",
-              topic,
-              true, // duplicate MV to show updated filters
-              messageViewerConfig,
-            );
-          }
-        });
-    } catch (error: any) {
-      logResponseError(error, "topic produce from file"); // not sending to Sentry by default
-      if (error instanceof ResponseError) {
-        const body = await error.response.clone().text();
-        vscode.window.showErrorMessage(
-          `Error response while trying to produce message: ${error.response.status} ${error.response.statusText}: ${body}`,
-        );
-      } else {
-        vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
-      }
+  try {
+    const resp: ProduceResponse = await recordsApi.produceRecord(request);
+    vscode.window
+      .showInformationMessage(`Success: Produced message to topic "${topic.name}".`, "View Message")
+      .then((selection) => {
+        if (selection) {
+          // open the message viewer to show a ~1sec window around the produced message
+          const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
+          // ...with the message key used to search, and partition filtered if available
+          const messageViewerConfig = MessageViewerConfig.create({
+            // don't change the consume query params, just filter to show this last message
+            timestampFilter: [msgTime, msgTime + 500],
+            partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
+            textFilter: String(message.key),
+          });
+          vscode.commands.executeCommand(
+            "confluent.topic.consume",
+            topic,
+            true, // duplicate MV to show updated filters
+            messageViewerConfig,
+          );
+        }
+      });
+  } catch (error: any) {
+    logResponseError(error, "topic produce from file"); // not sending to Sentry by default
+    if (error instanceof ResponseError) {
+      const body = await error.response.clone().text();
+      vscode.window.showErrorMessage(
+        `Error response while trying to produce message: ${error.response.status} ${error.response.statusText}: ${body}`,
+      );
+    } else {
+      vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
     }
   }
 }
@@ -275,6 +282,6 @@ export function registerTopicCommands(): vscode.Disposable[] {
       copyKafkaClusterBootstrapUrl,
     ),
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
-    registerCommandWithLogging("confluent.topic.produce.fromFile", produceMessageFromFile),
+    registerCommandWithLogging("confluent.topic.produce.fromDocument", produceMessageFromDocument),
   ];
 }
