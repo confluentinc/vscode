@@ -42,7 +42,7 @@ export async function logResponseError(
       status: error.response.status,
       statusText: error.response.statusText,
       body: errorBody.slice(0, 5000), // limit to 5000 characters
-      errorType: error.constructor.name,
+      errorType: error.name,
     };
     responseStatusCode = error.response.status;
   } else {
