@@ -244,7 +244,6 @@ export class WebsocketManager implements Disposable {
    **/
   public async deliverToCallbacks<T extends MessageType>(message: Message<T>): Promise<void> {
     const messageType = message.headers.message_type;
-    logger.info(`Delivering message of type ${messageType}`);
 
     const initialCallbackCount = this.messageRouter.listenerCount(messageType);
     logger.debug(
@@ -252,10 +251,10 @@ export class WebsocketManager implements Disposable {
     );
 
     this.messageRouter.emit(messageType, message);
-
     logger.debug(
-      `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
+      `Delivered message of type ${message.headers.message_type} to ${initialCallbackCount} callback(s).`,
     );
+
     const remainingCallbackCount = this.messageRouter.listenerCount(messageType);
     if (remainingCallbackCount !== initialCallbackCount) {
       logger.debug(

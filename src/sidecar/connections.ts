@@ -231,7 +231,6 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
 export async function waitForConnectionToBeUsable(
   id: ConnectionId,
   timeoutMs: number = 15_000,
-  waitTimeMs: number = 500,
 ): Promise<Connection | null> {
   let connection: Connection | null = null;
 
@@ -241,31 +240,14 @@ export async function waitForConnectionToBeUsable(
 
   const startTime = Date.now();
 
-  // First time through, allow waitForConnectionUpdate() to return the existing non-null state if present.
-  let firstTime = true;
+  let type: ConnectionType | undefined;
+  let status: ConnectionStatus | undefined;
 
-  const connectionStateWatcher = ConnectionStateWatcher.getInstance();
-
-  while (Date.now() - startTime < timeoutMs) {
-    logger.debug(`waitForConnectionToBeUsable(): Calling waitForConnectionUpdate() for ${id}`);
-    const checkedConnection = await connectionStateWatcher.waitForConnectionUpdate(
-      id,
-      firstTime,
-      timeoutMs,
-    );
-    if (!checkedConnection) {
-      // We didn't get any connection update at all within timeoutMs. Loop back to
-      // top and let the while statement decide to continue or break.
-      logger.debug(
-        `waitForConnectionToBeUsable(): waitForConnectionUpdate() returned null for ${id}`,
-      );
-      continue;
-    }
-
-    firstTime = false;
-
-    const type: ConnectionType = checkedConnection.spec.type!;
-    const status: ConnectionStatus = checkedConnection.status;
+  // Filter passed to .waitForConnectionUpdate() to decide if an updated connection obj
+  // meets terminal state criteria.
+  const eventFilter: ConnectionUpdateFilter = (checkedConnection: Connection): boolean => {
+    type = checkedConnection.spec.type!;
+    status = checkedConnection.status;
 
     switch (type) {
       case ConnectionType.Direct: {
@@ -276,7 +258,7 @@ export async function waitForConnectionToBeUsable(
         if (isAttempting) {
           connectionLoading.fire(id);
           logger.debug(
-            "waitForConnectionToBeUsable(): still waiting for direct connection to be usable",
+            "waitForConnectionToBeUsable() filter lambda: still waiting for direct connection to be usable",
             {
               id,
               type,
@@ -284,7 +266,8 @@ export async function waitForConnectionToBeUsable(
               schemaRegistryState,
             },
           );
-          continue;
+          // fail the filter. We're still waiting for the connection to be usable.
+          return false;
         }
         connectionUsable.fire(id);
         // notify subscribers that the "environment" has changed since direct connections are treated
@@ -296,7 +279,7 @@ export async function waitForConnectionToBeUsable(
         if (schemaRegistryState === "FAILED") {
           schemaRegistryFailed = status.schema_registry?.errors?.sign_in?.message;
         }
-        break;
+        return true;
       }
       case ConnectionType.Ccloud: {
         // CCloud connections don't transition from `NONE` to `ATTEMPTING` to `SUCCESS`, just directly
@@ -304,44 +287,34 @@ export async function waitForConnectionToBeUsable(
         const ccloudState = status.ccloud!.state;
         if (ccloudState === "NONE") {
           logger.debug(
-            "waitForConnectionToBeUsable(): still waiting for ccloud connection to be usable",
+            "waitForConnectionToBeUsable() filter lambda: still waiting for ccloud connection to be usable",
             {
               id,
               type,
               ccloudState,
             },
           );
-          continue;
+          return false;
         }
         if (ccloudState === "FAILED") {
           ccloudFailed = status.ccloud?.errors?.sign_in?.message;
         }
-        break;
+        return true;
       }
-      // TODO: check local connections?
+      // TODO: local connections?
     }
 
-    // if we didn't time out by now through the series of `continue`s, we have a usable connection
-    // (or we need to update the logic above for other connection types/states)
-    logger.debug(
-      `waitForConnectionToBeUsable(): connection is usable after ${Date.now() - startTime}ms, returning`,
-      {
-        id,
-        type,
-        ccloud: status.ccloud?.state,
-        ccloudFailed,
-        kafka: status.kafka_cluster?.state,
-        kafkaFailed,
-        schemaRegistry: status.schema_registry?.state,
-        schemaRegistryFailed,
-      },
-    );
-    connection = checkedConnection;
-    break;
-  }
+    logger.warn("waitForConnectionToBeUsable() filter lambda fallthrough false.");
+    return false;
+  };
 
+  logger.debug(
+    `waitForConnectionToBeUsable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become useable soon.`,
+  );
+  const connectionStateWatcher = ConnectionStateWatcher.getInstance();
+  connection = await connectionStateWatcher.waitForConnectionUpdate(id, eventFilter, timeoutMs);
   if (!connection) {
-    const msg = `Connection ${id} did not become usable within ${timeoutMs}ms`;
+    const msg = `waitForConnectionToBeUsable(): connection ${id} did not become usable within ${timeoutMs}ms`;
     // reset any "loading" state for this connection
     connectionUsable.fire(id);
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
@@ -350,6 +323,20 @@ export async function waitForConnectionToBeUsable(
     logger.error(msg);
     return null;
   }
+
+  logger.debug(
+    `waitForConnectionToBeUsable(): connection is usable after ${Date.now() - startTime}ms, returning`,
+    {
+      id,
+      type,
+      ccloud: status!.ccloud?.state,
+      ccloudFailed,
+      kafka: status!.kafka_cluster?.state,
+      kafkaFailed,
+      schemaRegistry: status!.schema_registry?.state,
+      schemaRegistryFailed,
+    },
+  );
 
   return connection;
 }
@@ -398,6 +385,14 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   return `http://localhost:${restProxyPort}`;
 }
 
+/**
+ * Definition for lambdas passed into ConnectionStateWatcher.waitForConnectionUpdate() to determine
+ * if a connection update should be considered for further processing. Allows for filtering out
+ * updates that are not relevant to the caller w/o gaps where there could be 0 observers and therefore
+ * missed updates.
+ * */
+export type ConnectionUpdateFilter = (connection: Connection, wasCachedUpdate: boolean) => boolean;
+
 export class ConnectionStateWatcher {
   // Singleton instance
   private static instance: ConnectionStateWatcher;
@@ -438,7 +433,7 @@ export class ConnectionStateWatcher {
    */
   async waitForConnectionUpdate(
     connectionId: string,
-    returnExistingStateIfPresent: boolean = true,
+    filter: ConnectionUpdateFilter,
     timeoutMs: number = 15_000,
   ): Promise<Connection | null> {
     let singleConnectionState = this.connectionStates.get(connectionId);
@@ -450,7 +445,10 @@ export class ConnectionStateWatcher {
       // If we already have a connection state, and we're allowed to return the existing state if
       // present, then return the existing state immediately. Otherwise we'll wait for
       // the next recieved update.
-      if (returnExistingStateIfPresent && singleConnectionState.mostRecentConnection) {
+      if (
+        singleConnectionState.mostRecentConnection &&
+        filter(singleConnectionState.mostRecentConnection, true)
+      ) {
         const connType = singleConnectionState.mostRecentConnection.spec.type!;
         logger.debug(
           `waitForConnectionUpdate(): Short-circuit returning existing connection state for ${connType} connection ${connectionId}`,
@@ -464,6 +462,9 @@ export class ConnectionStateWatcher {
         logger.warn(
           `ConnectionStateWatcher waitForConnectionUpdate(): Timed out waiting for connection update for connection ${connectionId}`,
         );
+        // cancel the event listner.
+        dispose.dispose();
+        // and indicate the timeout to the caller.
         resolve(null);
       }, timeoutMs);
       logger.debug(
@@ -474,10 +475,22 @@ export class ConnectionStateWatcher {
         logger.debug(
           `ConnectionStateWatcher waitForConnectionUpdate(): Received connection update for ${connType} connection ${connectionId}`,
         );
-        clearTimeout(timeout);
-        resolve(connection);
-        // deregister this listener.
-        dispose.dispose();
+        if (filter(connection, false)) {
+          logger.debug(
+            "ConnectionStateWatcher waitForConnectionUpdate(): passed filter, resolving",
+          );
+          // cancel the timeout.
+          clearTimeout(timeout);
+          // deregister this listener.
+          dispose.dispose();
+          // return happy to the caller.
+          resolve(connection);
+        } else {
+          logger.debug(
+            "ConnectionStateWatcher waitForConnectionUpdate(): did not pass filter, waiting for next update",
+          );
+          // leave the listener registered for the next update (or until )
+        }
       });
     });
   }

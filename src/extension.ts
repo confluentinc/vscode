@@ -71,7 +71,7 @@ import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
-import { getCCloudAuthSession } from "./sidecar/connections";
+import { ConnectionStateWatcher, getCCloudAuthSession } from "./sidecar/connections";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
@@ -220,6 +220,10 @@ async function _activateExtension(
   EventListener.getInstance().start();
   // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
   getStorageManager().deleteSecret(SecretStorageKeys.DOCKER_CREDS_SECRET_KEY);
+
+  // Watch for sidecar pushing connection state changes over websocket.
+  // (side effect of causing the watcher to be created)
+  ConnectionStateWatcher.getInstance();
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
