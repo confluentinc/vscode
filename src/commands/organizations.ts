@@ -36,6 +36,7 @@ async function useOrganizationCommand() {
         ...CCLOUD_CONNECTION_SPEC,
         ccloud_config: {
           organization_id: organization.id,
+          uri_scheme: vscode.env.uriScheme,
         },
       });
 
