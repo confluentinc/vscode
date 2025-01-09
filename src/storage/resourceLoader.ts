@@ -3,7 +3,6 @@ import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
-import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, IResourceBase } from "../models/resource";
@@ -243,14 +242,11 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
     }
   }
 
-  const logger = new Logger("fetchSchemas");
-
   const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
     // AVRO doesn't show up in `schemaType`
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
     const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
     // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
-
     return Schema.create({
       connectionId: schemaRegistry.connectionId,
       connectionType: schemaRegistry.connectionType,
