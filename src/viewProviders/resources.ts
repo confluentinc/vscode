@@ -89,6 +89,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   environmentsMap: Map<string, CCloudEnvironment | LocalEnvironment | DirectEnvironment> =
     new Map();
 
+  // env id -> preannounced loading state coming from sidecar websocket
+  // events to us via connectionUsable emitter.
+  private cachedLoadingStates: Map<string, boolean> = new Map();
+
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
@@ -98,6 +102,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
   private static instance: ResourceViewProvider | null = null;
+
   private constructor() {
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
@@ -186,7 +191,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       }
       // TODO: we aren't tracking LocalEnvironments yet, so skip that here
       if (directEnvironments) {
-        directEnvironments.forEach((env) => this.environmentsMap.set(env.id, env));
+        directEnvironments.forEach((env) => {
+          // if we have a cached loading state for this environment
+          // (due to websocket events coming in before the graphql query completes),
+          // update the environment's isLoading state before adding it to the map
+          const cachedLoading = this.cachedLoadingStates.get(env.id);
+          if (cachedLoading !== undefined) {
+            env.isLoading = cachedLoading;
+            this.cachedLoadingStates.delete(env.id);
+          }
+          this.environmentsMap.set(env.id, env);
+        });
       }
 
       return [ccloudContainer, localContainer, ...directEnvironments];
@@ -275,7 +290,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           // only update this environment in the tree view, not the entire view
           this._onDidChangeTreeData.fire(environment);
         } else {
-          logger.debug("could not find direct environment in map to update", { id });
+          logger.debug("could not find direct environment in map to update. Caching for later.", {
+            id,
+            loading,
+          });
+          this.cachedLoadingStates.set(id, loading);
         }
       }
     }
