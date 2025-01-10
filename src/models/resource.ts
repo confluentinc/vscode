@@ -1,18 +1,8 @@
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import { IconNames } from "../constants";
 
 /** A uniquely-branded string-type for a connection ID. */
 export type ConnectionId = string & { readonly brand: unique symbol };
-
-/** Given a ConnectionId, return the corresponding ConnectionType */
-export function connectionTypeFromId(id: ConnectionId): ConnectionType {
-  // CCloud and local are defined by constants. Direct are then arbitrary uuid strings.
-  return id === CCLOUD_CONNECTION_ID
-    ? ConnectionType.Ccloud
-    : id === LOCAL_CONNECTION_ID
-      ? ConnectionType.Local
-      : ConnectionType.Direct;
-}
 
 // TODO: use other branded resource ID types here
 
