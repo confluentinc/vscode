@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+- React to websocket events pushed from sidecar instead of polling for some connection change monitoring.
+
 ## 0.23.3
 
 ### Fixed
