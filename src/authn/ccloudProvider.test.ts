@@ -59,7 +59,7 @@ describe("ConfluentCloudAuthProvider", () => {
 
     // assume the connection is immediately usable for most tests
     sandbox
-      .stub(connections, "waitForConnectionToBeUsable")
+      .stub(connections, "waitForConnectionToBeStable")
       .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
 
     // don't handle the progress notification, openExternal, etc in this test suite

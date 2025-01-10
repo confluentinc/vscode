@@ -35,6 +35,9 @@ describe("EnvironmentTreeItem", () => {
       schemaRegistry: undefined,
     });
 
+    // Override isLoading to false due to no clusters
+    env.isLoading = false;
+
     const treeItem = new EnvironmentTreeItem(env);
 
     assert.deepStrictEqual(

@@ -12,8 +12,7 @@ import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
-  connectionLoading,
-  connectionUsable,
+  connectionStable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -90,6 +89,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   environmentsMap: Map<string, CCloudEnvironment | LocalEnvironment | DirectEnvironment> =
     new Map();
 
+  // env id -> preannounced loading state coming from sidecar websocket
+  // events to us via connectionUsable emitter.
+  private cachedLoadingStates: Map<string, boolean> = new Map();
+
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
@@ -99,6 +102,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
   private static instance: ResourceViewProvider | null = null;
+
   private constructor() {
     if (!getExtensionContext()) {
       // getChildren() will fail without the extension context
@@ -187,7 +191,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       }
       // TODO: we aren't tracking LocalEnvironments yet, so skip that here
       if (directEnvironments) {
-        directEnvironments.forEach((env) => this.environmentsMap.set(env.id, env));
+        directEnvironments.forEach((env) => {
+          // if we have a cached loading state for this environment
+          // (due to websocket events coming in before the graphql query completes),
+          // update the environment's isLoading state before adding it to the map
+          const cachedLoading = this.cachedLoadingStates.get(env.id);
+          if (cachedLoading !== undefined) {
+            env.isLoading = cachedLoading;
+            this.cachedLoadingStates.delete(env.id);
+          }
+          this.environmentsMap.set(env.id, env);
+        });
       }
 
       return [ccloudContainer, localContainer, ...directEnvironments];
@@ -234,11 +248,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       },
     );
 
-    const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
-      this.refreshConnection(id, true);
-    });
-
-    const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
+    const connectionUsableSub: vscode.Disposable = connectionStable.event((id: ConnectionId) => {
       this.refreshConnection(id, false);
     });
 
@@ -248,7 +258,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
-      connectionLoadingSub,
       connectionUsableSub,
     ];
   }
@@ -256,9 +265,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   async refreshConnection(id: ConnectionId, loading: boolean = false) {
     switch (id) {
       case CCLOUD_CONNECTION_ID:
-        throw new Error("Not implemented");
+        logger.debug("refreshConnection() ccloud: Not implemented");
+        break;
       case LOCAL_CONNECTION_ID:
-        throw new Error("Not implemented");
+        logger.debug("refreshConnection() local: Not implemented");
+        break;
       default: {
         // direct connections are treated as environments, so we can look up the direct "environment"
         // by its connection ID
@@ -279,7 +290,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           // only update this environment in the tree view, not the entire view
           this._onDidChangeTreeData.fire(environment);
         } else {
-          logger.debug("could not find direct environment in map to update", { id });
+          logger.debug("could not find direct environment in map to update. Caching for later.", {
+            id,
+            loading,
+          });
+          this.cachedLoadingStates.set(id, loading);
         }
       }
     }

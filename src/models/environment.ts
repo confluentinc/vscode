@@ -45,7 +45,8 @@ export abstract class Environment implements IResourceBase {
   kafkaClusters!: KafkaCluster[];
   schemaRegistry?: SchemaRegistry | undefined;
 
-  // updated by the ResourceViewProvider from connectionLoading/connectionUsable events
+  // updated by the ResourceViewProvider from connectionUsable events
+  // (DirectEnvironment instances are constructed with isLoading = true)
   isLoading: boolean = false;
 
   get hasClusters(): boolean {
@@ -113,6 +114,12 @@ export class DirectEnvironment extends Environment {
     this.kafkaClusters = props.kafkaClusters;
     this.schemaRegistry = props.schemaRegistry;
     if (props.formConnectionType) this.formConnectionType = props.formConnectionType;
+
+    // newly born direct connections are loading unless we already have children.
+    // This will eventually mutate
+    // to false when the connection is stable and emitters.connectionStable fires through
+    // a real Rube Goldberg machine of events.
+    this.isLoading = !this.hasClusters;
   }
 
   get iconName(): IconNames {
@@ -174,6 +181,7 @@ export class EnvironmentTreeItem extends TreeItem {
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;
     this.iconPath = new ThemeIcon(this.resource.iconName);
+
     if (this.resource.isLoading) {
       this.iconPath = new ThemeIcon(IconNames.LOADING);
     } else if (isDirect(resource) && !resource.hasClusters) {
