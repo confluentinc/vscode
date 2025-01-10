@@ -25,7 +25,7 @@ function isCCloudConnectionStable(connection: Connection): boolean {
 
   const ccloudFailed = ccloudStatus.errors?.sign_in?.message;
   if (ccloudFailed) {
-    logger.error(`isCCloudConnectionStable(): auth failed with error: ${ccloudFailed}`);
+    logger.error(`isCCloudConnectionStable(): error: ${ccloudFailed}`);
   }
 
   const rv = ccloudState !== "NONE";
@@ -36,19 +36,18 @@ function isCCloudConnectionStable(connection: Connection): boolean {
 
 function isDirectConnectionStable(connection: Connection): boolean {
   const status = connection.status;
+
+  for (const [entity, maybeError] of [
+    ["kafka", status.kafka_cluster?.errors?.sign_in?.message],
+    ["schema registry", status.schema_registry?.errors?.sign_in?.message],
+  ] as [string, string | undefined][]) {
+    if (maybeError) {
+      logger.error(`isDirectConnectionStable(): ${entity} error: ${maybeError}`);
+    }
+  }
+
   const kafkaState = status.kafka_cluster?.state;
   const schemaRegistryState = status.schema_registry?.state;
-
-  const kafkaFailedReason = status.kafka_cluster?.errors?.sign_in?.message;
-  const schemaRegistryFailedReason = status.schema_registry?.errors?.sign_in?.message;
-  if (kafkaFailedReason) {
-    logger.error(`isDirectConnectionStable(): kafka auth failed with error: ${kafkaFailedReason}`);
-  }
-  if (schemaRegistryFailedReason) {
-    logger.error(
-      `isDirectConnectionStable(): schema registry auth failed with error: ${schemaRegistryFailedReason}`,
-    );
-  }
 
   const rv = kafkaState !== "ATTEMPTING" && schemaRegistryState !== "ATTEMPTING";
   logger.debug(
