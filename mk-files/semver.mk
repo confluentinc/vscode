@@ -116,13 +116,6 @@ BUMPED_BASE_VERSION := v${BUMPED_CLEAN_BASE_VERSION}
 BUMPED_CLEAN_VERSION := $(BUMPED_CLEAN_VERSION)$(VERSION_POST)
 BUMPED_VERSION := v$(BUMPED_CLEAN_VERSION)
 
-RELEASE_SVG := <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="94" height="20"><linearGradient id="b" x2="0" y2="100%"><stop offset="0" stop-color="\#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="a"><rect width="94" height="20" rx="3" fill="\#fff"/></clipPath><g clip-path="url(\#a)"><path fill="\#555" d="M0 0h49v20H0z"/><path fill="\#007ec6" d="M49 0h45v20H49z"/><path fill="url(\#b)" d="M0 0h94v20H0z"/></g><g fill="\#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="110"><text x="255" y="150" fill="\#010101" fill-opacity=".3" transform="scale(.1)" textLength="390">release</text><text x="255" y="140" transform="scale(.1)" textLength="390">release</text><text x="705" y="150" fill="\#010101" fill-opacity=".3" transform="scale(.1)" textLength="350">$(BUMPED_VERSION)</text><text x="705" y="140" transform="scale(.1)" textLength="350">$(BUMPED_VERSION)</text></g> </svg>
-
-.PHONY: get-release-image
-get-release-image:
-	echo '$(RELEASE_SVG)' > release.svg
-	git add release.svg
-
 .PHONY: commit-release
 commit-release:
 	git diff --exit-code --cached --name-status || \
