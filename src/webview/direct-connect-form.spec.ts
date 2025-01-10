@@ -5,7 +5,6 @@ import esbuild from "rollup-plugin-esbuild";
 import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
 import { SinonStub } from "sinon";
-// import { TemplateManifest } from "../clients/sidecar";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
 
