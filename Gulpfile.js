@@ -142,7 +142,7 @@ export function build(done) {
   const extOutput = {
     dir: DESTINATION,
     format: "cjs",
-    sourcemap: true,
+    sourcemap: !production,
     sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
     exports: "named",
   };
