@@ -60,12 +60,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     // this should probably live in a separate test helper file
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
     getConfigurationStub.returns({
-      get: sandbox.stub().callsFake((key: string) => {
-        switch (key) {
-          case LOCAL_DOCKER_SOCKET_PATH:
-            return DEFAULT_UNIX_SOCKET_PATH;
-        }
-      }),
+      get: sandbox.stub().withArgs(LOCAL_DOCKER_SOCKET_PATH).returns(DEFAULT_UNIX_SOCKET_PATH),
     });
 
     // assume no running containers matching this workflow image for most tests
