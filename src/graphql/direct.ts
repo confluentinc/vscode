@@ -48,7 +48,6 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
     // look up the connectionId:spec map from storage
     const directConnectionMap: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
-
     response.directConnections.forEach((connection) => {
       if (!connection) {
         return;
@@ -89,7 +88,9 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         id: connection.id,
         name: connection.name,
         kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
+        kafkaConfigured: !!directSpec?.kafka_cluster,
         schemaRegistry,
+        schemaRegistryConfigured: !!directSpec?.schema_registry,
         formConnectionType: directSpec?.formConnectionType,
         ...connectionInfo,
       });
