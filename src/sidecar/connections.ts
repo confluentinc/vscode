@@ -325,6 +325,12 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
  * */
 export type ConnectionUpdateFilter = (connection: Connection) => boolean;
 
+/** Entry type kept in a per connection-id Map within ConnectionStateWatcher. */
+class SingleConnectionState {
+  mostRecentState: Connection | null = null;
+  eventEmitter: EventEmitter<Connection> = new EventEmitter<Connection>();
+}
+
 export class ConnectionStateWatcher {
   // Singleton instance
   private static instance: ConnectionStateWatcher;
@@ -371,10 +377,15 @@ export class ConnectionStateWatcher {
   }
 
   /**
-   * Wait at most N millis for this connection to be updated with an event from sidecar.
+   * Wait at most N millis for this connection to be updated with an Connection event from sidecar
+   * that passes the given filter. If the connection is already known to be in a filter-passing state, this
+   * will return immediately. If the connection is not in the desired state, this will wait for up to
+   * the timeoutMs for the next update to arrive.
    * Resolves with the updated Connection or null if the timeout is reached.
-   * If `returnExistingStateIfPresent` is true, and there is an existing Connection state for the requested
-   * connection id, then the existing state will be returned immediately without waiting for the next update.
+   *
+   * Callers who need to guarantee that they are working with the most recent Connection state should
+   * first call purgeCachedConnectionState() *before* mutating the connection and then calling
+   * this method.
    */
   async waitForConnectionUpdate(
     connectionId: ConnectionId,
@@ -397,46 +408,53 @@ export class ConnectionStateWatcher {
         return singleConnectionState.mostRecentState;
       }
     }
+
     return new Promise((resolve) => {
+      // Implicitly race between the timeout and a temporary event listener over a filter-passing update
+      // to the desired connection.
       const timeout = setTimeout(() => {
         // Did not get an update within the timeout.
         logger.warn(
           `ConnectionStateWatcher waitForConnectionUpdate(): Timed out waiting for connection update for connection ${connectionId}`,
         );
-        // cancel the event listner.
+        // Cancel the temporary event listner
         dispose.dispose();
-        // and indicate the timeout to the caller.
+        // ... and resolve to the caller indicating the timeout fired.
         resolve(null);
       }, timeoutMs);
-      logger.debug(
-        `ConnectionStateWatcher waitForConnectionUpdate(): registering observer for updates on  ${connectionId}`,
-      );
+
       const dispose = singleConnectionState.eventEmitter.event((connection: Connection) => {
         const connType = connection.spec.type!;
         logger.debug(
           `ConnectionStateWatcher waitForConnectionUpdate(): Received connection update for ${connType} connection ${connectionId}`,
         );
+
+        // Does it match the given filter?
         if (filter(connection)) {
           logger.debug(
             "ConnectionStateWatcher waitForConnectionUpdate(): passed filter, resolving",
           );
-          // cancel the timeout.
+          // Cancel the timeout,
           clearTimeout(timeout);
-          // deregister this listener.
+          // deregister this listener,
           dispose.dispose();
-          // return happy to the caller.
+          // resolve the filter-passing Connection to the caller.
           resolve(connection);
         } else {
           logger.debug(
             "ConnectionStateWatcher waitForConnectionUpdate(): did not pass filter, waiting for next update",
           );
-          // leave the listener registered for the next update (or until )
+          // leave the listener registered for the next update (or until the timeout fires)
         }
       });
     });
   }
 
-  /** Handle connection state change events from sidecar connections. */
+  /**
+   * Handle connection state change events from sidecar websocket pushed messages.
+   * Stashes the new connection state into our map cache for safe keeping,
+   * and fires the event emitter for the single connection.
+   */
   async handleConnectionUpdateEvent(message: Message<MessageType.CONNECTION_EVENT>): Promise<void> {
     const connectionEvent = message.body;
     const connectionId = connectionEvent.connection.id as ConnectionId;
@@ -453,14 +471,9 @@ export class ConnectionStateWatcher {
       this.connectionStates.set(connectionId, singleConnectionState);
     }
 
-    // Store this most recent Connection description including its spec.
+    // Store this most recent Connection state / spec.
     singleConnectionState.mostRecentState = connection;
     // Fire the event emitter for this connection to alert any listeners about the update.
     singleConnectionState.eventEmitter.fire(connection);
   }
-}
-
-class SingleConnectionState {
-  mostRecentState: Connection | null = null;
-  eventEmitter: EventEmitter<Connection> = new EventEmitter<Connection>();
 }
