@@ -135,7 +135,7 @@ describe("sidecar/connections.ts", () => {
   });
 });
 
-describe("sidecar/connections.ts waitForConnectionToBeUsable() tests", () => {
+describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
 
   let sandbox: sinon.SinonSandbox;
@@ -168,7 +168,7 @@ describe("sidecar/connections.ts waitForConnectionToBeUsable() tests", () => {
     connectionStateWatcher.handleConnectionUpdateEvent(websocketMessage);
   }
 
-  // dynamically set up tests for `waitForConnectionToBeUsable()` using different connections and states
+  // dynamically set up tests for `waitForConnectionToBeStable()` using different connections and states
   type ConnectionStateMatches = [
     Connection,
     ConnectedState,
@@ -206,7 +206,7 @@ describe("sidecar/connections.ts waitForConnectionToBeUsable() tests", () => {
     // "Property 'authentication' is missing in type ... but required in type 'ConnectionStatus'."
     const testAuthStatus = { authentication: { status: Status.NoToken } };
 
-    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should return the connection when it becomes usable`, async () => {
+    it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should return the connection when it becomes usable`, async () => {
       const testConnection: Connection = {
         ...baseConnection,
         status: {
@@ -224,7 +224,7 @@ describe("sidecar/connections.ts waitForConnectionToBeUsable() tests", () => {
       assert.deepStrictEqual(connection, testConnection);
     });
 
-    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should return null if the connection does not become usable within the timeout`, async () => {
+    it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should return null if the connection does not become usable within the timeout`, async () => {
       // use fake timers so we can control the time and "time out" quickly
       clock = sandbox.useFakeTimers(Date.now());
 
@@ -254,7 +254,7 @@ describe("sidecar/connections.ts waitForConnectionToBeUsable() tests", () => {
       assert.ok(connectionUsableFireStub.calledOnce);
     });
 
-    it(`${baseConnection.spec.type}: waitForConnectionToBeUsable() should wait for websocket event if the connection is not found initially`, async () => {
+    it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should wait for websocket event if the connection is not found initially`, async () => {
       const testConnection = {
         ...baseConnection,
         status: {

@@ -237,7 +237,7 @@ export async function waitForConnectionToBeStable(
   const startTime = Date.now();
 
   logger.debug(
-    `waitForConnectionToBeUsable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become useable soon.`,
+    `waitForConnectionToBeStable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become useable soon.`,
   );
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
   const connection = await connectionStateWatcher.waitForConnectionUpdate(
