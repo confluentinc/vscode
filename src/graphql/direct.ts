@@ -89,7 +89,9 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         id: connection.id,
         name: connection.name,
         kafkaClusters: kafkaCluster ? [kafkaCluster] : [],
+        kafkaConfigured: !!directSpec?.kafka_cluster,
         schemaRegistry,
+        schemaRegistryConfigured: !!directSpec?.schema_registry,
         formConnectionType: directSpec?.formConnectionType,
         ...connectionInfo,
       });

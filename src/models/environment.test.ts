@@ -28,24 +28,6 @@ describe("EnvironmentTreeItem", () => {
     assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.None);
   });
 
-  it("should use a warning icon if it's a direct environment with no clusters", () => {
-    const env = new DirectEnvironment({
-      ...TEST_DIRECT_ENVIRONMENT,
-      kafkaClusters: [],
-      schemaRegistry: undefined,
-    });
-
-    // Override isLoading to false due to no clusters
-    env.isLoading = false;
-
-    const treeItem = new EnvironmentTreeItem(env);
-
-    assert.deepStrictEqual(
-      treeItem.iconPath,
-      new ThemeIcon("warning", new ThemeColor("problemsWarningIcon.foreground")),
-    );
-  });
-
   it("should create correct tooltip for a CCloud environment", () => {
     const treeItem = new EnvironmentTreeItem(TEST_CCLOUD_ENVIRONMENT);
 
@@ -55,24 +37,53 @@ describe("EnvironmentTreeItem", () => {
     assert.ok(tooltip.value.includes("confluent.cloud/environments"));
   });
 
-  it("should create correct tooltip for a direct environment without clusters", () => {
-    // no Kafka cluster or Schema Registry by default
-    const treeItem = new EnvironmentTreeItem(TEST_DIRECT_ENVIRONMENT);
+  for (const [missingKafka, missingSR] of [
+    [true, false],
+    [false, true],
+    [true, true],
+    [false, false],
+  ]) {
+    const missingInfo = JSON.stringify({ missingKafka, missingSR });
+    const haveOrNot = missingKafka || missingSR ? "have" : "not have";
+    it(`should ${haveOrNot} an error icon for a direct environment ${missingInfo}`, () => {
+      const env = new DirectEnvironment({
+        ...TEST_DIRECT_ENVIRONMENT,
+        kafkaClusters: [],
+        kafkaConfigured: missingKafka,
+        schemaRegistry: undefined,
+        schemaRegistryConfigured: missingSR,
+      });
 
-    const tooltip = treeItem.tooltip as MarkdownString;
-    assert.ok(tooltip.value.includes("Unable to connect"));
-  });
+      // Override isLoading to false due to no clusters
+      env.isLoading = false;
 
-  it("should not include a warning in the tooltip for a direct environment with clusters", () => {
-    const directEnv = new DirectEnvironment({
-      ...TEST_DIRECT_ENVIRONMENT,
-      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+      const treeItem = new EnvironmentTreeItem(env);
+
+      if (missingKafka || missingSR) {
+        assert.deepStrictEqual(
+          treeItem.iconPath,
+          new ThemeIcon("error", new ThemeColor("problemsErrorIcon.foreground")),
+        );
+      } else {
+        assert.deepStrictEqual(treeItem.iconPath, new ThemeIcon(env.iconName));
+      }
     });
-    const treeItem = new EnvironmentTreeItem(directEnv);
 
-    const tooltip = treeItem.tooltip as MarkdownString;
-    assert.ok(!tooltip.value.includes("Unable to connect"));
-  });
+    it(`should ${haveOrNot} a tooltip warning for a direct environment ${missingInfo}`, () => {
+      // no Kafka cluster or Schema Registry by default
+      const resource = new DirectEnvironment({
+        ...TEST_DIRECT_ENVIRONMENT,
+        kafkaClusters: [],
+        kafkaConfigured: missingKafka,
+        schemaRegistry: undefined,
+        schemaRegistryConfigured: missingSR,
+      });
+      const treeItem = new EnvironmentTreeItem(resource);
+
+      const tooltip = treeItem.tooltip as MarkdownString;
+      assert.equal(tooltip.value.includes("Unable to connect"), missingKafka || missingSR);
+    });
+  }
 
   it("should include the form connection type for a direct environment/connection", () => {
     // without a formConnectionType set
