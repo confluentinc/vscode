@@ -256,9 +256,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   async refreshConnection(id: ConnectionId, loading: boolean = false) {
     switch (id) {
       case CCLOUD_CONNECTION_ID:
-        throw new Error("Not implemented");
+        logger.debug("refreshConnection() ccloud: Not implemented");
+        break;
       case LOCAL_CONNECTION_ID:
-        throw new Error("Not implemented");
+        logger.debug("refreshConnection() local: Not implemented");
+        break;
       default: {
         // direct connections are treated as environments, so we can look up the direct "environment"
         // by its connection ID
