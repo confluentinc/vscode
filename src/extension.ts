@@ -28,7 +28,7 @@ if (process.env.SENTRY_DSN) {
       "The request failed and the interceptors did not return an alternative response",
       "ENOENT: no such file or directory",
       "EPERM: operation not permitted",
-      "Cancelled",
+      "Canceled",
       "captureException", // only ever floated by the Sentry SDK itself
     ],
   });
