@@ -18,7 +18,9 @@ export const TEST_DIRECT_ENVIRONMENT: DirectEnvironment = new DirectEnvironment(
   id: "test-direct-connection",
   name: "test-direct-environment",
   kafkaClusters: [],
+  kafkaConfigured: false,
   schemaRegistry: undefined,
+  schemaRegistryConfigured: false,
 });
 
 export const TEST_LOCAL_ENVIRONMENT: LocalEnvironment = new LocalEnvironment({
