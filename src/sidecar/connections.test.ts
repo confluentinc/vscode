@@ -49,8 +49,6 @@ describe("sidecar/connections.ts", () => {
     stubSidecarHandle.getConnectionsResourceApi.returns(stubConnectionsResourceApi);
     // stub the getSidecar function to return the stub sidecar handle
     sandbox.stub(sidecar, "getSidecar").resolves(stubSidecarHandle);
-    // stub the event emitter
-    connectionUsableFireStub = sandbox.stub(connectionUsable, "fire");
   });
 
   afterEach(() => {
