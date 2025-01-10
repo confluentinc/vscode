@@ -230,7 +230,6 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
  * For `DIRECT` connections, this will wait for Kafka and Schema Registry states to be anything other
  * than `ATTEMPTING`.
  */
-
 export async function waitForConnectionToBeStable(
   id: ConnectionId,
   timeoutMs: number = 15_000,
