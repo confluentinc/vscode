@@ -13,7 +13,7 @@ import {
   ccloudConnected,
   ccloudOrganizationChanged,
   connectionLoading,
-  connectionUsable,
+  connectionStable,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -238,7 +238,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.refreshConnection(id, true);
     });
 
-    const connectionUsableSub: vscode.Disposable = connectionUsable.event((id: ConnectionId) => {
+    const connectionUsableSub: vscode.Disposable = connectionStable.event((id: ConnectionId) => {
       this.refreshConnection(id, false);
     });
 
