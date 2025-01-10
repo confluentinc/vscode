@@ -1,6 +1,7 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
 import { randomUUID } from "crypto";
+import { Connection } from "../clients/sidecar";
 
 /**
  * All websocket message types, message.header_type values.
@@ -22,6 +23,9 @@ export enum MessageType {
    * Sidecar -> All Workspaces message.
    */
   WORKSPACE_COUNT_CHANGED = "WORKSPACE_COUNT_CHANGED",
+
+  /** When a connection changes state sidecar side, sidecar announces the update. */
+  CONNECTION_EVENT = "CONNECTION_EVENT",
 
   /**
    * Sidecar didn't like something we said or did and is telling us about it right before it hangs up.
@@ -101,10 +105,26 @@ export interface ProtocolErrorBody {
   error: string;
 }
 
+/** Describes what kind of change happened in a CONNECTION_EVENT message. */
+export enum ConnectionEventAction {
+  CREATED = "CREATED",
+  UPDATED = "UPDATED",
+  DELETED = "DELETED",
+  CONNECTED = "CONNECTED",
+  DISCONNECTED = "DISCONNECTED",
+}
+
+/** Sidecar -> workspace message sent when a connection changes state */
+export interface ConnectionEventBody {
+  action: ConnectionEventAction;
+  connection: Connection;
+}
+
 /** Type mapping of message type -> corresponding message body type */
 export type MessageBodyMap = {
   [MessageType.WORKSPACE_HELLO]: WorkspaceHelloBody;
   [MessageType.WORKSPACE_COUNT_CHANGED]: WorkspacesChangedBody;
+  [MessageType.CONNECTION_EVENT]: ConnectionEventBody;
   [MessageType.PROTOCOL_ERROR]: ProtocolErrorBody;
 };
 
@@ -115,6 +135,7 @@ export type MessageBodyMap = {
 type MessageHeaderMap = {
   [MessageType.WORKSPACE_HELLO]: MessageHeaders;
   [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
+  [MessageType.CONNECTION_EVENT]: MessageHeaders;
   [MessageType.PROTOCOL_ERROR]: ReplyMessageHeaders;
 };
 
@@ -124,22 +145,20 @@ type MessageHeaderMap = {
  *  so we have to do it manually.
  */
 export function validateMessageBody(messageType: MessageType, body: unknown): void {
+  if (typeof body !== "object") {
+    throw new Error("validateMessageBody(): Invalid body");
+  }
+
   if (messageType === MessageType.WORKSPACE_COUNT_CHANGED) {
-    if (
-      body == null ||
-      typeof body !== "object" ||
-      typeof (body as WorkspacesChangedBody).current_workspace_count !== "number"
-    ) {
+    if (typeof (body as WorkspacesChangedBody).current_workspace_count !== "number") {
       throw new Error(`Invalid body for message type ${MessageType.WORKSPACE_COUNT_CHANGED}`);
     }
   } else if (messageType === MessageType.PROTOCOL_ERROR) {
-    if (
-      body == null ||
-      typeof body !== "object" ||
-      typeof (body as ProtocolErrorBody).error !== "string"
-    ) {
+    if (typeof (body as ProtocolErrorBody).error !== "string") {
       throw new Error(`Invalid body for message type ${MessageType.PROTOCOL_ERROR}`);
     }
+  } else if (messageType === MessageType.CONNECTION_EVENT) {
+    // lots of other possible things to test, too many to list here for now.
   } else {
     throw new Error(`validateMessageBody(): Unknown message type: ${messageType}`);
   }
