@@ -323,7 +323,7 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
  * updates that are not relevant to the caller w/o gaps where there could be 0 observers and therefore
  * missed updates.
  * */
-export type ConnectionUpdateFilter = (connection: Connection) => boolean;
+export type ConnectionUpdatePredicate = (connection: Connection) => boolean;
 
 /** Entry type kept in a per connection-id Map within ConnectionStateWatcher. */
 class SingleConnectionState {
@@ -378,7 +378,7 @@ export class ConnectionStateWatcher {
 
   /**
    * Wait at most N millis for this connection to be updated with an Connection event from sidecar
-   * that passes the given filter. If the connection is already known to be in a filter-passing state, this
+   * that passes the given predicate. If the connection is already known to be in a predicate-passing state, this
    * will return immediately. If the connection is not in the desired state, this will wait for up to
    * the timeoutMs for the next update to arrive.
    * Resolves with the updated Connection or null if the timeout is reached.
@@ -389,7 +389,7 @@ export class ConnectionStateWatcher {
    */
   async waitForConnectionUpdate(
     connectionId: ConnectionId,
-    filter: ConnectionUpdateFilter,
+    predicate: ConnectionUpdatePredicate,
     timeoutMs: number = 15_000,
   ): Promise<Connection | null> {
     let singleConnectionState = this.connectionStates.get(connectionId);
@@ -398,9 +398,12 @@ export class ConnectionStateWatcher {
       singleConnectionState = new SingleConnectionState();
       this.connectionStates.set(connectionId, singleConnectionState);
     } else {
-      // If we already know a connection state, test it against filter and possibly
+      // If we already know a connection state, test it against predicate and possibly
       // immediately return. (Otherwise wait for the next recieved update or timeout.)
-      if (singleConnectionState.mostRecentState && filter(singleConnectionState.mostRecentState)) {
+      if (
+        singleConnectionState.mostRecentState &&
+        predicate(singleConnectionState.mostRecentState)
+      ) {
         const connType = singleConnectionState.mostRecentState.spec.type!;
         logger.debug(
           `waitForConnectionUpdate(): Short-circuit returning existing connection state for ${connType} connection ${connectionId}`,
@@ -410,7 +413,7 @@ export class ConnectionStateWatcher {
     }
 
     return new Promise((resolve) => {
-      // Implicitly race between the timeout and a temporary event listener over a filter-passing update
+      // Implicitly race between the timeout and a temporary event listener over a predicate-passing update
       // to the desired connection.
       const timeout = setTimeout(() => {
         // Did not get an update within the timeout.
@@ -429,20 +432,20 @@ export class ConnectionStateWatcher {
           `ConnectionStateWatcher waitForConnectionUpdate(): Received connection update for ${connType} connection ${connectionId}`,
         );
 
-        // Does it match the given filter?
-        if (filter(connection)) {
+        // Does it match the given predicate?
+        if (predicate(connection)) {
           logger.debug(
-            "ConnectionStateWatcher waitForConnectionUpdate(): passed filter, resolving",
+            "ConnectionStateWatcher waitForConnectionUpdate(): passed predicate, resolving",
           );
           // Cancel the timeout,
           clearTimeout(timeout);
           // deregister this listener,
           dispose.dispose();
-          // resolve the filter-passing Connection to the caller.
+          // resolve the predicate-passing Connection to the caller.
           resolve(connection);
         } else {
           logger.debug(
-            "ConnectionStateWatcher waitForConnectionUpdate(): did not pass filter, waiting for next update",
+            "ConnectionStateWatcher waitForConnectionUpdate(): did not pass predicate, waiting for next update",
           );
           // leave the listener registered for the next update (or until the timeout fires)
         }
