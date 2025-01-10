@@ -1,0 +1,136 @@
+import { test } from "rollwright";
+import { expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import esbuild from "rollup-plugin-esbuild";
+import virtual from "@rollup/plugin-virtual";
+import alias from "@rollup/plugin-alias";
+import { SinonStub } from "sinon";
+// import { TemplateManifest } from "../clients/sidecar";
+import { createFilter } from "@rollup/pluginutils";
+import { Plugin } from "rollup";
+
+const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
+function render(template: string, variables: Record<string, any>) {
+  return template
+    .replace(/\$\{([^}]+)\}/g, (_, v) => variables[v])
+    .replace(/<script[^>]+><\/script>/g, "")
+    .replace(/<meta\s+http-equiv[^/]+\/>/gm, "");
+}
+
+// strip any stylesheet imports
+function stylesheet(options: any = {}): Plugin {
+  const filter = createFilter(options.include, options.exclude);
+  return {
+    name: "stylesheet",
+    async transform(code, id) {
+      if (filter(id)) return { code: "" };
+    },
+  };
+}
+test.use({
+  template: render(template, { nonce: "testing" }),
+  plugins: [
+    virtual({
+      comms: `
+        import * as sinon from 'sinon';
+        export const sendWebviewMessage = sinon.stub();
+      `,
+    }),
+    alias({ entries: { "./comms/comms": "comms" } }),
+    stylesheet({ include: ["**/*.css"], minify: false }),
+    esbuild({ jsx: "automatic", target: "es2022", exclude: [/node_modules/] }),
+  ],
+});
+test("renders form html correctly", async ({ page }) => {
+  const html = render(template, {
+    cspSource: "self",
+    nonce: "test-nonce",
+    path: (file: string) => `/${file}`,
+  });
+
+  await page.setContent(html);
+
+  // Check if the form is rendered correctly
+  const form = await page.$("form");
+  expect(form).not.toBeNull();
+
+  // Check if the connection type radio buttons are present
+  const radioButtons = await page.$$("input[type='radio'][name='platform']");
+  expect(radioButtons.length).toBe(4);
+
+  // Check if the connection name input is present
+  const connectionNameInput = await page.$("input[name='name']");
+  expect(connectionNameInput).not.toBeNull();
+
+  // Check if the bootstrap servers input is present
+  const bootstrapServersInput = await page.$("input[name='bootstrap_servers']");
+  expect(bootstrapServersInput).not.toBeNull();
+
+  // Check if the SSL enabled checkbox is present
+  const sslCheckbox = await page.$("input[type='checkbox'][name='kafka_ssl']");
+  expect(sslCheckbox).not.toBeNull();
+
+  // Check if the authentication type radio buttons are present
+  const authRadioButtons = await page.$$("input[type='radio'][name='kafka_auth_type']");
+  expect(authRadioButtons.length).toBe(3);
+
+  // Check if the schema registry URL input is present
+  const schemaUrlInput = await page.$("input[name='uri']");
+  expect(schemaUrlInput).not.toBeNull();
+
+  // Check if the schema registry SSL enabled checkbox is present
+  const schemaSslCheckbox = await page.$("input[type='checkbox'][name='schema_ssl']");
+  expect(schemaSslCheckbox).not.toBeNull();
+
+  // Check if the schema registry authentication type radio buttons are present
+  const schemaAuthRadioButtons = await page.$$("input[type='radio'][name='schema_auth_type']");
+  expect(schemaAuthRadioButtons.length).toBe(3);
+});
+
+test("submits the form with dummy data", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    // redispatching because the page already exists for some time
+    // before we actually import the view model application
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill out the form with dummy data
+  await page.check("input[type=radio][name=platform][value='Apache Kafka']");
+  await page.fill("input[name=name]", "Test Connection");
+  await page.fill("input[name=bootstrap_servers]", "localhost:9092");
+  await page.fill("input[name=uri]", "http://localhost:8081");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save Connection']");
+  const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
+  const specCall = await specCallHandle.jsonValue();
+  expect(specCall[0]).toBe("GetConnectionSpec");
+  // Check if the form submission was successful
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  // @ts-expect-error we already checked for undefined
+  expect(submitCall[0]).toBe("Submit");
+  // @ts-expect-error we already checked for undefined
+  expect(submitCall[1]).toEqual({
+    bootstrap_servers: "localhost:9092",
+    kafka_auth_type: "on",
+    name: "Test Connection",
+    platform: "Apache Kafka",
+    schema_auth_type: "None",
+    uri: "http://localhost:8081",
+  });
+});
