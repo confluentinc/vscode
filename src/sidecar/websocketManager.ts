@@ -159,9 +159,8 @@ export class WebsocketManager implements Disposable {
           return;
         }
 
-        // const headers: MessageHeaders = message.headers;
         // logger.debug(
-        //  `Recieved ${headers.message_type} websocket message from originator ${headers.originator}: ${JSON.stringify(message, null, 2)}`,
+        //   `Recieved ${message.headers.message_type} websocket message from originator ${message.headers.originator}: ${JSON.stringify(message, null, 2)}`,
         // );
 
         // Defer to the NodeJS EventEmitter to deliver the message to the registered by-message-type async handler(s).

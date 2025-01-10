@@ -12,7 +12,6 @@ import { DirectConnectionManager } from "../directConnectManager";
 import {
   ccloudConnected,
   ccloudOrganizationChanged,
-  connectionLoading,
   connectionStable,
   directConnectionsChanged,
   localKafkaConnected,
@@ -234,10 +233,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       },
     );
 
-    const connectionLoadingSub: vscode.Disposable = connectionLoading.event((id: ConnectionId) => {
-      this.refreshConnection(id, true);
-    });
-
     const connectionUsableSub: vscode.Disposable = connectionStable.event((id: ConnectionId) => {
       this.refreshConnection(id, false);
     });
@@ -248,7 +243,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       directConnectionsChangedSub,
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
-      connectionLoadingSub,
       connectionUsableSub,
     ];
   }

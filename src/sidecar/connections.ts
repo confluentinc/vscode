@@ -24,7 +24,6 @@ import {
 import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
 import {
-  connectionLoading,
   connectionStable,
   currentKafkaClusterChanged,
   currentSchemaRegistryChanged,
@@ -234,9 +233,6 @@ export async function waitForConnectionToBeStable(
   id: ConnectionId,
   timeoutMs: number = 15_000,
 ): Promise<Connection | null> {
-  // We know this connection is in the process of being updated, so we can fire the loading event
-  connectionLoading.fire(id);
-
   const startTime = Date.now();
 
   logger.debug(
