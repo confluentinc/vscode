@@ -48,6 +48,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
     // look up the connectionId:spec map from storage
     const directConnectionMap: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
+
     response.directConnections.forEach((connection) => {
       if (!connection) {
         return;
