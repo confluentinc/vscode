@@ -77,6 +77,13 @@ describe("validateMessageBody tests", () => {
         messageType: MessageType.PROTOCOL_ERROR,
         body: { error: 12 },
       },
+
+      // Completely unknown message type
+      {
+        label: "Completely unknown message type",
+        messageType: "UNKNOWN" as MessageType,
+        body: { foo: "bar" },
+      },
     ];
 
     for (const testCase of testCases) {
@@ -84,8 +91,8 @@ describe("validateMessageBody tests", () => {
         () => {
           validateMessageBody(testCase.messageType, testCase.body);
         },
-        /Invalid body for message type/,
-        testCase.label,
+        /(Invalid body)|(Unknown message type)/,
+        `${testCase.label} should throw but didn't`,
       );
     }
   });
