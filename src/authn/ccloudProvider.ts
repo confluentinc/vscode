@@ -13,7 +13,7 @@ import {
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
-  waitForConnectionToBeUsable,
+  waitForConnectionToBeStable,
 } from "../sidecar/connections";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
@@ -152,7 +152,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw e;
     }
 
-    const authenticatedConnection = await waitForConnectionToBeUsable(CCLOUD_CONNECTION_ID);
+    const authenticatedConnection = await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
       throw new Error("CCloud connection failed to become usable after authentication.");
     }
