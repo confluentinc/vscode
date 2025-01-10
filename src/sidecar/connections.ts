@@ -243,7 +243,6 @@ export async function waitForConnectionToBeStable(
   logger.debug(
     `waitForConnectionToBeStable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become stable soon.`,
   );
-  ("");
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
   const connection = await connectionStateWatcher.waitForConnectionUpdate(
     id,
