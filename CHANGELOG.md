@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+- React to websocket events pushed from sidecar instead of polling for some connection change monitoring.
+
 ### Fixed
 
 - Topics and Schemas views' empty states should now correctly indicate when a Kafka cluster or
