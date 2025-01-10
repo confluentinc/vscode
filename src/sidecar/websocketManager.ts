@@ -3,7 +3,7 @@ import { Disposable, EventEmitter as VscodeEventEmitter, window } from "vscode";
 import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
 import { Logger } from "../logging";
-import { Message, MessageHeaders, MessageType, validateMessageBody } from "../ws/messageTypes";
+import { Message, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 const logger = new Logger("websocketManager");
 
@@ -41,9 +41,6 @@ export class WebsocketManager implements Disposable {
     // Install handler for WORKSPACE_COUNT_CHANGED messages. Will recieve one when connected, and whenever
     // any other workspaces connect or disconnect.
     this.subscribe(MessageType.WORKSPACE_COUNT_CHANGED, async (message) => {
-      logger.debug(
-        `Received WORKSPACE_COUNT_CHANGED message: ${message.body.current_workspace_count}`,
-      );
       // The reply is inclusive of the current workspace, but we want to retain the peer count.
       this.peerWorkspaceCount = message.body.current_workspace_count - 1;
     });
@@ -162,10 +159,10 @@ export class WebsocketManager implements Disposable {
           return;
         }
 
-        const headers: MessageHeaders = message.headers;
-        logger.debug(
-          `Recieved ${headers.message_type} websocket message from originator ${headers.originator}: ${JSON.stringify(message, null, 2)}`,
-        );
+        // const headers: MessageHeaders = message.headers;
+        // logger.debug(
+        //  `Recieved ${headers.message_type} websocket message from originator ${headers.originator}: ${JSON.stringify(message, null, 2)}`,
+        // );
 
         // Defer to the NodeJS EventEmitter to deliver the message to the registered by-message-type async handler(s).
         this.deliverToCallbacks(message).catch((e) => {
@@ -210,7 +207,6 @@ export class WebsocketManager implements Disposable {
         window.showErrorMessage(errorMessage);
         throw new Error(errorMessage);
       }
-      logger.debug(`Sending ${payload.length} byte ${message.headers.message_type} message`);
       websocket.send(payload);
     } else {
       logger.error("Websocket not assigned + open, cannot send message");
@@ -247,24 +243,13 @@ export class WebsocketManager implements Disposable {
    **/
   public async deliverToCallbacks<T extends MessageType>(message: Message<T>): Promise<void> {
     const messageType = message.headers.message_type;
-    logger.info(`Delivering message of type ${messageType}`);
 
-    const initialCallbackCount = this.messageRouter.listenerCount(messageType);
-    logger.debug(
-      `Delivering message of type ${message.headers.message_type} to ${initialCallbackCount} callback(s).`,
-    );
+    // const initialCallbackCount = this.messageRouter.listenerCount(messageType);
+    // logger.debug(
+    //  `Delivering message of type ${message.headers.message_type} to ${initialCallbackCount} callback(s).`,
+    // );
 
     this.messageRouter.emit(messageType, message);
-
-    logger.debug(
-      `Delivered message of type ${message.headers.message_type} to all by-message-type callbacks.`,
-    );
-    const remainingCallbackCount = this.messageRouter.listenerCount(messageType);
-    if (remainingCallbackCount !== initialCallbackCount) {
-      logger.debug(
-        `Removed ${initialCallbackCount - remainingCallbackCount} one-time callback(s) for message type ${message.headers.message_type}`,
-      );
-    }
   }
 
   public dispose(): void {

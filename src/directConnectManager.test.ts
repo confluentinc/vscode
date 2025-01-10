@@ -71,7 +71,7 @@ describe("DirectConnectionManager behavior", () => {
       .stub(connections, "tryToUpdateConnection")
       .resolves({} as any);
     // assume the connection is immediately usable for most tests
-    sandbox.stub(connections, "waitForConnectionToBeUsable").resolves(TEST_DIRECT_CONNECTION);
+    sandbox.stub(connections, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
   });
 
   afterEach(() => {
