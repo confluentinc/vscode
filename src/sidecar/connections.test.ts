@@ -16,7 +16,7 @@ import {
 } from "../clients/sidecar";
 import { ContextValues, setContextValue } from "../context/values";
 import {
-  connectionUsable,
+  connectionStable,
   currentKafkaClusterChanged,
   currentSchemaRegistryChanged,
 } from "../emitters";
@@ -146,7 +146,7 @@ describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
     sandbox = sinon.createSandbox();
 
     // stub the event emitter
-    connectionUsableFireStub = sandbox.stub(connectionUsable, "fire");
+    connectionUsableFireStub = sandbox.stub(connectionStable, "fire");
   });
 
   afterEach(() => {

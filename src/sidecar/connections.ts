@@ -24,7 +24,7 @@ import {
 import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
 import {
-  connectionUsable,
+  connectionStable,
   currentKafkaClusterChanged,
   currentSchemaRegistryChanged,
   environmentChanged,
@@ -237,7 +237,7 @@ export async function waitForConnectionToBeStable(
   const startTime = Date.now();
 
   logger.debug(
-    `waitForConnectionToBeStable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become useable soon.`,
+    `waitForConnectionToBeStable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become stable soon.`,
   );
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
   const connection = await connectionStateWatcher.waitForConnectionUpdate(
@@ -248,7 +248,7 @@ export async function waitForConnectionToBeStable(
   if (!connection) {
     const msg = `waitForConnectionToBeUsable(): connection ${id} did not become usable within ${timeoutMs}ms`;
     // reset any "loading" state for this connection
-    connectionUsable.fire(id);
+    connectionStable.fire(id);
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
     // old data
     environmentChanged.fire(id);
@@ -260,14 +260,14 @@ export async function waitForConnectionToBeStable(
   const type = connection.spec.type!;
   if (type === ConnectionType.Direct) {
     // Fire when a direct connection is 'stable', be it happy or broken.
-    connectionUsable.fire(id);
+    connectionStable.fire(id);
     // notify subscribers that the "environment" has changed since direct connections are treated
     // as environment-specific resources
     environmentChanged.fire(id);
   }
 
   logger.debug(
-    `waitForConnectionToBeUsable(): connection is stable after ${Date.now() - startTime}ms, returning`,
+    `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
   );
 
   return connection;
@@ -369,7 +369,8 @@ export class ConnectionStateWatcher {
   /**
    * Get the most recent Connection description for the given connection ID.
    * Will return null if no CONNECTION_EVENT websocket messages have been
-   * received for this connection.
+   * received for this connection, or if purgeCachedConnectionState() had been
+   * called after the last update.
    */
   getLatestConnectionUpdate(connectionId: ConnectionId): Connection | null {
     const singleConnectionState = this.connectionStates.get(connectionId);
@@ -377,7 +378,7 @@ export class ConnectionStateWatcher {
   }
 
   /**
-   * Wait at most N millis for this connection to be updated with an Connection event from sidecar
+   * Wait at most `timeoutMs` for this connection to be updated with an Connection event from sidecar
    * that passes the given predicate. If the connection is already known to be in a predicate-passing state, this
    * will return immediately. If the connection is not in the desired state, this will wait for up to
    * the timeoutMs for the next update to arrive.

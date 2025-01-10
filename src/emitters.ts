@@ -39,4 +39,4 @@ export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster |
 export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistry | null>();
 
 export const connectionLoading = new vscode.EventEmitter<ConnectionId>();
-export const connectionUsable = new vscode.EventEmitter<ConnectionId>();
+export const connectionStable = new vscode.EventEmitter<ConnectionId>();
