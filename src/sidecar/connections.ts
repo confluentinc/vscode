@@ -1,12 +1,10 @@
-import { authentication, AuthenticationSession } from "vscode";
+import { authentication, AuthenticationSession, EventEmitter } from "vscode";
 import { getSidecar } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import {
-  ConnectedState,
   Connection,
   ConnectionSpec,
   ConnectionsResourceApi,
-  ConnectionStatus,
   ConnectionType,
   ResponseError,
 } from "../clients/sidecar";
@@ -27,7 +25,7 @@ import { MANAGED_CONTAINER_LABEL } from "../docker/constants";
 import { getContainersForImage } from "../docker/containers";
 import {
   connectionLoading,
-  connectionUsable,
+  connectionStable,
   currentKafkaClusterChanged,
   currentSchemaRegistryChanged,
   environmentChanged,
@@ -36,6 +34,9 @@ import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { ConnectionId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
+import { Message, MessageType } from "../ws/messageTypes";
+import { isConnectionStable } from "./connectionStatusUtils";
+import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecar.connections");
 
@@ -133,6 +134,10 @@ export async function deleteLocalConnection(): Promise<void> {
 
 /** Update the existing {@link Connection} with the given {@link ConnectionSpec}. */
 export async function tryToUpdateConnection(spec: ConnectionSpec): Promise<Connection> {
+  // Forget any prior known cached connection state for this connection ID
+  // so that any subsequent call to waitForConnectionToBeStable() will be based on post-update state.
+  ConnectionStateWatcher.getInstance().purgeCachedConnectionState(spec.id! as ConnectionId);
+
   let connection: Connection;
   const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
@@ -216,110 +221,57 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
 }
 
 /**
- * Wait for the connection with the given ID to be usable, to be done before any GraphQL or proxied
- * client queries. This function will "poll" the connection status until it's ready, or until the
- * timeout is reached.
+ * Wait up to timeoutMs for a new connection with the given ID to be stable
+ * (either fully connected and happy, or definitely broken), to be done before any GraphQL or proxied
+ * client queries.
  *
  * For `CCLOUD` connections, this will wait for the CCloud state to be anything other than `NONE` or `ATTEMPTING`.
  *
  * For `DIRECT` connections, this will wait for Kafka and Schema Registry states to be anything other
  * than `ATTEMPTING`.
  */
-export async function waitForConnectionToBeUsable(
+export async function waitForConnectionToBeStable(
   id: ConnectionId,
   timeoutMs: number = 15_000,
-  waitTimeMs: number = 500,
 ): Promise<Connection | null> {
-  let connection: Connection | null = null;
-
-  let kafkaFailed: string | undefined;
-  let schemaRegistryFailed: string | undefined;
-  let ccloudFailed: string | undefined;
+  // We know this connection is in the process of being updated, so we can fire the loading event
+  connectionLoading.fire(id);
 
   const startTime = Date.now();
-  while (Date.now() - startTime < timeoutMs) {
-    const checkedConnection = await tryToGetConnection(id);
-    if (!checkedConnection) {
-      logger.debug("waiting for connection to be usable", { connectionId: id });
-      await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
-      continue;
-    }
 
-    const type: ConnectionType = checkedConnection.spec.type!;
-    const status: ConnectionStatus = checkedConnection.status;
-
-    switch (type) {
-      case ConnectionType.Direct: {
-        // direct connections will use an `ATTEMPTING` status
-        const kafkaState: ConnectedState | undefined = status.kafka_cluster?.state;
-        const schemaRegistryState: ConnectedState | undefined = status.schema_registry?.state;
-        const isAttempting = kafkaState === "ATTEMPTING" || schemaRegistryState === "ATTEMPTING";
-        if (isAttempting) {
-          connectionLoading.fire(id);
-          logger.debug("still waiting for connection to be usable", {
-            id,
-            type,
-            kafkaState,
-            schemaRegistryState,
-          });
-          await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
-          continue;
-        }
-        connectionUsable.fire(id);
-        // notify subscribers that the "environment" has changed since direct connections are treated
-        // as environment-specific resources
-        environmentChanged.fire(id);
-        if (kafkaState === "FAILED") {
-          kafkaFailed = status.kafka_cluster?.errors?.sign_in?.message;
-        }
-        if (schemaRegistryState === "FAILED") {
-          schemaRegistryFailed = status.schema_registry?.errors?.sign_in?.message;
-        }
-        break;
-      }
-      case ConnectionType.Ccloud: {
-        // CCloud connections don't transition from `NONE` to `ATTEMPTING` to `SUCCESS`, just directly
-        // from `NONE` to `SUCCESS` (or `FAILED`)
-        const ccloudState = status.ccloud!.state;
-        if (ccloudState === "NONE") {
-          logger.debug("still waiting for connection to be usable", { id, type, ccloudState });
-          await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
-          continue;
-        }
-        if (ccloudState === "FAILED") {
-          ccloudFailed = status.ccloud?.errors?.sign_in?.message;
-        }
-        break;
-      }
-      // TODO: check local connections?
-    }
-
-    // if we didn't time out by now through the series of `continue`s, we have a usable connection
-    // (or we need to update the logic above for other connection types/states)
-    logger.debug("connection is usable, returning", {
-      id,
-      type,
-      ccloud: status.ccloud?.state,
-      ccloudFailed,
-      kafka: status.kafka_cluster?.state,
-      kafkaFailed,
-      schemaRegistry: status.schema_registry?.state,
-      schemaRegistryFailed,
-    });
-    connection = checkedConnection;
-    break;
-  }
-
+  logger.debug(
+    `waitForConnectionToBeStable(): Calling ConnectionStateWatcher.waitForConnectionUpdate() for ${id} to wait for it to become stable soon.`,
+  );
+  const connectionStateWatcher = ConnectionStateWatcher.getInstance();
+  const connection = await connectionStateWatcher.waitForConnectionUpdate(
+    id,
+    isConnectionStable,
+    timeoutMs,
+  );
   if (!connection) {
-    const msg = `Connection ${id} did not become usable within ${timeoutMs}ms`;
+    const msg = `waitForConnectionToBeStable(): connection ${id} did not become stable within ${timeoutMs}ms`;
     // reset any "loading" state for this connection
-    connectionUsable.fire(id);
+    connectionStable.fire(id);
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
     // old data
     environmentChanged.fire(id);
     logger.error(msg);
     return null;
   }
+
+  // per-type success actions ...
+  const type = connection.spec.type!;
+  if (type === ConnectionType.Direct) {
+    // Fire when a direct connection is 'stable', be it happy or broken.
+    connectionStable.fire(id);
+    // notify subscribers that the "environment" has changed since direct connections are treated
+    // as environment-specific resources
+    environmentChanged.fire(id);
+  }
+
+  logger.debug(
+    `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
+  );
 
   return connection;
 }
@@ -366,4 +318,169 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
   }
   logger.debug("Discovered Schema Registry REST proxy port", { schemaRegistryPort });
   return `http://localhost:${restProxyPort}`;
+}
+
+/**
+ * Definition for predicate functions passed into ConnectionStateWatcher.waitForConnectionUpdate() to determine
+ * if a connection update should be considered for further processing. Allows for filtering out
+ * updates that are not relevant to the caller w/o gaps where there could be 0 observers and therefore
+ * missed updates.
+ * */
+export type ConnectionUpdatePredicate = (connection: Connection) => boolean;
+
+/** Entry type kept in a per connection-id Map within ConnectionStateWatcher. */
+class SingleConnectionState {
+  mostRecentState: Connection | null = null;
+  eventEmitter: EventEmitter<Connection> = new EventEmitter<Connection>();
+}
+
+export class ConnectionStateWatcher {
+  // Singleton instance
+  private static instance: ConnectionStateWatcher;
+
+  // connection id -> pair of (most recent Connection announcement, event emitter to notify observers)
+  private connectionStates: Map<ConnectionId, SingleConnectionState> = new Map();
+
+  public static getInstance(): ConnectionStateWatcher {
+    if (!ConnectionStateWatcher.instance) {
+      ConnectionStateWatcher.instance = new ConnectionStateWatcher();
+    }
+    return ConnectionStateWatcher.instance;
+  }
+
+  private constructor() {
+    // Register handleConnectionUpdateEvent as a listener for CONNECTION_EVENT websocket messages
+    WebsocketManager.getInstance().subscribe(
+      MessageType.CONNECTION_EVENT,
+      this.handleConnectionUpdateEvent.bind(this),
+    );
+  }
+
+  /**
+   * Forget any prior state for the given connection ID by resetting any map
+   * entry's mostRecentState to null. Needed when, say, a direct connection has
+   * been updated and we want to guarantee to wait for the next update to be
+   * sure it's stable.
+   */
+  purgeCachedConnectionState(connectionId: ConnectionId): void {
+    const singleConnectionState = this.connectionStates.get(connectionId);
+    if (singleConnectionState) {
+      singleConnectionState.mostRecentState = null;
+    }
+  }
+
+  /**
+   * Get the most recent Connection description for the given connection ID.
+   * Will return null if no CONNECTION_EVENT websocket messages have been
+   * received for this connection, or if purgeCachedConnectionState() had been
+   * called after the last update.
+   */
+  getLatestConnectionUpdate(connectionId: ConnectionId): Connection | null {
+    const singleConnectionState = this.connectionStates.get(connectionId);
+    return singleConnectionState?.mostRecentState || null;
+  }
+
+  /**
+   * Wait at most `timeoutMs` for this connection to be updated with an Connection event from sidecar
+   * that passes the given predicate. If the connection is already known to be in a predicate-passing state, this
+   * will return immediately. If the connection is not in the desired state, this will wait for up to
+   * the timeoutMs for the next update to arrive.
+   * Resolves with the updated Connection or null if the timeout is reached.
+   *
+   * Callers who need to guarantee that they are working with the most recent Connection state should
+   * first call purgeCachedConnectionState() *before* mutating the connection and then calling
+   * this method.
+   */
+  async waitForConnectionUpdate(
+    connectionId: ConnectionId,
+    predicate: ConnectionUpdatePredicate,
+    timeoutMs: number = 15_000,
+  ): Promise<Connection | null> {
+    let singleConnectionState = this.connectionStates.get(connectionId);
+    if (!singleConnectionState) {
+      // insert a new entry to track this connection
+      singleConnectionState = new SingleConnectionState();
+      this.connectionStates.set(connectionId, singleConnectionState);
+    } else {
+      // If we already know a connection state, test it against predicate and possibly
+      // immediately return. (Otherwise wait for the next recieved update or timeout.)
+      if (
+        singleConnectionState.mostRecentState &&
+        predicate(singleConnectionState.mostRecentState)
+      ) {
+        const connType = singleConnectionState.mostRecentState.spec.type!;
+        logger.debug(
+          `waitForConnectionUpdate(): Short-circuit returning existing connection state for ${connType} connection ${connectionId}`,
+        );
+        return singleConnectionState.mostRecentState;
+      }
+    }
+
+    return new Promise((resolve) => {
+      // Implicitly race between the timeout and a temporary event listener over a predicate-passing update
+      // to the desired connection.
+      const timeout = setTimeout(() => {
+        // Did not get an update within the timeout.
+        logger.warn(
+          `ConnectionStateWatcher waitForConnectionUpdate(): Timed out waiting for connection update for connection ${connectionId}`,
+        );
+        // Cancel the temporary event listner
+        dispose.dispose();
+        // ... and resolve to the caller indicating the timeout fired.
+        resolve(null);
+      }, timeoutMs);
+
+      const dispose = singleConnectionState.eventEmitter.event((connection: Connection) => {
+        const connType = connection.spec.type!;
+        logger.debug(
+          `ConnectionStateWatcher waitForConnectionUpdate(): Received connection update for ${connType} connection ${connectionId}`,
+        );
+
+        // Does it match the given predicate?
+        if (predicate(connection)) {
+          logger.debug(
+            "ConnectionStateWatcher waitForConnectionUpdate(): passed predicate, resolving",
+          );
+          // Cancel the timeout,
+          clearTimeout(timeout);
+          // deregister this listener,
+          dispose.dispose();
+          // resolve the predicate-passing Connection to the caller.
+          resolve(connection);
+        } else {
+          logger.debug(
+            "ConnectionStateWatcher waitForConnectionUpdate(): did not pass predicate, waiting for next update",
+          );
+          // leave the listener registered for the next update (or until the timeout fires)
+        }
+      });
+    });
+  }
+
+  /**
+   * Handle connection state change events from sidecar websocket pushed messages.
+   * Stashes the new connection state into our map cache for safe keeping,
+   * and fires the event emitter for the single connection.
+   */
+  async handleConnectionUpdateEvent(message: Message<MessageType.CONNECTION_EVENT>): Promise<void> {
+    const connectionEvent = message.body;
+    const connectionId = connectionEvent.connection.id as ConnectionId;
+    const connection: Connection = connectionEvent.connection;
+
+    logger.debug(
+      `ConnectionStateWatcher: received ${message.body.action} event for connection id ${connectionId}`,
+    );
+
+    let singleConnectionState = this.connectionStates.get(connectionId);
+    if (!singleConnectionState) {
+      // insert a new entry to track this connection's updates.
+      singleConnectionState = new SingleConnectionState();
+      this.connectionStates.set(connectionId, singleConnectionState);
+    }
+
+    // Store this most recent Connection state / spec.
+    singleConnectionState.mostRecentState = connection;
+    // Fire the event emitter for this connection to alert any listeners about the update.
+    singleConnectionState.eventEmitter.fire(connection);
+  }
 }
