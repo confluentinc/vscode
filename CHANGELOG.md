@@ -7,10 +7,17 @@ All notable changes to this extension will be documented in this file.
 ### Changed
 - React to websocket events pushed from sidecar instead of polling for some connection change monitoring.
 
+## 0.23.3
+
 ### Fixed
 
 - Topics and Schemas views' empty states should now correctly indicate when a Kafka cluster or
   Schema Registry is available through a direct connection.
+- Clicking "Add New Connection" from the Resources view will now always open the connection form
+  correctly, regardless of the current state of the Resources view.
+- When setting up a new "Confluent Cloud"-type direct connection, the API key/secret fields under
+  the Kafka cluster config are no longer required to be filled out if only connecting to a Schema
+  Registry instance.
 
 ## 0.23.2
 

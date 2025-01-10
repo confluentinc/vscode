@@ -1,9 +1,5 @@
-import {
-  Preferences,
-  PreferencesResourceApi,
-  PreferencesSpec,
-  ResponseError,
-} from "../clients/sidecar";
+import { Preferences, PreferencesResourceApi, PreferencesSpec } from "../clients/sidecar";
+import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { getSidecar } from "../sidecar";
 
@@ -15,22 +11,7 @@ export async function fetchPreferences(): Promise<Preferences> {
   try {
     return await client.gatewayV1PreferencesGet();
   } catch (error) {
-    if (error instanceof ResponseError) {
-      let body;
-      try {
-        body = await error.response.json();
-      } catch {
-        body = await error.response.text();
-      }
-
-      logger.error("Error response getting preferences from sidecar: ", {
-        error: body,
-        status: error.response.status,
-        statusText: error.response.statusText,
-      });
-    } else {
-      logger.error("Error getting preferences: ", { error });
-    }
+    logResponseError(error, "fetching preferences", {}, true);
     throw error;
   }
 }
@@ -64,16 +45,13 @@ export async function updatePreferences(updates: Partial<Record<keyof Preference
     });
     logger.debug("Successfully updated preferences: ", { resp });
   } catch (error) {
-    if (error instanceof ResponseError) {
-      const data = await error.response.json();
-      logger.error("Error response setting preferences: ", {
-        error: data,
-        status: error.response.status,
-        statusText: error.response.statusText,
-      });
-    } else {
-      logger.error("Error updating preference: ", { error });
-    }
-    // TODO: notification?
+    logResponseError(
+      error,
+      "updating preferences",
+      {
+        updateKeys: Object.keys(updates).join(","), // log extension setting ID(s) updated
+      },
+      true,
+    );
   }
 }
