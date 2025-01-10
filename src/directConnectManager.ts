@@ -317,15 +317,14 @@ export function mergeSecrets(
   if (incomingKafkaCreds) {
     if (instanceOfBasicCredentials(incomingKafkaCreds)) {
       if (incomingKafkaCreds.password === "fakeplaceholdersecrethere") {
-        // FIXME what happens if they change the type of credentials?
         if (currentKafkaCreds && instanceOfBasicCredentials(currentKafkaCreds)) {
           incomingKafkaCreds.password = currentKafkaCreds.password;
         }
       }
     } else if (instanceOfApiKeyAndSecret(incomingKafkaCreds)) {
       if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
+        if (currentKafkaCreds && instanceOfApiKeyAndSecret(currentKafkaCreds))
+          incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
       }
     }
   }
@@ -335,13 +334,13 @@ export function mergeSecrets(
   if (incomingSchemaCreds) {
     if (instanceOfBasicCredentials(incomingSchemaCreds)) {
       if (incomingSchemaCreds.password === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingSchemaCreds.password = currentSchemaCreds.password;
+        if (currentSchemaCreds && instanceOfBasicCredentials(currentSchemaCreds))
+          incomingSchemaCreds.password = currentSchemaCreds.password;
       }
     } else if (instanceOfApiKeyAndSecret(incomingSchemaCreds)) {
       if (incomingSchemaCreds.api_secret === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
+        if (currentSchemaCreds && instanceOfApiKeyAndSecret(currentSchemaCreds))
+          incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
       }
     }
   }
