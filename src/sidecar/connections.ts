@@ -249,7 +249,7 @@ export async function waitForConnectionToBeStable(
     timeoutMs,
   );
   if (!connection) {
-    const msg = `waitForConnectionToBeStable(): connection ${id} did not become usable within ${timeoutMs}ms`;
+    const msg = `waitForConnectionToBeStable(): connection ${id} did not become stable within ${timeoutMs}ms`;
     // reset any "loading" state for this connection
     connectionStable.fire(id);
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
