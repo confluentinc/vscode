@@ -42,9 +42,7 @@ describe("docker/configs functions", function () {
 
   it("getSocketPath() should return socket path from user settings", function () {
     const getConfigStub = sandbox.stub(workspace, "getConfiguration").returns({
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === LOCAL_DOCKER_SOCKET_PATH) return "/custom/path/docker.sock";
-      }),
+      get: sandbox.stub().withArgs(LOCAL_DOCKER_SOCKET_PATH).returns("/custom/path/docker.sock"),
     } as any);
 
     const path: string = configs.getSocketPath();
