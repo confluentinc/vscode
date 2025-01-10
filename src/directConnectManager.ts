@@ -18,7 +18,7 @@ import {
   tryToCreateConnection,
   tryToDeleteConnection,
   tryToUpdateConnection,
-  waitForConnectionToBeUsable,
+  waitForConnectionToBeStable,
 } from "./sidecar/connections";
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
@@ -46,6 +46,8 @@ export class DirectConnectionManager {
   /** Disposables belonging to this class to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
   disposables: Disposable[] = [];
+
+  // Map of connection ID to {current from-websocket-event state, event emitter when said state changes}
 
   // singleton instance to prevent multiple listeners and single source of connection management
   private static instance: DirectConnectionManager | null = null;
@@ -218,6 +220,7 @@ export class DirectConnectionManager {
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
     let connection: Connection | null = null;
     let errorMessage: string | null = null;
+
     try {
       connection = update
         ? await tryToUpdateConnection(spec)
@@ -230,7 +233,7 @@ export class DirectConnectionManager {
             title: `Waiting for "${connection.spec.name}" to be usable...`,
           },
           async () => {
-            await waitForConnectionToBeUsable(connectionId);
+            await waitForConnectionToBeStable(connectionId);
           },
         );
       }
@@ -298,7 +301,7 @@ export class DirectConnectionManager {
       // wait for all new connections to be created before checking their status
       await Promise.all(newConnectionPromises);
       // kick off background checks to ensure the new connections are usable
-      connectionIdsToCheck.map((id) => waitForConnectionToBeUsable(id));
+      connectionIdsToCheck.map((id) => waitForConnectionToBeStable(id));
       logger.debug(
         `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );

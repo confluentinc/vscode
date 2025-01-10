@@ -3,6 +3,7 @@ import { IconNames } from "../constants";
 
 /** A uniquely-branded string-type for a connection ID. */
 export type ConnectionId = string & { readonly brand: unique symbol };
+
 // TODO: use other branded resource ID types here
 
 export interface IResourceBase {
