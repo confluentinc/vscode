@@ -98,9 +98,7 @@ describe("commands/connections.ts", function () {
 
   it("getSSLPemPaths() should return paths if they exists in the config", function () {
     const mockConfig = {
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === SSL_PEM_PATHS) return ["path/to/file.pem"];
-      }),
+      get: sandbox.stub().withArgs(SSL_PEM_PATHS).returns(["path/to/file.pem"]),
     };
     getConfigurationStub.returns(mockConfig);
 
@@ -111,9 +109,7 @@ describe("commands/connections.ts", function () {
 
   it("getSSLPemPaths() should return an empty array if the path is an empty array", function () {
     const emptyStringConfig = {
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === SSL_PEM_PATHS) return [];
-      }),
+      get: sandbox.stub().withArgs(SSL_PEM_PATHS).returns([]),
     };
     getConfigurationStub.returns(emptyStringConfig);
 
@@ -124,9 +120,7 @@ describe("commands/connections.ts", function () {
 
   it("getSSLPemPaths() should return an empty array if the path is not set", function () {
     const nullConfig = {
-      get: sandbox.stub().callsFake((key: string, defaultValue?: unknown) => {
-        if (key === SSL_PEM_PATHS) return defaultValue;
-      }),
+      get: sandbox.stub().withArgs(SSL_PEM_PATHS, []).returns([]),
     };
     getConfigurationStub.returns(nullConfig);
 
@@ -137,9 +131,7 @@ describe("commands/connections.ts", function () {
 
   it("getSSLPemPaths() should only return valid .pem paths and not other string values", function () {
     const mixedConfig = {
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === SSL_PEM_PATHS) return ["path/to/file.pem", "invalid/path", ""];
-      }),
+      get: sandbox.stub().withArgs(SSL_PEM_PATHS).returns(["path/to/file.pem", "invalid/path", ""]),
     };
     getConfigurationStub.returns(mixedConfig);
 

@@ -73,17 +73,14 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     executeCommandStub = sandbox.stub(commands, "executeCommand").resolves();
     // this should probably live in a separate test helper file
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+    const configMap = {
+      [LOCAL_KAFKA_IMAGE]: DEFAULT_KAFKA_IMAGE_REPO,
+      [LOCAL_KAFKA_IMAGE_TAG]: DEFAULT_KAFKA_IMAGE_TAG,
+      [LOCAL_DOCKER_SOCKET_PATH]: DEFAULT_UNIX_SOCKET_PATH,
+      // add others as needed
+    };
     getConfigurationStub.returns({
-      get: sandbox.stub().callsFake((key: string) => {
-        switch (key) {
-          case LOCAL_KAFKA_IMAGE:
-            return DEFAULT_KAFKA_IMAGE_REPO;
-          case LOCAL_KAFKA_IMAGE_TAG:
-            return DEFAULT_KAFKA_IMAGE_TAG;
-          case LOCAL_DOCKER_SOCKET_PATH:
-            return DEFAULT_UNIX_SOCKET_PATH;
-        }
-      }),
+      get: sandbox.stub().callsFake((arg) => configMap[arg]),
     });
 
     // assume no running containers matching this workflow image for most tests

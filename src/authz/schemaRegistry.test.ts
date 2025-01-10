@@ -129,9 +129,7 @@ describe("authz.schemaRegistry", function () {
   // showNoSchemaAccessWarningNotification() tests
   it("showNoSchemaAccessWarningNotification() should show warning if warnings are enabled", function () {
     const mockConfig = {
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === SCHEMA_RBAC_WARNINGS_ENABLED) return true;
-      }),
+      get: sandbox.stub().withArgs(SCHEMA_RBAC_WARNINGS_ENABLED).returns(true),
     };
     getConfigurationStub.returns(mockConfig);
 
@@ -142,9 +140,7 @@ describe("authz.schemaRegistry", function () {
 
   it("showNoSchemaAccessWarningNotification() should not show warning if warnings are disabled", function () {
     const mockConfig = {
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === SCHEMA_RBAC_WARNINGS_ENABLED) return false;
-      }),
+      get: sandbox.stub().withArgs(SCHEMA_RBAC_WARNINGS_ENABLED).returns(false),
     };
     getConfigurationStub.returns(mockConfig);
 

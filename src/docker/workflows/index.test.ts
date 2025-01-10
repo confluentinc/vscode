@@ -26,9 +26,7 @@ describe("docker/workflows/index.ts", () => {
   it(`getKafkaWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_KAFKA_IMAGE}" config`, async () => {
     const unsupportedImageRepo = "unsupported/image-name";
     getConfigurationStub.returns({
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === LOCAL_KAFKA_IMAGE) return unsupportedImageRepo;
-      }),
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(unsupportedImageRepo),
     });
 
     assert.throws(
@@ -40,9 +38,7 @@ describe("docker/workflows/index.ts", () => {
 
   it(`getKafkaWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE}" config`, async () => {
     getConfigurationStub.returns({
-      get: sandbox.stub().callsFake((key: string) => {
-        if (key === LOCAL_KAFKA_IMAGE) return ConfluentLocalWorkflow.imageRepo;
-      }),
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(ConfluentLocalWorkflow.imageRepo),
     });
 
     const workflow = getKafkaWorkflow();
