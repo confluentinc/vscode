@@ -43,7 +43,9 @@ describe("EnvironmentTreeItem", () => {
     [true, true],
     [false, false],
   ]) {
-    it("should use an error icon if it's a direct environment with no clusters", () => {
+    const missingInfo = JSON.stringify({ missingKafka, missingSR });
+    const haveOrNot = missingKafka || missingSR ? "have" : "not have";
+    it(`should ${haveOrNot} an error icon for a direct environment ${missingInfo}`, () => {
       const env = new DirectEnvironment({
         ...TEST_DIRECT_ENVIRONMENT,
         kafkaClusters: [],
@@ -67,7 +69,7 @@ describe("EnvironmentTreeItem", () => {
       }
     });
 
-    it(`should create correct tooltip for a direct environment where Kafka is missing (${missingKafka}) and SR is missing (${missingSR})`, () => {
+    it(`should ${haveOrNot} a tooltip warning for a direct environment ${missingInfo}`, () => {
       // no Kafka cluster or Schema Registry by default
       const resource = new DirectEnvironment({
         ...TEST_DIRECT_ENVIRONMENT,
@@ -82,17 +84,6 @@ describe("EnvironmentTreeItem", () => {
       assert.equal(tooltip.value.includes("Unable to connect"), missingKafka || missingSR);
     });
   }
-
-  it("should not include a warning in the tooltip for a direct environment with clusters", () => {
-    const directEnv = new DirectEnvironment({
-      ...TEST_DIRECT_ENVIRONMENT,
-      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
-    });
-    const treeItem = new EnvironmentTreeItem(directEnv);
-
-    const tooltip = treeItem.tooltip as MarkdownString;
-    assert.ok(!tooltip.value.includes("Unable to connect"));
-  });
 
   it("should include the form connection type for a direct environment/connection", () => {
     // without a formConnectionType set
