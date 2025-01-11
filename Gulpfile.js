@@ -206,6 +206,8 @@ function handleBuildLog(level, log, handler) {
   // skip log messages about circular dependencies inside node_modules
   if (log.code === "CIRCULAR_DEPENDENCY" && log.ids.every((id) => id.includes("node_modules")))
     return;
+  // as well as any "The 'this' keyword is equivalent to 'undefined' at the top level of an ES module" warnings
+  if (log.code === "THIS_IS_UNDEFINED" && log.id.includes("node_modules")) return;
   handler(level, log);
 }
 
