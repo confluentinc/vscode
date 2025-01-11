@@ -125,11 +125,10 @@ export class DirectEnvironment extends Environment {
     this.name = props.name;
 
     this.kafkaClusters = props.kafkaClusters;
-    if (props.kafkaConfigured) this.kafkaConfigured = props.kafkaConfigured;
+    this.kafkaConfigured = props.kafkaConfigured;
 
     this.schemaRegistry = props.schemaRegistry;
-    if (props.schemaRegistryConfigured)
-      this.schemaRegistryConfigured = props.schemaRegistryConfigured;
+    this.schemaRegistryConfigured = props.schemaRegistryConfigured;
 
     if (props.formConnectionType) this.formConnectionType = props.formConnectionType;
 
