@@ -250,7 +250,7 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
       if (missingSR) missing.push("Schema Registry");
       tooltip
         .appendMarkdown("\n\n---")
-        .appendMarkdown(`\n\n⚠️ Unable to connect to ${missing.join(" and ")}.`);
+        .appendMarkdown(`\n\n$(error) Unable to connect to ${missing.join(" and ")}.`);
     }
   }
 
