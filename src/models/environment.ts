@@ -96,7 +96,12 @@ export class DirectEnvironment extends Environment {
 
   // set explicit Direct* typing
   kafkaClusters: DirectKafkaCluster[] = [];
+  /** Was a Kafka cluster configuration provided for this environment (via the `ConnectionSpec`)? */
+  kafkaConfigured: boolean = false;
+
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
+  /** Was a Schema Registry configuration provided for this environment (via the `ConnectionSpec`)? */
+  schemaRegistryConfigured: boolean = false;
 
   /** What did the user choose as the source of this connection/environment? */
   formConnectionType?: FormConnectionType = "Other";
@@ -104,15 +109,27 @@ export class DirectEnvironment extends Environment {
   constructor(
     props: Pick<
       DirectEnvironment,
-      "connectionId" | "id" | "name" | "kafkaClusters" | "schemaRegistry" | "formConnectionType"
+      | "connectionId"
+      | "id"
+      | "name"
+      | "kafkaClusters"
+      | "kafkaConfigured"
+      | "schemaRegistry"
+      | "schemaRegistryConfigured"
+      | "formConnectionType"
     >,
   ) {
     super();
     this.connectionId = props.connectionId;
     this.id = props.id;
     this.name = props.name;
+
     this.kafkaClusters = props.kafkaClusters;
+    this.kafkaConfigured = props.kafkaConfigured;
+
     this.schemaRegistry = props.schemaRegistry;
+    this.schemaRegistryConfigured = props.schemaRegistryConfigured;
+
     if (props.formConnectionType) this.formConnectionType = props.formConnectionType;
 
     // newly born direct connections are loading unless we already have children.
@@ -184,11 +201,23 @@ export class EnvironmentTreeItem extends TreeItem {
 
     if (this.resource.isLoading) {
       this.iconPath = new ThemeIcon(IconNames.LOADING);
-    } else if (isDirect(resource) && !resource.hasClusters) {
-      this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsWarningIcon.foreground"));
+    } else if (isDirect(resource)) {
+      const { missingKafka, missingSR } = checkForMissingResources(resource);
+      if (missingKafka || missingSR) {
+        this.iconPath = new ThemeIcon("error", new ThemeColor("problemsErrorIcon.foreground"));
+      }
     }
     this.tooltip = createEnvironmentTooltip(this.resource);
   }
+}
+
+/** Compare provided `kafkaClusters` against `kafkaConfigured` and `schemaRegistry` against
+ * `schemaRegistryConfigured` to determine whether or not expected resources are missing, */
+function checkForMissingResources(resource: Environment) {
+  const directEnv = resource as DirectEnvironment;
+  const missingKafka: boolean = directEnv.kafkaConfigured && !directEnv.kafkaClusters.length;
+  const missingSR: boolean = directEnv.schemaRegistryConfigured && !directEnv.schemaRegistry;
+  return { missingKafka, missingSR };
 }
 
 function createEnvironmentTooltip(resource: Environment): MarkdownString {
@@ -213,11 +242,16 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
       .appendMarkdown(
         `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
       );
-  } else if (isDirectResource && !resource.hasClusters) {
-    tooltip
-      .appendMarkdown("\n\n---")
-      .appendMarkdown(`\n\n⚠️ Unable to connect to Kafka and/or Schema Registry.`);
-    // TODO(shoup): add link to edit connection here
+  } else if (isDirectResource) {
+    const { missingKafka, missingSR } = checkForMissingResources(resource);
+    if (missingKafka || missingSR) {
+      const missing = [];
+      if (missingKafka) missing.push("Kafka");
+      if (missingSR) missing.push("Schema Registry");
+      tooltip
+        .appendMarkdown("\n\n---")
+        .appendMarkdown(`\n\n$(error) Unable to connect to ${missing.join(" and ")}.`);
+    }
   }
 
   return tooltip;
