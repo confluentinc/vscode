@@ -15,9 +15,11 @@ import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { isCCloud, isDirect } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
+import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
@@ -223,8 +225,35 @@ async function produceMessageFromDocument(topic: KafkaTopic) {
   );
 
   // TODO: add schema information here once we have it
-  const key: ProduceRequestData = { data: message.key };
-  const value: ProduceRequestData = { data: message.value };
+  const schemaless = "JSON";
+  // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
+  const schemaType: { type?: string } = {};
+  if (isCCloud(topic)) {
+    schemaType.type = schemaless;
+  } else if (isDirect(topic)) {
+    // look up the formConnectionType for this topic's connection
+    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+      topic.connectionId,
+    );
+    if (spec?.formConnectionType === "Confluent Cloud") {
+      schemaType.type = schemaless;
+    }
+  }
+
+  const key: ProduceRequestData = {
+    ...schemaType,
+    data: message.key,
+    // schema_version: null,
+    // subject: null,
+    // subject_name_strategy: null,
+  };
+  const value: ProduceRequestData = {
+    ...schemaType,
+    data: message.value,
+    // schema_version: null,
+    // subject: null,
+    // subject_name_strategy: null,
+  };
 
   const produceRequest: ProduceRequest = {
     headers,
