@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { CCLOUD_CONNECTION_SPEC } from "../constants";
+import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_SPEC } from "../constants";
 import { ccloudOrganizationChanged } from "../emitters";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudOrganization } from "../models/organization";
@@ -36,7 +36,7 @@ async function useOrganizationCommand() {
         ...CCLOUD_CONNECTION_SPEC,
         ccloud_config: {
           organization_id: organization.id,
-          uri_scheme: vscode.env.uriScheme,
+          ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
         },
       });
 

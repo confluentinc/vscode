@@ -6,6 +6,9 @@ export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */
 export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.packageJSON.version;
 
+/** The URI used when completing the CCloud authentication flow in the browser. */
+export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}:${EXTENSION_ID}/authCallback`;
+
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
  * @see https://code.visualstudio.com/api/references/icons-in-labels
@@ -44,7 +47,7 @@ export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
   name: "Confluent Cloud",
   type: "CCLOUD",
   ccloud_config: {
-    uri_scheme: env.uriScheme,
+    ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
   },
 };
 // these two avoid the need to use `CCLOUD_CONNECTION_SPEC.id!` or `CCLOUD_CONNECTION_SPEC.name!`
