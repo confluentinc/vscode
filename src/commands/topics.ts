@@ -268,6 +268,16 @@ async function produceMessageFromDocument(topic: KafkaTopic) {
 
   try {
     const resp: ProduceResponse = await recordsApi.produceRecord(request);
+    // we may get a misleading `status: 200` with a nested `error_code` in the response body
+    // ...but we may also get `error_code: 200` with a successful message
+    if (resp.error_code >= 400) {
+      throw new ResponseError(
+        new Response("", {
+          status: resp.error_code,
+          statusText: resp.message,
+        }),
+      );
+    }
     vscode.window
       .showInformationMessage(`Success: Produced message to topic "${topic.name}".`, "View Message")
       .then((selection) => {
@@ -294,7 +304,7 @@ async function produceMessageFromDocument(topic: KafkaTopic) {
     if (error instanceof ResponseError) {
       const body = await error.response.clone().text();
       vscode.window.showErrorMessage(
-        `Error response while trying to produce message: ${error.response.status} ${error.response.statusText}: ${body}`,
+        `Error response while trying to produce message: ${error.response.status} ${error.response.statusText} ${body}`,
       );
     } else {
       vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
