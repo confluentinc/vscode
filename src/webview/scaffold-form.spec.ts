@@ -1,13 +1,13 @@
-import { test } from "rollwright";
 import { expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import esbuild from "rollup-plugin-esbuild";
-import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
-import { SinonStub } from "sinon";
-import { TemplateManifest } from "../clients/sidecar";
+import virtual from "@rollup/plugin-virtual";
 import { createFilter } from "@rollup/pluginutils";
+import { readFileSync } from "node:fs";
 import { Plugin } from "rollup";
+import esbuild from "rollup-plugin-esbuild";
+import { test } from "rollwright";
+import { SinonStub } from "sinon";
+import { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
 
 const template = readFileSync(new URL("scaffold-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {
@@ -50,14 +50,13 @@ test("dummy form submission", async ({ execute, page }) => {
   });
 
   await execute(async (stub) => {
-    const dummy: TemplateManifest = {
-      template_api_version: "0.0.1",
+    const dummy: ScaffoldV1TemplateSpec = {
+      version: "0.0.1",
       name: "go-consumer",
       display_name: "Go Consumer Application",
       description:
         "A simple Go project that reads messages from a topic in Confluent Cloud. Ideal for developers new to Kafka who want to learn about stream processing with Kafka.\n",
       language: "Go",
-      version: "0.0.1",
       tags: ["consumer", "getting started", "go"],
       options: {
         cc_bootstrap_server: {
@@ -111,7 +110,7 @@ test("dummy form submission", async ({ execute, page }) => {
         : {};
     stub.withArgs("GetOptionValues").resolves(transformedOptions);
     stub.withArgs("SetOptionValue").resolves(null);
-    stub.withArgs("GetTemplateSpec").resolves(dummy satisfies TemplateManifest);
+    stub.withArgs("GetTemplateSpec").resolves(dummy satisfies ScaffoldV1TemplateSpec);
     stub.withArgs("Submit").resolves(null);
   }, sendWebviewMessage);
 
