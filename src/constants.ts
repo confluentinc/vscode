@@ -7,7 +7,7 @@ export const EXTENSION_ID = "confluentinc.vscode-confluent";
 export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.packageJSON.version;
 
 /** The URI used when completing the CCloud authentication flow in the browser. */
-export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}:${EXTENSION_ID}/authCallback`;
+export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
