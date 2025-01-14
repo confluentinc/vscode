@@ -4,8 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Producing messages to a Kafka topic has been expanded to allow loading content from an unsaved
+  editor or Message Viewer preview tab.
+
 ### Changed
-- React to websocket events pushed from sidecar instead of polling for some connection change monitoring.
+
+- React to websocket events pushed from sidecar instead of polling for some connection change
+  monitoring.
 
 ## 0.23.3
 
