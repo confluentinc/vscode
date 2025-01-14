@@ -11,6 +11,10 @@ import {
   TopicV3Api,
 } from "../clients/kafkaRest";
 import {
+  Configuration as ScaffoldingServiceConfiguration,
+  TemplatesScaffoldV1Api,
+} from "../clients/scaffoldingService";
+import {
   Configuration as SchemaRegistryRestConfiguration,
   SchemasV1Api,
   SubjectsV1Api,
@@ -24,7 +28,6 @@ import {
   PreferencesResourceApi,
   ResponseError,
   Configuration as SidecarRestConfiguration,
-  TemplatesApi,
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
@@ -132,20 +135,18 @@ export class SidecarHandle {
   }
 
   /**
-   * Creates and returns a (Sidecar REST OpenAPI spec) {@link TemplatesApi} client instance with a
-   * preconfigured {@link SidecarRestConfiguration}.
+   * Creates and returns a (Scaffolding Service OpenAPI spec) {@link TemplatesApi} client instance
+   * with a preconfigured {@link ScaffoldingServiceConfiguration}.
    */
-  public getTemplatesApi(): TemplatesApi {
-    const config = new SidecarRestConfiguration({
-      ...this.defaultClientConfigParams,
+  public getTemplatesApi(): TemplatesScaffoldV1Api {
+    const config = new ScaffoldingServiceConfiguration({
       headers: {
-        ...this.defaultClientConfigParams.headers,
         // Intercept requests to set the Accept header to `application/*` to handle non-JSON responses
-        // For example, the sidecar returns a ZIP file for the `POST /gateway/v1/templates/{name}/apply` endpoint
+        // For example, the service returns a ZIP file for the `POST .../apply` endpoint
         Accept: "application/*",
       },
     });
-    return new TemplatesApi(config);
+    return new TemplatesScaffoldV1Api(config);
   }
 
   /**

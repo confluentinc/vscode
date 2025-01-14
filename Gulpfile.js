@@ -668,6 +668,10 @@ export async function apigen() {
       "src/clients/sidecar-openapi-specs/schema-registry.openapi.yaml",
       "src/clients/schemaRegistryRest",
     ],
+    [
+      "src/clients/sidecar-openapi-specs/scaffolding-service.openapi.yaml",
+      "src/clients/scaffoldingService",
+    ],
     ["src/clients/docker.openapi.yaml", "src/clients/docker"],
   ];
 
