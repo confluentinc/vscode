@@ -645,8 +645,35 @@ export function functional(done) {
   return done(result.status);
 }
 
+async function applyOpenAPISpecPatches(patchDir) {
+  const patchFiles = globSync(`${patchDir}/*.patch`);
+  for (const patch of patchFiles) {
+    console.log(`Applying patch from "${patch}"...`);
+    const result = spawnSync("git", ["apply", patch], {
+      stdio: "pipe",
+      shell: IS_WINDOWS,
+      encoding: "utf-8",
+    });
+
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      console.log(result.stderr.trim());
+      if (result.stderr?.includes("patch does not apply")) {
+        // patch was already applied, nothing to do
+        console.log(`⏩ Skipping patch "${patch}"`);
+        continue;
+      }
+      throw new Error(`❌ Failed to apply patch from "${patch}"`);
+    }
+    console.log(`✅ Successfully applied patch from "${patch}"`);
+  }
+}
+
 apigen.description = "Generate API clients from OpenAPI specs.";
 export async function apigen() {
+  // make any necessary changes to the OpenAPI specs before generating client code
+  await applyOpenAPISpecPatches("src/clients/sidecar-openapi-specs/patches");
+
   // Lock down the version of openapi-generator to avoid breaking changes or surprises
   // per https://openapi-generator.tech/docs/installation/
   const openapiGeneratorVersion = "7.10.0";
