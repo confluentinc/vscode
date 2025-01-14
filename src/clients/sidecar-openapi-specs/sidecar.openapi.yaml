@@ -465,6 +465,8 @@ components:
           - $ref: "#/components/schemas/Password"
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
+      required:
+      - organization_id
       type: object
       properties:
         organization_id:
@@ -472,12 +474,6 @@ components:
             default organization is used when absent.
           maxLength: 36
           minLength: 36
-          type: string
-        ide_auth_callback_uri:
-          description: The URI that users will be redirected to after successfully
-            completing the authentication flow with Confluent Cloud.
-          maxLength: 200
-          minLength: 10
           type: string
     CCloudStatus:
       description: The status related to CCloud.
@@ -1147,25 +1143,25 @@ components:
     HealthResponse:
       type: object
       properties:
+        status:
+          enum:
+          - UP
+          - DOWN
+          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
     HealthCheck:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
+        name:
           type: string
         data:
           type: object
           nullable: true
-        name:
+        status:
+          enum:
+          - UP
+          - DOWN
           type: string
