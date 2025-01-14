@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 
 import { posix } from "path";
@@ -50,7 +49,7 @@ export const scaffoldProjectRequest = async () => {
       (template) => template.spec!.display_name === pickedItem?.label,
     );
   } catch (err) {
-    logResponseError(err, "Failed to retrieve template list", {}, true);
+    logResponseError(err, "template listing", {}, true);
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return;
   }
@@ -88,7 +87,8 @@ export const scaffoldProjectRequest = async () => {
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }
-  const processMessage = (...[type, body]: Parameters<MessageSender>) => {
+  let successfullyAppliedTemplate = false;
+  const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "GetTemplateSpec": {
         const spec = pickedTemplate?.spec ?? null;
@@ -106,8 +106,11 @@ export const scaffoldProjectRequest = async () => {
         logUsage(UserEvent.ScaffoldFormSubmitted, {
           templateName: templateSpec.display_name,
         });
-        if (pickedTemplate) applyTemplate(pickedTemplate, body.data);
-        // optionsForm.dispose();
+        if (pickedTemplate) {
+          successfullyAppliedTemplate = await applyTemplate(pickedTemplate, body.data);
+        }
+        // only dispose the form if the template was successfully applied
+        if (successfullyAppliedTemplate) optionsForm.dispose();
         return null satisfies MessageResponse<"Submit">;
     }
   };
@@ -118,7 +121,7 @@ export const scaffoldProjectRequest = async () => {
 async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
-) {
+): Promise<boolean> {
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
 
   const stringifiedOptions = Object.fromEntries(
@@ -152,7 +155,7 @@ async function applyTemplate(
         templateName: pickedTemplate.spec!.display_name,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
-      return;
+      return false;
     }
 
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
@@ -183,9 +186,14 @@ async function applyTemplate(
         keepsExistingWindow,
       );
     }
+    return true;
   } catch (e) {
-    logger.error("Failed to apply template", e);
-    Sentry.captureException(e);
+    logResponseError(
+      e,
+      "Failed to apply template",
+      { templateName: pickedTemplate.spec!.name! },
+      true,
+    );
     const action = await vscode.window.showErrorMessage(
       "There was an error while generating the project. Try again or file an issue.",
       { title: "Try again" },
@@ -195,7 +203,7 @@ async function applyTemplate(
       const cmd = action.title === "Try again" ? "confluent.scaffold" : "confluent.support.issue";
       await vscode.commands.executeCommand(cmd);
     }
-    return;
+    return false;
   }
 }
 
