@@ -188,12 +188,7 @@ async function applyTemplate(
     }
     return true;
   } catch (e) {
-    logResponseError(
-      e,
-      "Failed to apply template",
-      { templateName: pickedTemplate.spec!.name! },
-      true,
-    );
+    logResponseError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
     const action = await vscode.window.showErrorMessage(
       "There was an error while generating the project. Try again or file an issue.",
       { title: "Try again" },
