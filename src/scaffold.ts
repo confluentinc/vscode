@@ -1,14 +1,24 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 
 import { posix } from "path";
 import { unzip } from "unzipit";
-import { Template, TemplateList, TemplateManifest, TemplatesApi } from "./clients/sidecar";
+import {
+  ApplyScaffoldV1TemplateOperationRequest,
+  ListScaffoldV1TemplatesRequest,
+  ScaffoldV1Template,
+  ScaffoldV1TemplateCollection,
+  ScaffoldV1TemplateCollectionList,
+  ScaffoldV1TemplateList,
+  ScaffoldV1TemplateSpec,
+  TemplateCollectionsScaffoldV1Api,
+  TemplatesScaffoldV1Api,
+} from "./clients/scaffoldingService";
 import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, ViewColumn } from "vscode";
 import { registerCommandWithLogging } from "./commands";
+import { logResponseError } from "./errors";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -30,32 +40,33 @@ export const registerProjectGenerationCommand = (context: ExtensionContext) => {
 };
 
 export const scaffoldProjectRequest = async () => {
-  let pickedTemplate: Template | undefined = undefined;
+  let pickedTemplate: ScaffoldV1Template | undefined = undefined;
   try {
-    const templateListResponse: TemplateList = await getTemplatesList();
-    const templateList = templateListResponse.data;
+    const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList();
+    const templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
     const pickedItem = await pickTemplate(templateList);
     pickedTemplate = templateList.find(
-      (template) => template.spec.display_name === pickedItem?.label,
+      (template) => template.spec!.display_name === pickedItem?.label,
     );
   } catch (err) {
-    logger.error("Failed to retrieve template list", err);
+    logResponseError(err, "template listing", {}, true);
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return;
   }
 
   if (pickedTemplate !== undefined) {
     logUsage(UserEvent.ScaffoldTemplatePicked, {
-      templateName: pickedTemplate.spec.display_name,
+      templateName: pickedTemplate.spec!.display_name,
     });
   } else {
     return;
   }
 
+  const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
-    { id: pickedTemplate.spec.name, template: scaffoldFormTemplate },
+    { id: templateSpec.name!, template: scaffoldFormTemplate },
     "template-options-form",
-    `Generate ${pickedTemplate.spec.display_name} Template`,
+    `Generate ${templateSpec.display_name} Template`,
     ViewColumn.One,
     { enableScripts: true },
   );
@@ -69,17 +80,18 @@ export const scaffoldProjectRequest = async () => {
    * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
    */
   let optionValues: { [key: string]: string | boolean } = {};
-  let options = (pickedTemplate.spec.options as TemplateManifest["options"]) || {};
+  let options = templateSpec.options || {};
   Object.entries(options).map(([option, properties]) => {
     optionValues[option] = properties.initial_value ?? "";
   });
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }
-  const processMessage = (...[type, body]: Parameters<MessageSender>) => {
+  let successfullyAppliedTemplate = false;
+  const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "GetTemplateSpec": {
-        const spec = pickedTemplate ? pickedTemplate.spec : null;
+        const spec = pickedTemplate?.spec ?? null;
         return spec satisfies MessageResponse<"GetTemplateSpec">;
       }
       case "GetOptionValues": {
@@ -92,10 +104,13 @@ export const scaffoldProjectRequest = async () => {
       }
       case "Submit":
         logUsage(UserEvent.ScaffoldFormSubmitted, {
-          templateName: pickedTemplate?.spec.display_name,
+          templateName: templateSpec.display_name,
         });
-        if (pickedTemplate) applyTemplate(pickedTemplate, body.data);
-        optionsForm.dispose();
+        if (pickedTemplate) {
+          successfullyAppliedTemplate = await applyTemplate(pickedTemplate, body.data);
+        }
+        // only dispose the form if the template was successfully applied
+        if (successfullyAppliedTemplate) optionsForm.dispose();
         return null satisfies MessageResponse<"Submit">;
     }
   };
@@ -104,17 +119,23 @@ export const scaffoldProjectRequest = async () => {
 };
 
 async function applyTemplate(
-  pickedTemplate: Template,
+  pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
-) {
+): Promise<boolean> {
+  const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
+
+  const stringifiedOptions = Object.fromEntries(
+    Object.entries(manifestOptionValues).map(([k, v]) => [k, String(v)]),
+  );
+  const request: ApplyScaffoldV1TemplateOperationRequest = {
+    template_collection_name: pickedTemplate.spec!.template_collection!.id!,
+    name: pickedTemplate.spec!.name!,
+    ApplyScaffoldV1TemplateRequest: {
+      options: stringifiedOptions,
+    },
+  };
   try {
-    const client: TemplatesApi = (await getSidecar()).getTemplatesApi();
-    const applyTemplateResponse: Blob = await client.gatewayV1TemplatesNameApplyPost({
-      name: pickedTemplate.id,
-      ApplyTemplateRequest: {
-        options: manifestOptionValues,
-      },
-    });
+    const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
 
     const arrayBuffer = await applyTemplateResponse.arrayBuffer();
 
@@ -131,17 +152,17 @@ async function applyTemplate(
     if (!fileUris || fileUris.length !== 1) {
       // This means the user cancelled @ save dialog. Show a message and return
       logUsage(UserEvent.ScaffoldCancelled, {
-        templateName: pickedTemplate.spec.display_name,
+        templateName: pickedTemplate.spec!.display_name,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
-      return;
+      return false;
     }
 
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ScaffoldCompleted, {
-      templateName: pickedTemplate.spec.display_name,
+      templateName: pickedTemplate.spec!.display_name,
     });
     // Notify the user that the project was generated successfully
     const selection = await vscode.window.showInformationMessage(
@@ -156,7 +177,7 @@ async function applyTemplate(
       // reusing the current one
       const keepsExistingWindow = selection.title === "Open in New Window";
       logUsage(UserEvent.ScaffoldFolderOpened, {
-        templateName: pickedTemplate.spec.display_name,
+        templateName: pickedTemplate.spec!.display_name,
         keepsExistingWindow,
       });
       vscode.commands.executeCommand(
@@ -165,9 +186,14 @@ async function applyTemplate(
         keepsExistingWindow,
       );
     }
+    return true;
   } catch (e) {
-    logger.error("Failed to apply template", e);
-    Sentry.captureException(e);
+    logResponseError(
+      e,
+      "Failed to apply template",
+      { templateName: pickedTemplate.spec!.name! },
+      true,
+    );
     const action = await vscode.window.showErrorMessage(
       "There was an error while generating the project. Try again or file an issue.",
       { title: "Try again" },
@@ -177,7 +203,7 @@ async function applyTemplate(
       const cmd = action.title === "Try again" ? "confluent.scaffold" : "confluent.support.issue";
       await vscode.commands.executeCommand(cmd);
     }
-    return;
+    return false;
   }
 }
 
@@ -197,14 +223,17 @@ async function extractZipContents(buffer: ArrayBuffer, destination: vscode.Uri) 
   }
 }
 
-async function getNonConflictingDirPath(destination: vscode.Uri, pickedTemplate: Template) {
-  let extractZipPath = posix.join(destination.path, `${pickedTemplate.id}`);
+async function getNonConflictingDirPath(
+  destination: vscode.Uri,
+  pickedTemplate: ScaffoldV1Template,
+) {
+  let extractZipPath = posix.join(destination.path, `${pickedTemplate.spec!.name}`);
 
   // Add some random alphanumeric to the end of the folder name to avoid conflicts
   if (await pathExists(extractZipPath)) {
     const randomString = Math.random().toString(36).substring(7);
 
-    extractZipPath = posix.join(destination.path, `${pickedTemplate.id}-${randomString}`);
+    extractZipPath = posix.join(destination.path, `${pickedTemplate.spec?.name}-${randomString}`);
   }
   destination = vscode.Uri.file(extractZipPath);
   return destination;
@@ -219,24 +248,51 @@ async function pathExists(path: string) {
   }
 }
 
-async function pickTemplate(templateList: Template[]): Promise<vscode.QuickPickItem | undefined> {
+async function pickTemplate(
+  templateList: ScaffoldV1Template[],
+): Promise<vscode.QuickPickItem | undefined> {
   const sortedList = templateList.sort((a, b) => {
-    return a.spec.display_name.toLowerCase().localeCompare(b.spec.display_name.toLowerCase());
+    return a.spec!.display_name!.toLowerCase().localeCompare(b.spec!.display_name!.toLowerCase());
   });
-  const quickPickItems: vscode.QuickPickItem[] = sortedList.map((templateItem: Template) => {
-    const tags = templateItem.spec?.tags ? `[${templateItem.spec.tags.join(", ")}]` : "";
-    return {
-      label: templateItem.spec.display_name,
+  const quickPickItems: vscode.QuickPickItem[] = [];
+  sortedList.forEach((templateItem: ScaffoldV1Template) => {
+    const spec = templateItem.spec;
+    if (!spec) return;
+
+    const tags = spec.tags ? `[${spec.tags.join(", ")}]` : "";
+    quickPickItems.push({
+      label: spec.display_name!,
       description: tags,
-      detail: templateItem.spec.description,
-    };
+      detail: spec.description!,
+    });
   });
   return await vscode.window.showQuickPick(quickPickItems, {
     placeHolder: "Select a project template",
   });
 }
 
-async function getTemplatesList(): Promise<TemplateList> {
-  const client: TemplatesApi = (await getSidecar()).getTemplatesApi();
-  return await client.gatewayV1TemplatesGet();
+async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
+  // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
+
+  // list collections first
+  const collectionsClient: TemplateCollectionsScaffoldV1Api =
+    new TemplateCollectionsScaffoldV1Api();
+  const collectionsResponse: ScaffoldV1TemplateCollectionList =
+    await collectionsClient.listScaffoldV1TemplateCollections({});
+  const collections: ScaffoldV1TemplateCollection[] = Array.from(collectionsResponse.data);
+  if (collections.length === 0) {
+    throw new Error("No template collections found");
+  }
+
+  // then use one of them to list all available templates
+  const vscodeCollection = collections.find((collection) => collection.spec!.name === "vscode");
+  if (!vscodeCollection) {
+    throw new Error("No vscode template collection found");
+  }
+
+  const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
+  const requestBody: ListScaffoldV1TemplatesRequest = {
+    template_collection_name: vscodeCollection.spec!.name!,
+  };
+  return await client.listScaffoldV1Templates(requestBody);
 }

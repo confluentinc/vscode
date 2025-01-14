@@ -6,12 +6,10 @@ apis/LoginRealmResourceApi.ts
 apis/MicroProfileHealthApi.ts
 apis/OAuthCallbackResourceApi.ts
 apis/PreferencesResourceApi.ts
-apis/TemplatesApi.ts
 apis/VersionResourceApi.ts
 apis/index.ts
 index.ts
 models/ApiKeyAndSecret.ts
-models/ApplyTemplateRequest.ts
 models/AuthError.ts
 models/AuthErrors.ts
 models/Authentication.ts
@@ -39,8 +37,6 @@ models/KeyStore.ts
 models/LocalConfig.ts
 models/ModelError.ts
 models/OAuthCredentials.ts
-models/ObjectMetadata.ts
-models/OptionProperties.ts
 models/PartitionConsumeData.ts
 models/PartitionConsumeRecord.ts
 models/PartitionConsumeRecordHeader.ts
@@ -58,9 +54,6 @@ models/SimpleConsumeMultiPartitionResponse.ts
 models/Status.ts
 models/StoreType.ts
 models/TLSConfig.ts
-models/Template.ts
-models/TemplateList.ts
-models/TemplateManifest.ts
 models/TimestampType.ts
 models/TrustStore.ts
 models/UserInfo.ts

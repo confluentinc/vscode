@@ -1,7 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from "./ApiKeyAndSecret";
-export * from "./ApplyTemplateRequest";
 export * from "./AuthError";
 export * from "./AuthErrors";
 export * from "./Authentication";
@@ -29,8 +28,6 @@ export * from "./KeyStore";
 export * from "./LocalConfig";
 export * from "./ModelError";
 export * from "./OAuthCredentials";
-export * from "./ObjectMetadata";
-export * from "./OptionProperties";
 export * from "./PartitionConsumeData";
 export * from "./PartitionConsumeRecord";
 export * from "./PartitionConsumeRecordHeader";
@@ -48,9 +45,6 @@ export * from "./SimpleConsumeMultiPartitionResponse";
 export * from "./Status";
 export * from "./StoreType";
 export * from "./TLSConfig";
-export * from "./Template";
-export * from "./TemplateList";
-export * from "./TemplateManifest";
 export * from "./TimestampType";
 export * from "./TrustStore";
 export * from "./UserInfo";
