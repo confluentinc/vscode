@@ -180,7 +180,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   editConfigForm.onDidDispose(() => disposable.dispose());
 }
 
-async function produceMessageFromDocument(topic: KafkaTopic) {
+export async function produceMessageFromDocument(topic: KafkaTopic) {
   if (!topic) {
     vscode.window.showErrorMessage("No topic selected.");
     return;
@@ -223,42 +223,13 @@ async function produceMessageFromDocument(topic: KafkaTopic) {
       value: Buffer.from(header.value).toString("base64"),
     }),
   );
-
-  // TODO: add schema information here once we have it
-  const schemaless = "JSON";
-  // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
-  const schemaType: { type?: string } = {};
-  if (isCCloud(topic)) {
-    schemaType.type = schemaless;
-  } else if (isDirect(topic)) {
-    // look up the formConnectionType for this topic's connection
-    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-      topic.connectionId,
-    );
-    if (spec?.formConnectionType === "Confluent Cloud") {
-      schemaType.type = schemaless;
-    }
-  }
-
-  const key: ProduceRequestData = {
-    ...schemaType,
-    data: message.key,
-    // schema_version: null,
-    // subject: null,
-    // subject_name_strategy: null,
-  };
-  const value: ProduceRequestData = {
-    ...schemaType,
-    data: message.value,
-    // schema_version: null,
-    // subject: null,
-    // subject_name_strategy: null,
-  };
+  // dig up any schema-related information we may need in the request body
+  const { keyData, valueData } = await createProduceRequestData(topic, message.key, message.value);
 
   const produceRequest: ProduceRequest = {
     headers,
-    key,
-    value,
+    key: keyData,
+    value: valueData,
   };
   const request: ProduceRecordRequest = {
     topic_name: topic.name,
@@ -310,6 +281,45 @@ async function produceMessageFromDocument(topic: KafkaTopic) {
       vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
     }
   }
+}
+
+export async function createProduceRequestData(
+  topic: KafkaTopic,
+  key: any,
+  value: any,
+): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
+  // TODO: add schema information here for key and/or value once we have it
+
+  const schemaless = "JSON";
+  // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
+  const schemaType: { type?: string } = {};
+  if (isCCloud(topic)) {
+    schemaType.type = schemaless;
+  } else if (isDirect(topic)) {
+    // look up the formConnectionType for this topic's connection
+    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+      topic.connectionId,
+    );
+    if (spec?.formConnectionType === "Confluent Cloud") {
+      schemaType.type = schemaless;
+    }
+  }
+
+  const keyData: ProduceRequestData = {
+    ...schemaType,
+    data: key,
+    // schema_version: null,
+    // subject: null,
+    // subject_name_strategy: null,
+  };
+  const valueData: ProduceRequestData = {
+    ...schemaType,
+    data: value,
+    // schema_version: null,
+    // subject: null,
+    // subject_name_strategy: null,
+  };
+  return { keyData, valueData };
 }
 
 export function registerTopicCommands(): vscode.Disposable[] {
