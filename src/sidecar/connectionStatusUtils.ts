@@ -1,11 +1,81 @@
 // helpers for connection status testing, factored out for test spying
 
 import { Connection, ConnectionType } from "../clients/sidecar/models";
+import { connectionStable, environmentChanged } from "../emitters";
 import { Logger } from "../logging";
+import { ConnectionId, EnvironmentId } from "../models/resource";
+import { ConnectionEventBody } from "../ws/messageTypes";
 
 const logger = new Logger("connectionStatusUtils");
 
-export function isConnectionStable(connection: Connection): boolean {
+/**
+ * Perform side-effects in the UI based on the the connection action (CREATED, DELETED, CONNECTED, etc.)
+ * and connection type pairing. Will be called whenever we recieve a connection state update websocket
+ * message from the sidecar.
+ * @param event The connection event to handle
+ */
+export function connectionEventHandler(event: ConnectionEventBody) {
+  const type = event.connection.spec.type!;
+  const connection = event.connection;
+  const id = connection.id as ConnectionId;
+
+  // triage across the connection type, then call into
+  // the appropriate very specific handler clause.
+  switch (type) {
+    case ConnectionType.Direct: {
+      const environmentId = connection.id as EnvironmentId;
+      switch (event.action) {
+        case "CREATED":
+        case "UPDATED":
+        case "CONNECTED":
+          if (isDirectConnectionStable(connection)) {
+            logger.info(
+              `connectionEventHandler: direct connection ${event.action} ${connection.id} stable side effects firing.`,
+            );
+            // Fire when a direct connection is 'stable', be it happy or broken. Stops the loading spinny.
+            connectionStable.fire(id);
+            // notify subscribers that the "environment" has changed since direct connections are treated
+            // as environment-specific resources
+            environmentChanged.fire(environmentId);
+          } else {
+            logger.info(
+              `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing side-effects.`,
+            );
+          }
+          break;
+        case "DELETED":
+        case "DISCONNECTED":
+          //  James guessing here, seems appropriate.
+          logger.info(
+            `connectionEventHandler: direct connection ${event.action} ${connection.id} disconnected/deleted side effects firing.`,
+          );
+          // Stop any loading spinny...
+          connectionStable.fire(id);
+          // ???
+          environmentChanged.fire(environmentId);
+          break;
+        default:
+          logger.warn(`connectionEventHandler: unhandled ccloud connection action ${event.action}`);
+          throw new Error(`Unhandled ccloud connection action ${event.action}`);
+      }
+      break;
+    }
+    case ConnectionType.Ccloud:
+    case ConnectionType.Local:
+      logger.info(
+        `connectionEventHandler: ${connection.id} connection ${event.action} side effects unhandled.`,
+      );
+      break;
+    default:
+      logger.warn(`connectionEventHandler: unhandled connection type ${type}`);
+      throw new Error(`Unhandled connection type ${type}`);
+  }
+}
+
+export function isConnectionStable(event: ConnectionEventBody): boolean {
+  // TODO: Consider including the event.action, like DELETED, UPDATED. etc?
+
+  const connection = event.connection;
   const type = connection.spec.type!;
 
   switch (type) {
