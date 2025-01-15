@@ -6,11 +6,8 @@ import {
   ApplyScaffoldV1TemplateOperationRequest,
   ListScaffoldV1TemplatesRequest,
   ScaffoldV1Template,
-  ScaffoldV1TemplateCollection,
-  ScaffoldV1TemplateCollectionList,
   ScaffoldV1TemplateList,
   ScaffoldV1TemplateSpec,
-  TemplateCollectionsScaffoldV1Api,
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
 import { Logger } from "./logging";
@@ -269,25 +266,9 @@ async function pickTemplate(
 async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
 
-  // list collections first
-  const collectionsClient: TemplateCollectionsScaffoldV1Api =
-    new TemplateCollectionsScaffoldV1Api();
-  const collectionsResponse: ScaffoldV1TemplateCollectionList =
-    await collectionsClient.listScaffoldV1TemplateCollections({});
-  const collections: ScaffoldV1TemplateCollection[] = Array.from(collectionsResponse.data);
-  if (collections.length === 0) {
-    throw new Error("No template collections found");
-  }
-
-  // then use one of them to list all available templates
-  const vscodeCollection = collections.find((collection) => collection.spec!.name === "vscode");
-  if (!vscodeCollection) {
-    throw new Error("No vscode template collection found");
-  }
-
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
   const requestBody: ListScaffoldV1TemplatesRequest = {
-    template_collection_name: vscodeCollection.spec!.name!,
+    template_collection_name: "vscode",
   };
   return await client.listScaffoldV1Templates(requestBody);
 }
