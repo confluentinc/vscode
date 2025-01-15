@@ -18,8 +18,8 @@ install-test-dependencies:
 			sudo apt-get update; \
 			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
-			sudo mkdir -p /usr/local/var/lib/dbus /usr/local/Caskroom; \
-			sudo chmod -R 775 /usr/local/var/lib /usr/local/Caskroom; \
+			sudo mkdir -p /usr/local/var/lib/dbus /usr/local/var/run /usr/local/Caskroom; \
+			sudo chmod -R 775 /usr/local/var /usr/local/Caskroom; \
 			brew update; \
 			HOMEBREW_NO_AUTO_UPDATE=1 brew install gtk+3; \
 			HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask xquartz; \
