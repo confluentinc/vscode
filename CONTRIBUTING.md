@@ -341,7 +341,7 @@ We use [`openapi-generator-cli`](https://openapi-generator.tech/docs/usage) with
 [`typescript-fetch` generator](https://openapi-generator.tech/docs/generators/typescript-fetch/) to
 create the client code from [OpenAPI specs](https://www.openapis.org/what-is-openapi).
 
-The generated client code is used to help make requests to the services defined in the OpenAPI specs
+The generated client code helps to make requests to the services defined in the OpenAPI specs
 without needing to manually write the request/response structures, middlewares, handlers, and more.
 
 #### Generating the client code
@@ -350,7 +350,7 @@ To generate the client code, run the `apigen` task:
 
     gulp apigen
 
-This task will generate the client code for all OpenAPI specs in the `src/clients` directory.
+This task generates the client code for all OpenAPI specs in the `src/clients` directory.
 
 #### Adding a new OpenAPI spec
 
@@ -388,13 +388,13 @@ with any custom headers and/or other configurations._
 
 #### Manual adjustments to OpenAPI specs
 
-We occasionally need to make manual adjustments to OpenAPI specs before generating the client code.
-To ensure these changes are not lost, we have a
+Sometimes, we need to make manual adjustments to OpenAPI specs before generating the client code. To
+ensure these changes are not lost, we have a
 [`src/clients/sidecar-openapi-specs/patches` directory](https://github.com/confluentinc/vscode/tree/main/src/clients/sidecar-openapi-specs/patches)
 where we can store these changes as `.patch` files.
 
-The `apigen` task will try (using a glob pattern to find all `.patch` files in the `patches`
-directory) to apply these patches to the OpenAPI specs before generating the client code.
+The `apigen` task tries to apply these patches to the OpenAPI specs before generating the client
+code by using a glob pattern to find all `.patch` files in the `patches` directory.
 
 ### Updating NOTICE files
 
