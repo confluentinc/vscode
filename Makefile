@@ -45,9 +45,12 @@ test: setup-test-env install-test-dependencies install-dependencies
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
-			open -a XQuartz; \
-			sleep 3; \
-			DISPLAY=:0 npx gulp test; \
+			echo "Starting XQuartz..."; \
+			open -a /Applications/Utilities/XQuartz.app || open -a /opt/X11/bin/XQuartz || echo "Failed to start XQuartz"; \
+			sleep 5; \
+			export DISPLAY=:0; \
+			launchctl load -w /Library/LaunchAgents/org.xquartz.startx.plist 2>/dev/null || true; \
+			npx gulp test; \
 	else \
 			npx gulp test; \
 	fi
