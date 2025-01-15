@@ -1,0 +1,47 @@
+diff --git a/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml b/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml
+index f00bacd9..94333ecd 100644
+--- a/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml
++++ b/src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml
+@@ -980,6 +980,7 @@ paths:
+     parameters:
+       - $ref: "#/components/parameters/ClusterId"
+       - $ref: "#/components/parameters/TopicName"
++      - $ref: "#/components/parameters/DryRun"
+ 
+     post:
+       summary: Produce Records
+@@ -1746,6 +1747,14 @@ components:
+         type: string
+       example: consumer-1
+ 
++    DryRun:
++      name: dry_run
++      description: "To validate the action can be performed successfully or not. Default: false"
++      in: query
++      required: false
++      schema:
++        type: boolean
++
+     IncludeAuthorizedOperations:
+       name: include_authorized_operations
+       description: Specify if authorized operations should be included in the response.
+@@ -2650,6 +2659,19 @@ components:
+             - BINARY
+             - JSON
+             - STRING
++        subject:
++          type: string
++          nullable: true
++        subject_name_strategy:
++          type: string
++          x-extensible-enum:
++            - TOPIC_NAME
++            - RECORD_NAME
++            - TOPIC_RECORD_NAME
++          nullable: true
++        schema_version:
++          type: integer
++          nullable: true
+         data:
+           $ref: "#/components/schemas/AnyValue"
+       nullable: true
