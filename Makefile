@@ -9,6 +9,25 @@ install-dependencies:
 	npm ci --prefer-offline --include=dev
 	npx playwright install
 
+# Install additional test dependencies to run VSCode testing in headless mode (on Linux)
+# ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
+.PHONY: install-test-dependencies
+install-test-dependencies:
+	@echo "Installing test dependencies for $(shell uname -s)"
+	@if [ $$(uname -s) = "Linux" ]; then \
+			sudo apt-get update; \
+			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			sudo mkdir /usr/local/Caskroom; \
+			sudo chmod 775 /usr/local/Caskroom; \
+			brew update; \
+			HOMEBREW_NO_AUTO_UPDATE=1 brew install gtk+3; \
+			HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask xquartz; \
+	else \
+			echo "Unsupported OS for headless testing"; \
+			exit 1; \
+	fi
+
 .PHONY: setup-test-env
 setup-test-env:
 	@echo "Pulling automated-test-user credentials from Vault into .env file for testing"
@@ -20,14 +39,14 @@ remove-test-env:
 	@echo "Removing .env file"
 	@rm -f .env
 
-# Install additional dependencies to run VSCode testing in headless mode
-# ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
-test: setup-test-env install-dependencies
-	sudo apt-get update
-	sudo apt install -y libgbm1 libgtk-3-0 xvfb
+test: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
-	xvfb-run -a npx gulp test
+	@if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp test; \
+	else \
+			npx gulp test; \
+	fi
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
@@ -73,7 +92,7 @@ EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
 SKIP_DOWNLOAD_EXECUTABLE := $(shell [ -x $(EXECUTABLE_DOWNLOAD_PATH) ] && echo true || echo false)
 
 # Get the OS and architecture combination for the sidecar executable
-SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/')" )
+SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')" )
 
 IDE_SIDECAR_REPO := confluentinc/ide-sidecar
 
