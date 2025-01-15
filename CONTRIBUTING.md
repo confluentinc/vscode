@@ -344,7 +344,7 @@ create the client code from [OpenAPI specs](https://www.openapis.org/what-is-ope
 The generated client code is used to help make requests to the services defined in the OpenAPI specs
 without needing to manually write the request/response structures, middlewares, handlers, and more.
 
-#### Generate the client code
+#### Generating the client code
 
 To generate the client code, run the `apigen` task:
 
