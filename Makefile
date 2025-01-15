@@ -44,6 +44,10 @@ test: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			open -a XQuartz; \
+			sleep 3; \
+			DISPLAY=:0 npx gulp test; \
 	else \
 			npx gulp test; \
 	fi
