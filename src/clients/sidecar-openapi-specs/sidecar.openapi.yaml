@@ -15,8 +15,6 @@ servers:
 tags:
 - name: Feature Flags
   description: Feature flags
-- name: Templates
-  description: Code generation templates
 paths:
   /api/login/realm:
     get:
@@ -260,60 +258,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Failure"
-  /gateway/v1/templates:
-    get:
-      tags:
-      - Templates
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TemplateList"
-  /gateway/v1/templates/{name}:
-    get:
-      tags:
-      - Templates
-      parameters:
-      - name: name
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Template"
-  /gateway/v1/templates/{name}/apply:
-    post:
-      tags:
-      - Templates
-      summary: Apply a template
-      description: Applies the specified template and returns the result as a zip
-        file.
-      parameters:
-      - name: name
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ApplyTemplateRequest"
-      responses:
-        "200":
-          description: Template applied successfully
-          content:
-            application/octet-stream:
-              schema:
-                format: binary
-                type: string
   /gateway/v1/version:
     get:
       tags:
@@ -468,14 +412,6 @@ components:
       maxLength: 64
       minLength: 1
       type: string
-    ApplyTemplateRequest:
-      required:
-      - options
-      type: object
-      properties:
-        options:
-          type: object
-          additionalProperties: {}
     AuthError:
       type: object
       properties:
@@ -925,38 +861,6 @@ components:
             \ to identify the principal ID for authorization. For example, this may\
             \ bea Confluent Cloud identity pool."
           type: string
-    ObjectMetadata:
-      type: object
-      properties:
-        self:
-          type: string
-        resource_name:
-          type: string
-    OptionProperties:
-      required:
-      - display_name
-      - description
-      type: object
-      properties:
-        display_name:
-          type: string
-        description:
-          type: string
-        hint:
-          type: string
-        format:
-          type: string
-        pattern:
-          type: string
-        enum:
-          type: array
-          items:
-            type: string
-        initial_value:
-          type: string
-        min_length:
-          format: int32
-          type: integer
     PartitionConsumeData:
       type: object
       properties:
@@ -1187,74 +1091,6 @@ components:
           allOf:
           - $ref: "#/components/schemas/KeyStore"
           nullable: true
-    Template:
-      required:
-      - api_version
-      - kind
-      - id
-      - metadata
-      - spec
-      type: object
-      properties:
-        api_version:
-          type: string
-        kind:
-          type: string
-        id:
-          type: string
-        metadata:
-          $ref: "#/components/schemas/ObjectMetadata"
-        spec:
-          $ref: "#/components/schemas/TemplateManifest"
-    TemplateList:
-      required:
-      - api_version
-      - kind
-      - metadata
-      - data
-      type: object
-      properties:
-        api_version:
-          type: string
-        kind:
-          type: string
-        metadata:
-          $ref: "#/components/schemas/CollectionMetadata"
-        data:
-          type: array
-          items:
-            $ref: "#/components/schemas/Template"
-    TemplateManifest:
-      required:
-      - template_api_version
-      - name
-      - display_name
-      - description
-      - language
-      - version
-      - tags
-      type: object
-      properties:
-        template_api_version:
-          type: string
-        name:
-          type: string
-        display_name:
-          type: string
-        description:
-          type: string
-        language:
-          type: string
-        version:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        options:
-          type: object
-          additionalProperties:
-            $ref: "#/components/schemas/OptionProperties"
     TimestampType:
       enum:
       - NO_TIMESTAMP_TYPE
@@ -1305,25 +1141,25 @@ components:
     HealthResponse:
       type: object
       properties:
+        status:
+          enum:
+          - UP
+          - DOWN
+          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
     HealthCheck:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
+        name:
           type: string
         data:
           type: object
           nullable: true
-        name:
+        status:
+          enum:
+          - UP
+          - DOWN
           type: string
