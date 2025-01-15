@@ -316,9 +316,6 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
  * */
 export type ConnectionUpdatePredicate = (event: ConnectionEventBody) => boolean;
 
-/** Similar type for general connection event handlers */
-export type ConnectionEventHandler = (event: ConnectionEventBody) => void;
-
 /** Entry type kept in a per connection-id Map within ConnectionStateWatcher. */
 export class SingleConnectionEntry {
   connectionId: ConnectionId;
