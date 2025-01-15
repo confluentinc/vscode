@@ -75,6 +75,13 @@ describe("isConnectionStable", () => {
   });
 
   it("should raise when asked about a local connection (not implemented yet)", () => {
-    assert.throws(() => isConnectionStable(TEST_LOCAL_CONNECTION));
+    assert.throws(
+      () =>
+        isConnectionStable({
+          action: ConnectionEventAction.UPDATED,
+          connection: TEST_LOCAL_CONNECTION,
+        }),
+      /Unhandled connection type LOCAL/,
+    );
   });
 });
