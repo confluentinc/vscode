@@ -18,9 +18,11 @@ install-test-dependencies:
 			sudo apt-get update; \
 			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
+			sudo mkdir /usr/local/Caskroom; \
+			sudo chmod 775 /usr/local/Caskroom; \
 			brew update; \
-			brew install gtk+3; \
-			brew install --cask xquartz; \
+			HOMEBREW_NO_AUTO_UPDATE=1 brew install gtk+3; \
+			HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask xquartz; \
 	else \
 			echo "Unsupported OS for headless testing"; \
 			exit 1; \
