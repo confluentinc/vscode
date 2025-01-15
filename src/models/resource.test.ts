@@ -4,7 +4,9 @@ import {
   TEST_DIRECT_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
-import { isCCloud, isDirect, isLocal } from "./resource";
+import { ConnectionType } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { ConnectionId, connectionIdToType, isCCloud, isDirect, isLocal } from "./resource";
 import { KafkaTopic } from "./topic";
 
 type ConnectionTypeMatches = [KafkaTopic, boolean, boolean, boolean];
@@ -27,4 +29,19 @@ describe("isLocal/isCCloud/isDirect helper functions", () => {
       assert.equal(isDirect(resource), direct);
     });
   }
+});
+
+describe("connectionIdToType tests", () => {
+  it("should return Local for LOCAL_CONNECTION_ID", () => {
+    assert.equal(connectionIdToType(LOCAL_CONNECTION_ID), ConnectionType.Local);
+  });
+  it("should return Ccloud for CCLOUD_CONNECTION_ID", () => {
+    assert.equal(connectionIdToType(CCLOUD_CONNECTION_ID), ConnectionType.Ccloud);
+  });
+  it("should return Direct for a UUID", () => {
+    assert.equal(
+      connectionIdToType("123e4567-e89b-12d3-a456-426614174000" as ConnectionId),
+      ConnectionType.Direct,
+    );
+  });
 });

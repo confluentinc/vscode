@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { KafkaCluster } from "./models/kafkaCluster";
-import { ConnectionId } from "./models/resource";
+import { ConnectionId, EnvironmentId } from "./models/resource";
 import { SchemaRegistry } from "./models/schemaRegistry";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
@@ -23,7 +23,7 @@ export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 
 /** Fired whenever a property of an {@link Environment} has changed. (Mainly to affect watchers in
  * the Topics/Schemas views, or similar.) */
-export const environmentChanged = new vscode.EventEmitter<string>(); // TODO: update to EnvironmentId once used
+export const environmentChanged = new vscode.EventEmitter<EnvironmentId>();
 
 /**
  * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
