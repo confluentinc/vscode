@@ -201,15 +201,8 @@ export async function produceMessageFromDocument(topic: KafkaTopic) {
     return;
   }
 
-  const docContent: LoadedDocumentContent = await loadDocumentContent(messageUri);
-  if (docContent.content === undefined) {
-    vscode.window.showErrorMessage("Could not read JSON file");
-    return;
-  }
-
-  const message = JSON.parse(docContent.content);
-  if (!message.key || !message.value || !Array.isArray(message.headers)) {
-    vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
+  const message = await loadAndValidateContent(messageUri);
+  if (!message) {
     return;
   }
 
@@ -230,6 +223,7 @@ export async function produceMessageFromDocument(topic: KafkaTopic) {
     headers,
     key: keyData,
     value: valueData,
+    timestamp: message.timestamp ?? null, // let the sidecar provide this
   };
   const request: ProduceRecordRequest = {
     topic_name: topic.name,
@@ -320,6 +314,69 @@ export async function createProduceRequestData(
     // subject_name_strategy: null,
   };
   return { keyData, valueData };
+}
+
+export async function loadAndValidateContent(messageUri: vscode.Uri) {
+  const docContent: LoadedDocumentContent = await loadDocumentContent(messageUri);
+  if (docContent.content === undefined) {
+    vscode.window.showErrorMessage("Could not read JSON file");
+    return;
+  }
+
+  const message = JSON.parse(docContent.content);
+  const missingFields: Map<string, any> = new Map();
+  if (!message.key) {
+    missingFields.set("key", "");
+  }
+  if (!message.value) {
+    missingFields.set("value", "");
+  }
+  if (!message.headers) {
+    missingFields.set("headers", []);
+  }
+  if (missingFields.size === 0) {
+    return message;
+  }
+
+  const choice = await vscode.window.showWarningMessage(
+    `Message is missing required fields: ${Array.from(missingFields.keys()).join(", ")}. Would you like to add them?`,
+    "Apply Fix",
+    "Show Diff",
+  );
+
+  // show diff or apply changes for the missing field(s)
+  const document: vscode.TextDocument = await vscode.workspace.openTextDocument(messageUri);
+  const insertPosition = document.positionAt(1);
+  const edit = new vscode.WorkspaceEdit();
+  const insertText = Array.from(missingFields.entries())
+    .map(([field, value]) => {
+      const valueStr = JSON.stringify(value);
+      return `\n  "${field}": ${valueStr},`;
+    })
+    .join("");
+
+  if (choice === "Apply Fix") {
+    edit.insert(document.uri, insertPosition, insertText);
+    await vscode.workspace.applyEdit(edit);
+  } else if (choice === "Show Diff") {
+    // open a new untitled document with the missing fields added, then diff with the original doc
+    const diffUri = messageUri.with({ scheme: "untitled", path: `${messageUri.path}.diff` });
+    const diffDoc: vscode.TextDocument = await vscode.workspace.openTextDocument(diffUri);
+    await vscode.languages.setTextDocumentLanguage(diffDoc, "json");
+    const diffEdit = new vscode.WorkspaceEdit();
+    // copy the original content over with the possible fixes
+    const origContent = document.getText();
+    const newContent = origContent.slice(0, 1) + insertText + origContent.slice(1);
+    diffEdit.insert(diffDoc.uri, new vscode.Position(0, 0), newContent);
+    await vscode.workspace.applyEdit(diffEdit);
+    // open the diff view
+    await vscode.commands.executeCommand(
+      "vscode.diff",
+      messageUri,
+      diffUri,
+      "Original Message ↔ Fixed Message",
+    );
+  }
 }
 
 export function registerTopicCommands(): vscode.Disposable[] {
