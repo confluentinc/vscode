@@ -9,6 +9,7 @@ import {
 } from "../../tests/unit/testResources/connection";
 
 import { ConnectedState, Status } from "../clients/sidecar/models";
+import { ConnectionEventAction, ConnectionEventBody } from "../ws/messageTypes";
 import { isConnectionStable } from "./connectionStatusUtils";
 
 describe("isConnectionStable", () => {
@@ -27,11 +28,14 @@ describe("isConnectionStable", () => {
     ];
 
     for (const [connectedState, expectedResult] of testCases) {
-      const testConnection = {
-        ...TEST_CCLOUD_CONNECTION,
-        status: {
-          ccloud: { state: connectedState },
-          ...testAuthStatus,
+      const testConnection: ConnectionEventBody = {
+        action: ConnectionEventAction.UPDATED,
+        connection: {
+          ...TEST_CCLOUD_CONNECTION,
+          status: {
+            ccloud: { state: connectedState },
+            ...testAuthStatus,
+          },
         },
       };
       assert.strictEqual(isConnectionStable(testConnection), expectedResult);
@@ -56,11 +60,14 @@ describe("isConnectionStable", () => {
 
     for (const [kafkaState, schemaRegistryState, expectedResult] of testCases) {
       const testConnection = {
-        ...TEST_DIRECT_CONNECTION,
-        status: {
-          kafka_cluster: { state: kafkaState },
-          schema_registry: { state: schemaRegistryState },
-          ...testAuthStatus,
+        action: ConnectionEventAction.UPDATED,
+        connection: {
+          ...TEST_DIRECT_CONNECTION,
+          status: {
+            kafka_cluster: { state: kafkaState },
+            schema_registry: { state: schemaRegistryState },
+            ...testAuthStatus,
+          },
         },
       };
       assert.strictEqual(isConnectionStable(testConnection), expectedResult);
