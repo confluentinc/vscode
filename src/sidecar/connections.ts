@@ -320,7 +320,7 @@ export type ConnectionUpdatePredicate = (event: ConnectionEventBody) => boolean;
 export type ConnectionEventHandler = (event: ConnectionEventBody) => void;
 
 /** Entry type kept in a per connection-id Map within ConnectionStateWatcher. */
-class SingleConnectionEntry {
+export class SingleConnectionEntry {
   connectionId: ConnectionId;
   mostRecentEvent: ConnectionEventBody | null = null;
   eventEmitter: EventEmitter<ConnectionEventBody> = new EventEmitter<ConnectionEventBody>();
@@ -340,12 +340,19 @@ class SingleConnectionEntry {
     return connectionIdToType(this.connectionId);
   }
 
-  get connection(): Connection | undefined {
-    return this.mostRecentEvent?.connection;
+  get connection(): Connection | null {
+    return this.mostRecentEvent?.connection || null;
   }
 
   /** Update the most recent Connection-bearing announcement and fire the event emitter. */
   handleUpdate(event: ConnectionEventBody): void {
+    // If the connection id != our connection id, raise an error.
+    if (event.connection.id !== this.connectionId) {
+      throw new Error(
+        `SingleConnectionEntry.handleUpdate(): received event for connection ${event.connection.id} but expected ${this.connectionId}`,
+        // JSON.stringify(event, null, 2),
+      );
+    }
     // Do not fire the event emitter if the event is a duplicate of the most recent event.
     // (hopefully doesn't happen, but just in case)
     if (
