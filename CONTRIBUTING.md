@@ -335,6 +335,67 @@ To run functional tests:
 
     gulp functional
 
+### Updating OpenAPI clients
+
+We use [`openapi-generator-cli`](https://openapi-generator.tech/docs/usage) with the
+[`typescript-fetch` generator](https://openapi-generator.tech/docs/generators/typescript-fetch/) to
+create the client code from [OpenAPI specs](https://www.openapis.org/what-is-openapi).
+
+The generated client code helps to make requests to the services defined in the OpenAPI specs
+without needing to manually write the request/response structures, middlewares, handlers, and more.
+
+#### Generating the client code
+
+To generate the client code, run the `apigen` task:
+
+    gulp apigen
+
+This task generates the client code for all OpenAPI specs in the `src/clients` directory.
+
+#### Adding a new OpenAPI spec
+
+1. Copy the associated OpenAPI spec file(s) to the `src/clients` directory.
+   - For requests handled by the sidecar\*, place them in the `src/clients/sidecar-openapi-specs`
+     directory.
+   - For other requests (like to the local Docker engine API), place them in the `src/clients`
+     directory.
+2. Update the `apigen` task's `clients` array in the
+   [`Gulpfile.js`](https://github.com/confluentinc/vscode/blob/main/Gulpfile.js) to include the path
+   of the new OpenAPI spec file(s) and their destination directory. For example:
+
+```diff
+const clients = [
+  // existing clients
+  ["src/clients/sidecar-openapi-specs/sidecar.openapi.yaml", "src/clients/sidecar"],
+  ["src/clients/sidecar-openapi-specs/ce-kafka-rest.openapi.yaml", "src/clients/kafkaRest"],
+  ["src/clients/sidecar-openapi-specs/schema-registry.openapi.yaml", "src/clients/schemaRegistryRest"],
+  ["src/clients/sidecar-openapi-specs/scaffolding-service.openapi.yaml", "src/clients/scaffoldingService"],
+- ["src/clients/docker.openapi.yaml", "src/clients/docker"]
++ ["src/clients/docker.openapi.yaml", "src/clients/docker"],
++ ["src/clients/sidecar-openapi-specs/new-service-openapi.yaml", "src/clients/newService"],
+];
+```
+
+3. Run the `apigen` task:
+
+```
+   gulp apigen
+```
+
+\*_For sidecar-handled requests, update
+[`SidecarHandle`](https://github.com/confluentinc/vscode/blob/main/src/sidecar/sidecarHandle.ts)
+with any custom headers and/or other configurations._
+
+#### Manual adjustments to OpenAPI specs
+
+Sometimes, we need to make manual adjustments to OpenAPI specs before generating the client code. To
+ensure these changes are not lost, we have a
+[`src/clients/sidecar-openapi-specs/patches` directory](https://github.com/confluentinc/vscode/tree/main/src/clients/sidecar-openapi-specs/patches)
+where we can store these changes as `.patch` files.
+
+The `apigen` task tries to apply these patches to the OpenAPI specs before generating the client
+code by using a glob pattern to find all `.patch` files in the `patches` directory.
+
 ### Updating NOTICE files
 
 <!-- prettier-ignore -->
