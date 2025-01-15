@@ -33,6 +33,11 @@ export interface GatewayV1ConnectionsIdGetRequest {
   id: string;
 }
 
+export interface GatewayV1ConnectionsIdPatchRequest {
+  id: string;
+  body?: object;
+}
+
 export interface GatewayV1ConnectionsIdPutRequest {
   id: string;
   ConnectionSpec?: ConnectionSpec;
@@ -160,6 +165,52 @@ export class ConnectionsResourceApi extends runtime.BaseAPI {
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<Connection> {
     const response = await this.gatewayV1ConnectionsIdGetRaw(requestParameters, initOverrides);
+    return await response.value();
+  }
+
+  /**
+   */
+  async gatewayV1ConnectionsIdPatchRaw(
+    requestParameters: GatewayV1ConnectionsIdPatchRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<runtime.ApiResponse<Connection>> {
+    if (requestParameters["id"] == null) {
+      throw new runtime.RequiredError(
+        "id",
+        'Required parameter "id" was null or undefined when calling gatewayV1ConnectionsIdPatch().',
+      );
+    }
+
+    const queryParameters: any = {};
+
+    const headerParameters: runtime.HTTPHeaders = {};
+
+    headerParameters["Content-Type"] = "application/json";
+
+    const response = await this.request(
+      {
+        path: `/gateway/v1/connections/{id}`.replace(
+          `{${"id"}}`,
+          encodeURIComponent(String(requestParameters["id"])),
+        ),
+        method: "PATCH",
+        headers: headerParameters,
+        query: queryParameters,
+        body: requestParameters["body"] as any,
+      },
+      initOverrides,
+    );
+
+    return new runtime.JSONApiResponse(response, (jsonValue) => ConnectionFromJSON(jsonValue));
+  }
+
+  /**
+   */
+  async gatewayV1ConnectionsIdPatch(
+    requestParameters: GatewayV1ConnectionsIdPatchRequest,
+    initOverrides?: RequestInit | runtime.InitOverrideFunction,
+  ): Promise<Connection> {
+    const response = await this.gatewayV1ConnectionsIdPatchRaw(requestParameters, initOverrides);
     return await response.value();
   }
 
