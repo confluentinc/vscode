@@ -479,8 +479,6 @@ components:
     AuthError:
       type: object
       properties:
-        created_at:
-          $ref: "#/components/schemas/Instant"
         message:
           type: string
         is_transient:
