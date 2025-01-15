@@ -21,12 +21,6 @@ import { mapValues } from "../runtime";
 export interface AuthError {
   /**
    *
-   * @type {Date}
-   * @memberof AuthError
-   */
-  created_at?: Date;
-  /**
-   *
    * @type {string}
    * @memberof AuthError
    */
@@ -55,7 +49,6 @@ export function AuthErrorFromJSONTyped(json: any, ignoreDiscriminator: boolean):
     return json;
   }
   return {
-    created_at: json["created_at"] == null ? undefined : new Date(json["created_at"]),
     message: json["message"] == null ? undefined : json["message"],
     is_transient: json["is_transient"] == null ? undefined : json["is_transient"],
   };
@@ -74,7 +67,6 @@ export function AuthErrorToJSONTyped(
   }
 
   return {
-    created_at: value["created_at"] == null ? undefined : value["created_at"].toISOString(),
     message: value["message"],
     is_transient: value["is_transient"],
   };

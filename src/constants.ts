@@ -1,10 +1,13 @@
-import { extensions } from "vscode";
+import { env, extensions } from "vscode";
 import { ConnectionSpec } from "./clients/sidecar";
 import { ConnectionId } from "./models/resource";
 
 export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */
 export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.packageJSON.version;
+
+/** The URI used when completing the CCloud authentication flow in the browser. */
+export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
@@ -40,9 +43,12 @@ export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
 
 /** Single CCloud connection spec to be used with the sidecar Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
-  id: "vscode-confluent-cloud-connection",
+  id: `${env.uriScheme}-confluent-cloud-connection`,
   name: "Confluent Cloud",
   type: "CCLOUD",
+  ccloud_config: {
+    ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
+  },
 };
 // these two avoid the need to use `CCLOUD_CONNECTION_SPEC.id!` or `CCLOUD_CONNECTION_SPEC.name!`
 // everywhere in the codebase
@@ -51,7 +57,7 @@ export const CCLOUD_CONNECTION_NAME = CCLOUD_CONNECTION_SPEC.name!;
 
 /** Single local connection spec to be used with the sidecar Connections API. */
 export const LOCAL_CONNECTION_SPEC: ConnectionSpec = {
-  id: "vscode-local-connection",
+  id: `${env.uriScheme}-local-connection`,
   name: "Local",
   type: "LOCAL",
 };

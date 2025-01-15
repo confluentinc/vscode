@@ -21,16 +21,16 @@ import { mapValues } from "../runtime";
 export interface HealthCheck {
   /**
    *
-   * @type {string}
-   * @memberof HealthCheck
-   */
-  name?: string;
-  /**
-   *
    * @type {object}
    * @memberof HealthCheck
    */
   data?: object | null;
+  /**
+   *
+   * @type {string}
+   * @memberof HealthCheck
+   */
+  name?: string;
   /**
    *
    * @type {string}
@@ -65,8 +65,8 @@ export function HealthCheckFromJSONTyped(json: any, ignoreDiscriminator: boolean
     return json;
   }
   return {
-    name: json["name"] == null ? undefined : json["name"],
     data: json["data"] == null ? undefined : json["data"],
+    name: json["name"] == null ? undefined : json["name"],
     status: json["status"] == null ? undefined : json["status"],
   };
 }
@@ -84,8 +84,8 @@ export function HealthCheckToJSONTyped(
   }
 
   return {
-    name: value["name"],
     data: value["data"],
+    name: value["name"],
     status: value["status"],
   };
 }

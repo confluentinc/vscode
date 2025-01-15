@@ -157,7 +157,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Failure"
         "401":
-          description: Could not authenticate with updated connection configuration
+          description: Could not authenticate
           content:
             application/json:
               schema:
@@ -180,6 +180,45 @@ paths:
       responses:
         "204":
           description: No Content
+    patch:
+      tags:
+      - Connections Resource
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JsonMergePatch"
+      responses:
+        "200":
+          description: Connection updated with PATCH
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        "404":
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "401":
+          description: Could not authenticate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
   /gateway/v1/feature-flags/{id}/value:
     get:
       tags:
@@ -415,8 +454,6 @@ components:
     AuthError:
       type: object
       properties:
-        created_at:
-          $ref: "#/components/schemas/Instant"
         message:
           type: string
         is_transient:
@@ -465,8 +502,6 @@ components:
           - $ref: "#/components/schemas/Password"
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
-      required:
-      - organization_id
       type: object
       properties:
         organization_id:
@@ -474,6 +509,12 @@ components:
             default organization is used when absent.
           maxLength: 36
           minLength: 36
+          type: string
+        ide_auth_callback_uri:
+          description: The URI that users will be redirected to after successfully
+            completing the authentication flow with Confluent Cloud.
+          maxLength: 200
+          minLength: 10
           type: string
     CCloudStatus:
       description: The status related to CCloud.
@@ -673,6 +714,8 @@ components:
       format: date-time
       type: string
       example: 2022-03-10T16:15:50Z
+    JsonMergePatch:
+      type: object
     JsonNode:
       type: object
       properties:
@@ -858,10 +901,15 @@ components:
             provider.
           minimum: 0
           type: integer
-        identityPool:
+        ccloud_logical_cluster_id:
+          description: "Additional property that can be added in the request header\
+            \ to identify the logical cluster ID to connect to. For example, this\
+            \ may be a Confluent Cloud Kafka or Schema Registry cluster ID."
+          type: string
+        ccloud_identity_pool_id:
           description: "Additional property that can be added in the request header\
             \ to identify the principal ID for authorization. For example, this may\
-            \ bea Confluent Cloud identity pool."
+            \ be a Confluent Cloud identity pool ID."
           type: string
     PartitionConsumeData:
       type: object
@@ -1155,11 +1203,11 @@ components:
     HealthCheck:
       type: object
       properties:
-        name:
-          type: string
         data:
           type: object
           nullable: true
+        name:
+          type: string
         status:
           enum:
           - UP

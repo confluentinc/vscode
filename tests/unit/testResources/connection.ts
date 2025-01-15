@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { Connection, ConnectionType, UserInfo } from "../../../src/clients/sidecar";
 import {
+  CCLOUD_AUTH_CALLBACK_URI,
   CCLOUD_CONNECTION_ID,
   CCLOUD_CONNECTION_SPEC,
   LOCAL_CONNECTION_ID,
@@ -34,6 +35,7 @@ export const TEST_CCLOUD_CONNECTION: Connection = {
     ...CCLOUD_CONNECTION_SPEC,
     ccloud_config: {
       organization_id: TEST_CCLOUD_ORGANIZATION.id,
+      ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
     },
   },
   status: {
