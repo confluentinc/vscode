@@ -8,9 +8,80 @@ import {
   TEST_LOCAL_CONNECTION,
 } from "../../tests/unit/testResources/connection";
 
+import sinon from "sinon";
 import { ConnectedState, Status } from "../clients/sidecar/models";
+import { connectionStable, environmentChanged } from "../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../ws/messageTypes";
-import { isConnectionStable } from "./connectionStatusUtils";
+import { connectionEventHandler, isConnectionStable } from "./connectionStatusUtils";
+
+describe("connectionEventHandler", () => {
+  // signon sandbox for connectionStable and  environmentChanged event emitters
+  let sandbox: sinon.SinonSandbox;
+  let connectionStableFireStub: sinon.SinonStub;
+  let environmentChangedFireStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    connectionStableFireStub = sandbox.stub(connectionStable, "fire");
+    environmentChangedFireStub = sandbox.stub(environmentChanged, "fire");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  for (const action of [
+    ConnectionEventAction.CREATED,
+    ConnectionEventAction.UPDATED,
+    ConnectionEventAction.CONNECTED,
+    ConnectionEventAction.DELETED,
+    ConnectionEventAction.DISCONNECTED,
+  ]) {
+    it(`should fire when stable direct connection ${action} event received`, () => {
+      // Arrange
+      const testConnectionEvent: ConnectionEventBody = {
+        action: action,
+        connection: TEST_DIRECT_CONNECTION,
+      };
+
+      // Act
+      connectionEventHandler(testConnectionEvent);
+
+      // Assert
+      assert.strictEqual(connectionStableFireStub.calledOnce, true);
+      // called with the connection id
+      assert.strictEqual(connectionStableFireStub.calledWith(TEST_DIRECT_CONNECTION.id), true);
+
+      assert.strictEqual(environmentChangedFireStub.calledOnce, true);
+      // called with the connection id cast as environment id
+      assert.strictEqual(environmentChangedFireStub.calledWith(TEST_DIRECT_CONNECTION.id), true);
+    });
+  }
+
+  it("should not fire when unstable direct connection event received", () => {
+    // Arrange
+    const testConnectionEvent: ConnectionEventBody = {
+      action: ConnectionEventAction.UPDATED,
+      connection: {
+        ...TEST_DIRECT_CONNECTION,
+        status: {
+          // either one of these being in Attempting state should prevent firing.
+          kafka_cluster: { state: ConnectedState.Attempting },
+          schema_registry: { state: ConnectedState.Success },
+          authentication: { status: Status.NoToken },
+        },
+      },
+    };
+
+    // Act
+    connectionEventHandler(testConnectionEvent);
+
+    // Assert
+    assert.strictEqual(connectionStableFireStub.notCalled, true);
+    assert.strictEqual(environmentChangedFireStub.notCalled, true);
+  });
+});
 
 describe("isConnectionStable", () => {
   const testAuthStatus = { authentication: { status: Status.NoToken } };
