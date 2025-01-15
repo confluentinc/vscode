@@ -33,7 +33,7 @@ import {
 } from "../emitters";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
-import { ConnectionId, EnvironmentId, idToType } from "../models/resource";
+import { ConnectionId, connectionIdToType, EnvironmentId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
 import { ConnectionEventBody, Message, MessageType } from "../ws/messageTypes";
 import { connectionEventHandler, isConnectionStable } from "./connectionStatusUtils";
@@ -337,7 +337,7 @@ class SingleConnectionEntry {
   }
 
   get connectionType(): ConnectionType {
-    return idToType(this.connectionId);
+    return connectionIdToType(this.connectionId);
   }
 
   get connection(): Connection | undefined {

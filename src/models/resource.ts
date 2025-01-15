@@ -9,7 +9,7 @@ export type EnvironmentId = string & { readonly brand: unique symbol };
 
 // Function to convert a ConnectionId to a ConnectionType, because we can always
 // go from one to the other.
-export function idToType(id: ConnectionId): ConnectionType {
+export function connectionIdToType(id: ConnectionId): ConnectionType {
   if (id === LOCAL_CONNECTION_ID) {
     return ConnectionType.Local;
   } else if (id === CCLOUD_CONNECTION_ID) {
