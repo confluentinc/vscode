@@ -361,13 +361,7 @@ describe("SingleConnectionEntry tests", () => {
 
     eventEmitterFireSub.reset();
 
-    // Passing in an equivalent event object should not trigger a fire (test the dejittering)
-    singleConnectionEntry.handleUpdate(firstEvent);
-    assert.ok(eventEmitterFireSub.notCalled);
-    // still assigned.
-    assert.deepEqual(firstEvent.connection, singleConnectionEntry.connection);
-
-    // But a new event about the same connection should trigger a fire.
+    // Anew event about the same connection should trigger a subsequent fire.
     const secondEvent: ConnectionEventBody = {
       action: ConnectionEventAction.UPDATED,
       connection: {

@@ -1,5 +1,3 @@
-import deepEqual from "deep-equal";
-
 import { authentication, AuthenticationSession, EventEmitter } from "vscode";
 import { getSidecar } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
@@ -349,19 +347,6 @@ export class SingleConnectionEntry {
         `SingleConnectionEntry.handleUpdate(): received event for connection ${event.connection.id} but expected ${this.connectionId}`,
         // JSON.stringify(event, null, 2),
       );
-    }
-    // Do not fire the event emitter if the event is a duplicate of the most recent event.
-    // (hopefully doesn't happen, but just in case)
-    if (
-      this.mostRecentEvent &&
-      this.mostRecentEvent.action === event.action &&
-      deepEqual(this.mostRecentEvent.connection, event.connection)
-    ) {
-      logger.warn(
-        `SingleConnectionEntry.handleUpdate(): received duplicate event for connection ${this.connectionId}`,
-        // JSON.stringify(event, null, 2),
-      );
-      return;
     }
 
     // New info. Update the most recent event and fire the event emitter.
