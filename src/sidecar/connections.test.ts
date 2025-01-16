@@ -4,6 +4,7 @@ import * as sidecar from ".";
 import {
   TEST_CCLOUD_CONNECTION,
   TEST_DIRECT_CONNECTION,
+  TEST_DIRECT_CONNECTION_ID,
   TEST_LOCAL_CONNECTION,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -11,6 +12,7 @@ import {
   ConnectedState,
   Connection,
   ConnectionsResourceApi,
+  ConnectionType,
   ResponseError,
   Status,
 } from "../clients/sidecar";
@@ -22,12 +24,19 @@ import {
 } from "../emitters";
 import { ConnectionId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
-import { ConnectionEventAction, Message, MessageType, newMessageHeaders } from "../ws/messageTypes";
+import {
+  ConnectionEventAction,
+  ConnectionEventBody,
+  Message,
+  MessageType,
+  newMessageHeaders,
+} from "../ws/messageTypes";
 import {
   clearCurrentCCloudResources,
   ConnectionStateWatcher,
   getLocalConnection,
   hasCCloudAuthSession,
+  SingleConnectionEntry,
   tryToCreateConnection,
   tryToDeleteConnection,
   tryToUpdateConnection,
@@ -140,13 +149,13 @@ describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
 
   let sandbox: sinon.SinonSandbox;
   let clock: sinon.SinonFakeTimers;
-  let connectionUsableFireStub: sinon.SinonStub;
+  let connectionStableFireStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     // stub the event emitter
-    connectionUsableFireStub = sandbox.stub(connectionStable, "fire");
+    connectionStableFireStub = sandbox.stub(connectionStable, "fire");
   });
 
   afterEach(() => {
@@ -251,7 +260,7 @@ describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
       const result = await connectionPromise;
       assert.strictEqual(result, null);
       // even if we hit a timeout, we need to stop the "loading" state
-      assert.ok(connectionUsableFireStub.calledOnce);
+      assert.ok(connectionStableFireStub.calledOnce);
     });
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should wait for websocket event if the connection is not found initially`, async () => {
@@ -303,4 +312,88 @@ describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
       assert.ok(isConnectionStableSpy.calledOnce);
     });
   }
+});
+
+describe("SingleConnectionEntry tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let eventEmitterFireSub: sinon.SinonStub;
+  let singleConnectionEntry: SingleConnectionEntry;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    singleConnectionEntry = new SingleConnectionEntry(TEST_DIRECT_CONNECTION_ID);
+    eventEmitterFireSub = sandbox.stub(singleConnectionEntry.eventEmitter, "fire");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("constructor tests", () => {
+    // as derived from the connection id
+    assert.strictEqual(ConnectionType.Direct, singleConnectionEntry.connectionType);
+    // won't be set until we get a connection
+    assert.strictEqual(null, singleConnectionEntry.connection);
+  });
+
+  it("SingleConnectionEntry handleUpdate tests", () => {
+    // Arrange
+    const firstEvent: ConnectionEventBody = {
+      action: ConnectionEventAction.CREATED,
+      connection: {
+        ...TEST_DIRECT_CONNECTION,
+        status: {
+          kafka_cluster: { state: ConnectedState.Attempting },
+          schema_registry: { state: ConnectedState.Attempting },
+          authentication: { status: Status.NoToken },
+        },
+      },
+    };
+
+    // edging from no prior state to a new state should retain the new state
+    // and fire the event.
+    singleConnectionEntry.handleUpdate(firstEvent);
+
+    assert.deepEqual(firstEvent, singleConnectionEntry.mostRecentEvent);
+    assert.ok(eventEmitterFireSub.calledOnce);
+    // Now assigned.
+    assert.deepEqual(firstEvent.connection, singleConnectionEntry.connection);
+
+    eventEmitterFireSub.reset();
+
+    // Anew event about the same connection should trigger a subsequent fire.
+    const secondEvent: ConnectionEventBody = {
+      action: ConnectionEventAction.UPDATED,
+      connection: {
+        ...TEST_DIRECT_CONNECTION,
+        status: {
+          kafka_cluster: { state: ConnectedState.Success },
+          schema_registry: { state: ConnectedState.Success },
+          authentication: { status: Status.ValidToken },
+        },
+      },
+    };
+
+    singleConnectionEntry.handleUpdate(secondEvent);
+    assert.ok(eventEmitterFireSub.calledOnce);
+    // reassigned.
+    assert.deepEqual(secondEvent.connection, singleConnectionEntry.connection);
+  });
+
+  it("handleUpdate throws error if called with a mismatched connection", () => {
+    const badEvent: ConnectionEventBody = {
+      action: ConnectionEventAction.CREATED,
+      connection: {
+        // wrong connection id from what singleConnectionEntry created to track.
+        ...TEST_CCLOUD_CONNECTION,
+        status: {
+          kafka_cluster: { state: ConnectedState.Attempting },
+          schema_registry: { state: ConnectedState.Attempting },
+          authentication: { status: Status.NoToken },
+        },
+      },
+    };
+
+    assert.throws(() => singleConnectionEntry.handleUpdate(badEvent));
+  });
 });
