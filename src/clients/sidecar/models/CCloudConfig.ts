@@ -24,14 +24,19 @@ export interface CCloudConfig {
    * @type {string}
    * @memberof CCloudConfig
    */
-  organization_id: string;
+  organization_id?: string;
+  /**
+   * The URI that users will be redirected to after successfully completing the authentication flow with Confluent Cloud.
+   * @type {string}
+   * @memberof CCloudConfig
+   */
+  ide_auth_callback_uri?: string;
 }
 
 /**
  * Check if a given object implements the CCloudConfig interface.
  */
 export function instanceOfCCloudConfig(value: object): value is CCloudConfig {
-  if (!("organization_id" in value) || value["organization_id"] === undefined) return false;
   return true;
 }
 
@@ -44,7 +49,9 @@ export function CCloudConfigFromJSONTyped(json: any, ignoreDiscriminator: boolea
     return json;
   }
   return {
-    organization_id: json["organization_id"],
+    organization_id: json["organization_id"] == null ? undefined : json["organization_id"],
+    ide_auth_callback_uri:
+      json["ide_auth_callback_uri"] == null ? undefined : json["ide_auth_callback_uri"],
   };
 }
 
@@ -62,5 +69,6 @@ export function CCloudConfigToJSONTyped(
 
   return {
     organization_id: value["organization_id"],
+    ide_auth_callback_uri: value["ide_auth_callback_uri"],
   };
 }
