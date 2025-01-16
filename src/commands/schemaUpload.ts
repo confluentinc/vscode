@@ -13,7 +13,7 @@ import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
-import { uriQuickpick } from "../quickpicks/uris";
+import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
@@ -70,27 +70,17 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     return;
   }
 
-  let content: string | undefined;
-  let document: vscode.TextDocument | undefined;
-  let languageId: string | undefined;
-  if (schemaUri.scheme === "file") {
-    // file may not be open/visible, so read it directly
-    const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
-    content = Buffer.from(contentArray).toString("utf-8");
-  } else {
-    // "untitled" and SCHEMA_URI_SCHEME URIs are treated the same way since they aren't saved to
-    // the file system and are always open in an editor if they were chosen through the quickpick
-    document = await vscode.workspace.openTextDocument(schemaUri);
-    content = document.getText();
-    languageId = document.languageId;
-  }
-  if (content === undefined) {
+  const docContent: LoadedDocumentContent = await loadDocumentContent(schemaUri);
+  if (docContent.content === undefined) {
     vscode.window.showErrorMessage("Could not read schema file");
     return;
   }
 
   // What kind of schema is this? We must tell the schema registry.
-  const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri, languageId);
+  const schemaType: SchemaType | undefined = await determineSchemaType(
+    schemaUri,
+    docContent.openDocument?.languageId,
+  );
   if (!schemaType) {
     // the only way we get here is if the user bailed on the schema type quickpick after we failed
     // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
@@ -114,7 +104,7 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     return;
   }
 
-  await uploadSchema(registry, subject, schemaType, content);
+  await uploadSchema(registry, subject, schemaType, docContent.content);
 }
 
 async function uploadSchema(
