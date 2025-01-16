@@ -338,7 +338,7 @@
         "enablement": "false"
       },
       {
-        "command": "confluent.topic.produce.fromFile",
+        "command": "confluent.topic.produce.fromDocument",
         "title": "Produce Message to Kafka Topic from schemaless JSON file",
         "icon": "$(send)",
         "category": "Confluent: Topic"
@@ -545,7 +545,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.topic.produce.fromFile",
+          "command": "confluent.topic.produce.fromDocument",
           "when": "false"
         },
         {
@@ -879,7 +879,7 @@
           "group": "4_copy@3"
         },
         {
-          "command": "confluent.topic.produce.fromFile",
+          "command": "confluent.topic.produce.fromDocument",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
           "group": "inline@1"
         },
