@@ -1,11 +1,11 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { getCCloudAuthSession } from "../authn/utils";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
-import { getCCloudAuthSession } from "../sidecar/connections";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
 

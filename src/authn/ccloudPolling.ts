@@ -4,9 +4,8 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
-import { getCCloudAuthSession, getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
-import { IntervalPoller } from "../utils/timing";
+import { getCCloudAuthSession } from "./utils";
 
 const logger = new Logger("authn.ccloudPolling");
 
@@ -46,30 +45,9 @@ export class AuthPromptTracker {
   }
 }
 
-/**
- * Poller to call {@link watchCCloudConnectionStatus} every 10 seconds to check the auth status of
- * the current CCloud connection.
- *
- * Starting and stopping is handled by the `ConfluentCloudAuthProvider` based on changes to the
- * authentication session state.
- */
-export const pollCCloudConnectionAuth = new IntervalPoller(
-  "pollCCloudConnectionAuth",
-  watchCCloudConnectionStatus,
-  10_000,
-  5_000,
-);
-
 /** Checks the current CCloud connection's authentication status passes the connection through for
  * checking authentication expiration and errors. */
-export async function watchCCloudConnectionStatus(): Promise<void> {
-  const connection: Connection | null = await getCCloudConnection();
-  if (!connection) {
-    // warn because the poller shouldn't be active if we don't have a connection
-    logger.warn("no connection found for current auth session");
-    return;
-  }
-
+export async function watchCCloudConnectionStatus(connection: Connection): Promise<void> {
   logger.debug("checking auth status for CCloud connection", {
     status: connection.status.authentication.status,
     expiration: connection.status.authentication.requires_authentication_at,
@@ -81,15 +59,11 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
 
   await getResourceManager().setCCloudAuthStatus(authStatus);
   if (authStatus === "INVALID_TOKEN") {
-    // poll faster to try and get to a non-transient status as quickly as possible since it's going
-    // to affect how our CCloudAuthStatusMiddleware behaves
-    pollCCloudConnectionAuth.useFastFrequency();
-    // ...and don't bother checking for expiration or errors until we get another status back
+    // Don't bother checking for expiration or errors until we get another status back
     return;
   } else {
     // ensure any open progress notifications are closed even if no requests are going through the middleware
     nonInvalidTokenStatus.fire();
-    pollCCloudConnectionAuth.useSlowFrequency();
   }
 
   // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,

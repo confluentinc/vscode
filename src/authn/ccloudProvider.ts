@@ -21,7 +21,7 @@ import { getResourceManager } from "../storage/resourceManager";
 import { UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
-import { openExternal, pollCCloudConnectionAuth } from "./ccloudPolling";
+import { openExternal } from "./ccloudPolling";
 
 const logger = new Logger("authn.ccloudProvider");
 
@@ -457,7 +457,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       removed: [],
       changed: [],
     });
-    pollCCloudConnectionAuth.start();
     this.updateContextValue(true);
 
     // updating secrets is cross-workspace-scoped
@@ -478,7 +477,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     logger.debug("handleSessionRemoved()", { updateSecret });
     this.updateContextValue(false);
     await clearCurrentCCloudResources();
-    pollCCloudConnectionAuth.stop();
     if (!this._session) {
       logger.debug("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
     } else {
