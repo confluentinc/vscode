@@ -1,8 +1,25 @@
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 
 /** A uniquely-branded string-type for a connection ID. */
 export type ConnectionId = string & { readonly brand: unique symbol };
+
+/** Likewise for environment ids. Note that Direct Connection ids also double as environment ids. */
+export type EnvironmentId = string & { readonly brand: unique symbol };
+
+// Function to convert a ConnectionId to a ConnectionType, because we can always
+// go from one to the other.
+export function connectionIdToType(id: ConnectionId): ConnectionType {
+  if (id === LOCAL_CONNECTION_ID) {
+    return ConnectionType.Local;
+  } else if (id === CCLOUD_CONNECTION_ID) {
+    return ConnectionType.Ccloud;
+  } else {
+    // Otherwise is a UUID-based Direct connection
+    return ConnectionType.Direct;
+  }
+}
+
 // TODO: use other branded resource ID types here
 
 export interface IResourceBase {
