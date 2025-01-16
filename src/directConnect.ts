@@ -1,6 +1,13 @@
 import { randomUUID } from "crypto";
 import { ViewColumn, window } from "vscode";
-import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
+import {
+  AuthErrors,
+  ConnectedState,
+  Connection,
+  ConnectionType,
+  instanceOfApiKeyAndSecret,
+  instanceOfBasicCredentials,
+} from "./clients/sidecar";
 import { DirectConnectionManager } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -208,26 +215,18 @@ export function parseTestResult(connection: Connection): TestResponse {
 function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
   const clean = { ...connection };
   if (clean.kafka_cluster?.credentials) {
-    // @ts-expect-error the types don't know which credentials are present
-    if (clean.kafka_cluster.credentials.password) {
-      // @ts-expect-error the types don't know which credentials are present
+    if (instanceOfBasicCredentials(clean.kafka_cluster.credentials)) {
       clean.kafka_cluster.credentials.password = "fakeplaceholdersecrethere";
     }
-    // @ts-expect-error the types don't know which credentials are present
-    if (clean.kafka_cluster.credentials.api_secret) {
-      // @ts-expect-error the types don't know which credentials are present
+    if (instanceOfApiKeyAndSecret(clean.kafka_cluster.credentials)) {
       clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
     }
   }
   if (clean.schema_registry?.credentials) {
-    // @ts-expect-error the types don't know which credentials are present
-    if (clean.schema_registry.credentials.password) {
-      // @ts-expect-error the types don't know which credentials are present
+    if (instanceOfBasicCredentials(clean.schema_registry.credentials)) {
       clean.schema_registry.credentials.password = "fakeplaceholdersecrethere";
     }
-    // @ts-expect-error the types don't know which credentials are present
-    if (clean.schema_registry.credentials.api_secret) {
-      // @ts-expect-error the types don't know which credentials are present
+    if (instanceOfApiKeyAndSecret(clean.schema_registry.credentials)) {
       clean.schema_registry.credentials.api_secret = "fakeplaceholdersecrethere";
     }
   }

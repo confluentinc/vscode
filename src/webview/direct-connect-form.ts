@@ -22,7 +22,6 @@ class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
     const fromHost = await post("GetConnectionSpec", {});
-    console.log("GetConnectionSpec", fromHost);
     return fromHost;
   }, null);
 
