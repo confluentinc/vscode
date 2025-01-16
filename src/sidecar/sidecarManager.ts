@@ -501,7 +501,15 @@ export class SidecarManager {
           false,
         );
         if (notifySidecarExceptions) {
-          showErrorNotificationWithButtons(`Sidecar error: ${errorMatch[2]}`);
+          showErrorNotificationWithButtons(`[Debugging] Sidecar error: ${errorMatch[2]}`, {
+            "Open Sidecar Logs": () =>
+              vscode.commands.executeCommand("confluent.showSidecarOutputChannel"),
+            "Open Settings": () =>
+              vscode.commands.executeCommand(
+                "workbench.action.openSettings",
+                "@id:confluent.debugging.showSidecarExceptions",
+              ),
+          });
         }
       }
       sidecarOutputChannel.appendLine(line);
