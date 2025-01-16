@@ -61,9 +61,11 @@
                     data-attr-name="this.field()[0]"
                     data-attr-value="this.getFieldValue(this.field()[0])"
                     data-on-input="this.handleInput(event)"
+                    data-on-blur="this.validateInput(event)"
                     data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
                     data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
                     data-attr-required="this.field()[1].min_length > 0"
+                    data-attr-pattern="this.field()[1].pattern ? this.field()[1].pattern : ''"
                   />
                 </div>
                 <span class="description" data-text="this.field()[1].description"></span>
@@ -71,7 +73,12 @@
             </template>
           </div>
         </template>
-        <input class="button" type="submit" value="Generate & Save" />
+        <input
+          class="button"
+          type="submit"
+          value="Generate & Save"
+          data-attr-disabled="this.hasValidationErrors() === true ? true : false"
+        />
       </form>
     </main>
 
@@ -125,6 +132,9 @@
       .dropdown > * {
         width: 250px;
       }
+      input:disabled {
+        cursor: not-allowed;
+      }
       .dropdown {
         display: flex;
         flex-direction: column;
@@ -143,6 +153,11 @@
         color: var(--vscode-descriptionForeground);
         font-weight: 700;
         font-style: italic;
+      }
+
+      .error {
+        color: var(--vscode-errorForeground);
+        border: 1px solid var(--vscode-errorForeground);
       }
     </style>
   </body>

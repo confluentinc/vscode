@@ -41,6 +41,10 @@ class ScaffoldFormViewModel extends ViewModel {
     return true;
   });
 
+  // Updated on blur in validateInput, based on inputs with class "error".
+  // Initially set to true to prevent form submission without touching fields
+  hasValidationErrors = this.signal(true);
+
   isEnumField(field: [string, ScaffoldV1TemplateOption]) {
     return field[1]._enum;
   }
@@ -49,11 +53,35 @@ class ScaffoldFormViewModel extends ViewModel {
     const input = event.target as HTMLInputElement;
     const key = input.name;
     const value = input.value;
+    input.classList.remove("error"); // reset error state, will be re-evaluated on blur
     post("SetOptionValue", { key, value });
+  }
+
+  validateInput(event: Event) {
+    console.log("validateInput");
+    const input = event.target as HTMLInputElement;
+    const key = input.name;
+    const value = input.value;
+    const minLength = this.spec()?.options?.[key]?.min_length;
+    const required = minLength !== undefined && minLength > 0;
+    const pattern = this.spec()?.options?.[key]?.pattern;
+    if (required && value.length < minLength) {
+      console.log(input.name, "not long enough");
+      input.classList.add("error");
+    } else if (value !== "" && pattern && !new RegExp(pattern).test(value)) {
+      console.log(input.name, "not valid");
+      input.classList.add("error");
+    } else {
+      console.log(input.name, "ok");
+      input.classList.remove("error");
+    }
+    this.hasValidationErrors(document.querySelectorAll(".input.error").length > 0);
   }
 
   handleSubmit(event: Event) {
     event.preventDefault();
+    this.hasValidationErrors(document.querySelectorAll(".input.error").length > 0);
+    if (this.hasValidationErrors()) return;
     const form = event.target as HTMLFormElement;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());

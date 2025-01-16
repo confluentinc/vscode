@@ -120,10 +120,6 @@
   line-height: normal;
   margin-bottom: 5px;
 }
-.label.required::after {
-  content: "*";
-  color: var(--vscode-inputValidation-errorBorder);
-}
 
 .hr {
   height: 1px;
@@ -173,6 +169,10 @@
 .input[type="submit"]:hover:not(:disabled),
 .button:hover:not(:disabled) {
   background-color: var(--vscode-button-hoverBackground);
+}
+.input[type="submit"]:disabled,
+.button:disabled {
+  opacity: 0.4;
 }
 .button.secondary {
   color: var(--vscode-button-secondaryForeground);
