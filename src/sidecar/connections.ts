@@ -31,10 +31,10 @@ import {
 } from "../emitters";
 import { logResponseError } from "../errors";
 import { Logger } from "../logging";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, connectionIdToType, EnvironmentId } from "../models/resource";
 import { getResourceManager } from "../storage/resourceManager";
-import { Message, MessageType } from "../ws/messageTypes";
-import { isConnectionStable } from "./connectionStatusUtils";
+import { ConnectionEventBody, Message, MessageType } from "../ws/messageTypes";
+import { connectionEventHandler, isConnectionStable } from "./connectionStatusUtils";
 import { WebsocketManager } from "./websocketManager";
 
 const logger = new Logger("sidecar.connections");
@@ -250,19 +250,9 @@ export async function waitForConnectionToBeStable(
     connectionStable.fire(id);
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
     // old data
-    environmentChanged.fire(id);
+    environmentChanged.fire(id as unknown as EnvironmentId);
     logger.error(msg);
     return null;
-  }
-
-  // per-type success actions ...
-  const type = connection.spec.type!;
-  if (type === ConnectionType.Direct) {
-    // Fire when a direct connection is 'stable', be it happy or broken.
-    connectionStable.fire(id);
-    // notify subscribers that the "environment" has changed since direct connections are treated
-    // as environment-specific resources
-    environmentChanged.fire(id);
   }
 
   logger.debug(
@@ -322,20 +312,55 @@ async function discoverSchemaRegistry(): Promise<string | undefined> {
  * updates that are not relevant to the caller w/o gaps where there could be 0 observers and therefore
  * missed updates.
  * */
-export type ConnectionUpdatePredicate = (connection: Connection) => boolean;
+export type ConnectionUpdatePredicate = (event: ConnectionEventBody) => boolean;
 
 /** Entry type kept in a per connection-id Map within ConnectionStateWatcher. */
-class SingleConnectionState {
-  mostRecentState: Connection | null = null;
-  eventEmitter: EventEmitter<Connection> = new EventEmitter<Connection>();
+export class SingleConnectionEntry {
+  connectionId: ConnectionId;
+  mostRecentEvent: ConnectionEventBody | null = null;
+  eventEmitter: EventEmitter<ConnectionEventBody> = new EventEmitter<ConnectionEventBody>();
+
+  constructor(connectionId: ConnectionId) {
+    this.connectionId = connectionId;
+
+    // Wire up the default event listener per connection type that will react to any
+    // connection state changes and cascade through to fire the appropriate UI event emitters.
+    // based on the connection type and new state.
+    this.eventEmitter.event((event: ConnectionEventBody) => {
+      connectionEventHandler(event);
+    });
+  }
+
+  get connectionType(): ConnectionType {
+    return connectionIdToType(this.connectionId);
+  }
+
+  get connection(): Connection | null {
+    return this.mostRecentEvent?.connection || null;
+  }
+
+  /** Update the most recent Connection-bearing announcement and fire the event emitter. */
+  handleUpdate(event: ConnectionEventBody): void {
+    // If the connection id != our connection id, raise an error.
+    if (event.connection.id !== this.connectionId) {
+      throw new Error(
+        `SingleConnectionEntry.handleUpdate(): received event for connection ${event.connection.id} but expected ${this.connectionId}`,
+        // JSON.stringify(event, null, 2),
+      );
+    }
+
+    // New info. Update the most recent event and fire the event emitter.
+    this.mostRecentEvent = event;
+    this.eventEmitter.fire(event);
+  }
 }
 
 export class ConnectionStateWatcher {
   // Singleton instance
   private static instance: ConnectionStateWatcher;
 
-  // connection id -> pair of (most recent Connection announcement, event emitter to notify observers)
-  private connectionStates: Map<ConnectionId, SingleConnectionState> = new Map();
+  // connection id -> pair of (most recent Connection-bearing announcement, event emitter to notify observers)
+  private connectionStates: Map<ConnectionId, SingleConnectionEntry> = new Map();
 
   public static getInstance(): ConnectionStateWatcher {
     if (!ConnectionStateWatcher.instance) {
@@ -361,7 +386,7 @@ export class ConnectionStateWatcher {
   purgeCachedConnectionState(connectionId: ConnectionId): void {
     const singleConnectionState = this.connectionStates.get(connectionId);
     if (singleConnectionState) {
-      singleConnectionState.mostRecentState = null;
+      singleConnectionState.mostRecentEvent = null;
     }
   }
 
@@ -371,9 +396,9 @@ export class ConnectionStateWatcher {
    * received for this connection, or if purgeCachedConnectionState() had been
    * called after the last update.
    */
-  getLatestConnectionUpdate(connectionId: ConnectionId): Connection | null {
+  getLatestConnectionEvent(connectionId: ConnectionId): ConnectionEventBody | null {
     const singleConnectionState = this.connectionStates.get(connectionId);
-    return singleConnectionState?.mostRecentState || null;
+    return singleConnectionState?.mostRecentEvent || null;
   }
 
   /**
@@ -383,32 +408,32 @@ export class ConnectionStateWatcher {
    * the timeoutMs for the next update to arrive.
    * Resolves with the updated Connection or null if the timeout is reached.
    *
-   * Callers who need to guarantee that they are working with the most recent Connection state should
-   * first call purgeCachedConnectionState() *before* mutating the connection and then calling
-   * this method.
+   * Callers who need to guarantee that they are working with a Connection state recieved AFTER
+   * a point in time should first call purgeCachedConnectionState() *before* mutating
+   * the connection and then calling this method. There is an unavoidable inherent race, however.
    */
   async waitForConnectionUpdate(
     connectionId: ConnectionId,
     predicate: ConnectionUpdatePredicate,
     timeoutMs: number = 15_000,
   ): Promise<Connection | null> {
-    let singleConnectionState = this.connectionStates.get(connectionId);
-    if (!singleConnectionState) {
+    let singleConnectionEntry = this.connectionStates.get(connectionId);
+    if (!singleConnectionEntry) {
       // insert a new entry to track this connection
-      singleConnectionState = new SingleConnectionState();
-      this.connectionStates.set(connectionId, singleConnectionState);
+      singleConnectionEntry = new SingleConnectionEntry(connectionId);
+      this.connectionStates.set(connectionId, singleConnectionEntry);
     } else {
       // If we already know a connection state, test it against predicate and possibly
       // immediately return. (Otherwise wait for the next recieved update or timeout.)
       if (
-        singleConnectionState.mostRecentState &&
-        predicate(singleConnectionState.mostRecentState)
+        singleConnectionEntry.mostRecentEvent &&
+        predicate(singleConnectionEntry.mostRecentEvent)
       ) {
-        const connType = singleConnectionState.mostRecentState.spec.type!;
+        const connType = singleConnectionEntry.connectionType;
         logger.debug(
           `waitForConnectionUpdate(): Short-circuit returning existing connection state for ${connType} connection ${connectionId}`,
         );
-        return singleConnectionState.mostRecentState;
+        return singleConnectionEntry.connection!;
       }
     }
 
@@ -426,30 +451,33 @@ export class ConnectionStateWatcher {
         resolve(null);
       }, timeoutMs);
 
-      const dispose = singleConnectionState.eventEmitter.event((connection: Connection) => {
-        const connType = connection.spec.type!;
-        logger.debug(
-          `ConnectionStateWatcher waitForConnectionUpdate(): Received connection update for ${connType} connection ${connectionId}`,
-        );
+      const dispose = singleConnectionEntry.eventEmitter.event(
+        (connectionEvent: ConnectionEventBody) => {
+          const connection = connectionEvent.connection;
+          const connType = connection.spec.type!;
+          logger.debug(
+            `ConnectionStateWatcher waitForConnectionUpdate(): Received connection update for ${connType} connection ${connectionId}`,
+          );
 
-        // Does it match the given predicate?
-        if (predicate(connection)) {
-          logger.debug(
-            "ConnectionStateWatcher waitForConnectionUpdate(): passed predicate, resolving",
-          );
-          // Cancel the timeout,
-          clearTimeout(timeout);
-          // deregister this listener,
-          dispose.dispose();
-          // resolve the predicate-passing Connection to the caller.
-          resolve(connection);
-        } else {
-          logger.debug(
-            "ConnectionStateWatcher waitForConnectionUpdate(): did not pass predicate, waiting for next update",
-          );
-          // leave the listener registered for the next update (or until the timeout fires)
-        }
-      });
+          // Does it match the given predicate?
+          if (predicate(connectionEvent)) {
+            logger.debug(
+              "ConnectionStateWatcher waitForConnectionUpdate(): passed predicate, resolving",
+            );
+            // Cancel the timeout,
+            clearTimeout(timeout);
+            // deregister this listener,
+            dispose.dispose();
+            // resolve the predicate-passing Connection to the caller.
+            resolve(connection);
+          } else {
+            logger.debug(
+              "ConnectionStateWatcher waitForConnectionUpdate(): did not pass predicate, waiting for next update",
+            );
+            // leave the listener registered for the next update (or until the timeout fires)
+          }
+        },
+      );
     });
   }
 
@@ -461,7 +489,6 @@ export class ConnectionStateWatcher {
   async handleConnectionUpdateEvent(message: Message<MessageType.CONNECTION_EVENT>): Promise<void> {
     const connectionEvent = message.body;
     const connectionId = connectionEvent.connection.id as ConnectionId;
-    const connection: Connection = connectionEvent.connection;
 
     logger.debug(
       `ConnectionStateWatcher: received ${message.body.action} event for connection id ${connectionId}`,
@@ -469,14 +496,13 @@ export class ConnectionStateWatcher {
 
     let singleConnectionState = this.connectionStates.get(connectionId);
     if (!singleConnectionState) {
-      // insert a new entry to track this connection's updates.
-      singleConnectionState = new SingleConnectionState();
+      // Insert a new entry to track this connection's updates.
+      singleConnectionState = new SingleConnectionEntry(connectionId);
       this.connectionStates.set(connectionId, singleConnectionState);
     }
 
-    // Store this most recent Connection state / spec.
-    singleConnectionState.mostRecentState = connection;
-    // Fire the event emitter for this connection to alert any listeners about the update.
-    singleConnectionState.eventEmitter.fire(connection);
+    // Store this most recent Connection state / spec, fire off to event handlers observing
+    // this single connection.
+    singleConnectionState.handleUpdate(message.body);
   }
 }
