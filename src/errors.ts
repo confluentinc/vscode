@@ -1,10 +1,12 @@
 import * as Sentry from "@sentry/node";
 
+import { commands, window } from "vscode";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
+import { logUsage, UserEvent } from "./telemetry/events";
 
 const logger = new Logger("errors");
 
@@ -57,4 +59,30 @@ export async function logResponseError(
       extra: { ...errorContext, ...extra },
     });
   }
+}
+
+/** Shows the error notification with `message` and custom action buttons.
+ * @param message Error message to display
+ * @param buttons Optional map of button labels to callback functions; defaults to showing
+ *   "Open Logs" and "File Issue" buttons if not provided
+ */
+export async function showErrorNotificationWithButtons(
+  message: string,
+  buttons?: Record<string, (() => void) | (() => Promise<void>)>,
+) {
+  const defaultButtons: Record<string, (() => void) | (() => Promise<void>)> = {
+    "Open Logs": () => commands.executeCommand("confluent.showOutputChannel"),
+    "File Issue": () => commands.executeCommand("confluent.support.issue"),
+  };
+  const buttonMap = buttons || defaultButtons;
+  window.showErrorMessage(message, ...Object.keys(buttonMap)).then(async (selection) => {
+    if (selection) {
+      await buttonMap[selection]();
+      // send telemetry for which button was clicked
+      logUsage(UserEvent.NotificationButtonClicked, {
+        buttonLabel: selection,
+        notificationType: "error",
+      });
+    }
+  });
 }

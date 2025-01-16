@@ -1,17 +1,13 @@
 import { graphql } from "gql.tada";
 import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
-import { Logger } from "../logging";
+import { logResponseError, showErrorNotificationWithButtons } from "../errors";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 import { createLocalConnection, getLocalConnection } from "../sidecar/connections";
 
-const logger = new Logger("graphql.local");
-
 export async function getLocalResources(): Promise<LocalEnvironment[]> {
-  const sidecar = await getSidecar();
-
   let envs: LocalEnvironment[] = [];
 
   // this is a bit odd, but we need to have a local "connection" to the sidecar before we can query
@@ -44,11 +40,13 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
     }
   `);
 
+  const sidecar = await getSidecar();
   let response;
   try {
     response = await sidecar.query(query, LOCAL_CONNECTION_ID);
   } catch (error) {
-    logger.error("Error fetching local connections", error);
+    logResponseError(error, "CCloud environments", { connectionId: LOCAL_CONNECTION_ID }, true);
+    showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
     return envs;
   }
 
