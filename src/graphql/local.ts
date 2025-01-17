@@ -45,7 +45,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
   try {
     response = await sidecar.query(query, LOCAL_CONNECTION_ID);
   } catch (error) {
-    logResponseError(error, "CCloud environments", { connectionId: LOCAL_CONNECTION_ID }, true);
+    logResponseError(error, "local resources", { connectionId: LOCAL_CONNECTION_ID }, true);
     showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
     return envs;
   }
