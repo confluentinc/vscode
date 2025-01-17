@@ -971,6 +971,12 @@
         }
       }
     },
+    "jsonValidation": [
+      {
+        "fileMatch": ".json",
+        "url": "./resources/schemas/produce-message.schema.json"
+      }
+    ],
     "walkthroughs": [
       {
         "id": "confluent-walkthrough",
