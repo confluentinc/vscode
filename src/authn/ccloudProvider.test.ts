@@ -15,7 +15,6 @@ import * as connections from "../sidecar/connections";
 import { getStorageManager, StorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
-import { pollCCloudConnectionAuth } from "./ccloudPolling";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
 
 const AUTH_CALLBACK_URI = vscode.Uri.parse("vscode://confluentinc.vscode-confluent/authCallback");
@@ -114,7 +113,9 @@ describe("ConfluentCloudAuthProvider", () => {
 
     const sessions = await authProvider.getSessions();
 
-    assert.deepStrictEqual(sessions, []);
+    assert.ok(getCCloudConnectionStub.calledOnce);
+
+    assert.deepStrictEqual([], sessions);
   });
 
   it("getSessions() should return an empty array when no connection exists", async () => {
@@ -122,7 +123,7 @@ describe("ConfluentCloudAuthProvider", () => {
 
     const sessions = await authProvider.getSessions();
 
-    assert.deepStrictEqual(sessions, []);
+    assert.deepStrictEqual([], sessions);
   });
 
   it("getSessions() should return an AuthenticationSession when a valid connection exists", async () => {
@@ -174,11 +175,9 @@ describe("ConfluentCloudAuthProvider", () => {
     assert.ok(handleSessionRemovedStub.calledWith(true));
   });
 
-  it("handleSessionCreated() should update the provider's internal state, fire the _onDidChangeSessions event, and adjust polling", async () => {
+  it("handleSessionCreated() should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
     const storageManager = getStorageManager();
     const setSecretStub = sandbox.stub(storageManager, "setSecret").resolves();
-    const pollStartStub = sandbox.stub(pollCCloudConnectionAuth, "start").resolves();
-    const pollStopStub = sandbox.stub(pollCCloudConnectionAuth, "stop").resolves();
 
     await authProvider["handleSessionCreated"](TEST_CCLOUD_AUTH_SESSION, true);
 
@@ -192,15 +191,11 @@ describe("ConfluentCloudAuthProvider", () => {
         changed: [],
       }),
     );
-    assert.ok(pollStartStub.called);
-    assert.ok(pollStopStub.notCalled);
   });
 
-  it("handleSessionRemoved() should update the provider's internal state, fire the _onDidChangeSessions event, and adjust polling", async () => {
+  it("handleSessionRemoved() should update the provider's internal state, fire the _onDidChangeSessions event.", async () => {
     const storageManager = getStorageManager();
     const deleteSecretStub = sandbox.stub(storageManager, "deleteSecret").resolves();
-    const pollStartStub = sandbox.stub(pollCCloudConnectionAuth, "start").resolves();
-    const pollStopStub = sandbox.stub(pollCCloudConnectionAuth, "stop").resolves();
 
     authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
     await authProvider["handleSessionRemoved"](true);
@@ -216,8 +211,6 @@ describe("ConfluentCloudAuthProvider", () => {
         changed: [],
       }),
     );
-    assert.ok(pollStartStub.notCalled);
-    assert.ok(pollStopStub.called);
   });
 
   it("handleSessionSecretChange() should call handleSessionCreated() when a session is available", async () => {

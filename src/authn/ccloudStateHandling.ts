@@ -7,10 +7,10 @@ import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
 import { getCCloudAuthSession } from "./utils";
 
-const logger = new Logger("authn.ccloudPolling");
+const logger = new Logger("authn.ccloudStateHandling");
 
 /*
- * Module-level constants regarding reauthentication and auth expiration warnings.
+ * Module-level constants regarding ccloud reauthentication and auth expiration warnings.
  */
 /** How long before auth expiration we can show a warning notification to the user */
 export const MINUTES_UNTIL_REAUTH_WARNING = 60;
@@ -45,10 +45,14 @@ export class AuthPromptTracker {
   }
 }
 
-/** Checks the current CCloud connection's authentication status passes the connection through for
- * checking authentication expiration and errors. */
-export async function watchCCloudConnectionStatus(connection: Connection): Promise<void> {
-  logger.debug("checking auth status for CCloud connection", {
+/**
+ * React to the current CCloud connection's authentication state. Passes the connection through for
+ * checking authentication expiration and errors.
+ *
+ * Called whenever sidecar pushes an update to the ccloud connection via websocket event to us.
+ */
+export async function reactToCCloudAuthState(connection: Connection): Promise<void> {
+  logger.debug("received update to CCloud connection", {
     status: connection.status.authentication.status,
     expiration: connection.status.authentication.requires_authentication_at,
     errors: connection.status.authentication.errors,

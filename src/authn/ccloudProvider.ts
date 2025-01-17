@@ -21,7 +21,7 @@ import { getResourceManager } from "../storage/resourceManager";
 import { UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
-import { openExternal } from "./ccloudPolling";
+import { openExternal } from "./ccloudStateHandling";
 
 const logger = new Logger("authn.ccloudProvider");
 
