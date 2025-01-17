@@ -157,7 +157,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
-    // User logged in successfully so we send an identify event to Segment
+    // User signed in successfully so we send an identify event to Segment
     if (authenticatedConnection.status.authentication.user) {
       sendTelemetryIdentifyEvent({
         eventName: UserEvent.SignedIn,
@@ -168,7 +168,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // we want to continue regardless of whether or not the user dismisses the notification,
     // so we aren't awaiting this:
     vscode.window.showInformationMessage(
-      `Successfully logged in to Confluent Cloud as ${authenticatedConnection.status.authentication.user?.username}`,
+      `Successfully signed in to Confluent Cloud as ${authenticatedConnection.status.authentication.user?.username}`,
     );
     logger.debug("createSession() successfully authenticated with Confluent Cloud");
     // update the auth status in the secret store so other workspaces can be notified of the change
@@ -394,7 +394,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Logging in to [Confluent Cloud](${uri})...`,
+        title: `Signing in to [Confluent Cloud](${uri})...`,
         cancellable: true,
       },
       async (_, token) => {
@@ -427,7 +427,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     });
   }
 
-  /** Only used for when the user clicks "Cancel" during the "Logging in..." progress notification. */
+  /** Only used for when the user clicks "Cancel" during the "Signing in..." progress notification. */
   private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
     return new Promise<void>((_, reject) =>
       token.onCancellationRequested(async () => {
@@ -511,7 +511,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       createIfNone: false,
     });
     if (!session) {
-      // SCENARIO 1: user logged out / auth session was removed
+      // SCENARIO 1: user signed out / auth session was removed
       // if we had a session before, we need to remove it and stop polling for auth status, as well
       // as inform the Accounts action to show the sign-in badge again
       if (this._session) {
@@ -522,7 +522,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         );
       }
     } else {
-      // SCENARIO 2: user logged in / auth session was added
+      // SCENARIO 2: user signed in / auth session was added
       // add a new auth session to the Accounts action, populate this instance's cached session state,
       // and start polling for auth status
       this.handleSessionCreated(session);

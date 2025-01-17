@@ -2,17 +2,18 @@ import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vsco
 import { registerCommandWithLogging } from ".";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
-import { getCCloudAuthSession } from "../sidecar/connections";
+import { deleteCCloudConnection, getCCloudAuthSession } from "../sidecar/connections";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
 
 const logger = new Logger("commands.connections");
 
 /** Allow CCloud sign-in via the auth provider outside of the Accounts section of the VS Code UI. */
-async function createCCloudConnection() {
+async function ccloudSignIn() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
@@ -31,6 +32,35 @@ async function createCCloudConnection() {
       throw error;
     }
   }
+}
+
+async function ccloudSignOut() {
+  const authSession = await getCCloudAuthSession();
+  if (!authSession) {
+    return;
+  }
+
+  // the authentication API doesn't provide a way to sign out, so we'll mirror the confirmation
+  // dialog from the Accounts section of the VS Code UI
+  const yesButton = "Sign Out";
+  const confirmation = await window.showWarningMessage(
+    `The account '${authSession.account.label}' has been used by: 
+
+Confluent
+
+Sign out from this extension?`,
+    {
+      modal: true,
+    },
+    yesButton,
+    // "Cancel" is added by default
+  );
+  if (confirmation !== yesButton) {
+    return;
+  }
+  // sign out by clearing the stored auth session
+  await deleteCCloudConnection();
+  ccloudAuthSessionInvalidated.fire();
 }
 
 /** Show the Open File dialog to let the user pick a .pem file and store it in the extension configs. */
@@ -147,7 +177,8 @@ export async function editDirectConnection(item: DirectEnvironment) {
 
 export function registerConnectionCommands(): Disposable[] {
   return [
-    registerCommandWithLogging("confluent.connections.ccloud.logIn", createCCloudConnection),
+    registerCommandWithLogging("confluent.connections.ccloud.signIn", ccloudSignIn),
+    registerCommandWithLogging("confluent.connections.ccloud.signOut", ccloudSignOut),
     registerCommandWithLogging("confluent.connections.addSSLPemPath", addSSLPemPath),
     registerCommandWithLogging("confluent.connections.direct", createNewDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
