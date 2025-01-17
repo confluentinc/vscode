@@ -17,6 +17,7 @@ import {
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
+  resourceSearchSet,
 } from "../emitters";
 import { ExtensionContextNotSetError, showErrorNotificationWithButtons } from "../errors";
 import { getDirectResources } from "../graphql/direct";
@@ -96,6 +97,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   // events to us via connectionUsable emitter.
   private cachedLoadingStates: Map<string, boolean> = new Map();
 
+  /** String to filter items returned by `getChildren`, if provided. */
+  itemSearchString: string | null = null;
+
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
@@ -130,19 +134,36 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
+    let treeItem: vscode.TreeItem;
     if (element instanceof Environment) {
       if (isDirect(element)) {
         // update contextValues for all known direct environments, not just the one that was updated
         await this.updateEnvironmentContextValues();
       }
-      return new EnvironmentTreeItem(element);
+      treeItem = new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
-      return new KafkaClusterTreeItem(element);
+      treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
-      return new SchemaRegistryTreeItem(element);
+      treeItem = new SchemaRegistryTreeItem(element);
+    } else {
+      // should only be left with ContainerTreeItems
+      treeItem = element;
     }
-    // should only be left with ContainerTreeItems
-    return element;
+
+    if (this.itemSearchString) {
+      logger.debug("highlighting search string in tree item label:", treeItem.label);
+      const label = (treeItem.label || "") as string;
+      const searchIndex = label.toLowerCase().indexOf(this.itemSearchString.toLowerCase());
+      if (searchIndex >= 0) {
+        // preserve the label, but highlight the search string portion
+        treeItem.label = {
+          label: label,
+          highlights: [[searchIndex, searchIndex + this.itemSearchString.length]],
+        };
+      }
+    }
+
+    return treeItem;
   }
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
@@ -153,21 +174,21 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.rehydratedDirectConnections = true;
     }
 
+    let children: ResourceViewProviderData[] = [];
+
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
-        return element.children;
+        children = element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await getCCloudEnvironmentChildren(element);
+        children = await getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
-        const children: DirectResources[] = [];
         if (element.kafkaClusters)
           children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
         if (element.schemaRegistry) children.push(element.schemaRegistry);
         logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
-        return children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
@@ -217,10 +238,39 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         });
       }
 
-      return [ccloudContainer, localContainer, ...directEnvironments];
+      children = [ccloudContainer, localContainer, ...directEnvironments];
     }
 
-    return [];
+    return this.itemSearchString ? this.filteredGetChildren(children) : children;
+  }
+
+  filteredGetChildren(children: ResourceViewProviderData[]): ResourceViewProviderData[] {
+    const filteredChildren: ResourceViewProviderData[] = [];
+
+    const searchString = this.itemSearchString!;
+    children.forEach((child) => {
+      if (child instanceof Environment) {
+        if (child.name.toLowerCase().includes(searchString.toLowerCase())) {
+          filteredChildren.push(child);
+        }
+      } else if (child instanceof KafkaCluster) {
+        if (child.name.toLowerCase().includes(searchString.toLowerCase())) {
+          filteredChildren.push(child);
+        }
+      } else if (child instanceof SchemaRegistry) {
+        if ("Schema Registry".toLowerCase().includes(searchString.toLowerCase())) {
+          filteredChildren.push(child);
+        }
+      } else if (child instanceof ContainerTreeItem) {
+        // TODO: recurse into children of container items
+        if ((child.label as string).toLowerCase().includes(searchString.toLowerCase())) {
+          filteredChildren.push(child);
+        }
+      }
+    });
+    logger.debug(`filtered ${children.length} children to ${filteredChildren.length}`);
+
+    return filteredChildren;
   }
 
   /** Set up event listeners for this view provider. */
@@ -266,6 +316,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.refreshConnection(id, false);
     });
 
+    const resourceSearchSetSub: vscode.Disposable = resourceSearchSet.event(
+      (searchString: string | null) => {
+        logger.debug("resourceSearchSet event fired, refreshing", { searchString });
+        // set/unset the filter and call into getChildren() to update the tree view
+        this.itemSearchString = searchString;
+        this.refresh();
+      },
+    );
+
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
@@ -273,6 +332,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
       connectionUsableSub,
+      resourceSearchSetSub,
     ];
   }
 
