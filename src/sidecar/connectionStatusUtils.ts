@@ -62,8 +62,6 @@ export function connectionEventHandler(event: ConnectionEventBody) {
       break;
     }
     case ConnectionType.Ccloud:
-      // This function used to be called by a poller. Now we kick off whenever we get a ccloud connection
-      // event.
       logger.debug(
         "connectionEventHandler: ccloud connection update received, passing to watchCCloudConnectionStatus()",
       );
