@@ -36,7 +36,6 @@ describe("connectionEventHandler", () => {
     ConnectionEventAction.CREATED,
     ConnectionEventAction.UPDATED,
     ConnectionEventAction.CONNECTED,
-    ConnectionEventAction.DELETED,
     ConnectionEventAction.DISCONNECTED,
   ]) {
     it(`CCloud connection update should cascade through to call ccloudStateHandling.reactToCCloudAuthState on ${action}`, () => {
@@ -70,6 +69,22 @@ describe("connectionEventHandler", () => {
       );
     });
   }
+
+  it("CCloud connection DELETED event should not call ccloudStateHandling.reactToCCloudAuthState", () => {
+    // Arrange
+    const reactToCCloudAuthStateStub = sandbox.stub(ccloudStateHandling, "reactToCCloudAuthState");
+
+    const testConnectionEvent: ConnectionEventBody = {
+      action: ConnectionEventAction.DELETED,
+      connection: TEST_CCLOUD_CONNECTION,
+    };
+
+    // Act
+    connectionEventHandler(testConnectionEvent);
+
+    // Assert
+    assert.strictEqual(reactToCCloudAuthStateStub.notCalled, true);
+  });
 
   for (const action of [
     ConnectionEventAction.CREATED,
