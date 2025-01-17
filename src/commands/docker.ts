@@ -14,6 +14,7 @@ import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
+import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { ConnectionLabel } from "../models/resource";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
@@ -150,7 +151,7 @@ export async function runWorkflowWithProgress(
             } else {
               errorMsg = error.message;
             }
-            workflow.showErrorNotification(
+            showErrorNotificationWithButtons(
               `Error ${start ? "starting" : "stopping"} ${workflow.resourceKind}: ${errorMsg}`,
             );
           }

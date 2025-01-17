@@ -27,7 +27,7 @@ export const REMIND_BUTTON_TEXT = "Remind Me Later";
 
 /** Singleton class to track the state of the various auth prompts that can be shown to the user. */
 export class AuthPromptTracker {
-  /** Keeps track of whether or not the user has been prompted to attempt logging in again after an
+  /** Keeps track of whether or not the user has been prompted to attempt signing in again after an
    * auth-related error status (not expiration-related). */
   public authErrorPromptOpen: boolean = false;
   /** Have we already shown a warning notification that the user's auth status is about to expire? */
@@ -254,7 +254,7 @@ export function checkAuthErrors(connection: Connection) {
     return;
   }
 
-  let authButton: string = "Log in to Confluent Cloud";
+  let authButton: string = "Sign in to Confluent Cloud";
   // show an error message to the user to retry the auth flow
   tracker.authErrorPromptOpen = true;
   vscode.window

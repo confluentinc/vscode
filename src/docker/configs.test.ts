@@ -100,7 +100,7 @@ describe("docker/configs functions", function () {
     assert.ok(
       showErrorMessageStub.calledOnceWith(
         "Docker is not available: Error 400: uh oh",
-        "Show Logs",
+        "Open Logs",
         "File Issue",
       ),
     );
@@ -120,7 +120,7 @@ describe("docker/configs functions", function () {
       showErrorMessageStub.calledOnceWith(
         "Docker is not available: Please install Docker and try again once it's running.",
         "Install Docker",
-        "Show Logs",
+        "Open Logs",
       ),
     );
   });
@@ -140,7 +140,7 @@ describe("docker/configs functions", function () {
       showErrorMessageStub.calledOnceWith(
         `Docker is not available: If Docker is currently running, please disable the "http.fetchAdditionalSupport" setting and try again.`,
         "Install Docker",
-        "Show Logs",
+        "Open Logs",
         "Update Settings",
       ),
     );
