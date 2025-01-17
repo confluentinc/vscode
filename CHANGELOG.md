@@ -15,6 +15,10 @@ All notable changes to this extension will be documented in this file.
 - React to websocket events pushed from sidecar instead of polling for some connection change
   monitoring.
 
+### Fixed
+
+- Extension/sidecar logs and the support zip can now be saved as expected on Windows.
+
 ## 0.23.3
 
 ### Fixed
