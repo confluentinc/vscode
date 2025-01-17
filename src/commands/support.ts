@@ -169,7 +169,7 @@ async function saveSupportZip() {
   const closeListener = output.on("close", () => {
     const openButton = "Open";
     window
-      .showInformationMessage("Confluent extension support .zip saved successfully", openButton)
+      .showInformationMessage("Confluent extension support .zip saved successfully.", openButton)
       .then((value) => {
         if (value === openButton) {
           // show in OS file explorer, don't try to open it in VS Code
