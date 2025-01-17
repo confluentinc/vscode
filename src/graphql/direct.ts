@@ -1,5 +1,5 @@
 import { graphql } from "gql.tada";
-import { Logger } from "../logging";
+import { logResponseError, showErrorNotificationWithButtons } from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
@@ -10,8 +10,6 @@ import {
   DirectConnectionsById,
   getResourceManager,
 } from "../storage/resourceManager";
-
-const logger = new Logger("graphql.direct");
 
 export async function getDirectResources(): Promise<DirectEnvironment[]> {
   let directResources: DirectEnvironment[] = [];
@@ -35,12 +33,15 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
     }
   `);
 
+  const sidecar = await getSidecar();
   let response;
   try {
-    const sidecar = await getSidecar();
     response = await sidecar.query(query);
   } catch (error) {
-    logger.error("Error fetching direct connection resources:", error);
+    logResponseError(error, "direct connection resources", {}, true);
+    showErrorNotificationWithButtons(
+      `Failed to fetch resources for direct Kafka / Schema Registry connection(s): ${error}`,
+    );
     return directResources;
   }
 
