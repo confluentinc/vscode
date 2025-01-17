@@ -1,4 +1,4 @@
-import { authentication, AuthenticationSession, EventEmitter } from "vscode";
+import { EventEmitter } from "vscode";
 import { getSidecar } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../clients/docker";
 import {
@@ -9,7 +9,6 @@ import {
   ResponseError,
 } from "../clients/sidecar";
 import {
-  AUTH_PROVIDER_ID,
   CCLOUD_CONNECTION_ID,
   CCLOUD_CONNECTION_SPEC,
   LOCAL_CONNECTION_ID,
@@ -161,22 +160,6 @@ export async function clearCurrentCCloudResources() {
   await getResourceManager().deleteCCloudResources();
   currentKafkaClusterChanged.fire(null);
   currentSchemaRegistryChanged.fire(null);
-}
-
-/** Convenience function to check with the authentication API and get a CCloud auth session, if
- * one exists.
- *
- * NOTE: If any callers need to check for general CCloud connection status, they should do it here.
- * Any reactions to CCloud connection change should also use an event listener for the
- * `ccloudConnected` event emitter.
- *
- * @param createIfNone If `true`, create a new session if one doesn't exist. This starts the
- * browser-based sign-in flow to CCloud. (default: `false`)
- */
-export async function getCCloudAuthSession(
-  createIfNone: boolean = false,
-): Promise<AuthenticationSession | undefined> {
-  return await authentication.getSession(AUTH_PROVIDER_ID, [], { createIfNone: createIfNone });
 }
 
 /** Do we currently have a ccloud connection? */

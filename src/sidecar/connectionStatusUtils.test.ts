@@ -9,6 +9,7 @@ import {
 } from "../../tests/unit/testResources/connection";
 
 import sinon from "sinon";
+import * as ccloudStateHandling from "../authn/ccloudStateHandling";
 import { ConnectedState, Status } from "../clients/sidecar/models";
 import { connectionStable, environmentChanged } from "../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../ws/messageTypes";
@@ -29,6 +30,60 @@ describe("connectionEventHandler", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  for (const action of [
+    ConnectionEventAction.CREATED,
+    ConnectionEventAction.UPDATED,
+    ConnectionEventAction.CONNECTED,
+    ConnectionEventAction.DISCONNECTED,
+  ]) {
+    it(`CCloud connection update should cascade through to call ccloudStateHandling.reactToCCloudAuthState on ${action}`, () => {
+      // connectionEventHandler() should call through to ccloudStateHandling.reactToCCloudAuthState()
+      // upon reciept of a connection event for the CCloud connection.
+
+      // Arrange
+      const reactToCCloudAuthStateStub = sandbox.stub(
+        ccloudStateHandling,
+        "reactToCCloudAuthState",
+      );
+
+      const testConnectionEvent: ConnectionEventBody = {
+        action: action,
+        connection: TEST_CCLOUD_CONNECTION,
+      };
+
+      // Act
+      connectionEventHandler(testConnectionEvent);
+
+      // Assert
+      assert.strictEqual(
+        reactToCCloudAuthStateStub.calledOnce,
+        true,
+        "reactToCCloudAuthState called",
+      );
+
+      assert.ok(
+        reactToCCloudAuthStateStub.calledWith(TEST_CCLOUD_CONNECTION),
+        "called with test ccloud connection",
+      );
+    });
+  }
+
+  it("CCloud connection DELETED event should not call ccloudStateHandling.reactToCCloudAuthState", () => {
+    // Arrange
+    const reactToCCloudAuthStateStub = sandbox.stub(ccloudStateHandling, "reactToCCloudAuthState");
+
+    const testConnectionEvent: ConnectionEventBody = {
+      action: ConnectionEventAction.DELETED,
+      connection: TEST_CCLOUD_CONNECTION,
+    };
+
+    // Act
+    connectionEventHandler(testConnectionEvent);
+
+    // Assert
+    assert.strictEqual(reactToCCloudAuthStateStub.notCalled, true);
   });
 
   for (const action of [
