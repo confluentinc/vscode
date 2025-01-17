@@ -282,7 +282,6 @@ async function setupContextValues() {
     "ccloud-schema-registry",
     "local-kafka-cluster",
     "local-schema-registry",
-    "direct-kafka-cluster",
     "direct-schema-registry",
   ]);
   await Promise.all([
