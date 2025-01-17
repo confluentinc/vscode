@@ -1,17 +1,20 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { Uri, window, workspace } from "vscode";
 import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
 import * as dockerWorkflows from "../docker/workflows";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
+import * as errors from "../errors";
+import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 import * as quickpicks from "../quickpicks/localResources";
 import { addDockerPath, orderWorkflows, runWorkflowWithProgress } from "./docker";
-import { Uri, window, workspace } from "vscode";
-import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 
 describe("commands/docker.ts runWorkflowWithProgress()", () => {
   let sandbox: sinon.SinonSandbox;
+
+  let showErrorNotificationStub: sinon.SinonStub;
 
   // Docker+workflow stubs
   let isDockerAvailableStub: sinon.SinonStub;
@@ -25,6 +28,8 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+
+    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons").resolves();
 
     // default to Docker being available for majority of tests
     isDockerAvailableStub = sandbox.stub(dockerConfigs, "isDockerAvailable").resolves(true);
@@ -88,7 +93,7 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     assert.ok(stubKafkaWorkflow.start.calledOnce);
     assert.ok(stubKafkaWorkflow.stop.notCalled);
-    assert.ok(stubKafkaWorkflow.showErrorNotification.calledOnce);
+    assert.ok(showErrorNotificationStub.calledOnce);
   });
 
   it("should show an workflow's error notification for uncaught errors in the workflow .stop()", async () => {
@@ -98,7 +103,7 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     assert.ok(stubKafkaWorkflow.start.notCalled);
     assert.ok(stubKafkaWorkflow.stop.calledOnce);
-    assert.ok(stubKafkaWorkflow.showErrorNotification.calledOnce);
+    assert.ok(showErrorNotificationStub.calledOnce);
   });
 
   // TODO(shoup): update these in follow-on branch once multi-select quickpick is added

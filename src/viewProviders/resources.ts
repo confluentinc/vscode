@@ -17,7 +17,7 @@ import {
   localKafkaConnected,
   localSchemaRegistryConnected,
 } from "../emitters";
-import { ExtensionContextNotSetError } from "../errors";
+import { ExtensionContextNotSetError, showErrorNotificationWithButtons } from "../errors";
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -375,13 +375,7 @@ export async function loadCCloudResources(
       const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
       logger.error(msg, e);
       Sentry.captureException(e);
-      vscode.window.showErrorMessage(msg, "Open Logs", "File Issue").then(async (action) => {
-        if (action === "Open Logs") {
-          vscode.commands.executeCommand("confluent.showOutputChannel");
-        } else if (action === "File Issue") {
-          vscode.commands.executeCommand("confluent.support.issue");
-        }
-      });
+      showErrorNotificationWithButtons(msg);
     }
 
     cloudContainerItem.collapsibleState =

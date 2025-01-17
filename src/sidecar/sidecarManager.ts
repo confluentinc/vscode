@@ -24,6 +24,7 @@ import { normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
+import { showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
 
 /**
@@ -500,13 +501,15 @@ export class SidecarManager {
           false,
         );
         if (notifySidecarExceptions) {
-          vscode.window
-            .showErrorMessage(`Sidecar error: ${errorMatch[2]}`, "Open Logs")
-            .then((action) => {
-              if (action === "Open Logs") {
-                vscode.commands.executeCommand("confluent.showSidecarOutputChannel");
-              }
-            });
+          showErrorNotificationWithButtons(`[Debugging] Sidecar error: ${errorMatch[2]}`, {
+            "Open Sidecar Logs": () =>
+              vscode.commands.executeCommand("confluent.showSidecarOutputChannel"),
+            "Open Settings": () =>
+              vscode.commands.executeCommand(
+                "workbench.action.openSettings",
+                "@id:confluent.debugging.showSidecarExceptions",
+              ),
+          });
         }
       }
       sidecarOutputChannel.appendLine(line);

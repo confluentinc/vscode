@@ -197,13 +197,13 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
     } catch {
       errorMessage = await error.response.clone().text();
     }
-    primaryButton = "Show Logs";
+    primaryButton = "Open Logs";
     secondaryButton = "File Issue";
     notificationMessage = `Error ${error.response.status}: ${errorMessage}`;
   } else {
     // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
     primaryButton = "Install Docker";
-    secondaryButton = "Show Logs";
+    secondaryButton = "Open Logs";
     notificationMessage = "Please install Docker and try again once it's running.";
     // TEMPORARY: if the `http.fetchAdditionalSupport` setting is enabled, suggest disabling it
     // TODO(shoup): remove this once we have a better way to handle the behavior described in
@@ -229,7 +229,7 @@ export async function showDockerUnavailableErrorNotification(error: unknown): Pr
           env.openExternal(uri);
           break;
         }
-        case "Show Logs":
+        case "Open Logs":
           commands.executeCommand("confluent.showOutputChannel");
           break;
         case "File Issue":
