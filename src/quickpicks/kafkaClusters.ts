@@ -63,7 +63,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     let login: string = "";
     let local: string = "";
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
-      login = "Log in to Confluent Cloud";
+      login = "Sign in to Confluent Cloud";
     }
     if (!getContextValue(ContextValues.localKafkaClusterAvailable)) {
       local = "Start Local Resources";
@@ -71,7 +71,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     // TODO: offer button for creating a direct connection?
     window.showInformationMessage("No Kafka clusters available.", login, local).then((selected) => {
       if (selected === login) {
-        commands.executeCommand("confluent.connections.ccloud.logIn");
+        commands.executeCommand("confluent.connections.ccloud.signIn");
       } else if (selected === local) {
         commands.executeCommand("confluent.docker.startLocalResources");
       }
