@@ -6,17 +6,15 @@ import { TEST_CCLOUD_CONNECTION } from "../../tests/unit/testResources/connectio
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { Connection, Status } from "../clients/sidecar";
 import { nonInvalidTokenStatus } from "../emitters";
-import * as connections from "../sidecar/connections";
 import { ResourceManager } from "../storage/resourceManager";
 import {
   AuthPromptTracker,
   checkAuthExpiration,
   MINUTES_UNTIL_REAUTH_WARNING,
-  pollCCloudConnectionAuth,
+  reactToCCloudAuthState,
   REAUTH_BUTTON_TEXT,
   REMIND_BUTTON_TEXT,
-  watchCCloudConnectionStatus,
-} from "./ccloudPolling";
+} from "./ccloudStateHandling";
 
 configDotenv();
 
@@ -24,7 +22,10 @@ configDotenv();
  * Light test wrapper to update the `requires_authentication_at` field in a {@link Connection} object.
  */
 function createFakeConnection(expiresInMinutes: number | undefined): Connection {
-  const connection = TEST_CCLOUD_CONNECTION;
+  // Make a deep clone of TEST_CCLOUD_CONNECTION, then mutate its authentication portion
+  // to either expire in `expiresInMinutes` minutes or not at all.
+  // (Mutating the original object may cause test flakiness)
+  const connection = JSON.parse(JSON.stringify(TEST_CCLOUD_CONNECTION));
   connection.status.authentication.requires_authentication_at = expiresInMinutes
     ? new Date(Date.now() + expiresInMinutes * 60 * 1000)
     : undefined;
@@ -163,14 +164,11 @@ describe("authn/ccloudPolling.ts checkAuthExpiration()", () => {
   });
 });
 
-describe("authn/ccloudPolling.ts watchCCloudConnectionStatus()", () => {
+describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
   let sandbox: sinon.SinonSandbox;
 
-  let getCCloudConnectionStub: sinon.SinonStub;
   let nonInvalidTokenStatusFireStub: sinon.SinonStub;
   let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
-  let pollFastStub: sinon.SinonStub;
-  let pollSlowStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
@@ -179,29 +177,14 @@ describe("authn/ccloudPolling.ts watchCCloudConnectionStatus()", () => {
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    getCCloudConnectionStub = sandbox.stub(connections, "getCCloudConnection");
     nonInvalidTokenStatusFireStub = sandbox.stub(nonInvalidTokenStatus, "fire");
 
     stubResourceManager = sinon.createStubInstance(ResourceManager);
     sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
-
-    pollFastStub = sandbox.stub(pollCCloudConnectionAuth, "useFastFrequency");
-    pollSlowStub = sandbox.stub(pollCCloudConnectionAuth, "useSlowFrequency");
   });
 
   afterEach(() => {
     sandbox.restore();
-  });
-
-  it("should take no action when no connection is fetched from the sidecar", async () => {
-    getCCloudConnectionStub.resolves(undefined);
-
-    await watchCCloudConnectionStatus();
-
-    assert.ok(stubResourceManager.setCCloudAuthStatus.notCalled);
-    assert.ok(pollFastStub.notCalled);
-    assert.ok(nonInvalidTokenStatusFireStub.notCalled);
-    assert.ok(pollSlowStub.notCalled);
   });
 
   const nonTransientStatuses: Status[] = ["FAILED", "NO_TOKEN", "VALID_TOKEN"];
@@ -209,14 +192,11 @@ describe("authn/ccloudPolling.ts watchCCloudConnectionStatus()", () => {
     it(`should fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${status}`, async () => {
       const connection = createFakeConnection(120);
       connection.status.authentication.status = status;
-      getCCloudConnectionStub.resolves(connection);
 
-      await watchCCloudConnectionStatus();
+      await reactToCCloudAuthState(connection);
 
       assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(status));
-      assert.ok(pollFastStub.notCalled);
       assert.ok(nonInvalidTokenStatusFireStub.called);
-      assert.ok(pollSlowStub.called);
     });
   });
 
@@ -224,14 +204,11 @@ describe("authn/ccloudPolling.ts watchCCloudConnectionStatus()", () => {
     const status = "INVALID_TOKEN";
     const connection = createFakeConnection(120);
     connection.status.authentication.status = status;
-    getCCloudConnectionStub.resolves(connection);
 
-    await watchCCloudConnectionStatus();
+    await reactToCCloudAuthState(connection);
 
     assert.ok(stubResourceManager.setCCloudAuthStatus.calledOnceWith(status));
-    assert.ok(pollFastStub.called);
     assert.ok(nonInvalidTokenStatusFireStub.notCalled);
-    assert.ok(pollSlowStub.notCalled);
   });
 
   // TODO(shoup): ccloudPolling.ts will need to be refactored to allow stubbing across the entire module
