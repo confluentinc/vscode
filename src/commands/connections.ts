@@ -2,6 +2,7 @@ import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vsco
 import { registerCommandWithLogging } from ".";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
+import { logResponseError } from "../errors";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
@@ -16,10 +17,12 @@ async function createCCloudConnection() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
-    logger.error("error creating CCloud connection", { error });
     if (error instanceof Error) {
       // if the user clicks "Cancel" on the modal before the sign-in process, we don't need to do anything
-      if (error.message === "User did not consent to login.") {
+      const noConsent = error.message === "User did not consent to login.";
+      // log the response, but only send to Sentry if the user didn't cancel the sign-in process
+      logResponseError(error, "CCloud sign-in", {}, !noConsent);
+      if (noConsent) {
         return;
       }
       // any other errors will be caught by the error handler in src/commands/index.ts as part of the
