@@ -16,10 +16,14 @@ async function createCCloudConnection() {
   try {
     await getCCloudAuthSession(true);
   } catch (error) {
-    logger.error("error creating CCloud connection", { error });
     if (error instanceof Error) {
-      // if the user clicks "Cancel" on the modal before the sign-in process, we don't need to do anything
-      if (error.message === "User did not consent to login.") {
+      // we don't need to do anything if:
+      // - the user clicks "Cancel" on the modal before the sign-in process
+      // - the auth provider handles a callback failure (which shows its own error notification)
+      if (
+        error.message === "User did not consent to login." ||
+        error.message.includes("Authentication failed, see browser for details")
+      ) {
         return;
       }
       // any other errors will be caught by the error handler in src/commands/index.ts as part of the
