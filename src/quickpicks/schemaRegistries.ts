@@ -66,7 +66,7 @@ export async function schemaRegistryQuickPick(
     let login: string = "";
     let local: string = "";
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
-      login = "Log in to Confluent Cloud";
+      login = "Sign in to Confluent Cloud";
     }
     if (!getContextValue(ContextValues.localSchemaRegistryAvailable)) {
       local = "Start Local Resources";
@@ -76,7 +76,7 @@ export async function schemaRegistryQuickPick(
       .showInformationMessage("No Schema registries available.", login, local)
       .then((selected) => {
         if (selected === login) {
-          commands.executeCommand("confluent.connections.ccloud.logIn");
+          commands.executeCommand("confluent.connections.ccloud.signIn");
         } else if (selected === local) {
           commands.executeCommand("confluent.docker.startLocalResources");
         }
