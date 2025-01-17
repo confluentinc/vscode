@@ -1,5 +1,6 @@
 // helpers for connection status testing, factored out for test spying
 
+import { reactToCCloudAuthState } from "../authn/ccloudStateHandling";
 import { Connection, ConnectionType } from "../clients/sidecar/models";
 import { connectionStable, environmentChanged } from "../emitters";
 import { Logger } from "../logging";
@@ -61,6 +62,13 @@ export function connectionEventHandler(event: ConnectionEventBody) {
       break;
     }
     case ConnectionType.Ccloud:
+      // This function used to be called by a poller. Now we kick off whenever we get a ccloud connection
+      // event.
+      logger.info(
+        "connectionEventHandler: ccloud connection side effects firing, passing to watchCCloudConnectionStatus()",
+      );
+      reactToCCloudAuthState(connection);
+      break;
     case ConnectionType.Local:
       logger.info(
         `connectionEventHandler: ${connection.id} connection ${event.action} side effects unhandled.`,
