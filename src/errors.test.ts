@@ -142,6 +142,7 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
     await showErrorNotificationWithButtons(fakeMessage, customButtons);
 
     assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
+    assert.calledOnce(customButtons[buttonLabel]);
   });
 
   it("should handle async custom callbacks", async () => {
@@ -236,28 +237,34 @@ describe("errors.ts logResponseError()", () => {
 
   it("should handle non-Error objects", async () => {
     const nonError = { foo: "bar" };
-    await logResponseError(nonError, "test message");
+    const logPrefix = "test message";
+    await logResponseError(nonError, logPrefix);
 
-    assert.calledOnceWithExactly(loggerErrorSpy, "[test message] error: [object Object]", {});
+    assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error: ${nonError}`, {});
   });
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
     const extra = { foo: "bar" };
-    await logResponseError(error, "test", extra);
+    const logPrefix = "test message";
+    await logResponseError(error, logPrefix, extra);
 
-    assert.calledWithMatch(loggerErrorSpy, "[test] error: Error: test", {
-      errorType: "Error",
-      errorMessage: "test",
-      ...extra,
-    });
+    assert.calledWithMatch(
+      loggerErrorSpy,
+      `[${logPrefix}] error: ${error.name}: ${error.message}`,
+      {
+        errorType: error.name,
+        errorMessage: error.message,
+        ...extra,
+      },
+    );
   });
 
   it("should truncate long 'body' values for ResponseErrors", async () => {
     const status = 400;
     const statusText = "Bad Request";
     const longBody = "a".repeat(6000);
-    const error = createResponseError(status, "Bad Request", longBody);
+    const error = createResponseError(status, statusText, longBody);
     const logPrefix = "test";
     await logResponseError(error, logPrefix);
 
@@ -265,7 +272,7 @@ describe("errors.ts logResponseError()", () => {
       status,
       statusText,
       body: "a".repeat(5000),
-      errorType: "ResponseError",
+      errorType: error.name,
     });
   });
 });
