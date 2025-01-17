@@ -42,6 +42,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
+import { getCCloudAuthSession } from "./authn/utils";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -74,7 +75,7 @@ import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
-import { ConnectionStateWatcher, getCCloudAuthSession } from "./sidecar/connections";
+import { ConnectionStateWatcher } from "./sidecar/connections";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
