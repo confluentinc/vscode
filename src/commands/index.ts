@@ -1,6 +1,5 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
-import { showErrorNotificationWithButtons } from "../errors";
+import { logResponseError, showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { UserEvent, logUsage } from "../telemetry/events";
 
@@ -16,12 +15,12 @@ export function registerCommandWithLogging(
       await command(...args);
     } catch (e) {
       const msg = `Error invoking command "${commandName}":`;
-      logger.error(msg, e);
       if (e instanceof Error) {
-        // capture error with Sentry (only enabled in production builds)
-        Sentry.captureException(e, { tags: { command: commandName } });
-        // also show error notification to the user
-        showErrorNotificationWithButtons(`${msg} ${e.message}`);
+        // gather more (possibly-ResponseError) context and send to Sentry (only enabled in
+        // production builds)
+        logResponseError(e, msg, { command: commandName }, true);
+        // also show error notification to the user with default buttons
+        showErrorNotificationWithButtons(`${msg} ${e}`);
       }
     }
   };
