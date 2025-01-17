@@ -1,7 +1,7 @@
 import archiver from "archiver";
 import { createWriteStream } from "fs";
 import { homedir } from "os";
-import { join } from "path";
+import { join, normalize } from "path";
 
 import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
@@ -57,11 +57,21 @@ function openSettings() {
   commands.executeCommand("workbench.action.openSettings", "@ext:confluentinc.vscode-confluent");
 }
 
+/** Return the file URI for the extension's log file, normalized for the user's OS. */
+function extensionLogFileUri(): Uri {
+  return Uri.file(normalize(LOGFILE_PATH));
+}
+
+/** Return the file URI for the sidecar's log file, normalized for the user's OS. */
+function sidecarLogFileUri(): Uri {
+  return Uri.file(normalize(SIDECAR_LOGFILE_PATH));
+}
+
 /**
- * Download the extension log file to the user's local file system, prompting for a save location.
- * The default save location is the user's home directory.
+ * Save the extension log file to the user's local file system, prompting for a save location.
+ * The default parent directory is the user's home directory.
  */
-async function downloadLogs() {
+async function saveExtensionLogFile() {
   // prompt where to save the file, using the home directory as the default
   const defaultPath = join(homedir(), LOGFILE_NAME);
   const saveUri = await window.showSaveDialog({
@@ -69,18 +79,18 @@ async function downloadLogs() {
     filters: {
       "Log files": ["log"],
     },
-    title: "Download Confluent Extension Log",
+    title: "Save Confluent Extension Log",
   });
   if (saveUri) {
-    await handleLogFileSave(Uri.parse(LOGFILE_PATH), saveUri, true);
+    await handleLogFileSave(extensionLogFileUri(), saveUri, true);
   }
 }
 
 /**
- * Download the sidecar log file to the user's local file system, prompting for a save location.
+ * Save the sidecar log file to the user's local file system, prompting for a save location.
  * The default save location is the user's home directory.
  */
-async function downloadSidecarLogs() {
+async function saveSidecarLogFile() {
   // prompt where to save the file, using the home directory as the default
   const defaultPath = join(homedir(), "vscode-confluent-sidecar.log");
   const saveUri: Uri | undefined = await window.showSaveDialog({
@@ -88,10 +98,10 @@ async function downloadSidecarLogs() {
     filters: {
       "Log files": ["log"],
     },
-    title: "Download Confluent Extension Sidecar Log",
+    title: "Save Confluent Extension Sidecar Log",
   });
   if (saveUri) {
-    await handleLogFileSave(Uri.parse(SIDECAR_LOGFILE_PATH), saveUri, true);
+    await handleLogFileSave(sidecarLogFileUri(), saveUri, true);
   }
 }
 
@@ -123,7 +133,7 @@ async function handleLogFileSave(readUri: Uri, writeUri: Uri, forSidecar: boolea
     return;
   }
 
-  const successMsg = `Confluent extension ${forSidecar ? "sidecar " : ""}log file downloaded successfully.`;
+  const successMsg = `Confluent extension ${forSidecar ? "sidecar " : ""}log file saved successfully.`;
   logger.debug(successMsg);
   const openButton = "Open File";
   window.showInformationMessage(successMsg, openButton).then((value) => {
@@ -134,12 +144,12 @@ async function handleLogFileSave(readUri: Uri, writeUri: Uri, forSidecar: boolea
 }
 
 /**
- * Download a .zip of the following:
+ * Save a .zip of the following:
  * - "Confluent" output channel log file
  * - "Confluent: Sidecar" output channel log file
  * - Observability context (as a .json file)
  */
-async function downloadSupportZip() {
+async function saveSupportZip() {
   // use a date-time string like YYYYmmddHHMMSS for the .zip filename, not the full ISO format
   const dateTimeString = new Date().toISOString().replace(/[-:T]/g, "").slice(0, -5);
   const defaultPath = join(homedir(), `vscode-confluent-support-${dateTimeString}.zip`);
@@ -159,10 +169,7 @@ async function downloadSupportZip() {
   const closeListener = output.on("close", () => {
     const openButton = "Open";
     window
-      .showInformationMessage(
-        "Confluent extension support .zip downloaded successfully",
-        openButton,
-      )
+      .showInformationMessage("Confluent extension support .zip saved successfully.", openButton)
       .then((value) => {
         if (value === openButton) {
           // show in OS file explorer, don't try to open it in VS Code
@@ -180,9 +187,9 @@ async function downloadSupportZip() {
 
   // add extension+sidecar log files
   // NOTE: this will not include other workspaces' logs, only the current workspace
-  const extensionLog = await workspace.fs.readFile(Uri.parse(LOGFILE_PATH));
+  const extensionLog = await workspace.fs.readFile(extensionLogFileUri());
   archive.append(Buffer.from(extensionLog), { name: "vscode-confluent.log" });
-  const sidecarLog = await workspace.fs.readFile(Uri.parse(SIDECAR_LOGFILE_PATH));
+  const sidecarLog = await workspace.fs.readFile(sidecarLogFileUri());
   archive.append(Buffer.from(sidecarLog), { name: "vscode-confluent-sidecar.log" });
 
   // add observability context
@@ -200,9 +207,9 @@ export function registerSupportCommands(): Disposable[] {
       "confluent.support.confluent-walkthrough.launch",
       openWalkthroughCommand,
     ),
-    registerCommandWithLogging("confluent.support.saveLogs", downloadLogs),
-    registerCommandWithLogging("confluent.support.saveSidecarLogs", downloadSidecarLogs),
-    registerCommandWithLogging("confluent.support.saveSupportZip", downloadSupportZip),
+    registerCommandWithLogging("confluent.support.saveLogs", saveExtensionLogFile),
+    registerCommandWithLogging("confluent.support.saveSidecarLogs", saveSidecarLogFile),
+    registerCommandWithLogging("confluent.support.saveSupportZip", saveSupportZip),
     registerCommandWithLogging("confluent.support.feedback", feedbackCommand),
     registerCommandWithLogging("confluent.support.issue", issueCommand),
     registerCommandWithLogging("confluent.support.openSettings", openSettings),
