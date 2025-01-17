@@ -16,7 +16,7 @@ All notable changes to this extension will be documented in this file.
 
 ### Fixed
 
-- Extension/sidecar logs and the support zip can now be downloaded on Windows as expected.
+- Extension/sidecar logs and the support zip can now be saved as expected on Windows.
 
 ## 0.23.3
 
