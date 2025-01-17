@@ -1,5 +1,7 @@
-import * as vscode from "vscode";
+import { Disposable, env, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
+import { ContextValues, setContextValue } from "../context/values";
+import { resourceSearchSet } from "../emitters";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.extra");
@@ -10,7 +12,7 @@ async function openCCloudLink(item: any) {
   if (!item?.ccloudUrl) {
     return;
   }
-  await vscode.env.openExternal(vscode.Uri.parse(item.ccloudUrl));
+  await env.openExternal(Uri.parse(item.ccloudUrl));
 }
 
 async function copyResourceId(item: any) {
@@ -19,8 +21,8 @@ async function copyResourceId(item: any) {
   if (!item?.id) {
     return;
   }
-  await vscode.env.clipboard.writeText(item.id);
-  vscode.window.showInformationMessage(`Copied "${item.id}" to clipboard.`);
+  await env.clipboard.writeText(item.id);
+  window.showInformationMessage(`Copied "${item.id}" to clipboard.`);
 }
 
 /** Copy the object's name to the clipboard. */
@@ -29,8 +31,8 @@ async function copyResourceName(item: any) {
   if (!item?.name) {
     return;
   }
-  await vscode.env.clipboard.writeText(item.name);
-  vscode.window.showInformationMessage(`Copied "${item.name}" to clipboard.`);
+  await env.clipboard.writeText(item.name);
+  window.showInformationMessage(`Copied "${item.name}" to clipboard.`);
 }
 
 async function copyResourceUri(item: any) {
@@ -39,15 +41,82 @@ async function copyResourceUri(item: any) {
   if (!item?.uri) {
     return;
   }
-  await vscode.env.clipboard.writeText(item.uri);
-  vscode.window.showInformationMessage(`Copied "${item.uri}" to clipboard.`);
+  await env.clipboard.writeText(item.uri);
+  window.showInformationMessage(`Copied "${item.uri}" to clipboard.`);
 }
 
-export function registerExtraCommands(): vscode.Disposable[] {
+async function searchResources() {
+  const searchString = await window.showInputBox({
+    title: "Search resources",
+    ignoreFocusOut: true,
+  });
+  if (!searchString) {
+    return;
+  }
+  await setContextValue(ContextValues.resourceSearchApplied, true);
+  logger.debug("Searching resources");
+  window.showInformationMessage("Searching resources");
+  resourceSearchSet.fire(searchString);
+}
+
+async function clearResourceSearch() {
+  logger.debug("Clearing resource search");
+  window.showInformationMessage("Cleared resource search");
+  await setContextValue(ContextValues.resourceSearchApplied, false);
+  resourceSearchSet.fire(null);
+}
+
+async function searchTopics() {
+  const searchString = await window.showInputBox({
+    title: "Search topics",
+    ignoreFocusOut: true,
+  });
+  if (!searchString) {
+    return;
+  }
+  await setContextValue(ContextValues.topicSearchApplied, true);
+  logger.debug("Searching topics");
+  window.showInformationMessage("Searching topics");
+}
+
+async function clearTopicSearch() {
+  logger.debug("Clearing topic search");
+  await setContextValue(ContextValues.topicSearchApplied, false);
+
+  window.showInformationMessage("Cleared topic search");
+}
+
+async function searchSchemas() {
+  const searchString = await window.showInputBox({
+    title: "Search schema subjects",
+    ignoreFocusOut: true,
+  });
+  if (!searchString) {
+    return;
+  }
+  await setContextValue(ContextValues.schemaSearchApplied, true);
+  logger.debug("Searching schemas");
+  window.showInformationMessage("Searching schemas");
+}
+
+async function clearSchemaSearch() {
+  logger.debug("Clearing schema search");
+  await setContextValue(ContextValues.schemaSearchApplied, false);
+
+  window.showInformationMessage("Cleared schema search");
+}
+
+export function registerExtraCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
     registerCommandWithLogging("confluent.copyResourceId", copyResourceId),
     registerCommandWithLogging("confluent.copyResourceName", copyResourceName),
     registerCommandWithLogging("confluent.copyResourceUri", copyResourceUri),
+    registerCommandWithLogging("confluent.resources.search", searchResources),
+    registerCommandWithLogging("confluent.resources.search.clear", clearResourceSearch),
+    registerCommandWithLogging("confluent.topics.search", searchTopics),
+    registerCommandWithLogging("confluent.topics.search.clear", clearTopicSearch),
+    registerCommandWithLogging("confluent.schemas.search", searchSchemas),
+    registerCommandWithLogging("confluent.schemas.search.clear", clearSchemaSearch),
   ];
 }

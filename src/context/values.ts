@@ -58,6 +58,12 @@ export enum ContextValues {
   kafkaClusterSelected = "confluent.kafkaClusterSelected",
   /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
+  /** The user applied a search string to the Resources view. */
+  resourceSearchApplied = "confluent.resourceSearchApplied",
+  /** The user applied a search string to the Topics view. */
+  topicSearchApplied = "confluent.topicSearchApplied",
+  /** The user applied a search string to the Schemas view. */
+  schemaSearchApplied = "confluent.schemaSearchApplied",
   /**
    * PREVIEW: Is the "produce message" functionality enabled at all?
    * (This should go away once the `confluent.preview.enableProduceMessages` setting is removed.)
