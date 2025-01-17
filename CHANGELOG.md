@@ -12,8 +12,9 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
-- React to websocket events pushed from sidecar instead of polling for some connection change
-  monitoring.
+- CCloud and direct connection status changes are now handled via websocket events pushed from the
+  sidecar instead of relying on HTTP polling. (Local connection status changes continue to be
+  handled through Docker system events.)
 
 ### Fixed
 
