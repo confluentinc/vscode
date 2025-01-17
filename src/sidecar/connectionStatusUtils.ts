@@ -62,11 +62,29 @@ export function connectionEventHandler(event: ConnectionEventBody) {
       break;
     }
     case ConnectionType.Ccloud:
-      logger.debug(
-        "connectionEventHandler: ccloud connection update received, passing to watchCCloudConnectionStatus()",
-      );
-      reactToCCloudAuthState(connection);
+      switch (event.action) {
+        case "CREATED":
+        case "UPDATED":
+        case "CONNECTED":
+        case "DISCONNECTED":
+          logger.debug(
+            "connectionEventHandler: ccloud connection update received, passing to reactToCCloudAuthState()",
+          );
+          reactToCCloudAuthState(connection);
+          break;
+        case "DELETED":
+          // When a DELETED event comes, it will come with the prior (perhaps fully happy) spelling of the connection.
+          // We don't want to consider it anymore, so don't call reactToCCloudAuthState.
+          // (Other actions hinging off of a secret being deleted will cause us to cascade through
+          // to have us go to a not-ccloud-authenticated state, so this is fine.)
+          logger.debug("connectionEventHandler: ccloud connection deleted.");
+          break;
+        default:
+          logger.warn(`connectionEventHandler: unhandled ccloud connection action ${event.action}`);
+          throw new Error(`Unhandled ccloud connection action ${event.action}`);
+      }
       break;
+
     case ConnectionType.Local:
       logger.info(
         `connectionEventHandler: ${connection.id} connection ${event.action} side effects unhandled.`,
