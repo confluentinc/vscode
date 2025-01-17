@@ -1,7 +1,7 @@
 import archiver from "archiver";
 import { createWriteStream } from "fs";
 import { homedir } from "os";
-import { join } from "path";
+import { join, normalize } from "path";
 
 import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
@@ -57,6 +57,16 @@ function openSettings() {
   commands.executeCommand("workbench.action.openSettings", "@ext:confluentinc.vscode-confluent");
 }
 
+/** Return the file URI for the extension's log file, normalized for the user's OS. */
+function extensionLogFileUri(): Uri {
+  return Uri.file(normalize(LOGFILE_PATH));
+}
+
+/** Return the file URI for the sidecar's log file, normalized for the user's OS. */
+function sidecarLogFileUri(): Uri {
+  return Uri.file(normalize(SIDECAR_LOGFILE_PATH));
+}
+
 /**
  * Download the extension log file to the user's local file system, prompting for a save location.
  * The default save location is the user's home directory.
@@ -72,7 +82,7 @@ async function downloadLogs() {
     title: "Download Confluent Extension Log",
   });
   if (saveUri) {
-    await handleLogFileSave(Uri.parse(LOGFILE_PATH), saveUri, true);
+    await handleLogFileSave(extensionLogFileUri(), saveUri, true);
   }
 }
 
@@ -91,7 +101,7 @@ async function downloadSidecarLogs() {
     title: "Download Confluent Extension Sidecar Log",
   });
   if (saveUri) {
-    await handleLogFileSave(Uri.parse(SIDECAR_LOGFILE_PATH), saveUri, true);
+    await handleLogFileSave(sidecarLogFileUri(), saveUri, true);
   }
 }
 
@@ -180,9 +190,9 @@ async function downloadSupportZip() {
 
   // add extension+sidecar log files
   // NOTE: this will not include other workspaces' logs, only the current workspace
-  const extensionLog = await workspace.fs.readFile(Uri.parse(LOGFILE_PATH));
+  const extensionLog = await workspace.fs.readFile(extensionLogFileUri());
   archive.append(Buffer.from(extensionLog), { name: "vscode-confluent.log" });
-  const sidecarLog = await workspace.fs.readFile(Uri.parse(SIDECAR_LOGFILE_PATH));
+  const sidecarLog = await workspace.fs.readFile(sidecarLogFileUri());
   archive.append(Buffer.from(sidecarLog), { name: "vscode-confluent-sidecar.log" });
 
   // add observability context
