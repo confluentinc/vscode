@@ -43,7 +43,7 @@ async function ccloudSignOut() {
   // the authentication API doesn't provide a way to sign out, so we'll mirror the confirmation
   // dialog from the Accounts section of the VS Code UI
   const yesButton = "Sign Out";
-  const confirmation = await window.showWarningMessage(
+  const confirmation = await window.showInformationMessage(
     `The account '${authSession.account.label}' has been used by: 
 
 Confluent
