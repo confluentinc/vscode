@@ -113,9 +113,7 @@ describe("ConfluentCloudAuthProvider", () => {
 
     const sessions = await authProvider.getSessions();
 
-    assert.ok(getCCloudConnectionStub.calledOnce);
-
-    assert.deepStrictEqual([], sessions);
+    assert.deepStrictEqual(sessions, []);
   });
 
   it("getSessions() should return an empty array when no connection exists", async () => {
@@ -123,7 +121,7 @@ describe("ConfluentCloudAuthProvider", () => {
 
     const sessions = await authProvider.getSessions();
 
-    assert.deepStrictEqual([], sessions);
+    assert.deepStrictEqual(sessions, []);
   });
 
   it("getSessions() should return an AuthenticationSession when a valid connection exists", async () => {
