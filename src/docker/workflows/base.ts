@@ -1,5 +1,6 @@
-import { CancellationToken, commands, Progress, ProgressLocation, window } from "vscode";
+import { CancellationToken, Progress, ProgressLocation, window } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
+import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
 import { logUsage, UserEvent } from "../../telemetry/events";
@@ -84,7 +85,7 @@ export abstract class LocalResourceWorkflow {
           errorMsg = error.response.statusText;
         }
       }
-      this.showErrorNotification(
+      showErrorNotificationWithButtons(
         `Failed to start ${this.resourceKind} container "${container.name}": ${errorMsg}`,
       );
       return;
@@ -156,28 +157,6 @@ export abstract class LocalResourceWorkflow {
       this.logAndUpdateProgress(`Pulling "${imageRepo}:${imageTag}"...`);
       await pullImage(imageRepo, imageTag);
     }
-  }
-
-  // TODO: maybe put this somewhere else for more general use?
-  /** Show an error notification for this workflow with buttons to "Open Logs" or "File an Issue". */
-  showErrorNotification(message: string) {
-    this.logger.error("showing error notification:", message);
-    const logsButton = "Open Logs";
-    const issueButton = "File an Issue";
-    window.showErrorMessage(message, logsButton, issueButton).then(async (selection) => {
-      if (!selection) return;
-
-      if (selection === logsButton) {
-        commands.executeCommand("confluent.showOutputChannel");
-      } else if (selection === issueButton) {
-        commands.executeCommand("confluent.support.issue");
-      }
-
-      this.sendTelemetryEvent(UserEvent.NotificationButtonClicked, {
-        buttonLabel: selection,
-        notificationType: "error",
-      });
-    });
   }
 
   /**
