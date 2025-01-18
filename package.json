@@ -971,12 +971,6 @@
         }
       }
     },
-    "jsonValidation": [
-      {
-        "fileMatch": ".json",
-        "url": "./resources/schemas/produce-message.schema.json"
-      }
-    ],
     "walkthroughs": [
       {
         "id": "confluent-walkthrough",
@@ -1116,6 +1110,7 @@
     "tail": "^2.2.6",
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
+    "vscode-json-languageservice": "^5.4.2",
     "ws": "^8.18.0"
   }
 }
