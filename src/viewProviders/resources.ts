@@ -45,7 +45,8 @@ import {
   SchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
-import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { updateLocalConnection } from "../sidecar/connections/local";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 
