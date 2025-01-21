@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
+import { ConnectionStatus } from "../clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
   EXTENSION_VERSION,
@@ -47,6 +48,7 @@ import {
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
+import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 
@@ -274,10 +276,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       default: {
         // direct connections are treated as environments, so we can look up the direct "environment"
         // by its connection ID
-        const environment = this.environmentsMap.get(id);
+        const environment = this.environmentsMap.get(id) as DirectEnvironment | undefined;
         if (environment) {
           if (!loading) {
-            // if the connection is usable, we need to refresh the children of the environment
+            // if the connection is stable, we need to refresh the children of the environment
             // to potentially show the Kafka clusters and Schema Registry and update the collapsible
             // state of the item
             const directEnvs = await getDirectResources();
@@ -285,6 +287,19 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             if (directEnv) {
               environment.kafkaClusters = directEnv.kafkaClusters;
               environment.schemaRegistry = directEnv.schemaRegistry;
+            }
+            // we also need to check for any `FAILED` states' error messages for the Kafka and/or
+            // Schema Registry configs based on the last websocket event
+            const lastStatus: ConnectionStatus | undefined =
+              ConnectionStateWatcher.getInstance().getLatestConnectionEvent(id)?.connection.status;
+            if (lastStatus) {
+              if (lastStatus.kafka_cluster?.errors?.sign_in?.message) {
+                environment.kafkaConnectionFailed = lastStatus.kafka_cluster.errors.sign_in.message;
+              }
+              if (lastStatus.schema_registry?.errors?.sign_in?.message) {
+                environment.schemaRegistryConnectionFailed =
+                  lastStatus.schema_registry.errors.sign_in.message;
+              }
             }
           }
           environment.isLoading = loading;
