@@ -9,15 +9,14 @@ import {
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import { Connection } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
+import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
 import { getSidecar } from "../sidecar";
-import * as connections from "../sidecar/connections";
+import * as ccloud from "../sidecar/connections/ccloud";
+import * as watcher from "../sidecar/connections/watcher";
 import { getStorageManager, StorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
-
-const AUTH_CALLBACK_URI = vscode.Uri.parse("vscode://confluentinc.vscode-confluent/authCallback");
 
 const TEST_CCLOUD_AUTH_SESSION: vscode.AuthenticationSession = {
   id: TEST_CCLOUD_CONNECTION.id!,
@@ -37,6 +36,7 @@ describe("ConfluentCloudAuthProvider", () => {
   // helper function stubs
   let getCCloudConnectionStub: sinon.SinonStub;
   let createCCloudConnectionStub: sinon.SinonStub;
+  let deleteConnectionStub: sinon.SinonStub;
   // auth provider stubs
   let browserAuthFlowStub: sinon.SinonStub;
   let stubOnDidChangeSessions: sinon.SinonStubbedInstance<
@@ -53,12 +53,13 @@ describe("ConfluentCloudAuthProvider", () => {
     authProvider = getAuthProvider();
 
     sandbox = sinon.createSandbox();
-    getCCloudConnectionStub = sandbox.stub(connections, "getCCloudConnection");
-    createCCloudConnectionStub = sandbox.stub(connections, "createCCloudConnection");
+    getCCloudConnectionStub = sandbox.stub(ccloud, "getCCloudConnection");
+    createCCloudConnectionStub = sandbox.stub(ccloud, "createCCloudConnection");
+    deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection");
 
     // assume the connection is immediately usable for most tests
     sandbox
-      .stub(connections, "waitForConnectionToBeStable")
+      .stub(watcher, "waitForConnectionToBeStable")
       .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
 
     // don't handle the progress notification, openExternal, etc in this test suite
@@ -137,7 +138,6 @@ describe("ConfluentCloudAuthProvider", () => {
     const handleSessionRemovedStub = sandbox.stub().resolves();
     authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
-    const deleteConnectionStub = sandbox.stub(connections, "deleteCCloudConnection").resolves();
     const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
 
     await authProvider.removeSession("sessionId");
@@ -151,7 +151,6 @@ describe("ConfluentCloudAuthProvider", () => {
     const handleSessionRemovedStub = sandbox.stub().resolves();
     authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
     getCCloudConnectionStub.resolves(null);
-    const deleteConnectionStub = sandbox.stub(connections, "deleteCCloudConnection").resolves();
 
     authProvider["_session"] = null;
     await authProvider.removeSession("sessionId");
@@ -164,7 +163,6 @@ describe("ConfluentCloudAuthProvider", () => {
     const handleSessionRemovedStub = sandbox.stub().resolves();
     authProvider["handleSessionRemoved"] = handleSessionRemovedStub;
     getCCloudConnectionStub.resolves(null);
-    const deleteConnectionStub = sandbox.stub(connections, "deleteCCloudConnection").resolves();
 
     authProvider["_session"] = TEST_CCLOUD_AUTH_SESSION;
     await authProvider.removeSession("sessionId");
@@ -242,7 +240,7 @@ describe("ConfluentCloudAuthProvider", () => {
   it("should reject the waitForUriHandling promise when the URI query contains 'success=false'", async () => {
     const promise = authProvider.waitForUriHandling();
 
-    const uri = AUTH_CALLBACK_URI.with({ query: "success=false" });
+    const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: "success=false" });
     uriHandler.handleUri(uri);
 
     await promise.catch((err) => {
@@ -253,7 +251,7 @@ describe("ConfluentCloudAuthProvider", () => {
   it("should resolve the waitForUriHandling promise when the URI query contains 'success=true'", async () => {
     const promise = authProvider.waitForUriHandling();
 
-    const uri = AUTH_CALLBACK_URI.with({ query: "success=true" });
+    const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: "success=true" });
     uriHandler.handleUri(uri);
 
     await promise.then((result) => {
@@ -272,7 +270,7 @@ describe("CCloud auth flow", () => {
   beforeEach(async () => {
     await storageManager.clearWorkspaceState();
     // make sure we don't have a lingering CCloud connection from other tests
-    await connections.deleteCCloudConnection();
+    await ccloud.deleteCCloudConnection();
   });
 
   it("should successfully authenticate via CCloud with the sign_in_uri", async function () {
@@ -285,7 +283,7 @@ describe("CCloud auth flow", () => {
     // NOTE: can't be used with an arrow-function because it needs to be able to access `this`
     this.slow(10000); // mark this test as slow if it takes longer than 10s
     this.retries(2); // retry this test up to 2 times if it fails
-    const newConnection: Connection = await connections.createCCloudConnection();
+    const newConnection: Connection = await ccloud.createCCloudConnection();
     await testAuthFlow(newConnection.metadata.sign_in_uri!);
     // make sure the newly-created connection is available via the sidecar
     const client = (await getSidecar()).getConnectionsResourceApi();

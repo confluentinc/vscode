@@ -16,6 +16,7 @@ import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
 import { ConnectionId } from "./models/resource";
 import * as sidecar from "./sidecar";
 import * as connections from "./sidecar/connections";
+import * as watcher from "./sidecar/connections/watcher";
 import {
   CustomConnectionSpec,
   DirectConnectionsById,
@@ -107,7 +108,7 @@ describe("DirectConnectionManager behavior", () => {
       .stub(connections, "tryToUpdateConnection")
       .resolves({} as any);
     // assume the connection is immediately usable for most tests
-    sandbox.stub(connections, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
+    sandbox.stub(watcher, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
   });
 
   afterEach(() => {
