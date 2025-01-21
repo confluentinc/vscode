@@ -71,7 +71,7 @@ function notifyForFailedState(connection: Connection) {
     showErrorNotificationWithButtons(
       `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
       {
-        "Edit Connection": () =>
+        "View Connection Details": () =>
           commands.executeCommand(`confluent.connections.direct.edit`, connection.id),
       },
     );
