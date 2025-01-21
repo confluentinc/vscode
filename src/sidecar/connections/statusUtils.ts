@@ -7,7 +7,7 @@ import { Logger } from "../../logging";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
 import { ConnectionEventBody } from "../../ws/messageTypes";
 
-const logger = new Logger("sidecar.connections.status");
+const logger = new Logger("sidecar.connections.statusUtils");
 
 /**
  * Perform side-effects in the UI based on the the connection action (CREATED, DELETED, CONNECTED, etc.)
