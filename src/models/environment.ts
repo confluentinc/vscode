@@ -1,4 +1,11 @@
-import { MarkdownString, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import {
+  MarkdownString,
+  ThemeColor,
+  ThemeIcon,
+  TreeItem,
+  TreeItemCollapsibleState,
+  Uri,
+} from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
@@ -261,9 +268,11 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
       failedResources.forEach((error) => {
         tooltip.appendMarkdown(`\n\n- ${error}`);
       });
-      tooltip.appendMarkdown(
-        `\n\n[View Connection Details](command:confluent.connections.direct.edit?${resource.id})`,
+      // provide a command URI as a markdown link
+      const commandUri = Uri.parse(
+        `command:confluent.connections.direct.edit?${encodeURIComponent(JSON.stringify([resource.connectionId]))}`,
       );
+      tooltip.appendMarkdown(`\n\n[View Connection Details](${commandUri})`);
     }
 
     // const { missingKafka, missingSR } = checkForMissingResources(resource);
