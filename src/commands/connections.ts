@@ -6,6 +6,7 @@ import { DirectConnectionManager } from "../directConnectManager";
 import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
+import { ConnectionId } from "../models/resource";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
@@ -156,15 +157,17 @@ export async function renameDirectConnection(item: DirectEnvironment) {
   await DirectConnectionManager.getInstance().updateConnection(updatedSpec);
 }
 
-export async function editDirectConnection(item: DirectEnvironment) {
-  if (!(item instanceof DirectEnvironment)) {
+export async function editDirectConnection(item: ConnectionId | DirectEnvironment) {
+  // if the user clicked on the "Edit" button in the Resources view, the item will be a DirectEnvironment
+  // otherwise, this was triggered via the commands API and should have been passed a ConnectionId arg
+  if (!(item instanceof DirectEnvironment || typeof item === "string")) {
     return;
   }
 
+  const connectionId = item instanceof DirectEnvironment ? item.connectionId : item;
   // look up the associated ConnectionSpec
-  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-    item.connectionId,
-  );
+  const spec: CustomConnectionSpec | null =
+    await getResourceManager().getDirectConnection(connectionId);
   if (!spec) {
     logger.error("Direct connection not found, can't edit");
     // possibly stale Resources view? this shouldn't happen
