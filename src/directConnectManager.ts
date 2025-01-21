@@ -20,8 +20,8 @@ import {
   tryToCreateConnection,
   tryToDeleteConnection,
   tryToUpdateConnection,
-  waitForConnectionToBeStable,
 } from "./sidecar/connections";
+import { waitForConnectionToBeStable } from "./sidecar/connections/watcher";
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
