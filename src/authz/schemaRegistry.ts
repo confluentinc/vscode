@@ -40,7 +40,7 @@ export async function canAccessSchemaTypeForTopic(
     await getResourceManager().getCCloudSchemaRegistry(environmentId);
   if (!schemaRegistry) {
     logger.debug(
-      "no Schema Registry in extension state matching CCloud topic's environment ID; assuming user can access (non-existent) schemas",
+      "no Schema Registry in extension state matching topic's environment ID; assuming user can access (non-existent) schemas",
       { environmentId },
     );
     // if we had schemas, we would have a schema registry
