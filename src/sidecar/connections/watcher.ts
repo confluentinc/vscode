@@ -5,7 +5,7 @@ import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
 import { ConnectionEventBody, Message, MessageType } from "../../ws/messageTypes";
 import { WebsocketManager } from "../websocketManager";
-import { connectionEventHandler, isConnectionStable } from "./statusUtils";
+import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 
 const logger = new Logger("sidecar.connections.watcher");
 

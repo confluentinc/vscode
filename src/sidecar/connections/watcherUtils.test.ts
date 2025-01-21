@@ -13,7 +13,7 @@ import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
 import { ConnectedState, Status } from "../../clients/sidecar/models";
 import { connectionStable, environmentChanged } from "../../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
-import { connectionEventHandler, isConnectionStable } from "./statusUtils";
+import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 
 describe("connectionEventHandler", () => {
   // signon sandbox for connectionStable and  environmentChanged event emitters

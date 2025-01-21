@@ -16,12 +16,12 @@ import {
   newMessageHeaders,
 } from "../../ws/messageTypes";
 
-import * as connectionStatusUtils from "./statusUtils";
 import {
   ConnectionStateWatcher,
   SingleConnectionEntry,
   waitForConnectionToBeStable,
 } from "./watcher";
+import * as connectionStatusUtils from "./watcherUtils";
 
 describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
