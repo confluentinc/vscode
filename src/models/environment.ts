@@ -251,10 +251,10 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
 
     const failedResources = [];
     if (directEnv.kafkaConnectionFailed) {
-      failedResources.push(`- **Kafka**: ${directEnv.kafkaConnectionFailed}`);
+      failedResources.push(`**Kafka**: ${directEnv.kafkaConnectionFailed}`);
     }
     if (directEnv.schemaRegistryConnectionFailed) {
-      failedResources.push(`- **Schema Registry**: ${directEnv.schemaRegistryConnectionFailed}`);
+      failedResources.push(`**Schema Registry**: ${directEnv.schemaRegistryConnectionFailed}`);
     }
     if (failedResources.length) {
       tooltip.appendMarkdown("\n\n---").appendMarkdown("\n\n$(error) **Unable to connect to**:");
