@@ -1,6 +1,7 @@
-import { EventEmitter } from "vscode";
+import { commands, EventEmitter } from "vscode";
 import { Connection, ConnectionType } from "../../clients/sidecar";
 import { connectionStable, environmentChanged } from "../../emitters";
+import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
 import { ConnectionEventBody, Message, MessageType } from "../../ws/messageTypes";
@@ -41,6 +42,12 @@ export async function waitForConnectionToBeStable(
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
     // old data
     environmentChanged.fire(id as unknown as EnvironmentId);
+    const lastConnectionEvent = connectionStateWatcher.getLatestConnectionEvent(id);
+    if (lastConnectionEvent) {
+      showErrorNotificationWithButtons(
+        `Timed out establishing "${lastConnectionEvent.connection.spec.name}" connection.`,
+      );
+    }
     logger.error(msg);
     return null;
   }
@@ -48,8 +55,27 @@ export async function waitForConnectionToBeStable(
   logger.debug(
     `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
   );
+  notifyForFailedState(connection);
 
   return connection;
+}
+
+function notifyForFailedState(connection: Connection) {
+  let failedStatuses: string[] = [];
+  // the notifications don't allow rich formatting here, so we'll just list out the failed resources
+  // and then try to show the errors themselves in the item tooltips
+  if (connection.status.ccloud?.state === "FAILED") failedStatuses.push("Confluent Cloud");
+  if (connection.status.kafka_cluster?.state === "FAILED") failedStatuses.push("Kafka");
+  if (connection.status.schema_registry?.state === "FAILED") failedStatuses.push("Schema Registry");
+  if (failedStatuses.length > 0) {
+    showErrorNotificationWithButtons(
+      `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
+      {
+        "View Connection Details": () =>
+          commands.executeCommand(`confluent.connections.direct.edit`, connection.id),
+      },
+    );
+  }
 }
 
 /**

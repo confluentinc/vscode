@@ -78,6 +78,9 @@ describe("EnvironmentTreeItem", () => {
         schemaRegistry: undefined,
         schemaRegistryConfigured: missingSR,
       });
+      resource.kafkaConnectionFailed = missingKafka ? "kafka config is bad" : undefined;
+      resource.schemaRegistryConnectionFailed = missingSR ? "SR config is bad" : undefined;
+
       const treeItem = new EnvironmentTreeItem(resource);
 
       const tooltip = treeItem.tooltip as MarkdownString;
