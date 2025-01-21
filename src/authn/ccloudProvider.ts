@@ -13,8 +13,8 @@ import {
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
-  waitForConnectionToBeStable,
-} from "../sidecar/connections";
+} from "../sidecar/connections/ccloud";
+import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { getEnvironments } from "../graphql/environments";
 import { CCloudEnvironment } from "../models/environment";
-import { hasCCloudAuthSession } from "../sidecar/connections";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 
 export async function environmentQuickPick(): Promise<CCloudEnvironment | undefined> {
   // Convenience function to get the name of a cloud environment if a command was triggered through

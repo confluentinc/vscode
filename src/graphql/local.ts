@@ -5,7 +5,7 @@ import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
-import { createLocalConnection, getLocalConnection } from "../sidecar/connections";
+import { createLocalConnection, getLocalConnection } from "../sidecar/connections/local";
 
 export async function getLocalResources(): Promise<LocalEnvironment[]> {
   let envs: LocalEnvironment[] = [];

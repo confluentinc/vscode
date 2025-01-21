@@ -7,7 +7,7 @@ import { ccloudAuthSessionInvalidated } from "../emitters";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { SSL_PEM_PATHS } from "../preferences/constants";
-import { deleteCCloudConnection } from "../sidecar/connections";
+import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
 

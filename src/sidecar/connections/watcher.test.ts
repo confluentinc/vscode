@@ -1,148 +1,27 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as sidecar from ".";
 import {
   TEST_CCLOUD_CONNECTION,
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_ID,
-  TEST_LOCAL_CONNECTION,
-} from "../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import {
-  ConnectedState,
-  Connection,
-  ConnectionsResourceApi,
-  ConnectionType,
-  ResponseError,
-  Status,
-} from "../clients/sidecar";
-import { ContextValues, setContextValue } from "../context/values";
-import {
-  connectionStable,
-  currentKafkaClusterChanged,
-  currentSchemaRegistryChanged,
-} from "../emitters";
-import { ConnectionId } from "../models/resource";
-import { getResourceManager } from "../storage/resourceManager";
+} from "../../../tests/unit/testResources/connection";
+import { ConnectedState, Connection, ConnectionType, Status } from "../../clients/sidecar";
+import { connectionStable } from "../../emitters";
+import { ConnectionId } from "../../models/resource";
 import {
   ConnectionEventAction,
   ConnectionEventBody,
   Message,
   MessageType,
   newMessageHeaders,
-} from "../ws/messageTypes";
+} from "../../ws/messageTypes";
+
+import * as connectionStatusUtils from "./statusUtils";
 import {
-  clearCurrentCCloudResources,
   ConnectionStateWatcher,
-  getLocalConnection,
-  hasCCloudAuthSession,
   SingleConnectionEntry,
-  tryToCreateConnection,
-  tryToDeleteConnection,
-  tryToUpdateConnection,
   waitForConnectionToBeStable,
-} from "./connections";
-
-import * as connectionStatusUtils from "./connectionStatusUtils";
-
-describe("sidecar/connections.ts", () => {
-  let sandbox: sinon.SinonSandbox;
-  let stubConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    // create the stubs for the sidecar + service client
-    const stubSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
-    stubConnectionsResourceApi = sandbox.createStubInstance(ConnectionsResourceApi);
-    stubSidecarHandle.getConnectionsResourceApi.returns(stubConnectionsResourceApi);
-    // stub the getSidecar function to return the stub sidecar handle
-    sandbox.stub(sidecar, "getSidecar").resolves(stubSidecarHandle);
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
-  for (const testConnection of [
-    TEST_LOCAL_CONNECTION,
-    TEST_CCLOUD_CONNECTION,
-    TEST_DIRECT_CONNECTION,
-  ]) {
-    it(`${testConnection.spec.type}: tryToGetConnection() should return null if no connection exists / we get a 404 response`, async () => {
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.rejects({ response: { status: 404 } });
-
-      const connection = await getLocalConnection();
-
-      assert.strictEqual(connection, null);
-    });
-
-    it(`${testConnection.spec.type}: tryToGetConnection() should return a connection if it exists`, async () => {
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdGet.resolves(testConnection);
-
-      const connection = await getLocalConnection();
-
-      assert.strictEqual(connection, testConnection);
-    });
-
-    it(`${testConnection.spec.type}: tryToCreateConnection() should create and return a new connection`, async () => {
-      stubConnectionsResourceApi.gatewayV1ConnectionsPost.resolves(testConnection);
-
-      const connection = await tryToCreateConnection(testConnection.spec);
-
-      assert.strictEqual(connection, testConnection);
-    });
-
-    it(`${testConnection.spec.type}: tryToUpdateConnection() should update and return a connection`, async () => {
-      const updatedConnection: Connection = {
-        ...testConnection,
-        spec: { ...testConnection.spec, name: "updated-name" },
-      };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdPut.resolves(updatedConnection);
-
-      const connection = await tryToUpdateConnection(updatedConnection);
-
-      assert.strictEqual(connection, updatedConnection);
-    });
-
-    it(`${testConnection.spec.type}: tryToDeleteConnection() should not re-throw 404 response errors`, async () => {
-      const error = new ResponseError(new Response(null, { status: 404 }));
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdDeleteRaw.rejects(error);
-
-      const promise = tryToDeleteConnection(testConnection.id);
-
-      await assert.doesNotReject(promise);
-    });
-  }
-
-  it("clearCurrentCCloudResources() should clear resources and fire events", async () => {
-    // just needed for this test, otherwise we'd put this in the before() block
-    await getTestExtensionContext();
-
-    const resourceManager = getResourceManager();
-    const deleteCCloudResourcesStub = sandbox.stub(resourceManager, "deleteCCloudResources");
-    const currentKafkaClusterChangedFireStub = sandbox.stub(currentKafkaClusterChanged, "fire");
-    const currentSchemaRegistryChangedFireStub = sandbox.stub(currentSchemaRegistryChanged, "fire");
-
-    await clearCurrentCCloudResources();
-
-    assert.ok(deleteCCloudResourcesStub.calledOnce);
-    assert.ok(currentKafkaClusterChangedFireStub.calledOnceWith(null));
-    assert.ok(currentSchemaRegistryChangedFireStub.calledOnceWith(null));
-  });
-
-  it("hasCCloudAuthSession() should return false when the context value is false or undefined", () => {
-    for (const value of [false, undefined]) {
-      setContextValue(ContextValues.ccloudConnectionAvailable, value);
-      assert.strictEqual(hasCCloudAuthSession(), false, `Expected ${value} to return false`);
-    }
-  });
-
-  it("hasCCloudAuthSession() should return true when the context value is true", () => {
-    setContextValue(ContextValues.ccloudConnectionAvailable, true);
-    assert.strictEqual(hasCCloudAuthSession(), true);
-  });
-});
+} from "./watcher";
 
 describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
@@ -361,7 +240,7 @@ describe("SingleConnectionEntry tests", () => {
 
     eventEmitterFireSub.reset();
 
-    // Anew event about the same connection should trigger a subsequent fire.
+    // A new event about the same connection should trigger a subsequent fire.
     const secondEvent: ConnectionEventBody = {
       action: ConnectionEventAction.UPDATED,
       connection: {

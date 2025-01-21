@@ -18,7 +18,7 @@ import {
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
 } from "../../preferences/constants";
-import * as connections from "../../sidecar/connections";
+import * as local from "../../sidecar/connections/local";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import {
   DEFAULT_DOCKER_NETWORK,
@@ -114,7 +114,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       .stub(workflow, "waitForLocalResourceEventChange")
       .resolves();
 
-    updateLocalConnectionStub = sandbox.stub(connections, "updateLocalConnection");
+    updateLocalConnectionStub = sandbox.stub(local, "updateLocalConnection");
   });
 
   afterEach(() => {

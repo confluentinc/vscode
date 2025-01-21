@@ -6,14 +6,14 @@ import {
   TEST_CCLOUD_CONNECTION,
   TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
-} from "../../tests/unit/testResources/connection";
+} from "../../../tests/unit/testResources/connection";
 
 import sinon from "sinon";
-import * as ccloudStateHandling from "../authn/ccloudStateHandling";
-import { ConnectedState, Status } from "../clients/sidecar/models";
-import { connectionStable, environmentChanged } from "../emitters";
-import { ConnectionEventAction, ConnectionEventBody } from "../ws/messageTypes";
-import { connectionEventHandler, isConnectionStable } from "./connectionStatusUtils";
+import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
+import { ConnectedState, Status } from "../../clients/sidecar/models";
+import { connectionStable, environmentChanged } from "../../emitters";
+import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
+import { connectionEventHandler, isConnectionStable } from "./statusUtils";
 
 describe("connectionEventHandler", () => {
   // signon sandbox for connectionStable and  environmentChanged event emitters
