@@ -31,7 +31,7 @@ import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster"
 import { ContainerTreeItem } from "../models/main";
 import { ConnectionLabel } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
-import * as auth from "../sidecar/connections";
+import * as ccloud from "../sidecar/connections/ccloud";
 import * as resourceManager from "../storage/resourceManager";
 import {
   loadCCloudResources,
@@ -143,7 +143,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadCCloudResources() should load CCloud resources under the Confluent Cloud container tree item when connected to CCloud", async () => {
-    sandbox.stub(auth, "hasCCloudAuthSession").returns(true);
+    sandbox.stub(ccloud, "hasCCloudAuthSession").returns(true);
     sandbox.stub(org, "getCurrentOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     sandbox
       .stub(resourceManager.getResourceManager(), "getCCloudEnvironments")
@@ -160,7 +160,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadCCloudResources() should return a CCloud placeholder item when not connected", async () => {
-    sandbox.stub(auth, "hasCCloudAuthSession").returns(false);
+    sandbox.stub(ccloud, "hasCCloudAuthSession").returns(false);
 
     const result: ContainerTreeItem<CCloudEnvironment> = await loadCCloudResources();
 

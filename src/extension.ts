@@ -75,7 +75,7 @@ import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
-import { ConnectionStateWatcher } from "./sidecar/connections";
+import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
