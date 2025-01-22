@@ -204,6 +204,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             env.isLoading = cachedLoading;
             this.cachedLoadingStates.delete(env.id);
           }
+          // if our ConnectionStatusWatcher was either rehydrated with connection info from the
+          // list-connections (HTTP) endpoint or has received a websocket event for this connection,
+          // update the environment with the latest status (e.g. `FAILED` state reasons)
           const latestStatus: ConnectionStatus | undefined = watcher.getLatestConnectionEvent(
             env.connectionId,
           )?.connection.status;
