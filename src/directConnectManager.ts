@@ -308,13 +308,16 @@ export class DirectConnectionManager {
     }
 
     // rehydrate the websocket connection state watcher with the known connections to let it fire
-    // off events as needed and determine connection stability
+    // off events as needed and determine connection stability, and also let any callers of the
+    // watcher's `getLatestConnectionEvent` method get the latest connection status (e.g. if they
+    // missed the initial event(s))
     const watcher = ConnectionStateWatcher.getInstance();
     sidecarDirectConnections.forEach((conn) => {
       watcher.cacheConnectionIfNeeded(conn);
     });
   }
 }
+
 export function mergeSecrets(
   currentSpec: ConnectionSpec,
   incomingSpec: CustomConnectionSpec,
