@@ -283,6 +283,11 @@ export class ConnectionStateWatcher {
     singleConnectionState.handleUpdate(message.body);
   }
 
+  /**
+   * Cache a connection if it's not already known to the ConnectionStateWatcher, primarily in the
+   * case where a {@link Connection} is known (e.g. from the Connections API) and we haven't yet
+   * received any websocket events.
+   */
   cacheConnectionIfNeeded(connection: Connection): void {
     const connectionId = connection.id as ConnectionId;
     let singleConnectionState = this.connectionStates.get(connectionId);
@@ -297,7 +302,7 @@ export class ConnectionStateWatcher {
     // Store this most recent Connection state / spec, fire off to event handlers observing
     // this single connection.
     singleConnectionState.handleUpdate({
-      action: ConnectionEventAction.UPDATED,
+      action: ConnectionEventAction.UPDATED, // seems the least-toxic guess
       connection,
     });
   }
