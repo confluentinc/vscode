@@ -60,25 +60,49 @@ export async function waitForConnectionToBeStable(
   logger.debug(
     `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
   );
-  notifyForFailedState(connection);
+  notifyIfFailedState(connection);
 
   return connection;
 }
 
-function notifyForFailedState(connection: Connection) {
+/**
+ * Show an error notification to the user if a {@linkcode Connection} has a `FAILED` status.
+ *
+ * For `DIRECT` connections, this will show a notification if the Kafka Cluster or Schema Registry
+ * status is `FAILED` and provide a button to view/edit the connection via webview form.
+ *
+ * For `CCLOUD` connections, this will show a notification if the Confluent Cloud status is `FAILED`
+ * and provide buttons to open the logs or file an issue.
+ */
+export function notifyIfFailedState(connection: Connection) {
   let failedStatuses: string[] = [];
+  let notificationButtons: Record<string, () => void> | undefined;
+
+  const type: ConnectionType = connection.spec.type!;
+  switch (type) {
+    case ConnectionType.Direct:
+      {
+        if (connection.status.kafka_cluster?.state === "FAILED") failedStatuses.push("Kafka");
+        if (connection.status.schema_registry?.state === "FAILED")
+          failedStatuses.push("Schema Registry");
+        notificationButtons = {
+          "View Connection Details": () =>
+            commands.executeCommand("confluent.connections.direct.edit", connection.id),
+        };
+      }
+      break;
+    case ConnectionType.Ccloud: {
+      if (connection.status.ccloud?.state === "FAILED") failedStatuses.push("Confluent Cloud");
+      // don't assign any buttons and allow the "Open Logs" + "File Issue" buttons to show by default
+    }
+  }
+
   // the notifications don't allow rich formatting here, so we'll just list out the failed resources
-  // and then try to show the errors themselves in the item tooltips
-  if (connection.status.ccloud?.state === "FAILED") failedStatuses.push("Confluent Cloud");
-  if (connection.status.kafka_cluster?.state === "FAILED") failedStatuses.push("Kafka");
-  if (connection.status.schema_registry?.state === "FAILED") failedStatuses.push("Schema Registry");
+  // and then try to show the errors themselves in the item tooltips if possible
   if (failedStatuses.length > 0) {
     showErrorNotificationWithButtons(
       `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
-      {
-        "View Connection Details": () =>
-          commands.executeCommand(`confluent.connections.direct.edit`, connection.id),
-      },
+      notificationButtons,
     );
   }
 }
