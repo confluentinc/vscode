@@ -48,10 +48,7 @@ import {
 } from "../models/schemaRegistry";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
-import {
-  ConnectionStateWatcher,
-  waitForConnectionToBeStable,
-} from "../sidecar/connections/watcher";
+import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 
@@ -207,9 +204,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             this.cachedLoadingStates.delete(env.id);
           }
           this.environmentsMap.set(env.id, env);
-          // and kick off a background task to make sure it's stable to avoid getting a stuck
-          // spinning icon (e.g. if this was a new workspace that may have missed websocket events).
-          waitForConnectionToBeStable(env.id as ConnectionId, 5_000);
         });
       }
 
@@ -301,6 +295,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             const lastStatus: ConnectionStatus | undefined =
               ConnectionStateWatcher.getInstance().getLatestConnectionEvent(id)?.connection.status;
             if (lastStatus) {
+              logger.debug("updating environment with last status from connection state watcher", {
+                id,
+              });
               if (lastStatus.kafka_cluster?.errors?.sign_in?.message) {
                 environment.kafkaConnectionFailed = lastStatus.kafka_cluster.errors.sign_in.message;
               }
