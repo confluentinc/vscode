@@ -107,10 +107,15 @@ export interface ProtocolErrorBody {
 
 /** Describes what kind of change happened in a CONNECTION_EVENT message. */
 export enum ConnectionEventAction {
+  /** From a POST to the Connections API. (Workspace -> sidecar HTTP requests.) */
   CREATED = "CREATED",
+  /** From a PUT/PATCH to the Connections API. (Workspace -> sidecar HTTP requests.) */
   UPDATED = "UPDATED",
+  /** From a DELETE to the Connections API. (Workspace -> sidecar HTTP requests.) */
   DELETED = "DELETED",
+  /** When we establish a connection based on its config(s) and the `status.<config>.state` resolves to `SUCCESS`. (Async updates from the sidecar.) */
   CONNECTED = "CONNECTED",
+  /** When we lose a connection based on its config(s) and the `status.<config>.state` resolves to `FAILED`. (Async updates from the sidecar.) */
   DISCONNECTED = "DISCONNECTED",
 }
 
