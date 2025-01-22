@@ -256,5 +256,13 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
   const schemas = await loader.getSchemasForEnvironmentId(topic.environmentId);
+  const subjects = await loader.getSubjects(topic.environmentId);
+
+  if (subjects.length !== schemas.length) {
+    logger.warn(`Mismatch between subjects (${subjects.length}) and schemas ${schemas.length}`);
+  } else {
+    logger.debug(`Loaded ${subjects.length} subjects for environment ${topic.environmentId}`);
+  }
+
   return generateSchemaSubjectGroups(schemas, topic.name);
 }

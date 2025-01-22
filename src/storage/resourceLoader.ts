@@ -1,11 +1,15 @@
 import { Disposable } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
+import {
+  Schema as ResponseSchema,
+  SchemasV1Api,
+  SubjectsV1Api,
+} from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, IResourceBase } from "../models/resource";
+import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -103,6 +107,35 @@ export abstract class ResourceLoader implements IResourceBase {
   public abstract getSchemaRegistryForEnvironmentId(
     environmentId: string | undefined,
   ): Promise<SchemaRegistry | undefined>;
+
+  /**
+   * Get the subjects from the schema registry for the given environment or schema registry.
+   * @param environmentId The environment to get the schema registry's subjects from.
+   * @param forceDeepRefresh If true, will ignore any cached subjects and fetch anew.
+   * @returns An array of subjects in the schema registry. Throws an error if the subjects could not be fetched.
+   * */
+  public async getSubjects(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+    forceDeepRefresh: boolean = false,
+  ): Promise<string[]> {
+    let schemaRegistry: SchemaRegistry | undefined;
+    if (typeof registryOrEnvironmentId === "string") {
+      schemaRegistry = await this.getSchemaRegistryForEnvironmentId(registryOrEnvironmentId);
+      if (!schemaRegistry) {
+        throw new Error(`No schema registry found for environment ${registryOrEnvironmentId}`);
+      }
+    } else {
+      schemaRegistry = registryOrEnvironmentId;
+    }
+
+    if (schemaRegistry.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for schema registry ${schemaRegistry.id}`,
+      );
+    }
+
+    return await fetchSubjects(schemaRegistry);
+  }
 
   /**
    * Get the possible schemas for an environment's schema registry.
@@ -260,4 +293,18 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
     });
   });
   return schemas;
+}
+
+/**
+ * Fetch all of the subjects in the schema registry and return them as an array of strings.
+ * Does not store into the resource manager.
+ */
+export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<string[]> {
+  const sidecarHandle = await getSidecar();
+  const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
+    schemaRegistry.id,
+    schemaRegistry.connectionId,
+  );
+
+  return await client.list();
 }
