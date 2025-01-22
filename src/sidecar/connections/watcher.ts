@@ -1,9 +1,15 @@
-import { EventEmitter } from "vscode";
+import { commands, EventEmitter } from "vscode";
 import { Connection, ConnectionType } from "../../clients/sidecar";
 import { connectionStable, environmentChanged } from "../../emitters";
+import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
-import { ConnectionEventBody, Message, MessageType } from "../../ws/messageTypes";
+import {
+  ConnectionEventAction,
+  ConnectionEventBody,
+  Message,
+  MessageType,
+} from "../../ws/messageTypes";
 import { WebsocketManager } from "../websocketManager";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 
@@ -41,6 +47,12 @@ export async function waitForConnectionToBeStable(
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
     // old data
     environmentChanged.fire(id as unknown as EnvironmentId);
+    const lastConnectionEvent = connectionStateWatcher.getLatestConnectionEvent(id);
+    if (lastConnectionEvent) {
+      showErrorNotificationWithButtons(
+        `Timed out establishing "${lastConnectionEvent.connection.spec.name}" connection.`,
+      );
+    }
     logger.error(msg);
     return null;
   }
@@ -48,8 +60,51 @@ export async function waitForConnectionToBeStable(
   logger.debug(
     `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
   );
+  notifyIfFailedState(connection);
 
   return connection;
+}
+
+/**
+ * Show an error notification to the user if a {@linkcode Connection} has a `FAILED` status.
+ *
+ * For `DIRECT` connections, this will show a notification if the Kafka Cluster or Schema Registry
+ * status is `FAILED` and provide a button to view/edit the connection via webview form.
+ *
+ * For `CCLOUD` connections, this will show a notification if the Confluent Cloud status is `FAILED`
+ * and provide buttons to open the logs or file an issue.
+ */
+export function notifyIfFailedState(connection: Connection) {
+  let failedStatuses: string[] = [];
+  let notificationButtons: Record<string, () => void> | undefined;
+
+  const type: ConnectionType = connection.spec.type!;
+  switch (type) {
+    case ConnectionType.Direct:
+      {
+        if (connection.status.kafka_cluster?.state === "FAILED") failedStatuses.push("Kafka");
+        if (connection.status.schema_registry?.state === "FAILED")
+          failedStatuses.push("Schema Registry");
+        notificationButtons = {
+          "View Connection Details": () =>
+            commands.executeCommand("confluent.connections.direct.edit", connection.id),
+        };
+      }
+      break;
+    case ConnectionType.Ccloud: {
+      if (connection.status.ccloud?.state === "FAILED") failedStatuses.push("Confluent Cloud");
+      // don't assign any buttons and allow the "Open Logs" + "File Issue" buttons to show by default
+    }
+  }
+
+  // the notifications don't allow rich formatting here, so we'll just list out the failed resources
+  // and then try to show the errors themselves in the item tooltips if possible
+  if (failedStatuses.length > 0) {
+    showErrorNotificationWithButtons(
+      `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
+      notificationButtons,
+    );
+  }
 }
 
 /**
@@ -250,5 +305,29 @@ export class ConnectionStateWatcher {
     // Store this most recent Connection state / spec, fire off to event handlers observing
     // this single connection.
     singleConnectionState.handleUpdate(message.body);
+  }
+
+  /**
+   * Cache a connection if it's not already known to the ConnectionStateWatcher, primarily in the
+   * case where a {@link Connection} is known (e.g. from the Connections API) and we haven't yet
+   * received any websocket events.
+   */
+  cacheConnectionIfNeeded(connection: Connection): void {
+    const connectionId = connection.id as ConnectionId;
+    let singleConnectionState = this.connectionStates.get(connectionId);
+    if (singleConnectionState) {
+      logger.debug("connection already known, not caching", { connectionId });
+      return;
+    }
+    logger.debug("caching connection", { connectionId });
+    // Insert a new entry to track this connection's updates.
+    singleConnectionState = new SingleConnectionEntry(connectionId);
+    this.connectionStates.set(connectionId, singleConnectionState);
+    // Store this most recent Connection state / spec, fire off to event handlers observing
+    // this single connection.
+    singleConnectionState.handleUpdate({
+      action: ConnectionEventAction.UPDATED, // seems the least-toxic guess
+      connection,
+    });
   }
 }

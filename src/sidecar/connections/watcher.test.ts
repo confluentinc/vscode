@@ -4,6 +4,7 @@ import {
   TEST_CCLOUD_CONNECTION,
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_ID,
+  TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
 import { ConnectedState, Connection, ConnectionType, Status } from "../../clients/sidecar";
 import { connectionStable } from "../../emitters";
@@ -16,14 +17,16 @@ import {
   newMessageHeaders,
 } from "../../ws/messageTypes";
 
+import * as errors from "../../errors";
 import {
   ConnectionStateWatcher,
+  notifyIfFailedState,
   SingleConnectionEntry,
   waitForConnectionToBeStable,
 } from "./watcher";
-import * as connectionStatusUtils from "./watcherUtils";
+import * as watcherUtils from "./watcherUtils";
 
-describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
+describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
   const connectionStateWatcher = ConnectionStateWatcher.getInstance();
 
   let sandbox: sinon.SinonSandbox;
@@ -154,7 +157,7 @@ describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
       };
 
       // wrap a spy around isConnectionStable so we can check when it's called
-      const isConnectionStableSpy = sandbox.spy(connectionStatusUtils, "isConnectionStable");
+      const isConnectionStableSpy = sandbox.spy(watcherUtils, "isConnectionStable");
 
       // clear out prior connection state so that top of ConnectionStateWatcher.waitForConnectionUpdate will be a cache
       // miss and it has to wait for an update.
@@ -193,7 +196,7 @@ describe("sidecar/connections.ts waitForConnectionToBeStable() tests", () => {
   }
 });
 
-describe("SingleConnectionEntry tests", () => {
+describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
   let sandbox: sinon.SinonSandbox;
   let eventEmitterFireSub: sinon.SinonStub;
   let singleConnectionEntry: SingleConnectionEntry;
@@ -274,5 +277,183 @@ describe("SingleConnectionEntry tests", () => {
     };
 
     assert.throws(() => singleConnectionEntry.handleUpdate(badEvent));
+  });
+});
+
+describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let showErrorNotificationStub: sinon.SinonStub;
+
+  const fakeDirectConnectionButtonLabel = "View Connection Details";
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should not show a notification if a DIRECT connection does not have any FAILED states", () => {
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: { state: ConnectedState.Success },
+        schema_registry: { state: ConnectedState.Success },
+        authentication: { status: Status.NoToken },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.notCalled);
+  });
+
+  it("should show a notification if a DIRECT connection has a FAILED `kafka_cluster` state", () => {
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: { state: ConnectedState.Failed },
+        schema_registry: { state: ConnectedState.Success },
+        authentication: { status: Status.NoToken },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.calledOnce);
+    const callArgs = showErrorNotificationStub.getCall(0).args;
+    assert.strictEqual(
+      callArgs[0],
+      `Failed to establish connection to Kafka for "${connection.spec.name}".`,
+    );
+    assert.ok(callArgs[1][fakeDirectConnectionButtonLabel]);
+  });
+
+  it("should show a notification if a DIRECT connection has a FAILED `schema_registry` state", () => {
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: { state: ConnectedState.Success },
+        schema_registry: { state: ConnectedState.Failed },
+        authentication: { status: Status.NoToken },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.calledOnce);
+    const callArgs = showErrorNotificationStub.getCall(0).args;
+    assert.strictEqual(
+      callArgs[0],
+      `Failed to establish connection to Schema Registry for "${connection.spec.name}".`,
+    );
+    assert.ok(callArgs[1][fakeDirectConnectionButtonLabel]);
+  });
+
+  it("should show a notification if a DIRECT connection has FAILED `kafka_cluster` and FAILED `schema_registry` states", () => {
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        kafka_cluster: { state: ConnectedState.Failed },
+        schema_registry: { state: ConnectedState.Failed },
+        authentication: { status: Status.NoToken },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.calledOnce);
+    const callArgs = showErrorNotificationStub.getCall(0).args;
+    assert.strictEqual(
+      callArgs[0],
+      `Failed to establish connection to Kafka and Schema Registry for "${connection.spec.name}".`,
+    );
+    assert.ok(callArgs[1][fakeDirectConnectionButtonLabel]);
+  });
+
+  it("should not show a notification if a DIRECT connection has a FAILED `ccloud` state", () => {
+    const connection: Connection = {
+      ...TEST_DIRECT_CONNECTION,
+      status: {
+        // these should not be possible with a DIRECT connection type, but still:
+        ccloud: { state: ConnectedState.Failed },
+        authentication: { status: Status.Failed },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.notCalled);
+  });
+
+  it("should not show a notification if a CCLOUD connection does not have a FAILED `ccloud` state", () => {
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: { state: ConnectedState.Success },
+        authentication: { status: Status.ValidToken },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.notCalled);
+  });
+
+  it("should show a notification if a CCLOUD connection has a FAILED `ccloud` state", () => {
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        ccloud: { state: ConnectedState.Failed },
+        authentication: { status: Status.Failed },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.calledOnce);
+    const callArgs = showErrorNotificationStub.getCall(0).args;
+    assert.strictEqual(
+      callArgs[0],
+      `Failed to establish connection to Confluent Cloud for "${connection.spec.name}".`,
+    );
+    assert.strictEqual(callArgs[1], undefined);
+  });
+
+  it("should not s how a notification if a CCLOUD connection has FAILED `kafka_cluster` and FAILED `schema_registry` states", () => {
+    const connection: Connection = {
+      ...TEST_CCLOUD_CONNECTION,
+      status: {
+        // these should not be possible with a CCLOUD connection type, but still:
+        kafka_cluster: { state: ConnectedState.Failed },
+        schema_registry: { state: ConnectedState.Failed },
+        authentication: { status: Status.ValidToken },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.notCalled);
+  });
+
+  // TODO(shoup): remove this after the LOCAL connection migrates to a DIRECT connection
+  it("should not show a notification for a LOCAL connection, even with FAILED states", () => {
+    const connection: Connection = {
+      ...TEST_LOCAL_CONNECTION,
+      spec: { type: ConnectionType.Local },
+      status: {
+        // none of this should be possible with a LOCAL connection type, but still:
+        kafka_cluster: { state: ConnectedState.Failed },
+        schema_registry: { state: ConnectedState.Failed },
+        ccloud: { state: ConnectedState.Failed },
+        authentication: { status: Status.Failed },
+      },
+    };
+
+    notifyIfFailedState(connection);
+
+    assert.ok(showErrorNotificationStub.notCalled);
   });
 });

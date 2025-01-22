@@ -9,6 +9,8 @@ All notable changes to this extension will be documented in this file.
 - Producing messages to a Kafka topic has been expanded to allow loading content from an unsaved
   editor or Message Viewer preview tab.
 - "Sign Out" action in the Resources view for the current Confluent Cloud connection.
+- Error notifications and additional tooltip information are now shown for direct connections to
+  Kafka and Schema Registry if either (or both) of the connections are not usable.
 
 ### Changed
 
