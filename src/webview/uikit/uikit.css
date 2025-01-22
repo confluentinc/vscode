@@ -49,6 +49,20 @@
   color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
+.webview-form .heading {
+  font-size: 26px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+}
+
+.webview-form .form-description {
+  color: var(--vscode-sideBarSectionHeader-foreground);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+}
 /**
  * <label class="checkbox">
  *   <input type="checkbox" />
@@ -119,6 +133,8 @@
   font-size: var(--cflt-base-font-size);
   line-height: normal;
   margin-bottom: 5px;
+  font-style: normal;
+  font-weight: 500;
 }
 .label.required::after {
   content: "*";
@@ -173,6 +189,10 @@
 .input[type="submit"]:hover:not(:disabled),
 .button:hover:not(:disabled) {
   background-color: var(--vscode-button-hoverBackground);
+}
+.input[type="submit"]:disabled,
+.button:disabled {
+  opacity: 0.4;
 }
 .button.secondary {
   color: var(--vscode-button-secondaryForeground);
