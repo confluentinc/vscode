@@ -194,6 +194,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       }
       // TODO: we aren't tracking LocalEnvironments yet, so skip that here
       if (directEnvironments) {
+        const watcher = ConnectionStateWatcher.getInstance();
         directEnvironments.forEach((env) => {
           // if we have a cached loading state for this environment
           // (due to websocket events coming in before the graphql query completes),
@@ -202,6 +203,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           if (cachedLoading !== undefined) {
             env.isLoading = cachedLoading;
             this.cachedLoadingStates.delete(env.id);
+          }
+          const latestStatus: ConnectionStatus | undefined = watcher.getLatestConnectionEvent(
+            env.connectionId,
+          )?.connection.status;
+          if (latestStatus) {
+            env = this.updateEnvironmentFromConnectionStatus(env, latestStatus);
           }
           this.environmentsMap.set(env.id, env);
         });
@@ -277,7 +284,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       default: {
         // direct connections are treated as environments, so we can look up the direct "environment"
         // by its connection ID
-        const environment = this.environmentsMap.get(id) as DirectEnvironment | undefined;
+        let environment = this.environmentsMap.get(id) as DirectEnvironment | undefined;
         if (environment) {
           logger.debug(`refreshing direct environment id="${id}" with loading state: ${loading}`);
           if (!loading) {
@@ -295,16 +302,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             const lastStatus: ConnectionStatus | undefined =
               ConnectionStateWatcher.getInstance().getLatestConnectionEvent(id)?.connection.status;
             if (lastStatus) {
-              logger.debug("updating environment with last status from connection state watcher", {
-                id,
-              });
-              if (lastStatus.kafka_cluster?.errors?.sign_in?.message) {
-                environment.kafkaConnectionFailed = lastStatus.kafka_cluster.errors.sign_in.message;
-              }
-              if (lastStatus.schema_registry?.errors?.sign_in?.message) {
-                environment.schemaRegistryConnectionFailed =
-                  lastStatus.schema_registry.errors.sign_in.message;
-              }
+              environment = this.updateEnvironmentFromConnectionStatus(environment, lastStatus);
             }
           }
           environment.isLoading = loading;
@@ -319,6 +317,27 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         }
       }
     }
+  }
+
+  /** Update a {@linkcode DirectEnvironment} with the latest connection status from the sidecar.
+   * Used to surface error messages for specific configs through the UI. */
+  updateEnvironmentFromConnectionStatus(
+    env: DirectEnvironment,
+    status: ConnectionStatus,
+  ): DirectEnvironment {
+    if (!isDirect(env)) {
+      return env;
+    }
+    logger.debug("updating environment with last status from connection state watcher", {
+      id: env.id,
+    });
+    if (status.kafka_cluster?.errors?.sign_in?.message) {
+      env.kafkaConnectionFailed = status.kafka_cluster.errors.sign_in.message;
+    }
+    if (status.schema_registry?.errors?.sign_in?.message) {
+      env.schemaRegistryConnectionFailed = status.schema_registry.errors.sign_in.message;
+    }
+    return env;
   }
 
   /** Update the context values for the current environment's resource availability. This is used
