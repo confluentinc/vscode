@@ -287,8 +287,10 @@ export class ConnectionStateWatcher {
     const connectionId = connection.id as ConnectionId;
     let singleConnectionState = this.connectionStates.get(connectionId);
     if (singleConnectionState) {
+      logger.debug("connection already known, not caching", { connectionId });
       return;
     }
+    logger.debug("caching connection", { connectionId });
     // Insert a new entry to track this connection's updates.
     singleConnectionState = new SingleConnectionEntry(connectionId);
     this.connectionStates.set(connectionId, singleConnectionState);
