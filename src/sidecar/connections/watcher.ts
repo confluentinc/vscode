@@ -4,7 +4,12 @@ import { connectionStable, environmentChanged } from "../../emitters";
 import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
-import { ConnectionEventBody, Message, MessageType } from "../../ws/messageTypes";
+import {
+  ConnectionEventAction,
+  ConnectionEventBody,
+  Message,
+  MessageType,
+} from "../../ws/messageTypes";
 import { WebsocketManager } from "../websocketManager";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 
@@ -276,5 +281,22 @@ export class ConnectionStateWatcher {
     // Store this most recent Connection state / spec, fire off to event handlers observing
     // this single connection.
     singleConnectionState.handleUpdate(message.body);
+  }
+
+  cacheConnectionIfNeeded(connection: Connection): void {
+    const connectionId = connection.id as ConnectionId;
+    let singleConnectionState = this.connectionStates.get(connectionId);
+    if (singleConnectionState) {
+      return;
+    }
+    // Insert a new entry to track this connection's updates.
+    singleConnectionState = new SingleConnectionEntry(connectionId);
+    this.connectionStates.set(connectionId, singleConnectionState);
+    // Store this most recent Connection state / spec, fire off to event handlers observing
+    // this single connection.
+    singleConnectionState.handleUpdate({
+      action: ConnectionEventAction.UPDATED,
+      connection,
+    });
   }
 }
