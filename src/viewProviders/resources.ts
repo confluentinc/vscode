@@ -331,12 +331,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     logger.debug("updating environment with last status from connection state watcher", {
       id: env.id,
     });
-    if (status.kafka_cluster?.errors?.sign_in?.message) {
-      env.kafkaConnectionFailed = status.kafka_cluster.errors.sign_in.message;
-    }
-    if (status.schema_registry?.errors?.sign_in?.message) {
-      env.schemaRegistryConnectionFailed = status.schema_registry.errors.sign_in.message;
-    }
+    // if either of these are undefined, we clear any error text that will be seen in the tooltips;
+    // otherwise we display the error message(s) in the tooltip
+    env.kafkaConnectionFailed = status.kafka_cluster?.errors?.sign_in?.message;
+    env.schemaRegistryConnectionFailed = status.schema_registry?.errors?.sign_in?.message;
     return env;
   }
 
