@@ -21,7 +21,7 @@ import {
   tryToDeleteConnection,
   tryToUpdateConnection,
 } from "./sidecar/connections";
-import { waitForConnectionToBeStable } from "./sidecar/connections/watcher";
+import { ConnectionStateWatcher, waitForConnectionToBeStable } from "./sidecar/connections/watcher";
 import { SecretStorageKeys } from "./storage/constants";
 import { DirectResourceLoader } from "./storage/directResourceLoader";
 import { ResourceLoader } from "./storage/resourceLoader";
@@ -306,6 +306,13 @@ export class DirectConnectionManager {
         `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );
     }
+
+    // rehydrate the websocket connection state watcher with the known connections to let it fire
+    // off events as needed and determine connection stability
+    const watcher = ConnectionStateWatcher.getInstance();
+    sidecarDirectConnections.forEach((conn) => {
+      watcher.cacheConnectionIfNeeded(conn);
+    });
   }
 }
 export function mergeSecrets(
