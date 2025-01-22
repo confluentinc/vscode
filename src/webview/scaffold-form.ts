@@ -41,9 +41,8 @@ class ScaffoldFormViewModel extends ViewModel {
     return true;
   });
 
-  // Updated on blur in validateInput, based on inputs with class "error".
-  // Initially set to true to prevent form submission without touching fields
-  hasValidationErrors = this.signal(true);
+  // Updated in validateInput & submit handler checks
+  hasValidationErrors = this.signal(false);
 
   isEnumField(field: [string, ScaffoldV1TemplateOption]) {
     return field[1]._enum;
@@ -65,24 +64,27 @@ class ScaffoldFormViewModel extends ViewModel {
     const minLength = this.spec()?.options?.[key]?.min_length;
     const required = minLength !== undefined && minLength > 0;
     const pattern = this.spec()?.options?.[key]?.pattern;
+    const inputContainer = input.closest(".input-container");
     if (required && value.length < minLength) {
       console.log(input.name, "not long enough");
-      input.classList.add("error");
+      inputContainer?.classList.add("error");
     } else if (value !== "" && pattern && !new RegExp(pattern).test(value)) {
       console.log(input.name, "not valid");
-      input.classList.add("error");
+      inputContainer?.classList.add("error");
     } else {
       console.log(input.name, "ok");
-      input.classList.remove("error");
+      inputContainer?.classList.remove("error");
     }
-    this.hasValidationErrors(document.querySelectorAll(".input.error").length > 0);
+    this.hasValidationErrors(document.querySelectorAll(".input-container.error").length > 0);
   }
 
   handleSubmit(event: Event) {
     event.preventDefault();
-    this.hasValidationErrors(document.querySelectorAll(".input.error").length > 0);
-    if (this.hasValidationErrors()) return;
     const form = event.target as HTMLFormElement;
+    this.hasValidationErrors(
+      document.querySelectorAll(".input-container.error").length > 0 || !form.checkValidity(),
+    );
+    if (this.hasValidationErrors()) return;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     post("Submit", { data });
