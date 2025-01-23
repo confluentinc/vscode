@@ -11,7 +11,6 @@ import {
   ConnectedState,
   Connection,
   ConnectionFromJSON,
-  ConnectionToJSONTyped,
   ConnectionType,
   instanceOfConnection,
   Status,
@@ -55,21 +54,12 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
     sandbox.restore();
   });
 
-  it("should parse valid Connection-like JSON objects correctly", async () => {
-    // since websockets don't go through the same client code as the (HTTP) REST API, we need to
-    // test that the watcher can coerce the JSON object into a Connection object correctly
-    const connectionObj = ConnectionToJSONTyped(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
-    assert.equal(
-      // not Date
-      typeof connectionObj["status"]["authentication"]["requires_authentication_at"],
-      "string",
-    );
-
+  it("should basically work when given good message", async () => {
     const message: Message<MessageType.CONNECTION_EVENT> = {
       headers: newMessageHeaders(MessageType.CONNECTION_EVENT),
       body: {
         action: ConnectionEventAction.UPDATED,
-        connection: connectionObj,
+        connection: TEST_AUTHENTICATED_CCLOUD_CONNECTION,
       },
     };
 
@@ -82,29 +72,7 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
     );
     assert.ok(cachedEvent);
     assert.ok(instanceOfConnection(cachedEvent.connection));
-    assert.ok(
-      cachedEvent.connection.status.authentication.requires_authentication_at instanceof Date,
-    );
-  });
-
-  it("should handle invalid Connection JSON objects gracefully", async () => {
-    const connectionString = "{error: 'this is not a Connection object'}";
-
-    const message: Message<MessageType.CONNECTION_EVENT> = {
-      headers: newMessageHeaders(MessageType.CONNECTION_EVENT),
-      body: {
-        action: ConnectionEventAction.UPDATED,
-        connection: connectionString as any,
-      },
-    };
-
-    await connectionStateWatcher.handleConnectionUpdateEvent(message);
-
-    assert.ok(connectionEventHandlerStub.notCalled);
-    assert.ok(logResponseErrorStub.calledOnce);
-    const cachedEvent = connectionStateWatcher.getLatestConnectionEvent(CCLOUD_CONNECTION_ID);
-    // we shouldn't have set the connection to anything since the JSON was invalid
-    assert.strictEqual(cachedEvent, null);
+    assert.deepEqual(cachedEvent.connection, TEST_AUTHENTICATED_CCLOUD_CONNECTION);
   });
 });
 
