@@ -11,7 +11,6 @@ import {
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
-import { getExtensionContext } from "../context/extension";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { logResponseError, showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
@@ -19,6 +18,7 @@ import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isDirect } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
+import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
@@ -210,11 +210,10 @@ export async function produceMessageFromDocument(topic: KafkaTopic) {
   }
 
   // load the produce-message schema and validate the incoming document
-  const schemaUri = vscode.Uri.joinPath(
-    getExtensionContext().extensionUri,
-    "resources/schemas/produce-message.schema.json",
+  const diagnostics: vscode.DiagnosticCollection = await validateDocument(
+    messageUri,
+    PRODUCE_MESSAGE_SCHEMA,
   );
-  const diagnostics: vscode.DiagnosticCollection = await validateDocument(messageUri, schemaUri);
   if (diagnostics.get(messageUri)) {
     showErrorNotificationWithButtons("Unable to produce message: JSON schema validation failed.", {
       "Show Validation Errors": () => {
