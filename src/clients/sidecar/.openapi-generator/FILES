@@ -26,6 +26,7 @@ models/ConnectionType.ts
 models/ConnectionsList.ts
 models/ExceededFields.ts
 models/Failure.ts
+models/HashAlgorithm.ts
 models/HealthCheck.ts
 models/HealthResponse.ts
 models/JsonNode.ts
@@ -47,6 +48,7 @@ models/PreferencesSpec.ts
 models/SchemaRegistryConfig.ts
 models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
+models/ScramCredentials.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts

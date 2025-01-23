@@ -33,13 +33,24 @@ import {
   OAuthCredentialsFromJSONTyped,
   OAuthCredentialsToJSON,
 } from "./OAuthCredentials";
+import type { ScramCredentials } from "./ScramCredentials";
+import {
+  instanceOfScramCredentials,
+  ScramCredentialsFromJSON,
+  ScramCredentialsFromJSONTyped,
+  ScramCredentialsToJSON,
+} from "./ScramCredentials";
 
 /**
  * @type KafkaClusterConfigCredentials
  * The credentials for the Kafka cluster, or null if no authentication is required
  * @export
  */
-export type KafkaClusterConfigCredentials = ApiKeyAndSecret | BasicCredentials | OAuthCredentials;
+export type KafkaClusterConfigCredentials =
+  | ApiKeyAndSecret
+  | BasicCredentials
+  | OAuthCredentials
+  | ScramCredentials;
 
 export function KafkaClusterConfigCredentialsFromJSON(json: any): KafkaClusterConfigCredentials {
   return KafkaClusterConfigCredentialsFromJSONTyped(json, false);
@@ -60,6 +71,9 @@ export function KafkaClusterConfigCredentialsFromJSONTyped(
   }
   if (instanceOfOAuthCredentials(json)) {
     return OAuthCredentialsFromJSONTyped(json, true);
+  }
+  if (instanceOfScramCredentials(json)) {
+    return ScramCredentialsFromJSONTyped(json, true);
   }
 
   return {} as any;
@@ -85,6 +99,9 @@ export function KafkaClusterConfigCredentialsToJSONTyped(
   }
   if (instanceOfOAuthCredentials(value)) {
     return OAuthCredentialsToJSON(value as OAuthCredentials);
+  }
+  if (instanceOfScramCredentials(value)) {
+    return ScramCredentialsToJSON(value as ScramCredentials);
   }
 
   return {};
