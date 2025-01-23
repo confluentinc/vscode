@@ -9,6 +9,7 @@ import { getTestExtensionContext } from "../tests/unit/testUtils";
 import {
   ConnectionsList,
   ConnectionSpec,
+  ConnectionSpecFromJSON,
   ConnectionsResourceApi,
   ResponseError,
 } from "./clients/sidecar";
@@ -283,7 +284,12 @@ describe("DirectConnectionManager behavior", () => {
 
     await DirectConnectionManager.getInstance().rehydrateConnections();
 
-    assert.ok(tryToCreateConnectionStub.calledOnceWith(TEST_DIRECT_CONNECTION_FORM_SPEC));
+    assert.ok(tryToCreateConnectionStub.calledOnce);
+    const args = tryToCreateConnectionStub.getCall(0).args;
+    assert.deepStrictEqual(
+      ConnectionSpecFromJSON(args[0]),
+      ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION_FORM_SPEC),
+    );
   });
 
   it("rehydrateConnections() should not inform the sidecar of existing/tracked connections", async () => {
