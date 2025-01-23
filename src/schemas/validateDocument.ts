@@ -14,28 +14,23 @@ const logger = new Logger("schemas.validateDocument");
 
 export async function validateDocument(
   documentUri: Uri,
-  schemaUri: Uri,
+  schema: JSONSchema,
 ): Promise<DiagnosticCollection> {
   // vscode-json-languageservice requires DocumentUri (string) type instead of vscode.Uri
   const textDocUri: DocumentUri = documentUri.toString();
-  const schemaDocUri: DocumentUri = schemaUri.toString();
 
   const { content } = await loadDocumentContent(documentUri);
-  const schema: JSONSchema = await loadSchemaFromUri(schemaUri);
   const textDocument = TextDocument.create(textDocUri, "json", 1, content);
 
   // JSON language service setup and initial document parsing
   const jsonLanguageService = getLanguageService({
-    schemaRequestService: (uri) => {
-      if (uri === schemaDocUri) {
-        return Promise.resolve(JSON.stringify(loadSchemaFromUri(schemaUri)));
-      }
-      return Promise.reject(`Unabled to load schema at ${uri}`);
+    schemaRequestService: () => {
+      return Promise.resolve(JSON.stringify(schema));
     },
   });
   jsonLanguageService.configure({
     allowComments: false,
-    schemas: [{ fileMatch: ["*.json"], uri: schemaDocUri }],
+    schemas: [{ fileMatch: ["*.json"], uri: "schema", schema }],
   });
   const jsonDocument = jsonLanguageService.parseJSONDocument(textDocument);
 
