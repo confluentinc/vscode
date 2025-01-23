@@ -70,7 +70,9 @@ export function connectionEventHandler(event: ConnectionEventBody) {
           logger.debug(
             "connectionEventHandler: ccloud connection update received, passing to reactToCCloudAuthState()",
           );
-          reactToCCloudAuthState(connection);
+          reactToCCloudAuthState(connection).catch((e) => {
+            logger.error(`connectionEventHandler: reactToCCloudAuthState() failed: ${e}`, e.stack);
+          });
           break;
         case "DELETED":
           // When a DELETED event comes, it will come with the prior (perhaps fully happy) spelling of the connection.
