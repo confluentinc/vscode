@@ -1,5 +1,11 @@
 import { randomUUID } from "crypto";
-import { Connection, ConnectionType, UserInfo } from "../../../src/clients/sidecar";
+import {
+  Connection,
+  ConnectionFromJSON,
+  ConnectionSpecFromJSON,
+  ConnectionType,
+  UserInfo,
+} from "../../../src/clients/sidecar";
 import {
   CCLOUD_AUTH_CALLBACK_URI,
   CCLOUD_CONNECTION_ID,
@@ -23,7 +29,7 @@ export const TEST_CCLOUD_USER: UserInfo = {
 const TEST_AUTH_EXPIRATION = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
 /** A basic CCloud {@link Connection} with `NO_TOKEN` auth status. */
-export const TEST_CCLOUD_CONNECTION: Connection = {
+export const TEST_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   api_version: "gateway/v1",
   kind: "Connection",
   id: CCLOUD_CONNECTION_ID,
@@ -44,10 +50,10 @@ export const TEST_CCLOUD_CONNECTION: Connection = {
       status: "NO_TOKEN",
     },
   },
-};
+});
 
 /** A CCloud {@link Connection} with `VALID_TOKEN` auth status and user info. */
-export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = {
+export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = ConnectionFromJSON({
   ...TEST_CCLOUD_CONNECTION,
   status: {
     ...TEST_CCLOUD_CONNECTION.status,
@@ -57,9 +63,9 @@ export const TEST_AUTHENTICATED_CCLOUD_CONNECTION: Connection = {
       requires_authentication_at: TEST_AUTH_EXPIRATION,
     },
   },
-};
+});
 
-export const TEST_LOCAL_CONNECTION: Connection = {
+export const TEST_LOCAL_CONNECTION: Connection = ConnectionFromJSON({
   api_version: "gateway/v1",
   kind: "Connection",
   id: LOCAL_CONNECTION_ID,
@@ -72,10 +78,10 @@ export const TEST_LOCAL_CONNECTION: Connection = {
       status: "NO_TOKEN",
     },
   },
-};
+});
 
 export const TEST_DIRECT_CONNECTION_ID = randomUUID() as ConnectionId;
-export const TEST_DIRECT_CONNECTION: Connection = {
+export const TEST_DIRECT_CONNECTION: Connection = ConnectionFromJSON({
   api_version: "gateway/v1",
   kind: "Connection",
   id: TEST_DIRECT_CONNECTION_ID,
@@ -92,11 +98,11 @@ export const TEST_DIRECT_CONNECTION: Connection = {
       status: "NO_TOKEN",
     },
   },
-};
+});
 
 /** Fake spec augmented with `formConnectionType` for test purposes. */
 export const TEST_DIRECT_CONNECTION_FORM_SPEC: CustomConnectionSpec = {
-  ...TEST_DIRECT_CONNECTION.spec,
+  ...ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION.spec),
   id: TEST_DIRECT_CONNECTION_ID, // enforced ConnectionId type
   formConnectionType: "Apache Kafka",
 };
