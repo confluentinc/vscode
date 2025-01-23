@@ -1,7 +1,7 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
 import { randomUUID } from "crypto";
-import { Connection } from "../clients/sidecar";
+import { Connection, ConnectionFromJSON, instanceOfConnection } from "../clients/sidecar";
 
 /**
  * All websocket message types, message.header_type values.
@@ -120,6 +120,45 @@ export type MessageBodyMap = {
 };
 
 /**
+ * Function signature for functions that perform higher-order decoding of message bodies
+ * above and beyond what the JSON.parse() call does. Like, say, decoding dates-as-strings to Date objects, etc.
+ * */
+type MessageBodyDecoder<T extends MessageType> = (body: MessageBodyMap[T]) => MessageBodyMap[T];
+
+/**
+ * Map of message type -> function that higher-level decodes the message body. If the
+ * body is already in the correct form just from json.parse(), should be null.
+ *
+ * Message types whose bodies need higher-level decoding (say, string -> Date conversion)
+ * implement or reference those decoding functions here.
+ *
+ * All message types must be present in the map so as to require developers to think about
+ * this need when adding new message types.
+ */
+export const MessageBodyDecoders: { [K in MessageType]: MessageBodyDecoder<K> | null } = {
+  [MessageType.WORKSPACE_HELLO]: null,
+  [MessageType.WORKSPACE_COUNT_CHANGED]: null,
+  [MessageType.CONNECTION_EVENT]: (body: ConnectionEventBody) => {
+    // generic object -> Connection object conversion (includes string -> Date conversions)
+    body.connection = ConnectionFromJSON(body.connection);
+
+    // explicitly check and raise if any date coversion fails, because JS can't be bothered to throw an error on invalid date strings
+    for (const dateField of [
+      body.connection.status.authentication?.requires_authentication_at,
+      body.connection.status.ccloud?.requires_authentication_at,
+    ] as (Date | undefined)[]) {
+      if (dateField && isNaN(dateField.valueOf())) {
+        throw new Error(
+          "MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid requires_authentication_at date",
+        );
+      }
+    }
+    return body;
+  },
+  [MessageType.PROTOCOL_ERROR]: null,
+};
+
+/**
  *  Validate the fields of a message body having just come from JSON with its corresponding message type.
  *  Alas, TypeScript doesn't have a way to enforce that the body is of the correct type for the message type,
  *  so we have to do it manually.
@@ -138,7 +177,16 @@ export function validateMessageBody(messageType: MessageType, body: unknown): vo
       throw new Error(`Invalid body for message type ${MessageType.PROTOCOL_ERROR}`);
     }
   } else if (messageType === MessageType.CONNECTION_EVENT) {
-    // lots of other possible things to test, too many to list here for now.
+    const connEventBody = body as ConnectionEventBody;
+    // Ensure body.action is a valid ConnectionEventAction
+    if (!Object.values(ConnectionEventAction).includes(connEventBody.action)) {
+      throw new Error(
+        `MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid ConnectionEventAction: ${connEventBody.action}`,
+      );
+    }
+    if (!instanceOfConnection(connEventBody.connection)) {
+      throw new Error(`Invalid body for message type ${MessageType.CONNECTION_EVENT}`);
+    }
   } else {
     throw new Error(`validateMessageBody(): Unknown message type: ${messageType}`);
   }
