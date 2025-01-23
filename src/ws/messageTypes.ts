@@ -50,22 +50,13 @@ export interface MessageHeaders {
   message_id: string;
 }
 
-export interface ReplyMessageHeaders extends MessageHeaders {
-  /** Used to correlate responses to requests. Holds message_id value of the message being replied to. */
-  response_to_id: string;
-}
-
-/** Construct and return either a MessageHeaders or ReplyMessageHeaders given the message type and possible response_to_id value. */
-export function newMessageHeaders<T extends MessageType>(
-  message_type: T,
-  response_to_id?: string,
-): MessageHeaderMap[T] {
+/** Construct and return a MessageHeaders given the message type, providing the `originator` and `message_id` fields. */
+export function newMessageHeaders<T extends MessageType>(message_type: T): MessageHeaders {
   return {
     message_type,
     originator: process.pid.toString(),
     message_id: randomUUID().toString(),
-    ...(response_to_id ? { response_to_id } : {}),
-  } as MessageHeaderMap[T];
+  };
 }
 
 /**
@@ -73,13 +64,8 @@ export function newMessageHeaders<T extends MessageType>(
  * is determined by the message type.
  **/
 export interface Message<T extends MessageType> {
-  headers: MessageHeaderMap[T];
+  headers: MessageHeaders;
   body: MessageBodyMap[T];
-}
-
-/** A message whose headers carry field "response_to_id", indicating is a response message. */
-export interface ResponseMessage<T extends MessageType> extends Message<T> {
-  headers: ReplyMessageHeaders;
 }
 
 /**
@@ -131,17 +117,6 @@ export type MessageBodyMap = {
   [MessageType.WORKSPACE_COUNT_CHANGED]: WorkspacesChangedBody;
   [MessageType.CONNECTION_EVENT]: ConnectionEventBody;
   [MessageType.PROTOCOL_ERROR]: ProtocolErrorBody;
-};
-
-/**
- * Type mapping of message type -> corresponding headers type.
- * Dictates which messages whose headers should have `response_to_id` field.`
- */
-type MessageHeaderMap = {
-  [MessageType.WORKSPACE_HELLO]: MessageHeaders;
-  [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
-  [MessageType.CONNECTION_EVENT]: MessageHeaders;
-  [MessageType.PROTOCOL_ERROR]: ReplyMessageHeaders;
 };
 
 /**
