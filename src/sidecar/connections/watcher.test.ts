@@ -10,6 +10,7 @@ import {
 import {
   ConnectedState,
   Connection,
+  ConnectionFromJSON,
   ConnectionToJSONTyped,
   ConnectionType,
   instanceOfConnection,
@@ -179,7 +180,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
     const testAuthStatus = { authentication: { status: Status.NoToken } };
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should return the connection when it becomes usable`, async () => {
-      const testConnection: Connection = {
+      const testConnection: Connection = ConnectionFromJSON({
         ...baseConnection,
         status: {
           kafka_cluster: { state: usableKafkaClusterState },
@@ -187,7 +188,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           ccloud: { state: usableCcloudState },
           ...testAuthStatus,
         },
-      };
+      });
 
       announceConnectionState(testConnection);
 
@@ -200,7 +201,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
       // use fake timers so we can control the time and "time out" quickly
       clock = sandbox.useFakeTimers(Date.now());
 
-      const testConnection: Connection = {
+      const testConnection: Connection = ConnectionFromJSON({
         ...baseConnection,
         status: {
           kafka_cluster: { state: pendingState },
@@ -208,7 +209,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           ccloud: { state: pendingState },
           ...testAuthStatus,
         },
-      };
+      });
       announceConnectionState(testConnection);
 
       // set a short timeout, even though we're using fake timers
@@ -227,7 +228,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
     });
 
     it(`${baseConnection.spec.type}: waitForConnectionToBeStable() should wait for websocket event if the connection is not found initially`, async () => {
-      const testConnection = {
+      const testConnection = ConnectionFromJSON({
         ...baseConnection,
         status: {
           kafka_cluster: { state: usableKafkaClusterState },
@@ -235,7 +236,7 @@ describe("sidecar/connections/watcher.ts waitForConnectionToBeStable()", () => {
           ccloud: { state: usableCcloudState },
           ...testAuthStatus,
         },
-      };
+      });
 
       // wrap a spy around isConnectionStable so we can check when it's called
       const isConnectionStableSpy = sandbox.spy(watcherUtils, "isConnectionStable");
