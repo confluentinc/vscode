@@ -1,7 +1,12 @@
 import { Mutex } from "async-mutex";
 import { Uri } from "vscode";
 import { StorageManager, getStorageManager } from ".";
-import { ConnectionSpec, Status } from "../clients/sidecar";
+import {
+  ConnectionSpec,
+  ConnectionSpecFromJSON,
+  ConnectionSpecToJSON,
+  Status,
+} from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -688,10 +693,13 @@ export class ResourceManager {
     if (!connectionsString) {
       return new Map<ConnectionId, CustomConnectionSpec>();
     }
-    const connections: Map<ConnectionId, CustomConnectionSpec> = JSON.parse(connectionsString);
-    const connectionsById: DirectConnectionsById = new Map(
-      Object.entries(connections),
-    ) as DirectConnectionsById;
+    const connections: Map<ConnectionId, object> = JSON.parse(connectionsString);
+    const connectionsById = new Map(
+      Object.entries(connections).map(([id, spec]) => [
+        id as ConnectionId,
+        CustomConnectionSpecFromJSON(spec),
+      ]),
+    );
     return connectionsById;
   }
 
@@ -701,15 +709,21 @@ export class ResourceManager {
   }
 
   /**
-   * Add a direct connection to the extension state by looking up the existing
-   * {@link DirectConnectionsById} map and adding/overwriting the `connection` by its `id`.
+   * Add a direct connection spec to the extension state by looking up the existing
+   * {@link DirectConnectionsById} map and adding/overwriting the `spec` by its `id`.
    */
-  async addDirectConnection(connection: CustomConnectionSpec): Promise<void> {
+  async addDirectConnection(spec: CustomConnectionSpec): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
       const connectionIds: DirectConnectionsById = await this.getDirectConnections();
-      connectionIds.set(connection.id! as ConnectionId, connection);
-      await this.storage.setSecret(key, JSON.stringify(Object.fromEntries(connectionIds)));
+      connectionIds.set(spec.id! as ConnectionId, spec);
+      const serializedConnections = Object.fromEntries(
+        Array.from(connectionIds.entries()).map(([id, spec]) => [
+          id,
+          CustomConnectionSpecToJSON(spec),
+        ]),
+      );
+      await this.storage.setSecret(key, JSON.stringify(serializedConnections));
     });
   }
 
@@ -733,4 +747,24 @@ export class ResourceManager {
  */
 export function getResourceManager(): ResourceManager {
   return ResourceManager.getInstance();
+}
+
+/** Convert an object to a typed {@link CustomConnectionSpec}. */
+export function CustomConnectionSpecFromJSON(obj: any): CustomConnectionSpec {
+  if (obj == null) {
+    return obj;
+  }
+  return {
+    ...ConnectionSpecFromJSON(obj),
+    id: obj["id"] as ConnectionId,
+    formConnectionType: obj["formConnectionType"],
+  };
+}
+
+/** Convert a typed {@link CustomConnectionSpec} to an object. */
+export function CustomConnectionSpecToJSON(spec: CustomConnectionSpec): any {
+  return {
+    ...ConnectionSpecToJSON(spec),
+    formConnectionType: spec.formConnectionType,
+  };
 }
