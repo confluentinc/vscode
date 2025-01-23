@@ -21,6 +21,8 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Extension/sidecar logs and the support zip can now be saved as expected on Windows.
+- CCloud auth sessions will now show the pre-expiration warning and post-expiration error
+  notifications as expected.
 
 ## 0.23.3
 
