@@ -710,6 +710,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Error"
+    HashAlgorithm:
+      enum:
+      - SCRAM_SHA_256
+      - SCRAM_SHA_512
+      type: string
     Instant:
       format: date-time
       type: string
@@ -794,6 +799,7 @@ components:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
           - $ref: "#/components/schemas/OAuthCredentials"
+          - $ref: "#/components/schemas/ScramCredentials"
           nullable: true
         ssl:
           description: "The SSL configuration for connecting to the Kafka cluster.\
@@ -1056,6 +1062,31 @@ components:
           type: object
           allOf:
           - $ref: "#/components/schemas/AuthErrors"
+    ScramCredentials:
+      description: Scram authentication credentials
+      required:
+      - hash_algorithm
+      - scram_username
+      - scram_password
+      type: object
+      properties:
+        hash_algorithm:
+          description: Hash algorithm
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/HashAlgorithm"
+        scram_username:
+          description: The username to use when connecting to the external service.
+          maxLength: 64
+          minLength: 1
+          type: string
+        scram_password:
+          description: The password to use when connecting to the external service.
+          maxLength: 64
+          minLength: 1
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/Password"
     SidecarAccessToken:
       type: object
       properties:
