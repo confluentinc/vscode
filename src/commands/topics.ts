@@ -224,9 +224,10 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     });
     return;
   }
-  // document is valid, discard the listeners
+  // document is valid, discard the listeners for that document
   docListeners.forEach((l) => l.dispose());
 
+  // always treat producing as a "bulk" action, even if there's only one message
   const contents = [];
   const msgContent = JSON.parse(content);
   if (Array.isArray(msgContent)) {
@@ -294,7 +295,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   if (errorResults.length) {
     const errorMessages = errorResults.map((result) => result.error).join("\n");
-    vscode.window.showErrorMessage(
+    showErrorNotificationWithButtons(
       `Error while trying to produce message${plural} to topic "${topic.name}":\n${errorMessages}`,
     );
   }
@@ -306,6 +307,7 @@ interface ProduceResult {
   error: string | undefined;
 }
 
+/** Produce a single message to a Kafka topic. */
 export async function produceMessage(content: any, topic: KafkaTopic): Promise<ProduceResult> {
   const sidecar = await getSidecar();
   const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
@@ -324,6 +326,9 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
     headers,
     key: keyData,
     value: valueData,
+    // if these made it through the validation step, no other handling is needed
+    partition_id: content.partition_id,
+    timestamp: content.timestamp,
   };
   const request: ProduceRecordRequest = {
     topic_name: topic.name,
@@ -348,12 +353,7 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
     }
     timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
   } catch (error) {
-    logResponseError(
-      error,
-      "topic produce from document",
-      { connectionId: topic.connectionId },
-      true,
-    );
+    logResponseError(error, "topic message produce", { connectionId: topic.connectionId }, true);
     if (error instanceof ResponseError) {
       const body = await error.response.clone().text();
       errorBody = `${error.response.status} ${error.response.statusText} ${body}`;
