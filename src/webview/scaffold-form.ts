@@ -11,10 +11,10 @@ addEventListener("DOMContentLoaded", () => {
   applyBindings(ui, os, vm);
 });
 
-/** In the Scaffolding Service (golang), `enum` is not a reserved word, but here in Typescript it is.
- * Our OpenAPI generator converts it to `_enum` instead, but we get the Template Options with the original underscore-less version.
- * These two type interfaces are combining those types, which allows us to check for either spelling
- * in getEnumField() when we use the option to generate a <select> element in the form.
+/** XXXX: We uncovered an issue in the way our OpenAPI spec is generated in the Scaffold Service
+ * and it means the reserved word in our options templates no longer gets converted from `enum` to `_enum`,
+ * causing a TypeScript error. To workaround it *temporarily* we have this special type interface for the form.
+ * TODO we should either patch the OpenAPI generator or push for template spec changes.
  */
 export interface ScaffoldV1TemplateOptionAlt extends ScaffoldV1TemplateOption {
   enum?: string[];
@@ -54,8 +54,7 @@ class ScaffoldFormViewModel extends ViewModel {
     return true;
   });
 
-  // Updated in validateInput & submit handler checks
-  hasValidationErrors = this.signal(false);
+  hasValidationErrors = this.signal(false); // updated in validateInput & submit handler checks
   success = this.signal(true); // only false if submission fails
   message = this.signal("");
 
