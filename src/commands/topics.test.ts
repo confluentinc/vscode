@@ -8,7 +8,7 @@ import {
 } from "../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { RecordsV3Api, ResponseError } from "../clients/kafkaRest";
+import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import * as quickpicks from "../quickpicks/uris";
 import * as sidecar from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
@@ -109,7 +109,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     assert.ok(showErrorMessageStub.calledOnce);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
-    assert.ok(errorMsg.startsWith("Error response while trying to produce message"));
+    assert.ok(errorMsg.startsWith("Error while trying to produce message"), errorMsg);
   });
 
   it("should show an error notification for any nested error_code>=400 responses", async function () {
@@ -125,7 +125,40 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     assert.ok(showErrorMessageStub.calledOnce);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
-    assert.ok(errorMsg.startsWith("Error response while trying to produce message"));
+    assert.ok(errorMsg.startsWith("Error while trying to produce message"));
+  });
+
+  it("should pass `partition_id` and `timestamp` in the produce request if provided", async function () {
+    const partition_id = 123;
+    const timestamp = 1234567890;
+    loadDocumentContentStub.resolves({
+      content: JSON.stringify({ ...fakeMessage, partition_id, timestamp }),
+    });
+    clientStub.produceRecord.resolves({
+      error_code: 200,
+      timestamp: new Date(timestamp),
+      partition_id,
+    });
+
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.ok(clientStub.produceRecord.calledOnce);
+    const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
+    assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
+    assert.strictEqual(requestArg.ProduceRequest!.timestamp, timestamp);
+  });
+
+  it("should handle optional fields independently", async function () {
+    const partition_id = 123;
+    const messageWithPartition = { ...fakeMessage, partition_id };
+    loadDocumentContentStub.resolves({ content: JSON.stringify(messageWithPartition) });
+
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.ok(clientStub.produceRecord.calledOnce);
+    const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
+    assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
+    assert.strictEqual(requestArg.ProduceRequest!.timestamp, undefined);
   });
 });
 
