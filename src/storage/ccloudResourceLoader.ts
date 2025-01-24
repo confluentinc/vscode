@@ -13,7 +13,7 @@ import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
-  correlateTopicsWithSchemas,
+  correlateTopicsWithSchemaSubjects,
   fetchSchemas,
   fetchTopics,
   ResourceLoader,
@@ -287,19 +287,14 @@ export class CCloudResourceLoader extends ResourceLoader {
 
     // Do a deep fetch, cache the results, then return them.
 
-    // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
-    // but the topics are always a deep fetch.
-    const [schemas, responseTopics] = await Promise.all([
-      this.getSchemasForEnvironmentId(cluster.environmentId, forceDeepRefresh),
+    // Get the schemas and the topics concurrently.
+    const [subjects, responseTopics]: [string[], TopicData[]] = await Promise.all([
+      this.getSubjects(cluster.environmentId, forceDeepRefresh),
       fetchTopics(cluster),
     ]);
 
     // now correlate the topics with the schemas.
-    const topics = correlateTopicsWithSchemas(
-      cluster,
-      responseTopics as TopicData[],
-      schemas as Schema[],
-    );
+    const topics = correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
 
     // Cache the correlated topics for this cluster.
     await resourceManager.setTopicsForCluster(cluster, topics);

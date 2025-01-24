@@ -10,7 +10,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -86,10 +86,18 @@ export abstract class ResourceLoader implements IResourceBase {
    * Return the topics present in the cluster. Will also correlate with schemas
    * in the schema registry for the cluster, if any.
    */
-  public abstract getTopicsForCluster(
+  public async getTopicsForCluster(
     cluster: KafkaCluster,
-    forceDeepRefresh?: boolean,
-  ): Promise<KafkaTopic[]>;
+    forceRefresh: boolean = false,
+  ): Promise<KafkaTopic[]> {
+    // Deep fetch the schemas and the topics concurrently.
+    const [subjects, responseTopics]: [string[], TopicData[]] = await Promise.all([
+      this.getSubjects(cluster.environmentId!, forceRefresh),
+      fetchTopics(cluster),
+    ]);
+
+    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
+  }
 
   // Schema registry methods
 
@@ -116,7 +124,8 @@ export abstract class ResourceLoader implements IResourceBase {
    * */
   public async getSubjects(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
-    forceDeepRefresh: boolean = false,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forceRefresh: boolean = false,
   ): Promise<string[]> {
     let schemaRegistry: SchemaRegistry | undefined;
     if (typeof registryOrEnvironmentId === "string") {
@@ -218,16 +227,16 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 
 /**
  * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
- * and set whether or not each topic has a matching schema.
+ * and set whether or not each topic has a matching schema by subject.
  */
-export function correlateTopicsWithSchemas(
+export function correlateTopicsWithSchemaSubjects(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
-  schemas: Schema[],
+  subjects: string[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
-      schema.matchesTopicName(topic.topic_name),
+    const hasMatchingSchema: boolean = subjects.some((subject) =>
+      subjectMatchesTopicName(subject, topic.topic_name),
     );
 
     return KafkaTopic.create({
