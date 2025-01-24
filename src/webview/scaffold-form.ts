@@ -11,6 +11,19 @@ addEventListener("DOMContentLoaded", () => {
   applyBindings(ui, os, vm);
 });
 
+/** XXXX: We uncovered an issue in the way our OpenAPI spec is generated in the Scaffold Service
+ * and it means the reserved word in our options templates no longer gets converted from `enum` to `_enum`,
+ * causing a TypeScript error. To workaround it *temporarily* we have this special type interface for the form.
+ * TODO we should either patch the OpenAPI generator or push for template spec changes.
+ */
+export interface ScaffoldV1TemplateOptionAlt extends ScaffoldV1TemplateOption {
+  enum?: string[];
+  _enum?: string[];
+}
+export interface ScaffoldV1TemplateSpecAlt extends ScaffoldV1TemplateSpec {
+  options: Record<string, ScaffoldV1TemplateOptionAlt>;
+}
+
 class ScaffoldFormViewModel extends ViewModel {
   spec = this.resolve(async () => {
     return await post("GetTemplateSpec", {});
@@ -41,25 +54,55 @@ class ScaffoldFormViewModel extends ViewModel {
     return true;
   });
 
-  isEnumField(field: [string, ScaffoldV1TemplateOption]) {
-    return field[1]._enum;
+  hasValidationErrors = this.signal(false); // updated in validateInput & submit handler checks
+  success = this.signal(true); // only false if submission fails
+  message = this.signal("");
+
+  getEnumField(field: [string, ScaffoldV1TemplateOptionAlt]) {
+    return field[1].enum ?? field[1]._enum;
   }
 
   handleInput(event: Event) {
     const input = event.target as HTMLInputElement;
     const key = input.name;
     const value = input.value;
+    input.classList.remove("error"); // reset error state, will be re-evaluated on blur
     post("SetOptionValue", { key, value });
   }
 
-  handleSubmit(event: Event) {
+  validateInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const key = input.name;
+    const value = input.value;
+    const minLength = this.spec()?.options?.[key]?.min_length;
+    const required = minLength !== undefined && minLength > 0;
+    const pattern = this.spec()?.options?.[key]?.pattern;
+    const inputContainer = input.closest(".input-container");
+    if (required && value.length < minLength) {
+      inputContainer?.classList.add("error");
+    } else if (value !== "" && pattern && !new RegExp(pattern).test(value)) {
+      inputContainer?.classList.add("error");
+    } else {
+      inputContainer?.classList.remove("error");
+    }
+    this.hasValidationErrors(document.querySelectorAll(".input-container.error").length > 0);
+  }
+  async handleSubmit(event: Event) {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
+    this.hasValidationErrors(
+      document.querySelectorAll(".input-container.error").length > 0 || !form.checkValidity(),
+    );
+    if (this.hasValidationErrors()) return;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-    post("Submit", { data });
+    const result = await post("Submit", { data });
+    this.success(result.success);
+    this.message(result.message ? result.message : "");
   }
 }
+
+export type PostResponse = { success: boolean; message: string | null };
 
 export function post(
   type: "SetOptionValue",
@@ -67,7 +110,10 @@ export function post(
 ): Promise<unknown>;
 export function post(type: "GetOptionValues", body: any): Promise<{ [key: string]: unknown }>;
 export function post(type: "GetTemplateSpec", body: any): Promise<ScaffoldV1TemplateSpec | null>;
-export function post(type: "Submit", body: { data: { [key: string]: unknown } }): Promise<unknown>;
+export function post(
+  type: "Submit",
+  body: { data: { [key: string]: unknown } },
+): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
