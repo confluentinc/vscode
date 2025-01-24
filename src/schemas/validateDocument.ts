@@ -1,6 +1,6 @@
 import {
   Diagnostic,
-  DiagnosticCollection,
+  DiagnosticSeverity,
   Disposable,
   Position,
   Range,
@@ -23,8 +23,8 @@ import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnosticCollection";
 const logger = new Logger("schemas.validateDocument");
 
 /**
- * Validate a JSON document against a {@link JSONSchema} and sets its {@link DiagnosticCollection}
- * against the provided document Uri.
+ * Validate a JSON document against a {@link JSONSchema} and attach any resulting diagnostics in the
+ * against the provided `documentUri` in the {@link JSON_DIAGNOSTIC_COLLECTION}.
  * @returns Workspace document listener {@link Disposable}s that will clear diagnostics when disposed.
  */
 export async function validateDocument(
@@ -34,6 +34,13 @@ export async function validateDocument(
   const { content } = await loadDocumentContent(documentUri);
   if (!content) {
     logger.error(`no content found for document ${documentUri}`);
+    JSON_DIAGNOSTIC_COLLECTION.set(documentUri, [
+      new Diagnostic(
+        new Range(new Position(0, 0), new Position(0, 0)),
+        "No JSON content found in document.",
+        DiagnosticSeverity.Error,
+      ),
+    ]);
     return [];
   }
 
