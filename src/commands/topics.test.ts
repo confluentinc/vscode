@@ -92,6 +92,8 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     assert.ok(clientStub.produceRecord.calledOnce);
     assert.ok(showInfoStub.calledOnce);
+    const successMsg = showInfoStub.firstCall.args[0];
+    assert.ok(successMsg.startsWith("Successfully produced 1 message to topic"), successMsg);
     assert.ok(showErrorMessageStub.notCalled);
   });
 
@@ -109,7 +111,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     assert.ok(showErrorMessageStub.calledOnce);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
-    assert.ok(errorMsg.startsWith("Error while trying to produce message"), errorMsg);
+    assert.ok(errorMsg.startsWith("Failed to produce 1 message to topic"), errorMsg);
   });
 
   it("should show an error notification for any nested error_code>=400 responses", async function () {
@@ -125,7 +127,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     assert.ok(showErrorMessageStub.calledOnce);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
-    assert.ok(errorMsg.startsWith("Error while trying to produce message"));
+    assert.ok(errorMsg.startsWith("Failed to produce 1 message to topic"), errorMsg);
   });
 
   it("should pass `partition_id` and `timestamp` in the produce request if provided", async function () {
@@ -145,7 +147,8 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
     assert.ok(clientStub.produceRecord.calledOnce);
     const requestArg: ProduceRecordRequest = clientStub.produceRecord.firstCall.args[0];
     assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
-    assert.strictEqual(requestArg.ProduceRequest!.timestamp, timestamp);
+    // timestamp should also be converted to a Date object
+    assert.deepStrictEqual(requestArg.ProduceRequest!.timestamp, new Date(timestamp));
   });
 
   it("should handle optional fields independently", async function () {

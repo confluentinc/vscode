@@ -18,6 +18,7 @@ import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isDirect } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
+import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
 import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
@@ -215,7 +216,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     PRODUCE_MESSAGE_SCHEMA,
   );
   const diagnostics: readonly vscode.Diagnostic[] =
-    vscode.languages.getDiagnostics(messageUri) ?? [];
+    JSON_DIAGNOSTIC_COLLECTION.get(messageUri) ?? [];
   if (diagnostics.length) {
     showErrorNotificationWithButtons(
       "Unable to produce message(s): JSON schema validation failed.",
@@ -231,14 +232,34 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   docListeners.forEach((l) => l.dispose());
 
   // always treat producing as a "bulk" action, even if there's only one message
-  const contents = [];
-  const msgContent = JSON.parse(content);
+  const contents: any[] = [];
+  const msgContent: any = JSON.parse(content);
   if (Array.isArray(msgContent)) {
     contents.push(...msgContent);
   } else {
     contents.push(msgContent);
   }
 
+  // TODO: bump this number up?
+  if (contents.length === 1) {
+    await produceMessageBatch(contents, topic);
+  } else {
+    // show progress notification for batch produce
+    vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Producing ${contents.length} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
+        cancellable: false,
+      },
+      async () => {
+        // TODO: chunk through this and increment progress?
+        await produceMessageBatch(contents, topic);
+      },
+    );
+  }
+}
+
+async function produceMessageBatch(contents: any[], topic: KafkaTopic) {
   const plural = contents.length > 1 ? "s" : "";
   const promises: Promise<ProduceResult>[] = contents.map((content) =>
     produceMessage(content, topic),
@@ -248,8 +269,9 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   const successResults = produceResults.filter((result) => result.response !== undefined);
   const errorResults = produceResults.filter((result) => result.error);
   logger.debug(
-    `produced ${successResults.length}/${produceResults.length} message${plural} produced to ${topic.name}`,
+    `produced ${successResults.length}/${produceResults.length} message${plural} produced to topic "${topic.name}"`,
   );
+  const ofTotal = plural ? ` of ${produceResults.length}` : "";
 
   if (successResults.length) {
     // set up a time window around the produced message(s) for message viewer
@@ -273,7 +295,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     const buttonLabel = `View Message${plural}`;
     vscode.window
       .showInformationMessage(
-        `Produced ${successResults.length} message${plural} to topic "${topic.name}".`,
+        `Successfully produced ${successResults.length}${ofTotal} message${plural} to topic "${topic.name}".`,
         buttonLabel,
       )
       .then((selection) => {
@@ -298,8 +320,9 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   if (errorResults.length) {
     const errorMessages = errorResults.map((result) => result.error).join("\n");
+    // this format isn't great if there are multiple errors, but it's better than nothing
     showErrorNotificationWithButtons(
-      `Error while trying to produce message${plural} to topic "${topic.name}":\n${errorMessages}`,
+      `Failed to produce ${errorResults.length}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
     );
   }
 }
