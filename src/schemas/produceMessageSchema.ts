@@ -6,11 +6,14 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
   title: "Produce Message",
   description: "Schema for producing messages to a Kafka topic",
   oneOf: [
-    { $ref: "#/definitions/produceMessage" },
+    // NOTE: the ordering here is important -- if the object is first, validating an empty array
+    // will raise a confusing error about expecting an object type and not "Array has too few items"
     {
       type: "array",
       items: { $ref: "#/definitions/produceMessage" },
+      minItems: 1,
     },
+    { $ref: "#/definitions/produceMessage" },
   ],
   definitions: {
     produceMessage: {
@@ -43,6 +46,14 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
             required: ["value"],
             oneOf: [{ required: ["key"] }, { required: ["name"] }],
           },
+        },
+        partition_id: {
+          type: "integer",
+          description: "The partition to produce to",
+        },
+        timestamp: {
+          type: "integer",
+          description: "The timestamp of the message in milliseconds since epoch",
         },
       },
       required: ["key", "value"],
