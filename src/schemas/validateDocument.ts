@@ -1,4 +1,3 @@
-import { readFile } from "fs";
 import {
   Diagnostic,
   DiagnosticCollection,
@@ -8,11 +7,10 @@ import {
   TextDocument,
   TextDocumentChangeEvent,
   Uri,
-  languages,
   workspace,
 } from "vscode";
 import {
-  DocumentUri,
+  JSONDocument,
   JSONSchema,
   Diagnostic as JsonDiagnostic,
   TextDocument as JsonTextDocument,
@@ -20,6 +18,7 @@ import {
 } from "vscode-json-languageservice";
 import { Logger } from "../logging";
 import { loadDocumentContent } from "../quickpicks/uris";
+import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnosticCollection";
 
 const logger = new Logger("schemas.validateDocument");
 
@@ -32,11 +31,11 @@ export async function validateDocument(
   documentUri: Uri,
   schema: JSONSchema,
 ): Promise<Disposable[]> {
-  // vscode-json-languageservice requires DocumentUri (string) type instead of vscode.Uri
-  const textDocUri: DocumentUri = documentUri.toString();
-
   const { content } = await loadDocumentContent(documentUri);
-  const textDocument = JsonTextDocument.create(textDocUri, "json", 1, content);
+  if (!content) {
+    logger.error(`no content found for document ${documentUri}`);
+    return [];
+  }
 
   // JSON language service setup and initial document parsing
   const jsonLanguageService = getLanguageService({
@@ -48,9 +47,17 @@ export async function validateDocument(
     allowComments: false,
     schemas: [{ fileMatch: ["*.json"], uri: "schema", schema }],
   });
-  const jsonDocument = jsonLanguageService.parseJSONDocument(textDocument);
+  // vscode-json-languageservice requires DocumentUri (string) type instead of vscode.Uri
+  const textDocument: JsonTextDocument = JsonTextDocument.create(
+    documentUri.toString(),
+    "json",
+    1,
+    content,
+  );
+  const jsonDocument: JSONDocument = jsonLanguageService.parseJSONDocument(textDocument);
 
   // validate the document against the schema
+  // (no idea why we need to pass both the document and the parsed document)
   const diagnostics: JsonDiagnostic[] = await jsonLanguageService.doValidation(
     textDocument,
     jsonDocument,
@@ -72,15 +79,12 @@ export async function validateDocument(
   // TODO: try out `jsonLanguageService.doComplete()`
 
   // apply diagnostics to the document so they show up in the Problems panel
-  const collection: DiagnosticCollection = languages.createDiagnosticCollection("jsonValidator");
-  collection.clear();
-  collection.set(documentUri, diags);
+  JSON_DIAGNOSTIC_COLLECTION.set(documentUri, diags);
 
-  // TODO: move these outside of this function?
   // on document close/rename, clear diagnostics
   const docCloseSub: Disposable = workspace.onDidCloseTextDocument((e: TextDocument) => {
     if (e.uri.fsPath === documentUri.fsPath) {
-      collection.clear();
+      JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
       docCloseSub.dispose();
     }
   });
@@ -88,7 +92,7 @@ export async function validateDocument(
   const docChangeSub: Disposable = workspace.onDidChangeTextDocument(
     (e: TextDocumentChangeEvent) => {
       if (e.document.uri.fsPath === documentUri.fsPath && e.contentChanges.length > 0) {
-        collection.clear();
+        JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
         docChangeSub.dispose();
         validateDocument(documentUri, schema);
       }
@@ -96,19 +100,4 @@ export async function validateDocument(
   );
 
   return [docCloseSub, docChangeSub];
-}
-
-export async function loadSchemaFromUri(uri: Uri): Promise<JSONSchema> {
-  return new Promise((resolve, reject) => {
-    readFile(uri.fsPath, "utf8", (err, data) => {
-      if (err) {
-        return reject(err);
-      }
-      try {
-        resolve(JSON.parse(data));
-      } catch (e) {
-        reject(e);
-      }
-    });
-  });
 }

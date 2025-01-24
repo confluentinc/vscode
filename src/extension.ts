@@ -74,6 +74,7 @@ import {
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
+import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
@@ -231,6 +232,9 @@ async function _activateExtension(
 
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
+
+  // ensure our diagnostic collection(s) are cleared when the extension is deactivated
+  context.subscriptions.push(JSON_DIAGNOSTIC_COLLECTION);
 
   // XXX: used for testing; do not remove
   return context;
