@@ -21,7 +21,7 @@
       </div>
       <form class="section" data-on-submit="this.handleSubmit(event)">
         <template data-if="this.noOptions()">
-          <p class="info">
+          <p class="form-description">
             There are no configurable options for this template. Click Generate & Save to continue.
           </p>
         </template>
@@ -79,12 +79,18 @@
             </template>
           </div>
         </template>
-        <input
-          class="button"
-          type="submit"
-          value="Generate & Save"
-          data-attr-disabled="this.hasValidationErrors() === true ? true : false"
-        />
+        <div>
+          <input
+            class="button"
+            type="submit"
+            value="Generate & Save"
+            data-attr-disabled="this.hasValidationErrors() === true ? true : false"
+          />
+          <span
+            data-attr-class="this.success() ? 'help-text' : 'help-text error'"
+            data-text="this.message()"
+          ></span>
+        </div>
       </form>
     </main>
 
@@ -129,26 +135,28 @@
       .input-container > .input {
         width: 100%;
       }
+      .input-container > .label {
+        margin-bottom: 0;
+      }
 
       input:disabled {
         cursor: not-allowed;
       }
+      .dropdown > label > vscode-dropdown {
+        width: 100%;
+      }
       .button[type="submit"] {
         margin-top: 24px;
       }
-
       .help-text {
         font-weight: 500;
         color: var(--vscode-descriptionForeground);
         font-size: 11px;
       }
-      .dropdown > label > vscode-dropdown {
-        width: 100%;
-      }
-      .info {
-        color: var(--vscode-descriptionForeground);
-        font-weight: 700;
-        font-style: italic;
+      .help-text.error::before {
+        content: " X ";
+        font-size: 16px;
+        color: var(--vscode-errorForeground);
       }
       .input-container.error .pattern {
         color: var(--vscode-errorForeground);

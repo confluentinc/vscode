@@ -56,6 +56,8 @@ class ScaffoldFormViewModel extends ViewModel {
 
   // Updated in validateInput & submit handler checks
   hasValidationErrors = this.signal(false);
+  success = this.signal(true); // only false if submission fails
+  message = this.signal("");
 
   getEnumField(field: [string, ScaffoldV1TemplateOptionAlt]) {
     return field[1].enum ?? field[1]._enum;
@@ -70,7 +72,6 @@ class ScaffoldFormViewModel extends ViewModel {
   }
 
   validateInput(event: Event) {
-    console.log("validateInput");
     const input = event.target as HTMLInputElement;
     const key = input.name;
     const value = input.value;
@@ -79,19 +80,15 @@ class ScaffoldFormViewModel extends ViewModel {
     const pattern = this.spec()?.options?.[key]?.pattern;
     const inputContainer = input.closest(".input-container");
     if (required && value.length < minLength) {
-      console.log(input.name, "not long enough");
       inputContainer?.classList.add("error");
     } else if (value !== "" && pattern && !new RegExp(pattern).test(value)) {
-      console.log(input.name, "not valid");
       inputContainer?.classList.add("error");
     } else {
-      console.log(input.name, "ok");
       inputContainer?.classList.remove("error");
     }
     this.hasValidationErrors(document.querySelectorAll(".input-container.error").length > 0);
   }
-
-  handleSubmit(event: Event) {
+  async handleSubmit(event: Event) {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
     this.hasValidationErrors(
@@ -100,9 +97,13 @@ class ScaffoldFormViewModel extends ViewModel {
     if (this.hasValidationErrors()) return;
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
-    post("Submit", { data });
+    const result = await post("Submit", { data });
+    this.success(result.success);
+    this.message(result.message ? result.message : "");
   }
 }
+
+export type PostResponse = { success: boolean; message: string | null };
 
 export function post(
   type: "SetOptionValue",
@@ -110,7 +111,10 @@ export function post(
 ): Promise<unknown>;
 export function post(type: "GetOptionValues", body: any): Promise<{ [key: string]: unknown }>;
 export function post(type: "GetTemplateSpec", body: any): Promise<ScaffoldV1TemplateSpec | null>;
-export function post(type: "Submit", body: { data: { [key: string]: unknown } }): Promise<unknown>;
+export function post(
+  type: "Submit",
+  body: { data: { [key: string]: unknown } },
+): Promise<PostResponse>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
