@@ -6,8 +6,11 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- Producing messages to a Kafka topic has been expanded to allow loading content from an unsaved
-  editor or Message Viewer preview tab.
+- Producing (schemaless) messages to a Kafka topic has been expanded to support:
+  - loading content from an unsaved editor or Message Viewer preview tab
+  - providing document basic validation for JSON content
+  - passing `partition_id` and `timestamp` as optional fields in the message payload
+  - multiple message production to a topic in a single action
 - "Sign Out" action in the Resources view for the current Confluent Cloud connection.
 - Error notifications and additional tooltip information are now shown for direct connections to
   Kafka and Schema Registry if either (or both) of the connections are not usable.
