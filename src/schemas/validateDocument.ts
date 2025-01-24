@@ -88,23 +88,36 @@ export async function validateDocument(
   // apply diagnostics to the document so they show up in the Problems panel
   JSON_DIAGNOSTIC_COLLECTION.set(documentUri, diags);
 
-  // on document close/rename, clear diagnostics
+  // on document close, clear diagnostics
   const docCloseSub: Disposable = workspace.onDidCloseTextDocument((e: TextDocument) => {
     if (e.uri.fsPath === documentUri.fsPath) {
       JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
       docCloseSub.dispose();
+      docChangeSub.dispose();
+      docSaveSub.dispose();
     }
   });
-  // if the document is modified, re-validate
+  // if the document is modified or saved, re-validate it
   const docChangeSub: Disposable = workspace.onDidChangeTextDocument(
     (e: TextDocumentChangeEvent) => {
       if (e.document.uri.fsPath === documentUri.fsPath && e.contentChanges.length > 0) {
         JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
+        docCloseSub.dispose();
         docChangeSub.dispose();
+        docSaveSub.dispose();
         validateDocument(documentUri, schema);
       }
     },
   );
+  const docSaveSub: Disposable = workspace.onDidSaveTextDocument((e: TextDocument) => {
+    if (e.uri.fsPath === documentUri.fsPath) {
+      JSON_DIAGNOSTIC_COLLECTION.delete(documentUri);
+      docCloseSub.dispose();
+      docChangeSub.dispose();
+      docSaveSub.dispose();
+      validateDocument(documentUri, schema);
+    }
+  });
 
-  return [docCloseSub, docChangeSub];
+  return [docCloseSub, docChangeSub, docSaveSub];
 }
