@@ -1,41 +1,11 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
+import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData, TopicV3Api } from "../clients/kafkaRest";
 import * as sidecar from "../sidecar";
 import { KAFKA_TOPIC_OPERATIONS } from "./constants";
 import { fetchTopicAuthorizedOperations } from "./topics";
-import { KafkaTopicOperation } from "./types";
-
-// TODO: make this a more generic function (or `TEST_TOPIC_DATA` constant) that can be used in other
-// tests if we need to start using it more
-function createTestTopicData(
-  clusterId: string,
-  topicName: string,
-  authorizedOperations: KafkaTopicOperation[],
-): TopicData {
-  return {
-    kind: "KafkaTopic",
-    metadata: {
-      self: "test",
-    },
-    cluster_id: clusterId,
-    topic_name: topicName,
-    is_internal: false,
-    replication_factor: 1,
-    partitions_count: 3,
-    partitions: {
-      related: "test",
-    },
-    partition_reassignments: {
-      related: "test",
-    },
-    configs: {
-      related: "test",
-    },
-    authorized_operations: authorizedOperations,
-  };
-}
 
 describe("authz.topics", function () {
   let sandbox: sinon.SinonSandbox;
