@@ -24,12 +24,14 @@ import { loadDocumentContent } from "../quickpicks/uris";
 const logger = new Logger("schemas.validateDocument");
 
 /**
- * Validate a JSON document against a {@link JSONSchema} and returns its {@link DiagnosticCollection}.
+ * Validate a JSON document against a {@link JSONSchema} and sets its {@link DiagnosticCollection}
+ * against the provided document Uri.
+ * @returns Workspace document listener {@link Disposable}s that will clear diagnostics when disposed.
  */
 export async function validateDocument(
   documentUri: Uri,
   schema: JSONSchema,
-): Promise<DiagnosticCollection> {
+): Promise<Disposable[]> {
   // vscode-json-languageservice requires DocumentUri (string) type instead of vscode.Uri
   const textDocUri: DocumentUri = documentUri.toString();
 
@@ -71,13 +73,13 @@ export async function validateDocument(
 
   // apply diagnostics to the document so they show up in the Problems panel
   const collection: DiagnosticCollection = languages.createDiagnosticCollection("jsonValidator");
+  collection.clear();
   collection.set(documentUri, diags);
 
   // TODO: move these outside of this function?
   // on document close/rename, clear diagnostics
   const docCloseSub: Disposable = workspace.onDidCloseTextDocument((e: TextDocument) => {
     if (e.uri.fsPath === documentUri.fsPath) {
-      logger.debug(`"${documentUri.fsPath}" closed, clearing diagnostics`);
       collection.clear();
       docCloseSub.dispose();
     }
@@ -86,7 +88,6 @@ export async function validateDocument(
   const docChangeSub: Disposable = workspace.onDidChangeTextDocument(
     (e: TextDocumentChangeEvent) => {
       if (e.document.uri.fsPath === documentUri.fsPath && e.contentChanges.length > 0) {
-        logger.debug(`"${documentUri.fsPath}" changed, clearing diagnostics and re-validating`, e);
         collection.clear();
         docChangeSub.dispose();
         validateDocument(documentUri, schema);
@@ -94,7 +95,7 @@ export async function validateDocument(
     },
   );
 
-  return collection;
+  return [docCloseSub, docChangeSub];
 }
 
 export async function loadSchemaFromUri(uri: Uri): Promise<JSONSchema> {

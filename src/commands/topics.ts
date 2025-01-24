@@ -182,7 +182,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   editConfigForm.onDidDispose(() => disposable.dispose());
 }
 
-export async function produceMessageFromDocument(topic: KafkaTopic) {
+export async function produceMessagesFromDocument(topic: KafkaTopic) {
   if (!topic) {
     vscode.window.showErrorMessage("No topic selected.");
     return;
@@ -203,18 +203,20 @@ export async function produceMessageFromDocument(topic: KafkaTopic) {
     return;
   }
 
-  const docContent: LoadedDocumentContent = await loadDocumentContent(messageUri);
-  if (docContent.content === undefined) {
-    vscode.window.showErrorMessage("Could not read JSON file");
+  const { content }: LoadedDocumentContent = await loadDocumentContent(messageUri);
+  if (!content) {
+    vscode.window.showErrorMessage("No content found in the selected file.");
     return;
   }
 
   // load the produce-message schema and validate the incoming document
-  const diagnostics: vscode.DiagnosticCollection = await validateDocument(
+  const docListeners: vscode.Disposable[] = await validateDocument(
     messageUri,
     PRODUCE_MESSAGE_SCHEMA,
   );
-  if (diagnostics.get(messageUri)) {
+  const diagnostics: readonly vscode.Diagnostic[] =
+    vscode.languages.getDiagnostics(messageUri) ?? [];
+  if (diagnostics.length) {
     showErrorNotificationWithButtons("Unable to produce message: JSON schema validation failed.", {
       "Show Validation Errors": () => {
         vscode.commands.executeCommand("workbench.action.showErrorsWarnings");
@@ -222,20 +224,101 @@ export async function produceMessageFromDocument(topic: KafkaTopic) {
     });
     return;
   }
+  // document is valid, discard the listeners
+  docListeners.forEach((l) => l.dispose());
 
-  const message = JSON.parse(docContent.content);
+  const contents = [];
+  const msgContent = JSON.parse(content);
+  if (Array.isArray(msgContent)) {
+    contents.push(...msgContent);
+  } else {
+    contents.push(msgContent);
+  }
+
+  const plural = contents.length > 1 ? "s" : "";
+  const promises: Promise<ProduceResult>[] = contents.map((content) =>
+    produceMessage(content, topic),
+  );
+  const produceResults: ProduceResult[] = await Promise.all(promises);
+
+  const successResults = produceResults.filter((result) => result.response !== undefined);
+  const errorResults = produceResults.filter((result) => result.error);
+  logger.debug(
+    `produced ${successResults.length}/${produceResults.length} message${plural} produced to ${topic.name}`,
+  );
+
+  if (successResults.length) {
+    // set up a time window around the produced message(s) for message viewer
+    const bufferMs = 500;
+    const firstMessageTime = successResults[0].timestamp.getTime() - bufferMs;
+    const lastMessageTime =
+      successResults[successResults.length - 1].timestamp.getTime() + bufferMs;
+    // aggregate all unique partitions from the produce responses
+    const uniquePartitions: Set<number> = new Set();
+    successResults.forEach((result) => {
+      if (result.response?.partition_id) {
+        uniquePartitions.add(result.response.partition_id);
+      }
+    });
+    // if there was only one message, we can also filter by key (if it exists)
+    let textFilter: string | undefined;
+    if (successResults.length === 1 && contents[0].key) {
+      textFilter = String(contents[0].key);
+    }
+
+    const buttonLabel = `View Message${plural}`;
+    vscode.window
+      .showInformationMessage(
+        `Produced ${successResults.length} message${plural} to topic "${topic.name}".`,
+        buttonLabel,
+      )
+      .then((selection) => {
+        if (selection) {
+          // open the message viewer to show a ~1sec window around the produced message(s)
+          // ...with the message key and/or partition filtered if available
+          const messageViewerConfig = MessageViewerConfig.create({
+            // don't change the consume query params, just filter to show this last message
+            timestampFilter: [firstMessageTime, lastMessageTime],
+            partitionFilter: uniquePartitions.size === 1 ? Array.from(uniquePartitions) : undefined,
+            textFilter,
+          });
+          vscode.commands.executeCommand(
+            "confluent.topic.consume",
+            topic,
+            true, // duplicate MV to show updated filters
+            messageViewerConfig,
+          );
+        }
+      });
+  }
+
+  if (errorResults.length) {
+    const errorMessages = errorResults.map((result) => result.error).join("\n");
+    vscode.window.showErrorMessage(
+      `Error while trying to produce message${plural} to topic "${topic.name}":\n${errorMessages}`,
+    );
+  }
+}
+
+interface ProduceResult {
+  timestamp: Date;
+  response: ProduceResponse | undefined;
+  error: string | undefined;
+}
+
+export async function produceMessage(content: any, topic: KafkaTopic): Promise<ProduceResult> {
   const sidecar = await getSidecar();
   const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
 
-  // convert headers to the correct format, ensuring the value is base64-encoded
-  const headers: ProduceRequestHeader[] = message.headers.map(
+  // convert any provided headers to the correct format, ensuring the `value` is base64-encoded
+  const headers: ProduceRequestHeader[] = (content.headers ?? []).map(
     (header: any): ProduceRequestHeader => ({
       name: header.key ? header.key : header.name,
       value: Buffer.from(header.value).toString("base64"),
     }),
   );
   // dig up any schema-related information we may need in the request body
-  const { keyData, valueData } = await createProduceRequestData(topic, message.key, message.value);
+  const { keyData, valueData } = await createProduceRequestData(topic, content.key, content.value);
 
   const produceRequest: ProduceRequest = {
     headers,
@@ -248,50 +331,37 @@ export async function produceMessageFromDocument(topic: KafkaTopic) {
     ProduceRequest: produceRequest,
   };
 
+  let response: ProduceResponse | undefined;
+  let errorBody: string | undefined;
+  let timestamp = new Date();
   try {
-    const resp: ProduceResponse = await recordsApi.produceRecord(request);
+    response = await recordsApi.produceRecord(request);
     // we may get a misleading `status: 200` with a nested `error_code` in the response body
     // ...but we may also get `error_code: 200` with a successful message
-    if (resp.error_code >= 400) {
+    if (response.error_code >= 400) {
       throw new ResponseError(
         new Response("", {
-          status: resp.error_code,
-          statusText: resp.message,
+          status: response.error_code,
+          statusText: response.message,
         }),
       );
     }
-    vscode.window
-      .showInformationMessage(`Success: Produced message to topic "${topic.name}".`, "View Message")
-      .then((selection) => {
-        if (selection) {
-          // open the message viewer to show a ~1sec window around the produced message
-          const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
-          // ...with the message key used to search, and partition filtered if available
-          const messageViewerConfig = MessageViewerConfig.create({
-            // don't change the consume query params, just filter to show this last message
-            timestampFilter: [msgTime, msgTime + 500],
-            partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
-            textFilter: String(message.key),
-          });
-          vscode.commands.executeCommand(
-            "confluent.topic.consume",
-            topic,
-            true, // duplicate MV to show updated filters
-            messageViewerConfig,
-          );
-        }
-      });
-  } catch (error: any) {
-    logResponseError(error, "topic produce from file"); // not sending to Sentry by default
+    timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
+  } catch (error) {
+    logResponseError(
+      error,
+      "topic produce from document",
+      { connectionId: topic.connectionId },
+      true,
+    );
     if (error instanceof ResponseError) {
       const body = await error.response.clone().text();
-      vscode.window.showErrorMessage(
-        `Error response while trying to produce message: ${error.response.status} ${error.response.statusText} ${body}`,
-      );
-    } else {
-      vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
+      errorBody = `${error.response.status} ${error.response.statusText} ${body}`;
+    } else if (error instanceof Error) {
+      errorBody = error.message;
     }
   }
+  return { timestamp, response, error: errorBody };
 }
 
 export async function createProduceRequestData(
@@ -342,6 +412,6 @@ export function registerTopicCommands(): vscode.Disposable[] {
       copyKafkaClusterBootstrapUrl,
     ),
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
-    registerCommandWithLogging("confluent.topic.produce.fromDocument", produceMessageFromDocument),
+    registerCommandWithLogging("confluent.topic.produce.fromDocument", produceMessagesFromDocument),
   ];
 }

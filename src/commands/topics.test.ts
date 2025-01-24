@@ -12,7 +12,7 @@ import { RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import * as quickpicks from "../quickpicks/uris";
 import * as sidecar from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
-import { createProduceRequestData, produceMessageFromDocument } from "./topics";
+import { createProduceRequestData, produceMessagesFromDocument } from "./topics";
 
 const fakeMessage = {
   key: "test-key",
@@ -55,7 +55,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
   it("should show an error notification if no topic is provided", async function () {
     // shouldn't be possible based on the package.json configs, but just in case
-    await produceMessageFromDocument(null as any);
+    await produceMessagesFromDocument(null as any);
 
     assert.ok(showErrorMessageStub.calledOnceWith("No topic selected."));
   });
@@ -65,7 +65,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     // using local so we don't need to deal with the `type` lookups in `createProduceRequestData`;
     // see tests in suite below
-    await produceMessageFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
     assert.ok(showErrorMessageStub.notCalled);
   });
@@ -73,9 +73,11 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
   it("should show an error notification for an invalid JSON message", async function () {
     loadDocumentContentStub.resolves({ content: "{}" });
 
-    await produceMessageFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
-    assert.ok(showErrorMessageStub.calledOnceWith("Message must have a key, value, and headers."));
+    assert.ok(showErrorMessageStub.calledOnce);
+    const callArgs = showErrorMessageStub.getCall(0).args;
+    assert.strictEqual(callArgs[0], "Unable to produce message: JSON schema validation failed.");
   });
 
   it("should show a success (info) notification after valid produce response", async function () {
@@ -86,7 +88,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
     });
     const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
-    await produceMessageFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
     assert.ok(clientStub.produceRecord.calledOnce);
     assert.ok(showInfoStub.calledOnce);
@@ -103,7 +105,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
       ),
     );
 
-    await produceMessageFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
     assert.ok(showErrorMessageStub.calledOnce);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
@@ -119,7 +121,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
       partition_id: 0,
     });
 
-    await produceMessageFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
     assert.ok(showErrorMessageStub.calledOnce);
     const errorMsg = showErrorMessageStub.firstCall.args[0];
