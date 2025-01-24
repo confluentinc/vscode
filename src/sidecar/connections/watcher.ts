@@ -1,7 +1,12 @@
 import { commands, EventEmitter } from "vscode";
-import { Connection, ConnectionType } from "../../clients/sidecar";
+import {
+  Connection,
+  ConnectionFromJSON,
+  ConnectionType,
+  instanceOfConnection,
+} from "../../clients/sidecar";
 import { connectionStable, environmentChanged } from "../../emitters";
-import { showErrorNotificationWithButtons } from "../../errors";
+import { logResponseError, showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
 import {
@@ -295,6 +300,29 @@ export class ConnectionStateWatcher {
       `ConnectionStateWatcher: received ${message.body.action} event for connection id ${connectionId}`,
     );
 
+    // ensure Connection structure is coerced to the expected types (e.g. `requires_authentication_at`
+    // as a Date and not a string) for any callers that need to work with it
+    try {
+      if (!instanceOfConnection(connectionEvent.connection)) {
+        throw new Error(
+          `WebSocket message contained a non-Connection object: ${JSON.stringify(connectionEvent)}`,
+        );
+      }
+      connectionEvent.connection = ConnectionFromJSON(connectionEvent.connection);
+    } catch (e) {
+      // log the error and send to Sentry if we managed to get an error parsing the Connection
+      logResponseError(
+        e,
+        "handleConnectionUpdateEvent parsing",
+        {
+          connectionId,
+          event: JSON.stringify(connectionEvent, null, 2),
+        },
+        true,
+      );
+      return;
+    }
+
     let singleConnectionState = this.connectionStates.get(connectionId);
     if (!singleConnectionState) {
       // Insert a new entry to track this connection's updates.
@@ -304,7 +332,7 @@ export class ConnectionStateWatcher {
 
     // Store this most recent Connection state / spec, fire off to event handlers observing
     // this single connection.
-    singleConnectionState.handleUpdate(message.body);
+    singleConnectionState.handleUpdate(connectionEvent);
   }
 
   /**

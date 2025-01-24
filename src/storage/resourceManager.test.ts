@@ -11,11 +11,15 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
 import {
-  TEST_DIRECT_CONNECTION,
+  TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
-import { ConnectionSpec } from "../clients/sidecar";
+import {
+  ConnectionSpec,
+  KafkaClusterConfigFromJSON,
+  KafkaClusterConfigToJSON,
+} from "../clients/sidecar";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
@@ -26,6 +30,9 @@ import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
+  CustomConnectionSpec,
+  CustomConnectionSpecFromJSON,
+  CustomConnectionSpecToJSON,
   DirectConnectionsById,
   getResourceManager,
   ResourceManager,
@@ -984,7 +991,7 @@ describe("ResourceManager direct connection methods", function () {
 
   it("addDirectConnection() should correctly store a direct connection spec", async () => {
     // preload one connection
-    const spec = TEST_DIRECT_CONNECTION.spec;
+    const spec = TEST_DIRECT_CONNECTION_FORM_SPEC;
     await rm.addDirectConnection(spec);
 
     // make sure it exists
@@ -993,7 +1000,8 @@ describe("ResourceManager direct connection methods", function () {
     assert.deepStrictEqual(storedSpecs, new Map([[TEST_DIRECT_CONNECTION_ID, spec]]));
     assert.deepStrictEqual(storedSpecs.get(TEST_DIRECT_CONNECTION_ID), spec);
 
-    const storedSpec: ConnectionSpec | null =
+    // and that it also exists when fetched directly
+    const storedSpec: CustomConnectionSpec | null =
       await rm.getDirectConnection(TEST_DIRECT_CONNECTION_ID);
     assert.ok(storedSpec);
     assert.deepStrictEqual(storedSpec, spec);
@@ -1019,9 +1027,9 @@ describe("ResourceManager direct connection methods", function () {
     // preload two connections
     const connId1: ConnectionId = TEST_DIRECT_CONNECTION_ID;
     const connId2: ConnectionId = "other-id" as ConnectionId;
-    const specs: ConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION.spec,
-      { ...TEST_DIRECT_CONNECTION.spec, id: connId2 },
+    const specs: CustomConnectionSpec[] = [
+      TEST_DIRECT_CONNECTION_FORM_SPEC,
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: connId2 },
     ];
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
@@ -1043,10 +1051,10 @@ describe("ResourceManager direct connection methods", function () {
 
   it("deleteDirectConnections() should delete all direct connections", async () => {
     // preload multiple connections
-    const specs: ConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION.spec,
-      { ...TEST_DIRECT_CONNECTION.spec, id: "other-id" },
-      { ...TEST_DIRECT_CONNECTION.spec, id: "another-id" },
+    const specs: CustomConnectionSpec[] = [
+      TEST_DIRECT_CONNECTION_FORM_SPEC,
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "other-id" as ConnectionId },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "another-id" as ConnectionId },
     ];
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
@@ -1148,5 +1156,75 @@ describe("ResourceManager general utility methods", function () {
     const existingLocalTopics = await resourceManager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
     assert.ok(existingLocalTopics);
     assert.equal(existingLocalTopics.length, 1);
+  });
+});
+
+describe("CustomConnectionSpec object conversion", () => {
+  it("CustomConnectionSpecFromJSON should correctly convert objects to typed CustomConnectionSpecs", () => {
+    const plainObj = {
+      id: TEST_DIRECT_CONNECTION_ID,
+      name: "Test Connection",
+      type: "DIRECT",
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "localhost:9092",
+      },
+    };
+
+    const spec = CustomConnectionSpecFromJSON(plainObj);
+
+    assert.ok(spec);
+    assert.strictEqual(spec.id, TEST_DIRECT_CONNECTION_ID);
+    // TODO: figure out how to test for branded string types?
+    assert.strictEqual(spec.name, "Test Connection");
+    assert.strictEqual(spec.type, "DIRECT");
+    assert.strictEqual(spec.formConnectionType, "Apache Kafka");
+    // ensure all KafkaClusterConfig fields are present
+    assert.deepStrictEqual(
+      spec.kafka_cluster,
+      KafkaClusterConfigFromJSON({
+        bootstrap_servers: "localhost:9092",
+      }),
+    );
+  });
+
+  it("CustomConnectionSpecFromJSON should handle null input", () => {
+    const spec = CustomConnectionSpecFromJSON(null);
+
+    assert.strictEqual(spec, null);
+  });
+
+  it("CustomConnectionSpecToJSON should correctly convert a typed CustomConnectionSpec to a plain object", () => {
+    // don't use existing test data since it will include all fields
+    const spec: object = {
+      id: TEST_DIRECT_CONNECTION_ID,
+      name: "Test Connection",
+      type: "DIRECT",
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "localhost:9092",
+      },
+    };
+
+    const plainObj = CustomConnectionSpecToJSON(spec as CustomConnectionSpec);
+    assert.ok(plainObj);
+    assert.strictEqual(plainObj.id, TEST_DIRECT_CONNECTION_ID);
+    assert.strictEqual(plainObj.name, "Test Connection");
+    assert.strictEqual(plainObj.type, "DIRECT");
+    assert.strictEqual(plainObj.formConnectionType, "Apache Kafka");
+    assert.deepStrictEqual(
+      plainObj.kafka_cluster,
+      KafkaClusterConfigToJSON({
+        bootstrap_servers: "localhost:9092",
+      }),
+    );
+  });
+
+  it("CustomConnectionSpec conversion should be reversible", () => {
+    // use the existing test spec which has all fields
+    const specObj = CustomConnectionSpecToJSON(TEST_DIRECT_CONNECTION_FORM_SPEC);
+    const typedSpec = CustomConnectionSpecFromJSON(specObj);
+
+    assert.deepStrictEqual(typedSpec, TEST_DIRECT_CONNECTION_FORM_SPEC);
   });
 });
