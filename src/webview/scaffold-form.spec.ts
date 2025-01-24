@@ -124,17 +124,6 @@ test("empty form submission works", async ({ execute, page }) => {
     window.dispatchEvent(new Event("DOMContentLoaded"));
   });
 
-  // await page.focus("[name=cc_bootstrap_server]");
-  // await page.keyboard.type("cc_bootstrap_server");
-  // await page.focus("[name=api_key]");
-  // await page.keyboard.type("api_key");
-  // await page.focus("[name=api_secret]");
-  // await page.keyboard.type("api_secret");
-  // await page.focus("[name=cc_topic]");
-  // await page.keyboard.type("cc_topic");
-  // await page.focus("[name=group_id]");
-  // await page.keyboard.type("group_id");
-
   await page.click("input[type=submit]");
 
   const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
