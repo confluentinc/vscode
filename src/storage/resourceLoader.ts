@@ -83,14 +83,14 @@ export abstract class ResourceLoader implements IResourceBase {
   ): Promise<KafkaCluster[]>;
 
   /**
-   * Return the topics present in the cluster. Will also correlate with schemas
-   * in the schema registry for the cluster, if any.
+   * Return the topics present in the cluster, annotated with whether or not
+   * they have a matching schema (subject).
    */
   public async getTopicsForCluster(
     cluster: KafkaCluster,
     forceRefresh: boolean = false,
   ): Promise<KafkaTopic[]> {
-    // Deep fetch the schemas and the topics concurrently.
+    // Deep fetch the topics and schema registry subject names concurrently.
     const [subjects, responseTopics]: [string[], TopicData[]] = await Promise.all([
       this.getSubjects(cluster.environmentId!, forceRefresh),
       fetchTopics(cluster),
