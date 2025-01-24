@@ -77,7 +77,7 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     assert.ok(showErrorMessageStub.calledOnce);
     const callArgs = showErrorMessageStub.getCall(0).args;
-    assert.strictEqual(callArgs[0], "Unable to produce message: JSON schema validation failed.");
+    assert.strictEqual(callArgs[0], "Unable to produce message(s): JSON schema validation failed.");
   });
 
   it("should show a success (info) notification after valid produce response", async function () {

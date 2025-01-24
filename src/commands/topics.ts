@@ -217,11 +217,14 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   const diagnostics: readonly vscode.Diagnostic[] =
     vscode.languages.getDiagnostics(messageUri) ?? [];
   if (diagnostics.length) {
-    showErrorNotificationWithButtons("Unable to produce message: JSON schema validation failed.", {
-      "Show Validation Errors": () => {
-        vscode.commands.executeCommand("workbench.action.showErrorsWarnings");
+    showErrorNotificationWithButtons(
+      "Unable to produce message(s): JSON schema validation failed.",
+      {
+        "Show Validation Errors": () => {
+          vscode.commands.executeCommand("workbench.action.showErrorsWarnings");
+        },
       },
-    });
+    );
     return;
   }
   // document is valid, discard the listeners for that document
