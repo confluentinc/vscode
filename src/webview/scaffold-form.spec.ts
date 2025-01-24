@@ -8,6 +8,7 @@ import esbuild from "rollup-plugin-esbuild";
 import { test } from "rollwright";
 import { SinonStub } from "sinon";
 import { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
+import { ScaffoldV1TemplateSpecAlt } from "./scaffold-form";
 
 const template = readFileSync(new URL("scaffold-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {
@@ -50,7 +51,7 @@ test("dummy form submission", async ({ execute, page }) => {
   });
 
   await execute(async (stub) => {
-    const dummy: ScaffoldV1TemplateSpec = {
+    const dummy: ScaffoldV1TemplateSpecAlt = {
       version: "0.0.1",
       name: "go-consumer",
       display_name: "Go Consumer Application",
@@ -93,7 +94,7 @@ test("dummy form submission", async ({ execute, page }) => {
           display_name: "Begin Consuming From",
           description:
             "What to do when there is no initial offset in the Kafka topic or if the current offset does not exist any more on the server (e.g. because that data has been deleted).",
-          _enum: ["earliest", "latest"],
+          enum: ["earliest", "latest"],
           initial_value: "earliest",
         },
       },
