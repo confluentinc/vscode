@@ -1,10 +1,21 @@
 import { readFile } from "fs";
-import { Diagnostic, DiagnosticCollection, Position, Range, Uri, languages } from "vscode";
+import {
+  Diagnostic,
+  DiagnosticCollection,
+  Disposable,
+  Position,
+  Range,
+  TextDocument,
+  TextDocumentChangeEvent,
+  Uri,
+  languages,
+  workspace,
+} from "vscode";
 import {
   DocumentUri,
   JSONSchema,
   Diagnostic as JsonDiagnostic,
-  TextDocument,
+  TextDocument as JsonTextDocument,
   getLanguageService,
 } from "vscode-json-languageservice";
 import { Logger } from "../logging";
@@ -12,6 +23,9 @@ import { loadDocumentContent } from "../quickpicks/uris";
 
 const logger = new Logger("schemas.validateDocument");
 
+/**
+ * Validate a JSON document against a {@link JSONSchema} and returns its {@link DiagnosticCollection}.
+ */
 export async function validateDocument(
   documentUri: Uri,
   schema: JSONSchema,
@@ -20,7 +34,7 @@ export async function validateDocument(
   const textDocUri: DocumentUri = documentUri.toString();
 
   const { content } = await loadDocumentContent(documentUri);
-  const textDocument = TextDocument.create(textDocUri, "json", 1, content);
+  const textDocument = JsonTextDocument.create(textDocUri, "json", 1, content);
 
   // JSON language service setup and initial document parsing
   const jsonLanguageService = getLanguageService({
@@ -52,16 +66,33 @@ export async function validateDocument(
       d.severity !== undefined ? d.severity - 1 : 1, // error by default
     );
   });
-  if (diags.length > 0) {
-    logger.warn(`Document ${documentUri.fsPath} has ${diags.length} validation errors`);
-  }
 
   // TODO: try out `jsonLanguageService.doComplete()`
 
   // apply diagnostics to the document so they show up in the Problems panel
   const collection: DiagnosticCollection = languages.createDiagnosticCollection("jsonValidator");
   collection.set(documentUri, diags);
-  // TODO: on document close/rename, clear diagnostics
+
+  // TODO: move these outside of this function?
+  // on document close/rename, clear diagnostics
+  const docCloseSub: Disposable = workspace.onDidCloseTextDocument((e: TextDocument) => {
+    if (e.uri.fsPath === documentUri.fsPath) {
+      logger.debug(`"${documentUri.fsPath}" closed, clearing diagnostics`);
+      collection.clear();
+      docCloseSub.dispose();
+    }
+  });
+  // if the document is modified, re-validate
+  const docChangeSub: Disposable = workspace.onDidChangeTextDocument(
+    (e: TextDocumentChangeEvent) => {
+      if (e.document.uri.fsPath === documentUri.fsPath && e.contentChanges.length > 0) {
+        logger.debug(`"${documentUri.fsPath}" changed, clearing diagnostics and re-validating`, e);
+        collection.clear();
+        docChangeSub.dispose();
+        validateDocument(documentUri, schema);
+      }
+    },
+  );
 
   return collection;
 }
