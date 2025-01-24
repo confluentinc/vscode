@@ -1,12 +1,16 @@
 import { Disposable } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
+import {
+  Schema as ResponseSchema,
+  SchemasV1Api,
+  SubjectsV1Api,
+} from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, IResourceBase } from "../models/resource";
-import { Schema, SchemaType } from "../models/schema";
+import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
+import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -79,13 +83,21 @@ export abstract class ResourceLoader implements IResourceBase {
   ): Promise<KafkaCluster[]>;
 
   /**
-   * Return the topics present in the cluster. Will also correlate with schemas
-   * in the schema registry for the cluster, if any.
+   * Return the topics present in the cluster, annotated with whether or not
+   * they have a corresponding schema subject.
    */
-  public abstract getTopicsForCluster(
+  public async getTopicsForCluster(
     cluster: KafkaCluster,
-    forceDeepRefresh?: boolean,
-  ): Promise<KafkaTopic[]>;
+    forceRefresh: boolean = false,
+  ): Promise<KafkaTopic[]> {
+    // Deep fetch the topics and schema registry subject names concurrently.
+    const [subjects, responseTopics]: [string[], TopicData[]] = await Promise.all([
+      this.getSubjects(cluster.environmentId!, forceRefresh),
+      fetchTopics(cluster),
+    ]);
+
+    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
+  }
 
   // Schema registry methods
 
@@ -103,6 +115,36 @@ export abstract class ResourceLoader implements IResourceBase {
   public abstract getSchemaRegistryForEnvironmentId(
     environmentId: string | undefined,
   ): Promise<SchemaRegistry | undefined>;
+
+  /**
+   * Get the subjects from the schema registry for the given environment or schema registry.
+   * @param environmentId The environment to get the schema registry's subjects from.
+   * @param forceDeepRefresh If true, will ignore any cached subjects and fetch anew.
+   * @returns An array of subjects in the schema registry. Throws an error if the subjects could not be fetched.
+   * */
+  public async getSubjects(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forceRefresh: boolean = false,
+  ): Promise<string[]> {
+    let schemaRegistry: SchemaRegistry | undefined;
+    if (typeof registryOrEnvironmentId === "string") {
+      schemaRegistry = await this.getSchemaRegistryForEnvironmentId(registryOrEnvironmentId);
+      if (!schemaRegistry) {
+        throw new Error(`No schema registry found for environment ${registryOrEnvironmentId}`);
+      }
+    } else {
+      schemaRegistry = registryOrEnvironmentId;
+    }
+
+    if (schemaRegistry.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for schema registry ${schemaRegistry.id}`,
+      );
+    }
+
+    return await fetchSubjects(schemaRegistry);
+  }
 
   /**
    * Get the possible schemas for an environment's schema registry.
@@ -185,16 +227,16 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 
 /**
  * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
- * and set whether or not each topic has a matching schema.
+ * and set whether or not each topic has a matching schema by subject.
  */
-export function correlateTopicsWithSchemas(
+export function correlateTopicsWithSchemaSubjects(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
-  schemas: Schema[],
+  subjects: string[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
-      schema.matchesTopicName(topic.topic_name),
+    const hasMatchingSchema: boolean = subjects.some((subject) =>
+      subjectMatchesTopicName(subject, topic.topic_name),
     );
 
     return KafkaTopic.create({
@@ -260,4 +302,18 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
     });
   });
   return schemas;
+}
+
+/**
+ * Fetch all of the subjects in the schema registry and return them as an array of strings.
+ * Does not store into the resource manager.
+ */
+export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<string[]> {
+  const sidecarHandle = await getSidecar();
+  const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
+    schemaRegistry.id,
+    schemaRegistry.connectionId,
+  );
+
+  return await client.list();
 }

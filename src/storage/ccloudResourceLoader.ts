@@ -1,6 +1,5 @@
 import { Disposable } from "vscode";
 
-import { TopicData } from "../clients/kafkaRest/models";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
@@ -12,12 +11,7 @@ import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import {
-  correlateTopicsWithSchemas,
-  fetchSchemas,
-  fetchTopics,
-  ResourceLoader,
-} from "./resourceLoader";
+import { fetchSchemas, ResourceLoader } from "./resourceLoader";
 import { getResourceManager } from "./resourceManager";
 
 const logger = new Logger("storage.ccloudResourceLoader");
@@ -265,6 +259,9 @@ export class CCloudResourceLoader extends ResourceLoader {
   /**
    * Return the topics present in the {@link CCloudKafkaCluster}. Will also correlate with schemas
    * in the schema registry for the cluster, if any.
+   *
+   * Augments the implementation in base class ResourceLoader by handling caching
+   * within the resource manager.
    */
   public async getTopicsForCluster(
     cluster: CCloudKafkaCluster,
@@ -285,21 +282,8 @@ export class CCloudResourceLoader extends ResourceLoader {
       return cachedTopics;
     }
 
-    // Do a deep fetch, cache the results, then return them.
-
-    // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
-    // but the topics are always a deep fetch.
-    const [schemas, responseTopics] = await Promise.all([
-      this.getSchemasForEnvironmentId(cluster.environmentId, forceDeepRefresh),
-      fetchTopics(cluster),
-    ]);
-
-    // now correlate the topics with the schemas.
-    const topics = correlateTopicsWithSchemas(
-      cluster,
-      responseTopics as TopicData[],
-      schemas as Schema[],
-    );
+    // Do a deep fetch and schema subject correlation via the base implementation.
+    const topics: KafkaTopic[] = await super.getTopicsForCluster(cluster);
 
     // Cache the correlated topics for this cluster.
     await resourceManager.setTopicsForCluster(cluster, topics);
