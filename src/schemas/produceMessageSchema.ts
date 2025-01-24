@@ -17,11 +17,9 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
       type: "object",
       properties: {
         key: {
-          oneOf: [{ type: "string" }, { type: "object" }],
           description: "The key of the message",
         },
         value: {
-          oneOf: [{ type: "string" }, { type: "object" }],
           description: "The value of the message",
         },
         headers: {
@@ -29,6 +27,10 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
           items: {
             type: "object",
             properties: {
+              // either name or key is required, but 'name' is used in the request interface
+              name: {
+                description: "The name of the header",
+              },
               key: {
                 type: "string",
                 description: "The key of the header",
@@ -38,7 +40,8 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
                 description: "The value of the header",
               },
             },
-            required: ["key", "value"],
+            required: ["value"],
+            oneOf: [{ required: ["key"] }, { required: ["name"] }],
           },
         },
       },
