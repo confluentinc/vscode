@@ -27,14 +27,14 @@
         </template>
         <template data-for="field of this.options()">
           <div class="content-wrapper">
-            <template data-if="this.isEnumField(this.field())">
+            <template data-if="this.getEnumField(this.field())">
               <div class="input-container dropdown">
                 <label class="label" data-text="this.field()[1].display_name"> </label>
                 <vscode-dropdown
                   data-attr-name="this.field()[0]"
                   data-prop-value="this.field()[1].initial_value"
                 >
-                  <template data-for="option of this.field()[1].enum"
+                  <template data-for="option of this.getEnumField(this.field())"
                     ><vscode-option
                       data-attr-value="this.option()"
                       data-text="this.option()"
@@ -47,7 +47,7 @@
                 </div>
               </div>
             </template>
-            <template data-if="!this.isEnumField(this.field())">
+            <template data-if="!this.getEnumField(this.field())">
               <div class="input-container" data-attr-id="'input_' + this.field()[0]">
                 <label
                   data-text="this.field()[1].display_name"

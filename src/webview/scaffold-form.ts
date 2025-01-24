@@ -11,6 +11,19 @@ addEventListener("DOMContentLoaded", () => {
   applyBindings(ui, os, vm);
 });
 
+/** In the Scaffolding Service, `enum` is not a reserved word, but in Typescript it is.
+ * Our OpenAPI generator converts it to `_enum` instead, but we get the Template Options with the original underscore-less version.
+ * These two type interfaces are combining those types, which allows us to check for either spelling
+ * in getEnumField() when we use the option to generate a <select> element in the form.
+ */
+export interface ScaffoldV1TemplateOptionAlt extends ScaffoldV1TemplateOption {
+  enum?: string[];
+  _enum?: string[];
+}
+export interface ScaffoldV1TemplateSpecAlt extends ScaffoldV1TemplateSpec {
+  options: Record<string, ScaffoldV1TemplateOptionAlt>;
+}
+
 class ScaffoldFormViewModel extends ViewModel {
   spec = this.resolve(async () => {
     return await post("GetTemplateSpec", {});
@@ -44,8 +57,8 @@ class ScaffoldFormViewModel extends ViewModel {
   // Updated in validateInput & submit handler checks
   hasValidationErrors = this.signal(false);
 
-  isEnumField(field: [string, ScaffoldV1TemplateOption]) {
-    return field[1]._enum;
+  getEnumField(field: [string, ScaffoldV1TemplateOptionAlt]) {
+    return field[1].enum ?? field[1]._enum;
   }
 
   handleInput(event: Event) {
