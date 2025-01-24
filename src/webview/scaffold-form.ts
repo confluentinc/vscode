@@ -11,7 +11,7 @@ addEventListener("DOMContentLoaded", () => {
   applyBindings(ui, os, vm);
 });
 
-/** In the Scaffolding Service, `enum` is not a reserved word, but in Typescript it is.
+/** In the Scaffolding Service (golang), `enum` is not a reserved word, but here in Typescript it is.
  * Our OpenAPI generator converts it to `_enum` instead, but we get the Template Options with the original underscore-less version.
  * These two type interfaces are combining those types, which allows us to check for either spelling
  * in getEnumField() when we use the option to generate a <select> element in the form.
