@@ -328,7 +328,7 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
     value: valueData,
     // if these made it through the validation step, no other handling is needed
     partition_id: content.partition_id,
-    timestamp: content.timestamp,
+    timestamp: content.timestamp ? new Date(content.timestamp) : undefined,
   };
   const request: ProduceRecordRequest = {
     topic_name: topic.name,
