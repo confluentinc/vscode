@@ -84,7 +84,7 @@ export abstract class ResourceLoader implements IResourceBase {
 
   /**
    * Return the topics present in the cluster, annotated with whether or not
-   * they have a matching schema (subject).
+   * they have a corresponding schema subject.
    */
   public async getTopicsForCluster(
     cluster: KafkaCluster,
