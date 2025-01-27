@@ -56,7 +56,7 @@ version_no_v = $(shell echo $(1) | sed 's,^v,,' )
 .PHONY: upload-vsix-files-to-gh-releases
 upload-vsix-files-to-gh-releases:
 ifeq ($(LATEST_VERSION_NO_V), $(CURRENT_VERSION))
-	for target in darwin-x64 darwin-arm64 linux-x64 linux-arm64; do \
+	for target in darwin-x64 darwin-arm64 linux-x64 linux-arm64 win32-x64; do \
 		vsix_file=$$(find packaged-vsix-files -name "*$$target*.vsix"); \
 		gh release upload $(LATEST_VERSION) $$vsix_file --clobber; \
 	done;
