@@ -15,14 +15,14 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const StoreType = {
-  Jks: "JKS",
-  Pkcs12: "PKCS12",
-  Pem: "PEM",
-  Unknown: "UNKNOWN",
-} as const;
-export type StoreType = (typeof StoreType)[keyof typeof StoreType];
+export enum StoreType {
+  Jks = "JKS",
+  Pkcs12 = "PKCS12",
+  Pem = "PEM",
+  Unknown = "UNKNOWN",
+}
 
 export function instanceOfStoreType(value: any): boolean {
   for (const key in StoreType) {

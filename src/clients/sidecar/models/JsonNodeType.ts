@@ -15,19 +15,19 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const JsonNodeType = {
-  Array: "ARRAY",
-  Binary: "BINARY",
-  Boolean: "BOOLEAN",
-  Missing: "MISSING",
-  Null: "NULL",
-  Number: "NUMBER",
-  Object: "OBJECT",
-  Pojo: "POJO",
-  String: "STRING",
-} as const;
-export type JsonNodeType = (typeof JsonNodeType)[keyof typeof JsonNodeType];
+export enum JsonNodeType {
+  Array = "ARRAY",
+  Binary = "BINARY",
+  Boolean = "BOOLEAN",
+  Missing = "MISSING",
+  Null = "NULL",
+  Number = "NUMBER",
+  Object = "OBJECT",
+  Pojo = "POJO",
+  String = "STRING",
+}
 
 export function instanceOfJsonNodeType(value: any): boolean {
   for (const key in JsonNodeType) {

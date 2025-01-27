@@ -55,21 +55,18 @@ export interface ScaffoldV1TemplateListDataInner {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ScaffoldV1TemplateListDataInnerApiVersionEnum = {
-  ScaffoldV1: "scaffold/v1",
-} as const;
-export type ScaffoldV1TemplateListDataInnerApiVersionEnum =
-  (typeof ScaffoldV1TemplateListDataInnerApiVersionEnum)[keyof typeof ScaffoldV1TemplateListDataInnerApiVersionEnum];
-
+export enum ScaffoldV1TemplateListDataInnerApiVersionEnum {
+  ScaffoldV1 = "scaffold/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ScaffoldV1TemplateListDataInnerKindEnum = {
-  Template: "Template",
-} as const;
-export type ScaffoldV1TemplateListDataInnerKindEnum =
-  (typeof ScaffoldV1TemplateListDataInnerKindEnum)[keyof typeof ScaffoldV1TemplateListDataInnerKindEnum];
+export enum ScaffoldV1TemplateListDataInnerKindEnum {
+  Template = "Template",
+}
 
 /**
  * Check if a given object implements the ScaffoldV1TemplateListDataInner interface.

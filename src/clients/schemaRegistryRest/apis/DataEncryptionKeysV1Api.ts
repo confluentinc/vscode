@@ -752,70 +752,64 @@ export class DataEncryptionKeysV1Api extends runtime.BaseAPI {
 
 /**
  * @export
+ * @enum {string}
  */
-export const DeleteDekVersionAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type DeleteDekVersionAlgorithmEnum =
-  (typeof DeleteDekVersionAlgorithmEnum)[keyof typeof DeleteDekVersionAlgorithmEnum];
+export enum DeleteDekVersionAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const DeleteDekVersionsAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type DeleteDekVersionsAlgorithmEnum =
-  (typeof DeleteDekVersionsAlgorithmEnum)[keyof typeof DeleteDekVersionsAlgorithmEnum];
+export enum DeleteDekVersionsAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetDekAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type GetDekAlgorithmEnum = (typeof GetDekAlgorithmEnum)[keyof typeof GetDekAlgorithmEnum];
+export enum GetDekAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetDekByVersionAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type GetDekByVersionAlgorithmEnum =
-  (typeof GetDekByVersionAlgorithmEnum)[keyof typeof GetDekByVersionAlgorithmEnum];
+export enum GetDekByVersionAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetDekVersionsAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type GetDekVersionsAlgorithmEnum =
-  (typeof GetDekVersionsAlgorithmEnum)[keyof typeof GetDekVersionsAlgorithmEnum];
+export enum GetDekVersionsAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const UndeleteDekVersionAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type UndeleteDekVersionAlgorithmEnum =
-  (typeof UndeleteDekVersionAlgorithmEnum)[keyof typeof UndeleteDekVersionAlgorithmEnum];
+export enum UndeleteDekVersionAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const UndeleteDekVersionsAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type UndeleteDekVersionsAlgorithmEnum =
-  (typeof UndeleteDekVersionsAlgorithmEnum)[keyof typeof UndeleteDekVersionsAlgorithmEnum];
+export enum UndeleteDekVersionsAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}

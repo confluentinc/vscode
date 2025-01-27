@@ -273,14 +273,13 @@ export interface TaskSpecContainerSpec {
 
 /**
  * @export
+ * @enum {string}
  */
-export const TaskSpecContainerSpecIsolationEnum = {
-  Default: "default",
-  Process: "process",
-  Hyperv: "hyperv",
-} as const;
-export type TaskSpecContainerSpecIsolationEnum =
-  (typeof TaskSpecContainerSpecIsolationEnum)[keyof typeof TaskSpecContainerSpecIsolationEnum];
+export enum TaskSpecContainerSpecIsolationEnum {
+  Default = "default",
+  Process = "process",
+  Hyperv = "hyperv",
+}
 
 /**
  * Check if a given object implements the TaskSpecContainerSpec interface.
