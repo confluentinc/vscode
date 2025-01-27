@@ -9,7 +9,7 @@ The following 3rd-party software packages may be used by or distributed with git
 
 Date generated: 2025-1-27
 
-Revision ID: 7ed56e6c60b11c48be80019730321931b7f388e8
+Revision ID: dd2263911187034486a6b5801b7bc7f79194524d
 
 ================================================================================
 ================================================================================
@@ -18641,9 +18641,9 @@ SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: picocolors (1.0.1)
+Package Title: picocolors (1.1.1)
 
-Package Locator: npm+picocolors$1.0.1
+Package Locator: npm+picocolors$1.1.1
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -18654,7 +18654,7 @@ ISC
 
 ISC License
 
-Copyright (c) 2021 Alexey Raspopov, Kostiantyn Denysov, Anton Verinov
+Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -20579,9 +20579,9 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 --------------------------------------------------------------------------------
-Package Title: source-map-js (1.2.0)
+Package Title: source-map-js (1.2.1)
 
-Package Locator: npm+source-map-js$1.2.0
+Package Locator: npm+source-map-js$1.2.1
 
 Package Depth: Transitive
 --------------------------------------------------------------------------------
@@ -26575,25 +26575,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ISC License
 
-Copyright (c) 2021 Alexey Raspopov, Kostiantyn Denysov, Anton Verinov
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-
-* ISC *
-
-ISC License
-
 Copyright (c) 2021, Mapbox
 
 Permission to use, copy, modify, and/or distribute this software for any purpose
@@ -26607,6 +26588,25 @@ INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
 OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
+
+
+* ISC *
+
+ISC License
+
+Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
 * ISC *
@@ -30104,9 +30104,9 @@ Copyright (c) 2009-2011 Mozilla Foundation and contributors
 
 Copyright (c) 2011 Mozilla Foundation and contributors
 
-Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
-
 Copyright (c) 2014 Mozilla Foundation and contributors
+
+Copyright (c) 2011 The Closure Compiler Authors. All rights reserved.
 
 Copyright (c) 2022 Sentry
 
@@ -30456,7 +30456,7 @@ Copyright (c) 2017 Charmander <~@charmander.me>
 
 Copyright (c) 2017-2024 Oleksii Raspopov
 
-Copyright (c) 2021 Alexey Raspopov, Kostiantyn Denysov, Anton Verinov
+Copyright (c) 2021-2024 Oleksii Raspopov, Kostiantyn Denysov, Anton Verinov
 
 Copyright (c) 2024 Oleksii Raspopov
 
@@ -30481,6 +30481,8 @@ Copyright (c)  Stephen Sugden <me@stephensugden.com> (stephensugden.com)
 Copyright (c) 2022 present Johnson Chu
 
 Copyright (c)  Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+
+Copyright (c) 2021 Alexey Raspopov, Kostiantyn Denysov, Anton Verinov
 
 Copyright (c)  Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
 
