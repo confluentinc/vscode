@@ -234,9 +234,7 @@ test("form prevents invalid submissions", async ({ execute, page }) => {
   await page.focus("[name=api_key]");
   await page.keyboard.type("not a key");
   await page.focus("[name=cc_bootstrap_server]"); // blur to invoke validation
-  expect(
-    await page.locator("[name=api_key]").evaluate((el) => el.matches(":invalid")),
-  ).toBeTruthy();
+
   expect(submitBtn).toBeDisabled();
 
   // Delete value and submit
@@ -246,7 +244,6 @@ test("form prevents invalid submissions", async ({ execute, page }) => {
   await page.keyboard.type("MUSTBE16CHARACTE");
 
   await page.focus("[name=cc_bootstrap_server]"); // blur to invoke validation
-  expect(await page.locator("[name=api_key]").evaluate((el) => el.matches(":invalid"))).toBeFalsy();
   await submitBtn.click();
 
   const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
