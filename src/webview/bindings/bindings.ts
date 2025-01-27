@@ -195,7 +195,11 @@ function nodeAttribute<T>(node: T, attr: string, expr: string, os: Scope, vm: an
       else node.removeAttribute(attr);
     });
   }
-  return os.watch(() => node.setAttribute(attr, get.call(vm)));
+  return os.watch(() => {
+    let value = get.call(vm);
+    if (value != null) node.setAttribute(attr, value);
+    else node.removeAttribute(attr);
+  });
 }
 
 function walk(root: Node) {
