@@ -4,22 +4,34 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.24.1
+
+(Fixed issue with CI process. No user-facing changes.)
+
+## 0.24.0
+
 ### Added
 
 - Producing (schemaless) messages to a Kafka topic has been expanded to support:
-  - loading content from an unsaved editor or Message Viewer preview tab
-  - providing document basic validation for JSON content
+  - loading message content from an unsaved editor or Message Viewer preview tab
+  - providing basic JSON validation for message content
   - passing `partition_id` and `timestamp` as optional fields in the message payload
   - multiple message production to a topic in a single action
 - "Sign Out" action in the Resources view for the current Confluent Cloud connection.
 - Error notifications and additional tooltip information are now shown for direct connections to
   Kafka and Schema Registry if either (or both) of the connections are not usable.
+- Client-side validation for project scaffolding forms.
+- Basic initial support for non-`vscode` URI callbacks during the Confluent Cloud sign-in flow.
 
 ### Changed
 
 - CCloud and direct connection status changes are now handled via websocket events pushed from the
   sidecar instead of relying on HTTP polling. (Local connection status changes continue to be
   handled through Docker system events.)
+- Generating projects from templates now uses the Confluent Cloud scaffolding service, which
+  requires an internet connection.
+- Empty states in the Topics and Schemas views now provide links to create direct connections to
+  Kafka and/or Schema Registry.
 
 ### Fixed
 
