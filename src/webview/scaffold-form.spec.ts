@@ -7,16 +7,28 @@ import { Plugin } from "rollup";
 import esbuild from "rollup-plugin-esbuild";
 import { test } from "rollwright";
 import { SinonStub } from "sinon";
+import sanitize from "sanitize-html";
 import { ScaffoldV1TemplateSpec } from "../clients/scaffoldingService";
 import { ScaffoldV1TemplateSpecAlt } from "./scaffold-form";
 
 const template = readFileSync(new URL("scaffold-form.html", import.meta.url), "utf8");
 
 function render(template: string, variables: Record<string, any>) {
-  return template
-    .replace(/\$\{([^}]+)\}/g, (_, v) => variables[v])
-    .replace(/<script[^>]+><\/script>/g, "")
-    .replace(/<meta\s+http-equiv[^/]+\/>/gm, "");
+  return sanitize(template, {
+    allowedAttributes: false,
+    allowedTags: sanitize.defaults.allowedTags.concat([
+      "head",
+      "body",
+      "link",
+      "form",
+      "input",
+      "label",
+      "select",
+      "template",
+      "vscode-dropdown",
+      "vscode-option",
+    ]),
+  }).replace(/\$\{([^}]+)\}/g, (_, v) => variables[v]);
 }
 
 // TEMP just strip any stylesheet imports

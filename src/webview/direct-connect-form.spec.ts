@@ -5,15 +5,27 @@ import esbuild from "rollup-plugin-esbuild";
 import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
 import { SinonStub } from "sinon";
+import sanitize from "sanitize-html";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {
-  return template
-    .replace(/\$\{([^}]+)\}/g, (_, v) => variables[v])
-    .replace(/<script[^>]+><\/script>/g, "")
-    .replace(/<meta\s+http-equiv[^/]+\/>/gm, "");
+  return sanitize(template, {
+    allowedAttributes: false,
+    allowedTags: sanitize.defaults.allowedTags.concat([
+      "head",
+      "body",
+      "link",
+      "form",
+      "input",
+      "label",
+      "select",
+      "template",
+      "vscode-dropdown",
+      "vscode-option",
+    ]),
+  }).replace(/\$\{([^}]+)\}/g, (_, v) => variables[v]);
 }
 
 // strip any stylesheet imports
