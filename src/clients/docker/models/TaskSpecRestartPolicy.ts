@@ -53,14 +53,13 @@ export interface TaskSpecRestartPolicy {
 
 /**
  * @export
+ * @enum {string}
  */
-export const TaskSpecRestartPolicyConditionEnum = {
-  None: "none",
-  OnFailure: "on-failure",
-  Any: "any",
-} as const;
-export type TaskSpecRestartPolicyConditionEnum =
-  (typeof TaskSpecRestartPolicyConditionEnum)[keyof typeof TaskSpecRestartPolicyConditionEnum];
+export enum TaskSpecRestartPolicyConditionEnum {
+  None = "none",
+  OnFailure = "on-failure",
+  Any = "any",
+}
 
 /**
  * Check if a given object implements the TaskSpecRestartPolicy interface.

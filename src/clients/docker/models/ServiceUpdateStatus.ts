@@ -47,14 +47,13 @@ export interface ServiceUpdateStatus {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ServiceUpdateStatusStateEnum = {
-  Updating: "updating",
-  Paused: "paused",
-  Completed: "completed",
-} as const;
-export type ServiceUpdateStatusStateEnum =
-  (typeof ServiceUpdateStatusStateEnum)[keyof typeof ServiceUpdateStatusStateEnum];
+export enum ServiceUpdateStatusStateEnum {
+  Updating = "updating",
+  Paused = "paused",
+  Completed = "completed",
+}
 
 /**
  * Check if a given object implements the ServiceUpdateStatus interface.

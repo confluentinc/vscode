@@ -706,6 +706,7 @@ export async function apigen() {
   const additionalProperties = {
     modelPropertyNaming: "original",
     paramNaming: "original",
+    stringEnums: "true",
   };
   // join key-value pairs into a string `key1=value1,key2=value2,...`
   const additionalPropertiesString = Object.entries(additionalProperties)

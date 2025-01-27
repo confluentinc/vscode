@@ -15,17 +15,17 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const AclResourceType = {
-  Unknown: "UNKNOWN",
-  Any: "ANY",
-  Topic: "TOPIC",
-  Group: "GROUP",
-  Cluster: "CLUSTER",
-  TransactionalId: "TRANSACTIONAL_ID",
-  DelegationToken: "DELEGATION_TOKEN",
-} as const;
-export type AclResourceType = (typeof AclResourceType)[keyof typeof AclResourceType];
+export enum AclResourceType {
+  Unknown = "UNKNOWN",
+  Any = "ANY",
+  Topic = "TOPIC",
+  Group = "GROUP",
+  Cluster = "CLUSTER",
+  TransactionalId = "TRANSACTIONAL_ID",
+  DelegationToken = "DELEGATION_TOKEN",
+}
 
 export function instanceOfAclResourceType(value: any): boolean {
   for (const key in AclResourceType) {

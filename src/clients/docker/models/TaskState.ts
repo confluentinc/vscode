@@ -15,25 +15,25 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const TaskState = {
-  New: "new",
-  Allocated: "allocated",
-  Pending: "pending",
-  Assigned: "assigned",
-  Accepted: "accepted",
-  Preparing: "preparing",
-  Ready: "ready",
-  Starting: "starting",
-  Running: "running",
-  Complete: "complete",
-  Shutdown: "shutdown",
-  Failed: "failed",
-  Rejected: "rejected",
-  Remove: "remove",
-  Orphaned: "orphaned",
-} as const;
-export type TaskState = (typeof TaskState)[keyof typeof TaskState];
+export enum TaskState {
+  New = "new",
+  Allocated = "allocated",
+  Pending = "pending",
+  Assigned = "assigned",
+  Accepted = "accepted",
+  Preparing = "preparing",
+  Ready = "ready",
+  Starting = "starting",
+  Running = "running",
+  Complete = "complete",
+  Shutdown = "shutdown",
+  Failed = "failed",
+  Rejected = "rejected",
+  Remove = "remove",
+  Orphaned = "orphaned",
+}
 
 export function instanceOfTaskState(value: any): boolean {
   for (const key in TaskState) {

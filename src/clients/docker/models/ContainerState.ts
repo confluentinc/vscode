@@ -114,18 +114,17 @@ export interface ContainerState {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ContainerStateStatusEnum = {
-  Created: "created",
-  Running: "running",
-  Paused: "paused",
-  Restarting: "restarting",
-  Removing: "removing",
-  Exited: "exited",
-  Dead: "dead",
-} as const;
-export type ContainerStateStatusEnum =
-  (typeof ContainerStateStatusEnum)[keyof typeof ContainerStateStatusEnum];
+export enum ContainerStateStatusEnum {
+  Created = "created",
+  Running = "running",
+  Paused = "paused",
+  Restarting = "restarting",
+  Removing = "removing",
+  Exited = "exited",
+  Dead = "dead",
+}
 
 /**
  * Check if a given object implements the ContainerState interface.
