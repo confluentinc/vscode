@@ -1066,6 +1066,7 @@
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.67",
+    "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.87.0",
@@ -1089,6 +1090,7 @@
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollwright": "^0.0.6",
+    "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.0.0-alpha.28"
