@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.24.1
+
+(Fixed issue with CI process. No user-facing changes.)
+
 ## 0.24.0
 
 ### Added
