@@ -12,7 +12,7 @@ import {
 } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { logResponseError, showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isDirect } from "../models/resource";
@@ -379,7 +379,7 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
     }
     timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
   } catch (error) {
-    logResponseError(error, "topic message produce", { connectionId: topic.connectionId }, true);
+    logError(error, "topic message produce", { connectionId: topic.connectionId }, true);
     if (error instanceof ResponseError) {
       const body = await error.response.clone().text();
       errorBody = `${error.response.status} ${error.response.statusText} ${body}`;

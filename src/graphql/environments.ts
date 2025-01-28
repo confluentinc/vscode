@@ -1,6 +1,6 @@
 import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { logResponseError, showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
@@ -44,7 +44,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
   try {
     response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
   } catch (error) {
-    logResponseError(error, "CCloud environments", { connectionId: CCLOUD_CONNECTION_ID }, true);
+    logError(error, "CCloud environments", { connectionId: CCLOUD_CONNECTION_ID }, true);
     showErrorNotificationWithButtons(`Failed to fetch CCloud resources: ${error}`);
     return envs;
   }
