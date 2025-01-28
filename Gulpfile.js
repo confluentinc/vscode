@@ -118,6 +118,7 @@ export function build(done) {
               "NOTICE-vsix.txt",
               "THIRD_PARTY_NOTICES.txt",
               "THIRD_PARTY_NOTICES_IDE_SIDECAR.txt",
+              ".vscodeignore",
             ],
             dest: DESTINATION,
           },
@@ -142,7 +143,7 @@ export function build(done) {
   const extOutput = {
     dir: DESTINATION,
     format: "cjs",
-    sourcemap: !production,
+    sourcemap: true,
     sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
     exports: "named",
   };
