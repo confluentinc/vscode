@@ -2,7 +2,7 @@ import { graphql } from "gql.tada";
 import { logResponseError, showErrorNotificationWithButtons } from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, EnvironmentId } from "../models/resource";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 import {
@@ -76,7 +76,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         schemaRegistry = DirectSchemaRegistry.create({
           id: connection.schemaRegistry.id,
           uri: connection.schemaRegistry.uri,
-          environmentId: connection.id,
+          environmentId: connection.id as EnvironmentId,
           ...connectionInfo,
         });
       }

@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -40,7 +40,7 @@ export class Schema extends Data implements IResourceBase {
   type!: SchemaType;
   // added separately from the response data, used for follow-on API calls
   schemaRegistryId!: Enforced<string>;
-  environmentId!: Enforced<string> | undefined;
+  environmentId!: EnvironmentId | undefined;
 
   /** Is this the highest version bound to this subject? */
   isHighestVersion!: Enforced<boolean>;

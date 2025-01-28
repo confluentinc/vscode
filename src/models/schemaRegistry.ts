@@ -13,7 +13,7 @@ export abstract class SchemaRegistry extends Data implements IResourceBase {
   id!: Enforced<string>;
   uri!: Enforced<string>;
   // added separately from sidecar responses
-  environmentId!: Enforced<EnvironmentId>;
+  environmentId!: EnvironmentId;
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
