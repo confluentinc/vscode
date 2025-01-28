@@ -143,6 +143,8 @@ export function build(done) {
   const extOutput = {
     dir: DESTINATION,
     format: "cjs",
+    // this must be set to true for the sourcemaps to be uploaded to Sentry
+    // see: https://docs.sentry.io/platforms/javascript/guides/wasm/sourcemaps/uploading/rollup/
     sourcemap: true,
     sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
     exports: "named",
