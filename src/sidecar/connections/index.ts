@@ -5,7 +5,7 @@ import {
   ConnectionsResourceApi,
   ResponseError,
 } from "../../clients/sidecar";
-import { logResponseError } from "../../errors";
+import { logError } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId } from "../../models/resource";
 import { ConnectionStateWatcher } from "./watcher";
@@ -30,7 +30,7 @@ export async function tryToCreateConnection(
     });
     return connection;
   } catch (error) {
-    logResponseError(
+    logError(
       error,
       `${dryRun ? "testing" : "creating"} new connection:`,
       { connectionId: spec.id! },
@@ -52,7 +52,7 @@ export async function tryToGetConnection(id: string): Promise<Connection | null>
       logger.debug("No connection found", { connectionId: id });
     } else {
       // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
-      logResponseError(error, "fetching connection", { connectionId: id }, true);
+      logError(error, "fetching connection", { connectionId: id }, true);
     }
   }
   return connection;
@@ -74,7 +74,7 @@ export async function tryToUpdateConnection(spec: ConnectionSpec): Promise<Conne
     logger.debug("updated connection:", { id: connection.id });
     return connection;
   } catch (error) {
-    logResponseError(error, "updating connection", { connectionId: spec.id! }, true);
+    logError(error, "updating connection", { connectionId: spec.id! }, true);
     throw error;
   }
 }
@@ -90,7 +90,7 @@ export async function tryToDeleteConnection(id: string): Promise<void> {
       logger.debug("no connection found to delete:", { id });
       return;
     }
-    logResponseError(error, "deleting connection", { connectionId: id }, true);
+    logError(error, "deleting connection", { connectionId: id }, true);
     throw error;
   }
 }
