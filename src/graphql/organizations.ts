@@ -1,6 +1,6 @@
 import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { logResponseError, showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { CCloudOrganization } from "../models/organization";
 import { getSidecar } from "../sidecar";
@@ -27,7 +27,7 @@ export async function getOrganizations(): Promise<CCloudOrganization[]> {
   try {
     response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
   } catch (error) {
-    logResponseError(error, "CCloud organizations", { connectionId: CCLOUD_CONNECTION_ID }, true);
+    logError(error, "CCloud organizations", { connectionId: CCLOUD_CONNECTION_ID }, true);
     showErrorNotificationWithButtons(`Failed to fetch CCloud organizations: ${error}`);
     return orgs;
   }

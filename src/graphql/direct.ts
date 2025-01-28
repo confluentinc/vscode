@@ -1,5 +1,5 @@
 import { graphql } from "gql.tada";
-import { logResponseError, showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
@@ -38,7 +38,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
   try {
     response = await sidecar.query(query);
   } catch (error) {
-    logResponseError(error, "direct connection resources", {}, true);
+    logError(error, "direct connection resources", {}, true);
     showErrorNotificationWithButtons(
       `Failed to fetch resources for direct Kafka / Schema Registry connection(s): ${error}`,
     );

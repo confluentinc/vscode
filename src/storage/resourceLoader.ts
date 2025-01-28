@@ -3,6 +3,7 @@ import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
+import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, IResourceBase } from "../models/resource";
@@ -10,6 +11,8 @@ import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
+
+const logger = new Logger("resourceLoader");
 
 /**
  * Class family for dealing with loading (and perhaps caching) information
@@ -155,6 +158,8 @@ export class TopicFetchError extends Error {
  * Deep read and return of all topics in a Kafka cluster.
  */
 export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
+  logger.debug(`fetching topics for ${cluster.connectionType} Kafka cluster ${cluster.id}`);
+
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
   let topicsResp: TopicDataList;
@@ -164,6 +169,9 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
       cluster_id: cluster.id,
       includeAuthorizedOperations: true,
     });
+    logger.debug(
+      `fetched ${topicsResp.data.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+    );
   } catch (error) {
     if (error instanceof ResponseError) {
       // XXX todo improve this, raise a more specific error type.

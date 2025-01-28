@@ -5,7 +5,7 @@ import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
-import { ExtensionContextNotSetError, logResponseError } from "../errors";
+import { ExtensionContextNotSetError, logError } from "../errors";
 import { Logger } from "../logging";
 import { fetchPreferences } from "../preferences/updates";
 import {
@@ -137,7 +137,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         vscode.window.showErrorMessage(
           `Error during Confluent Cloud sign-in process: ${e.message}`,
         );
-        logResponseError(
+        logError(
           e,
           "browser sign-in flow",
           {
