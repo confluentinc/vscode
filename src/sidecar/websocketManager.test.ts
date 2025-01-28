@@ -1,6 +1,7 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import { getSidecar } from ".";
+import { GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE } from "../../tests/unit/testResources/websocketMessages";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { Message, MessageType, newMessageHeaders, WorkspacesChangedBody } from "../ws/messageTypes";
 import { constructMessageRouter, WebsocketManager } from "./websocketManager";
@@ -125,6 +126,27 @@ describe("WebsocketManager dispose tests", () => {
 
 describe("WebsocketManager.parseMessage tests", () => {
   it("parseMessage vs bad message structure tests", () => {
+    // Nontrivial setups: break clones of GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE by respelling date fields to be something
+    // not parseable as a Date.
+    const broken_ccloud_connection_event_bad_auth_time: any = JSON.parse(
+      JSON.stringify(GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE),
+    );
+    broken_ccloud_connection_event_bad_auth_time.body.connection.status.authentication.requires_authentication_at =
+      "ceci n'est pas une date";
+
+    // likewise for ...ccloud.requires_authentication_at
+    const broken_ccloud_connection_event_bad_ccloud_auth_time: any = JSON.parse(
+      JSON.stringify(GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE),
+    );
+    broken_ccloud_connection_event_bad_ccloud_auth_time.body.connection.status.ccloud.requires_authentication_at =
+      "ceci n'est pas une date";
+
+    // Also, respell the action to be something unknown.
+    const broken_ccloud_connection_event_bad_action: any = JSON.parse(
+      JSON.stringify(GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE),
+    );
+    broken_ccloud_connection_event_bad_action.body.action = "BOGUS";
+
     const testCases = [
       // not an object at all
       "not an object",
@@ -144,6 +166,13 @@ describe("WebsocketManager.parseMessage tests", () => {
       '{"headers":{"message_type":"WORKSPACE_COUNT_CHANGED","originator":"sidecar","message_id":"1"}, "body":{"foo":"bar"}}',
       // bad body for PROTOCOL_ERROR
       '{"headers":{"message_type":"PROTOCOL_ERROR","originator":"sidecar","message_id":"1"}, "body":{"foo":"bar"}}',
+
+      // various bad body structures for CONNECTION_EVENT
+      // bad timestamp formats
+      JSON.stringify(broken_ccloud_connection_event_bad_auth_time),
+      JSON.stringify(broken_ccloud_connection_event_bad_ccloud_auth_time),
+      // bad action
+      JSON.stringify(broken_ccloud_connection_event_bad_action),
     ];
 
     for (const testCase of testCases) {
@@ -178,6 +207,10 @@ describe("WebsocketManager.parseMessage tests", () => {
           error: "bad message",
         },
       },
+
+      // CONNECTION_EVENT. Needs post-processing to convert date strings to Date objects,
+      // see ws/messageTypes.ts::MessageBodyDeserializers[MessageType.CONNECTION_EVENT]
+      GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE,
     ];
 
     for (const testCase of testCases) {

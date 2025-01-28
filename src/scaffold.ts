@@ -10,7 +10,6 @@ import {
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
-import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, ViewColumn } from "vscode";
@@ -19,14 +18,14 @@ import { logResponseError } from "./errors";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import { type post } from "./webview/scaffold-form";
+import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
+import { ResponseError } from "./clients/sidecar";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
 
-const logger = new Logger("scaffold");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommand = (context: ExtensionContext) => {
@@ -84,7 +83,7 @@ export const scaffoldProjectRequest = async () => {
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }
-  let successfullyAppliedTemplate = false;
+
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "GetTemplateSpec": {
@@ -99,16 +98,18 @@ export const scaffoldProjectRequest = async () => {
         updateOptionValue(key, value);
         return null satisfies MessageResponse<"SetOptionValue">;
       }
-      case "Submit":
+      case "Submit": {
         logUsage(UserEvent.ScaffoldFormSubmitted, {
           templateName: templateSpec.display_name,
         });
+        let res: PostResponse = { success: false, message: "Failed to apply template." };
         if (pickedTemplate) {
-          successfullyAppliedTemplate = await applyTemplate(pickedTemplate, body.data);
-        }
-        // only dispose the form if the template was successfully applied
-        if (successfullyAppliedTemplate) optionsForm.dispose();
-        return null satisfies MessageResponse<"Submit">;
+          res = await applyTemplate(pickedTemplate, body.data);
+          // only dispose the form if the template was successfully applied
+          if (res.success) optionsForm.dispose();
+        } else vscode.window.showErrorMessage("Failed to apply template.");
+        return res satisfies MessageResponse<"Submit">;
+      }
     }
   };
   const disposable = handleWebviewMessage(optionsForm.webview, processMessage);
@@ -118,7 +119,7 @@ export const scaffoldProjectRequest = async () => {
 async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
-): Promise<boolean> {
+): Promise<PostResponse> {
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
 
   const stringifiedOptions = Object.fromEntries(
@@ -131,6 +132,7 @@ async function applyTemplate(
       options: stringifiedOptions,
     },
   };
+
   try {
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
 
@@ -152,7 +154,7 @@ async function applyTemplate(
         templateName: pickedTemplate.spec!.display_name,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
-      return false;
+      return { success: false, message: "Project generation cancelled before save." };
     }
 
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
@@ -183,19 +185,26 @@ async function applyTemplate(
         keepsExistingWindow,
       );
     }
-    return true;
+    return { success: true, message: "Project generated successfully." };
   } catch (e) {
     logResponseError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
-    const action = await vscode.window.showErrorMessage(
-      "There was an error while generating the project. Try again or file an issue.",
-      { title: "Try again" },
-      { title: "Report an issue" },
-    );
-    if (action !== undefined) {
-      const cmd = action.title === "Try again" ? "confluent.scaffold" : "confluent.support.issue";
-      await vscode.commands.executeCommand(cmd);
+    let message = "Failed to generate template. An unknown error occurred.";
+    if (e instanceof Error) {
+      message = e.message;
+      // instanceof ResponseError check fails, but we can check if the response property exists & use it
+      const response = (e as ResponseError).response;
+      if (response) {
+        const status = response.status;
+        try {
+          const payload = await response.json().then((json) => JSON.stringify(json));
+          message = `Failed to generate template. ${status}: ${response.statusText}. ${payload}`;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (jsonError) {
+          message = `Failed to generate template. Unable to parse error response: ${e}`;
+        }
+      }
     }
-    return false;
+    return { success: false, message };
   }
 }
 
