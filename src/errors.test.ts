@@ -1,7 +1,13 @@
-import { SinonSandbox, SinonSpy, SinonStub, assert, createSandbox } from "sinon";
+import * as assert from "assert";
+import * as sinon from "sinon";
 import { commands, window } from "vscode";
 import { ResponseError } from "./clients/sidecar";
-import { logResponseError, showErrorNotificationWithButtons } from "./errors";
+import {
+  getNestedErrorChain,
+  hasErrorCause,
+  logError,
+  showErrorNotificationWithButtons,
+} from "./errors";
 import { Logger } from "./logging";
 import * as telemetryEvents from "./telemetry/events";
 
@@ -9,13 +15,13 @@ const fakeMessage = "oh no, an error";
 const DEFAULT_BUTTONS = ["Open Logs", "File Issue"];
 
 describe("errors.ts showErrorNotificationWithButtons()", () => {
-  let sandbox: SinonSandbox;
-  let showErrorMessageStub: SinonStub;
-  let executeCommandStub: SinonStub;
-  let logUsageStub: SinonStub;
+  let sandbox: sinon.SinonSandbox;
+  let showErrorMessageStub: sinon.SinonStub;
+  let executeCommandStub: sinon.SinonStub;
+  let logUsageStub: sinon.SinonStub;
 
   beforeEach(() => {
-    sandbox = createSandbox();
+    sandbox = sinon.createSandbox();
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves(undefined);
     executeCommandStub = sandbox.stub(commands, "executeCommand");
     logUsageStub = sandbox.stub(telemetryEvents, "logUsage");
@@ -30,9 +36,9 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
-    assert.notCalled(executeCommandStub);
-    assert.notCalled(logUsageStub);
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
+    sinon.assert.notCalled(executeCommandStub);
+    sinon.assert.notCalled(logUsageStub);
   });
 
   it("should call the default 'Open Logs' callback function and send a usage event for telemetry for telemetry", async () => {
@@ -42,9 +48,9 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
-    assert.calledOnceWithExactly(executeCommandStub, "confluent.showOutputChannel");
-    assert.calledOnceWithExactly(
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
+    sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent.showOutputChannel");
+    sinon.assert.calledOnceWithExactly(
       logUsageStub,
       telemetryEvents.UserEvent.NotificationButtonClicked,
       {
@@ -61,9 +67,9 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
-    assert.calledOnceWithExactly(executeCommandStub, "confluent.support.issue");
-    assert.calledOnceWithExactly(
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, ...DEFAULT_BUTTONS);
+    sinon.assert.calledOnceWithExactly(executeCommandStub, "confluent.support.issue");
+    sinon.assert.calledOnceWithExactly(
       logUsageStub,
       telemetryEvents.UserEvent.NotificationButtonClicked,
       {
@@ -85,9 +91,14 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage, customButtons);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel, otherButtonLabel);
-    assert.notCalled(customButtons[buttonLabel]);
-    assert.notCalled(customButtons[otherButtonLabel]);
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      fakeMessage,
+      buttonLabel,
+      otherButtonLabel,
+    );
+    sinon.assert.notCalled(customButtons[buttonLabel]);
+    sinon.assert.notCalled(customButtons[otherButtonLabel]);
   });
 
   it("should call a custom callback function and send a usage event for telemetry", async () => {
@@ -103,11 +114,16 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage, customButtons);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel, otherButtonLabel);
-    assert.calledOnce(customButtons[buttonLabel]);
-    assert.notCalled(customButtons[otherButtonLabel]);
+    sinon.assert.calledOnceWithExactly(
+      showErrorMessageStub,
+      fakeMessage,
+      buttonLabel,
+      otherButtonLabel,
+    );
+    sinon.assert.calledOnce(customButtons[buttonLabel]);
+    sinon.assert.notCalled(customButtons[otherButtonLabel]);
 
-    assert.calledOnceWithExactly(
+    sinon.assert.calledOnceWithExactly(
       logUsageStub,
       telemetryEvents.UserEvent.NotificationButtonClicked,
       {
@@ -126,7 +142,7 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage, orderedButtons);
 
-    assert.calledWith(showErrorMessageStub, fakeMessage, "C", "A", "B");
+    sinon.assert.calledWith(showErrorMessageStub, fakeMessage, "C", "A", "B");
   });
 
   it("should not throw in the event of a failed callback", async () => {
@@ -141,8 +157,8 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
     // no throwing
     await showErrorNotificationWithButtons(fakeMessage, customButtons);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
-    assert.calledOnce(customButtons[buttonLabel]);
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
+    sinon.assert.calledOnce(customButtons[buttonLabel]);
   });
 
   it("should handle async custom callbacks", async () => {
@@ -157,8 +173,8 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage, customButtons);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
-    assert.calledOnce(asyncCallback);
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
+    sinon.assert.calledOnce(asyncCallback);
   });
 
   it("should not throw/reject in the event of a failed async callback", async () => {
@@ -173,17 +189,17 @@ describe("errors.ts showErrorNotificationWithButtons()", () => {
 
     await showErrorNotificationWithButtons(fakeMessage, customButtons);
 
-    assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
-    assert.calledOnce(asyncCallback);
+    sinon.assert.calledOnceWithExactly(showErrorMessageStub, fakeMessage, buttonLabel);
+    sinon.assert.calledOnce(asyncCallback);
   });
 });
 
-describe("errors.ts logResponseError()", () => {
-  let sandbox: SinonSandbox;
-  let loggerErrorSpy: SinonSpy;
+describe("errors.ts logError()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let loggerErrorSpy: sinon.SinonSpy;
 
   beforeEach(() => {
-    sandbox = createSandbox();
+    sandbox = sinon.createSandbox();
     // spy on the `logger.error` calls so we can check the arguments and also see them in test output
     loggerErrorSpy = sandbox.spy(Logger.prototype, "error");
   });
@@ -207,14 +223,15 @@ describe("errors.ts logResponseError()", () => {
     const errorMessage = "uh oh";
     const error = new Error(errorMessage);
     const logPrefix = "test message";
-    await logResponseError(error, logPrefix);
+    await logError(error, logPrefix);
 
-    assert.calledOnceWithExactly(
+    sinon.assert.calledOnceWithExactly(
       loggerErrorSpy,
       `[${logPrefix}] error: ${error.name}: ${errorMessage}`,
       {
         errorType: error.name,
         errorMessage,
+        errorStack: error.stack,
       },
     );
   });
@@ -225,36 +242,37 @@ describe("errors.ts logResponseError()", () => {
     const body = "Bad Request";
     const error: ResponseError = createResponseError(status, statusText, body);
     const logPrefix = "api call";
-    await logResponseError(error, logPrefix);
+    await logError(error, logPrefix);
 
-    assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error response:`, {
-      status,
-      statusText,
-      body,
-      errorType: error.name,
+    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error response:`, {
+      responseStatus: status,
+      responseStatusText: statusText,
+      responseBody: body,
+      responseErrorType: error.name,
     });
   });
 
   it("should handle non-Error objects", async () => {
     const nonError = { foo: "bar" };
     const logPrefix = "test message";
-    await logResponseError(nonError, logPrefix);
+    await logError(nonError, logPrefix);
 
-    assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error: ${nonError}`, {});
+    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error: ${nonError}`, {});
   });
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
     const extra = { foo: "bar" };
     const logPrefix = "test message";
-    await logResponseError(error, logPrefix, extra);
+    await logError(error, logPrefix, extra);
 
-    assert.calledWithMatch(
+    sinon.assert.calledWithMatch(
       loggerErrorSpy,
       `[${logPrefix}] error: ${error.name}: ${error.message}`,
       {
         errorType: error.name,
         errorMessage: error.message,
+        errorStack: error.stack,
         ...extra,
       },
     );
@@ -266,13 +284,66 @@ describe("errors.ts logResponseError()", () => {
     const longBody = "a".repeat(6000);
     const error = createResponseError(status, statusText, longBody);
     const logPrefix = "test";
-    await logResponseError(error, logPrefix);
+    await logError(error, logPrefix);
 
-    assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error response:`, {
-      status,
-      statusText,
-      body: "a".repeat(5000),
-      errorType: error.name,
+    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error response:`, {
+      responseStatus: status,
+      responseStatusText: statusText,
+      responseBody: "a".repeat(5000),
+      responseErrorType: error.name,
     });
+  });
+});
+
+describe("errors.ts hasErrorCause()", () => {
+  it("should return true if the error has a 'cause' property of type Error", () => {
+    const error = new Error("test");
+    error.cause = new Error("cause");
+    assert.strictEqual(hasErrorCause(error), true);
+  });
+
+  it("should return false if the error does not have a 'cause' property", () => {
+    const error = new Error("test");
+    assert.strictEqual(hasErrorCause(error), false);
+  });
+
+  it("should return false if the error has a 'cause' property that is not an Error", () => {
+    const error = new Error("test");
+    error.cause = "cause";
+    assert.strictEqual(hasErrorCause(error), false);
+  });
+});
+
+describe("errors.ts getNestedErrorChain()", () => {
+  it("should return an array of all nested errors starting from the first 'cause' property", () => {
+    const error1 = new Error("error1");
+    const error2 = new Error("error2");
+    error1.cause = error2;
+    const error3 = new Error("error3");
+    error2.cause = error3;
+
+    const errorChain = getNestedErrorChain(error1);
+
+    assert.strictEqual(errorChain.length, 3);
+
+    assert.deepStrictEqual(errorChain[0]["errorType0"], error1.name);
+    assert.deepStrictEqual(errorChain[0]["errorMessage0"], error1.message);
+    assert.deepStrictEqual(errorChain[0]["errorStack0"], error1.stack);
+    assert.deepStrictEqual(errorChain[1]["errorType1"], error2.name);
+    assert.deepStrictEqual(errorChain[1]["errorMessage1"], error2.message);
+    assert.deepStrictEqual(errorChain[1]["errorStack1"], error2.stack);
+    assert.deepStrictEqual(errorChain[2]["errorType2"], error3.name);
+    assert.deepStrictEqual(errorChain[2]["errorMessage2"], error3.message);
+    assert.deepStrictEqual(errorChain[2]["errorStack2"], error3.stack);
+  });
+
+  it("should not recurse if the error does not have a 'cause' property", () => {
+    const error = new Error("test");
+    const errorChain = getNestedErrorChain(error);
+
+    assert.strictEqual(errorChain.length, 1);
+    assert.deepStrictEqual(errorChain[0]["errorType0"], error.name);
+    assert.deepStrictEqual(errorChain[0]["errorMessage0"], error.message);
+    assert.deepStrictEqual(errorChain[0]["errorStack0"], error.stack);
   });
 });
