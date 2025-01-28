@@ -15,7 +15,8 @@ import { ContainerTreeItem } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
-import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
+import { TopicFetchError } from "../storage/loaderUtils";
+import { ResourceLoader } from "../storage/resourceLoader";
 
 const logger = new Logger("viewProviders.topics");
 

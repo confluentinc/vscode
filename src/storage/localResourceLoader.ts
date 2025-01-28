@@ -6,7 +6,8 @@ import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
-import { fetchSchemas, ResourceLoader } from "./resourceLoader";
+import { fetchSchemas } from "./loaderUtils";
+import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.localResourceLoader");
 

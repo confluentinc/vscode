@@ -3,7 +3,7 @@ import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "v
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
 
 export abstract class SchemaRegistry extends Data implements IResourceBase {
   abstract connectionId: ConnectionId;
@@ -13,7 +13,7 @@ export abstract class SchemaRegistry extends Data implements IResourceBase {
   id!: Enforced<string>;
   uri!: Enforced<string>;
   // added separately from sidecar responses
-  environmentId!: Enforced<string>;
+  environmentId!: Enforced<EnvironmentId>;
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {

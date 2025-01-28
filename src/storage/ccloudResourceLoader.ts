@@ -11,7 +11,8 @@ import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { fetchSchemas, ResourceLoader } from "./resourceLoader";
+import { fetchSchemas } from "./loaderUtils";
+import { ResourceLoader } from "./resourceLoader";
 import { getResourceManager } from "./resourceManager";
 
 const logger = new Logger("storage.ccloudResourceLoader");

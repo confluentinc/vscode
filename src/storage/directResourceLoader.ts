@@ -5,7 +5,8 @@ import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
-import { fetchSchemas, ResourceLoader } from "./resourceLoader";
+import { fetchSchemas } from "./loaderUtils";
+import { ResourceLoader } from "./resourceLoader";
 
 /**
  * {@link ResourceLoader} implementation for direct connections.
