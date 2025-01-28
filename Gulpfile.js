@@ -118,6 +118,7 @@ export function build(done) {
               "NOTICE-vsix.txt",
               "THIRD_PARTY_NOTICES.txt",
               "THIRD_PARTY_NOTICES_IDE_SIDECAR.txt",
+              ".vscodeignore",
             ],
             dest: DESTINATION,
           },
@@ -142,7 +143,9 @@ export function build(done) {
   const extOutput = {
     dir: DESTINATION,
     format: "cjs",
-    sourcemap: !production,
+    // this must be set to true for the sourcemaps to be uploaded to Sentry
+    // see: https://docs.sentry.io/platforms/javascript/guides/wasm/sourcemaps/uploading/rollup/
+    sourcemap: true,
     sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
     exports: "named",
   };
