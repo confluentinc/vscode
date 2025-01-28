@@ -3,7 +3,13 @@ import "mocha";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
-import { Schema, SchemaType, generateSchemaSubjectGroups, getSubjectIcon } from "./schema";
+import {
+  Schema,
+  SchemaType,
+  generateSchemaSubjectGroups,
+  getSubjectIcon,
+  subjectMatchesTopicName,
+} from "./schema";
 
 describe("Schema model methods", () => {
   it(".matchesTopicName() success / fail tests", () => {
@@ -23,6 +29,14 @@ describe("Schema model methods", () => {
       ["test-topic-MyRecordSchema", "test-topic-MyRecordSchema", false], // isn't TopicRecordNameStrategy, but exact match, which is nothing.
     ];
     for (const [subject, topic, expected] of testSchemas) {
+      // Test subjectMatchesTopicName() directly, the underlying implementation.
+      assert.equal(
+        subjectMatchesTopicName(subject, topic),
+        expected,
+        `subject: ${subject}, topic: ${topic}`,
+      );
+
+      // and also the passthrough (legacy, will probably end up being removed) method on the Schema class.
       const schema = Schema.create({ ...TEST_CCLOUD_SCHEMA, subject });
       assert.equal(
         schema.matchesTopicName(topic),

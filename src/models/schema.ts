@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -40,23 +40,14 @@ export class Schema extends Data implements IResourceBase {
   type!: SchemaType;
   // added separately from the response data, used for follow-on API calls
   schemaRegistryId!: Enforced<string>;
-  environmentId!: Enforced<string> | undefined;
+  environmentId!: EnvironmentId | undefined;
 
   /** Is this the highest version bound to this subject? */
   isHighestVersion!: Enforced<boolean>;
 
   /** Returns true if this schema subject corresponds to the topic name per TopicNameStrategy or TopicRecordNameStrategy*/
   matchesTopicName(topicName: string): boolean {
-    if (this.subject.endsWith("-key")) {
-      // TopicNameStrategy key schema
-      return this.subject === `${topicName}-key`;
-    } else if (this.subject.endsWith("-value")) {
-      // TopicNameStrategy value schema
-      return this.subject === `${topicName}-value`;
-    } else {
-      // only other possibility is a matching TopicRecordNameStrategy (value) schema
-      return this.subject.startsWith(`${topicName}-`);
-    }
+    return subjectMatchesTopicName(this.subject, topicName);
   }
 
   /** Get the proper file extension */
@@ -247,5 +238,22 @@ export function getSubjectIcon(subject: string, errOnValueSubject?: boolean): vs
     return new vscode.ThemeIcon(IconNames.VALUE_SUBJECT);
   } else {
     return new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
+  }
+}
+
+/**
+ * Determine if the schema subject and a topic name seem correlated
+ * based on either TopicNameStrategy or TopicRecordNameStrategy.
+ */
+export function subjectMatchesTopicName(subject: string, topicName: string): boolean {
+  if (subject.endsWith("-key")) {
+    // TopicNameStrategy key schema
+    return subject === `${topicName}-key`;
+  } else if (subject.endsWith("-value")) {
+    // TopicNameStrategy value schema
+    return subject === `${topicName}-value`;
+  } else {
+    // only other possibility is a matching TopicRecordNameStrategy (value) schema
+    return subject.startsWith(`${topicName}-`);
   }
 }
