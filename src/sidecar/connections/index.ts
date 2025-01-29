@@ -67,7 +67,7 @@ export async function tryToUpdateConnection(spec: ConnectionSpec): Promise<Conne
   let connection: Connection;
   const client: ConnectionsResourceApi = (await getSidecar()).getConnectionsResourceApi();
   try {
-    connection = await client.gatewayV1ConnectionsIdPut({
+    connection = await client.gatewayV1ConnectionsIdPatch({
       id: spec.id!,
       ConnectionSpec: spec,
     });
