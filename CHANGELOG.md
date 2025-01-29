@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.24.2
+
+### Added
+
+- Additional logging and error-handling for issues preventing the Topics view from loading topics
+  from a Kafka cluster and/or associated schemas from a Schema Registry.
+
 ## 0.24.1
 
 (Fixed issue with CI process. No user-facing changes.)
