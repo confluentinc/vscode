@@ -124,6 +124,31 @@ export abstract class ResourceLoader implements IResourceBase {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
   ): Promise<string[]> {
+    const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
+
+    return await fetchSubjects(schemaRegistry);
+  }
+
+  /**
+   * Get the list of schemas for a single subject group from a schema registry.
+   */
+  public async getSchemasForSubject(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+    subject: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forceRefresh: boolean = false,
+  ): Promise<Schema[]> {
+    const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
+    return fetchSchemaSubjectGroup(schemaRegistry, subject);
+  }
+
+  /**
+   * Distill a possible environment id into its corresponding schema registry.
+   * Validate that the registry belongs to the same connection as this loader.
+   */
+  private async resolveSchemaRegistry(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+  ): Promise<SchemaRegistry> {
     let schemaRegistry: SchemaRegistry | undefined;
     if (typeof registryOrEnvironmentId === "string") {
       schemaRegistry = await this.getSchemaRegistryForEnvironmentId(registryOrEnvironmentId);
@@ -140,7 +165,7 @@ export abstract class ResourceLoader implements IResourceBase {
       );
     }
 
-    return await fetchSubjects(schemaRegistry);
+    return schemaRegistry;
   }
 
   /**
