@@ -24,7 +24,7 @@ import { normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
 
 /**
@@ -104,11 +104,10 @@ export class SidecarManager {
       this.startTailingSidecarLogs();
     }
 
-    for (let i = 0; i < 10; i++) {
-      // Get our current auth header out of the secret store
-      // (If it's not there, will return empty string, and we'll end up down either path 2. or 3. below)
+    const max_attempts = 20;
 
-      const logPrefix = `getHandlePromise(${callnum} loop ${i})`;
+    for (let i = 0; i < max_attempts; i++) {
+      const logPrefix = `getHandlePromise(${callnum} attempt ${i})`;
 
       try {
         if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
@@ -138,7 +137,7 @@ export class SidecarManager {
           if (e instanceof NoSidecarRunningError) {
             // 2. The sidecar is not running (we got ECONNREFUSED), in which case we need to start it.
             logger.info(`${logPrefix}: No sidecar running, starting sidecar`);
-            accessToken = await this.startSidecar(callnum);
+            accessToken = await this.startSidecar(callnum, max_attempts);
 
             // Now jump back to the top of loop, try healthcheck / authentication again.
             continue;
@@ -158,7 +157,7 @@ export class SidecarManager {
             await this.pause();
 
             // Start new sidecar proces.
-            accessToken = await this.startSidecar(callnum);
+            accessToken = await this.startSidecar(callnum, max_attempts);
             logger.info(`${logPrefix}: Started new sidecar, got new access token.`);
 
             // Now jump back to the top, try healthcheck / authentication again.
@@ -180,7 +179,7 @@ export class SidecarManager {
         }
       } // end catch.
     } // end for loop.
-    // If we get here, we've tried 10 times and failed. Return an error.
+    // If we get here, we've tried max_attempts times and failed. Return an error.
     this.pendingHandlePromise = null;
     throw new Error(`getHandlePromise(${callnum}): failed to start sidecar`);
   }
@@ -342,7 +341,7 @@ export class SidecarManager {
   /**
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
    **/
-  private async startSidecar(callnum: number): Promise<string> {
+  private async startSidecar(callnum: number, max_handshake_attempts: number): Promise<string> {
     observabilityContext.sidecarStartCount++;
     return new Promise<string>((resolve, reject) => {
       (async () => {
@@ -402,11 +401,7 @@ export class SidecarManager {
           // but the sidecar file architecture check above should catch most of those cases.
         } catch (e) {
           // Failure to spawn the process. Reject and return (we're the main codepath here).
-          // (TODO -- test if OSX intel gets this codepath if / when trying an ARM sidecar)
-          // (ARM Mac that has Rosetta2 fails with early process death above due to Rosetta2 trying
-          // to run the intel binary, but Rosetta2 lacks certain CPU features that the binary expects and
-          // the process logs a specific error message to that effect and exits(1), but isn't a spawn error.)
-          logger.error(`${logPrefix}: sidecar component spawn fatal error`, e);
+          logError(e, `${logPrefix}: sidecar component spawn fatal error`, {}, true);
           reject(e);
           return;
         }
@@ -417,31 +412,44 @@ export class SidecarManager {
         // Pause after spawning (so as to let the sidecar initialize and bind to its port),
         // then try to hit the handshake endpoint. It may fail a few times while
         // the sidecar process is coming online.
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < max_handshake_attempts; i++) {
           try {
             await this.pause();
 
+            accessToken = await this.doHandshake();
+            await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
+
             logger.info(
-              `${logPrefix}(attempt ${i}): done pausing, on to hitting handshake endpoint`,
+              `${logPrefix}(handshake attempt ${i}): Successful, got auth token, stored in secret store.`,
             );
 
-            accessToken = await this.doHandshake();
-            logger.info(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
+            resolve(accessToken);
             break;
           } catch (e) {
-            // We expect ECONNREFUSED while the sidecar is coming up, but log other unexpected errors.
+            // We expect ECONNREFUSED while the sidecar is coming up, but log + rethrow other unexpected errors.
             if (!wasConnRefused(e)) {
-              logger.error(`${logPrefix}(attempt ${i}): handshake failed with unexpected error`, e);
+              logError(
+                e,
+                `${logPrefix}: Attempt raised unexpected error`,
+                { handshake_attempt: `${i}` },
+                true,
+              );
             }
-            if (i < 9) {
-              logger.info(`${logPrefix}(attempt ${i}): pausing, retrying handshake`);
+            if (i < max_handshake_attempts - 1) {
+              logger.info(
+                `${logPrefix}(handshake attempt ${i}): Got ECONNREFUSED. Pausing, retrying ...`,
+              );
+              // loops back to the top, pauses, tries again.
             }
           }
         }
-        await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
-        logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
 
-        resolve(accessToken);
+        // Didn't resolve in the loop, so reject.
+        reject(
+          new Error(
+            `${logPrefix}: Failed to handshake with sidecar after ${max_handshake_attempts} attempts`,
+          ),
+        );
       })();
     });
   }
@@ -533,7 +541,7 @@ export class SidecarManager {
     return "";
   }
   /**
-   * Pause for a moment.
+   * Pause for MOMENTARY_PAUSE_MS.
    */
   private async pause(): Promise<void> {
     // pause an iota
