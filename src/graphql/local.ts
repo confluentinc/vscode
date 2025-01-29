@@ -3,6 +3,7 @@ import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 import { createLocalConnection, getLocalConnection } from "../sidecar/connections/local";
@@ -83,7 +84,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
       schemaRegistry = LocalSchemaRegistry.create({
         id: connection.schemaRegistry.id,
         uri: connection.schemaRegistry.uri,
-        environmentId: connection.id,
+        environmentId: connection.id as EnvironmentId,
       });
     }
 

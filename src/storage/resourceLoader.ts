@@ -1,16 +1,14 @@
 import { Disposable } from "vscode";
-import { toKafkaTopicOperations } from "../authz/types";
-import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
-import { Schema as ResponseSchema, SchemasV1Api } from "../clients/schemaRegistryRest";
+import { TopicData } from "../clients/kafkaRest";
 import { ConnectionType } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, IResourceBase } from "../models/resource";
-import { Schema, SchemaType } from "../models/schema";
+import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
+import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { getSidecar } from "../sidecar";
+import { correlateTopicsWithSchemaSubjects, fetchSubjects, fetchTopics } from "./loaderUtils";
 
 const logger = new Logger("resourceLoader");
 
@@ -82,13 +80,21 @@ export abstract class ResourceLoader implements IResourceBase {
   ): Promise<KafkaCluster[]>;
 
   /**
-   * Return the topics present in the cluster. Will also correlate with schemas
-   * in the schema registry for the cluster, if any.
+   * Return the topics present in the cluster, annotated with whether or not
+   * they have a corresponding schema subject.
    */
-  public abstract getTopicsForCluster(
+  public async getTopicsForCluster(
     cluster: KafkaCluster,
-    forceDeepRefresh?: boolean,
-  ): Promise<KafkaTopic[]>;
+    forceRefresh: boolean = false,
+  ): Promise<KafkaTopic[]> {
+    // Deep fetch the topics and schema registry subject names concurrently.
+    const [subjects, responseTopics]: [string[], TopicData[]] = await Promise.all([
+      this.getSubjects(cluster.environmentId!, forceRefresh),
+      fetchTopics(cluster),
+    ]);
+
+    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
+  }
 
   // Schema registry methods
 
@@ -106,6 +112,36 @@ export abstract class ResourceLoader implements IResourceBase {
   public abstract getSchemaRegistryForEnvironmentId(
     environmentId: string | undefined,
   ): Promise<SchemaRegistry | undefined>;
+
+  /**
+   * Get the subjects from the schema registry for the given environment or schema registry.
+   * @param environmentId The environment to get the schema registry's subjects from.
+   * @param forceDeepRefresh If true, will ignore any cached subjects and fetch anew.
+   * @returns An array of subjects in the schema registry. Throws an error if the subjects could not be fetched.
+   * */
+  public async getSubjects(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forceRefresh: boolean = false,
+  ): Promise<string[]> {
+    let schemaRegistry: SchemaRegistry | undefined;
+    if (typeof registryOrEnvironmentId === "string") {
+      schemaRegistry = await this.getSchemaRegistryForEnvironmentId(registryOrEnvironmentId);
+      if (!schemaRegistry) {
+        throw new Error(`No schema registry found for environment ${registryOrEnvironmentId}`);
+      }
+    } else {
+      schemaRegistry = registryOrEnvironmentId;
+    }
+
+    if (schemaRegistry.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for schema registry ${schemaRegistry.id}`,
+      );
+    }
+
+    return await fetchSubjects(schemaRegistry);
+  }
 
   /**
    * Get the possible schemas for an environment's schema registry.
@@ -145,127 +181,4 @@ export abstract class ResourceLoader implements IResourceBase {
    * (So that when it does get displayed, it will fetch the schemas anew).
    */
   public abstract purgeSchemas(schemaRegistryId: string): void;
-}
-
-export class TopicFetchError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TopicFetchError";
-  }
-}
-
-/**
- * Deep read and return of all topics in a Kafka cluster.
- */
-export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
-  logger.debug(`fetching topics for ${cluster.connectionType} Kafka cluster ${cluster.id}`);
-
-  const sidecar = await getSidecar();
-  const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
-  let topicsResp: TopicDataList;
-
-  try {
-    topicsResp = await client.listKafkaTopics({
-      cluster_id: cluster.id,
-      includeAuthorizedOperations: true,
-    });
-    logger.debug(
-      `fetched ${topicsResp.data.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
-    );
-  } catch (error) {
-    if (error instanceof ResponseError) {
-      // XXX todo improve this, raise a more specific error type.
-      const body = await error.response.json();
-
-      throw new TopicFetchError(JSON.stringify(body));
-    } else {
-      throw new TopicFetchError(JSON.stringify(error));
-    }
-  }
-
-  // sort multiple topics by name
-  if (topicsResp.data.length > 1) {
-    topicsResp.data.sort((a, b) => a.topic_name.localeCompare(b.topic_name));
-  }
-
-  return topicsResp.data;
-}
-
-/**
- * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
- * and set whether or not each topic has a matching schema.
- */
-export function correlateTopicsWithSchemas(
-  cluster: KafkaCluster,
-  topicsRespTopics: TopicData[],
-  schemas: Schema[],
-): KafkaTopic[] {
-  const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
-      schema.matchesTopicName(topic.topic_name),
-    );
-
-    return KafkaTopic.create({
-      connectionId: cluster.connectionId,
-      connectionType: cluster.connectionType,
-      name: topic.topic_name,
-      is_internal: topic.is_internal,
-      replication_factor: topic.replication_factor,
-      partition_count: topic.partitions_count,
-      partitions: topic.partitions,
-      configs: topic.configs,
-      clusterId: cluster.id,
-      environmentId: cluster.environmentId,
-      hasSchema: hasMatchingSchema,
-      operations: toKafkaTopicOperations(topic.authorized_operations!),
-    });
-  });
-
-  return topics;
-}
-
-/**
- * Deep read and return of all schemas in a CCloud or local environment's Schema Registry.
- * Does not store into the resource manager.
- *
- * @param schemaRegistry The Schema Registry to fetch schemas from.
- * @returns An array of all the schemas in the environment's Schema Registry.
- */
-export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Schema[]> {
-  const sidecarHandle = await getSidecar();
-  const client: SchemasV1Api = sidecarHandle.getSchemasV1Api(
-    schemaRegistry.id,
-    schemaRegistry.connectionId,
-  );
-  const schemaListRespData: ResponseSchema[] = await client.getSchemas();
-
-  // Keep track of the highest version number for each subject to determine if a schema is the latest version,
-  // needed for context value setting (only the most recent versions are evolvable, see package.json).
-  const subjectToHighestVersion: Map<string, number> = new Map();
-  for (const schema of schemaListRespData) {
-    const subject = schema.subject!;
-    const version = schema.version!;
-    if (!subjectToHighestVersion.has(subject) || version > subjectToHighestVersion.get(subject)!) {
-      subjectToHighestVersion.set(subject, version);
-    }
-  }
-
-  const schemas: Schema[] = schemaListRespData.map((schema: ResponseSchema) => {
-    // AVRO doesn't show up in `schemaType`
-    // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
-    const schemaType = (schema.schemaType as SchemaType) || SchemaType.Avro;
-    // casting `id` from number to string to allow returning Schema types in `.getChildren()` above
-    return Schema.create({
-      connectionId: schemaRegistry.connectionId,
-      connectionType: schemaRegistry.connectionType,
-      id: schema.id!.toString(),
-      subject: schema.subject!,
-      version: schema.version!,
-      type: schemaType,
-      schemaRegistryId: schemaRegistry.id,
-      environmentId: schemaRegistry.environmentId,
-      isHighestVersion: schema.version === subjectToHighestVersion.get(schema.subject!),
-    });
-  });
-  return schemas;
 }
