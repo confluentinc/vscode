@@ -1,5 +1,5 @@
 import { Preferences, PreferencesResourceApi, PreferencesSpec } from "../clients/sidecar";
-import { logResponseError } from "../errors";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { getSidecar } from "../sidecar";
 
@@ -11,7 +11,7 @@ export async function fetchPreferences(): Promise<Preferences> {
   try {
     return await client.gatewayV1PreferencesGet();
   } catch (error) {
-    logResponseError(error, "fetching preferences", {}, true);
+    logError(error, "fetching preferences", {}, true);
     throw error;
   }
 }
@@ -45,7 +45,7 @@ export async function updatePreferences(updates: Partial<Record<keyof Preference
     });
     logger.debug("Successfully updated preferences: ", { resp });
   } catch (error) {
-    logResponseError(
+    logError(
       error,
       "updating preferences",
       {

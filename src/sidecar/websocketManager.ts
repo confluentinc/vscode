@@ -2,7 +2,7 @@ import { Disposable, EventEmitter as VscodeEventEmitter, window } from "vscode";
 // our message callback routing internally using node's EventEmitter for .once() support + per-event-type callbacks, lacking in VSCode's EventEmitter implementation
 import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
-import { logResponseError } from "../errors";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { Message, MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
@@ -303,7 +303,7 @@ export class WebsocketManager implements Disposable {
       try {
         message.body = additionalDeserializer(body);
       } catch (e) {
-        logResponseError(
+        logError(
           e,
           "Websocket message body higher-level body deserialization error",
           {
