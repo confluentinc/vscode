@@ -23,6 +23,7 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import { executeInWorkerPool, isErrorResult, isSuccessResult } from "../utils/queue";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
@@ -242,7 +243,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   // TODO: bump this number up?
   if (contents.length === 1) {
-    await produceMessageBatch(contents, topic);
+    await produceMessages(contents, topic);
   } else {
     // show progress notification for batch produce
     vscode.window.withProgress(
@@ -251,37 +252,56 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
         title: `Producing ${contents.length} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
         cancellable: false,
       },
-      async () => {
-        // TODO: chunk through this and increment progress?
-        await produceMessageBatch(contents, topic);
+      async (
+        progress: vscode.Progress<{
+          message?: string;
+          increment?: number;
+        }>,
+        token: vscode.CancellationToken,
+      ) => {
+        progress.report({ increment: 0 });
+        await produceMessages(contents, topic, progress, token);
       },
     );
   }
 }
 
-async function produceMessageBatch(contents: any[], topic: KafkaTopic) {
-  const plural = contents.length > 1 ? "s" : "";
-  const promises: Promise<ProduceResult>[] = contents.map((content) =>
-    produceMessage(content, topic),
+async function produceMessages(
+  contents: any[],
+  topic: KafkaTopic,
+  progress?: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+  token?: vscode.CancellationToken,
+) {
+  const results = await executeInWorkerPool(
+    contents,
+    (content) => produceMessage(content, topic),
+    20, // max workers/requests
+    true, // return errors
+    progress,
+    token,
   );
-  const produceResults: ProduceResult[] = await Promise.all(promises);
 
-  const successResults = produceResults.filter((result) => result.response !== undefined);
-  const errorResults = produceResults.filter((result) => result.error);
+  const successResults = results.filter(isSuccessResult);
+  const errorResults = results.filter(isErrorResult);
+
+  const plural = contents.length > 1 ? "s" : "";
   logger.debug(
-    `produced ${successResults.length}/${produceResults.length} message${plural} produced to topic "${topic.name}"`,
+    `produced ${successResults.length}/${results.length} message${plural} produced to topic "${topic.name}"`,
   );
-  const ofTotal = plural ? ` of ${produceResults.length}` : "";
+  const ofTotal = plural ? ` of ${results.length}` : "";
 
   if (successResults.length) {
     // set up a time window around the produced message(s) for message viewer
     const bufferMs = 500;
-    const firstMessageTime = successResults[0].timestamp.getTime() - bufferMs;
+    const firstMessageTime = successResults[0].result!.timestamp.getTime() - bufferMs;
     const lastMessageTime =
-      successResults[successResults.length - 1].timestamp.getTime() + bufferMs;
+      successResults[successResults.length - 1].result.timestamp.getTime() + bufferMs;
     // aggregate all unique partitions from the produce responses
     const uniquePartitions: Set<number> = new Set();
-    successResults.forEach((result) => {
+    successResults.forEach(({ result }) => {
       if (result.response?.partition_id) {
         uniquePartitions.add(result.response.partition_id);
       }
