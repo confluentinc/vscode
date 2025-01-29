@@ -24,7 +24,7 @@ import { normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
 
 /**
@@ -39,8 +39,10 @@ const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
 const MOMENTARY_PAUSE_MS = 500; // half a second.
 
-const logger = new Logger("sidecarManager");
+/** How many loop attempts to try in startSidecar() and doHand */
+const MAX_ATTEMPTS = 20;
 
+const logger = new Logger("sidecarManager");
 // Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
 // which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
 // we won't be in position to restart / rehandshake with the sidecar if needed.
@@ -104,11 +106,8 @@ export class SidecarManager {
       this.startTailingSidecarLogs();
     }
 
-    for (let i = 0; i < 10; i++) {
-      // Get our current auth header out of the secret store
-      // (If it's not there, will return empty string, and we'll end up down either path 2. or 3. below)
-
-      const logPrefix = `getHandlePromise(${callnum} loop ${i})`;
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      const logPrefix = `getHandlePromise(${callnum} attempt ${i})`;
 
       try {
         if (this.websocketManager?.isConnected() || (await this.healthcheck(accessToken))) {
@@ -180,7 +179,7 @@ export class SidecarManager {
         }
       } // end catch.
     } // end for loop.
-    // If we get here, we've tried 10 times and failed. Return an error.
+    // If we get here, we've tried MAX_ATTEMPTS times and failed. Throw an error.
     this.pendingHandlePromise = null;
     throw new Error(`getHandlePromise(${callnum}): failed to start sidecar`);
   }
@@ -402,11 +401,7 @@ export class SidecarManager {
           // but the sidecar file architecture check above should catch most of those cases.
         } catch (e) {
           // Failure to spawn the process. Reject and return (we're the main codepath here).
-          // (TODO -- test if OSX intel gets this codepath if / when trying an ARM sidecar)
-          // (ARM Mac that has Rosetta2 fails with early process death above due to Rosetta2 trying
-          // to run the intel binary, but Rosetta2 lacks certain CPU features that the binary expects and
-          // the process logs a specific error message to that effect and exits(1), but isn't a spawn error.)
-          logger.error(`${logPrefix}: sidecar component spawn fatal error`, e);
+          logError(e, `${logPrefix}: sidecar component spawn fatal error`, {}, true);
           reject(e);
           return;
         }
@@ -417,31 +412,44 @@ export class SidecarManager {
         // Pause after spawning (so as to let the sidecar initialize and bind to its port),
         // then try to hit the handshake endpoint. It may fail a few times while
         // the sidecar process is coming online.
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < MAX_ATTEMPTS; i++) {
           try {
             await this.pause();
 
+            accessToken = await this.doHandshake();
+            await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
+
             logger.info(
-              `${logPrefix}(attempt ${i}): done pausing, on to hitting handshake endpoint`,
+              `${logPrefix}(handshake attempt ${i}): Successful, got auth token, stored in secret store.`,
             );
 
-            accessToken = await this.doHandshake();
-            logger.info(`${logPrefix}(attempt ${i}): handshake successful, got auth token.`);
-            break;
+            resolve(accessToken);
+            return;
           } catch (e) {
-            // We expect ECONNREFUSED while the sidecar is coming up, but log other unexpected errors.
+            // We expect ECONNREFUSED while the sidecar is coming up, but log + rethrow other unexpected errors.
             if (!wasConnRefused(e)) {
-              logger.error(`${logPrefix}(attempt ${i}): handshake failed with unexpected error`, e);
+              logError(
+                e,
+                `${logPrefix}: Attempt raised unexpected error`,
+                { handshake_attempt: `${i}` },
+                true,
+              );
             }
-            if (i < 9) {
-              logger.info(`${logPrefix}(attempt ${i}): pausing, retrying handshake`);
+            if (i < MAX_ATTEMPTS - 1) {
+              logger.info(
+                `${logPrefix}(handshake attempt ${i}): Got ECONNREFUSED. Pausing, retrying ...`,
+              );
+              // loops back to the top, pauses, tries again.
             }
           }
-        }
-        await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
-        logger.debug(`${logPrefix}: Stored new auth token in secret store.`);
+        } // the doHandshake() loop.
 
-        resolve(accessToken);
+        // Didn't resolve and return within the loop, so reject.
+        reject(
+          new Error(
+            `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts`,
+          ),
+        );
       })();
     });
   }
@@ -533,7 +541,7 @@ export class SidecarManager {
     return "";
   }
   /**
-   * Pause for a moment.
+   * Pause for MOMENTARY_PAUSE_MS.
    */
   private async pause(): Promise<void> {
     // pause an iota
