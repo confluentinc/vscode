@@ -7,7 +7,7 @@ import {
 } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -67,16 +67,16 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 
 /**
  * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
- * and set whether or not each topic has a matching schema.
+ * and set whether or not each topic has a matching schema by subject.
  */
-export function correlateTopicsWithSchemas(
+export function correlateTopicsWithSchemaSubjects(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
-  schemas: Schema[],
+  subjects: string[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = schemas.some((schema) =>
-      schema.matchesTopicName(topic.topic_name),
+    const hasMatchingSchema: boolean = subjects.some((subject) =>
+      subjectMatchesTopicName(subject, topic.topic_name),
     );
 
     return KafkaTopic.create({
