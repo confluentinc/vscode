@@ -56,18 +56,18 @@ export async function executeInWorkerPool<T, R>(
   }>,
   token?: CancellationToken,
 ): Promise<ExecutionResult<R>[]> {
-  const callableArgs = [...items];
   // the tasks themselves don't return anything; leave that to the inner function to push to results
   const tasks: Promise<void>[] = [];
   const results: ExecutionResult<R>[] = [];
 
   const totalCount = items.length;
-  let progressCount = 0;
+  const progressTick = { increment: 100 / totalCount };
+  let currentIndex = 0;
   let resultCount = 0;
   let errorCount = 0;
 
   async function startNext(): Promise<void> {
-    const item: T | undefined = callableArgs.shift();
+    const item: T | undefined = items[currentIndex++];
     if (!item) {
       // no more items to process
       return;
@@ -96,10 +96,9 @@ export async function executeInWorkerPool<T, R>(
       }
     }
 
-    progressCount++;
     if (progress) {
       // update any attached progress reporters (e.g. vscode.window.withProgress)
-      progress.report({ increment: 100 / totalCount });
+      progress.report(progressTick);
       // TODO: include configurable `message`?
     }
 
@@ -121,7 +120,6 @@ export async function executeInWorkerPool<T, R>(
       taskName: options.taskName,
       errorCount,
       resultCount,
-      progressCount,
       totalCount,
     });
   }
