@@ -271,6 +271,10 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   }
 }
 
+/**
+ * Produce multiple messages to a Kafka topic through a worker pool and display info and/or error
+ * notifications depending on the {@link ExecutionResult}s.
+ */
 async function produceMessages(
   contents: any[],
   topic: KafkaTopic,
@@ -280,6 +284,7 @@ async function produceMessages(
   }>,
   token?: vscode.CancellationToken,
 ) {
+  // TODO: make maxWorkers a user setting?
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
     contents,
     (content) => produceMessage(content, topic),
