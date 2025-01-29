@@ -4,6 +4,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { fetchSchemas } from "../loaders/loaderUtils";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
@@ -11,9 +12,8 @@ import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { fetchSchemas } from "./loaderUtils";
+import { getResourceManager } from "../storage/resourceManager";
 import { ResourceLoader } from "./resourceLoader";
-import { getResourceManager } from "./resourceManager";
 
 const logger = new Logger("storage.ccloudResourceLoader");
 

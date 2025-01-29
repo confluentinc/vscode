@@ -1,8 +1,8 @@
 import { Disposable } from "vscode";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
+import { ResourceLoader } from "../loaders/resourceLoader";
 import { CCloudResourceLoader } from "./ccloudResourceLoader";
 import { LocalResourceLoader } from "./localResourceLoader";
-import { ResourceLoader } from "./resourceLoader";
 
 /** Construct and register the singleton resource loaders so they may register their event listeners and
  * so that ResourceLoader.getInstance() will find them. */

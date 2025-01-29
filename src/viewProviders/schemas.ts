@@ -8,13 +8,13 @@ import {
   localSchemaRegistryConnected,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { ResourceLoader } from "../storage/resourceLoader";
 
 const logger = new Logger("viewProviders.schemas");
 

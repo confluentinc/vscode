@@ -1,11 +1,11 @@
 import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("quickpicks.schemaRegistry");

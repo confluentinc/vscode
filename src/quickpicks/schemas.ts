@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
+import { ResourceLoader } from "../loaders/";
 import { getConnectionLabel } from "../models/resource";
 import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
-import { ResourceLoader } from "../storage/resourceLoader";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
  * @returns nonempty string if user chose an existing subject name.

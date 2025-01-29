@@ -8,6 +8,7 @@ import {
 } from "../clients/schemaRegistryRest";
 import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
 import { currentSchemaRegistryChanged } from "../emitters";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType } from "../models/schema";
@@ -15,7 +16,6 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
-import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");

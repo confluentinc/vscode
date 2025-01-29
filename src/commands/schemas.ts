@@ -2,13 +2,13 @@ import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
 import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
-import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 

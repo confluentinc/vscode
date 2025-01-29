@@ -28,6 +28,12 @@ import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { MessageDocumentProvider } from "./documentProviders/message";
+import {
+  CCloudResourceLoader,
+  DirectResourceLoader,
+  LocalResourceLoader,
+  ResourceLoader,
+} from "./loaders";
 import { Logger } from "./logging";
 import { ConnectionId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
@@ -35,10 +41,6 @@ import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
-import { CCloudResourceLoader } from "./storage/ccloudResourceLoader";
-import { DirectResourceLoader } from "./storage/directResourceLoader";
-import { LocalResourceLoader } from "./storage/localResourceLoader";
-import { ResourceLoader } from "./storage/resourceLoader";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
