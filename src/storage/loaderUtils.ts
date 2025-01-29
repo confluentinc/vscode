@@ -5,11 +5,14 @@ import {
   SchemasV1Api,
   SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
+import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
+import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
+
+const logger = new Logger("resourceLoader");
 
 /**
  * Internal functions used by ResourceLoaders.
@@ -29,6 +32,8 @@ export class TopicFetchError extends Error {
  * Deep read and return of all topics in a Kafka cluster.
  */
 export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
+  logger.debug(`fetching topics for ${cluster.connectionType} Kafka cluster ${cluster.id}`);
+
   const sidecar = await getSidecar();
   const client: TopicV3Api = sidecar.getTopicV3Api(cluster.id, cluster.connectionId);
   let topicsResp: TopicDataList;
@@ -38,6 +43,9 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
       cluster_id: cluster.id,
       includeAuthorizedOperations: true,
     });
+    logger.debug(
+      `fetched ${topicsResp.data.length} topic(s) for ${cluster.connectionType} Kafka cluster ${cluster.id}`,
+    );
   } catch (error) {
     if (error instanceof ResponseError) {
       // XXX todo improve this, raise a more specific error type.
@@ -59,16 +67,16 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 
 /**
  * Convert an array of {@link TopicData} to an array of {@link KafkaTopic}
- * and set whether or not each topic has a matching schema by subject.
+ * and set whether or not each topic has a matching schema.
  */
-export function correlateTopicsWithSchemaSubjects(
+export function correlateTopicsWithSchemas(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
-  subjects: string[],
+  schemas: Schema[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = subjects.some((subject) =>
-      subjectMatchesTopicName(subject, topic.topic_name),
+    const hasMatchingSchema: boolean = schemas.some((schema) =>
+      schema.matchesTopicName(topic.topic_name),
     );
 
     return KafkaTopic.create({

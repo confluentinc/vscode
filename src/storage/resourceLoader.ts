@@ -1,6 +1,7 @@
 import { Disposable } from "vscode";
 import { TopicData } from "../clients/kafkaRest";
 import { ConnectionType } from "../clients/sidecar";
+import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
@@ -8,6 +9,8 @@ import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { correlateTopicsWithSchemaSubjects, fetchSubjects, fetchTopics } from "./loaderUtils";
+
+const logger = new Logger("resourceLoader");
 
 /**
  * Class family for dealing with loading (and perhaps caching) information
