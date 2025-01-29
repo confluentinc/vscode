@@ -38,7 +38,7 @@ import * as watcherUtils from "./watcherUtils";
 describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnectionUpdateEvent()", () => {
   let sandbox: sinon.SinonSandbox;
   let connectionEventHandlerStub: sinon.SinonStub;
-  let logResponseErrorStub: sinon.SinonStub;
+  let logErrorStub: sinon.SinonStub;
 
   let connectionStateWatcher: ConnectionStateWatcher;
 
@@ -46,7 +46,7 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
     sandbox = sinon.createSandbox();
     connectionStateWatcher = ConnectionStateWatcher.getInstance();
     connectionEventHandlerStub = sandbox.stub(watcherUtils, "connectionEventHandler").returns();
-    logResponseErrorStub = sandbox.stub(errors, "logResponseError").resolves();
+    logErrorStub = sandbox.stub(errors, "logError").resolves();
   });
 
   afterEach(() => {
@@ -66,7 +66,7 @@ describe("sidecar/connections/watcher.ts ConnectionStateWatcher handleConnection
     await connectionStateWatcher.handleConnectionUpdateEvent(message);
 
     assert.ok(connectionEventHandlerStub.calledOnce);
-    assert.ok(logResponseErrorStub.notCalled);
+    assert.ok(logErrorStub.notCalled);
     const cachedEvent = connectionStateWatcher.getLatestConnectionEvent(
       TEST_AUTHENTICATED_CCLOUD_CONNECTION.id as ConnectionId,
     );

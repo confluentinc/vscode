@@ -13,14 +13,14 @@ import {
 import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, ViewColumn } from "vscode";
+import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
-import { logResponseError } from "./errors";
+import { logError } from "./errors";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
-import { ResponseError } from "./clients/sidecar";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
@@ -45,7 +45,7 @@ export const scaffoldProjectRequest = async () => {
       (template) => template.spec!.display_name === pickedItem?.label,
     );
   } catch (err) {
-    logResponseError(err, "template listing", {}, true);
+    logError(err, "template listing", {}, true);
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return;
   }
@@ -187,7 +187,7 @@ async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    logResponseError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
+    logError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
       message = e.message;

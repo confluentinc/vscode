@@ -1,6 +1,6 @@
 import { graphql } from "gql.tada";
 import { LOCAL_CONNECTION_ID, LOCAL_ENVIRONMENT_NAME } from "../constants";
-import { logResponseError, showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
@@ -45,7 +45,7 @@ export async function getLocalResources(): Promise<LocalEnvironment[]> {
   try {
     response = await sidecar.query(query, LOCAL_CONNECTION_ID);
   } catch (error) {
-    logResponseError(error, "local resources", { connectionId: LOCAL_CONNECTION_ID }, true);
+    logError(error, "local resources", { connectionId: LOCAL_CONNECTION_ID }, true);
     showErrorNotificationWithButtons(`Failed to fetch local resources: ${error}`);
     return envs;
   }
