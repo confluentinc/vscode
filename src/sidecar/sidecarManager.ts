@@ -39,8 +39,10 @@ const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
 const MOMENTARY_PAUSE_MS = 500; // half a second.
 
-const logger = new Logger("sidecarManager");
+/** How many loop attempts to try in startSidecar() and doHand */
+const MAX_ATTEMPTS = 20;
 
+const logger = new Logger("sidecarManager");
 // Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
 // which should be used for a single action and then discarded. Not retained for multiple actions, otherwise
 // we won't be in position to restart / rehandshake with the sidecar if needed.
@@ -104,9 +106,7 @@ export class SidecarManager {
       this.startTailingSidecarLogs();
     }
 
-    const max_attempts = 20;
-
-    for (let i = 0; i < max_attempts; i++) {
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
       const logPrefix = `getHandlePromise(${callnum} attempt ${i})`;
 
       try {
@@ -137,7 +137,7 @@ export class SidecarManager {
           if (e instanceof NoSidecarRunningError) {
             // 2. The sidecar is not running (we got ECONNREFUSED), in which case we need to start it.
             logger.info(`${logPrefix}: No sidecar running, starting sidecar`);
-            accessToken = await this.startSidecar(callnum, max_attempts);
+            accessToken = await this.startSidecar(callnum);
 
             // Now jump back to the top of loop, try healthcheck / authentication again.
             continue;
@@ -157,7 +157,7 @@ export class SidecarManager {
             await this.pause();
 
             // Start new sidecar proces.
-            accessToken = await this.startSidecar(callnum, max_attempts);
+            accessToken = await this.startSidecar(callnum);
             logger.info(`${logPrefix}: Started new sidecar, got new access token.`);
 
             // Now jump back to the top, try healthcheck / authentication again.
@@ -179,7 +179,7 @@ export class SidecarManager {
         }
       } // end catch.
     } // end for loop.
-    // If we get here, we've tried max_attempts times and failed. Return an error.
+    // If we get here, we've tried MAX_ATTEMPTS times and failed. Throw an error.
     this.pendingHandlePromise = null;
     throw new Error(`getHandlePromise(${callnum}): failed to start sidecar`);
   }
@@ -341,7 +341,7 @@ export class SidecarManager {
   /**
    *  Actually spawn the sidecar process, handshake with it, return its auth token string.
    **/
-  private async startSidecar(callnum: number, max_handshake_attempts: number): Promise<string> {
+  private async startSidecar(callnum: number): Promise<string> {
     observabilityContext.sidecarStartCount++;
     return new Promise<string>((resolve, reject) => {
       (async () => {
@@ -412,7 +412,7 @@ export class SidecarManager {
         // Pause after spawning (so as to let the sidecar initialize and bind to its port),
         // then try to hit the handshake endpoint. It may fail a few times while
         // the sidecar process is coming online.
-        for (let i = 0; i < max_handshake_attempts; i++) {
+        for (let i = 0; i < MAX_ATTEMPTS; i++) {
           try {
             await this.pause();
 
@@ -435,7 +435,7 @@ export class SidecarManager {
                 true,
               );
             }
-            if (i < max_handshake_attempts - 1) {
+            if (i < MAX_ATTEMPTS - 1) {
               logger.info(
                 `${logPrefix}(handshake attempt ${i}): Got ECONNREFUSED. Pausing, retrying ...`,
               );
@@ -447,7 +447,7 @@ export class SidecarManager {
         // Didn't resolve and return within the loop, so reject.
         reject(
           new Error(
-            `${logPrefix}: Failed to handshake with sidecar after ${max_handshake_attempts} attempts`,
+            `${logPrefix}: Failed to handshake with sidecar after ${MAX_ATTEMPTS} attempts`,
           ),
         );
       })();
