@@ -12,7 +12,7 @@ import {
 } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isDirect } from "../models/resource";
@@ -23,6 +23,12 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import {
+  executeInWorkerPool,
+  ExecutionResult,
+  isErrorResult,
+  isSuccessResult,
+} from "../utils/workerPool";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
@@ -242,46 +248,69 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   // TODO: bump this number up?
   if (contents.length === 1) {
-    await produceMessageBatch(contents, topic);
+    await produceMessages(contents, topic);
   } else {
     // show progress notification for batch produce
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Producing ${contents.length} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
-        cancellable: false,
+        title: `Producing ${contents.length.toLocaleString()} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
+        cancellable: true,
       },
-      async () => {
-        // TODO: chunk through this and increment progress?
-        await produceMessageBatch(contents, topic);
+      async (
+        progress: vscode.Progress<{
+          message?: string;
+          increment?: number;
+        }>,
+        token: vscode.CancellationToken,
+      ) => {
+        progress.report({ increment: 0 });
+        await produceMessages(contents, topic, progress, token);
       },
     );
   }
 }
 
-async function produceMessageBatch(contents: any[], topic: KafkaTopic) {
-  const plural = contents.length > 1 ? "s" : "";
-  const promises: Promise<ProduceResult>[] = contents.map((content) =>
-    produceMessage(content, topic),
+/**
+ * Produce multiple messages to a Kafka topic through a worker pool and display info and/or error
+ * notifications depending on the {@link ExecutionResult}s.
+ */
+async function produceMessages(
+  contents: any[],
+  topic: KafkaTopic,
+  progress?: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+  token?: vscode.CancellationToken,
+) {
+  // TODO: make maxWorkers a user setting?
+  const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
+    contents,
+    (content) => produceMessage(content, topic),
+    { maxWorkers: 20, taskName: "produceMessage" },
+    progress,
+    token,
   );
-  const produceResults: ProduceResult[] = await Promise.all(promises);
 
-  const successResults = produceResults.filter((result) => result.response !== undefined);
-  const errorResults = produceResults.filter((result) => result.error);
+  const successResults = results.filter(isSuccessResult);
+  const errorResults = results.filter(isErrorResult);
+
+  const plural = contents.length > 1 ? "s" : "";
   logger.debug(
-    `produced ${successResults.length}/${produceResults.length} message${plural} produced to topic "${topic.name}"`,
+    `produced ${successResults.length}/${contents.length} message${plural} produced to topic "${topic.name}"`,
   );
-  const ofTotal = plural ? ` of ${produceResults.length}` : "";
+  const ofTotal = plural ? ` of ${contents.length.toLocaleString()}` : "";
 
   if (successResults.length) {
     // set up a time window around the produced message(s) for message viewer
     const bufferMs = 500;
-    const firstMessageTime = successResults[0].timestamp.getTime() - bufferMs;
+    const firstMessageTime = successResults[0].result!.timestamp.getTime() - bufferMs;
     const lastMessageTime =
-      successResults[successResults.length - 1].timestamp.getTime() + bufferMs;
+      successResults[successResults.length - 1].result.timestamp.getTime() + bufferMs;
     // aggregate all unique partitions from the produce responses
     const uniquePartitions: Set<number> = new Set();
-    successResults.forEach((result) => {
+    successResults.forEach(({ result }) => {
       if (result.response?.partition_id) {
         uniquePartitions.add(result.response.partition_id);
       }
@@ -295,7 +324,7 @@ async function produceMessageBatch(contents: any[], topic: KafkaTopic) {
     const buttonLabel = `View Message${plural}`;
     vscode.window
       .showInformationMessage(
-        `Successfully produced ${successResults.length}${ofTotal} message${plural} to topic "${topic.name}".`,
+        `Successfully produced ${successResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}".`,
         buttonLabel,
       )
       .then((selection) => {
@@ -319,18 +348,17 @@ async function produceMessageBatch(contents: any[], topic: KafkaTopic) {
   }
 
   if (errorResults.length) {
-    const errorMessages = errorResults.map((result) => result.error).join("\n");
+    const errorMessages = errorResults.map(({ error }) => error).join("\n");
     // this format isn't great if there are multiple errors, but it's better than nothing
     showErrorNotificationWithButtons(
-      `Failed to produce ${errorResults.length}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
+      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
     );
   }
 }
 
 interface ProduceResult {
   timestamp: Date;
-  response: ProduceResponse | undefined;
-  error: string | undefined;
+  response: ProduceResponse;
 }
 
 /** Produce a single message to a Kafka topic. */
@@ -363,31 +391,22 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
   };
 
   let response: ProduceResponse | undefined;
-  let errorBody: string | undefined;
   let timestamp = new Date();
-  try {
-    response = await recordsApi.produceRecord(request);
-    // we may get a misleading `status: 200` with a nested `error_code` in the response body
-    // ...but we may also get `error_code: 200` with a successful message
-    if (response.error_code >= 400) {
-      throw new ResponseError(
-        new Response("", {
-          status: response.error_code,
-          statusText: response.message,
-        }),
-      );
-    }
-    timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
-  } catch (error) {
-    logError(error, "topic message produce", { connectionId: topic.connectionId }, true);
-    if (error instanceof ResponseError) {
-      const body = await error.response.clone().text();
-      errorBody = `${error.response.status} ${error.response.statusText} ${body}`;
-    } else if (error instanceof Error) {
-      errorBody = error.message;
-    }
+
+  response = await recordsApi.produceRecord(request);
+  // we may get a misleading `status: 200` with a nested `error_code` in the response body
+  // ...but we may also get `error_code: 200` with a successful message
+  if (response.error_code >= 400) {
+    throw new ResponseError(
+      new Response("", {
+        status: response.error_code,
+        statusText: response.message,
+      }),
+    );
   }
-  return { timestamp, response, error: errorBody };
+  timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
+
+  return { timestamp, response };
 }
 
 export async function createProduceRequestData(
