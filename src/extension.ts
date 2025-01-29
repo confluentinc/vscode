@@ -65,6 +65,7 @@ import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { constructResourceLoaderSingletons } from "./loaders";
 import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_PRODUCE_MESSAGES,
@@ -81,7 +82,6 @@ import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";

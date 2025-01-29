@@ -13,6 +13,7 @@ import {
 import { getExtensionContext } from "./context/extension";
 import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
+import { DirectResourceLoader, ResourceLoader } from "./loaders";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
 import { getSidecar } from "./sidecar";
@@ -23,8 +24,6 @@ import {
 } from "./sidecar/connections";
 import { ConnectionStateWatcher, waitForConnectionToBeStable } from "./sidecar/connections/watcher";
 import { SecretStorageKeys } from "./storage/constants";
-import { DirectResourceLoader } from "./storage/directResourceLoader";
-import { ResourceLoader } from "./storage/resourceLoader";
 import {
   CustomConnectionSpec,
   DirectConnectionsById,

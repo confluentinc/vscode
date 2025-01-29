@@ -2,7 +2,7 @@ import assert from "assert";
 import { TEST_LOCAL_KAFKA_CLUSTER } from "../../tests/unit/testResources";
 import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest/models";
-import * as loaderUtils from "./loaderUtils";
+import * as loaderUtils from "../loaders/loaderUtils";
 
 // as from fetchTopics() result.
 export const topicsResponseData: TopicData[] = [

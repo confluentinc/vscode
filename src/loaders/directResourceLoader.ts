@@ -1,11 +1,11 @@
 import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
+import { fetchSchemas } from "../loaders/loaderUtils";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
-import { fetchSchemas } from "./loaderUtils";
 import { ResourceLoader } from "./resourceLoader";
 
 /**

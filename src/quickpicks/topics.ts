@@ -1,10 +1,10 @@
 import { ProgressOptions, ThemeColor, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
-import { ResourceLoader } from "../storage/resourceLoader";
 
 const logger = new Logger("quickpicks.topics");
 

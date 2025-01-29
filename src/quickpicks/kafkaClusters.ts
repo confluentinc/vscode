@@ -1,11 +1,11 @@
 import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
-import { ResourceLoader } from "../storage/resourceLoader";
 import { getTopicViewProvider } from "../viewProviders/topics";
 
 const logger = new Logger("quickpicks.kafkaClusters");
