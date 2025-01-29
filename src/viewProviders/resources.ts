@@ -22,6 +22,7 @@ import { ExtensionContextNotSetError, showErrorNotificationWithButtons } from ".
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import {
   CCloudEnvironment,
@@ -49,7 +50,6 @@ import {
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
-import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 
 const logger = new Logger("viewProviders.resources");

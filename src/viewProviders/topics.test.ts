@@ -7,12 +7,11 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
 import { getTestStorageManager } from "../../tests/unit/testUtils";
+import { CCloudResourceLoader, constructResourceLoaderSingletons } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { StorageManager } from "../storage";
-import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
-import { constructResourceLoaderSingletons } from "../storage/resourceLoaderInitialization";
 import { getResourceManager } from "../storage/resourceManager";
 import { TopicViewProvider, loadTopicSchemas } from "./topics";
 
