@@ -5,7 +5,7 @@ import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
 
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data implements IResourceBase {
@@ -26,7 +26,7 @@ export class KafkaTopic extends Data implements IResourceBase {
 
   clusterId!: Enforced<string>;
   // CCloud env IDs are unique, direct/local env IDs match their connection IDs
-  environmentId!: string;
+  environmentId!: EnvironmentId;
   hasSchema: boolean = false;
 
   /** Operations the user is authzd to perform on the topic */

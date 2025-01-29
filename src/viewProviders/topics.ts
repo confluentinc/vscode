@@ -15,7 +15,8 @@ import { ContainerTreeItem } from "../models/main";
 import { isCCloud, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
-import { ResourceLoader, TopicFetchError } from "../storage/resourceLoader";
+import { TopicFetchError } from "../storage/loaderUtils";
+import { ResourceLoader } from "../storage/resourceLoader";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -256,5 +257,6 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
   const schemas = await loader.getSchemasForEnvironmentId(topic.environmentId);
+
   return generateSchemaSubjectGroups(schemas, topic.name);
 }
