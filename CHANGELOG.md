@@ -10,6 +10,10 @@ All notable changes to this extension will be documented in this file.
   step of migrating away from use of the `GET /schemas` schema registry route, not implemented by
   all schema registries.
 
+### Fixed
+
+- Give the sidecar more time to start up, log more sidecar startup errors into sentry.
+
 ## 0.24.2
 
 ### Added
