@@ -305,7 +305,7 @@ async function produceMessages(
   if (successResults.length) {
     // set up a time window around the produced message(s) for message viewer
     const bufferMs = 500;
-    const firstMessageTime = successResults[0].result!.timestamp.getTime() - bufferMs;
+    const firstMessageTime = successResults[0].result.timestamp.getTime() - bufferMs;
     const lastMessageTime =
       successResults[successResults.length - 1].result.timestamp.getTime() + bufferMs;
     // aggregate all unique partitions from the produce responses
