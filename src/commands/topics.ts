@@ -23,7 +23,7 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
-import { executeInWorkerPool, isErrorResult, isSuccessResult } from "../utils/queue";
+import { executeInWorkerPool, isErrorResult, isSuccessResult } from "../utils/workerPool";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
@@ -250,7 +250,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
       {
         location: vscode.ProgressLocation.Notification,
         title: `Producing ${contents.length} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
-        cancellable: false,
+        cancellable: true,
       },
       async (
         progress: vscode.Progress<{
@@ -289,9 +289,9 @@ async function produceMessages(
 
   const plural = contents.length > 1 ? "s" : "";
   logger.debug(
-    `produced ${successResults.length}/${results.length} message${plural} produced to topic "${topic.name}"`,
+    `produced ${successResults.length}/${contents.length} message${plural} produced to topic "${topic.name}"`,
   );
-  const ofTotal = plural ? ` of ${results.length}` : "";
+  const ofTotal = plural ? ` of ${contents.length}` : "";
 
   if (successResults.length) {
     // set up a time window around the produced message(s) for message viewer
@@ -339,7 +339,7 @@ async function produceMessages(
   }
 
   if (errorResults.length) {
-    const errorMessages = errorResults.map((result) => result.error).join("\n");
+    const errorMessages = errorResults.map(({ error }) => error).join("\n");
     // this format isn't great if there are multiple errors, but it's better than nothing
     showErrorNotificationWithButtons(
       `Failed to produce ${errorResults.length}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
