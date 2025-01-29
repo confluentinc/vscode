@@ -254,7 +254,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Producing ${contents.length} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
+        title: `Producing ${contents.length.toLocaleString()} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
         cancellable: true,
       },
       async (
@@ -283,7 +283,7 @@ async function produceMessages(
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
     contents,
     (content) => produceMessage(content, topic),
-    { maxWorkers: 20, returnErrors: true, taskName: "produceMessage" },
+    { maxWorkers: 20, taskName: "produceMessage" },
     progress,
     token,
   );
@@ -295,7 +295,7 @@ async function produceMessages(
   logger.debug(
     `produced ${successResults.length}/${contents.length} message${plural} produced to topic "${topic.name}"`,
   );
-  const ofTotal = plural ? ` of ${contents.length}` : "";
+  const ofTotal = plural ? ` of ${contents.length.toLocaleString()}` : "";
 
   if (successResults.length) {
     // set up a time window around the produced message(s) for message viewer
@@ -319,7 +319,7 @@ async function produceMessages(
     const buttonLabel = `View Message${plural}`;
     vscode.window
       .showInformationMessage(
-        `Successfully produced ${successResults.length}${ofTotal} message${plural} to topic "${topic.name}".`,
+        `Successfully produced ${successResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}".`,
         buttonLabel,
       )
       .then((selection) => {
@@ -346,7 +346,7 @@ async function produceMessages(
     const errorMessages = errorResults.map(({ error }) => error).join("\n");
     // this format isn't great if there are multiple errors, but it's better than nothing
     showErrorNotificationWithButtons(
-      `Failed to produce ${errorResults.length}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
+      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
     );
   }
 }

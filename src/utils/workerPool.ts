@@ -35,7 +35,6 @@ export function isErrorResult(result: ExecutionResult<unknown>): result is Error
 interface WorkerPoolOptions {
   maxWorkers: number;
   taskName?: string;
-  returnErrors: boolean;
 }
 
 /**
@@ -50,7 +49,7 @@ interface WorkerPoolOptions {
 export async function executeInWorkerPool<T, R>(
   items: T[],
   callable: (item: T) => Promise<R>,
-  options: WorkerPoolOptions = { maxWorkers: 1, returnErrors: false },
+  options: WorkerPoolOptions = { maxWorkers: 1 },
   progress?: Progress<{
     message?: string;
     increment?: number;
@@ -92,10 +91,8 @@ export async function executeInWorkerPool<T, R>(
         resultCount: resultCount.toString(),
         totalCount: totalCount.toString(),
       });
-      if (options.returnErrors && error instanceof Error) {
+      if (error instanceof Error) {
         results.push({ error });
-      } else {
-        throw error;
       }
     }
 
@@ -119,14 +116,13 @@ export async function executeInWorkerPool<T, R>(
 
   await Promise.all(tasks);
 
-  if (progressCount < totalCount) {
+  if (token?.isCancellationRequested) {
     logger.debug("worker execution stopped early", {
       taskName: options.taskName,
       errorCount,
       resultCount,
       progressCount,
       totalCount,
-      cancellationRequested: token?.isCancellationRequested,
     });
   }
 
