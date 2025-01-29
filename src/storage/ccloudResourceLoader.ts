@@ -4,6 +4,7 @@ import { TopicData } from "../clients/kafkaRest/models";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
+import { logError } from "../errors";
 import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
@@ -212,8 +213,11 @@ export class CCloudResourceLoader extends ResourceLoader {
       // Mark this cluster as having its schemas loaded.
       this.schemaRegistryCacheStates.set(schemaRegistry.id, true);
     } catch (error) {
-      // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
-      logger.error("Error while preloading CCloud schemas", { error });
+      logError(error, "fetching schemas", {}, true);
+      if (error instanceof Error) {
+        // Perhaps the user logged out of CCloud while the preloading was in progress, or some other API-level error.
+        logger.error("Error while preloading CCloud schemas", { error });
+      }
 
       // Forget the current promise, make next call to ensureSchemasLoaded() start from scratch.
       this.schemaRegistryCacheStates.set(schemaRegistry.id, false);
@@ -290,7 +294,15 @@ export class CCloudResourceLoader extends ResourceLoader {
     // Get the schemas and the topics concurrently. The schemas may either be a cache hit or a deep fetch,
     // but the topics are always a deep fetch.
     const [schemas, responseTopics] = await Promise.all([
-      this.getSchemasForEnvironmentId(cluster.environmentId, forceDeepRefresh),
+      (async () => {
+        // TEMPORARY: wrap in try/catch to prevent blocking the topics fetch if the schemas fetch fails
+        try {
+          return await this.getSchemasForEnvironmentId(cluster.environmentId, forceDeepRefresh);
+        } catch (error) {
+          logError(error, "fetching schemas", {}, true);
+          return [];
+        }
+      })(),
       fetchTopics(cluster),
     ]);
 

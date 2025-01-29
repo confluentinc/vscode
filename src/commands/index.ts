@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { logResponseError, showErrorNotificationWithButtons } from "../errors";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { UserEvent, logUsage } from "../telemetry/events";
 
 export function registerCommandWithLogging(
@@ -14,7 +14,7 @@ export function registerCommandWithLogging(
       if (e instanceof Error) {
         // gather more (possibly-ResponseError) context and send to Sentry (only enabled in
         // production builds)
-        logResponseError(e, `${commandName}`, { command: commandName }, true);
+        logError(e, `${commandName}`, { command: commandName }, true);
         // also show error notification to the user with default buttons
         showErrorNotificationWithButtons(`Error invoking command "${commandName}": ${e}`);
       }

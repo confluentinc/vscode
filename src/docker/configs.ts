@@ -5,7 +5,7 @@ import { join, normalize } from "path";
 import { Agent, RequestInit as UndiciRequestInit } from "undici";
 import { commands, env, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { ResponseError, SystemApi } from "../clients/docker";
-import { logResponseError } from "../errors";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
@@ -167,7 +167,7 @@ export async function isDockerAvailable(showNotification: boolean = false): Prom
     // either float this as an `error` log if it's a ResponseError or was an explicit action that
     // warrants notifying the user that something is wrong
     if (error instanceof ResponseError || showNotification) {
-      logResponseError(error, "docker ping");
+      logError(error, "docker ping");
     } else {
       // likely FetchError->TypeError: connect ENOENT <socket path> but not a lot else we can do here
       logger.debug("docker ping error:", error);
