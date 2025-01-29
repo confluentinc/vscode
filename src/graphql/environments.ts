@@ -3,6 +3,7 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 
@@ -78,7 +79,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
     if (env.schemaRegistry) {
       schemaRegistry = CCloudSchemaRegistry.create({
         ...env.schemaRegistry,
-        environmentId: env.id,
+        environmentId: env.id as EnvironmentId,
       });
     }
 

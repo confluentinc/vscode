@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Changed
+- Matching topics to schemas now based on the result of the `GET /subjects` route results. First step of migrating away from use of the `GET /schemas` schema registry route, not implemented by all schema registries.
+
 ## 0.24.1
 
 (Fixed issue with CI process. No user-facing changes.)
