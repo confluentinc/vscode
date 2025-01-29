@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { KafkaTopicOperation } from "../../src/authz/types";
-import { TopicData } from "../../src/clients/kafkaRest/models";
+import { TopicData, TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
 import { Logger } from "../../src/logging";
@@ -68,7 +68,7 @@ export function createTestTopicData(
   topicName: string,
   authorizedOperations: KafkaTopicOperation[],
 ): TopicData {
-  return {
+  return TopicDataFromJSON({
     kind: "KafkaTopic",
     metadata: {
       self: "test",
@@ -88,5 +88,5 @@ export function createTestTopicData(
       related: "test",
     },
     authorized_operations: authorizedOperations,
-  };
+  });
 }
