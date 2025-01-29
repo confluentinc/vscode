@@ -424,7 +424,7 @@ export class SidecarManager {
             );
 
             resolve(accessToken);
-            break;
+            return;
           } catch (e) {
             // We expect ECONNREFUSED while the sidecar is coming up, but log + rethrow other unexpected errors.
             if (!wasConnRefused(e)) {
@@ -442,9 +442,9 @@ export class SidecarManager {
               // loops back to the top, pauses, tries again.
             }
           }
-        }
+        } // the doHandshake() loop.
 
-        // Didn't resolve in the loop, so reject.
+        // Didn't resolve and return within the loop, so reject.
         reject(
           new Error(
             `${logPrefix}: Failed to handshake with sidecar after ${max_handshake_attempts} attempts`,
