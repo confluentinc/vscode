@@ -56,8 +56,8 @@ export async function executeInWorkerPool<T, R>(
   }>,
   token?: CancellationToken,
 ): Promise<ExecutionResult<R>[]> {
-  // the tasks themselves don't return anything; leave that to the inner function to push to results
-  const tasks: Promise<void>[] = [];
+  // the workers themselves don't return anything; leave that to the inner function to push to results
+  const workers: Promise<void>[] = [];
   const results: ExecutionResult<R>[] = [];
 
   const totalCount = items.length;
@@ -66,54 +66,50 @@ export async function executeInWorkerPool<T, R>(
   let resultCount = 0;
   let errorCount = 0;
 
-  async function startNext(): Promise<void> {
-    const item: T | undefined = items[currentIndex++];
-    if (!item) {
-      // no more items to process
-      return;
-    }
-
-    try {
-      const result: R = await callable(item);
-      // XXX: only enable for local debugging because this can get very noisy
-      // logger.debug("worker pool task finished", {
-      //   progressCount,
-      //   totalCount,
-      //   taskName: options.taskName,
-      // });
-      resultCount++;
-      results.push({ result });
-    } catch (error) {
-      errorCount++;
-      logError(error, "workerPool", {
-        taskName: String(options.taskName),
-        errorCount: errorCount.toString(),
-        resultCount: resultCount.toString(),
-        totalCount: totalCount.toString(),
-      });
-      if (error instanceof Error) {
-        results.push({ error });
+  async function worker(): Promise<void> {
+    while (currentIndex < totalCount && !token?.isCancellationRequested) {
+      const item: T | undefined = items[currentIndex++];
+      if (!item) {
+        // no more items to process
+        return;
       }
-    }
 
-    if (progress) {
-      // update any attached progress reporters (e.g. vscode.window.withProgress)
-      progress.report(progressTick);
-      // TODO: include configurable `message`?
-    }
+      try {
+        const result: R = await callable(item);
+        // XXX: only enable for local debugging because this can get very noisy
+        // logger.debug("worker pool task finished", {
+        //   currentIndex,
+        //   totalCount,
+        //   taskName: options.taskName,
+        // });
+        resultCount++;
+        results.push({ result });
+      } catch (error) {
+        errorCount++;
+        logError(error, "workerPool", {
+          taskName: String(options.taskName),
+          errorCount: errorCount.toString(),
+          resultCount: resultCount.toString(),
+          totalCount: totalCount.toString(),
+        });
+        if (error instanceof Error) {
+          results.push({ error });
+        }
+      }
 
-    if (!token?.isCancellationRequested) {
-      // start the next task if the user didn't cancel early
-      await startNext();
+      if (progress) {
+        // update any attached progress reporters (e.g. vscode.window.withProgress)
+        progress.report(progressTick);
+        // TODO: include configurable `message`?
+      }
     }
   }
 
   for (let i = 0; i < Math.min(options.maxWorkers, totalCount); i++) {
-    const task = startNext();
-    tasks.push(task);
+    workers.push(worker());
   }
 
-  await Promise.all(tasks);
+  await Promise.all(workers);
 
   if (token?.isCancellationRequested) {
     logger.debug("worker execution stopped early", {
