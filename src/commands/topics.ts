@@ -12,7 +12,7 @@ import {
 } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { logError, showErrorNotificationWithButtons } from "../errors";
+import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, isDirect } from "../models/resource";
@@ -23,7 +23,12 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
-import { executeInWorkerPool, isErrorResult, isSuccessResult } from "../utils/workerPool";
+import {
+  executeInWorkerPool,
+  ExecutionResult,
+  isErrorResult,
+  isSuccessResult,
+} from "../utils/workerPool";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
@@ -275,11 +280,10 @@ async function produceMessages(
   }>,
   token?: vscode.CancellationToken,
 ) {
-  const results = await executeInWorkerPool(
+  const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
     contents,
     (content) => produceMessage(content, topic),
-    20, // max workers/requests
-    true, // return errors
+    { maxWorkers: 20, returnErrors: true, taskName: "produceMessage" },
     progress,
     token,
   );
@@ -349,8 +353,7 @@ async function produceMessages(
 
 interface ProduceResult {
   timestamp: Date;
-  response: ProduceResponse | undefined;
-  error: string | undefined;
+  response: ProduceResponse;
 }
 
 /** Produce a single message to a Kafka topic. */
@@ -383,31 +386,22 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
   };
 
   let response: ProduceResponse | undefined;
-  let errorBody: string | undefined;
   let timestamp = new Date();
-  try {
-    response = await recordsApi.produceRecord(request);
-    // we may get a misleading `status: 200` with a nested `error_code` in the response body
-    // ...but we may also get `error_code: 200` with a successful message
-    if (response.error_code >= 400) {
-      throw new ResponseError(
-        new Response("", {
-          status: response.error_code,
-          statusText: response.message,
-        }),
-      );
-    }
-    timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
-  } catch (error) {
-    logError(error, "topic message produce", { connectionId: topic.connectionId }, true);
-    if (error instanceof ResponseError) {
-      const body = await error.response.clone().text();
-      errorBody = `${error.response.status} ${error.response.statusText} ${body}`;
-    } else if (error instanceof Error) {
-      errorBody = error.message;
-    }
+
+  response = await recordsApi.produceRecord(request);
+  // we may get a misleading `status: 200` with a nested `error_code` in the response body
+  // ...but we may also get `error_code: 200` with a successful message
+  if (response.error_code >= 400) {
+    throw new ResponseError(
+      new Response("", {
+        status: response.error_code,
+        statusText: response.message,
+      }),
+    );
   }
-  return { timestamp, response, error: errorBody };
+  timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
+
+  return { timestamp, response };
 }
 
 export async function createProduceRequestData(
