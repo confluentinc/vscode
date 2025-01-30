@@ -52,8 +52,8 @@ interface WorkerPoolOptions {
  * @returns Array of results, each containing either a result or error
  */
 export async function executeInWorkerPool<T, R>(
-  items: T[],
   callable: (item: T) => Promise<R>,
+  items: T[],
   options: WorkerPoolOptions = { maxWorkers: 2 },
   progress?: Progress<{
     message?: string;

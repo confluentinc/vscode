@@ -286,8 +286,8 @@ async function produceMessages(
 ) {
   // TODO: make maxWorkers a user setting?
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
-    contents,
     (content) => produceMessage(content, topic),
+    contents,
     { maxWorkers: 20, taskName: "produceMessage" },
     progress,
     token,

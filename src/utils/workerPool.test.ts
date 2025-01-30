@@ -18,7 +18,7 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
     const items = [1, 2, 3, 4];
     const callable = async (num: number) => num * 2;
 
-    const results = await executeInWorkerPool(items, callable, { maxWorkers: 2 });
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 2 });
 
     assert.strictEqual(results.length, 4);
     assert.strictEqual(results.every(isSuccessResult), true);
@@ -35,7 +35,7 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
       return num;
     };
 
-    const results = await executeInWorkerPool(items, callable, { maxWorkers: 1 });
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 1 });
 
     assert.strictEqual(results.length, 3);
     assert.strictEqual(isSuccessResult(results[0]), true);
@@ -44,16 +44,16 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
   });
 
   it("should respect cancellation token by exiting early", async () => {
-    const items = Array(10).fill(0);
-    const tokenSource = new CancellationTokenSource();
+    const items: number[] = Array(10).fill(0);
     const callable = async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       return true;
     };
+    const tokenSource = new CancellationTokenSource();
 
     const execution = executeInWorkerPool(
-      items,
       callable,
+      items,
       { maxWorkers: 2 },
       undefined,
       tokenSource.token,
@@ -68,59 +68,66 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
   });
 
   it("should report progress", async () => {
-    const items = [1, 2];
+    const items: number[] = [1, 2];
+    const callable = async (n: number) => n;
     const progressStub: sinon.SinonStubbedInstance<Progress<any>> = {
       report: sandbox.stub(),
     };
 
-    await executeInWorkerPool(items, async (n) => n, { maxWorkers: 1 }, progressStub);
+    await executeInWorkerPool(callable, items, { maxWorkers: 1 }, progressStub);
 
     assert.strictEqual(progressStub.report.callCount, 2);
     sinon.assert.calledWithExactly(progressStub.report, { increment: 50 });
   });
 
   it("should limit worker count based on total item count", async () => {
-    const items = [1, 2];
+    const items: number[] = [1, 2];
     const callable = async (n: number) => n;
 
-    const results = await executeInWorkerPool(items, callable, { maxWorkers: 5 });
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 5 });
 
     assert.strictEqual(results.length, 2);
     assert.strictEqual(results.every(isSuccessResult), true);
   });
 
   it("should handle empty items array", async () => {
-    const results = await executeInWorkerPool([], async (n) => n, { maxWorkers: 1 });
+    const items: number[] = [];
+    const callable = async (n: number) => n;
+
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 1 });
 
     assert.strictEqual(results.length, 0);
   });
 
   it("should set maxWorkers defaults if out of range [2,100]", async () => {
-    const items = [1, 2];
+    const items: number[] = [1, 2];
+    const callable = async (n: number) => n;
 
     // this shouldn't happen in practice, but test it anyway
-    const results = await executeInWorkerPool(items, async (n) => n, { maxWorkers: 0 });
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 0 });
 
     assert.strictEqual(results.length, 2);
     assert.strictEqual(results.every(isSuccessResult), true);
   });
 
   it("should handle undefined items in array", async () => {
-    const items = [1, undefined, 3];
+    const items: (number | undefined)[] = [1, undefined, 3];
+    const callable = async (n: number | undefined) => n;
 
-    const results = await executeInWorkerPool(items, async (n) => n, { maxWorkers: 1 });
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 1 });
 
     assert.strictEqual(results.length, 3);
     assert.strictEqual(results[1], undefined);
   });
 
   it("should support custom progress messages", async () => {
-    const items = [1];
+    const items: number[] = [1];
+    const callable = async (n: number) => n;
     const progressStub: sinon.SinonStubbedInstance<Progress<any>> = {
       report: sandbox.stub(),
     };
 
-    await executeInWorkerPool(items, async (n) => n, { maxWorkers: 1 }, progressStub);
+    await executeInWorkerPool(callable, items, { maxWorkers: 1 }, progressStub);
 
     sinon.assert.calledWith(progressStub.report, { increment: 100 });
   });
@@ -133,18 +140,15 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
       [75, 2],
       [25, 3],
     ];
-    const completionOrder: number[] = [];
+    const callable = async ([delay, index]: WorkItem) => {
+      // simulate variable processing time for each item
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      completionOrder.push(index);
+      return index;
+    };
 
-    const results = await executeInWorkerPool(
-      items,
-      async ([delay, index]: WorkItem) => {
-        // simulate variable processing time for each item
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        completionOrder.push(index);
-        return index;
-      },
-      { maxWorkers: 4 },
-    );
+    const completionOrder: number[] = [];
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 4 });
 
     assert.strictEqual(results.length, 4);
     // the completion order should just be the index order in which the workers finished
