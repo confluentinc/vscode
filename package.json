@@ -218,6 +218,7 @@
       },
       {
         "command": "confluent.resources.search.clear",
+        "icon": "$(search-stop)",
         "title": "Clear Search",
         "category": "Confluent: Resources View"
       },
@@ -252,6 +253,7 @@
       },
       {
         "command": "confluent.schemas.search.clear",
+        "icon": "$(search-stop)",
         "title": "Clear Search",
         "category": "Confluent: Schemas View"
       },
@@ -405,6 +407,7 @@
       },
       {
         "command": "confluent.topics.search.clear",
+        "icon": "$(search-stop)",
         "title": "Clear Search",
         "category": "Confluent: Topics View"
       },
@@ -736,6 +739,11 @@
       ],
       "view/title": [
         {
+          "command": "confluent.resources.search",
+          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.resources.search.clear",
           "when": "view == confluent-resources && confluent.resourceSearchApplied",
           "group": "navigation@1"
@@ -749,6 +757,11 @@
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
           "group": "navigation@3"
+        },
+        {
+          "command": "confluent.schemas.search",
+          "when": "view == confluent-schemas && !confluent.schemaSearchApplied",
+          "group": "navigation@1"
         },
         {
           "command": "confluent.schemas.search.clear",
@@ -779,6 +792,11 @@
           "command": "confluent.schemas.copySchemaRegistryId",
           "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
           "group": "2_copy@1"
+        },
+        {
+          "command": "confluent.topics.search",
+          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "group": "navigation@1"
         },
         {
           "command": "confluent.topics.search.clear",
