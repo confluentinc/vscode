@@ -1,7 +1,7 @@
 import { Disposable, env, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { resourceSearchSet } from "../emitters";
+import { resourceSearchSet, schemaSearchSet, topicSearchSet } from "../emitters";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.extra");
@@ -47,7 +47,7 @@ async function copyResourceUri(item: any) {
 
 async function searchResources() {
   const searchString = await window.showInputBox({
-    title: "Search resources",
+    title: "Search items in the Resources view",
     ignoreFocusOut: true,
   });
   if (!searchString) {
@@ -55,20 +55,18 @@ async function searchResources() {
   }
   await setContextValue(ContextValues.resourceSearchApplied, true);
   logger.debug("Searching resources");
-  window.showInformationMessage("Searching resources");
   resourceSearchSet.fire(searchString);
 }
 
 async function clearResourceSearch() {
   logger.debug("Clearing resource search");
-  window.showInformationMessage("Cleared resource search");
   await setContextValue(ContextValues.resourceSearchApplied, false);
   resourceSearchSet.fire(null);
 }
 
 async function searchTopics() {
   const searchString = await window.showInputBox({
-    title: "Search topics",
+    title: "Search items in the Topics view",
     ignoreFocusOut: true,
   });
   if (!searchString) {
@@ -76,19 +74,18 @@ async function searchTopics() {
   }
   await setContextValue(ContextValues.topicSearchApplied, true);
   logger.debug("Searching topics");
-  window.showInformationMessage("Searching topics");
+  topicSearchSet.fire(searchString);
 }
 
 async function clearTopicSearch() {
   logger.debug("Clearing topic search");
   await setContextValue(ContextValues.topicSearchApplied, false);
-
-  window.showInformationMessage("Cleared topic search");
+  topicSearchSet.fire(null);
 }
 
 async function searchSchemas() {
   const searchString = await window.showInputBox({
-    title: "Search schema subjects",
+    title: "Search items in the Schemas view",
     ignoreFocusOut: true,
   });
   if (!searchString) {
@@ -96,14 +93,13 @@ async function searchSchemas() {
   }
   await setContextValue(ContextValues.schemaSearchApplied, true);
   logger.debug("Searching schemas");
-  window.showInformationMessage("Searching schemas");
+  schemaSearchSet.fire(searchString);
 }
 
 async function clearSchemaSearch() {
   logger.debug("Clearing schema search");
   await setContextValue(ContextValues.schemaSearchApplied, false);
-
-  window.showInformationMessage("Cleared schema search");
+  schemaSearchSet.fire(null);
 }
 
 export function registerExtraCommands(): Disposable[] {
