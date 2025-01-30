@@ -61,29 +61,32 @@ export async function executeInWorkerPool<T, R>(
   }>,
   token?: CancellationToken,
 ): Promise<ExecutionResult<R>[]> {
-  // maxWorkers must be at least 2 and no more than 100
-  options.maxWorkers = Math.max(2, Math.min(options.maxWorkers, 100));
-  logger.debug("worker pool execution started", {
-    taskName: options.taskName,
-    maxWorkers: options.maxWorkers,
-    itemCount: items.length,
-  });
-  // `undefined` placeholders for results to preserve ordering
-  const results: ExecutionResult<R>[] = new Array(items.length).fill(undefined);
-
   const totalCount = items.length;
-  const progressTick = { increment: 100 / totalCount };
   let currentIndex = 0;
   let resultCount = 0;
   let errorCount = 0;
+  // how much to increment any provided progress reporter for each task completion
+  const progressTick = { increment: 100 / totalCount };
+
+  // maxWorkers must be at least 2 and no more than 100, but also no more than the `items` length
+  options.maxWorkers = Math.max(2, Math.min(options.maxWorkers, 100));
+  const workerCount = Math.min(options.maxWorkers, totalCount);
+  logger.debug("worker pool execution started", {
+    taskName: options.taskName,
+    maxWorkers: options.maxWorkers,
+    workerCount,
+    totalCount,
+  });
+
+  // `undefined` placeholders for results to preserve ordering
+  const results: ExecutionResult<R>[] = new Array(items.length).fill(undefined);
 
   async function worker(): Promise<void> {
     while (currentIndex < totalCount && !token?.isCancellationRequested) {
       // store the current index in a separate variable so we can use it to set the result/error and
       // preserve ordering of the original items
-      const taskIndex = currentIndex;
-      // then start incrementing the currentIndex for the next iteration after getting this item
-      const item: T | undefined = items[currentIndex++];
+      const taskIndex = currentIndex++;
+      const item: T | undefined = items[taskIndex];
       if (item === undefined) {
         // no support for passing `undefined` items into the callback
         continue;
@@ -125,7 +128,7 @@ export async function executeInWorkerPool<T, R>(
   // set up the initial workers; no less than 2 and no more than the total number of items provided
   // (the workers themselves don't return anything; leave that to the inner function to set results)
   const workers: Promise<void>[] = [];
-  for (let i = 0; i < Math.min(options.maxWorkers, totalCount); i++) {
+  for (let i = 0; i < workerCount; i++) {
     workers.push(worker());
   }
   // wait for all workers to finish their task loops
