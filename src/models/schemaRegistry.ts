@@ -9,6 +9,7 @@ export abstract class SchemaRegistry extends Data implements IResourceBase {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.SCHEMA_REGISTRY;
+  readonly name = "Schema Registry";
 
   id!: Enforced<string>;
   uri!: Enforced<string>;
@@ -45,8 +46,7 @@ export class SchemaRegistryTreeItem extends TreeItem {
   resource: SchemaRegistry;
 
   constructor(resource: SchemaRegistry) {
-    const label = "Schema Registry";
-    super(label, TreeItemCollapsibleState.None);
+    super(resource.name, TreeItemCollapsibleState.None);
 
     // internal properties
     this.resource = resource;
