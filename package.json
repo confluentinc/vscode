@@ -546,7 +546,13 @@
     "viewsWelcome": [
       {
         "view": "confluent-resources",
-        "contents": "No resources found."
+        "contents": "No resources found.",
+        "when": "!confluent.resourceSearchApplied"
+      },
+      {
+        "view": "confluent-resources",
+        "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
+        "when": "confluent.resourceSearchApplied"
       },
       {
         "view": "confluent-schemas",
