@@ -52,6 +52,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
+import { filterSearchableItems } from "./filtering";
 import { createHighlightRanges } from "./highlights";
 
 const logger = new Logger("viewProviders.resources");
@@ -100,12 +101,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
+  filteredItemCount: number = 0;
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
     // update the UI for any added/removed direct environments
     this.updateEnvironmentContextValues();
+    // reset the filtered item count when the tree is refreshed
+    this.filteredItemCount = 0;
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -152,6 +156,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
+      this.filteredItemCount++;
       // highlight the search string for the tree item label
       const existingLabel = treeItem.label as string;
       treeItem.label = {
@@ -246,14 +251,20 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     if (this.itemSearchString) {
       // if we have a search string, filter the children based on it
-      const filteredChildren = this.filteredGetChildren(children);
-      this.treeView.message = `Filtered resources for "${this.itemSearchString}":`;
-      this.treeView.badge = { tooltip: "Filtered", value: filteredChildren.length };
+      const filteredChildren = filterSearchableItems(
+        children,
+        this.itemSearchString,
+      ) as ResourceViewProviderData[];
+      if (this.filteredItemCount) {
+        // only show a message if the filter returned at least one item, otherwise let empty state
+        // take over
+        this.treeView.message = `Filtered to ${this.filteredItemCount} resource(s) for "${this.itemSearchString}":`;
+      }
       return filteredChildren;
     } else {
       this.treeView.message = undefined;
-      this.treeView.badge = undefined;
     }
+
     return children;
   }
 
