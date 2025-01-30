@@ -156,13 +156,33 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      this.filteredItemCount++;
-      // highlight the search string for the tree item label
+      // highlight the search string for the tree item, whether it matched on the label or the
+      // description. if it matched on the description, swap the label and description for display
       const existingLabel = treeItem.label as string;
-      treeItem.label = {
-        label: existingLabel,
-        highlights: createHighlightRanges(existingLabel, this.itemSearchString),
-      };
+      const existingDescription = treeItem.description as string;
+
+      const labelHighlights = createHighlightRanges(existingLabel, this.itemSearchString);
+      const descriptionHighlights = createHighlightRanges(
+        existingDescription,
+        this.itemSearchString,
+      );
+
+      if (labelHighlights.length > 0) {
+        this.filteredItemCount++;
+        treeItem.label = {
+          label: existingLabel,
+          highlights: labelHighlights,
+        };
+      } else if (descriptionHighlights.length > 0) {
+        this.filteredItemCount++;
+        // reverse!
+        treeItem.description = existingLabel;
+        treeItem.label = {
+          label: existingDescription,
+          highlights: descriptionHighlights,
+        };
+      }
+
       if (treeItem.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
         // adjust the id so we can auto-expand any currently-collapsed items that match the search
         // (or whose children match the search)
@@ -250,6 +270,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
+      if (element && filterSearchableItems([element], this.itemSearchString).length > 0) {
+        logger.debug("parent element matched search string, returning children", {
+          searchableText: element.searchableText(),
+        });
+        return children;
+      }
       // if we have a search string, filter the children based on it
       const filteredChildren = filterSearchableItems(
         children,
@@ -258,7 +284,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       if (this.filteredItemCount) {
         // only show a message if the filter returned at least one item, otherwise let empty state
         // take over
-        this.treeView.message = `Filtered to ${this.filteredItemCount} resource(s) for "${this.itemSearchString}":`;
+        const plural = this.filteredItemCount > 1 ? "s" : "";
+        this.treeView.message = `Filtered to ${this.filteredItemCount} resource${plural} for "${this.itemSearchString}":`;
       }
       return filteredChildren;
     } else {
@@ -266,79 +293,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     return children;
-  }
-
-  /**
-   * Recursively filter the children of the tree view based on the provider's
-   * {@linkcode itemSearchString}, provided by the user.
-   *
-   * Due to the structure of the `ResourceViewProvider`'s tree, we need to look for any children of
-   * {@link ContainerTreeItem}s, as well as any {@link KafkaCluster}s or {@link SchemaRegistry}
-   * instances that are nested within an {@link Environment}. This is to ensure that the search
-   * filter is applied to all levels of the tree, even if we haven't expanded an item to show all
-   * children in the UI yet.
-   */
-  filteredGetChildren(items: ResourceViewProviderData[]): ResourceViewProviderData[] {
-    if (!this.itemSearchString || items.length === 0) {
-      return items;
-    }
-    const searchStr: string = this.itemSearchString.toLowerCase();
-
-    const itemTypes = Array.from(new Set(items.map((item) => item.constructor.name))).join("/");
-    logger.debug(`filtering ${items.length} ${itemTypes} item(s) with search string: ${searchStr}`);
-
-    const filteredItems: ResourceViewProviderData[] = [];
-    items.forEach((item) => {
-      if (item instanceof Environment) {
-        logger.debug(`--> sub-filtering Environment children of ${item.name}`);
-        // include any nested Kafka Clusters or Schema Registries in search filter
-        const envResources: ResourceViewProviderData[] = [
-          ...item.kafkaClusters,
-          ...(item.schemaRegistry ? [item.schemaRegistry] : []),
-        ];
-        const filteredResources = this.filteredGetChildren(envResources);
-        const resourcesTypes = Array.from(
-          new Set(envResources.map((child) => child.constructor.name)),
-        ).join("/");
-        logger.debug(
-          `--> sub-filtered ${envResources.length} ${resourcesTypes} to ${filteredResources.length} item(s)`,
-        );
-        if (item.name.toLowerCase().includes(searchStr) || filteredResources.length) {
-          filteredItems.push(item);
-        }
-      } else if (item instanceof KafkaCluster) {
-        if (item.name.toLowerCase().includes(searchStr)) {
-          filteredItems.push(item);
-        }
-      } else if (item instanceof SchemaRegistry) {
-        // no custom SR labels supported, so just use the default label for now
-        if (item.name.toLowerCase().includes(searchStr)) {
-          filteredItems.push(item);
-        }
-      } else if (item instanceof ContainerTreeItem) {
-        // include any nested environments in search filter
-        const subFilteredItems = [];
-        if (item.children.length) {
-          logger.debug(`--> sub-filtering ContainerTreeItem children of "${item.label}"`);
-          subFilteredItems.push(...this.filteredGetChildren(item.children));
-          const childrenTypes = Array.from(
-            new Set(subFilteredItems.map((child) => child.constructor.name)),
-          ).join("/");
-          logger.debug(
-            `--> sub-filtered ${item.children.length} ${childrenTypes} to ${subFilteredItems.length} item(s) for ContainerTreeItem "${item.label}"`,
-          );
-        }
-        if ((item.label as string).toLowerCase().includes(searchStr) || subFilteredItems.length) {
-          filteredItems.push(item);
-        }
-      }
-    });
-
-    logger.debug(
-      `filtered ${items.length} ${itemTypes} item(s) to ${filteredItems.length} item(s)`,
-      filteredItems.map((item) => (item instanceof ContainerTreeItem ? item.label : item.name)),
-    );
-    return filteredItems;
   }
 
   /** Set up event listeners for this view provider. */
