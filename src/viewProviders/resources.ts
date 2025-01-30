@@ -52,6 +52,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
+import { createHighlightRanges } from "./highlights";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -151,15 +152,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      logger.debug("highlighting search string in tree item label:", treeItem.label);
-      const label = (treeItem.label || "") as string;
-      const searchIndex = label.toLowerCase().indexOf(this.itemSearchString.toLowerCase());
-      if (searchIndex >= 0) {
-        // preserve the label, but highlight the search string portion
-        treeItem.label = {
-          label: label,
-          highlights: [[searchIndex, searchIndex + this.itemSearchString.length]],
-        };
+      // highlight the search string for the tree item label
+      const existingLabel = treeItem.label as string;
+      treeItem.label = {
+        label: existingLabel,
+        highlights: createHighlightRanges(existingLabel, this.itemSearchString),
+      };
+      if (treeItem.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+        // adjust the id so we can auto-expand any currently-collapsed items that match the search
+        // (or whose children match the search)
+        treeItem.id = `${treeItem.id}-search`;
+        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
       }
     }
 
@@ -241,36 +244,90 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       children = [ccloudContainer, localContainer, ...directEnvironments];
     }
 
-    return this.itemSearchString ? this.filteredGetChildren(children) : children;
+    if (this.itemSearchString) {
+      // if we have a search string, filter the children based on it
+      const filteredChildren = this.filteredGetChildren(children);
+      this.treeView.message = `Filtered resources for "${this.itemSearchString}":`;
+      this.treeView.badge = { tooltip: "Filtered", value: filteredChildren.length };
+      return filteredChildren;
+    } else {
+      this.treeView.message = undefined;
+      this.treeView.badge = undefined;
+    }
+    return children;
   }
 
-  filteredGetChildren(children: ResourceViewProviderData[]): ResourceViewProviderData[] {
-    const filteredChildren: ResourceViewProviderData[] = [];
+  /**
+   * Recursively filter the children of the tree view based on the provider's
+   * {@linkcode itemSearchString}, provided by the user.
+   *
+   * Due to the structure of the `ResourceViewProvider`'s tree, we need to look for any children of
+   * {@link ContainerTreeItem}s, as well as any {@link KafkaCluster}s or {@link SchemaRegistry}
+   * instances that are nested within an {@link Environment}. This is to ensure that the search
+   * filter is applied to all levels of the tree, even if we haven't expanded an item to show all
+   * children in the UI yet.
+   */
+  filteredGetChildren(items: ResourceViewProviderData[]): ResourceViewProviderData[] {
+    if (!this.itemSearchString || items.length === 0) {
+      return items;
+    }
+    const searchStr: string = this.itemSearchString.toLowerCase();
 
-    const searchString = this.itemSearchString!;
-    children.forEach((child) => {
-      if (child instanceof Environment) {
-        if (child.name.toLowerCase().includes(searchString.toLowerCase())) {
-          filteredChildren.push(child);
+    const itemTypes = Array.from(new Set(items.map((item) => item.constructor.name))).join("/");
+    logger.debug(`filtering ${items.length} ${itemTypes} item(s) with search string: ${searchStr}`);
+
+    const filteredItems: ResourceViewProviderData[] = [];
+    items.forEach((item) => {
+      if (item instanceof Environment) {
+        logger.debug(`--> sub-filtering Environment children of ${item.name}`);
+        // include any nested Kafka Clusters or Schema Registries in search filter
+        const envResources: ResourceViewProviderData[] = [
+          ...item.kafkaClusters,
+          ...(item.schemaRegistry ? [item.schemaRegistry] : []),
+        ];
+        const filteredResources = this.filteredGetChildren(envResources);
+        const resourcesTypes = Array.from(
+          new Set(envResources.map((child) => child.constructor.name)),
+        ).join("/");
+        logger.debug(
+          `--> sub-filtered ${envResources.length} ${resourcesTypes} to ${filteredResources.length} item(s)`,
+        );
+        if (item.name.toLowerCase().includes(searchStr) || filteredResources.length) {
+          filteredItems.push(item);
         }
-      } else if (child instanceof KafkaCluster) {
-        if (child.name.toLowerCase().includes(searchString.toLowerCase())) {
-          filteredChildren.push(child);
+      } else if (item instanceof KafkaCluster) {
+        if (item.name.toLowerCase().includes(searchStr)) {
+          filteredItems.push(item);
         }
-      } else if (child instanceof SchemaRegistry) {
-        if ("Schema Registry".toLowerCase().includes(searchString.toLowerCase())) {
-          filteredChildren.push(child);
+      } else if (item instanceof SchemaRegistry) {
+        // no custom SR labels supported, so just use the default label for now
+        if (item.name.toLowerCase().includes(searchStr)) {
+          filteredItems.push(item);
         }
-      } else if (child instanceof ContainerTreeItem) {
-        // TODO: recurse into children of container items
-        if ((child.label as string).toLowerCase().includes(searchString.toLowerCase())) {
-          filteredChildren.push(child);
+      } else if (item instanceof ContainerTreeItem) {
+        // include any nested environments in search filter
+        const subFilteredItems = [];
+        if (item.children.length) {
+          logger.debug(`--> sub-filtering ContainerTreeItem children of "${item.label}"`);
+          subFilteredItems.push(...this.filteredGetChildren(item.children));
+          const childrenTypes = Array.from(
+            new Set(subFilteredItems.map((child) => child.constructor.name)),
+          ).join("/");
+          logger.debug(
+            `--> sub-filtered ${item.children.length} ${childrenTypes} to ${subFilteredItems.length} item(s) for ContainerTreeItem "${item.label}"`,
+          );
+        }
+        if ((item.label as string).toLowerCase().includes(searchStr) || subFilteredItems.length) {
+          filteredItems.push(item);
         }
       }
     });
-    logger.debug(`filtered ${children.length} children to ${filteredChildren.length}`);
 
-    return filteredChildren;
+    logger.debug(
+      `filtered ${items.length} ${itemTypes} item(s) to ${filteredItems.length} item(s)`,
+      filteredItems.map((item) => (item instanceof ContainerTreeItem ? item.label : item.name)),
+    );
+    return filteredItems;
   }
 
   /** Set up event listeners for this view provider. */
