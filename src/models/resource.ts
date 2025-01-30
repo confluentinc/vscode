@@ -64,3 +64,12 @@ export function getConnectionLabel(type: ConnectionType): string {
       throw new Error(`Unhandled connection type ${type}`);
   }
 }
+
+export interface ISearchable {
+  /** Space-separated strings for a given resource that should be searchable in the UI. */
+  searchableText: () => string;
+}
+
+export function isSearchable(item: any): item is ISearchable {
+  return "searchableText" in item;
+}
