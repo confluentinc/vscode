@@ -3,9 +3,9 @@ import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "v
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
-export abstract class SchemaRegistry extends Data implements IResourceBase {
+export abstract class SchemaRegistry extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.SCHEMA_REGISTRY;
@@ -15,6 +15,10 @@ export abstract class SchemaRegistry extends Data implements IResourceBase {
   uri!: Enforced<string>;
   // added separately from sidecar responses
   environmentId!: EnvironmentId;
+
+  searchableText(): string {
+    return `${this.name} ${this.id}`;
+  }
 }
 
 export class CCloudSchemaRegistry extends SchemaRegistry {
