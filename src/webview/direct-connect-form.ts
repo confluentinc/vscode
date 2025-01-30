@@ -35,7 +35,13 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.name || "";
   });
 
-  /** Kafka */
+  fakeInput = this.derive(() => {
+    return `<input type=text value="TEST FAKE INPUT"} />`;
+  });
+  /** Kafka Cluster Config */
+  kafka_cluster = this.derive(() => {
+    return this.spec()?.kafka_cluster;
+  });
   kafkaBootstrapServers = this.derive(() => {
     return this.spec()?.kafka_cluster?.bootstrap_servers || "";
   });
@@ -59,6 +65,24 @@ class DirectConnectFormViewModel extends ViewModel {
   });
   kafkaSslEnabled = this.derive(() => {
     return this.spec()?.kafka_cluster?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+  });
+  truststorePath = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.truststore || "";
+  });
+  truststorePassword = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.truststore?.password || "";
+  });
+  truststoreType = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.truststore?.type || "JKS";
+  });
+  keystorePath = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.keystore?.path || "";
+  });
+  keystorePassword = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.keystore?.password || "";
+  });
+  verifyHostname = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl?.verify_hostname || false;
   });
 
   /** Schema Registry */
@@ -127,6 +151,11 @@ class DirectConnectFormViewModel extends ViewModel {
 
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
+    const inputName = input.name as keyof DirectConnectFormViewModel;
+    if (typeof this[inputName] === "function") {
+      console.log("calling", inputName, input.value);
+      // (this[inputName] as any)(input.value);
+    }
     switch (input.name) {
       case "platform":
         this.platformType(input.value as FormConnectionType);
