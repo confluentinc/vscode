@@ -21,7 +21,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud, isDirect } from "./resource";
+import { ConnectionId, IResourceBase, isCCloud, isDirect, ISearchable } from "./resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -35,7 +35,7 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment implements IResourceBase {
+export abstract class Environment implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
@@ -58,6 +58,10 @@ export abstract class Environment implements IResourceBase {
 
   get hasClusters(): boolean {
     return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
+  }
+
+  searchableText(): string {
+    return `${this.name} ${this.id}`;
   }
 }
 
@@ -164,6 +168,11 @@ export class DirectEnvironment extends Environment {
         return IconNames.CONNECTION;
       }
     }
+  }
+
+  searchableText(): string {
+    // same as Environment, but `id` isn't used since it isn't visible in the UI
+    return this.name;
   }
 }
 

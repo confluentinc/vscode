@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { ISearchable } from "./resource";
 
 /** Anything with an `id` string property */
 export interface IdItem {
@@ -10,7 +11,7 @@ export interface IdItem {
  * easily group items in the tree view. Most useful when there are multiple types of
  * items nested under a single resource.
  */
-export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem {
+export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem implements ISearchable {
   private _children: T[] = [];
 
   constructor(label: string, collapsibleState: vscode.TreeItemCollapsibleState, children: T[]) {
@@ -36,6 +37,14 @@ export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem {
 
   get children(): T[] {
     return this._children;
+  }
+
+  searchableText(): string {
+    // const childrenSearchText = this._children
+    //   .filter((child): child is T & ISearchable => isSearchable(child))
+    //   .map((child) => child.searchableText())
+    //   .join(" ");
+    return `${this.label} ${this.description}`;
   }
 }
 
