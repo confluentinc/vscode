@@ -17,6 +17,7 @@ import {
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
+  resourceSearchSet,
 } from "../emitters";
 import { ExtensionContextNotSetError, showErrorNotificationWithButtons } from "../errors";
 import { getDirectResources } from "../graphql/direct";
@@ -51,6 +52,8 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
+import { filterSearchableItems } from "./filtering";
+import { createHighlightRanges } from "./highlights";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -96,11 +99,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   // events to us via connectionUsable emitter.
   private cachedLoadingStates: Map<string, boolean> = new Map();
 
+  /** String to filter items returned by `getChildren`, if provided. */
+  itemSearchString: string | null = null;
+  filteredItemCount: number = 0;
+
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
     // update the UI for any added/removed direct environments
     this.updateEnvironmentContextValues();
+    // reset the filtered item count when the tree is refreshed
+    this.filteredItemCount = 0;
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -130,19 +139,59 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
+    let treeItem: vscode.TreeItem;
     if (element instanceof Environment) {
       if (isDirect(element)) {
         // update contextValues for all known direct environments, not just the one that was updated
         await this.updateEnvironmentContextValues();
       }
-      return new EnvironmentTreeItem(element);
+      treeItem = new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
-      return new KafkaClusterTreeItem(element);
+      treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
-      return new SchemaRegistryTreeItem(element);
+      treeItem = new SchemaRegistryTreeItem(element);
+    } else {
+      // should only be left with ContainerTreeItems
+      treeItem = element;
     }
-    // should only be left with ContainerTreeItems
-    return element;
+
+    if (this.itemSearchString) {
+      // highlight the search string for the tree item, whether it matched on the label or the
+      // description. if it matched on the description, swap the label and description for display
+      const existingLabel = treeItem.label as string;
+      const existingDescription = treeItem.description as string;
+
+      const labelHighlights = createHighlightRanges(existingLabel, this.itemSearchString);
+      const descriptionHighlights = createHighlightRanges(
+        existingDescription,
+        this.itemSearchString,
+      );
+
+      if (labelHighlights.length > 0) {
+        this.filteredItemCount++;
+        treeItem.label = {
+          label: existingLabel,
+          highlights: labelHighlights,
+        };
+      } else if (descriptionHighlights.length > 0) {
+        this.filteredItemCount++;
+        // reverse!
+        treeItem.description = existingLabel;
+        treeItem.label = {
+          label: existingDescription,
+          highlights: descriptionHighlights,
+        };
+      }
+
+      if (treeItem.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
+        // adjust the id so we can auto-expand any currently-collapsed items that match the search
+        // (or whose children match the search)
+        treeItem.id = `${treeItem.id}-search`;
+        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+      }
+    }
+
+    return treeItem;
   }
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
@@ -153,21 +202,21 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.rehydratedDirectConnections = true;
     }
 
+    let children: ResourceViewProviderData[] = [];
+
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
-        return element.children;
+        children = element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await getCCloudEnvironmentChildren(element);
+        children = await getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
-        const children: DirectResources[] = [];
         if (element.kafkaClusters)
           children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
         if (element.schemaRegistry) children.push(element.schemaRegistry);
         logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
-        return children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
@@ -217,10 +266,33 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         });
       }
 
-      return [ccloudContainer, localContainer, ...directEnvironments];
+      children = [ccloudContainer, localContainer, ...directEnvironments];
     }
 
-    return [];
+    if (this.itemSearchString) {
+      if (element && filterSearchableItems([element], this.itemSearchString).length > 0) {
+        logger.debug("parent element matched search string, returning children", {
+          searchableText: element.searchableText(),
+        });
+        return children;
+      }
+      // if we have a search string, filter the children based on it
+      const filteredChildren = filterSearchableItems(
+        children,
+        this.itemSearchString,
+      ) as ResourceViewProviderData[];
+      if (this.filteredItemCount) {
+        // only show a message if the filter returned at least one item, otherwise let empty state
+        // take over
+        const plural = this.filteredItemCount > 1 ? "s" : "";
+        this.treeView.message = `Filtered to ${this.filteredItemCount} resource${plural} for "${this.itemSearchString}":`;
+      }
+      return filteredChildren;
+    } else {
+      this.treeView.message = undefined;
+    }
+
+    return children;
   }
 
   /** Set up event listeners for this view provider. */
@@ -266,6 +338,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.refreshConnection(id, false);
     });
 
+    const resourceSearchSetSub: vscode.Disposable = resourceSearchSet.event(
+      (searchString: string | null) => {
+        logger.debug("resourceSearchSet event fired, refreshing", { searchString });
+        // set/unset the filter and call into getChildren() to update the tree view
+        this.itemSearchString = searchString;
+        this.refresh();
+      },
+    );
+
     return [
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
@@ -273,6 +354,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
       connectionUsableSub,
+      resourceSearchSetSub,
     ];
   }
 
