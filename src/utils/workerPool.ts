@@ -82,8 +82,9 @@ export async function executeInWorkerPool<T, R>(
       // store the current index in a separate variable so we can use it to set the result/error and
       // preserve ordering of the original items
       const taskIndex = currentIndex;
+      // then start incrementing the currentIndex for the next iteration after getting this item
       const item: T | undefined = items[currentIndex++];
-      if (!item) {
+      if (item === undefined) {
         // no support for passing `undefined` items into the callback
         continue;
       }
