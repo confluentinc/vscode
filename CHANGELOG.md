@@ -19,6 +19,13 @@ All notable changes to this extension will be documented in this file.
 
 - Give the sidecar more time to start up, log more sidecar startup errors into sentry.
 
+## 0.24.3
+
+### Fixed
+
+- Sidecar update to address an issue where requests to a Confluent Cloud Schema Registry with SSL
+  were failing.
+
 ## 0.24.2
 
 ### Added
