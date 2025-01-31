@@ -98,11 +98,15 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     return;
   }
 
-  subject = subject ? subject : await chooseSubject(registry, schemaType);
+  subject = subject ? subject : await chooseSubject(registry);
   if (!subject) {
     logger.error("Could not determine schema subject");
     return;
   }
+
+  // TODO after #951: grab the subject group and / or the most recent schema binding
+  // to the subject to ensure is the right type. Error out if not. This error
+  // will be more clear than the one that the schema registry will give us.
 
   await uploadSchema(registry, subject, schemaType, docContent.content);
 }
@@ -212,12 +216,11 @@ async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
  */
 async function chooseSubject(
   registry: SchemaRegistry,
-  schemaType: SchemaType,
   defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, schemaType, defaultSubject);
+  let subject = await schemaSubjectQuickPick(registry, defaultSubject);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.
