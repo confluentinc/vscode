@@ -40,7 +40,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel, isDirect } from "../models/resource";
+import { ConnectionId, ConnectionLabel, isDirect, isSearchable } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -270,12 +270,18 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      if (element && filterSearchableItems([element], this.itemSearchString).length > 0) {
+      if (
+        element &&
+        isSearchable(element) &&
+        element.searchableText().toLowerCase().includes(this.itemSearchString.toLowerCase())
+      ) {
         logger.debug("parent element matched search string, returning children", {
           searchableText: element.searchableText(),
+          searchString: this.itemSearchString,
         });
         return children;
       }
+
       // if we have a search string, filter the children based on it
       const filteredChildren = filterSearchableItems(
         children,
