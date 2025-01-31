@@ -218,7 +218,6 @@
       },
       {
         "command": "confluent.resources.search.clear",
-        "icon": "$(search-stop)",
         "title": "Clear Search",
         "category": "Confluent: Resources View"
       },
