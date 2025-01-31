@@ -8,7 +8,12 @@ import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { correlateTopicsWithSchemaSubjects, fetchSubjects, fetchTopics } from "./loaderUtils";
+import {
+  correlateTopicsWithSchemaSubjects,
+  fetchSchemaSubjectGroup,
+  fetchSubjects,
+  fetchTopics,
+} from "./loaderUtils";
 
 const logger = new Logger("resourceLoader");
 

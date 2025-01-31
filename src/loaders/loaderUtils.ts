@@ -11,6 +11,7 @@ import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
+import { executeInWorkerPool, isSuccessResult } from "../utils/workerPool";
 
 const logger = new Logger("resourceLoader");
 
@@ -156,4 +157,90 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<str
   );
 
   return await client.list();
+}
+
+/**
+ * Given a schema registry and a subject, fetch the versions available, then fetch the details
+ * of each version and return them as an array of {@link Schema}.
+ */
+export async function fetchSchemaSubjectGroup(
+  schemaRegistry: SchemaRegistry,
+  subject: string,
+): Promise<Schema[]> {
+  const sidecarHandle = await getSidecar();
+  const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
+    schemaRegistry.id,
+    schemaRegistry.connectionId,
+  );
+
+  // Learn all of the live version numbers for the subject.
+  const versions: number[] = await client.listVersions({ subject });
+
+  // Now prep to fetch all of the versions concurrently.
+  const highestVersion = Math.max(...versions);
+  const concurrentVersionRequests: FetchSchemaVersionParams[] = versions.map((version) => {
+    return {
+      schemaRegistry: schemaRegistry,
+      client: client,
+      subject: subject,
+      version: version,
+      highestVersion: highestVersion,
+    } as FetchSchemaVersionParams;
+  });
+
+  // Fetch all versions concurrently capped at 5 concurrent requests at a time.
+  const concurrentFetchResults = await executeInWorkerPool(
+    fetchSchemaVersion,
+    concurrentVersionRequests,
+    {
+      maxWorkers: 5,
+    },
+  );
+
+  // The results may contain both successful Schema objects as well as errors.
+  // Split them apart and throw on the first error (if any)
+  const schemas: Schema[] = new Array(concurrentFetchResults.length);
+  concurrentFetchResults.forEach((result) => {
+    if (isSuccessResult(result)) {
+      schemas.push(result.result);
+    } else {
+      // improve this before PR raised.
+      throw result.error;
+    }
+  });
+
+  return schemas;
+}
+
+interface FetchSchemaVersionParams {
+  schemaRegistry: SchemaRegistry;
+  client: SubjectsV1Api;
+  subject: string;
+  version: number;
+  highestVersion: number;
+}
+
+export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Promise<Schema> {
+  const schema: ResponseSchema = await params.client.getSchemaByVersion({
+    subject: params.subject,
+    version: params.version.toString(),
+  });
+
+  const schemaRegistry = params.schemaRegistry;
+  return Schema.create({
+    // Fields copied from the SR ...
+    connectionId: schemaRegistry.connectionId,
+    connectionType: schemaRegistry.connectionType,
+    schemaRegistryId: schemaRegistry.id,
+    environmentId: schemaRegistry.environmentId,
+
+    // Fields specific to this single schema subject binding.
+    id: schema.id!.toString(),
+    subject: schema.subject!,
+    version: schema.version!,
+    // AVRO doesn't show up in `schemaType`
+    // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
+    type: (schema.schemaType as SchemaType) || SchemaType.Avro,
+    isHighestVersion: schema.version === params.highestVersion,
+  });
 }
