@@ -35,20 +35,19 @@ export interface HostConfigAllOfLogConfig {
 
 /**
  * @export
+ * @enum {string}
  */
-export const HostConfigAllOfLogConfigTypeEnum = {
-  JsonFile: "json-file",
-  Syslog: "syslog",
-  Journald: "journald",
-  Gelf: "gelf",
-  Fluentd: "fluentd",
-  Awslogs: "awslogs",
-  Splunk: "splunk",
-  Etwlogs: "etwlogs",
-  None: "none",
-} as const;
-export type HostConfigAllOfLogConfigTypeEnum =
-  (typeof HostConfigAllOfLogConfigTypeEnum)[keyof typeof HostConfigAllOfLogConfigTypeEnum];
+export enum HostConfigAllOfLogConfigTypeEnum {
+  JsonFile = "json-file",
+  Syslog = "syslog",
+  Journald = "journald",
+  Gelf = "gelf",
+  Fluentd = "fluentd",
+  Awslogs = "awslogs",
+  Splunk = "splunk",
+  Etwlogs = "etwlogs",
+  None = "none",
+}
 
 /**
  * Check if a given object implements the HostConfigAllOfLogConfig interface.

@@ -15,12 +15,12 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const HashAlgorithm = {
-  _256: "SCRAM_SHA_256",
-  _512: "SCRAM_SHA_512",
-} as const;
-export type HashAlgorithm = (typeof HashAlgorithm)[keyof typeof HashAlgorithm];
+export enum HashAlgorithm {
+  _256 = "SCRAM_SHA_256",
+  _512 = "SCRAM_SHA_512",
+}
 
 export function instanceOfHashAlgorithm(value: any): boolean {
   for (const key in HashAlgorithm) {

@@ -15,20 +15,20 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const MirrorTopicStatus = {
-  Active: "ACTIVE",
-  Failed: "FAILED",
-  LinkFailed: "LINK_FAILED",
-  LinkPaused: "LINK_PAUSED",
-  Paused: "PAUSED",
-  PendingStopped: "PENDING_STOPPED",
-  SourceUnavailable: "SOURCE_UNAVAILABLE",
-  Stopped: "STOPPED",
-  PendingMirror: "PENDING_MIRROR",
-  PendingSynchronize: "PENDING_SYNCHRONIZE",
-} as const;
-export type MirrorTopicStatus = (typeof MirrorTopicStatus)[keyof typeof MirrorTopicStatus];
+export enum MirrorTopicStatus {
+  Active = "ACTIVE",
+  Failed = "FAILED",
+  LinkFailed = "LINK_FAILED",
+  LinkPaused = "LINK_PAUSED",
+  Paused = "PAUSED",
+  PendingStopped = "PENDING_STOPPED",
+  SourceUnavailable = "SOURCE_UNAVAILABLE",
+  Stopped = "STOPPED",
+  PendingMirror = "PENDING_MIRROR",
+  PendingSynchronize = "PENDING_SYNCHRONIZE",
+}
 
 export function instanceOfMirrorTopicStatus(value: any): boolean {
   for (const key in MirrorTopicStatus) {

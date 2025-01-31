@@ -41,17 +41,16 @@ export interface MountBindOptions {
 
 /**
  * @export
+ * @enum {string}
  */
-export const MountBindOptionsPropagationEnum = {
-  Private: "private",
-  Rprivate: "rprivate",
-  Shared: "shared",
-  Rshared: "rshared",
-  Slave: "slave",
-  Rslave: "rslave",
-} as const;
-export type MountBindOptionsPropagationEnum =
-  (typeof MountBindOptionsPropagationEnum)[keyof typeof MountBindOptionsPropagationEnum];
+export enum MountBindOptionsPropagationEnum {
+  Private = "private",
+  Rprivate = "rprivate",
+  Shared = "shared",
+  Rshared = "rshared",
+  Slave = "slave",
+  Rslave = "rslave",
+}
 
 /**
  * Check if a given object implements the MountBindOptions interface.
