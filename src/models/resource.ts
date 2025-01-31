@@ -68,6 +68,12 @@ export function getConnectionLabel(type: ConnectionType): string {
 export interface ISearchable {
   /** Space-separated strings for a given resource that should be searchable in the UI. */
   searchableText: () => string;
+
+  /**
+   * Optional method for container-like classes to search against their own {@linkcode searchableText}
+   * and their children's {@linkcode searchableText} against the provided `searchStr`.
+   */
+  searchContainer?(searchStr: string): ISearchable | undefined;
 }
 
 export function isSearchable(item: any): item is ISearchable {

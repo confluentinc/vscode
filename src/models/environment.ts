@@ -13,6 +13,7 @@ import {
   LOCAL_CONNECTION_ID,
   LOCAL_ENVIRONMENT_NAME,
 } from "../constants";
+import { filterSearchableItems } from "../viewProviders/filtering";
 import { FormConnectionType } from "../webview/direct-connect-form";
 import {
   CCloudKafkaCluster,
@@ -62,6 +63,39 @@ export abstract class Environment implements IResourceBase, ISearchable {
 
   searchableText(): string {
     return `${this.name} ${this.id}`;
+  }
+
+  searchContainer(searchStr: string): Environment | undefined {
+    if (this.searchableText().toLowerCase().includes(searchStr)) {
+      // the environment itself matches, no need to check its children
+      return this;
+    }
+
+    // determine whether an environment matches based on its children; if it does, return a partial
+    // environment with only the matching children
+    const kafkaMatches = this.kafkaClusters.some((kafkaCluster) =>
+      kafkaCluster.searchableText().toLowerCase().includes(searchStr),
+    );
+    if (kafkaMatches) {
+      this.kafkaClusters = filterSearchableItems(this.kafkaClusters, searchStr) as KafkaCluster[];
+    } else {
+      // remove all Kafka Clusters if none match
+      this.kafkaClusters = [];
+    }
+
+    const schemaRegistryMatches = this.schemaRegistry
+      ?.searchableText()
+      .toLowerCase()
+      .includes(searchStr);
+    if (!schemaRegistryMatches) {
+      // remove it if it doesn't match
+      this.schemaRegistry = undefined;
+    }
+
+    if (kafkaMatches || schemaRegistryMatches) {
+      // only if we have at least one matching child do we return this (possibly partial) environment
+      return this;
+    }
   }
 }
 
