@@ -1,6 +1,6 @@
 import { type Scope } from "inertial";
 
-export function applyBindings(root: Element, os: Scope, vm: object) {
+export function applyBindings(root: Element | ShadowRoot, os: Scope, vm: object) {
   let tree = walk(root);
   let disposables: Array<() => void> = [];
   for (let node: Node | null = tree.currentNode; node != null; node = tree.nextNode()) {
