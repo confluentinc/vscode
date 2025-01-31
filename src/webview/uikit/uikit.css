@@ -49,20 +49,6 @@
   color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
-.webview-form .heading {
-  font-size: 26px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: normal;
-}
-
-.webview-form .form-description {
-  color: var(--vscode-sideBarSectionHeader-foreground);
-  font-size: 13px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: normal;
-}
 /**
  * <label class="checkbox">
  *   <input type="checkbox" />
@@ -126,30 +112,172 @@
   margin-inline-end: 10px;
 }
 
-.label {
-  display: block;
-  color: var(--vscode-sideBarSectionHeader-foreground);
-  cursor: pointer;
-  font-size: var(--cflt-base-font-size);
-  line-height: normal;
-  margin-bottom: 5px;
+/** Shared styles for webview forms 
+* for layout, incl. children:
+* <div class="webview-form"> // FIXME when done (WRONG)
+*   div.form-header
+*   form.form-container (or <div>?) 
+*     div.form-section (*n)
+*       h2.section-heading
+*       div.input-container || .input-row (*n)
+*     div.form-section.button-group (including input[type="submit"] or .button[type="submit"])
+*/
+.webview-form .form-header {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+}
+.webview-form .form-header > * {
+  margin: unset;
+}
+.webview-form .heading {
+  font-size: 26px;
   font-style: normal;
   font-weight: 500;
+  line-height: 1.2;
 }
-.label.required::after {
-  content: "*";
-  color: var(--vscode-inputValidation-errorBorder);
+.webview-form .form-description {
+  color: var(--vscode-sideBarSectionHeader-foreground);
+  font-size: 13px;
+  font-style: normal;
+  line-height: normal;
 }
 
-.hr {
-  height: 1px;
-  padding-top: 0.5rem;
-  padding-bottom: 0.75rem;
-  color: var(--vscode-icon-foreground);
-  font-size: 0;
+.webview-form .field-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.webview-form .form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0;
+  padding: 24px 0;
+}
+.webview-form .form-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-space_16, 16px);
+  padding: var(--space-space_32, 32px) 0px;
+  align-self: stretch;
+  border-bottom: 1px solid var(--Base-Base-05, #d4d4d4);
+}
+.form-section:first-of-type {
+  padding-top: 0;
+}
+.form-section > * {
+  margin: unset;
+}
+
+.webview-form .button-group {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0;
+  align-self: stretch;
+  border: none;
+}
+.button-group > .info {
+  justify-self: start;
+}
+
+.webview-form .fieldset {
+  padding: 0;
   border: 0;
+  width: 100%;
+  border-width: 0;
+}
+.webview-form .form-section-heading {
+  color: var(--vscode-editor-foreground);
+  font-size: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.webview-form .input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+.webview-form .label {
+  display: block;
+  cursor: pointer;
+  font-size: var(--cflt-base-font-size);
+  font-style: normal;
+  font-weight: 500;
+  color: var(--vscode-editor-foreground);
+}
+.webview-form .info {
+  color: var(--vscode-descriptionForeground);
+  font-weight: 450;
+  white-space: break-spaces;
+  font-size: 12px;
+  position: relative;
+}
+.info.error::before {
+  content: " x ";
+  font-size: 18px;
+  line-height: 0;
+  font-weight: 200;
+  color: var(--vscode-errorForeground);
+  position: absolute;
+  top: 6px;
+  left: -16px;
+}
+.input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 2px;
+  width: 100%;
+}
+.input-container > .info.error {
+  min-width: 100%;
 }
 
+.input-container > input {
+  min-width: 8rem;
+}
+.input-container > * {
+  flex-basis: 50%;
+}
+.input-container > * > * {
+  width: 100%;
+}
+
+.input-container > .input {
+  width: 100%;
+}
+.input-container > .label {
+  margin-bottom: 0;
+}
+
+.toggle-container {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+.toggle-container > input[type="checkbox"] {
+  margin: 0;
+}
+.toggle-container > .label {
+  margin-bottom: 0;
+  color: var(--vscode-descriptionForeground);
+  font-weight: normal;
+}
+.input-container.error .pattern {
+  color: var(--vscode-errorForeground);
+}
+
+.input-container.error .input,
+.input.error,
+input:user-invalid {
+  border: 1px solid var(--vscode-errorForeground);
+}
 .input {
   box-sizing: border-box;
   color: var(--vscode-input-foreground);
@@ -159,6 +287,7 @@
   height: var(--cflt-input-height);
   min-width: var(--cflt-input-min-width);
   padding: 2px 5px;
+  font-size: var(--cflt-base-font-size);
 }
 .input:focus {
   outline: 1px solid var(--vscode-inputOption-activeBorder);
@@ -167,7 +296,17 @@
 .input.invalid {
   border: 1px solid var(--vscode-inputValidation-errorBorder);
 }
-
+.input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+.input:disabled {
+  background-color: var(--vscode-disabledForeground);
+  cursor: not-allowed;
+}
+.input + .hint {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8em;
+}
 .input[type="submit"],
 .button {
   display: inline-flex;
@@ -175,7 +314,7 @@
   box-sizing: border-box;
   justify-content: center;
   align-items: center;
-  padding: 5px 8px;
+  padding: 6px 11px;
   font-size: var(--cflt-base-font-size);
   color: var(--vscode-button-foreground);
   background: var(--vscode-button-background);
@@ -187,22 +326,23 @@
   border: 1px solid var(--vscode-input-border);
 }
 .input[type="submit"]:hover:not(:disabled),
-.button:hover:not(:disabled) {
+.button:hover:not(:disabled),
+.button.secondary:hover:not(:disabled) {
   background-color: var(--vscode-button-hoverBackground);
+  color: var(--vscode-button-foreground);
 }
 .input[type="submit"]:disabled,
 .button:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
 }
 .button.secondary {
-  color: var(--vscode-button-secondaryForeground);
-  background: var(--vscode-button-secondaryBackground);
-}
-.button.secondary:hover {
-  background-color: var(--vscode-button-secondaryHoverBackground);
+  color: var(--vscode-button-background);
+  background: var(--vscode-button-foreground);
+  border: 1px solid var(--vscode-button-background);
 }
 
-.input + .hint {
-  color: var(--vscode-descriptionForeground);
-  font-size: 0.8em;
-}
+/* fieldset > p {
+  margin: 0;
+  height: min-content;
+} */
