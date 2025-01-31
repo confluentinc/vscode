@@ -71,5 +71,8 @@ export interface ISearchable {
 }
 
 export function isSearchable(item: any): item is ISearchable {
+  if (!item) {
+    return false;
+  }
   return "searchableText" in item;
 }
