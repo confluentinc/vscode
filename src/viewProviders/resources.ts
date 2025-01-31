@@ -108,8 +108,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     this._onDidChangeTreeData.fire();
     // update the UI for any added/removed direct environments
     this.updateEnvironmentContextValues();
-    // reset the filtered item count when the tree is refreshed
-    this.filteredItemCount = 0;
   }
 
   private treeView: vscode.TreeView<vscode.TreeItem>;
@@ -168,13 +166,11 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       );
 
       if (labelHighlights.length > 0) {
-        this.filteredItemCount++;
         treeItem.label = {
           label: existingLabel,
           highlights: labelHighlights,
         };
       } else if (descriptionHighlights.length > 0) {
-        this.filteredItemCount++;
         // reverse!
         treeItem.description = existingLabel;
         treeItem.label = {
@@ -219,8 +215,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
       }
     } else {
-      // --- ROOT-LEVEL ITEMS ---
-      // NOTE: we end up here when the tree is first loaded
+      // reset the count so we can increment if any search filtering is applied
+      this.filteredItemCount = 0;
+      // start loading the root-level items
       const resourcePromises: [
         Promise<ContainerTreeItem<CCloudEnvironment>>,
         Promise<ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>>,
@@ -232,11 +229,14 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>,
         DirectEnvironment[],
       ] = await Promise.all(resourcePromises);
+      children = [ccloudContainer, localContainer, ...directEnvironments];
 
       if (this.forceDeepRefresh) {
+        // reset the flag after the initial deep refresh
         this.forceDeepRefresh = false;
       }
 
+      // store instances of the environments for any per-item updates that need to happen later
       if (ccloudContainer) {
         const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).children;
         ccloudEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
@@ -265,8 +265,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           this.environmentsMap.set(env.id, env);
         });
       }
-
-      children = [ccloudContainer, localContainer, ...directEnvironments];
     }
 
     if (this.itemSearchString) {
@@ -275,25 +273,22 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         isSearchable(element) &&
         element.searchableText().toLowerCase().includes(this.itemSearchString.toLowerCase())
       ) {
-        logger.debug("parent element matched search string, returning children", {
-          searchableText: element.searchableText(),
-          searchString: this.itemSearchString,
-        });
         return children;
+      } else {
+        // if we have a search string, filter the children based on it
+        const filteredChildren = filterSearchableItems(
+          children,
+          this.itemSearchString,
+        ) as ResourceViewProviderData[];
+        this.filteredItemCount += filteredChildren.length;
+        if (this.filteredItemCount) {
+          // only show a message if the filter returned at least one item, otherwise let empty state
+          // take over
+          const plural = this.filteredItemCount > 1 ? "s" : "";
+          this.treeView.message = `Filtered to ${this.filteredItemCount} resource${plural} for "${this.itemSearchString}":`;
+        }
+        return filteredChildren;
       }
-
-      // if we have a search string, filter the children based on it
-      const filteredChildren = filterSearchableItems(
-        children,
-        this.itemSearchString,
-      ) as ResourceViewProviderData[];
-      if (this.filteredItemCount) {
-        // only show a message if the filter returned at least one item, otherwise let empty state
-        // take over
-        const plural = this.filteredItemCount > 1 ? "s" : "";
-        this.treeView.message = `Filtered to ${this.filteredItemCount} resource${plural} for "${this.itemSearchString}":`;
-      }
-      return filteredChildren;
     } else {
       this.treeView.message = undefined;
     }
