@@ -10,8 +10,8 @@
     <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
   </head>
   <body>
-    <main class="container webview-form">
-      <div class="section">
+    <main class="webview-form">
+      <div class="form-header">
         <h1 class="heading" data-text="this.displayName()"></h1>
         <p class="form-description" data-text="this.description()"></p>
         <p class="form-description">
@@ -19,66 +19,68 @@
           below. You can always change them later in the project file.
         </p>
       </div>
-      <form class="section" data-on-submit="this.handleSubmit(event)">
+      <form class="form-container" data-on-submit="this.handleSubmit(event)">
         <template data-if="this.noOptions()">
           <p class="form-description">
             There are no configurable options for this template. Click Generate & Save to continue.
           </p>
         </template>
-        <template data-for="field of this.options()">
-          <div class="content-wrapper">
-            <template data-if="this.getEnumField(this.field())">
-              <div class="input-container dropdown">
-                <label class="label" data-text="this.field()[1].display_name"> </label>
-                <vscode-dropdown
-                  data-attr-name="this.field()[0]"
-                  data-prop-value="this.field()[1].initial_value"
-                >
-                  <template data-for="option of this.getEnumField(this.field())"
-                    ><vscode-option
-                      data-attr-value="this.option()"
-                      data-text="this.option()"
-                      data-attr-selected="this.option() === this.field()[1].initial_value"
-                    ></vscode-option>
-                  </template>
-                </vscode-dropdown>
-                <div class="help-text">
-                  <span class="description" data-text="this.field()[1].description"></span>
+        <div class="form-section">
+          <template data-for="field of this.options()">
+            <div class="content-wrapper">
+              <template data-if="this.getEnumField(this.field())">
+                <div class="input-container dropdown">
+                  <label class="label" data-text="this.field()[1].display_name"> </label>
+                  <vscode-dropdown
+                    data-attr-name="this.field()[0]"
+                    data-prop-value="this.field()[1].initial_value"
+                  >
+                    <template data-for="option of this.getEnumField(this.field())"
+                      ><vscode-option
+                        data-attr-value="this.option()"
+                        data-text="this.option()"
+                        data-attr-selected="this.option() === this.field()[1].initial_value"
+                      ></vscode-option>
+                    </template>
+                  </vscode-dropdown>
+                  <div class="help-text">
+                    <span class="field-description" data-text="this.field()[1].description"></span>
+                  </div>
                 </div>
-              </div>
-            </template>
-            <template data-if="!this.getEnumField(this.field())">
-              <div class="input-container" data-attr-id="'input_' + this.field()[0]">
-                <label
-                  data-text="this.field()[1].display_name"
-                  data-attr-for="this.field()[0]"
-                  data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
-                ></label>
-                <input
-                  class="input"
-                  data-text="this.field()[1].display_name"
-                  data-attr-id="this.field()[0]"
-                  data-attr-name="this.field()[0]"
-                  data-attr-value="this.getFieldValue(this.field()[0])"
-                  data-on-input="this.handleInput(event)"
-                  data-on-blur="this.validateInput(event)"
-                  data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
-                  data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
-                  data-attr-required="this.field()[1].min_length > 0"
-                />
-                <div class="help-text">
-                  <span class="description" data-text="this.field()[1].description"></span
-                  >&nbsp;<span
-                    class="pattern"
+              </template>
+              <template data-if="!this.getEnumField(this.field())">
+                <div class="input-container" data-attr-id="'input_' + this.field()[0]">
+                  <label
+                    data-text="this.field()[1].display_name"
+                    data-attr-for="this.field()[0]"
+                    data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
+                  ></label>
+                  <input
+                    class="input"
+                    data-text="this.field()[1].display_name"
                     data-attr-id="this.field()[0]"
-                    data-text="this.field()[1].pattern ? 'Must match pattern: ' + this.field()[1].pattern : ''"
-                  ></span>
+                    data-attr-name="this.field()[0]"
+                    data-attr-value="this.getFieldValue(this.field()[0])"
+                    data-on-input="this.handleInput(event)"
+                    data-on-blur="this.validateInput(event)"
+                    data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
+                    data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
+                    data-attr-required="this.field()[1].min_length > 0"
+                  />
+                  <div class="help-text">
+                    <span class="field-description" data-text="this.field()[1].description"></span
+                    >&nbsp;<span
+                      class="pattern field-description"
+                      data-attr-id="this.field()[0]"
+                      data-text="this.field()[1].pattern ? 'Must match pattern: ' + this.field()[1].pattern : ''"
+                    ></span>
+                  </div>
                 </div>
-              </div>
-            </template>
-          </div>
-        </template>
-        <div>
+              </template>
+            </div>
+          </template>
+        </div>
+        <div class="form-section button-group">
           <input
             class="button"
             type="submit"
@@ -99,43 +101,14 @@
       body {
         margin: 0 auto;
         font-size: 14px;
-      }
-      .content-wrapper {
-        display: contents;
-      }
-      .container {
         max-width: 960px;
         padding: 64px 96px;
         display: flex;
         flex-direction: column;
         gap: 24px;
       }
-      @media screen and (max-width: 760px) {
-        .container {
-          padding: 24px;
-        }
-      }
-      .section > * {
-        margin: unset;
-      }
-      .section {
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-        gap: 16px;
-      }
-      .input-container {
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-        gap: 2px;
-        width: 100%;
-      }
-      .input-container > .input {
-        width: 100%;
-      }
-      .input-container > .label {
-        margin-bottom: 0;
+      .content-wrapper {
+        display: contents;
       }
 
       input:disabled {
@@ -143,26 +116,6 @@
       }
       .dropdown > label > vscode-dropdown {
         width: 100%;
-      }
-      .button[type="submit"] {
-        margin-top: 24px;
-      }
-      .help-text {
-        font-weight: 500;
-        color: var(--vscode-descriptionForeground);
-        font-size: 11px;
-      }
-      .help-text.error::before {
-        content: " X ";
-        font-size: 16px;
-        color: var(--vscode-errorForeground);
-      }
-      .input-container.error .pattern {
-        color: var(--vscode-errorForeground);
-      }
-      .input-container.error .input,
-      input:user-invalid {
-        border: 1px solid var(--vscode-errorForeground);
       }
     </style>
   </body>
