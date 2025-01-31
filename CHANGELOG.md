@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.24.3
+
+### Fixed
+
+- Sidecar update to address an issue where requests to a Confluent Cloud Schema Registry with SSL
+  were failing.
+
 ## 0.24.2
 
 ### Added
