@@ -101,7 +101,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
-  filteredItemCount: number = 0;
+  /** Local cache of the items returned by `getChildren` when a search string is provided. */
+  filteredItems: ResourceViewProviderData[] = [];
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -215,8 +216,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
       }
     } else {
-      // reset the count so we can increment if any search filtering is applied
-      this.filteredItemCount = 0;
+      // reset the array so we can add if any search filtering is applied
+      this.filteredItems = [];
       // start loading the root-level items
       const resourcePromises: [
         Promise<ContainerTreeItem<CCloudEnvironment>>,
@@ -268,10 +269,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
+      // if (the parent) element is a previously-filtered result, we need to show its children.
+      // this is checked either by:
+      // - matching the search string, or
+      // - being previously returned from this method as another element's child
       if (
         element &&
-        isSearchable(element) &&
-        element.searchableText().toLowerCase().includes(this.itemSearchString.toLowerCase())
+        ((isSearchable(element) &&
+          element.searchableText().toLowerCase().includes(this.itemSearchString.toLowerCase())) ||
+          this.filteredItems.includes(element))
       ) {
         return children;
       } else {
@@ -280,12 +286,12 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           children,
           this.itemSearchString,
         ) as ResourceViewProviderData[];
-        this.filteredItemCount += filteredChildren.length;
-        if (this.filteredItemCount) {
+        this.filteredItems.push(...filteredChildren);
+        if (this.filteredItems.length) {
           // only show a message if the filter returned at least one item, otherwise let empty state
           // take over
-          const plural = this.filteredItemCount > 1 ? "s" : "";
-          this.treeView.message = `Filtered to ${this.filteredItemCount} resource${plural} for "${this.itemSearchString}":`;
+          const plural = this.filteredItems.length > 1 ? "s" : "";
+          this.treeView.message = `Filtered to ${this.filteredItems.length} resource${plural} for "${this.itemSearchString}":`;
         }
         return filteredChildren;
       }
