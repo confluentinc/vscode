@@ -53,8 +53,8 @@ import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
-import { filterItems, itemMatchesSearch } from "./filtering";
 import { highlightFilteredTreeItem } from "./highlights";
+import { filterItems, itemMatchesSearch } from "./search";
 
 const logger = new Logger("viewProviders.resources");
 
