@@ -1,6 +1,6 @@
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ISearchable } from "../models/resource";
-import { matchesOrHasMatchingChild } from "./filtering";
+import { matchesOrHasMatchingChild } from "./search";
 
 /**
  * Adjust the {@link TreeItemCollapsibleState TreeItemCollapsibleState} of a tree item that

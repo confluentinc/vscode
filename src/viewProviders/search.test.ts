@@ -9,13 +9,13 @@ import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources/sche
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { ISearchable } from "../models/resource";
-import { filterSearchableItems } from "./filtering";
+import { filterItems } from "./search";
 
-describe("filterSearchableItems", () => {
+describe("viewProviders/search filterItems", () => {
   it("should return all items when `searchStr` is empty", () => {
     const items = [TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT];
 
-    const filtered = filterSearchableItems(items, "");
+    const filtered = filterItems(items, "");
 
     assert.deepStrictEqual(filtered, items);
   });
@@ -23,7 +23,7 @@ describe("filterSearchableItems", () => {
   it("should return an empty array when the `items` array is empty", () => {
     const items: ISearchable[] = [];
 
-    const filtered = filterSearchableItems(items, "foo");
+    const filtered = filterItems(items, "foo");
 
     assert.deepStrictEqual(filtered, []);
   });
@@ -31,7 +31,7 @@ describe("filterSearchableItems", () => {
   it("should return the correct environment when its name matches", () => {
     const items = [TEST_LOCAL_ENVIRONMENT, TEST_CCLOUD_ENVIRONMENT];
 
-    const filtered = filterSearchableItems(items, TEST_LOCAL_ENVIRONMENT.name);
+    const filtered = filterItems(items, TEST_LOCAL_ENVIRONMENT.name);
 
     assert.deepStrictEqual(filtered, [TEST_LOCAL_ENVIRONMENT]);
   });
@@ -42,7 +42,7 @@ describe("filterSearchableItems", () => {
       kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
     });
 
-    const filtered = filterSearchableItems([env], TEST_CCLOUD_KAFKA_CLUSTER.name);
+    const filtered = filterItems([env], TEST_CCLOUD_KAFKA_CLUSTER.name);
 
     assert.deepStrictEqual(filtered, [env]);
   });
@@ -53,7 +53,7 @@ describe("filterSearchableItems", () => {
       schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
     });
 
-    const filtered = filterSearchableItems([env], TEST_CCLOUD_SCHEMA_REGISTRY.name);
+    const filtered = filterItems([env], TEST_CCLOUD_SCHEMA_REGISTRY.name);
 
     assert.deepStrictEqual(filtered, [env]);
   });
@@ -64,7 +64,7 @@ describe("filterSearchableItems", () => {
       TEST_CCLOUD_ENVIRONMENT,
     ]);
 
-    const filtered = filterSearchableItems([container], TEST_LOCAL_ENVIRONMENT.name);
+    const filtered = filterItems([container], TEST_LOCAL_ENVIRONMENT.name);
 
     assert.deepStrictEqual(filtered, [container]);
   });
@@ -72,7 +72,7 @@ describe("filterSearchableItems", () => {
   it("should perform case-insensitive search", () => {
     const items = [TEST_LOCAL_ENVIRONMENT];
 
-    const filtered = filterSearchableItems(items, TEST_LOCAL_ENVIRONMENT.name.toUpperCase());
+    const filtered = filterItems(items, TEST_LOCAL_ENVIRONMENT.name.toUpperCase());
 
     assert.deepStrictEqual(filtered, items);
   });
