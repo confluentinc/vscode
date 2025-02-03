@@ -551,7 +551,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Kafka locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Kafka cluster.",
+        "contents": "No Kafka clusters available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Kafka locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Kafka cluster.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)"
       },
       {
@@ -562,7 +562,12 @@
       {
         "view": "confluent-topics",
         "contents": "No topics found.\n[Create Topic](command:confluent.topics.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && !confluent.topicSearchApplied"
+      },
+      {
+        "view": "confluent-topics",
+        "contents": "No topics match search string. [Clear search](command:confluent.topics.search.clear) or [try a new search](command:confluent.topics.search).",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && confluent.topicSearchApplied"
       }
     ],
     "menus": {
