@@ -402,6 +402,17 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Topics View"
+      },
+      {
+        "command": "confluent.topics.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Topics View"
+      },
+      {
         "command": "confluent.openCCloudLink",
         "icon": "$(confluent-logo)",
         "title": "View in Confluent Cloud",
@@ -473,6 +484,12 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == confluent-resources"
+      },
+      {
+        "command": "confluent.topics.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-topics"
       }
     ],
     "viewsContainers": {
@@ -675,6 +692,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.search.clear",
+          "when": "confluent.topicSearchApplied"
+        },
+        {
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "false"
         }
@@ -773,6 +794,16 @@
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@3"
+        },
+        {
+          "command": "confluent.topics.search",
+          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.topics.search.clear",
+          "when": "view == confluent-topics && confluent.topicSearchApplied",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
