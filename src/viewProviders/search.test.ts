@@ -9,7 +9,7 @@ import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources/sche
 import { CCloudEnvironment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { ISearchable } from "../models/resource";
-import { filterItems } from "./search";
+import { filterItems, itemMatchesSearch, matchesOrHasMatchingChild } from "./search";
 
 describe("viewProviders/search filterItems", () => {
   it("should return all items when `searchStr` is empty", () => {
@@ -75,5 +75,77 @@ describe("viewProviders/search filterItems", () => {
     const filtered = filterItems(items, TEST_LOCAL_ENVIRONMENT.name.toUpperCase());
 
     assert.deepStrictEqual(filtered, items);
+  });
+});
+
+describe("viewProviders/search itemMatchesSearch", () => {
+  it("should return true when the search string is empty", () => {
+    assert.strictEqual(itemMatchesSearch(TEST_LOCAL_ENVIRONMENT, ""), true);
+  });
+
+  it("should return true when the item matches the search string", () => {
+    assert.strictEqual(
+      itemMatchesSearch(TEST_LOCAL_ENVIRONMENT, TEST_LOCAL_ENVIRONMENT.name),
+      true,
+    );
+  });
+
+  it("should return false when the item does not match the search string", () => {
+    assert.strictEqual(itemMatchesSearch(TEST_LOCAL_ENVIRONMENT, "nomatch"), false);
+  });
+
+  it("should perform case-insensitive matching", () => {
+    assert.strictEqual(
+      itemMatchesSearch(TEST_LOCAL_ENVIRONMENT, TEST_LOCAL_ENVIRONMENT.name.toUpperCase()),
+      true,
+    );
+  });
+});
+
+describe("viewProviders/search matchesOrHasMatchingChild", () => {
+  it("should return true when the item directly matches", () => {
+    assert.strictEqual(
+      matchesOrHasMatchingChild(TEST_LOCAL_ENVIRONMENT, TEST_LOCAL_ENVIRONMENT.name),
+      true,
+    );
+  });
+
+  it("should return true when an item's child matches", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+
+    assert.strictEqual(matchesOrHasMatchingChild(env, TEST_CCLOUD_KAFKA_CLUSTER.name), true);
+  });
+
+  it("should return true when a nested child matches", () => {
+    // Container -> CCloudEnvironment -> KafkaCluster
+    const container = new ContainerTreeItem("Container", TreeItemCollapsibleState.Collapsed, [
+      new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      }),
+    ]);
+
+    assert.strictEqual(matchesOrHasMatchingChild(container, TEST_CCLOUD_KAFKA_CLUSTER.name), true);
+  });
+
+  it("should return false when no children match", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+
+    assert.strictEqual(matchesOrHasMatchingChild(env, "nomatch"), false);
+  });
+
+  it("should handle items without children", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [],
+    });
+
+    assert.strictEqual(matchesOrHasMatchingChild(env, TEST_CCLOUD_KAFKA_CLUSTER.name), false);
   });
 });
