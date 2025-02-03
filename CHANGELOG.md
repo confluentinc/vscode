@@ -4,12 +4,28 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Progress indicator when producing large batches of messages to Kafka topics to improve visibility
+  of long-running operations.
+
 ### Changed
 
 - Matching topics to schemas now based on the result of the `GET /subjects` route results. First
   step of migrating away from use of the `GET /schemas` schema registry route, not implemented by
   all schema registries.
 - Quickpick for schema registry subject names (i.e. when uploading a new schema) now based off of `GET /subjects` route results.
+
+### Fixed
+
+- Give the sidecar more time to start up, log more sidecar startup errors into sentry.
+
+## 0.24.3
+
+### Fixed
+
+- Sidecar update to address an issue where requests to a Confluent Cloud Schema Registry with SSL
+  were failing.
 
 ## 0.24.2
 
