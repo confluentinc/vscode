@@ -18,9 +18,11 @@ import {
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { EXTENSION_VERSION } from "../constants";
 import * as contextValues from "../context/values";
+import { resourceSearchSet } from "../emitters";
 import * as direct from "../graphql/direct";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
+import { CCloudResourceLoader } from "../loaders";
 import {
   CCloudEnvironment,
   DirectEnvironment,
@@ -31,7 +33,8 @@ import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster"
 import { ContainerTreeItem } from "../models/main";
 import { ConnectionLabel } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
-import * as ccloud from "../sidecar/connections/ccloud";
+import * as ccloudConnections from "../sidecar/connections/ccloud";
+import * as localConnections from "../sidecar/connections/local";
 import * as resourceManager from "../storage/resourceManager";
 import {
   loadCCloudResources,
@@ -39,6 +42,7 @@ import {
   loadLocalResources,
   ResourceViewProvider,
 } from "./resources";
+import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
@@ -143,7 +147,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadCCloudResources() should load CCloud resources under the Confluent Cloud container tree item when connected to CCloud", async () => {
-    sandbox.stub(ccloud, "hasCCloudAuthSession").returns(true);
+    sandbox.stub(ccloudConnections, "hasCCloudAuthSession").returns(true);
     sandbox.stub(org, "getCurrentOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     sandbox
       .stub(resourceManager.getResourceManager(), "getCCloudEnvironments")
@@ -160,7 +164,7 @@ describe("ResourceViewProvider loading functions", () => {
   });
 
   it("loadCCloudResources() should return a CCloud placeholder item when not connected", async () => {
-    sandbox.stub(ccloud, "hasCCloudAuthSession").returns(false);
+    sandbox.stub(ccloudConnections, "hasCCloudAuthSession").returns(false);
 
     const result: ContainerTreeItem<CCloudEnvironment> = await loadCCloudResources();
 
@@ -381,5 +385,152 @@ describe("ResourceViewProvider context value updates", () => {
         false,
       ),
     );
+  });
+});
+
+describe("ResourceViewProvider search behavior", () => {
+  let provider: ResourceViewProvider;
+  let ccloudLoader: CCloudResourceLoader;
+
+  let sandbox: sinon.SinonSandbox;
+  let ccloudLoaderGetEnvironmentsStub: sinon.SinonStub;
+  let ccloudGetKafkaClustersForEnvironmentIdStub: sinon.SinonStub;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(async () => {
+    sandbox = sinon.createSandbox();
+
+    ccloudLoader = CCloudResourceLoader.getInstance();
+    ccloudLoaderGetEnvironmentsStub = sandbox.stub(ccloudLoader, "getEnvironments").resolves([]);
+    ccloudGetKafkaClustersForEnvironmentIdStub = sandbox
+      .stub(ccloudLoader, "getKafkaClustersForEnvironmentId")
+      .resolves([]);
+
+    // stub all the calls within loadCCloudResources() since we can't stub it directly
+    sandbox.stub(ccloudConnections, "hasCCloudAuthSession").returns(true);
+    sandbox.stub(org, "getCurrentOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
+    sandbox.stub(localConnections, "updateLocalConnection").resolves();
+    sandbox.stub(local, "getLocalResources").resolves([]);
+    sandbox.stub(direct, "getDirectResources").resolves([]);
+    sandbox.stub(ccloudLoader, "getSchemaRegistryForEnvironmentId").resolves();
+
+    provider = ResourceViewProvider.getInstance();
+    // skip any direct connection rehydration behavior for these tests
+    provider["rehydratedDirectConnections"] = true;
+  });
+
+  afterEach(() => {
+    ResourceViewProvider["instance"] = null;
+    CCloudResourceLoader["instance"] = null;
+
+    sandbox.restore();
+  });
+
+  it("getChildren() should filter root-level items based on search string", async () => {
+    ccloudLoaderGetEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+    // CCloud environment name matches the search string
+    resourceSearchSet.fire(TEST_CCLOUD_ENVIRONMENT.name);
+
+    const rootElements = await provider.getChildren();
+
+    assert.strictEqual(rootElements.length, 1);
+    const container = rootElements[0] as ContainerTreeItem<CCloudEnvironment>;
+    assert.strictEqual(container.label, ConnectionLabel.CCLOUD);
+    assert.ok(
+      container instanceof ContainerTreeItem &&
+        container.children.includes(TEST_CCLOUD_ENVIRONMENT),
+    );
+  });
+
+  it("getChildren() should filter element children based on search string", async () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    ccloudLoaderGetEnvironmentsStub.resolves([env]);
+    ccloudGetKafkaClustersForEnvironmentIdStub.resolves(env.kafkaClusters);
+    // Kafka cluster name matches the search string
+    resourceSearchSet.fire(TEST_CCLOUD_KAFKA_CLUSTER.name);
+
+    const children = await provider.getChildren(env);
+
+    assert.deepStrictEqual(children, [TEST_CCLOUD_KAFKA_CLUSTER]);
+  });
+
+  it("getChildren() should show correct count in tree view message when items match search", async () => {
+    // the message won't populate for the root-level items that don't match, so simulate a container
+    // being expanded that has a matching child
+    const container = new ContainerTreeItem<CCloudEnvironment>(
+      ConnectionLabel.CCLOUD,
+      TreeItemCollapsibleState.Expanded,
+      [TEST_CCLOUD_ENVIRONMENT],
+    );
+    ccloudLoaderGetEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+    // CCloud environment name matches the search string
+    const searchStr = TEST_CCLOUD_ENVIRONMENT.name;
+    resourceSearchSet.fire(searchStr);
+
+    await provider.getChildren(container);
+
+    assert.strictEqual(provider["treeView"].message, `Showing 1 result for "${searchStr}"`);
+  });
+
+  it("getChildren() should clear tree view message when search is cleared", async () => {
+    resourceSearchSet.fire(null);
+
+    await provider.getChildren();
+
+    assert.strictEqual(provider["treeView"].message, undefined);
+  });
+
+  it("getTreeItem() should set the resourceUri of tree items whose label matches the search string", async () => {
+    // CCloud environment name matches the search string
+    resourceSearchSet.fire(TEST_CCLOUD_ENVIRONMENT.name);
+
+    const treeItem = (await provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT)) as EnvironmentTreeItem;
+
+    assert.ok(treeItem.resourceUri);
+    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+  });
+
+  it("getTreeItem() should indicate description matches with a highlighted asterisk", async () => {
+    // Kafka cluster ID (shown as description) matches the search string
+    resourceSearchSet.fire(TEST_CCLOUD_KAFKA_CLUSTER.id);
+
+    const treeItem = (await provider.getTreeItem(
+      TEST_CCLOUD_KAFKA_CLUSTER,
+    )) as KafkaClusterTreeItem;
+
+    assert.ok(treeItem.resourceUri);
+    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+  });
+
+  it("getTreeItem() should expand parent items when children match search", async () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    // Kafka cluster name matches the search string
+    resourceSearchSet.fire(TEST_CCLOUD_KAFKA_CLUSTER.name);
+
+    const treeItem = await provider.getTreeItem(env);
+
+    assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
+  });
+
+  it("getTreeItem() should collapse items when children exist but don't match search", async () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    // unrelated search string compared to env + cluster values
+    resourceSearchSet.fire("non-matching-search");
+
+    const treeItem = await provider.getTreeItem(env);
+
+    assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
   });
 });
