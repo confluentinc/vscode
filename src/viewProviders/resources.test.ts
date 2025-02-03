@@ -42,6 +42,7 @@ import {
   loadLocalResources,
   ResourceViewProvider,
 } from "./resources";
+import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 describe("ResourceViewProvider methods", () => {
   let provider: ResourceViewProvider;
@@ -459,17 +460,40 @@ describe("ResourceViewProvider search behavior", () => {
     assert.deepStrictEqual(children, [TEST_CCLOUD_KAFKA_CLUSTER]);
   });
 
-  it("getTreeItem() should highlight matching text in tree items", async () => {
+  it("getChildren() should show correct count in tree view message when items match search", async () => {
+    // the message won't populate for the root-level items that don't match, so simulate a container
+    // being expanded that has a matching child
+    const container = new ContainerTreeItem<CCloudEnvironment>(
+      ConnectionLabel.CCLOUD,
+      TreeItemCollapsibleState.Expanded,
+      [TEST_CCLOUD_ENVIRONMENT],
+    );
+    ccloudLoaderGetEnvironmentsStub.resolves([TEST_CCLOUD_ENVIRONMENT]);
+    // CCloud environment name matches the search string
+    const searchStr = TEST_CCLOUD_ENVIRONMENT.name;
+    resourceSearchSet.fire(searchStr);
+
+    await provider.getChildren(container);
+
+    assert.strictEqual(provider["treeView"].message, `Showing 1 result for "${searchStr}"`);
+  });
+
+  it("getChildren() should clear tree view message when search is cleared", async () => {
+    resourceSearchSet.fire(null);
+
+    await provider.getChildren();
+
+    assert.strictEqual(provider["treeView"].message, undefined);
+  });
+
+  it("getTreeItem() should set the resourceUri of tree items whose label matches the search string", async () => {
     // CCloud environment name matches the search string
     resourceSearchSet.fire(TEST_CCLOUD_ENVIRONMENT.name);
 
     const treeItem = (await provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT)) as EnvironmentTreeItem;
 
-    assert.ok(treeItem.label);
-    // label should be a TreeItemLabel with highlights
-    assert.ok(typeof treeItem.label !== "string");
-    assert.ok(treeItem.label.highlights);
-    assert.strictEqual(treeItem.label.highlights.length, 1);
+    assert.ok(treeItem.resourceUri);
+    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });
 
   it("getTreeItem() should indicate description matches with a highlighted asterisk", async () => {
@@ -480,13 +504,8 @@ describe("ResourceViewProvider search behavior", () => {
       TEST_CCLOUD_KAFKA_CLUSTER,
     )) as KafkaClusterTreeItem;
 
-    assert.ok(treeItem.label);
-    // label should be a TreeItemLabel with highlights
-    assert.ok(typeof treeItem.label !== "string");
-    assert.ok(treeItem.label.label.endsWith("*"));
-    assert.deepStrictEqual(treeItem.label.highlights, [
-      [treeItem.label?.label.length - 1, treeItem.label?.label.length],
-    ]);
+    assert.ok(treeItem.resourceUri);
+    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });
 
   it("getTreeItem() should expand parent items when children match search", async () => {
@@ -513,22 +532,5 @@ describe("ResourceViewProvider search behavior", () => {
     const treeItem = await provider.getTreeItem(env);
 
     assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
-  });
-
-  it("getTreeItem() should show correct count in tree view message when items match search", async () => {
-    const searchStr = TEST_CCLOUD_ENVIRONMENT.name;
-    resourceSearchSet.fire(searchStr);
-
-    await provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT);
-
-    assert.strictEqual(provider["treeView"].message, `Showing 1 result for "${searchStr}"`);
-  });
-
-  it("getTreeItem() should clear tree view message when search is cleared", async () => {
-    resourceSearchSet.fire(null);
-
-    await provider.getTreeItem(TEST_CCLOUD_ENVIRONMENT);
-
-    assert.strictEqual(provider["treeView"].message, undefined);
   });
 });
