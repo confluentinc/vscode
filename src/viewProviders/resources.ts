@@ -170,7 +170,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         // and color the label, description, and decoration so it stands out in the tree view
         treeItem.resourceUri = vscode.Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
       }
-      // treeItem = highlightLabel(treeItem, this.itemSearchString);
       treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
     }
 
