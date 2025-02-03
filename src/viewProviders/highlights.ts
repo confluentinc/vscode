@@ -35,13 +35,6 @@ export function highlightLabel(treeItem: TreeItem, searchStr: string): TreeItem 
       label: label,
       highlights: labelHighlights,
     };
-  } else if (String(treeItem.description)?.toLowerCase().includes(searchStr.toLowerCase())) {
-    // the description matched; just add an asterisk to the label and highlight that instead
-    // since the description property can't be highlighted directly
-    treeItem.label = {
-      label: `${label}*`,
-      highlights: [[label.length, label.length + 1]],
-    };
   }
 
   return treeItem;
