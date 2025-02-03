@@ -3,10 +3,10 @@ import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "v
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
 /** Base class for all KafkaClusters */
-export abstract class KafkaCluster extends Data implements IResourceBase {
+export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.KAFKA_CLUSTER;
@@ -17,6 +17,10 @@ export abstract class KafkaCluster extends Data implements IResourceBase {
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
   uri?: string;
+
+  searchableText(): string {
+    return `${this.name} ${this.id}`;
+  }
 }
 
 /** A Confluent Cloud {@link KafkaCluster} with additional properties. */

@@ -39,3 +39,6 @@ export const currentKafkaClusterChanged = new vscode.EventEmitter<KafkaCluster |
 export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegistry | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
+
+/** The user set/unset a filter for the Resources view. */
+export const resourceSearchSet = new vscode.EventEmitter<string | null>();
