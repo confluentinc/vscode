@@ -263,14 +263,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
           this.itemSearchString,
         ) as ResourceViewProviderData[];
       }
-      // update the tree view message to show how many results were found to match the search string
-      // (not just how many were returned in the tree view)
-      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
-      // will never be called and the message won't update
+      // aggregate all elements that directly match the search string (not just how many were
+      // returned in the tree view since children of directly-matching parents will be included)
       const matchingChildren = children.filter((child) =>
         itemMatchesSearch(child, this.itemSearchString!),
       );
       matchingChildren.forEach((child) => this.searchMatches.add(child));
+      // update the tree view message to show how many results were found to match the search string
+      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
+      // will never be called and the message won't update
       const plural = this.searchMatches.size > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
         this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
