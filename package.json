@@ -39,7 +39,6 @@
     "kstreams",
     "kafka streams",
     "schema",
-    "schema registry",
     "producer",
     "consumer",
     "kafka consumer",
@@ -210,6 +209,17 @@
         "icon": "$(confluent-schema-registry)",
         "title": "Select Schema Registry",
         "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.resources.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Resources View"
+      },
+      {
+        "command": "confluent.resources.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Resources View"
       },
       {
         "command": "confluent.scaffold",
@@ -457,6 +467,14 @@
         }
       }
     },
+    "keybindings": [
+      {
+        "command": "confluent.resources.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-resources"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -491,7 +509,13 @@
     "viewsWelcome": [
       {
         "view": "confluent-resources",
-        "contents": "No resources found."
+        "contents": "No resources found.",
+        "when": "!confluent.resourceSearchApplied"
+      },
+      {
+        "view": "confluent-resources",
+        "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
+        "when": "confluent.resourceSearchApplied"
       },
       {
         "view": "confluent-schemas",
@@ -591,6 +615,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.search.clear",
+          "when": "confluent.resourceSearchApplied"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -672,14 +700,24 @@
       ],
       "view/title": [
         {
+          "command": "confluent.resources.search",
+          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.resources.search.clear",
+          "when": "view == confluent-resources && confluent.resourceSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.connections.direct",
           "when": "view == confluent-resources",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.schemas.create",
