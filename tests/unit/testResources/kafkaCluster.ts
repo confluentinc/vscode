@@ -4,7 +4,11 @@ import {
   LocalKafkaCluster,
 } from "../../../src/models/kafkaCluster";
 import { TEST_DIRECT_CONNECTION_ID } from "./connection";
-import { TEST_CCLOUD_ENVIRONMENT, TEST_CCLOUD_PROVIDER, TEST_CCLOUD_REGION } from "./environments";
+import {
+  TEST_CCLOUD_ENVIRONMENT_ID,
+  TEST_CCLOUD_PROVIDER,
+  TEST_CCLOUD_REGION,
+} from "./environments";
 
 export const TEST_LOCAL_KAFKA_CLUSTER: LocalKafkaCluster = LocalKafkaCluster.create({
   id: "local-kafka-cluster-abc123",
@@ -20,7 +24,7 @@ export const TEST_CCLOUD_KAFKA_CLUSTER: CCloudKafkaCluster = CCloudKafkaCluster.
   region: TEST_CCLOUD_REGION,
   bootstrapServers: `SASL_SSL://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud:443`,
   uri: `https://pkc-abc123.${TEST_CCLOUD_REGION}.${TEST_CCLOUD_PROVIDER}.confluent.cloud:443`,
-  environmentId: TEST_CCLOUD_ENVIRONMENT.id,
+  environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
 });
 
 export const TEST_DIRECT_KAFKA_CLUSTER = DirectKafkaCluster.create({
