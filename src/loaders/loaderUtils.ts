@@ -146,7 +146,7 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
 }
 
 /**
- * Fetch all of the subjects in the schema registry and return them as an array of strings.
+ * Fetch all of the subjects in the schema registry and return them as an array of sorted strings.
  * Does not store into the resource manager.
  */
 export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<string[]> {
@@ -156,7 +156,7 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<str
     schemaRegistry.connectionId,
   );
 
-  return await client.list();
+  return (await client.list()).sort();
 }
 
 /**
