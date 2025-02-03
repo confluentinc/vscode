@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ResourceLoader } from "../loaders/";
 import { getConnectionLabel } from "../models/resource";
-import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
+import { getSubjectIcon, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
@@ -12,35 +12,10 @@ import { SchemaRegistry } from "../models/schemaRegistry";
  */
 export async function schemaSubjectQuickPick(
   schemaRegistry: SchemaRegistry,
-  onlyType: SchemaType | undefined = undefined,
-  defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-  const schemas = await loader.getSchemasForRegistry(schemaRegistry);
 
-  let schemaSubjects: string[] | undefined;
-
-  const latestVersionSchemaBySubject = new Map<string, Schema>();
-  if (schemas) {
-    // Crunch down to map of subject -> latest version'd Schema for said subject
-    for (const schema of schemas) {
-      // Skip if the caller asked for only a specific type of schema and this one doesn't match.
-      if (onlyType && schema.type !== onlyType) {
-        continue;
-      }
-      const latestVersionSchema = latestVersionSchemaBySubject.get(schema.subject);
-      if (!latestVersionSchema || schema.version > latestVersionSchema.version) {
-        latestVersionSchemaBySubject.set(schema.subject, schema);
-      }
-    }
-
-    schemaSubjects = Array.from(latestVersionSchemaBySubject.keys());
-    schemaSubjects.sort();
-  }
-
-  if (schemas === undefined) {
-    schemaSubjects = [];
-  }
+  const schemaSubjects = await loader.getSubjects(schemaRegistry);
 
   // Convert to quickpick items, first entry to create a new schema / subject followed by a separator
   const newSchemaLabel = "Create new schema / subject";
@@ -58,26 +33,11 @@ export async function schemaSubjectQuickPick(
 
   // Wire up all of the exsting schema registry subjects as items
   // with the description as the subject name for easy return value.
-  for (const subject of schemaSubjects!) {
-    const latestVersionSchema = latestVersionSchemaBySubject.get(subject);
-
+  for (const subject of schemaSubjects) {
     subjectItems.push({
       label: subject,
       iconPath: getSubjectIcon(subject),
-      description: `v${latestVersionSchema?.version}`,
-      alwaysShow: subject === defaultSubject,
     });
-  }
-
-  // If defaultSubject is set (and present), make its quickpick item the default selection.
-  if (defaultSubject) {
-    const defaultSubjectItem = subjectItems.find((item) => item.label === defaultSubject);
-    if (defaultSubjectItem) {
-      // pop it off the array and re-insert at the front. Being the first item
-      // is the only way to make it the default selection when using showQuickPick(), sigh.
-      subjectItems = subjectItems.filter((item) => item !== defaultSubjectItem);
-      subjectItems.unshift(defaultSubjectItem);
-    }
   }
 
   const chosenSubject: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(

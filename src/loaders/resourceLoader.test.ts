@@ -19,13 +19,14 @@ import { ResourceLoader } from "./resourceLoader";
 describe("ResourceLoader::getSubjects()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
+
   let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
+  let fetchSubjectsStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    const fetchSubjectsStub: sinon.SinonStub = sandbox.stub(loaderUtils, "fetchSubjects");
-    fetchSubjectsStub.resolves(["subject1", "subject2"]);
+    fetchSubjectsStub = sandbox.stub(loaderUtils, "fetchSubjects");
 
     loaderInstance = LocalResourceLoader.getInstance();
 
@@ -58,13 +59,16 @@ describe("ResourceLoader::getSubjects()", () => {
   });
 
   it("Returns subjects when called with right schema registry or env id", async () => {
+    const fetchSubjectsStubReturns = ["subject1", "subject2", "subject3"];
+    fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
+
     for (const inputParam of [
       TEST_LOCAL_SCHEMA_REGISTRY,
       TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
     ]) {
       const subjects = await loaderInstance.getSubjects(inputParam);
 
-      assert.deepStrictEqual(subjects, ["subject1", "subject2"]);
+      assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
     }
   });
 });
