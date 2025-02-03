@@ -51,8 +51,16 @@ export function countMatchingElements(item: ISearchable, searchStr: string): num
   return count;
 }
 
+/** Decorator for an item in a view that matches a search string. */
+const SEARCH_MATCH_DECORATION = new FileDecoration(
+  "●",
+  "Matches search",
+  new ThemeColor("list.highlightForeground"),
+);
+
 /** Uri scheme to use when a view's tree item can be decorated to look like a search result. */
 export const SEARCH_DECORATION_URI_SCHEME = "search-match";
+
 /**
  * File decoration provider that adds a visual indicator to search results for {@link Uri}s using
  * the {@link SEARCH_DECORATION_URI_SCHEME}.
@@ -60,13 +68,7 @@ export const SEARCH_DECORATION_URI_SCHEME = "search-match";
 export const SEARCH_DECORATION_PROVIDER: FileDecorationProvider = {
   provideFileDecoration: (uri: Uri): FileDecoration | undefined => {
     if (uri.scheme === SEARCH_DECORATION_URI_SCHEME) {
-      const decoration = new FileDecoration(
-        "●",
-        "Matches search",
-        new ThemeColor("list.highlightForeground"),
-      );
-      decoration.propagate = true;
-      return decoration;
+      return SEARCH_MATCH_DECORATION;
     }
   },
 };
