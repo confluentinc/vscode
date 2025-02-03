@@ -6,7 +6,14 @@ import {
 } from "../../tests/unit/testResources";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
-import { ConnectionId, connectionIdToType, isCCloud, isDirect, isLocal } from "./resource";
+import {
+  ConnectionId,
+  connectionIdToType,
+  isCCloud,
+  isDirect,
+  isLocal,
+  isSearchable,
+} from "./resource";
 import { KafkaTopic } from "./topic";
 
 type ConnectionTypeMatches = [KafkaTopic, boolean, boolean, boolean];
@@ -43,5 +50,25 @@ describe("connectionIdToType tests", () => {
       connectionIdToType("123e4567-e89b-12d3-a456-426614174000" as ConnectionId),
       ConnectionType.Direct,
     );
+  });
+});
+
+describe("isSearchable", () => {
+  it("should return true for elements that implement a searchableText method", () => {
+    const searchable = {
+      searchableText: () => "searchable",
+    };
+
+    assert.equal(isSearchable(searchable), true);
+  });
+
+  it("should return false for elements that don't implement a searchableText method", () => {
+    const notSearchable = { name: "searchable" };
+
+    assert.equal(isSearchable(notSearchable), false);
+  });
+
+  it("should return false for undefined", () => {
+    assert.equal(isSearchable(undefined), false);
   });
 });
