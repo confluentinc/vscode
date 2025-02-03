@@ -14,6 +14,7 @@ All notable changes to this extension will be documented in this file.
 - Matching topics to schemas now based on the result of the `GET /subjects` route results. First
   step of migrating away from use of the `GET /schemas` schema registry route, not implemented by
   all schema registries.
+- Quickpick for schema registry subject names (i.e. when uploading a new schema) now based off of `GET /subjects` route results.
 
 ### Fixed
 
