@@ -8,6 +8,7 @@ All notable changes to this extension will be documented in this file.
 
 - Progress indicator when producing large batches of messages to Kafka topics to improve visibility
   of long-running operations.
+- Search functionality in the Resources view to filter items by label or description.
 
 ### Changed
 
