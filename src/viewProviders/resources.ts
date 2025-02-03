@@ -40,7 +40,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel, isDirect, isSearchable } from "../models/resource";
+import { ConnectionId, ConnectionLabel, isDirect, ISearchable } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -52,8 +52,9 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
-import { filterSearchableItems } from "./filtering";
-import { createHighlightRanges } from "./highlights";
+import { updateCollapsibleStateFromSearch } from "./collapsing";
+import { filterItems, itemMatchesSearch } from "./filtering";
+import { highlightFilteredTreeItem } from "./highlights";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -101,8 +102,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
-  /** Local cache of the items returned by `getChildren` when a search string is provided. */
-  filteredItems: ResourceViewProviderData[] = [];
+  /** Highlighted items matching {@linkcode itemSearchString} */
+  highlightedItems: ResourceViewProviderData[] = [];
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -155,37 +156,18 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      // highlight the search string for the tree item, whether it matched on the label or the
-      // description. if it matched on the description, swap the label and description for display
-      const existingLabel = treeItem.label as string;
-      const existingDescription = treeItem.description as string;
-
-      const labelHighlights = createHighlightRanges(existingLabel, this.itemSearchString);
-      const descriptionHighlights = createHighlightRanges(
-        existingDescription,
-        this.itemSearchString,
-      );
-
-      if (labelHighlights.length > 0) {
-        treeItem.label = {
-          label: existingLabel,
-          highlights: labelHighlights,
-        };
-      } else if (descriptionHighlights.length > 0) {
-        // reverse!
-        treeItem.description = existingLabel;
-        treeItem.label = {
-          label: existingDescription,
-          highlights: descriptionHighlights,
-        };
+      const origLabel = treeItem.label;
+      treeItem = highlightFilteredTreeItem(treeItem, this.itemSearchString);
+      if (origLabel !== treeItem.label) {
+        // item was highlighted; track it to display in the tree view message
+        this.highlightedItems.push(element);
       }
-
-      if (treeItem.collapsibleState === vscode.TreeItemCollapsibleState.Collapsed) {
-        // adjust the id so we can auto-expand any currently-collapsed items that match the search
-        // (or whose children match the search)
-        treeItem.id = `${treeItem.id}-search`;
-        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-      }
+      treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+      const plural = this.highlightedItems.length > 1 ? "s" : "";
+      this.treeView.message = `Showing ${this.highlightedItems.length} result${plural} for "${this.itemSearchString}"`;
+    } else {
+      // clear any previous search filter message
+      this.treeView.message = undefined;
     }
 
     return treeItem;
@@ -216,8 +198,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
       }
     } else {
-      // reset the array so we can add if any search filtering is applied
-      this.filteredItems = [];
       // start loading the root-level items
       const resourcePromises: [
         Promise<ContainerTreeItem<CCloudEnvironment>>,
@@ -269,32 +249,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      // if (the parent) element is a previously-filtered result, we need to show its children.
-      // this is checked either by:
-      // - matching the search string, or
-      // - being previously returned from this method as another element's child
-      if (
-        element &&
-        ((isSearchable(element) &&
-          element.searchableText().toLowerCase().includes(this.itemSearchString.toLowerCase())) ||
-          this.filteredItems.includes(element))
-      ) {
+      if (element && itemMatchesSearch(element, this.itemSearchString)) {
+        // if the parent item matches the search string, return all children
         return children;
-      } else {
-        // if we have a search string, filter the children based on it
-        const filteredChildren = filterSearchableItems(
-          children,
-          this.itemSearchString,
-        ) as ResourceViewProviderData[];
-        this.filteredItems.push(...filteredChildren);
-        if (this.filteredItems.length) {
-          // only show a message if the filter returned at least one item, otherwise let empty state
-          // take over
-          const plural = this.filteredItems.length > 1 ? "s" : "";
-          this.treeView.message = `Filtered to ${this.filteredItems.length} resource${plural} for "${this.itemSearchString}":`;
-        }
-        return filteredChildren;
       }
+      // filter the children based on the search string
+      return filterItems(
+        children as ISearchable[],
+        this.itemSearchString,
+      ) as ResourceViewProviderData[];
     } else {
       this.treeView.message = undefined;
     }
@@ -350,6 +313,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         logger.debug("resourceSearchSet event fired, refreshing", { searchString });
         // set/unset the filter and call into getChildren() to update the tree view
         this.itemSearchString = searchString;
+        // clear highlighted results from any previous search filter
+        this.highlightedItems = [];
         this.refresh();
       },
     );
