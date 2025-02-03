@@ -53,7 +53,7 @@ import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
-import { highlightFilteredTreeItem } from "./highlights";
+import { highlightLabel } from "./highlights";
 import { filterItems, itemMatchesSearch } from "./search";
 
 const logger = new Logger("viewProviders.resources");
@@ -157,7 +157,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     if (this.itemSearchString) {
       const origLabel = treeItem.label;
-      treeItem = highlightFilteredTreeItem(treeItem, this.itemSearchString);
+      treeItem = highlightLabel(treeItem, this.itemSearchString);
       if (origLabel !== treeItem.label) {
         // item was highlighted; track it to display in the tree view message
         this.highlightedItems.push(element);
