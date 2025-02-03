@@ -5,10 +5,10 @@ import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
 /** Main class representing Kafka topic */
-export class KafkaTopic extends Data implements IResourceBase {
+export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
   iconName!: IconNames; // set depending on presence of associated schema(s)
@@ -44,6 +44,10 @@ export class KafkaTopic extends Data implements IResourceBase {
   /** Property producing a unique identifier for a topic based on both the cluster id and the topic name */
   get uniqueId(): string {
     return `${this.clusterId}-${this.name}`;
+  }
+
+  searchableText(): string {
+    return `${this.name} ${this.clusterId}`;
   }
 }
 
