@@ -128,11 +128,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
-      if (element instanceof ContainerTreeItem) {
-        // Local / CCloud containers, just return the topic tree items
-        children = element.children;
-      } else if (element instanceof KafkaTopic) {
+      if (element instanceof KafkaTopic) {
+        // return schema-subject containers
         children = await loadTopicSchemas(element);
+      } else if (element instanceof ContainerTreeItem) {
+        // schema-subject container, return schema versions for the topic
+        children = element.children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
