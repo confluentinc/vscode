@@ -53,12 +53,7 @@ import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
-import {
-  filterItems,
-  itemMatchesSearch,
-  SEARCH_DECORATION_PROVIDER,
-  SEARCH_DECORATION_URI_SCHEME,
-} from "./search";
+import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -131,13 +126,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     const listeners = this.setEventListeners();
 
-    // register the search decoration provider for the tree view so any matches can be highlighted
-    // with a dot to the right of the item label+description area
-    const searchDecorationProvider: vscode.Disposable =
-      vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER);
-
     // dispose of the tree view and listeners when the extension is deactivated
-    this.disposables.push(this.treeView, searchDecorationProvider, ...listeners);
+    this.disposables.push(this.treeView, ...listeners);
   }
 
   static getInstance(): ResourceViewProvider {

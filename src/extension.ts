@@ -88,6 +88,7 @@ import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
+import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 
@@ -235,6 +236,12 @@ async function _activateExtension(
 
   // ensure our diagnostic collection(s) are cleared when the extension is deactivated
   context.subscriptions.push(JSON_DIAGNOSTIC_COLLECTION);
+
+  // register the search decoration provider for the tree views so any matches can be highlighted
+  // with a dot to the right of the item label+description area
+  context.subscriptions.push(
+    vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
+  );
 
   // XXX: used for testing; do not remove
   return context;
