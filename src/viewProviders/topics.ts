@@ -99,10 +99,10 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
   getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {
     let treeItem: vscode.TreeItem;
-    if (element instanceof Schema) {
-      treeItem = new SchemaTreeItem(element);
-    } else if (element instanceof KafkaTopic) {
+    if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
+    } else if (element instanceof Schema) {
+      treeItem = new SchemaTreeItem(element);
     } else {
       // should only be left with ContainerTreeItems
       treeItem = element;
