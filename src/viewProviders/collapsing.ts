@@ -11,6 +11,11 @@ export function updateCollapsibleStateFromSearch(
   treeItem: TreeItem,
   searchStr: string,
 ): TreeItem {
+  if (!searchStr) {
+    // return the tree item as-is if there's no search string or it's empty
+    return treeItem;
+  }
+
   const origCollapsibleState = treeItem.collapsibleState;
 
   if (element.children?.some((child) => matchesOrHasMatchingChild(child, searchStr))) {
