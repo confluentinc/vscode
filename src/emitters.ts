@@ -44,3 +44,5 @@ export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 export const resourceSearchSet = new vscode.EventEmitter<string | null>();
 /** The user set/unset a filter for the Topics view. */
 export const topicSearchSet = new vscode.EventEmitter<string | null>();
+/** The user set/unset a filter for the Schemas view. */
+export const schemaSearchSet = new vscode.EventEmitter<string | null>();
