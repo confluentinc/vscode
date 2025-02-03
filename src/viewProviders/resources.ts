@@ -250,7 +250,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     if (this.itemSearchString) {
       if (element && itemMatchesSearch(element, this.itemSearchString)) {
-        // if the parent item matches the search string, return all children
+        // if the parent item matches the search string, return all children so the user can expand
+        // and see them all, even if just the parent item matched and shows the highlight(s)
         return children;
       }
       // filter the children based on the search string
