@@ -2,6 +2,8 @@ import { ISearchable, isSearchable } from "../models/resource";
 
 /** Check if an item matches the provided search string. */
 export function itemMatchesSearch(item: ISearchable, searchStr: string): boolean {
+  // if there's no search string, everything matches
+  if (!searchStr) return true;
   return (
     isSearchable(item) && item.searchableText().toLowerCase().includes(searchStr.toLowerCase())
   );
