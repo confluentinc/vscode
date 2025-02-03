@@ -7,9 +7,16 @@ import {
 import { TEST_CCLOUD_KAFKA_CLUSTER } from "../../tests/unit/testResources/kafkaCluster";
 import { TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources/schemaRegistry";
 import { CCloudEnvironment } from "../models/environment";
+import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { ISearchable } from "../models/resource";
-import { filterItems, itemMatchesSearch, matchesOrHasMatchingChild } from "./search";
+import {
+  countMatchingElements,
+  filterItems,
+  itemMatchesSearch,
+  matchesOrHasMatchingChild,
+  traverseMatches,
+} from "./search";
 
 describe("viewProviders/search filterItems", () => {
   it("should return all items when `searchStr` is empty", () => {
@@ -147,5 +154,123 @@ describe("viewProviders/search matchesOrHasMatchingChild", () => {
     });
 
     assert.strictEqual(matchesOrHasMatchingChild(env, TEST_CCLOUD_KAFKA_CLUSTER.name), false);
+  });
+});
+
+describe("viewProviders/search traverseMatches", () => {
+  it("should call callback for direct matches", () => {
+    const searchStr = TEST_LOCAL_ENVIRONMENT.name;
+    const matches: ISearchable[] = [];
+    const callback = (item: ISearchable) => matches.push(item);
+
+    traverseMatches(TEST_LOCAL_ENVIRONMENT, searchStr, callback);
+
+    assert.deepStrictEqual(matches, [TEST_LOCAL_ENVIRONMENT]);
+  });
+
+  it("should call callback for child matches", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    const searchStr = TEST_CCLOUD_KAFKA_CLUSTER.name;
+    const matches: ISearchable[] = [];
+    const callback = (item: ISearchable) => matches.push(item);
+
+    traverseMatches(env, searchStr, callback);
+
+    assert.strictEqual(matches.length, 1);
+    assert.deepStrictEqual(matches[0], TEST_CCLOUD_KAFKA_CLUSTER);
+  });
+
+  it("should traverse deeply nested matches", () => {
+    const container = new ContainerTreeItem("Container", TreeItemCollapsibleState.Collapsed, [
+      new CCloudEnvironment({
+        ...TEST_CCLOUD_ENVIRONMENT,
+        kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+      }),
+    ]);
+    const searchStr = TEST_CCLOUD_KAFKA_CLUSTER.name;
+    const matches: ISearchable[] = [];
+    const callback = (item: ISearchable) => matches.push(item);
+
+    traverseMatches(container, searchStr, callback);
+
+    assert.strictEqual(matches.length, 1);
+    assert.deepStrictEqual(matches[0], TEST_CCLOUD_KAFKA_CLUSTER);
+  });
+
+  it("should handle empty search string", () => {
+    const matches: ISearchable[] = [];
+    const searchStr = "";
+    const callback = (item: ISearchable) => matches.push(item);
+
+    traverseMatches(TEST_LOCAL_ENVIRONMENT, searchStr, callback);
+
+    assert.deepStrictEqual(matches, [TEST_LOCAL_ENVIRONMENT]);
+  });
+
+  it("should handle items without children", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [],
+    });
+    const matches: ISearchable[] = [];
+    const searchStr = TEST_CCLOUD_KAFKA_CLUSTER.name;
+    const callback = (item: ISearchable) => matches.push(item);
+
+    traverseMatches(env, searchStr, callback);
+
+    assert.strictEqual(matches.length, 0);
+  });
+});
+
+describe("viewProviders/search countMatchingElements", () => {
+  it("should count direct matches", () => {
+    const count = countMatchingElements(TEST_LOCAL_ENVIRONMENT, TEST_LOCAL_ENVIRONMENT.name);
+
+    assert.strictEqual(count, 1);
+  });
+
+  it("should count child matches", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+
+    const count = countMatchingElements(env, TEST_CCLOUD_KAFKA_CLUSTER.name);
+
+    assert.strictEqual(count, 1);
+  });
+
+  it("should count multiple matches", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [
+        TEST_CCLOUD_KAFKA_CLUSTER,
+        CCloudKafkaCluster.create({ ...TEST_CCLOUD_KAFKA_CLUSTER, id: "second-cluster" }),
+      ],
+    });
+
+    const count = countMatchingElements(env, TEST_CCLOUD_KAFKA_CLUSTER.name);
+
+    assert.strictEqual(count, 2);
+  });
+
+  it("should return 0 for empty search string", () => {
+    const count = countMatchingElements(TEST_LOCAL_ENVIRONMENT, "");
+
+    assert.strictEqual(count, 0);
+  });
+
+  it("should return 0 for items without children", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      kafkaClusters: [],
+    });
+
+    const count = countMatchingElements(env, TEST_CCLOUD_KAFKA_CLUSTER.name);
+
+    assert.strictEqual(count, 0);
   });
 });
