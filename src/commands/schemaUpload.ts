@@ -214,13 +214,10 @@ async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
 /**
  * Guide the user through chosing a subject to bind the schema to.
  */
-async function chooseSubject(
-  registry: SchemaRegistry,
-  defaultSubject: string | undefined = undefined,
-): Promise<string | undefined> {
+async function chooseSubject(registry: SchemaRegistry): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, defaultSubject);
+  let subject = await schemaSubjectQuickPick(registry);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.

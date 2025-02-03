@@ -12,7 +12,6 @@ import { SchemaRegistry } from "../models/schemaRegistry";
  */
 export async function schemaSubjectQuickPick(
   schemaRegistry: SchemaRegistry,
-  defaultSubject: string | undefined = undefined,
 ): Promise<string | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
 
@@ -38,19 +37,7 @@ export async function schemaSubjectQuickPick(
     subjectItems.push({
       label: subject,
       iconPath: getSubjectIcon(subject),
-      alwaysShow: subject === defaultSubject,
     });
-  }
-
-  // If defaultSubject is set (and present), make its quickpick item the default selection.
-  if (defaultSubject) {
-    const defaultSubjectItem = subjectItems.find((item) => item.label === defaultSubject);
-    if (defaultSubjectItem) {
-      // pop it off the array and re-insert at the front. Being the first item
-      // is the only way to make it the default selection when using showQuickPick(), sigh.
-      subjectItems = subjectItems.filter((item) => item !== defaultSubjectItem);
-      subjectItems.unshift(defaultSubjectItem);
-    }
   }
 
   const chosenSubject: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
