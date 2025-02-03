@@ -1,8 +1,19 @@
 import assert from "assert";
-import { TEST_LOCAL_KAFKA_CLUSTER } from "../../tests/unit/testResources";
-import { createTestTopicData } from "../../tests/unit/testUtils";
+import * as sinon from "sinon";
+import {
+  TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_SCHEMA_REGISTRY,
+} from "../../tests/unit/testResources";
+import { createTestTopicData, getTestStorageManager } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest/models";
+import {
+  GetSchemaByVersionRequest,
+  Schema as ResponseSchema,
+  SubjectsV1Api,
+} from "../clients/schemaRegistryRest";
 import * as loaderUtils from "../loaders/loaderUtils";
+import { SchemaRegistry } from "../models/schemaRegistry";
+import * as sidecar from "../sidecar";
 
 // as from fetchTopics() result.
 export const topicsResponseData: TopicData[] = [
@@ -27,5 +38,52 @@ describe("correlateTopicsWithSchemaSubjects() test", () => {
     assert.ok(results[1].hasSchema);
     assert.ok(results[2].hasSchema);
     assert.ok(!results[3].hasSchema);
+  });
+});
+
+describe("fetchSchemaSubjectGroup() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let subjectsV1ApiStub: sinon.SinonStubbedInstance<SubjectsV1Api>;
+
+  beforeEach(async () => {
+    await getTestStorageManager();
+
+    sandbox = sinon.createSandbox();
+
+    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+      sandbox.createStubInstance(sidecar.SidecarHandle);
+
+    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+
+    subjectsV1ApiStub = sandbox.createStubInstance(SubjectsV1Api);
+
+    mockSidecarHandle.getSubjectsV1Api.returns(subjectsV1ApiStub);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should fetch versions of schemas for a given subject", async () => {
+    const schemaRegistry: SchemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+    const subject: string = "topic1-value";
+
+    const versions = [1, 2, 3];
+    subjectsV1ApiStub.listVersions.resolves(versions);
+
+    async function mockGetSchemaByVersion(
+      request: GetSchemaByVersionRequest,
+    ): Promise<ResponseSchema> {
+      return {
+        id: Number.parseInt(request.version) + 10000,
+        subject: request.subject,
+        version: parseInt(request.version),
+        schema: "insert schema document here",
+        schemaType: "AVRO",
+      };
+    }
+    subjectsV1ApiStub.getSchemaByVersion.callsFake(mockGetSchemaByVersion);
+
+    await loaderUtils.fetchSchemaSubjectGroup(schemaRegistry, subject);
   });
 });

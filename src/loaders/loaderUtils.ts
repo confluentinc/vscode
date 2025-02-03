@@ -175,6 +175,9 @@ export async function fetchSchemaSubjectGroup(
 
   // Learn all of the live version numbers for the subject.
   const versions: number[] = await client.listVersions({ subject });
+  logger.info(
+    `fetchSchemaSubjectGroup(): fetching ${versions.length} versions of schema for subject ${subject}`,
+  );
 
   // Now prep to fetch all of the versions concurrently.
   const highestVersion = Math.max(...versions);
