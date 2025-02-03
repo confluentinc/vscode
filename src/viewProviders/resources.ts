@@ -53,8 +53,12 @@ import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
-import { highlightLabel } from "./highlights";
-import { filterItems, itemMatchesSearch } from "./search";
+import {
+  filterItems,
+  itemMatchesSearch,
+  SEARCH_DECORATION_PROVIDER,
+  SEARCH_DECORATION_URI_SCHEME,
+} from "./search";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -102,8 +106,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
-  /** Highlighted items matching {@linkcode itemSearchString} */
-  highlightedItems: ResourceViewProviderData[] = [];
+  /** Items directly matching the {@linkcode itemSearchString}, if provided. */
+  searchMatches: Set<ResourceViewProviderData> = new Set();
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -127,8 +131,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     const listeners = this.setEventListeners();
 
+    // register the search decoration provider for the tree view so any matches can be highlighted
+    // with a dot to the right of the item label+description area
+    const searchDecorationProvider: vscode.Disposable =
+      vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER);
+
     // dispose of the tree view and listeners when the extension is deactivated
-    this.disposables.push(this.treeView, ...listeners);
+    this.disposables.push(this.treeView, searchDecorationProvider, ...listeners);
   }
 
   static getInstance(): ResourceViewProvider {
@@ -156,18 +165,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      const origLabel = treeItem.label;
-      treeItem = highlightLabel(treeItem, this.itemSearchString);
-      if (origLabel !== treeItem.label) {
-        // item was highlighted; track it to display in the tree view message
-        this.highlightedItems.push(element);
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = vscode.Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
       }
+      // treeItem = highlightLabel(treeItem, this.itemSearchString);
       treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
-      const plural = this.highlightedItems.length > 1 ? "s" : "";
-      this.treeView.message = `Showing ${this.highlightedItems.length} result${plural} for "${this.itemSearchString}"`;
-    } else {
-      // clear any previous search filter message
-      this.treeView.message = undefined;
     }
 
     return treeItem;
@@ -249,16 +253,31 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     }
 
     if (this.itemSearchString) {
-      if (element && itemMatchesSearch(element, this.itemSearchString)) {
-        // if the parent item matches the search string, return all children so the user can expand
-        // and see them all, even if just the parent item matched and shows the highlight(s)
-        return children;
+      // if the parent item matches the search string, return all children so the user can expand
+      // and see them all, even if just the parent item matched and shows the highlight(s)
+      const parentMatched = element && itemMatchesSearch(element, this.itemSearchString);
+      if (!parentMatched) {
+        // filter the children based on the search string
+        children = filterItems(
+          [...children] as ISearchable[],
+          this.itemSearchString,
+        ) as ResourceViewProviderData[];
       }
-      // filter the children based on the search string
-      return filterItems(
-        children as ISearchable[],
-        this.itemSearchString,
-      ) as ResourceViewProviderData[];
+      // update the tree view message to show how many results were found to match the search string
+      // (not just how many were returned in the tree view)
+      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
+      // will never be called and the message won't update
+      const matchingChildren = children.filter((child) =>
+        itemMatchesSearch(child, this.itemSearchString!),
+      );
+      matchingChildren.forEach((child) => this.searchMatches.add(child));
+      const plural = this.searchMatches.size > 1 ? "s" : "";
+      if (this.searchMatches.size > 0) {
+        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+      } else {
+        // let empty state take over
+        this.treeView.message = undefined;
+      }
     } else {
       this.treeView.message = undefined;
     }
@@ -314,8 +333,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         logger.debug("resourceSearchSet event fired, refreshing", { searchString });
         // set/unset the filter and call into getChildren() to update the tree view
         this.itemSearchString = searchString;
-        // clear highlighted results from any previous search filter
-        this.highlightedItems = [];
+        // clear from any previous search filter
+        this.searchMatches = new Set();
         this.refresh();
       },
     );
