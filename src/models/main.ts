@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { filterSearchableItems } from "../viewProviders/filtering";
-import { ISearchable, isSearchable } from "./resource";
+import { ISearchable } from "./resource";
 
 /** Anything with an `id` string property */
 export interface IdItem {
@@ -12,7 +11,10 @@ export interface IdItem {
  * easily group items in the tree view. Most useful when there are multiple types of
  * items nested under a single resource.
  */
-export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem implements ISearchable {
+export class ContainerTreeItem<T extends IdItem & ISearchable>
+  extends vscode.TreeItem
+  implements ISearchable
+{
   private _children: T[] = [];
 
   constructor(
@@ -50,32 +52,6 @@ export class ContainerTreeItem<T extends IdItem> extends vscode.TreeItem impleme
       label = (this.label as vscode.TreeItemLabel).label;
     }
     return `${label} ${this.description}`;
-  }
-
-  searchContainer(searchStr: string): ContainerTreeItem<T> | undefined {
-    if (this.searchableText().toLowerCase().includes(searchStr)) {
-      // the container itself matches, no need to check its children
-      return this;
-    }
-
-    // filter to only the children that implement ISearchable
-    const searchableChildren = this.children.filter(isSearchable);
-    if (searchableChildren.length === 0) {
-      // no searchable children to check
-      return;
-    }
-
-    // determine whether a container matches based on its children; if it does, return the container
-    // with possibly a subset of its matching children
-    const childrenMatches = filterSearchableItems(
-      searchableChildren as unknown as ISearchable[],
-      searchStr,
-    );
-    if (childrenMatches.length > 0) {
-      // only if we have at least one matching child do we return this (possibly partial) container
-      this.children = childrenMatches as unknown as T[];
-      return this;
-    }
   }
 }
 
