@@ -47,7 +47,7 @@ export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   }
 
   searchableText(): string {
-    return `${this.name} ${this.clusterId}`;
+    return this.name;
   }
 }
 
