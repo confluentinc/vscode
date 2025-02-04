@@ -771,19 +771,29 @@
           "group": "2_copy@1"
         },
         {
+          "command": "confluent.topics.search",
+          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.topics.search.clear",
+          "when": "view == confluent-topics && confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.topics.create",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.kafka-cluster.select",
           "when": "view == confluent-topics && (confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.topics.refresh",
           "when": "view == confluent-topics",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
@@ -799,16 +809,6 @@
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@3"
-        },
-        {
-          "command": "confluent.topics.search",
-          "when": "view == confluent-topics && !confluent.topicSearchApplied",
-          "group": "navigation@1"
-        },
-        {
-          "command": "confluent.topics.search.clear",
-          "when": "view == confluent-topics && confluent.topicSearchApplied",
-          "group": "navigation@1"
         }
       ],
       "view/item/context": [
