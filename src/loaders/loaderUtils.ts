@@ -210,7 +210,7 @@ export async function fetchSchemaSubjectGroup(
     if (isSuccessResult(result)) {
       schemas[index] = result.result;
     } else {
-      // improve this before PR raised.
+      // If any single request failed, fail the whole operation for now.
       throw result.error;
     }
   });

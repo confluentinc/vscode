@@ -6,7 +6,11 @@ import {
 } from "../../tests/unit/testResources";
 import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest/models";
-import { GetSchemaByVersionRequest, Schema as ResponseSchema } from "../clients/schemaRegistryRest";
+import {
+  GetSchemaByVersionRequest,
+  Schema as ResponseSchema,
+  SubjectsV1Api,
+} from "../clients/schemaRegistryRest";
 import * as loaderUtils from "../loaders/loaderUtils";
 import { Schema, SchemaType } from "../models/schema";
 import * as sidecar from "../sidecar";
@@ -41,28 +45,18 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
   // Common suite and setup for loaderUtils functions that interact with SubjectsV1Api.
 
   let sandbox: sinon.SinonSandbox;
-  let listSubjectsStub: sinon.SinonStub;
-  let listVersionsStub: sinon.SinonStub;
-  let getSchemaByVersionStub: sinon.SinonStub;
+  let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
-    listSubjectsStub = sandbox.stub();
-    listVersionsStub = sandbox.stub();
-    getSchemaByVersionStub = sandbox.stub();
-
-    const mockSubjectsV1Api = {
-      list: listSubjectsStub,
-      listVersions: listVersionsStub,
-      getSchemaByVersion: getSchemaByVersionStub,
-    };
+    stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
 
     const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
 
     const mockHandle = {
       getSubjectsV1Api: () => {
-        return mockSubjectsV1Api;
+        return stubbedSubjectsV1Api;
       },
     };
     getSidecarStub.resolves(mockHandle);
@@ -74,7 +68,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
 
   it("fetchSubjects() should return subjects sorted", async () => {
     const subjectsRaw = ["subject2", "subject3", "subject1"];
-    listSubjectsStub.resolves(subjectsRaw);
+    stubbedSubjectsV1Api.list.resolves(subjectsRaw);
 
     const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
 
@@ -88,7 +82,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
     // learn that there are 3 versions. And as if version 1 was soft deleted.
     const versions = [2, 3, 4];
-    listVersionsStub.resolves(versions);
+    stubbedSubjectsV1Api.listVersions.resolves(versions);
 
     // Then will ultimately drive the getSchemaByVersion() API client call for each version.
     async function fakeGetSchemaByVersion(
@@ -102,7 +96,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
         schemaType: "AVRO",
       };
     }
-    getSchemaByVersionStub.callsFake(fakeGetSchemaByVersion);
+    stubbedSubjectsV1Api.getSchemaByVersion.callsFake(fakeGetSchemaByVersion);
 
     // Make the function call. Should drive the above stubs using executeInWorkerPool()
     // and demultiplex its results properly.
@@ -131,7 +125,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
     // learn that there are 3 versions. And as if version 1 was soft deleted.
     const versions = [2, 3, 4];
-    listVersionsStub.resolves(versions);
+    stubbedSubjectsV1Api.listVersions.resolves(versions);
 
     // Then will ultimately drive the getSchemaByVersion() API client call for each version.
     async function fakeGetSchemaByVersion(
@@ -148,7 +142,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
         schemaType: "AVRO",
       };
     }
-    getSchemaByVersionStub.callsFake(fakeGetSchemaByVersion);
+    stubbedSubjectsV1Api.getSchemaByVersion.callsFake(fakeGetSchemaByVersion);
 
     // Make the function call. Should drive the above stubs using executeInWorkerPool()
     // and demultiplex its results properly, which in this case means noticing the
