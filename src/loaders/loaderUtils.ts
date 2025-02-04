@@ -7,6 +7,8 @@ import {
 } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { IdItem } from "../models/main";
+import { ISearchable } from "../models/resource";
 import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -75,8 +77,17 @@ export function correlateTopicsWithSchemaSubjects(
   subjects: string[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = subjects.some((subject) =>
+    const matchingSubjects: string[] = subjects.filter((subject) =>
       subjectMatchesTopicName(subject, topic.topic_name),
+    );
+
+    // attach subjects to topic for search
+    const subjectChildren: (ISearchable & IdItem)[] = matchingSubjects.map(
+      (subject): ISearchable & IdItem => ({
+        id: `${topic.cluster_id}-${topic.topic_name}-${subject}`,
+        searchableText: () => subject,
+        children: [],
+      }),
     );
 
     return KafkaTopic.create({
@@ -90,8 +101,9 @@ export function correlateTopicsWithSchemaSubjects(
       configs: topic.configs,
       clusterId: cluster.id,
       environmentId: cluster.environmentId,
-      hasSchema: hasMatchingSchema,
+      hasSchema: matchingSubjects.length > 0,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
+      children: subjectChildren,
     });
   });
 
