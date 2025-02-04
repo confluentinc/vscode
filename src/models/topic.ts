@@ -29,6 +29,9 @@ export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   environmentId!: EnvironmentId;
   hasSchema: boolean = false;
 
+  /** Schema subjects; only used with Topics view search. */
+  children?: ISearchable[] | undefined;
+
   /** Operations the user is authzd to perform on the topic */
   operations!: Enforced<KafkaTopicOperation[]>;
 
