@@ -5,9 +5,24 @@ openapi: 3.0.0
 info:
   title: Scaffolding API
   version: 0.0.1
+  contact:
+    name: DTX
+    url: https://confluent.slack.com/app_redirect?channel=dtx-eng
+    email: dtx-eng@confluent.io
+  x-api-id: 05ee8438-54db-4838-9df1-a3981492e4de
+  x-api-group: scaffold/v1
+  x-audience: external-public
+  x-tag-group: Scaffolding API (%s)
+  description: |
+    The Scaffolding Service exposes collections of templates that can
+    be applied to generate application projects.
 servers:
   - url: https://api.confluent.cloud
     description: Confluent Cloud production
+  - url: https://api.stag.cpdev.cloud
+    description: Confluent Cloud staging
+  - url: https://api.devel.cpdev.cloud
+    description: Confluent Cloud development
 paths:
   /scaffold/v1/template-collections:
     x-lifecycle-stage: Early Access
@@ -43,13 +58,13 @@ paths:
       tags:
         - Template Collections (scaffold/v1)
       responses:
-        '200':
+        "200":
           description: Template Collection.
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/scaffold.v1.TemplateCollectionList'
+                  - $ref: "#/components/schemas/scaffold.v1.TemplateCollectionList"
           headers:
             X-Request-Id:
               schema:
@@ -66,15 +81,17 @@ paths:
             X-RateLimit-Reset:
               schema:
                 type: integer
-              description: "The relative time in seconds until the current rate-limit window resets.  \n  \n**Important:**\
-                \ This differs from Github and Twitter's same-named header which uses UTC epoch seconds. We use relative time\
+              description: "The relative time in seconds until the current rate-limit window
+                resets.  \n  \n**Important:**\
+                \ This differs from Github and Twitter's same-named header which uses UTC epoch
+                seconds. We use relative time\
                 \ to avoid client/server time synchronization issues."
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '500':
-          $ref: '#/components/responses/DefaultSystemError'
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
   /scaffold/v1/template-collections/{name}:
     x-lifecycle-stage: Early Access
     x-self-access: false
@@ -99,13 +116,13 @@ paths:
       tags:
         - Template Collections (scaffold/v1)
       responses:
-        '200':
+        "200":
           description: Template Collection.
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/scaffold.v1.TemplateCollection'
+                  - $ref: "#/components/schemas/scaffold.v1.TemplateCollection"
                   - type: object
                     required:
                       - api_version
@@ -132,17 +149,19 @@ paths:
             X-RateLimit-Reset:
               schema:
                 type: integer
-              description: "The relative time in seconds until the current rate-limit window resets.  \n  \n**Important:**\
-                \ This differs from Github and Twitter's same-named header which uses UTC epoch seconds. We use relative time\
+              description: "The relative time in seconds until the current rate-limit window
+                resets.  \n  \n**Important:**\
+                \ This differs from Github and Twitter's same-named header which uses UTC epoch
+                seconds. We use relative time\
                 \ to avoid client/server time synchronization issues."
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '500':
-          $ref: '#/components/responses/DefaultSystemError'
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
   /scaffold/v1/template-collections/{template-collection-name}/templates:
     x-lifecycle-stage: Early Access
     x-self-access: false
@@ -183,13 +202,13 @@ paths:
       tags:
         - Templates (scaffold/v1)
       responses:
-        '200':
+        "200":
           description: Template.
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/scaffold.v1.TemplateList'
+                  - $ref: "#/components/schemas/scaffold.v1.TemplateList"
           headers:
             X-Request-Id:
               schema:
@@ -206,15 +225,17 @@ paths:
             X-RateLimit-Reset:
               schema:
                 type: integer
-              description: "The relative time in seconds until the current rate-limit window resets.  \n  \n**Important:**\
-                \ This differs from Github and Twitter's same-named header which uses UTC epoch seconds. We use relative time\
+              description: "The relative time in seconds until the current rate-limit window
+                resets.  \n  \n**Important:**\
+                \ This differs from Github and Twitter's same-named header which uses UTC epoch
+                seconds. We use relative time\
                 \ to avoid client/server time synchronization issues."
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '500':
-          $ref: '#/components/responses/DefaultSystemError'
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
   /scaffold/v1/template-collections/{template-collection-name}/templates/{name}:
     x-lifecycle-stage: Early Access
     x-self-access: false
@@ -245,13 +266,13 @@ paths:
       tags:
         - Templates (scaffold/v1)
       responses:
-        '200':
+        "200":
           description: Template.
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/scaffold.v1.Template'
+                  - $ref: "#/components/schemas/scaffold.v1.Template"
                   - type: object
                     required:
                       - api_version
@@ -284,17 +305,19 @@ paths:
             X-RateLimit-Reset:
               schema:
                 type: integer
-              description: "The relative time in seconds until the current rate-limit window resets.  \n  \n**Important:**\
-                \ This differs from Github and Twitter's same-named header which uses UTC epoch seconds. We use relative time\
+              description: "The relative time in seconds until the current rate-limit window
+                resets.  \n  \n**Important:**\
+                \ This differs from Github and Twitter's same-named header which uses UTC epoch
+                seconds. We use relative time\
                 \ to avoid client/server time synchronization issues."
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '500':
-          $ref: '#/components/responses/DefaultSystemError'
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
   /scaffold/v1/template-collections/{template-collection-name}/templates/{name}/apply:
     x-lifecycle-stage: Early Access
     x-self-access: false
@@ -340,21 +363,21 @@ paths:
       tags:
         - Templates (scaffold/v1)
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/zip:
               schema:
                 type: string
                 format: binary
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '500':
-          $ref: '#/components/responses/DefaultSystemError'
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/RateLimitError"
+        "500":
+          $ref: "#/components/responses/DefaultSystemError"
 components:
   schemas:
     scaffold.v1.TemplateCollection:
@@ -379,14 +402,14 @@ components:
             - TemplateCollection
         metadata:
           allOf:
-            - $ref: '#/components/schemas/ObjectMeta'
+            - $ref: "#/components/schemas/ObjectMeta"
             - properties:
                 self:
                   example: https://api.confluent.cloud/scaffold/v1/template-collections/12345
                 resource_name:
                   example: crn://confluent.cloud/organization=9bb441c4-edef-46ac-8a41-c49e44a3fd9a/template-collection=12345
         spec:
-          $ref: '#/components/schemas/scaffold.v1.TemplateCollectionSpec'
+          $ref: "#/components/schemas/scaffold.v1.TemplateCollectionSpec"
     scaffold.v1.Template:
       type: object
       description: |-
@@ -409,14 +432,14 @@ components:
             - Template
         metadata:
           allOf:
-            - $ref: '#/components/schemas/ObjectMeta'
+            - $ref: "#/components/schemas/ObjectMeta"
             - properties:
                 self:
                   example: https://api.confluent.cloud/scaffold/v1/templates/12345
                 resource_name:
                   example: crn://confluent.cloud/notification-template=12345
         spec:
-          $ref: '#/components/schemas/scaffold.v1.TemplateSpec'
+          $ref: "#/components/schemas/scaffold.v1.TemplateSpec"
     scaffold.v1.TemplateOption:
       description: An option of a template.
       type: object
@@ -427,8 +450,8 @@ components:
         display_name:
           type: string
           description: >-
-            A few words that accurately and concisely represent the human readable
-            form of the option's key.
+            A few words that accurately and concisely represent the human readable form of the
+            option's key.
           maxLength: 60
         description:
           type: string
@@ -436,22 +459,26 @@ components:
         hint:
           type: string
           description: >-
-            An optional description or example of the information required for a form
-            field, typically rendered within the entry field of a form.
+            An optional description or example of the information required for a form field,
+            typically rendered within the entry field of a form.
         format:
           type: string
           description: >-
-            An optional format modifer that serves as a hint for UI presentation. If
-            specified, the only allowed value at this time is `password` to hint the UI
-            to mask the input.
+            An optional format modifer that serves as a hint for UI presentation. If specified, the
+            only allowed value at this time is `password` to hint the UI to mask the input.
           x-extensible-enum:
             - PASSWORD
         pattern:
           type: string
           description: >-
-            An optional regular expression pattern such that only values matched by this
-            pattern will be accepted.
+            An optional regular expression pattern such that only values matched by this pattern
+            will be accepted.
           format: regex
+        pattern_description:
+          type: string
+          description: >-
+            An optional human-readable description of the pattern property; should be provided only
+            if the pattern is provided.
         enum:
           type: array
           description: An optional attribute that specifies possible values for this option.
@@ -471,6 +498,16 @@ components:
           description: Examples of valid values for this option.
           items:
             type: string
+        order:
+          type: integer
+          format: int32
+          description: >-
+            An optional field that specifies the order of the template option in the UI. Template
+            options with a lower order value should be displayed before template options with a
+            higher order value. Template options with the same order value should be displayed in
+            alphanumerical order.
+          minimum: 0
+          default: 0
     scaffold.v1.TemplateCollectionList:
       type: object
       description: |-
@@ -498,7 +535,7 @@ components:
             - TemplateCollectionList
         metadata:
           allOf:
-            - $ref: '#/components/schemas/ListMeta'
+            - $ref: "#/components/schemas/ListMeta"
             - properties:
                 first:
                   example: https://api.confluent.cloud/scaffold/v1/template-collections
@@ -510,10 +547,12 @@ components:
                   example: https://api.confluent.cloud/scaffold/v1/template-collections?page_token=UvmDWOB1iwfAIBPj6EYb
         data:
           type: array
-          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          description:
+            A data property that contains an array of resource items. Each entry in the array is a
+            separate resource.
           items:
             allOf:
-              - $ref: '#/components/schemas/scaffold.v1.TemplateCollection'
+              - $ref: "#/components/schemas/scaffold.v1.TemplateCollection"
               - type: object
                 required:
                   - metadata
@@ -575,7 +614,7 @@ components:
             - TemplateList
         metadata:
           allOf:
-            - $ref: '#/components/schemas/ListMeta'
+            - $ref: "#/components/schemas/ListMeta"
             - properties:
                 first:
                   example: https://api.confluent.cloud/scaffold/v1/templates
@@ -587,10 +626,12 @@ components:
                   example: https://api.confluent.cloud/scaffold/v1/templates?page_token=UvmDWOB1iwfAIBPj6EYb
         data:
           type: array
-          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          description:
+            A data property that contains an array of resource items. Each entry in the array is a
+            separate resource.
           items:
             allOf:
-              - $ref: '#/components/schemas/scaffold.v1.Template'
+              - $ref: "#/components/schemas/scaffold.v1.Template"
               - type: object
                 required:
                   - metadata
@@ -627,25 +668,25 @@ components:
           type: string
           maxLength: 300
           example: >-
-            A Python application project that reads messages from a topic in
-            Confluent Cloud. Ideal for developers new to Kafka who want to
-            explore data or create business dashboards.
+            A Python application project that reads messages from a topic in Confluent Cloud. Ideal
+            for developers new to Kafka who want to explore data or create business dashboards.
           description: The description of the template.
         version:
           type: string
-        # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
           pattern: >-
             ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-]
             [0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]
             +(?:\.[0-9a-zA-Z-]+)*))?$
           example: 0.5.0
           description: >-
-            The semantic version of the template, of the form <major>.<minor>.<patch>.
-            Bump the version with each non-trivial change.
+            The semantic version of the template, of the form <major>.<minor>.<patch>. Bump the
+            version with each non-trivial change.
         language:
           type: string
           example: Python
-          description: The primary programming language that projects generated from the template will use.
+          description:
+            The primary programming language that projects generated from the template will use.
           x-extensible-enum:
             - Clojure
             - C/C++
@@ -684,36 +725,41 @@ components:
             - filter
             - analytics
           description: >-
-            Tags are keywords or very short phrases (1-3 words) that apply to the template
-            and that help with search and organization. Use lowercase characters and numbers
-            in each word, and separate words with a space.
+            Tags are keywords or very short phrases (1-3 words) that apply to the template and that
+            help with search and organization. Use lowercase characters and numbers in each word,
+            and separate words with a space.
         options:
           type: object
           description: Options of the template.
           additionalProperties:
-            $ref: '#/components/schemas/scaffold.v1.TemplateOption'
+            $ref: "#/components/schemas/scaffold.v1.TemplateOption"
         template_collection:
           allOf:
-            - $ref: '#/components/schemas/GlobalObjectReference'
+            - $ref: "#/components/schemas/GlobalObjectReference"
           description: The template_collection to which this belongs.
       x-enable-id: false
       x-enable-listmeta: true
       x-enable-objectmeta: true
     ObjectMeta:
-      description: ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
+      description:
+        ObjectMeta is metadata that all persisted resources must have, which includes all objects
+        users must create.
       required:
         - self
       properties:
         self:
-          description: Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL encodes the
-            service location, API version, and other particulars necessary to locate the resource at a point in time
+          description:
+            Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL
+            encodes the service location, API version, and other particulars necessary to locate the
+            resource at a point in time
           type: string
           format: uri
           readOnly: true
           example: https://api.confluent.cloud/v2/kafka-clusters/lkc-f3a90de
         resource_name:
-          description: Resource Name is a Uniform Resource Identifier (URI) that is globally unique across space and time.
-            It is represented as a Confluent Resource Name
+          description:
+            Resource Name is a Uniform Resource Identifier (URI) that is globally unique across
+            space and time. It is represented as a Confluent Resource Name
           type: string
           format: uri
           readOnly: true
@@ -721,59 +767,69 @@ components:
         created_at:
           type: string
           format: date-time
-          example: '2006-01-02T15:04:05-07:00'
+          example: "2006-01-02T15:04:05-07:00"
           readOnly: true
-          description: The date and time at which this object was created. It is represented in RFC3339 format and is in UTC.
+          description:
+            The date and time at which this object was created. It is represented in RFC3339 format
+            and is in UTC.
         updated_at:
           type: string
           format: date-time
-          example: '2006-01-02T15:04:05-07:00'
+          example: "2006-01-02T15:04:05-07:00"
           readOnly: true
-          description: The date and time at which this object was last updated. It is represented in RFC3339 format and is
-            in UTC.
+          description:
+            The date and time at which this object was last updated. It is represented in RFC3339
+            format and is in UTC.
         deleted_at:
           type: string
           format: date-time
-          example: '2006-01-02T15:04:05-07:00'
+          example: "2006-01-02T15:04:05-07:00"
           readOnly: true
-          description: The date and time at which this object was (or will be) deleted. It is represented in RFC3339 format
-            and is in UTC.
+          description:
+            The date and time at which this object was (or will be) deleted. It is represented in
+            RFC3339 format and is in UTC.
       readOnly: true
     ListMeta:
       type: object
       description: ListMeta describes metadata that resource collections may have
       properties:
         first:
-          description: A link to the first page of results. If a response does not contain a first link, then direct navigation
-            to the first page is not supported.
+          description:
+            A link to the first page of results. If a response does not contain a first link, then
+            direct navigation to the first page is not supported.
           type: string
           format: uri
           nullable: true
           example: https://api.confluent.cloud/v2/resourcekinds
         last:
-          description: A link to the last page of results. If a response does not contain a last link, then direct navigation
-            to the last page is not supported.
+          description:
+            A link to the last page of results. If a response does not contain a last link, then
+            direct navigation to the last page is not supported.
           type: string
           format: uri
           nullable: true
           example: https://api.confluent.cloud/v2/resourcekinds?page_token=bcAOehAY8F16YD84Z1wT
         prev:
-          description: A link to the previous page of results. If a response does not contain a prev link, then either there
-            is no previous data or backwards traversal through the result set is not supported.
+          description:
+            A link to the previous page of results. If a response does not contain a prev link, then
+            either there is no previous data or backwards traversal through the result set is not
+            supported.
           type: string
           format: uri
           nullable: true
           example: https://api.confluent.cloud/v2/resourcekinds?page_token=YIXRY97wWYmwzrax4dld
         next:
-          description: A link to the next page of results. If a response does not contain a next link, then there is no more
-            data available.
+          description:
+            A link to the next page of results. If a response does not contain a next link, then
+            there is no more data available.
           type: string
           format: uri
           nullable: true
           example: https://api.confluent.cloud/v2/resourcekinds?page_token=UvmDWOB1iwfAIBPj6EYb
         total_size:
-          description: Number of records in the full result set. This response may be paginated and have a smaller number
-            of records.
+          description:
+            Number of records in the full result set. This response may be paginated and have a
+            smaller number of records.
           type: integer
           format: int32
           minimum: 0
@@ -853,7 +909,7 @@ components:
           description: List of errors which caused this operation to fail
           type: array
           items:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           uniqueItems: true
     Error:
       type: object
@@ -870,20 +926,23 @@ components:
           description: An application-specific error code, expressed as a string value.
           type: string
         title:
-          description: A short, human-readable summary of the problem. It **SHOULD NOT** change from occurrence to occurrence
-            of the problem, except for purposes of localization.
+          description:
+            A short, human-readable summary of the problem. It **SHOULD NOT** change from occurrence
+            to occurrence of the problem, except for purposes of localization.
           type: string
         detail:
           description: A human-readable explanation specific to this occurrence of the problem.
           type: string
         source:
           type: object
-          description: If this error was caused by a particular part of the API request, the source will point to the query
-            string parameter or request body property that caused it.
+          description:
+            If this error was caused by a particular part of the API request, the source will point
+            to the query string parameter or request body property that caused it.
           properties:
             pointer:
-              description: A JSON Pointer [RFC6901] to the associated entity in the request document [e.g. "/spec" for a spec
-                object, or "/spec/title" for a specific field].
+              description:
+                A JSON Pointer [RFC6901] to the associated entity in the request document [e.g.
+                "/spec" for a spec object, or "/spec/title" for a specific field].
               type: string
             parameter:
               description: A string indicating which query parameter caused the error.
@@ -900,11 +959,11 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '400'
+                status: "400"
                 code: invalid_filter
                 title: Invalid Filter
                 detail: The 'delorean' resource can't be filtered by 'num_doors'
@@ -926,11 +985,11 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '401'
+                status: "401"
                 code: user_unauthenticated
                 title: Authentication Required
                 detail: Valid authentication credentials must be provided
@@ -945,14 +1004,14 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '402'
+                status: "402"
                 code: quota_exceeded
                 title: Kafka Clusters Per Org Quota Exceeded
-                detail: 'The request would exceed the quota: kafka_clusters_per_environment'
+                detail: "The request would exceed the quota: kafka_clusters_per_environment"
     UnauthorizedError:
       x-summary: Forbidden
       description: The access credentials were considered insufficient to grant access
@@ -964,14 +1023,16 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '403'
+                status: "403"
                 code: user_unauthorized
                 title: User Access Unauthorized
-                detail: The user 'mcfly' is not allowed to access the 'delorean' resource without the 'plutonium' role.
+                detail:
+                  The user 'mcfly' is not allowed to access the 'delorean' resource without the
+                  'plutonium' role.
     ConflictError:
       x-summary: Conflict
       description: The request is in conflict with the current server state
@@ -989,11 +1050,11 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '409'
+                status: "409"
                 code: resource_already_exists
                 title: Resource Already exists
                 detail: The entitlement '91e3e86f-fca6-4f14-98f5-a48e64113ce2' already exists.
@@ -1007,11 +1068,11 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '404'
+                status: "404"
                 title: Not Found
     ValidationError:
       description: Validation Failed
@@ -1023,14 +1084,16 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
-              - status: '422'
+              - status: "422"
                 code: invalid_configuration
                 id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
                 title: Validation Failed
-                detail: "The property '/cluster/storage_size' of type string did not match the following type: integer"
+                detail:
+                  "The property '/cluster/storage_size' of type string did not match the following
+                  type: integer"
                 source:
                   pointer: /cluster/storage_size
     RateLimitError:
@@ -1051,14 +1114,17 @@ components:
         X-RateLimit-Reset:
           schema:
             type: integer
-          description: "The relative time in seconds until the current rate-limit window resets.  \n  \n**Important:** This\
-            \ differs from Github and Twitter's same-named header which uses UTC epoch seconds. We use relative time to avoid\
+          description: "The relative time in seconds until the current rate-limit window
+            resets.  \n  \n**Important:** This\
+            \ differs from Github and Twitter's same-named header which uses UTC epoch seconds. We
+            use relative time to avoid\
             \ client/server time synchronization issues."
         Retry-After:
           schema:
             type: integer
-          description: The number of seconds to wait until the rate limit window resets. Only sent when the rate limit is
-            reached.
+          description:
+            The number of seconds to wait until the rate limit window resets. Only sent when the
+            rate limit is reached.
     DefaultSystemError:
       description: Oops, something went wrong!
       headers:
@@ -1069,11 +1135,11 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Failure'
+            $ref: "#/components/schemas/Failure"
           example:
             errors:
               - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
-                status: '500'
+                status: "500"
                 code: out_of_gas
                 title: DeLorean Out Of Gas
                 detail: The DeLorean has run out of gas, but Doc Brown will fill 'er up for you asap
