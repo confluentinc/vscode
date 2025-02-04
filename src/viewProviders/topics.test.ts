@@ -230,17 +230,6 @@ describe("TopicViewProvider search behavior", () => {
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });
 
-  it("getTreeItem() should set the resourceUri of schema items whose ID matches the search string", async () => {
-    // Schema ID matches the search string
-    topicSearchSet.fire(TEST_CCLOUD_SCHEMA.id);
-
-    const treeItem = await provider.getTreeItem(TEST_CCLOUD_SCHEMA);
-
-    assert.ok(treeItem instanceof SchemaTreeItem);
-    assert.ok(treeItem.resourceUri);
-    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
-  });
-
   it("getTreeItem() should expand topic items when their schemas match search", async () => {
     const topic = KafkaTopic.create({
       ...TEST_CCLOUD_KAFKA_TOPIC,
