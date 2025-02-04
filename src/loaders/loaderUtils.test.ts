@@ -6,7 +6,9 @@ import {
 } from "../../tests/unit/testResources";
 import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest/models";
+import { GetSchemaByVersionRequest, Schema as ResponseSchema } from "../clients/schemaRegistryRest";
 import * as loaderUtils from "../loaders/loaderUtils";
+import { Schema, SchemaType } from "../models/schema";
 import * as sidecar from "../sidecar";
 
 // as from fetchTopics() result.
@@ -35,22 +37,28 @@ describe("loaderUtils correlateTopicsWithSchemaSubjects() test", () => {
   });
 });
 
-describe("loaderUtils fetchSubjects() tests", () => {
-  let sandbox: sinon.SinonSandbox;
+describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () => {
+  // Common suite and setup for loaderUtils functions that interact with SubjectsV1Api.
 
+  let sandbox: sinon.SinonSandbox;
   let listSubjectsStub: sinon.SinonStub;
+  let listVersionsStub: sinon.SinonStub;
+  let getSchemaByVersionStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     listSubjectsStub = sandbox.stub();
+    listVersionsStub = sandbox.stub();
+    getSchemaByVersionStub = sandbox.stub();
 
     const mockSubjectsV1Api = {
       list: listSubjectsStub,
+      listVersions: listVersionsStub,
+      getSchemaByVersion: getSchemaByVersionStub,
     };
 
-    let getSidecarStub: sinon.SinonStub;
-    getSidecarStub = sandbox.stub(sidecar, "getSidecar");
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
 
     const mockHandle = {
       getSubjectsV1Api: () => {
@@ -64,7 +72,7 @@ describe("loaderUtils fetchSubjects() tests", () => {
     sandbox.restore();
   });
 
-  it("should return subjects sorted", async () => {
+  it("fetchSubjects() should return subjects sorted", async () => {
     const subjectsRaw = ["subject2", "subject3", "subject1"];
     listSubjectsStub.resolves(subjectsRaw);
 
@@ -72,5 +80,82 @@ describe("loaderUtils fetchSubjects() tests", () => {
 
     // be sure to test against a wholly separate array, 'cause .sort() is in-place.
     assert.deepStrictEqual(subjects, ["subject1", "subject2", "subject3"]);
+  });
+
+  it("fetchSchemaSubjectGroup() should fetch versions of schemas for a given subject", async () => {
+    const subject: string = "topic1-value";
+
+    // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
+    // learn that there are 3 versions. And as if version 1 was soft deleted.
+    const versions = [2, 3, 4];
+    listVersionsStub.resolves(versions);
+
+    // Then will ultimately drive the getSchemaByVersion() API client call for each version.
+    async function fakeGetSchemaByVersion(
+      request: GetSchemaByVersionRequest,
+    ): Promise<ResponseSchema> {
+      return {
+        id: Number.parseInt(request.version) + 10000,
+        subject: request.subject,
+        version: parseInt(request.version),
+        schema: "insert schema document here",
+        schemaType: "AVRO",
+      };
+    }
+    getSchemaByVersionStub.callsFake(fakeGetSchemaByVersion);
+
+    // Make the function call. Should drive the above stubs using executeInWorkerPool()
+    // and demultiplex its results properly.
+    const schemas: Schema[] = await loaderUtils.fetchSchemaSubjectGroup(
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      subject,
+    );
+
+    assert.equal(schemas.length, versions.length);
+    // Should be in the right order ...
+    assert.deepEqual(
+      schemas.map((schema) => schema.version),
+      versions,
+    );
+    // And each schema should have the right properties as from fakeGetSchemaByVersion().
+    for (const schema of schemas) {
+      assert.equal(schema.subject, subject);
+      assert.equal(schema.type, SchemaType.Avro);
+      assert.equal(schema.id, schema.version + 10000);
+    }
+  });
+
+  it("fetchSchemaSubjectGroup() throws if any single version fetch fails", async () => {
+    const subject: string = "topic1-value";
+
+    // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
+    // learn that there are 3 versions. And as if version 1 was soft deleted.
+    const versions = [2, 3, 4];
+    listVersionsStub.resolves(versions);
+
+    // Then will ultimately drive the getSchemaByVersion() API client call for each version.
+    async function fakeGetSchemaByVersion(
+      request: GetSchemaByVersionRequest,
+    ): Promise<ResponseSchema> {
+      if (request.version === "3") {
+        throw new Error("Failed to fetch schema");
+      }
+      return {
+        id: Number.parseInt(request.version) + 10000,
+        subject: request.subject,
+        version: parseInt(request.version),
+        schema: "insert schema document here",
+        schemaType: "AVRO",
+      };
+    }
+    getSchemaByVersionStub.callsFake(fakeGetSchemaByVersion);
+
+    // Make the function call. Should drive the above stubs using executeInWorkerPool()
+    // and demultiplex its results properly, which in this case means noticing the
+    // error and re-throwing it.
+    await assert.rejects(
+      loaderUtils.fetchSchemaSubjectGroup(TEST_LOCAL_SCHEMA_REGISTRY, subject),
+      new Error("Failed to fetch schema"),
+    );
   });
 });
