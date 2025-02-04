@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { CancellationTokenSource, Progress } from "vscode";
-import { executeInWorkerPool, isErrorResult, isSuccessResult } from "./workerPool";
+import { executeInWorkerPool, extract, isErrorResult, isSuccessResult } from "./workerPool";
 
 describe("utils/workerPool.ts executeInWorkerPool()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -178,5 +178,39 @@ describe("utils/workerPool.ts type guards", () => {
 
   it("isErrorResult() should handle undefined input", () => {
     assert.strictEqual(isErrorResult(undefined), false);
+  });
+});
+
+describe("utils/workerPool.ts extract() tests", () => {
+  it("should raise exception when first exception is found", async () => {
+    const items = [1, 2, 3];
+    const callable = async (num: number) => {
+      if (num > 1) throw new Error(`test error ${num}`);
+      return num;
+    };
+
+    const results = await executeInWorkerPool(callable, items);
+
+    assert.strictEqual(results.length, 3);
+
+    assert.throws(
+      () => {
+        const goodResults: number[] = extract(results);
+      },
+      { message: "test error 2" },
+    );
+  });
+
+  it("should return array of results when no exceptions are found", async () => {
+    const items = [1, 2, 3];
+    const callable = async (num: number) => num;
+
+    const results = await executeInWorkerPool(callable, items);
+
+    assert.strictEqual(results.length, 3);
+
+    const goodResults: number[] = extract(results);
+
+    assert.deepStrictEqual(goodResults, [1, 2, 3]);
   });
 });
