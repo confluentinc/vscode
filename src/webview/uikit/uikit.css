@@ -181,17 +181,10 @@
   align-self: stretch;
   border: none;
 }
-.button-group > .info {
+.webview-form .button-group > .info {
   justify-self: start;
 }
 
-.webview-form .input-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-}
 .webview-form .field-description {
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
@@ -202,10 +195,18 @@
   width: 100%;
   border-width: 0;
 }
-/** 
+
+.webview-form .input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+/** Input layouts
 * div.input-container
 *   .label
-*   .input[type=text] ??? or all the types and make it generic
+*   .input
 *   .info(.error) // description|message|help text
 */
 .input-container {
@@ -219,31 +220,12 @@
   width: 100%;
   min-width: 8rem;
 }
+.input-container > select.input,
+.input-container > .input[type="number"] {
+  width: fit-content;
+}
 .input-container > .label {
   margin-bottom: 0;
-}
-
-.toggle-container {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-}
-.toggle-container > input[type="checkbox"] {
-  margin: 0;
-}
-.toggle-container > .label {
-  margin-bottom: 0;
-  color: var(--vscode-descriptionForeground);
-  font-weight: normal;
-}
-.input-container.error .pattern {
-  color: var(--vscode-errorForeground);
-}
-
-.input-container > .info.error {
-  min-width: 100%;
-}
-.webview-form .label {
   display: block;
   cursor: pointer;
   font-size: var(--cflt-base-font-size);
@@ -251,28 +233,14 @@
   font-weight: 500;
   color: var(--vscode-editor-foreground);
 }
-.webview-form .info {
+.input-container > .info {
   color: var(--vscode-descriptionForeground);
   font-weight: 450;
   white-space: break-spaces;
   font-size: 12px;
   position: relative;
 }
-.info.error::before {
-  content: " x ";
-  font-size: 18px;
-  line-height: 0;
-  font-weight: 200;
-  color: var(--vscode-errorForeground);
-  position: absolute;
-  top: 6px;
-  left: -16px;
-}
-.input-container.error .input,
-.input.error,
-input:user-invalid {
-  border: 1px solid var(--vscode-errorForeground);
-}
+/** Generic input styles using theme custom properties whenever possible */
 .input {
   box-sizing: border-box;
   color: var(--vscode-input-foreground);
@@ -302,6 +270,9 @@ input:user-invalid {
   color: var(--vscode-descriptionForeground);
   font-size: 0.8em;
 }
+/** Button styles 
+* .input[type="submit"] or .button
+*/
 .input[type="submit"],
 .button {
   display: inline-flex;
@@ -335,4 +306,28 @@ input:user-invalid {
   color: var(--vscode-button-background);
   background: var(--vscode-button-foreground);
   border: 1px solid var(--vscode-button-background);
+}
+
+/** Error states */
+.input-container.error .pattern {
+  color: var(--vscode-errorForeground);
+}
+
+.input-container > .info.error {
+  min-width: 100%;
+}
+.info.error::before {
+  content: " x ";
+  font-size: 18px;
+  line-height: 0;
+  font-weight: 200;
+  color: var(--vscode-errorForeground);
+  position: absolute;
+  top: 6px;
+  left: -16px;
+}
+.input-container.error .input,
+.input.error,
+input:user-invalid {
+  border: 1px solid var(--vscode-errorForeground);
 }
