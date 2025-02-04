@@ -114,13 +114,13 @@
 
 /** Shared styles for webview forms 
 * for layout, incl. children:
-* <div class="webview-form"> // FIXME when done (WRONG)
+* div.webview-form
 *   div.form-header
 *   form.form-container (or <div>?) 
-*     div.form-section (*n)
+*     fieldset|div.form-section (*n)
 *       h2.section-heading
-*       div.input-container || .input-row (*n)
-*     div.form-section.button-group (including input[type="submit"] or .button[type="submit"])
+*       inputs(*n), e.g. div.input-container|div.input-row
+*     div.form-section.button-group (incl. input[type="submit"] or .button[type="submit"])
 */
 .webview-form .form-header {
   display: flex;
@@ -144,11 +144,6 @@
   line-height: normal;
 }
 
-.webview-form .field-description {
-  color: var(--vscode-descriptionForeground);
-  font-size: 12px;
-}
-
 .webview-form .form-container {
   display: flex;
   flex-direction: column;
@@ -165,13 +160,19 @@
   align-self: stretch;
   border-bottom: 1px solid var(--Base-Base-05, #d4d4d4);
 }
+
 .form-section:first-of-type {
   padding-top: 0;
 }
 .form-section > * {
   margin: unset;
 }
-
+.webview-form .form-section-heading {
+  color: var(--vscode-editor-foreground);
+  font-size: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
 .webview-form .button-group {
   flex-direction: row;
   justify-content: space-between;
@@ -184,24 +185,63 @@
   justify-self: start;
 }
 
-.webview-form .fieldset {
-  padding: 0;
-  border: 0;
-  width: 100%;
-  border-width: 0;
-}
-.webview-form .form-section-heading {
-  color: var(--vscode-editor-foreground);
-  font-size: 20px;
-  font-weight: 500;
-  white-space: nowrap;
-}
 .webview-form .input-row {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 16px;
   width: 100%;
+}
+.webview-form .field-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+.webview-form .fieldset {
+  padding: 0;
+  border: 0;
+  width: 100%;
+  border-width: 0;
+}
+/** 
+* div.input-container
+*   .label
+*   .input[type=text] ??? or all the types and make it generic
+*   .info(.error) // description|message|help text
+*/
+.input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 2px;
+  width: 100%;
+}
+.input-container > .input {
+  width: 100%;
+  min-width: 8rem;
+}
+.input-container > .label {
+  margin-bottom: 0;
+}
+
+.toggle-container {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+.toggle-container > input[type="checkbox"] {
+  margin: 0;
+}
+.toggle-container > .label {
+  margin-bottom: 0;
+  color: var(--vscode-descriptionForeground);
+  font-weight: normal;
+}
+.input-container.error .pattern {
+  color: var(--vscode-errorForeground);
+}
+
+.input-container > .info.error {
+  min-width: 100%;
 }
 .webview-form .label {
   display: block;
@@ -228,51 +268,6 @@
   top: 6px;
   left: -16px;
 }
-.input-container {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  gap: 2px;
-  width: 100%;
-}
-.input-container > .info.error {
-  min-width: 100%;
-}
-
-.input-container > input {
-  min-width: 8rem;
-}
-.input-container > * {
-  flex-basis: 50%;
-}
-.input-container > * > * {
-  width: 100%;
-}
-
-.input-container > .input {
-  width: 100%;
-}
-.input-container > .label {
-  margin-bottom: 0;
-}
-
-.toggle-container {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-}
-.toggle-container > input[type="checkbox"] {
-  margin: 0;
-}
-.toggle-container > .label {
-  margin-bottom: 0;
-  color: var(--vscode-descriptionForeground);
-  font-weight: normal;
-}
-.input-container.error .pattern {
-  color: var(--vscode-errorForeground);
-}
-
 .input-container.error .input,
 .input.error,
 input:user-invalid {
@@ -341,8 +336,3 @@ input:user-invalid {
   background: var(--vscode-button-foreground);
   border: 1px solid var(--vscode-button-background);
 }
-
-/* fieldset > p {
-  margin: 0;
-  height: min-content;
-} */
