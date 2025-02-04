@@ -68,7 +68,7 @@ describe("sidecar/connections/index.ts", () => {
         ...testConnection,
         spec: { ...testConnection.spec, name: "updated-name" },
       };
-      stubConnectionsResourceApi.gatewayV1ConnectionsIdPut.resolves(updatedConnection);
+      stubConnectionsResourceApi.gatewayV1ConnectionsIdPatch.resolves(updatedConnection);
 
       const connection = await tryToUpdateConnection(updatedConnection);
 
