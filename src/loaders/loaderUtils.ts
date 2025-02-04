@@ -82,7 +82,10 @@ export function correlateTopicsWithSchemaSubjects(
       subjectMatchesTopicName(subject, topic.topic_name),
     );
 
-    // attach subjects to topic for search
+    // HACK: we need to create children to allow searching the Topics view by schema subject; this
+    // will only allow the topic to "match" and be returned from the TopicsViewProvider's
+    // `getChildren()` method, and then once the topic is expanded, it will show the real subject
+    // container(s), which will be the source of truth for subjects+schemas
     const subjectChildren: ContainerTreeItem<Schema>[] = matchingSubjects.map(
       (subject) => new ContainerTreeItem<Schema>(subject, TreeItemCollapsibleState.Collapsed, []),
     );
