@@ -124,4 +124,38 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
       assert.equal(schema.id, schema.version + 10000);
     }
   });
+
+  it("fetchSchemaSubjectGroup() throws if any single version fetch fails", async () => {
+    const subject: string = "topic1-value";
+
+    // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
+    // learn that there are 3 versions. And as if version 1 was soft deleted.
+    const versions = [2, 3, 4];
+    listVersionsStub.resolves(versions);
+
+    // Then will ultimately drive the getSchemaByVersion() API client call for each version.
+    async function fakeGetSchemaByVersion(
+      request: GetSchemaByVersionRequest,
+    ): Promise<ResponseSchema> {
+      if (request.version === "3") {
+        throw new Error("Failed to fetch schema");
+      }
+      return {
+        id: Number.parseInt(request.version) + 10000,
+        subject: request.subject,
+        version: parseInt(request.version),
+        schema: "insert schema document here",
+        schemaType: "AVRO",
+      };
+    }
+    getSchemaByVersionStub.callsFake(fakeGetSchemaByVersion);
+
+    // Make the function call. Should drive the above stubs using executeInWorkerPool()
+    // and demultiplex its results properly, which in this case means noticing the
+    // error and re-throwing it.
+    await assert.rejects(
+      loaderUtils.fetchSchemaSubjectGroup(TEST_LOCAL_SCHEMA_REGISTRY, subject),
+      new Error("Failed to fetch schema"),
+    );
+  });
 });
