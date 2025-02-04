@@ -145,3 +145,24 @@ export async function executeInWorkerPool<T, R>(
 
   return results;
 }
+
+/**
+ * Extracts all the underlying `results` from an {@link ExecutionResult[]} if they are {@link SuccessResult},
+ * returns as an array. If any {@link ErrorResult} is encountered, throws the encountered error.
+ *
+ * Makes {@link executeInWorkerPool} error handling more like `Promise.all()` when the caller
+ * desires all-or-none semantics.
+ */
+export function extract<R>(results: ExecutionResult<R>[]): R[] {
+  const goodResults: R[] = new Array<R>(results.length);
+  let i = 0;
+  for (const result of results) {
+    if (isSuccessResult(result)) {
+      goodResults[i++] = result.result;
+    } else {
+      throw result.error;
+    }
+  }
+
+  return goodResults;
+}
