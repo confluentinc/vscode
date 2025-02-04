@@ -94,6 +94,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     setContextValue(ContextValues.kafkaClusterSelected, false);
     this.kafkaCluster = null;
     this.treeView.description = "";
+    this.setSearch(null);
     this.refresh();
   }
 
@@ -226,8 +227,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
     const currentKafkaClusterChangedSub: vscode.Disposable = currentKafkaClusterChanged.event(
       async (cluster: KafkaCluster | null) => {
+        logger.debug(
+          `currentKafkaClusterChanged event fired, ${cluster ? "refreshing" : "resetting"}.`,
+          { cluster },
+        );
+        this.setSearch(null); // reset search when cluster changes
         if (!cluster) {
-          logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting.");
           this.reset();
         } else {
           setContextValue(ContextValues.kafkaClusterSelected, true);
@@ -241,10 +246,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
       (searchString: string | null) => {
         logger.debug("topicSearchSet event fired, refreshing", { searchString });
-        // set/unset the filter and call into getChildren() to update the tree view
-        this.itemSearchString = searchString;
-        // clear from any previous search filter
-        this.searchMatches = new Set();
+        this.setSearch(searchString);
         this.refresh();
       },
     );
@@ -277,6 +279,16 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       });
       this.treeView.description = cluster.name;
     }
+  }
+
+  /** Update internal state when the search string is set or unset. */
+  setSearch(searchString: string | null): void {
+    // set/unset the filter so any calls to getChildren() will filter appropriately
+    this.itemSearchString = searchString;
+    // set context value to toggle between "search" and "clear search" actions
+    setContextValue(ContextValues.topicSearchApplied, searchString !== null);
+    // clear from any previous search filter
+    this.searchMatches = new Set();
   }
 }
 
