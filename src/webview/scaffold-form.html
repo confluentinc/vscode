@@ -26,6 +26,7 @@
           </p>
         </template>
         <div class="form-section">
+          <h2 class="form-section-heading">Options</h2>
           <template data-for="field of this.options()">
             <div class="content-wrapper">
               <template data-if="this.getEnumField(this.field())">
@@ -97,26 +98,6 @@
 
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('scaffold-form.js')}"></script>
-    <style nonce="${nonce}">
-      body {
-        margin: 0 auto;
-        font-size: 14px;
-        max-width: 960px;
-        padding: 64px 96px;
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-      }
-      .content-wrapper {
-        display: contents;
-      }
-
-      input:disabled {
-        cursor: not-allowed;
-      }
-      .dropdown > label > vscode-dropdown {
-        width: 100%;
-      }
-    </style>
+    <style nonce="${nonce}"></style>
   </body>
 </html>
