@@ -402,6 +402,17 @@
         "category": "Confluent: Topics"
       },
       {
+        "command": "confluent.topics.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Topics View"
+      },
+      {
+        "command": "confluent.topics.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Topics View"
+      },
+      {
         "command": "confluent.openCCloudLink",
         "icon": "$(confluent-logo)",
         "title": "View in Confluent Cloud",
@@ -473,6 +484,12 @@
         "key": "ctrl+f",
         "mac": "cmd+f",
         "when": "focusedView == confluent-resources"
+      },
+      {
+        "command": "confluent.topics.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-topics"
       }
     ],
     "viewsContainers": {
@@ -534,7 +551,7 @@
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Kafka locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Kafka cluster.",
+        "contents": "No Kafka clusters available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Kafka locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Kafka cluster.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)"
       },
       {
@@ -545,7 +562,12 @@
       {
         "view": "confluent-topics",
         "contents": "No topics found.\n[Create Topic](command:confluent.topics.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && !confluent.topicSearchApplied"
+      },
+      {
+        "view": "confluent-topics",
+        "contents": "No topics match search string. [Clear search](command:confluent.topics.search.clear) or [try a new search](command:confluent.topics.search).",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && confluent.topicSearchApplied"
       }
     ],
     "menus": {
@@ -675,6 +697,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.search.clear",
+          "when": "confluent.topicSearchApplied"
+        },
+        {
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "false"
         }
@@ -745,19 +771,29 @@
           "group": "2_copy@1"
         },
         {
+          "command": "confluent.topics.search",
+          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.topics.search.clear",
+          "when": "view == confluent-topics && confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.topics.create",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.kafka-cluster.select",
           "when": "view == confluent-topics && (confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.topics.refresh",
           "when": "view == confluent-topics",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
