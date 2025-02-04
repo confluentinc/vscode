@@ -25,6 +25,7 @@
       </div>
       <form class="form-container" data-on-submit="this.handleSubmit(event)">
         <div class="form-section">
+          <h2 class="section-heading">Settings</h2>
           <div class="input-container">
             <label for="cleanup-policy" class="label">Cleanup Policy</label>
             <span class="info error"></span>
@@ -140,16 +141,6 @@
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
-    <style nonce="${nonce}">
-      body {
-        max-width: 1000px;
-        font-size: 15px;
-        margin: 0 auto;
-        padding: 60px 80px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-    </style>
+    <style nonce="${nonce}"></style>
   </body>
 </html>

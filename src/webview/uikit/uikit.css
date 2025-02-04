@@ -5,7 +5,9 @@
   --cflt-input-min-width: 100px;
   --cflt-base-font-size: 13px;
 }
-
+.content-wrapper {
+  display: contents;
+}
 .grid {
   display: grid;
   grid-template-columns: var(--grid-template-columns, auto);
@@ -122,36 +124,45 @@
 *       inputs(*n), e.g. div.input-container|div.input-row
 *     div.form-section.button-group (incl. input[type="submit"] or .button[type="submit"])
 */
-.webview-form .form-header {
+.webview-form {
+  margin: 0 auto;
+  max-width: 1000px;
+  padding: 60px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 14px;
+}
+.form-header {
   display: flex;
   flex-direction: column;
   align-items: start;
   gap: 8px;
 }
-.webview-form .form-header > * {
+.form-header > * {
   margin: unset;
 }
-.webview-form .heading {
+.heading {
   font-size: 26px;
   font-style: normal;
   font-weight: 500;
   line-height: 1.2;
 }
-.webview-form .form-description {
+.form-description {
   color: var(--vscode-sideBarSectionHeader-foreground);
   font-size: 13px;
   font-style: normal;
   line-height: normal;
 }
 
-.webview-form .form-container {
+.form-container {
   display: flex;
   flex-direction: column;
   align-items: start;
   gap: 0;
   padding: 24px 0;
 }
-.webview-form .form-section {
+.form-section {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -167,13 +178,13 @@
 .form-section > * {
   margin: unset;
 }
-.webview-form .form-section-heading {
+.form-section-heading {
   color: var(--vscode-editor-foreground);
   font-size: 20px;
   font-weight: 500;
   white-space: nowrap;
 }
-.webview-form .button-group {
+.button-group {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
@@ -181,29 +192,29 @@
   align-self: stretch;
   border: none;
 }
-.webview-form .button-group > .info {
+.button-group > .info {
   justify-self: start;
 }
 
-.webview-form .field-description {
+.field-description {
   color: var(--vscode-descriptionForeground);
   font-size: 12px;
 }
-.webview-form .fieldset {
+.fieldset {
   padding: 0;
   border: 0;
   width: 100%;
   border-width: 0;
 }
-
-.webview-form .input-row {
+/** shorter inputs and dropdowns can be side-by-side */
+.input-row {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 16px;
   width: 100%;
 }
-/** Input layouts
+/** Input Layout
 * div.input-container
 *   .label
 *   .input
