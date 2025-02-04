@@ -19,7 +19,7 @@ test("custom element with properties passed down", async ({ execute, page }) => 
 
   await execute(async () => {
     const { ObservableScope } = await import("inertial");
-    const { applyBindings } = await import("./bindings");
+    const { applyBindings, html } = await import("./bindings");
 
     class XCounter extends HTMLElement {
       os = ObservableScope();
@@ -31,7 +31,7 @@ test("custom element with properties passed down", async ({ execute, page }) => 
         this.value(value);
       }
 
-      template = /* html */ `
+      template = html`
         <output data-text="this.value()"></output>
         <button data-on-click="this.value(v => v + 1)">Increment</button>
       `;
@@ -51,9 +51,9 @@ test("custom element with properties passed down", async ({ execute, page }) => 
   /* Here we make use of the custom component several times with different input parameters */
   await execute(async () => {
     const { ObservableScope } = await import("inertial");
-    const { applyBindings } = await import("./bindings");
+    const { applyBindings, html } = await import("./bindings");
     const root = document.createElement("main");
-    root.innerHTML = /* html */ `
+    root.innerHTML = html`
       <x-counter data-prop-counter="13"></x-counter>
       <hr />
       <x-counter data-prop-counter="20"></x-counter>
@@ -77,15 +77,15 @@ test("custom elements with events bubbling up", async ({ execute, page }) => {
 
   await execute(async () => {
     const { ObservableScope } = await import("inertial");
-    const { applyBindings } = await import("./bindings");
+    const { applyBindings, html } = await import("./bindings");
 
     class CustomForm extends HTMLElement {
       os = ObservableScope();
       value = this.os.signal("");
 
-      template = /* html */ `
+      template = html`
         <input
-          type="text" 
+          type="text"
           data-value="this.value()"
           data-on-change="this.value(event.target.value)"
           data-on-blur="this.handelBlur()"
@@ -108,10 +108,10 @@ test("custom elements with events bubbling up", async ({ execute, page }) => {
 
   const vm = await execute(async () => {
     const { ObservableScope } = await import("inertial");
-    const { applyBindings } = await import("./bindings");
+    const { applyBindings, html } = await import("./bindings");
     const { fake } = await import("sinon");
     const root = document.createElement("main");
-    root.innerHTML = /* html */ `
+    root.innerHTML = html`
       <custom-form data-on-bubble="this.handleBubble(event.detail)"></custom-form>
     `;
     document.body.append(root);

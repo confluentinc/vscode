@@ -1,5 +1,8 @@
 import { type Scope } from "inertial";
 
+/** Provides no special treatment to template strings, but enables syntax highlight for HTML inside JS. */
+export const html = String.raw;
+
 export function applyBindings(root: Element | ShadowRoot, os: Scope, vm: object) {
   let tree = walk(root);
   let disposables: Array<() => void> = [];
