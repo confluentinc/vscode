@@ -1,3 +1,4 @@
+import { TreeItemCollapsibleState } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import {
@@ -7,6 +8,7 @@ import {
 } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -76,8 +78,16 @@ export function correlateTopicsWithSchemaSubjects(
   subjects: string[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const hasMatchingSchema: boolean = subjects.some((subject) =>
+    const matchingSubjects: string[] = subjects.filter((subject) =>
       subjectMatchesTopicName(subject, topic.topic_name),
+    );
+
+    // HACK: we need to create children to allow searching the Topics view by schema subject; this
+    // will only allow the topic to "match" and be returned from the TopicsViewProvider's
+    // `getChildren()` method, and then once the topic is expanded, it will show the real subject
+    // container(s), which will be the source of truth for subjects+schemas
+    const subjectChildren: ContainerTreeItem<Schema>[] = matchingSubjects.map(
+      (subject) => new ContainerTreeItem<Schema>(subject, TreeItemCollapsibleState.Collapsed, []),
     );
 
     return KafkaTopic.create({
@@ -91,8 +101,9 @@ export function correlateTopicsWithSchemaSubjects(
       configs: topic.configs,
       clusterId: cluster.id,
       environmentId: cluster.environmentId,
-      hasSchema: hasMatchingSchema,
+      hasSchema: matchingSubjects.length > 0,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
+      children: subjectChildren,
     });
   });
 
