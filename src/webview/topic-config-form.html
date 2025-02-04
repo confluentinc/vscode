@@ -27,13 +27,7 @@
         <div class="form-section">
           <div class="input-container">
             <label for="cleanup-policy" class="label">Cleanup Policy</label>
-            <span class="field-description"
-              >The retention policy to use on old log segments.
-              <a
-                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy"
-                >More info.</a
-              ></span
-            >
+            <span class="info error"></span>
             <select
               id="cleanup-policy"
               class="input dropdown"
@@ -45,17 +39,17 @@
               <option value="compact">Compact</option>
               <option value="compact,delete">Compact, Delete</option>
             </select>
-            <span class="info error"></span>
-          </div>
-          <div class="input-container">
-            <label for="retention-size" class="label">Retention Size</label>
             <span class="field-description"
-              >The maximum size a partition can grow to before it is discarded to free up space.
+              >The retention policy to use on old log segments.
               <a
-                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes"
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy"
                 >More info.</a
               ></span
             >
+          </div>
+          <div class="input-container">
+            <label for="retention-size" class="label">Retention Size</label>
+            <span class="info error"></span>
             <select
               class="input dropdown"
               id="retention-size"
@@ -68,17 +62,17 @@
               <option value="1099511627776">1 TB</option>
               <option value="-1">Infinite</option>
             </select>
-            <span class="info error"></span>
-          </div>
-          <div class="input-container">
-            <label for="retention-ms" class="label">Retention Time</label>
             <span class="field-description"
-              >The amount of time to retain data.
+              >The maximum size a partition can grow to before it is discarded to free up space.
               <a
-                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms"
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes"
                 >More info.</a
               ></span
             >
+          </div>
+          <div class="input-container">
+            <label for="retention-ms" class="label">Retention Time</label>
+            <span class="info error"></span>
             <select
               class="input dropdown"
               id="retention-ms"
@@ -93,17 +87,17 @@
               <option value="31536000000">1 Year (365 days)</option>
               <option value="-1">Infinite</option>
             </select>
-            <span class="info error"></span>
-          </div>
-          <div class="input-container">
-            <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
             <span class="field-description"
-              >The maximum message size that can be appended to this topic, in bytes.
+              >The amount of time to retain data.
               <a
-                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes"
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms"
                 >More info.</a
               ></span
             >
+          </div>
+          <div class="input-container">
+            <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
+            <span class="info error"></span>
             <input
               class="input"
               id="max-message-bytes"
@@ -114,7 +108,13 @@
               data-prop-value="this.maxMessageBytes()"
               data-on-change="this.handleChange(event)"
             />
-            <span class="info error"></span>
+            <span class="field-description"
+              >The maximum message size that can be appended to this topic, in bytes.
+              <a
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes"
+                >More info.</a
+              ></span
+            >
           </div>
         </div>
         <div class="form-section button-group">
@@ -149,13 +149,6 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
-      }
-
-      .success {
-        color: var(--vscode-panelTitle-activeForeground);
-      }
-      .error {
-        color: var(--vscode-errorForeground);
       }
     </style>
   </body>

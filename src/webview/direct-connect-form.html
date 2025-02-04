@@ -164,7 +164,7 @@
               </div>
             </div>
           </template>
-          <div class="toggle-container">
+          <label class="checkbox" for="kafka_ssl">
             <input
               type="checkbox"
               id="kafka_ssl"
@@ -173,9 +173,8 @@
               data-attr-checked="this.kafkaSslEnabled() ? true : false"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-            />
-            <label class="label" for="kafka_ssl">SSL enabled</label>
-          </div>
+            /><span>SSL enabled</span></label
+          >
         </div>
         <div class="form-section">
           <template data-if="this.schemaStatusMessage()"
@@ -271,7 +270,7 @@
               </div>
             </div>
           </template>
-          <div class="toggle-container">
+          <label class="checkbox" for="schema_ssl">
             <input
               type="checkbox"
               id="schema_ssl"
@@ -281,8 +280,8 @@
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             />
-            <label class="label" for="schema_ssl">SSL enabled</label>
-          </div>
+            <span>SSL enabled</span></label
+          >
         </div>
         <div class="form-section button-group">
           <div>
