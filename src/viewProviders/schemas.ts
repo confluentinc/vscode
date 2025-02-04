@@ -6,15 +6,18 @@ import {
   currentSchemaRegistryChanged,
   environmentChanged,
   localSchemaRegistryConnected,
+  schemaSearchSet,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
-import { isCCloud, isLocal } from "../models/resource";
-import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
+import { isCCloud, ISearchable, isLocal } from "../models/resource";
+import { generateSchemaSubjectGroups, Schema, SchemaTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
+import { updateCollapsibleStateFromSearch } from "./collapsing";
+import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 const logger = new Logger("viewProviders.schemas");
 
@@ -51,6 +54,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** The focused Schema Registry; set by clicking a Schema Registry item in the Resources view. */
   public schemaRegistry: SchemaRegistry | null = null;
 
+  /** String to filter items returned by `getChildren`, if provided. */
+  itemSearchString: string | null = null;
+  /** Items directly matching the {@linkcode itemSearchString}, if provided. */
+  searchMatches: Set<SchemasViewProviderData> = new Set();
+
   private static instance: SchemasViewProvider | null = null;
   private constructor() {
     if (!getExtensionContext()) {
@@ -82,11 +90,26 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   // we're not handling just `Schema` here since we may be expanding a container tree item
-  getTreeItem(element: SchemasViewProviderData): vscode.TreeItem | SchemaTreeItem {
+  getTreeItem(element: SchemasViewProviderData): vscode.TreeItem {
+    let treeItem: vscode.TreeItem;
+
     if (element instanceof Schema) {
-      return new SchemaTreeItem(element);
+      treeItem = new SchemaTreeItem(element);
+    } else {
+      // ContainerTreeItem
+      treeItem = element;
     }
-    return element;
+
+    if (this.itemSearchString) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = vscode.Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+      }
+      treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+    }
+
+    return treeItem;
   }
 
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
@@ -110,11 +133,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     // - topic2-value (ContainerTreeItem)
     //   - schema2-V1 (Schema)
 
-    let schemaList: SchemasViewProviderData[] = [];
+    let children: SchemasViewProviderData[] = [];
 
     if (element) {
       if (element instanceof ContainerTreeItem) {
-        return element.children;
+        children = element.children;
       }
       // Schema items are leaf nodes, so we don't need to handle them here
     } else {
@@ -127,11 +150,42 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
           this.forceDeepRefresh = false;
         }
         // return the hierarchy of "Key/Value Schemas -> Subject -> Version" items or return empty array
-        return schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
+        children = schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
       }
     }
 
-    return schemaList;
+    if (this.itemSearchString) {
+      // if the parent item matches the search string, return all children so the user can expand
+      // and see them all, even if just the parent item matched and shows the highlight(s)
+      const parentMatched = element && itemMatchesSearch(element, this.itemSearchString);
+      if (!parentMatched) {
+        // filter the children based on the search string
+        children = filterItems(
+          [...children] as ISearchable[],
+          this.itemSearchString,
+        ) as SchemasViewProviderData[];
+      }
+      // aggregate all elements that directly match the search string (not just how many were
+      // returned in the tree view since children of directly-matching parents will be included)
+      const matchingChildren = children.filter((child) =>
+        itemMatchesSearch(child, this.itemSearchString!),
+      );
+      matchingChildren.forEach((child) => this.searchMatches.add(child));
+      // update the tree view message to show how many results were found to match the search string
+      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
+      // will never be called and the message won't update
+      const plural = this.searchMatches.size > 1 ? "s" : "";
+      if (this.searchMatches.size > 0) {
+        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+      } else {
+        // let empty state take over
+        this.treeView.message = undefined;
+      }
+    } else {
+      this.treeView.message = undefined;
+    }
+
+    return children;
   }
 
   /** Set up event listeners for this view provider. */
@@ -182,11 +236,23 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       },
     );
 
+    const schemaSearchSetSub: vscode.Disposable = schemaSearchSet.event(
+      (searchString: string | null) => {
+        logger.debug("schemaSearchSet event fired, refreshing", { searchString });
+        // set/unset the filter and call into getChildren() to update the tree view
+        this.itemSearchString = searchString;
+        // clear from any previous search filter
+        this.searchMatches = new Set();
+        this.refresh();
+      },
+    );
+
     return [
       environmentChangedSub,
       ccloudConnectedSub,
       localSchemaRegistryConnectedSub,
       currentSchemaRegistryChangedSub,
+      schemaSearchSetSub,
     ];
   }
 
