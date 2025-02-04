@@ -8,7 +8,12 @@ import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { correlateTopicsWithSchemaSubjects, fetchSubjects, fetchTopics } from "./loaderUtils";
+import {
+  correlateTopicsWithSchemaSubjects,
+  fetchSchemaSubjectGroup,
+  fetchSubjects,
+  fetchTopics,
+} from "./loaderUtils";
 
 const logger = new Logger("resourceLoader");
 
@@ -124,6 +129,31 @@ export abstract class ResourceLoader implements IResourceBase {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
   ): Promise<string[]> {
+    const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
+
+    return await fetchSubjects(schemaRegistry);
+  }
+
+  /**
+   * Get the list of schema (metadata) for a single subject group from a schema registry.
+   */
+  public async getSchemaSubjectGroup(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+    subject: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    forceRefresh: boolean = false,
+  ): Promise<Schema[]> {
+    const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
+    return fetchSchemaSubjectGroup(schemaRegistry, subject);
+  }
+
+  /**
+   * Distill a possible environment id into its corresponding schema registry.
+   * Validate that the registry belongs to the same connection as this loader.
+   */
+  private async resolveSchemaRegistry(
+    registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
+  ): Promise<SchemaRegistry> {
     let schemaRegistry: SchemaRegistry | undefined;
     if (typeof registryOrEnvironmentId === "string") {
       schemaRegistry = await this.getSchemaRegistryForEnvironmentId(registryOrEnvironmentId);
@@ -140,7 +170,7 @@ export abstract class ResourceLoader implements IResourceBase {
       );
     }
 
-    return await fetchSubjects(schemaRegistry);
+    return schemaRegistry;
   }
 
   /**
