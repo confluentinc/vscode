@@ -11,7 +11,7 @@ import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
-import { executeInWorkerPool, isSuccessResult } from "../utils/workerPool";
+import { executeInWorkerPool, extract } from "../utils/workerPool";
 
 const logger = new Logger("resourceLoader");
 
@@ -205,17 +205,7 @@ export async function fetchSchemaSubjectGroup(
 
   // Filter the executeInWorkerPool() return for successful results and return the schemas.
   // If any single request failed, fail the whole operation.
-  const schemas: Schema[] = new Array(concurrentFetchResults.length);
-  concurrentFetchResults.forEach((result, index) => {
-    if (isSuccessResult(result)) {
-      schemas[index] = result.result;
-    } else {
-      // If any single request failed, fail the whole operation for now.
-      throw result.error;
-    }
-  });
-
-  return schemas;
+  return extract(concurrentFetchResults);
 }
 
 /** Interface describing a bundle of params needed for call to {@link fetchSchemaVersion} */
