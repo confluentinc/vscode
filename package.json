@@ -809,16 +809,6 @@
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@3"
-        },
-        {
-          "command": "confluent.topics.search",
-          "when": "view == confluent-topics && !confluent.topicSearchApplied",
-          "group": "navigation@1"
-        },
-        {
-          "command": "confluent.topics.search.clear",
-          "when": "view == confluent-topics && confluent.topicSearchApplied",
-          "group": "navigation@1"
         }
       ],
       "view/item/context": [
