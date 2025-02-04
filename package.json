@@ -553,7 +553,7 @@
       },
       {
         "view": "confluent-schemas",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Schema Registry locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Schema Registry instance.",
+        "contents": "No Schema Registries available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Schema Registry locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Schema Registry instance.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable)"
       },
       {
@@ -564,7 +564,12 @@
       {
         "view": "confluent-schemas",
         "contents": "No schemas found.\n[Create Schema](command:confluent.schemas.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected && !confluent.schemaSearchApplied"
+      },
+      {
+        "view": "confluent-schemas",
+        "contents": "No schemas match search string. [Clear search](command:confluent.schemas.search.clear) or [try a new search](command:confluent.schemas.search).",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected && confluent.schemaSearchApplied"
       },
       {
         "view": "confluent-topics",
