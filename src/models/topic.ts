@@ -5,10 +5,10 @@ import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
 /** Main class representing Kafka topic */
-export class KafkaTopic extends Data implements IResourceBase {
+export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
   iconName!: IconNames; // set depending on presence of associated schema(s)
@@ -29,6 +29,9 @@ export class KafkaTopic extends Data implements IResourceBase {
   environmentId!: EnvironmentId;
   hasSchema: boolean = false;
 
+  /** Schema subjects; only used with Topics view search. */
+  children?: ISearchable[] | undefined;
+
   /** Operations the user is authzd to perform on the topic */
   operations!: Enforced<KafkaTopicOperation[]>;
 
@@ -45,6 +48,10 @@ export class KafkaTopic extends Data implements IResourceBase {
   get uniqueId(): string {
     return `${this.clusterId}-${this.name}`;
   }
+
+  searchableText(): string {
+    return this.name;
+  }
 }
 
 // Main class controlling the representation of a Kafka topic as a tree item.
@@ -55,6 +62,7 @@ export class KafkaTopicTreeItem extends vscode.TreeItem {
     super(resource.name);
 
     // internal properties
+    this.id = resource.uniqueId;
     this.resource = resource;
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-kafka-topic`;
     if (this.resource.hasSchema) {
