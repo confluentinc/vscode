@@ -1,6 +1,9 @@
 import { type Scope } from "inertial";
 
-export function applyBindings(root: Element, os: Scope, vm: object) {
+/** Provides no special treatment to template strings, but enables syntax highlight for HTML inside JS. */
+export const html = String.raw;
+
+export function applyBindings(root: Element | ShadowRoot, os: Scope, vm: object) {
   let tree = walk(root);
   let disposables: Array<() => void> = [];
   for (let node: Node | null = tree.currentNode; node != null; node = tree.nextNode()) {
