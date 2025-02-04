@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { CancellationTokenSource, Progress } from "vscode";
-import { executeInWorkerPool, isErrorResult, isSuccessResult } from "./workerPool";
+import { executeInWorkerPool, extract, isErrorResult, isSuccessResult } from "./workerPool";
 
 describe("utils/workerPool.ts executeInWorkerPool()", () => {
   let sandbox: sinon.SinonSandbox;
@@ -159,6 +159,27 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
       [0, 1, 2, 3],
     );
   });
+
+  it("If callback throws non-Error exception, it gets wrapped properly", async () => {
+    const items = [1, 2, 3];
+    const callable = async (num: number) => {
+      if (num === 2) throw "test error";
+      return num;
+    };
+
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 3 });
+
+    assert.strictEqual(results.length, 3);
+    assert.strictEqual(isSuccessResult(results[0]), true);
+    assert.strictEqual(isErrorResult(results[1]), true);
+    assert.ok(results[1].error instanceof Error);
+    assert.strictEqual(
+      results[1].error.message,
+      "executeInWorkerPool(): Non-Error encountered when dispatching index 1",
+    );
+    assert.strictEqual(results[1].error.cause, "test error");
+    assert.strictEqual(isSuccessResult(results[2]), true);
+  });
 });
 
 describe("utils/workerPool.ts type guards", () => {
@@ -172,11 +193,45 @@ describe("utils/workerPool.ts type guards", () => {
     assert.strictEqual(isErrorResult({ result: 123 }), false);
   });
 
-  it("isSuccessResult() should handle undefined input", () => {
+  it("isSuccessResult() should handle undefined input by returning false", () => {
     assert.strictEqual(isSuccessResult(undefined), false);
   });
 
-  it("isErrorResult() should handle undefined input", () => {
+  it("isErrorResult() should handle undefined input by returning false", () => {
     assert.strictEqual(isErrorResult(undefined), false);
+  });
+});
+
+describe("utils/workerPool.ts extract() tests", () => {
+  it("should raise exception when first exception is found", async () => {
+    const items = [1, 2, 3];
+    const callable = async (num: number) => {
+      if (num > 1) throw new Error(`test error ${num}`);
+      return num;
+    };
+
+    const results = await executeInWorkerPool(callable, items);
+
+    assert.strictEqual(results.length, 3);
+
+    assert.throws(
+      () => {
+        const goodResults: number[] = extract(results);
+      },
+      { message: "test error 2" },
+    );
+  });
+
+  it("should return array of results when no exceptions are found", async () => {
+    const items = [1, 2, 3];
+    const callable = async (num: number) => num;
+
+    const results = await executeInWorkerPool(callable, items);
+
+    assert.strictEqual(results.length, 3);
+
+    const goodResults: number[] = extract(results);
+
+    assert.deepStrictEqual(goodResults, [1, 2, 3]);
   });
 });
