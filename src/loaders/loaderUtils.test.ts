@@ -4,15 +4,11 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { createTestTopicData, getTestStorageManager } from "../../tests/unit/testUtils";
+import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest/models";
-import {
-  GetSchemaByVersionRequest,
-  Schema as ResponseSchema,
-  SubjectsV1Api,
-} from "../clients/schemaRegistryRest";
+import { GetSchemaByVersionRequest, Schema as ResponseSchema } from "../clients/schemaRegistryRest";
 import * as loaderUtils from "../loaders/loaderUtils";
-import { SchemaRegistry } from "../models/schemaRegistry";
+import { Schema, SchemaType } from "../models/schema";
 import * as sidecar from "../sidecar";
 
 // as from fetchTopics() result.
@@ -41,21 +37,28 @@ describe("loaderUtils correlateTopicsWithSchemaSubjects() test", () => {
   });
 });
 
-describe("loaderUtils fetchSchemaSubjectGroup() tests", () => {
+describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () => {
+  // Common suite and setup for loaderUtils functions that interact with SubjectsV1Api.
+
   let sandbox: sinon.SinonSandbox;
   let listSubjectsStub: sinon.SinonStub;
+  let listVersionsStub: sinon.SinonStub;
+  let getSchemaByVersionStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     listSubjectsStub = sandbox.stub();
+    listVersionsStub = sandbox.stub();
+    getSchemaByVersionStub = sandbox.stub();
 
     const mockSubjectsV1Api = {
       list: listSubjectsStub,
+      listVersions: listVersionsStub,
+      getSchemaByVersion: getSchemaByVersionStub,
     };
 
-    let getSidecarStub: sinon.SinonStub;
-    getSidecarStub = sandbox.stub(sidecar, "getSidecar");
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
 
     const mockHandle = {
       getSubjectsV1Api: () => {
@@ -69,7 +72,7 @@ describe("loaderUtils fetchSchemaSubjectGroup() tests", () => {
     sandbox.restore();
   });
 
-  it("should return subjects sorted", async () => {
+  it("fetchSubjects() should return subjects sorted", async () => {
     const subjectsRaw = ["subject2", "subject3", "subject1"];
     listSubjectsStub.resolves(subjectsRaw);
 
@@ -78,39 +81,17 @@ describe("loaderUtils fetchSchemaSubjectGroup() tests", () => {
     // be sure to test against a wholly separate array, 'cause .sort() is in-place.
     assert.deepStrictEqual(subjects, ["subject1", "subject2", "subject3"]);
   });
-});
 
-describe("loaderUtils fetchSubjects() tests", () => {
-  let sandbox: sinon.SinonSandbox;
-  let subjectsV1ApiStub: sinon.SinonStubbedInstance<SubjectsV1Api>;
-
-  beforeEach(async () => {
-    await getTestStorageManager();
-
-    sandbox = sinon.createSandbox();
-
-    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
-      sandbox.createStubInstance(sidecar.SidecarHandle);
-
-    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
-
-    subjectsV1ApiStub = sandbox.createStubInstance(SubjectsV1Api);
-
-    mockSidecarHandle.getSubjectsV1Api.returns(subjectsV1ApiStub);
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
-  it("should fetch versions of schemas for a given subject", async () => {
-    const schemaRegistry: SchemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+  it("fetchSchemaSubjectGroup() should fetch versions of schemas for a given subject", async () => {
     const subject: string = "topic1-value";
 
-    const versions = [1, 2, 3];
-    subjectsV1ApiStub.listVersions.resolves(versions);
+    // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
+    // learn that there are 3 versions. And as if version 1 was soft deleted.
+    const versions = [2, 3, 4];
+    listVersionsStub.resolves(versions);
 
-    async function mockGetSchemaByVersion(
+    // Then will ultimately drive the getSchemaByVersion() API client call for each version.
+    async function fakeGetSchemaByVersion(
       request: GetSchemaByVersionRequest,
     ): Promise<ResponseSchema> {
       return {
@@ -121,8 +102,26 @@ describe("loaderUtils fetchSubjects() tests", () => {
         schemaType: "AVRO",
       };
     }
-    subjectsV1ApiStub.getSchemaByVersion.callsFake(mockGetSchemaByVersion);
+    getSchemaByVersionStub.callsFake(fakeGetSchemaByVersion);
 
-    await loaderUtils.fetchSchemaSubjectGroup(schemaRegistry, subject);
+    // Make the function call. Should drive the above stubs using executeInWorkerPool()
+    // and demultiplex its results properly.
+    const schemas: Schema[] = await loaderUtils.fetchSchemaSubjectGroup(
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      subject,
+    );
+
+    assert.equal(schemas.length, versions.length);
+    // Should be in the right order ...
+    assert.deepEqual(
+      schemas.map((schema) => schema.version),
+      versions,
+    );
+    // And each schema should have the right properties as from fakeGetSchemaByVersion().
+    for (const schema of schemas) {
+      assert.equal(schema.subject, subject);
+      assert.equal(schema.type, SchemaType.Avro);
+      assert.equal(schema.id, schema.version + 10000);
+    }
   });
 });

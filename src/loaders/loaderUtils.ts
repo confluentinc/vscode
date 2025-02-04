@@ -162,6 +162,8 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<str
 /**
  * Given a schema registry and a subject, fetch the versions available, then fetch the details
  * of each version and return them as an array of {@link Schema}.
+ *
+ * The returned array of schema metadata concerning a a single subject is called a "subject group".
  */
 export async function fetchSchemaSubjectGroup(
   schemaRegistry: SchemaRegistry,
@@ -173,23 +175,24 @@ export async function fetchSchemaSubjectGroup(
     schemaRegistry.connectionId,
   );
 
-  // Learn all of the live version numbers for the subject.
+  // Learn all of the live version numbers for the subject in one round trip.
   const versions: number[] = await client.listVersions({ subject });
-  logger.info(
-    `fetchSchemaSubjectGroup(): fetching ${versions.length} versions of schema for subject ${subject}`,
-  );
 
-  // Now prep to fetch all of the versions concurrently.
+  // Now prep to fetch each of the versions concurrently via concurrent
+  // calls to fetchSchemaVersion() driven by executeInWorkerPool().
   const highestVersion = Math.max(...versions);
-  const concurrentVersionRequests: FetchSchemaVersionParams[] = versions.map((version) => {
-    return {
-      schemaRegistry: schemaRegistry,
-      client: client,
-      subject: subject,
-      version: version,
-      highestVersion: highestVersion,
-    } as FetchSchemaVersionParams;
-  });
+  const concurrentVersionRequests: FetchSchemaVersionParams[] = versions.map(
+    (version): FetchSchemaVersionParams => {
+      return {
+        // The only varying parameter in the concurrent calls/requests is the version number.
+        schemaRegistry: schemaRegistry,
+        client: client,
+        subject: subject,
+        version: version,
+        highestVersion: highestVersion,
+      };
+    },
+  );
 
   // Fetch all versions concurrently capped at 5 concurrent requests at a time.
   const concurrentFetchResults = await executeInWorkerPool(
@@ -200,12 +203,12 @@ export async function fetchSchemaSubjectGroup(
     },
   );
 
-  // The results may contain both successful Schema objects as well as errors.
-  // Split them apart and throw on the first error (if any)
+  // Filter the executeInWorkerPool() return for successful results and return the schemas.
+  // If any single request failed, fail the whole operation.
   const schemas: Schema[] = new Array(concurrentFetchResults.length);
-  concurrentFetchResults.forEach((result) => {
+  concurrentFetchResults.forEach((result, index) => {
     if (isSuccessResult(result)) {
-      schemas.push(result.result);
+      schemas[index] = result.result;
     } else {
       // improve this before PR raised.
       throw result.error;
@@ -215,6 +218,7 @@ export async function fetchSchemaSubjectGroup(
   return schemas;
 }
 
+/** Interface describing a bundle of params needed for call to {@link fetchSchemaVersion} */
 interface FetchSchemaVersionParams {
   schemaRegistry: SchemaRegistry;
   client: SubjectsV1Api;
@@ -223,12 +227,15 @@ interface FetchSchemaVersionParams {
   highestVersion: number;
 }
 
+/** Hit the /subjects/{subject}/versions/{version} route, returning a Schema model. */
 export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Promise<Schema> {
-  const schema: ResponseSchema = await params.client.getSchemaByVersion({
+  const responseSchema: ResponseSchema = await params.client.getSchemaByVersion({
     subject: params.subject,
     version: params.version.toString(),
   });
 
+  // Convert the response schema to a Schema model. Discards the returned schema document, sigh. We're
+  // only interested in the metadata.
   const schemaRegistry = params.schemaRegistry;
   return Schema.create({
     // Fields copied from the SR ...
@@ -238,12 +245,12 @@ export async function fetchSchemaVersion(params: FetchSchemaVersionParams): Prom
     environmentId: schemaRegistry.environmentId,
 
     // Fields specific to this single schema subject binding.
-    id: schema.id!.toString(),
-    subject: schema.subject!,
-    version: schema.version!,
+    id: responseSchema.id!.toString(),
+    subject: responseSchema.subject!,
+    version: responseSchema.version!,
     // AVRO doesn't show up in `schemaType`
     // https://docs.confluent.io/platform/current/schema-registry/develop/api.html#get--subjects-(string-%20subject)-versions-(versionId-%20version)
-    type: (schema.schemaType as SchemaType) || SchemaType.Avro,
-    isHighestVersion: schema.version === params.highestVersion,
+    type: (responseSchema.schemaType as SchemaType) || SchemaType.Avro,
+    isHighestVersion: responseSchema.version === params.highestVersion,
   });
 }

@@ -135,9 +135,9 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   /**
-   * Get the list of schemas for a single subject group from a schema registry.
+   * Get the list of schema (metadata) for a single subject group from a schema registry.
    */
-  public async getSchemasForSubject(
+  public async getSchemaSubjectGroup(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
     subject: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
