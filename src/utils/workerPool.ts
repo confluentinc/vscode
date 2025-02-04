@@ -26,7 +26,10 @@ export interface ErrorResult extends ExecutionResult<unknown> {
 export function isSuccessResult<R>(
   result: ExecutionResult<R> | undefined,
 ): result is SuccessResult<R> {
-  return result?.result !== undefined;
+  if (result === undefined) {
+    return false;
+  }
+  return !isErrorResult(result);
 }
 
 /** Type guard to check if an {@link ExecutionResult} is an {@link ErrorResult}. */
@@ -114,6 +117,16 @@ export async function executeInWorkerPool<T, R>(
         });
         if (error instanceof Error) {
           results[taskIndex] = { error };
+        } else {
+          // callback threw a non-Error exception; wrap it in an Error for consistency.
+          results[taskIndex] = {
+            error: new Error(
+              `executeInWorkerPool(): Non-Error encountered when dispatching index ${taskIndex}`,
+              {
+                cause: error,
+              },
+            ),
+          };
         }
         // no re-throwing here; let the callers handle that if needed
       }
@@ -160,7 +173,9 @@ export function extract<R>(results: ExecutionResult<R>[]): R[] {
     if (isSuccessResult(result)) {
       goodResults[i++] = result.result;
     } else {
-      throw result.error;
+      if (result!.error) {
+        throw result.error;
+      }
     }
   }
 

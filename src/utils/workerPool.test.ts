@@ -159,6 +159,27 @@ describe("utils/workerPool.ts executeInWorkerPool()", () => {
       [0, 1, 2, 3],
     );
   });
+
+  it("If callback throws non-Error exception, it gets wrapped properly", async () => {
+    const items = [1, 2, 3];
+    const callable = async (num: number) => {
+      if (num === 2) throw "test error";
+      return num;
+    };
+
+    const results = await executeInWorkerPool(callable, items, { maxWorkers: 3 });
+
+    assert.strictEqual(results.length, 3);
+    assert.strictEqual(isSuccessResult(results[0]), true);
+    assert.strictEqual(isErrorResult(results[1]), true);
+    assert.ok(results[1].error instanceof Error);
+    assert.strictEqual(
+      results[1].error.message,
+      "executeInWorkerPool(): Non-Error encountered when dispatching index 1",
+    );
+    assert.strictEqual(results[1].error.cause, "test error");
+    assert.strictEqual(isSuccessResult(results[2]), true);
+  });
 });
 
 describe("utils/workerPool.ts type guards", () => {
@@ -172,11 +193,11 @@ describe("utils/workerPool.ts type guards", () => {
     assert.strictEqual(isErrorResult({ result: 123 }), false);
   });
 
-  it("isSuccessResult() should handle undefined input", () => {
+  it("isSuccessResult() should handle undefined input by returning false", () => {
     assert.strictEqual(isSuccessResult(undefined), false);
   });
 
-  it("isErrorResult() should handle undefined input", () => {
+  it("isErrorResult() should handle undefined input by returning false", () => {
     assert.strictEqual(isErrorResult(undefined), false);
   });
 });
