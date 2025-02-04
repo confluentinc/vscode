@@ -1,3 +1,4 @@
+import { TreeItemCollapsibleState } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import {
@@ -7,8 +8,7 @@ import {
 } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { IdItem } from "../models/main";
-import { ISearchable } from "../models/resource";
+import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -83,12 +83,8 @@ export function correlateTopicsWithSchemaSubjects(
     );
 
     // attach subjects to topic for search
-    const subjectChildren: (ISearchable & IdItem)[] = matchingSubjects.map(
-      (subject): ISearchable & IdItem => ({
-        id: `${topic.cluster_id}-${topic.topic_name}-${subject}`,
-        searchableText: () => subject,
-        children: [],
-      }),
+    const subjectChildren: ContainerTreeItem<Schema>[] = matchingSubjects.map(
+      (subject) => new ContainerTreeItem<Schema>(subject, TreeItemCollapsibleState.Collapsed, []),
     );
 
     return KafkaTopic.create({
