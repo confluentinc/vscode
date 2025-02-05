@@ -1,7 +1,7 @@
 import { Disposable, env, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { resourceSearchSet } from "../emitters";
+import { resourceSearchSet, topicSearchSet } from "../emitters";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.extra");
@@ -64,6 +64,25 @@ async function clearResourceSearch() {
   resourceSearchSet.fire(null);
 }
 
+async function searchTopics() {
+  const searchString = await window.showInputBox({
+    title: "Search items in the Topics view",
+    ignoreFocusOut: true,
+  });
+  if (!searchString) {
+    return;
+  }
+  await setContextValue(ContextValues.topicSearchApplied, true);
+  logger.debug("Searching topics");
+  topicSearchSet.fire(searchString);
+}
+
+async function clearTopicSearch() {
+  logger.debug("Clearing topic search");
+  await setContextValue(ContextValues.topicSearchApplied, false);
+  topicSearchSet.fire(null);
+}
+
 export function registerExtraCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
@@ -72,5 +91,7 @@ export function registerExtraCommands(): Disposable[] {
     registerCommandWithLogging("confluent.copyResourceUri", copyResourceUri),
     registerCommandWithLogging("confluent.resources.search", searchResources),
     registerCommandWithLogging("confluent.resources.search.clear", clearResourceSearch),
+    registerCommandWithLogging("confluent.topics.search", searchTopics),
+    registerCommandWithLogging("confluent.topics.search.clear", clearTopicSearch),
   ];
 }
