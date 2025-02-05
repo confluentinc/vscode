@@ -1,7 +1,7 @@
 import { Disposable, env, Uri, window } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { ContextValues, setContextValue } from "../context/values";
-import { resourceSearchSet, topicSearchSet } from "../emitters";
+import { resourceSearchSet, schemaSearchSet, topicSearchSet } from "../emitters";
 import { Logger } from "../logging";
 
 const logger = new Logger("commands.extra");
@@ -83,6 +83,25 @@ async function clearTopicSearch() {
   topicSearchSet.fire(null);
 }
 
+async function searchSchemas() {
+  const searchString = await window.showInputBox({
+    title: "Search items in the Schemas view",
+    ignoreFocusOut: true,
+  });
+  if (!searchString) {
+    return;
+  }
+  await setContextValue(ContextValues.schemaSearchApplied, true);
+  logger.debug("Searching schemas");
+  schemaSearchSet.fire(searchString);
+}
+
+async function clearSchemaSearch() {
+  logger.debug("Clearing schema search");
+  await setContextValue(ContextValues.schemaSearchApplied, false);
+  schemaSearchSet.fire(null);
+}
+
 export function registerExtraCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
@@ -93,5 +112,7 @@ export function registerExtraCommands(): Disposable[] {
     registerCommandWithLogging("confluent.resources.search.clear", clearResourceSearch),
     registerCommandWithLogging("confluent.topics.search", searchTopics),
     registerCommandWithLogging("confluent.topics.search.clear", clearTopicSearch),
+    registerCommandWithLogging("confluent.schemas.search", searchSchemas),
+    registerCommandWithLogging("confluent.schemas.search.clear", clearSchemaSearch),
   ];
 }
