@@ -14,7 +14,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { generateSchemaSubjectGroups, Schema, SchemaTreeItem } from "../models/schema";
+import { generateSubjectContainers, Schema, SchemaTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -139,15 +139,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     const loader = ResourceLoader.getInstance(this.schemaRegistry!.connectionId);
 
     if (element instanceof ContainerTreeItem) {
-      // expanded a subject container, so return the schemas for that subject
+      // expanded a subject container, so return the schemas for that subject.
+      // Returns Schema[].
       children = await loader.getSchemaSubjectGroup(this.schemaRegistry!, element.label as string);
     } else {
       if (this.schemaRegistry != null) {
         // TODO: replace this with subject-loader call
-        const schemas =
-          (await loader.getSchemasForRegistry(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
+        const subjects =
+          (await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
         // this ends up being an array of subject containers, each with schemas as .children:
-        children = schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
+        children = subjects.length > 0 ? generateSubjectContainers(subjects) : [];
 
         if (this.forceDeepRefresh) {
           // Just honored the user's request for a deep refresh.

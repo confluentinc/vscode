@@ -231,6 +231,32 @@ export function generateSchemaSubjectGroups(
   return schemaGroups;
 }
 
+/** Generate child-free ContainerTreeItem<Schema>[] from array of subjects found in a schema registry. */
+export function generateSubjectContainers(subjects: string[]): ContainerTreeItem<Schema>[] {
+  const subjectContainers: ContainerTreeItem<Schema>[] = new Array<ContainerTreeItem<Schema>>(
+    subjects.length,
+  );
+  if (subjects.length === 0) {
+    return subjectContainers;
+  }
+
+  // sort subjects alphabetically
+  subjects.sort();
+
+  let i = 0;
+  for (const subject of subjects) {
+    const subjectContainerItem = new ContainerTreeItem<Schema>(
+      subject,
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    subjectContainerItem.iconPath = getSubjectIcon(subject);
+    subjectContainers[i++] = subjectContainerItem;
+  }
+
+  return subjectContainers;
+}
+
 /** Determine an icon for a schema subject,
  *  possibly considering erring on VALUE_SUBJECT over OTHER_SUBJECT
  */
