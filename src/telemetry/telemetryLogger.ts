@@ -1,6 +1,6 @@
 import { Analytics } from "@segment/analytics-node";
 import { randomUUID } from "crypto";
-import { version as currentSidecarVersion } from "ide-sidecar";
+import * as ideSidecar from "ide-sidecar";
 import * as vscode from "vscode";
 import { Logger } from "../logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
@@ -64,8 +64,6 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
 
   telemetryLogger = vscode.env.createTelemetryLogger({
     sendEventData: (eventName, data) => {
-      // Remove the prefix that vscode adds to event names
-      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, "");
       // Extract & save the user id if was sent
       if (data?.user?.id) userId = data.user.id;
       if (data?.identify && data?.user) {
@@ -74,15 +72,16 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
           anonymousId: segmentAnonId,
           traits: { ...data.user },
         });
-        // We don't want to send the user traits or identify prop in the following Track call
-        delete data.identify;
-        delete data.user;
       }
+
+      // Remove the prefix that vscode adds to event names
+      const cleanEventName = eventName.replace(/^confluentinc\.vscode-confluent\//, "");
+
       analytics?.track({
         userId,
         anonymousId: segmentAnonId,
         event: cleanEventName,
-        properties: { currentSidecarVersion, ...data }, // VSCode Common properties in data includes the extension version
+        properties: preparePropertiesForTrack(data),
       });
     },
     sendErrorData: (exception, data) => {
@@ -94,4 +93,24 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
   });
 
   return telemetryLogger;
+}
+
+/**
+ * Augment (and clean up) caller-provided data to telemetryLogger.sendEventData()
+ * before sending it to Segment.
+ */
+export function preparePropertiesForTrack(
+  data: Record<string, any> | undefined,
+): Record<string, any> {
+  if (data) {
+    // We never want to send the user traits or identify property to track() call.
+    delete data.identify;
+    delete data.user;
+  }
+
+  return {
+    productName: vscode.env.uriScheme, // "vscode", "vscode-insiders", etc.
+    currentSidecarVersion: ideSidecar.version,
+    ...data, // VSCode Common properties in data includes the extension version
+  };
 }
