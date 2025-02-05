@@ -48,6 +48,3 @@ export class InfoBanner extends HTMLElement {
     applyBindings(shadow, this.os, this);
   }
 }
-
-// Register the custom element
-customElements.define("info-banner", InfoBanner);

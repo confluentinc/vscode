@@ -8,7 +8,9 @@ import {
   instanceOfBasicCredentials,
 } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
-
+import { InfoBanner } from "./uikit/InfoBanner";
+// Register the custom element
+customElements.define("info-banner", InfoBanner);
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
 addEventListener("DOMContentLoaded", () => {
