@@ -211,9 +211,9 @@ class DirectConnectFormViewModel extends ViewModel {
     }
 
     let result: PostResponse | TestResponse;
-    if (submitter.value === "Test Connection") {
+    if (submitter.value === "Test") {
       result = await post("Test", data);
-    } else if (submitter.value === "Update Connection") {
+    } else if (submitter.value === "Update") {
       result = await post("Update", data);
     } else result = await post("Submit", data);
     this.success(result.success);
