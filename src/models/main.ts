@@ -23,9 +23,9 @@ export class ContainerTreeItem<T extends IdItem & ISearchable>
     children: T[],
   ) {
     super(label, collapsibleState);
-
     // set id to the label so it isn't `undefined`; can be overwritten by the caller if needed
     this.id = label.toString();
+
     this.description = `(${children.length})`;
 
     this.children = children;
