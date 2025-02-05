@@ -13,6 +13,7 @@ All notable changes to this extension will be documented in this file.
   - Resources view: search by any label or description of visible environments, Kafka clusters, and
     Schema Registries
   - Topics view: search by topic name or schema subject (if applicable)
+  - Schemas view: search by schema subject
 
 ### Changed
 
