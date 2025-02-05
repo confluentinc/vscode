@@ -6,6 +6,7 @@ import {
   currentKafkaClusterChanged,
   environmentChanged,
   localKafkaConnected,
+  topicSearchSet,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
@@ -14,9 +15,11 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { isCCloud, isLocal } from "../models/resource";
-import { Schema, SchemaTreeItem, generateSchemaSubjectGroups } from "../models/schema";
+import { isCCloud, ISearchable, isLocal } from "../models/resource";
+import { generateSchemaSubjectGroups, Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
+import { updateCollapsibleStateFromSearch } from "./collapsing";
+import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 const logger = new Logger("viewProviders.topics");
 
@@ -59,6 +62,11 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   /** The focused Kafka cluster; set by clicking a Kafka cluster item in the Resources view. */
   public kafkaCluster: KafkaCluster | null = null;
 
+  /** String to filter items returned by `getChildren`, if provided. */
+  itemSearchString: string | null = null;
+  /** Items directly matching the {@linkcode itemSearchString}, if provided. */
+  searchMatches: Set<TopicViewProviderData> = new Set();
+
   private static instance: TopicViewProvider | null = null;
   private constructor() {
     if (!getExtensionContext()) {
@@ -86,49 +94,92 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     setContextValue(ContextValues.kafkaClusterSelected, false);
     this.kafkaCluster = null;
     this.treeView.description = "";
+    this.setSearch(null);
     this.refresh();
   }
 
   getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {
-    if (element instanceof Schema) {
-      return new SchemaTreeItem(element);
-    } else if (element instanceof KafkaTopic) {
-      return new KafkaTopicTreeItem(element);
+    let treeItem: vscode.TreeItem;
+    if (element instanceof KafkaTopic) {
+      treeItem = new KafkaTopicTreeItem(element);
+    } else if (element instanceof Schema) {
+      treeItem = new SchemaTreeItem(element);
+    } else {
+      // should only be left with ContainerTreeItems
+      treeItem = element;
     }
-    return element;
+
+    if (this.itemSearchString) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = vscode.Uri.parse(
+          `${SEARCH_DECORATION_URI_SCHEME}:/${element.searchableText()}`,
+        );
+      }
+      treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+    }
+
+    return treeItem;
   }
 
   async getChildren(element?: TopicViewProviderData): Promise<TopicViewProviderData[]> {
-    let topicItems: TopicViewProviderData[] = [];
+    let children: TopicViewProviderData[] = [];
 
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
-      if (element instanceof ContainerTreeItem) {
-        // Local / CCloud containers, just return the topic tree items
-        return element.children;
-      } else if (element instanceof KafkaTopic) {
-        return await loadTopicSchemas(element);
+      if (element instanceof KafkaTopic) {
+        // return schema-subject containers
+        children = await loadTopicSchemas(element);
+      } else if (element instanceof ContainerTreeItem) {
+        // schema-subject container, return schema versions for the topic
+        children = element.children;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
       // NOTE: we end up here when the tree is first loaded, and we can use this to load the top-level items
-      if (!this.kafkaCluster) {
-        // no current cluster, nothing to display
-        return topicItems;
+      if (this.kafkaCluster) {
+        children = await getTopicsForCluster(this.kafkaCluster, this.forceDeepRefresh);
+        // clear any prior request to deep refresh, allow any subsequent repaint
+        // to draw from workspace storage cache.
+        this.forceDeepRefresh = false;
       }
-
-      const topics: KafkaTopic[] = await getTopicsForCluster(
-        this.kafkaCluster,
-        this.forceDeepRefresh,
-      );
-      topicItems.push(...topics);
-
-      // clear any prior request to deep refresh, allow any subsequent repaint
-      // to draw from workspace storage cache.
-      this.forceDeepRefresh = false;
     }
-    return topicItems;
+
+    // filter the children based on the search string, if provided
+    if (this.itemSearchString) {
+      // if the parent item matches the search string, return all children so the user can expand
+      // and see them all, even if just the parent item matched and shows the highlight(s)
+      const parentMatched = element && itemMatchesSearch(element, this.itemSearchString);
+      if (!parentMatched) {
+        // filter the children based on the search string
+        children = filterItems(
+          [...children] as ISearchable[],
+          this.itemSearchString,
+        ) as TopicViewProviderData[];
+      }
+      // aggregate all elements that directly match the search string (not just how many were
+      // returned in the tree view since children of directly-matching parents will be included)
+      const matchingChildren = children.filter((child) =>
+        itemMatchesSearch(child, this.itemSearchString!),
+      );
+      matchingChildren.forEach((child) => this.searchMatches.add(child));
+      // update the tree view message to show how many results were found to match the search string
+      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
+      // will never be called and the message won't update
+      const plural = this.searchMatches.size > 1 ? "s" : "";
+      if (this.searchMatches.size > 0) {
+        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+      } else {
+        // let empty state take over
+        this.treeView.message = undefined;
+      }
+    } else {
+      this.treeView.message = undefined;
+    }
+
+    return children;
   }
 
   /** Set up event listeners for this view provider. */
@@ -176,8 +227,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
     const currentKafkaClusterChangedSub: vscode.Disposable = currentKafkaClusterChanged.event(
       async (cluster: KafkaCluster | null) => {
+        logger.debug(
+          `currentKafkaClusterChanged event fired, ${cluster ? "refreshing" : "resetting"}.`,
+          { cluster },
+        );
+        this.setSearch(null); // reset search when cluster changes
         if (!cluster) {
-          logger.debug("currentKafkaClusterChanged event fired with null cluster, resetting.");
           this.reset();
         } else {
           setContextValue(ContextValues.kafkaClusterSelected, true);
@@ -188,11 +243,20 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       },
     );
 
+    const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
+      (searchString: string | null) => {
+        logger.debug("topicSearchSet event fired, refreshing", { searchString });
+        this.setSearch(searchString);
+        this.refresh();
+      },
+    );
+
     return [
       environmentChangedSub,
       ccloudConnectedSub,
       localKafkaConnectedSub,
       currentKafkaClusterChangedSub,
+      topicSearchSetSub,
     ];
   }
 
@@ -215,6 +279,16 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       });
       this.treeView.description = cluster.name;
     }
+  }
+
+  /** Update internal state when the search string is set or unset. */
+  setSearch(searchString: string | null): void {
+    // set/unset the filter so any calls to getChildren() will filter appropriately
+    this.itemSearchString = searchString;
+    // set context value to toggle between "search" and "clear search" actions
+    setContextValue(ContextValues.topicSearchApplied, searchString !== null);
+    // clear from any previous search filter
+    this.searchMatches = new Set();
   }
 }
 

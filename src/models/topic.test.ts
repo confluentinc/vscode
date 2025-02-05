@@ -133,6 +133,7 @@ describe("KafkaTopicTreeItem constructor", () => {
     const icon = noSchemaTopicTreeItem.iconPath;
     assert.strictEqual(icon instanceof vscode.ThemeIcon, true);
     assert.strictEqual((icon as vscode.ThemeIcon).id, IconNames.TOPIC_WITHOUT_SCHEMA);
+    // @ts-expect-error we need to update @types/vscode to make ThemeColor.id public
     assert.strictEqual((icon as vscode.ThemeIcon).color!.id, "problemsWarningIcon.foreground");
     assert.strictEqual(noSchemaTopicTreeItem.contextValue!.includes("-with-schema"), false);
     assert.strictEqual(

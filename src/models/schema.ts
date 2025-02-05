@@ -89,7 +89,7 @@ export class Schema extends Data implements IResourceBase, ISearchable {
   }
 
   searchableText(): string {
-    return `${this.subject} ${this.version}`;
+    return this.id;
   }
 }
 
