@@ -43,6 +43,12 @@ describe("preparePropertiesForTrack", () => {
     }
   });
 
+  it("should include vscode.version as productVersion", () => {
+    // vscode.version is unstubbable and read-only, so just go with expecting current value.
+    const result = preparePropertiesForTrack(undefined);
+    assert.strictEqual(result.productVersion, vscode.version);
+  });
+
   it("should include ide-sidecar version as currentSidecarVersion", () => {
     const version = "1.2.3";
     sandbox.stub(ideSidecar, "version").value(version);
