@@ -86,6 +86,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this.environment = null;
     this.schemaRegistry = null;
     this.treeView.description = "";
+    this.setSearch(null);
     this.refresh();
   }
 
@@ -127,30 +128,32 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   async getChildren(element?: SchemasViewProviderData): Promise<SchemasViewProviderData[]> {
     // we should get the following hierarchy/structure of tree items from this method:
-    // - topic1-value (ContainerTreeItem)
+    // - topic1-value (ContainerTreeItem<Schema>)
     //   - schema1-V2 (Schema)
     //   - schema1-V1 (Schema)
-    // - topic2-value (ContainerTreeItem)
+    // - topic2-value (ContainerTreeItem<Schema>)
     //   - schema2-V1 (Schema)
 
     let children: SchemasViewProviderData[] = [];
 
-    if (element) {
-      if (element instanceof ContainerTreeItem) {
-        children = element.children;
-      }
+    if (element instanceof ContainerTreeItem) {
+      // expanded a subject container, so return the schemas for that subject
+      // TODO: replace this with call to list schema versions from subject
+      children = element.children;
       // Schema items are leaf nodes, so we don't need to handle them here
     } else {
       if (this.schemaRegistry != null) {
         const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+        // TODO: replace this with subject-loader call
         const schemas =
           (await loader.getSchemasForRegistry(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
+        // this ends up being an array of subject containers, each with schemas as .children:
+        children = schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
+
         if (this.forceDeepRefresh) {
           // Just honored the user's request for a deep refresh.
           this.forceDeepRefresh = false;
         }
-        // return the hierarchy of "Key/Value Schemas -> Subject -> Version" items or return empty array
-        children = schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
       }
     }
 
@@ -225,6 +228,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     const currentSchemaRegistryChangedSub: vscode.Disposable = currentSchemaRegistryChanged.event(
       async (schemaRegistry: SchemaRegistry | null) => {
+        logger.debug(
+          `currentSchemaRegistryChanged event fired, ${schemaRegistry ? "refreshing" : "resetting"}.`,
+          { schemaRegistry },
+        );
+        this.setSearch(null); // reset search when SR changes
         if (!schemaRegistry) {
           this.reset();
         } else {
@@ -239,10 +247,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     const schemaSearchSetSub: vscode.Disposable = schemaSearchSet.event(
       (searchString: string | null) => {
         logger.debug("schemaSearchSet event fired, refreshing", { searchString });
-        // set/unset the filter and call into getChildren() to update the tree view
-        this.itemSearchString = searchString;
-        // clear from any previous search filter
-        this.searchMatches = new Set();
+        this.setSearch(searchString);
         this.refresh();
       },
     );
@@ -280,6 +285,16 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Try to reveal this particular schema, if present */
   revealSchema(schema: Schema): void {
     this.treeView.reveal(schema, { focus: true, select: true, expand: true });
+  }
+
+  /** Update internal state when the search string is set or unset. */
+  setSearch(searchString: string | null): void {
+    // set/unset the filter so any calls to getChildren() will filter appropriately
+    this.itemSearchString = searchString;
+    // set context value to toggle between "search" and "clear search" actions
+    setContextValue(ContextValues.schemaSearchApplied, searchString !== null);
+    // clear from any previous search filter
+    this.searchMatches = new Set();
   }
 }
 
