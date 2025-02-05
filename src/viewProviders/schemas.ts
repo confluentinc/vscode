@@ -136,14 +136,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     let children: SchemasViewProviderData[] = [];
 
+    const loader = ResourceLoader.getInstance(this.schemaRegistry!.connectionId);
+
     if (element instanceof ContainerTreeItem) {
       // expanded a subject container, so return the schemas for that subject
-      // TODO: replace this with call to list schema versions from subject
-      children = element.children;
-      // Schema items are leaf nodes, so we don't need to handle them here
+      children = await loader.getSchemaSubjectGroup(this.schemaRegistry!, element.label as string);
     } else {
       if (this.schemaRegistry != null) {
-        const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
         // TODO: replace this with subject-loader call
         const schemas =
           (await loader.getSchemasForRegistry(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
