@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import * as ideSidecar from "ide-sidecar";
-import Sinon from "sinon";
+import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { preparePropertiesForTrack } from "./telemetryLogger";
 
@@ -8,7 +8,7 @@ describe("preparePropertiesForTrack", () => {
   let sandbox: sinon.SinonSandbox;
 
   beforeEach(() => {
-    sandbox = Sinon.createSandbox();
+    sandbox = sinon.createSandbox();
   });
 
   afterEach(() => {
@@ -27,10 +27,10 @@ describe("preparePropertiesForTrack", () => {
 
     const result = preparePropertiesForTrack(data);
 
-    // user and identify should be removed
+    // user and identify should be removed,
     assert.strictEqual(result.user, undefined);
     assert.strictEqual(result.identify, undefined);
-    // Other properties should be kept
+    // ... but other call-provided properties should remain.
     assert.strictEqual(result.foo, "bar");
   });
 

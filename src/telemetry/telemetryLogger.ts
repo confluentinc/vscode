@@ -102,9 +102,11 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
 export function preparePropertiesForTrack(
   data: Record<string, any> | undefined,
 ): Record<string, any> {
-  // We never want to send the user traits or identify property to track call.
-  delete data?.identify;
-  delete data?.user;
+  if (data) {
+    // We never want to send the user traits or identify property to track() call.
+    delete data.identify;
+    delete data.user;
+  }
 
   return {
     productName: vscode.env.uriScheme, // "vscode", "vscode-insiders", etc.
