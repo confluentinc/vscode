@@ -31,7 +31,7 @@ export const TEST_LOCAL_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({
   name: "test-local-topic",
   partition_count: 1,
   clusterId: TEST_LOCAL_KAFKA_CLUSTER.id,
-  environmentId: TEST_LOCAL_KAFKA_CLUSTER.environmentId,
+  environmentId: LOCAL_CONNECTION_ID,
 });
 
 export const TEST_CCLOUD_KAFKA_TOPIC: KafkaTopic = KafkaTopic.create({

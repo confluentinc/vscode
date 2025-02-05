@@ -29,7 +29,10 @@ export class LocalResourceLoader extends ResourceLoader {
   }
 
   // singleton class, get instance via getInstance()
-  private constructor() {
+  constructor() {
+    if (LocalResourceLoader.instance) {
+      throw new Error("Use LocalResourceLoader.getInstance()");
+    }
     super();
   }
 

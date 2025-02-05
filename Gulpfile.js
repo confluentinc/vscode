@@ -484,8 +484,13 @@ export function check(done) {
   });
   if (precheck.error) throw precheck.error;
 
-  // Entry points are the extension.ts and webview script files
-  const rootNames = ["src/extension.ts", ...globSync("src/webview/*.ts")];
+  // Entry points are the extension.ts and webview script files, but also include test files
+  // so we can catch any type errors in them as well.
+  const rootNames = [
+    "src/extension.ts",
+    ...globSync("src/**/*.test.ts"),
+    ...globSync("src/webview/*.ts"),
+  ];
   const defaults = ["lib.dom.d.ts", "lib.es2022.d.ts", "lib.dom.iterable.d.ts"];
   const customdts = globSync(["src/**/*.d.ts", "bin/*.d.ts"], { absolute: true });
 

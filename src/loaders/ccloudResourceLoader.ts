@@ -63,6 +63,9 @@ export class CCloudResourceLoader extends ResourceLoader {
   // Singleton class. Use getInstance() to get the singleton instance.
   // (Only public for testing / signon mocking purposes.)
   constructor() {
+    if (CCloudResourceLoader.instance) {
+      throw new Error("Use CCloudResourceLoader.getInstance()");
+    }
     super();
 
     // When the ccloud connection state changes, reset the loader's state.
