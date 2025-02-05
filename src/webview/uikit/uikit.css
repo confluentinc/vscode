@@ -126,12 +126,17 @@
 */
 .webview-form {
   margin: 0 auto;
-  max-width: 1000px;
+  max-width: 900px;
   padding: 60px 80px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  font-size: 14px;
+}
+@media screen and (max-width: 800px) {
+  .webview-form {
+    padding: 24px;
+    gap: 12px;
+  }
 }
 .form-header {
   display: flex;
