@@ -15,13 +15,13 @@
 /**
  * Reachability represents the reachability of a node.
  * @export
+ * @enum {string}
  */
-export const Reachability = {
-  Unknown: "unknown",
-  Unreachable: "unreachable",
-  Reachable: "reachable",
-} as const;
-export type Reachability = (typeof Reachability)[keyof typeof Reachability];
+export enum Reachability {
+  Unknown = "unknown",
+  Unreachable = "unreachable",
+  Reachable = "reachable",
+}
 
 export function instanceOfReachability(value: any): boolean {
   for (const key in Reachability) {
