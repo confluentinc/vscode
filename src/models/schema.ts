@@ -92,7 +92,7 @@ export class Schema extends Data implements IResourceBase {
     // NOTE: based on the availability of schema-specific data at the time of SchemasViewProvider
     // loading, the Subject containers won't actually have any Schema children, so we can't offer
     // any searchability on them.
-    return this.id;
+    return "";
   }
 }
 
