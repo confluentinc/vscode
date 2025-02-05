@@ -22,7 +22,7 @@ import {
 } from "../clients/sidecar";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, EnvironmentId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -346,7 +346,10 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   });
 
   it("CCLOUD: setCCloudSchemaRegistries() should correctly store Schema Registries", async () => {
-    const secondCloudEnvironment = { ...TEST_CCLOUD_ENVIRONMENT, id: "second-cloud-env-id" };
+    const secondCloudEnvironment = {
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: "second-cloud-env-id" as EnvironmentId,
+    };
     const secondSchemaRegistry = CCloudSchemaRegistry.create({
       ...TEST_CCLOUD_SCHEMA_REGISTRY,
       environmentId: secondCloudEnvironment.id,
