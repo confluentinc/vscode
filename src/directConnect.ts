@@ -97,18 +97,36 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     return { success: true, message: "Connection updated successfully." };
   }
 
+  /** Stores a map of options with key: value pairs that is then updated on form input
+   * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   * TODO I'm not sure if I should "extrapolate" to make a sub component for all kafka...
+   * or at least we should update these in the same way?
+   * which would help with future "grouping" efforts and loading form file we discussed
+   */
+  let kafkaSslConfigUpdates: { [key: string]: string | boolean } = {};
+  let schemaSslConfigUpdates: { [key: string]: string | boolean } = {};
+  function updateConfigValue(namespace: "kafka" | "schema", key: string, value: string) {
+    if (namespace === "kafka") kafkaSslConfigUpdates[key] = value;
+    console.log("new kafka ssl:", kafkaSslConfigUpdates);
+    if (namespace === "schema") schemaSslConfigUpdates[key] = value;
+    console.log("new schema ssl:", schemaSslConfigUpdates);
+  }
+
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "Test":
         return (await testConnection(body)) satisfies MessageResponse<"Test">;
       case "Submit":
         return (await saveConnection(body)) satisfies MessageResponse<"Submit">;
+      case "Update":
+        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
       case "GetConnectionSpec": {
         const spec = connection ? cleanSpec(connection) : null;
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
-      case "Update":
-        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
+      case "UpdateSpecValue":
+        updateConfigValue(body.namespace, body.inputName, body.inputValue);
+        return null satisfies MessageResponse<"UpdateSpecValue">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
@@ -139,7 +157,8 @@ export function getConnectionSpecFromFormData(
         username: formData["kafka_username"],
         password: formData["kafka_password"],
       };
-    } else if (formData.kafka_auth_type === "API") {
+      // if CCloud we force it to be API
+    } else if (formData["platform"] === "Confluent Cloud" || formData.kafka_auth_type === "API") {
       spec.kafka_cluster.credentials = {
         api_key: formData["kafka_api_key"],
         api_secret: formData["kafka_api_secret"],
@@ -160,7 +179,8 @@ export function getConnectionSpecFromFormData(
         username: formData["schema_username"],
         password: formData["schema_password"],
       };
-    } else if (formData.schema_auth_type === "API") {
+      // if CCloud we force it to be API
+    } else if (formData["platform"] === "Confluent Cloud" || formData.schema_auth_type === "API") {
       spec.schema_registry.credentials = {
         api_key: formData["schema_api_key"],
         api_secret: formData["schema_api_secret"],
