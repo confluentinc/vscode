@@ -106,11 +106,13 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     );
 
     assert.equal(schemas.length, versions.length);
-    // Should be in the right order ...
+
+    // Should be in the right order (descending by version)...
     assert.deepEqual(
       schemas.map((schema) => schema.version),
-      versions,
+      versions.sort((a, b) => b - a),
     );
+
     // And each schema should have the right properties as from fakeGetSchemaByVersion().
     for (const schema of schemas) {
       assert.equal(schema.subject, subject);

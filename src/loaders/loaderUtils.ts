@@ -175,6 +175,8 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<str
  * of each version and return them as an array of {@link Schema}.
  *
  * The returned array of schema metadata concerning a a single subject is called a "subject group".
+ *
+ * @returns An array of all the schemas for the subject in the schema registry, sorted descending by version.
  */
 export async function fetchSchemaSubjectGroup(
   schemaRegistry: SchemaRegistry,
@@ -188,6 +190,10 @@ export async function fetchSchemaSubjectGroup(
 
   // Learn all of the live version numbers for the subject in one round trip.
   const versions: number[] = await client.listVersions({ subject });
+
+  // Reverse sort versions to get the highest version first. This will then
+  // become the order of the returned array of Schema.
+  versions.sort((a, b) => b - a);
 
   // Now prep to fetch each of the versions concurrently via concurrent
   // calls to fetchSchemaVersion() driven by executeInWorkerPool().
