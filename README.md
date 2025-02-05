@@ -205,6 +205,8 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 - Preview links for non-default organizations work only after switching to the non-default
   organization in the Confluent Cloud UI in your browser.
 - When using multiple users on a single machine, only one user can run the extension at a time.
+- Searching by schema ID (in the Topics and Schemas views) is not supported due to cost and
+  performance considerations.
 
 ## Support
 
