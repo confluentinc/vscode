@@ -1,5 +1,5 @@
-import { brush } from "./brush";
 import { deepEqual } from "assert/strict";
+import { brush } from "./brush";
 
 describe("brush", () => {
   it("should follow the events", () => {
@@ -14,7 +14,7 @@ describe("brush", () => {
     ctl.down(10, 10);
     ctl.move(40, 40);
     ctl.move(60, 30);
-    ctl.up(0, 0);
+    ctl.up();
 
     deepEqual(ctl.get(), [
       [10, 10],
@@ -23,7 +23,7 @@ describe("brush", () => {
 
     ctl.down(70, 80);
     ctl.move(5, 5);
-    ctl.up(0, 0);
+    ctl.up();
 
     deepEqual(ctl.get(), [
       [5, 5],
@@ -32,7 +32,7 @@ describe("brush", () => {
 
     ctl.down(20, 20);
     ctl.move(25, 25);
-    ctl.up(0, 0);
+    ctl.up();
 
     deepEqual(ctl.get(), [
       [10, 10],
