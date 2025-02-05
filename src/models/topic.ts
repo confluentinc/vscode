@@ -4,8 +4,9 @@ import { KAFKA_TOPIC_OPERATIONS } from "../authz/constants";
 import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import { CustomMarkdownString } from "./main";
+import { ContainerTreeItem, CustomMarkdownString } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
+import { Schema } from "./schema";
 
 /** Main class representing Kafka topic */
 export class KafkaTopic extends Data implements IResourceBase, ISearchable {
@@ -30,7 +31,7 @@ export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   hasSchema: boolean = false;
 
   /** Schema subjects; only used with Topics view search. */
-  children?: ISearchable[] | undefined;
+  children: ContainerTreeItem<Schema>[] = [];
 
   /** Operations the user is authzd to perform on the topic */
   operations!: Enforced<KafkaTopicOperation[]>;
