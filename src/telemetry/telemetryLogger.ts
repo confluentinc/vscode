@@ -110,6 +110,7 @@ export function preparePropertiesForTrack(
 
   return {
     productName: vscode.env.uriScheme, // "vscode", "vscode-insiders", etc.
+    productVersion: vscode.version,
     currentSidecarVersion: ideSidecar.version,
     ...data, // VSCode Common properties in data includes the extension version
   };
