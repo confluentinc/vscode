@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -29,7 +29,7 @@ export function getLanguageTypes(schemaType: SchemaType): string[] {
 
 // Main class representing CCloud Schema Registry schemas, matching key/value pairs returned
 // by the `confluent schema-registry schema list` command.
-export class Schema extends Data implements IResourceBase, ISearchable {
+export class Schema extends Data implements IResourceBase {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
   iconName: IconNames.SCHEMA = IconNames.SCHEMA;
@@ -89,6 +89,9 @@ export class Schema extends Data implements IResourceBase, ISearchable {
   }
 
   searchableText(): string {
+    // NOTE: based on the availability of schema-specific data at the time of SchemasViewProvider
+    // loading, the Subject containers won't actually have any Schema children, so we can't offer
+    // any searchability on them.
     return this.id;
   }
 }
