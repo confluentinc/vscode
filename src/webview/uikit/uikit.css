@@ -120,7 +120,7 @@
 *   div.form-header
 *   form.form-container (or <div>?) 
 *     fieldset|div.form-section (*n)
-*       h2.section-heading
+*       h2.form-section-heading
 *       inputs(*n), e.g. div.input-container|div.input-row
 *     div.form-section.button-group (incl. input[type="submit"] or .button[type="submit"])
 */
@@ -189,16 +189,21 @@
   font-weight: 500;
   white-space: nowrap;
 }
+/** Button group expects 2 buttons w/possible info
+* e.g. div.button-group
+*       .button.secondary
+*       .info
+*       .button[type="submit"]
+*/
 .button-group {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  gap: 0;
-  align-self: stretch;
+  gap: 8px;
   border: none;
 }
-.button-group > .info {
-  justify-self: start;
+.button-group > .button:last-child {
+  margin-left: auto;
 }
 
 .field-description {
@@ -249,13 +254,17 @@
   font-weight: 500;
   color: var(--vscode-editor-foreground);
 }
-.input-container > .info {
+.info {
   color: var(--vscode-descriptionForeground);
   font-weight: 450;
   white-space: break-spaces;
   font-size: 12px;
   position: relative;
 }
+.button-group > .info {
+  white-space: unset;
+}
+
 /** Generic input styles using theme custom properties whenever possible */
 .input {
   box-sizing: border-box;
@@ -332,18 +341,20 @@
 .input-container > .info.error {
   min-width: 100%;
 }
-.info.error::before {
-  content: " x ";
-  font-size: 18px;
-  line-height: 0;
-  font-weight: 200;
-  color: var(--vscode-errorForeground);
-  position: absolute;
-  top: 6px;
-  left: -16px;
-}
+
 .input-container.error .input,
 .input.error,
 input:user-invalid {
   border: 1px solid var(--vscode-errorForeground);
+}
+.status-icon {
+  font-size: 18px;
+  line-height: 0;
+  font-weight: 200;
+}
+.success .status-icon {
+  color: var(--vscode-testing-iconPassed);
+}
+.error .status-icon {
+  color: var(--vscode-testing-iconFailed);
 }
