@@ -37,7 +37,7 @@ global_job_config:
         - make store-test-results-to-semaphore
 
 blocks:
-  - name: "Build & Test"
+  - name: "Build & Test (VS Code)"
     dependencies: []
     # Skip when:
     # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
@@ -49,6 +49,17 @@ blocks:
         - name: "Build & Test"
           commands:
             - make test
+          # Not setting VSCODE_VERSION env var will default using the latest stable release version
+      epilogue:
+        always:
+          commands:
+            - make remove-test-env
+  - name: "Build & Test (VS Code Insiders)"
+    dependencies: []
+    skip:
+      when: "branch_name != 'main' || change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    task:
+      jobs:
         - name: "Build & Test (Insiders)"
           commands:
             - make test
