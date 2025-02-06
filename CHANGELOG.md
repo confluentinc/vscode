@@ -22,6 +22,8 @@ All notable changes to this extension will be documented in this file.
   all schema registries.
 - Quickpick for schema registry subject names (i.e. when uploading a new schema) now based off of
   `GET /subjects` route results.
+- Message Viewer's "Open consumed messages as JSON" feature now opens messages in a read-only
+  document, which can be used to produce messages to other topics.
 
 ### Fixed
 
