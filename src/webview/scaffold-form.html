@@ -31,7 +31,17 @@
             <div class="content-wrapper">
               <template data-if="this.getEnumField(this.field())">
                 <div class="input-container dropdown">
-                  <label class="label" data-text="this.field()[1].display_name"> </label>
+                  <div class="label-wrapper">
+                    <label
+                      data-text="this.field()[1].display_name"
+                      data-attr-for="this.field()[0]"
+                      class="label"
+                    ></label
+                    ><template data-if="this.field()[1].description">
+                      <span class="tooltip-indicator">?</span
+                      ><span class="tooltip" data-text="this.field()[1].description"></span>
+                    </template>
+                  </div>
                   <vscode-dropdown
                     data-attr-name="this.field()[0]"
                     data-prop-value="this.field()[1].initial_value"
@@ -44,18 +54,21 @@
                       ></vscode-option>
                     </template>
                   </vscode-dropdown>
-                  <div class="help-text">
-                    <span class="field-description" data-text="this.field()[1].description"></span>
-                  </div>
                 </div>
               </template>
               <template data-if="!this.getEnumField(this.field())">
                 <div class="input-container" data-attr-id="'input_' + this.field()[0]">
-                  <label
-                    data-text="this.field()[1].display_name"
-                    data-attr-for="this.field()[0]"
-                    data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
-                  ></label>
+                  <div class="label-wrapper">
+                    <label
+                      data-text="this.field()[1].display_name"
+                      data-attr-for="this.field()[0]"
+                      data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
+                    ></label
+                    ><template data-if="this.field()[1].description">
+                      <span class="tooltip-indicator">?</span
+                      ><span class="tooltip" data-text="this.field()[1].description"></span>
+                    </template>
+                  </div>
                   <input
                     class="input"
                     data-text="this.field()[1].display_name"
@@ -68,9 +81,8 @@
                     data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
                     data-attr-required="this.field()[1].min_length > 0"
                   />
-                  <div class="help-text">
-                    <span class="field-description" data-text="this.field()[1].description"></span
-                    >&nbsp;<span
+                  <div class="info">
+                    <span
                       class="pattern field-description"
                       data-attr-id="this.field()[0]"
                       data-text="this.field()[1].pattern ? 'Must match pattern: ' + this.field()[1].pattern : ''"
@@ -81,23 +93,67 @@
             </div>
           </template>
         </div>
-        <div class="form-section button-group">
-          <input
-            class="button"
-            type="submit"
-            value="Generate & Save"
-            data-attr-disabled="this.hasValidationErrors() === true ? true : false"
-          />
-          <span
-            data-attr-class="this.success() ? 'help-text' : 'help-text error'"
-            data-text="this.message()"
-          ></span>
+        <div class="form-section">
+          <div class="input-row">
+            <input
+              class="button"
+              type="submit"
+              value="Generate & Save"
+              data-attr-disabled="this.hasValidationErrors() === true ? true : false"
+            />
+            <template data-if="this.message()">
+              <div data-attr-class="this.success() ? 'info' : 'info error'">
+                <span class="status-icon" data-text="this.success() ? '' : 'x'"></span>
+                <span data-text="this.message()"></span>
+              </div>
+            </template>
+          </div>
         </div>
       </form>
     </main>
 
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('scaffold-form.js')}"></script>
-    <style nonce="${nonce}"></style>
+    <style nonce="${nonce}">
+      .label-wrapper {
+        position: relative;
+      }
+      .tooltip-indicator {
+        padding: 2px;
+        border-radius: 50%;
+        border: 1px solid var(--vscode-descriptionForeground);
+        color: var(--vscode-descriptionForeground);
+        height: 0.5rem;
+        width: 0.5rem;
+        font-size: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        right: -15px;
+        position: absolute;
+        top: 0px;
+        transition: all 0.2s ease-in-out;
+      }
+      .label-wrapper:hover .tooltip-indicator {
+        background-color: var(--vscode-badge-background);
+      }
+      .label-wrapper > .tooltip {
+        display: none;
+        border: 1px solid var(--vscode-badge-background); /* slightly lighter I hope? */
+        background: var(--vscode-editor-background);
+        color: var(--vscode-descriptionForeground);
+        padding: 5px;
+        width: max-content;
+        max-width: 250px;
+        position: absolute;
+        bottom: 1rem;
+        left: 100%;
+        border-radius: 3px;
+        font-weight: normal;
+      }
+      .label-wrapper:hover > .tooltip {
+        display: block;
+      }
+    </style>
   </body>
 </html>

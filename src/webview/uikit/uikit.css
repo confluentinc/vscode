@@ -245,7 +245,8 @@
 .input-container > .input[type="number"] {
   width: fit-content;
 }
-.input-container > .label {
+.input-container > .label,
+.label-wrapper > .label {
   margin-bottom: 0;
   display: block;
   cursor: pointer;
@@ -257,12 +258,8 @@
 .info {
   color: var(--vscode-descriptionForeground);
   font-weight: 450;
-  white-space: break-spaces;
   font-size: 12px;
   position: relative;
-}
-.button-group > .info {
-  white-space: unset;
 }
 
 /** Generic input styles using theme custom properties whenever possible */
