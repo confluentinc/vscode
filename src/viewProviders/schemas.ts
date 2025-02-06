@@ -12,9 +12,8 @@ import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
-import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { generateSubjectContainers, Schema, SchemaTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -25,7 +24,7 @@ const logger = new Logger("viewProviders.schemas");
  * The types managed by the {@link SchemasViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
  */
-type SchemasViewProviderData = ContainerTreeItem<Schema> | Schema;
+type SchemasViewProviderData = Subject | Schema;
 
 export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -94,11 +93,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   getTreeItem(element: SchemasViewProviderData): vscode.TreeItem {
     let treeItem: vscode.TreeItem;
 
-    if (element instanceof Schema) {
-      treeItem = new SchemaTreeItem(element);
+    if (element instanceof Subject) {
+      treeItem = new SubjectTreeItem(element);
     } else {
-      // ContainerTreeItem
-      treeItem = element;
+      // must be a Schema
+      treeItem = new SchemaTreeItem(element);
     }
 
     if (this.itemSearchString) {
@@ -115,12 +114,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     if (element instanceof Schema) {
-      // if we're a schema, our parent is (an equivalent) container tree item (that will have the right label (the schema subject))
-      return new ContainerTreeItem<Schema>(
-        element.subject,
-        vscode.TreeItemCollapsibleState.Collapsed,
-        [],
-      );
+      // if we're a schema, our parent is our Subject (which we carry as just a string).
+      return new Subject(element.subject);
     }
     // Otherwise the parent of a container tree item is the root.
     return null;
@@ -142,22 +137,36 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     // just that single subject and show them as children of the ContainerTreeItem<Schema>.
 
     if (!this.schemaRegistry) {
-      // No Schema Registry selected, so no schemas to show.
+      // No Schema Registry selected, so no subjects or schemas to show.
       return [];
     }
 
-    let children: SchemasViewProviderData[] = [];
+    // What will be returned.
+    let children: SchemasViewProviderData[];
 
     const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
-    if (element instanceof ContainerTreeItem) {
-      // expanded a subject container, so return the schemas for that subject.
-      // Returns Schema[].
-      children = await loader.getSchemaSubjectGroup(this.schemaRegistry!, element.label as string);
-    } else {
-      const subjects = (await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
+    if (element == null) {
+      // Toplevel: return the subjects.
+
+      // todo make this loader method return Subject[] instead of string[]
+      const subjects: string[] = await loader.getSubjects(
+        this.schemaRegistry,
+        this.forceDeepRefresh,
+      );
+
+      children = subjects.map((subject) => {
+        return new Subject(subject);
+      });
+
       // this ends up being an array of subject containers, each with schemas as .children:
-      children = subjects.length > 0 ? generateSubjectContainers(subjects) : [];
+    } else if (element instanceof Subject) {
+      // Selected a subject, so return the schemas bound to the subject.
+      // Returns Schema[].
+      children = await loader.getSchemaSubjectGroup(this.schemaRegistry!, element.name);
+    } else {
+      // Selected a schema, no children there.
+      children = [];
     }
 
     if (this.itemSearchString) {

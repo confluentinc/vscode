@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -93,6 +93,31 @@ export class Schema extends Data implements IResourceBase {
     // loading, the Subject containers won't actually have any Schema children, so we can't offer
     // any searchability on them.
     return "";
+  }
+}
+
+/** Thin ISearchable wrapper around a schema subject string. */
+export class Subject implements ISearchable {
+  name!: string;
+  id!: string;
+
+  constructor(name: string) {
+    this.name = name;
+    this.id = name;
+  }
+
+  searchableText(): string {
+    return this.name;
+  }
+}
+
+/** Tree item representing a subject */
+export class SubjectTreeItem extends vscode.TreeItem {
+  constructor(subject: Subject) {
+    super(subject.name, vscode.TreeItemCollapsibleState.Collapsed);
+    this.iconPath = getSubjectIcon(subject.name);
+    this.id = subject.name;
+    this.contextValue = "schema-subject";
   }
 }
 
@@ -229,32 +254,6 @@ export function generateSchemaSubjectGroups(
   }
 
   return schemaGroups;
-}
-
-/** Generate child-free ContainerTreeItem<Schema>[] from array of subjects found in a schema registry. */
-export function generateSubjectContainers(subjects: string[]): ContainerTreeItem<Schema>[] {
-  const subjectContainers: ContainerTreeItem<Schema>[] = new Array<ContainerTreeItem<Schema>>(
-    subjects.length,
-  );
-  if (subjects.length === 0) {
-    return subjectContainers;
-  }
-
-  // sort subjects alphabetically
-  subjects.sort();
-
-  let i = 0;
-  for (const subject of subjects) {
-    const subjectContainerItem = new ContainerTreeItem<Schema>(
-      subject,
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [],
-    );
-    subjectContainerItem.iconPath = getSubjectIcon(subject);
-    subjectContainers[i++] = subjectContainerItem;
-  }
-
-  return subjectContainers;
 }
 
 /** Determine an icon for a schema subject,

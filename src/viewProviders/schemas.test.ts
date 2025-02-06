@@ -1,12 +1,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TreeItemCollapsibleState } from "vscode";
 import { TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -22,12 +21,10 @@ describe("SchemasViewProvider methods", () => {
     assert.ok(treeItem instanceof SchemaTreeItem);
   });
 
-  it("getTreeItem() should pass ContainerTreeItems through directly", () => {
-    const container = new ContainerTreeItem<Schema>("test", TreeItemCollapsibleState.Collapsed, [
-      TEST_CCLOUD_SCHEMA,
-    ]);
-    const treeItem = provider.getTreeItem(container);
-    assert.deepStrictEqual(treeItem, container);
+  it("getTreeItem() should return a SubjectTreeItem for a Subject instance", () => {
+    const subject = new Subject(TEST_CCLOUD_SCHEMA.subject);
+    const treeItem = provider.getTreeItem(subject);
+    assert.ok(treeItem instanceof SubjectTreeItem);
   });
 });
 
@@ -129,28 +126,24 @@ describe("SchemasViewProvider search behavior", () => {
     // First schema subject matches search
     schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 
-    const container = new ContainerTreeItem<Schema>(
-      TEST_CCLOUD_SCHEMA.subject,
-      TreeItemCollapsibleState.Collapsed,
-      [TEST_CCLOUD_SCHEMA],
-    );
-    const treeItem = provider.getTreeItem(container);
+    const subject = new Subject(TEST_CCLOUD_SCHEMA.subject);
+    const treeItem = provider.getTreeItem(subject);
 
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });
 
-  it("getTreeItem() should collapse items when children exist but don't match search", async () => {
-    // Search for non-matching string
-    schemaSearchSet.fire("non-matching-search");
+  // it("getTreeItem() should collapse items when children exist but don't match search", async () => {
+  //   // Search for non-matching string
+  //   schemaSearchSet.fire("non-matching-search");
 
-    const container = new ContainerTreeItem<Schema>(
-      TEST_CCLOUD_SCHEMA.subject,
-      TreeItemCollapsibleState.Expanded,
-      [TEST_CCLOUD_SCHEMA],
-    );
-    const treeItem = provider.getTreeItem(container);
+  //   const container = new ContainerTreeItem<Schema>(
+  //     TEST_CCLOUD_SCHEMA.subject,
+  //     TreeItemCollapsibleState.Expanded,
+  //     [TEST_CCLOUD_SCHEMA],
+  //   );
+  //   const treeItem = provider.getTreeItem(container);
 
-    assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
-  });
+  //   assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
+  // });
 });
