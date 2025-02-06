@@ -28,7 +28,6 @@
           <h2 class="form-section-heading">Settings</h2>
           <div class="input-container">
             <label for="cleanup-policy" class="label">Cleanup Policy</label>
-            <span class="info error"></span>
             <select
               id="cleanup-policy"
               class="input dropdown"
@@ -50,7 +49,6 @@
           </div>
           <div class="input-container">
             <label for="retention-size" class="label">Retention Size</label>
-            <span class="info error"></span>
             <select
               class="input dropdown"
               id="retention-size"
@@ -73,7 +71,6 @@
           </div>
           <div class="input-container">
             <label for="retention-ms" class="label">Retention Time</label>
-            <span class="info error"></span>
             <select
               class="input dropdown"
               id="retention-ms"
@@ -98,17 +95,18 @@
           </div>
           <div class="input-container">
             <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
-            <span class="info error"></span>
-            <input
-              class="input"
-              id="max-message-bytes"
-              name="max.message.bytes"
-              type="number"
-              min="0"
-              max="20971520"
-              data-prop-value="this.maxMessageBytes()"
-              data-on-change="this.handleChange(event)"
-            />
+            <div class="input-row">
+              <input
+                class="input"
+                id="max-message-bytes"
+                name="max.message.bytes"
+                type="number"
+                min="0"
+                max="20971520"
+                data-prop-value="this.maxMessageBytes()"
+                data-on-change="this.handleChange(event)"
+              /><span class="info error"></span>
+            </div>
             <span class="field-description"
               >The maximum message size that can be appended to this topic, in bytes.
               <a
@@ -127,10 +125,14 @@
             data-attr-disabled="!this.hasChanges()"
           />
           <template data-if="this.success()">
-            <p class="info success">
-              Data updated successfully. You may close this tab or make additional changes.
-            </p> </template
-          ><input
+            <div data-attr-class="this.success() ? 'info success' : 'info'">
+              <span class="status-icon" data-text="this.success() ? '✓' : ''"></span>
+              <span
+                data-text="this.success() ? 'Configuration updated successfully.' : 'An error occurred during update.'"
+              ></span>
+            </div>
+          </template>
+          <input
             class="button"
             type="submit"
             value="Save changes"
@@ -141,6 +143,20 @@
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
-    <style nonce="${nonce}"></style>
+    <style nonce="${nonce}">
+      .info.error {
+        position: relative;
+      }
+      .input.error + .info.error::before {
+        content: " x ";
+        font-size: 18px;
+        line-height: 0;
+        font-weight: 200;
+        color: var(--vscode-testing-iconFailed);
+        position: absolute;
+        top: 6px;
+        left: -16px;
+      }
+    </style>
   </body>
 </html>
