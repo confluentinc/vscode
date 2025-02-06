@@ -49,23 +49,26 @@
             >
               <option
                 value="Apache Kafka"
-                data-attr-selected="this.platformType() === 'Apache Kafka'"
+                data-attr-selected="this.platformType() === 'Apache Kafka' ? true : false"
               >
                 Apache Kafka®
               </option>
               <option
                 value="Confluent Cloud"
-                data-attr-selected="this.platformType() === 'Confluent Cloud'"
+                data-attr-selected="this.platformType() === 'Confluent Cloud' ? true : false"
               >
                 Confluent Cloud
               </option>
               <option
                 value="Confluent Platform"
-                data-attr-selected="this.platformType() === 'Confluent Platform'"
+                data-attr-selected="this.platformType() === 'Confluent Platform' ? true : false"
               >
                 Confluent Platform
               </option>
-              <option value="Other" data-attr-selected="this.platformType() === 'Other'">
+              <option
+                value="Other"
+                data-attr-selected="this.platformType() === 'Other' ? true : false"
+              >
                 Other
               </option>
             </select>
@@ -116,18 +119,23 @@
               id="kafka_auth_type"
               name="kafka_auth_type"
               data-on-change="this.updateValue(event)"
-              data-attr-value="this.kafkaAuthType()"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
-              <option value="None" data-attr-selected="this.kafkaAuthType() === 'None'">
+              <option
+                value="None"
+                data-attr-selected="this.kafkaAuthType() === 'None' ? true : false"
+              >
                 None
               </option>
-              <option value="Basic" data-attr-selected="this.kafkaAuthType() === 'Basic'">
+              <option
+                value="Basic"
+                data-attr-selected="this.kafkaAuthType() === 'Basic' ? true : false"
+              >
                 Username & Password
               </option>
               <option
                 value="API"
-                data-attr-selected="this.kafkaAuthType() === 'API' || this.platformType() === 'Confluent Cloud'"
+                data-attr-selected="this.kafkaAuthType() === 'API' ? true : false"
               >
                 API Credentials
               </option>
@@ -235,15 +243,21 @@
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
-              <option value="None" data-attr-selected="this.schemaAuthType() === 'None'">
+              <option
+                value="None"
+                data-attr-selected="this.schemaAuthType() === 'None' ? true : false"
+              >
                 None
               </option>
-              <option value="Basic" data-attr-selected="this.schemaAuthType() === 'Basic'">
+              <option
+                value="Basic"
+                data-attr-selected="this.schemaAuthType() === 'Basic' ? true : false"
+              >
                 Username & Password
               </option>
               <option
                 value="API"
-                data-attr-selected="this.schemaAuthType() === 'API' || this.platformType() === 'Confluent Cloud'"
+                data-attr-selected="this.schemaAuthType() === 'API' ? true : false"
               >
                 API Credentials
               </option>
