@@ -45,13 +45,29 @@
               class="input dropdown"
               id="platform"
               name="platform"
-              value="this.platformType()"
               data-on-change="this.updateValue(event)"
             >
-              <option value="apache-kafka">Apache Kafka®</option>
-              <option value="confluent-cloud">Confluent Cloud</option>
-              <option value="confluent-platform">Confluent Platform</option>
-              <option value="other">Other</option>
+              <option
+                value="Apache Kafka"
+                data-attr-selected="this.platformType() === 'Apache Kafka'"
+              >
+                Apache Kafka®
+              </option>
+              <option
+                value="Confluent Cloud"
+                data-attr-selected="this.platformType() === 'Confluent Cloud'"
+              >
+                Confluent Cloud
+              </option>
+              <option
+                value="Confluent Platform"
+                data-attr-selected="this.platformType() === 'Confluent Platform'"
+              >
+                Confluent Platform
+              </option>
+              <option value="Other" data-attr-selected="this.platformType() === 'Other'">
+                Other
+              </option>
             </select>
             <!-- <template data-if="this.platformType() === 'Other'"
               >&nbsp;&nbsp;
@@ -68,17 +84,15 @@
           </div>
         </div>
         <div class="form-section">
-          <template data-if="this.kafkaStatusMessage()"
-            ><div class="status-banner">
-              <span class="status-icon">x</span>
-              <span
-                data-attr-class="this.kafkaErrorMessage() ? 'info error' : 'info'"
-                data-text="this.kafkaStatusMessage()"
-              ></span>
+          <template data-if="this.showKafkaStatus()"
+            ><div
+              data-attr-class="this.kafkaErrorMessage() ? 'msg-banner error' : 'msg-banner success'"
+            >
+              <span class="status-icon" data-text="this.kafkaErrorMessage() ? 'x' : '✓'"></span>
+              <span data-text="this.kafkaStatusMessage()"></span>
             </div>
-            ></template
-          >
-          <h2 class="section-heading">Kafka Cluster</h2>
+          </template>
+          <h2 class="form-section-heading">Kafka Cluster</h2>
           <div class="input-container">
             <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
             <input
@@ -105,9 +119,18 @@
               data-attr-value="this.kafkaAuthType()"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
-              <option value="None">None</option>
-              <option value="Basic">Username & Password</option>
-              <option value="API">API Credentials</option>
+              <option value="None" data-attr-selected="this.kafkaAuthType() === 'None'">
+                None
+              </option>
+              <option value="Basic" data-attr-selected="this.kafkaAuthType() === 'Basic'">
+                Username & Password
+              </option>
+              <option
+                value="API"
+                data-attr-selected="this.kafkaAuthType() === 'API' || this.platformType() === 'Confluent Cloud'"
+              >
+                API Credentials
+              </option>
             </select>
           </div>
           <template data-if="this.kafkaAuthType() === 'Basic'">
@@ -177,13 +200,15 @@
           >
         </div>
         <div class="form-section">
-          <template data-if="this.schemaStatusMessage()"
-            ><p
-              data-attr-class="this.schemaErrorMessage() ? 'info error' : 'info'"
-              data-text="this.schemaStatusMessage()"
-            ></p
-          ></template>
-          <h2 class="section-heading">Schema Registry</h2>
+          <template data-if="this.showSchemaStatus()">
+            <div
+              data-attr-class="this.schemaErrorMessage() ? 'msg-banner error' : 'msg-banner success'"
+            >
+              <span class="status-icon" data-text="this.schemaErrorMessage() ? 'x' : '✓'"></span>
+              <span data-text="this.schemaStatusMessage()"></span>
+            </div>
+          </template>
+          <h2 class="form-section-heading">Schema Registry</h2>
           <div class="input-container">
             <label for="uri" class="label">URL</label>
             <input
@@ -208,12 +233,20 @@
               id="schema_auth_type"
               name="schema_auth_type"
               data-on-change="this.updateValue(event)"
-              data-attr-value="this.schemaAuthType()"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
-              <option value="None">None</option>
-              <option value="Basic">Username & Password</option>
-              <option value="API">API Credentials</option>
+              <option value="None" data-attr-selected="this.schemaAuthType() === 'None'">
+                None
+              </option>
+              <option value="Basic" data-attr-selected="this.schemaAuthType() === 'Basic'">
+                Username & Password
+              </option>
+              <option
+                value="API"
+                data-attr-selected="this.schemaAuthType() === 'API' || this.platformType() === 'Confluent Cloud'"
+              >
+                API Credentials
+              </option>
             </select>
           </div>
           <template data-if="this.schemaAuthType() === 'Basic'">
@@ -284,18 +317,18 @@
           >
         </div>
         <div class="form-section button-group">
-          <div>
-            <input
-              class="button secondary"
-              type="submit"
-              data-attr-value="this.loading() ? 'Testing...' : 'Test'"
-              data-attr-disabled="this.loading()"
-            />
-            <div
-              data-attr-class="this.success() ? 'info' : 'info error'"
-              data-text="this.message()"
-            ></div>
-          </div>
+          <input
+            class="button secondary"
+            type="submit"
+            data-attr-value="this.loading() ? 'Testing...' : 'Test'"
+            data-attr-disabled="this.loading()"
+          />
+          <template data-if="this.message() !== ''">
+            <div data-attr-class="!this.success() ? 'info error' : 'info'">
+              <span class="status-icon" data-text="!this.success() ? 'x' : '✓'"></span>
+              <span data-text="this.message()"></span>
+            </div>
+          </template>
           <input
             class="button"
             type="submit"
@@ -307,6 +340,43 @@
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('direct-connect-form.js')}"></script>
-    <style nonce="${nonce}"></style>
+    <style nonce="${nonce}">
+      .msg-banner {
+        color: var(--vscode-descriptionForeground);
+        font-weight: 450;
+      }
+      .msg-banner {
+        margin-bottom: -8px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        padding: 0.5em 1em;
+        border-radius: 3px;
+        border: 1px solid var(--vscode-panel-border, #ccc);
+      }
+      .msg-banner::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: transparent;
+        opacity: 0.1;
+        z-index: -1;
+      }
+      .msg-banner.error {
+        border-color: var(--vscode-testing-iconFailed);
+      }
+      .msg-banner.error::before {
+        background-color: var(--vscode-testing-iconFailed);
+      }
+      .msg-banner.success {
+        border-color: var(--vscode-testing-iconPassed);
+      }
+      .msg-banner.success::before {
+        background-color: var(--vscode-testing-iconPassed);
+      }
+    </style>
   </body>
 </html>
