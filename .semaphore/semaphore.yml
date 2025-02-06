@@ -49,6 +49,12 @@ blocks:
         - name: "Build & Test"
           commands:
             - make test
+        - name: "Build & Test (Insiders)"
+          commands:
+            - make test
+          env_vars:
+            - name: VSCODE_VERSION
+              value: insiders
       epilogue:
         always:
           commands:
