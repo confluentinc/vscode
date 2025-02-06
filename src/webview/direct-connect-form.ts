@@ -29,8 +29,10 @@ class DirectConnectFormViewModel extends ViewModel {
   platformType = this.derive<FormConnectionType>(() => {
     return this.spec()?.formConnectionType || "Apache Kafka";
   });
+
   // TODO this is not used anywhere but could be extra metadata for telemetry. We'll have to save it in the spec.
   // otherPlatformType = this.signal<string | undefined>(undefined);
+
   name = this.derive(() => {
     return this.spec()?.name || "";
   });
@@ -43,7 +45,9 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.kafka_cluster?.credentials;
   });
   kafkaAuthType = this.derive(() => {
-    return this.getCredentialsType(this.kafkaCreds());
+    if (this.platformType() === "Confluent Cloud")
+      return "API"; // CCloud only supports API
+    else return this.getCredentialsType(this.kafkaCreds());
   });
   kafkaUsername = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
@@ -69,7 +73,9 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.schema_registry?.credentials;
   });
   schemaAuthType = this.derive(() => {
-    return this.getCredentialsType(this.schemaCreds());
+    if (this.platformType() === "Confluent Cloud")
+      return "API"; // CCloud only supports API
+    else return this.getCredentialsType(this.schemaCreds());
   });
   schemaUsername = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
@@ -92,22 +98,33 @@ class DirectConnectFormViewModel extends ViewModel {
   success = this.signal(false);
   loading = this.signal(false);
 
-  /** Connection state & errors (seen after testing) */
+  /** Connection state & errors (displayed in UI after Test) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
   kafkaErrorMessage = this.signal<string | undefined>(undefined);
   kafkaStatusMessage = this.derive(() => {
-    if (this.kafkaState() === "FAILED") {
-      return this.kafkaErrorMessage();
-    } else if (this.kafkaState()) return "Connection test succeeded";
-    else return undefined;
+    if (this.kafkaState() === "FAILED") return this.kafkaErrorMessage();
+    else if (this.kafkaState() === "SUCCESS") return "Connection test succeeded";
+    else return `Kafka Cluster state: ${this.kafkaState()}`;
   });
+  showKafkaStatus = this.derive(() => {
+    return (
+      this.kafkaBootstrapServers() != null &&
+      this.kafkaState() !== undefined &&
+      this.kafkaState() !== "NONE"
+    );
+  });
+
   schemaState = this.signal<ConnectedState | undefined>(undefined);
   schemaErrorMessage = this.signal<string | undefined>(undefined);
   schemaStatusMessage = this.derive(() => {
-    if (this.schemaState() === "FAILED") {
-      return this.schemaErrorMessage();
-    } else if (this.schemaState()) return "Connection test succeeded";
-    else return undefined;
+    if (this.schemaState() === "FAILED") return this.schemaErrorMessage();
+    else if (this.schemaState() === "SUCCESS") return "Connection test succeeded";
+    else return `Schema Registry state: ${this.schemaState()}`;
+  });
+  showSchemaStatus = this.derive(() => {
+    return (
+      this.schemaUri() != null && this.schemaState() !== undefined && this.schemaState() !== "NONE"
+    );
   });
 
   getCredentialsType(creds: any) {
@@ -209,11 +226,15 @@ class DirectConnectFormViewModel extends ViewModel {
       this.loading(false);
       return;
     }
+    if (data["platform"] === "Confluent Cloud") {
+      data["kafka_auth_type"] = "API";
+      data["schema_auth_type"] = "API";
+    }
 
     let result: PostResponse | TestResponse;
-    if (submitter.value === "Test Connection") {
+    if (submitter.value === "Test") {
       result = await post("Test", data);
-    } else if (submitter.value === "Update Connection") {
+    } else if (submitter.value === "Update") {
       result = await post("Update", data);
     } else result = await post("Submit", data);
     this.success(result.success);

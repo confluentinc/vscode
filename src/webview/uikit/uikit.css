@@ -5,7 +5,9 @@
   --cflt-input-min-width: 100px;
   --cflt-base-font-size: 13px;
 }
-
+.content-wrapper {
+  display: contents;
+}
 .grid {
   display: grid;
   grid-template-columns: var(--grid-template-columns, auto);
@@ -49,20 +51,6 @@
   color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
-.webview-form .heading {
-  font-size: 26px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: normal;
-}
-
-.webview-form .form-description {
-  color: var(--vscode-sideBarSectionHeader-foreground);
-  font-size: 13px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: normal;
-}
 /**
  * <label class="checkbox">
  *   <input type="checkbox" />
@@ -126,30 +114,159 @@
   margin-inline-end: 10px;
 }
 
-.label {
-  display: block;
-  color: var(--vscode-sideBarSectionHeader-foreground);
-  cursor: pointer;
-  font-size: var(--cflt-base-font-size);
-  line-height: normal;
-  margin-bottom: 5px;
+/** Shared styles for webview forms 
+* for layout, incl. children:
+* div.webview-form
+*   div.form-header
+*   form.form-container (or <div>?) 
+*     fieldset|div.form-section (*n)
+*       h2.form-section-heading
+*       inputs(*n), e.g. div.input-container|div.input-row
+*     div.form-section.button-group (incl. input[type="submit"] or .button[type="submit"])
+*/
+.webview-form {
+  margin: 0 auto;
+  max-width: 900px;
+  padding: 60px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media screen and (max-width: 800px) {
+  .webview-form {
+    padding: 24px;
+    gap: 12px;
+  }
+}
+.form-header {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+}
+.form-header > * {
+  margin: unset;
+}
+.heading {
+  font-size: 26px;
   font-style: normal;
   font-weight: 500;
+  line-height: 1.2;
 }
-.label.required::after {
-  content: "*";
-  color: var(--vscode-inputValidation-errorBorder);
+.form-description {
+  color: var(--vscode-sideBarSectionHeader-foreground);
+  font-size: 13px;
+  font-style: normal;
+  line-height: normal;
 }
 
-.hr {
-  height: 1px;
-  padding-top: 0.5rem;
-  padding-bottom: 0.75rem;
-  color: var(--vscode-icon-foreground);
-  font-size: 0;
+.form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0;
+  padding: 24px 0;
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-space_16, 16px);
+  padding: var(--space-space_32, 32px) 0px;
+  align-self: stretch;
+  border-bottom: 1px solid var(--Base-Base-05, #d4d4d4);
+}
+
+.form-section:first-of-type {
+  padding-top: 0;
+}
+.form-section:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.form-section > * {
+  margin: unset;
+}
+.form-section-heading {
+  color: var(--vscode-editor-foreground);
+  font-size: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+/** Button group expects 2 buttons w/possible info
+* e.g. div.button-group
+*       .button.secondary
+*       .info
+*       .button[type="submit"]
+*/
+.button-group {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border: none;
+}
+.button-group > .button:last-child {
+  margin-left: auto;
+}
+
+.field-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+.fieldset {
+  padding: 0;
   border: 0;
+  width: 100%;
+  border-width: 0;
+}
+/** shorter inputs and dropdowns can be side-by-side */
+.input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+/** Input Layout
+* div.input-container
+*   .label
+*   .input
+*   .info(.error) // description|message|help text
+*/
+.input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 2px;
+  width: 100%;
+}
+.input-container > .input {
+  width: 100%;
+  min-width: 8rem;
+}
+.input-container > select.input,
+.input-container > .input[type="number"] {
+  width: fit-content;
+}
+.input-container > .label,
+.label-wrapper > .label {
+  margin-bottom: 0;
+  display: block;
+  cursor: pointer;
+  font-size: var(--cflt-base-font-size);
+  font-style: normal;
+  font-weight: 500;
+  color: var(--vscode-editor-foreground);
+}
+.info {
+  color: var(--vscode-descriptionForeground);
+  font-weight: 450;
+  font-size: 12px;
+  position: relative;
 }
 
+/** Generic input styles using theme custom properties whenever possible */
 .input {
   box-sizing: border-box;
   color: var(--vscode-input-foreground);
@@ -159,6 +276,7 @@
   height: var(--cflt-input-height);
   min-width: var(--cflt-input-min-width);
   padding: 2px 5px;
+  font-size: var(--cflt-base-font-size);
 }
 .input:focus {
   outline: 1px solid var(--vscode-inputOption-activeBorder);
@@ -167,7 +285,20 @@
 .input.invalid {
   border: 1px solid var(--vscode-inputValidation-errorBorder);
 }
-
+.input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+.input:disabled {
+  background-color: var(--vscode-disabledForeground);
+  cursor: not-allowed;
+}
+.input + .hint {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.8em;
+}
+/** Button styles 
+* .input[type="submit"] or .button
+*/
 .input[type="submit"],
 .button {
   display: inline-flex;
@@ -175,7 +306,7 @@
   box-sizing: border-box;
   justify-content: center;
   align-items: center;
-  padding: 5px 8px;
+  padding: 6px 11px;
   font-size: var(--cflt-base-font-size);
   color: var(--vscode-button-foreground);
   background: var(--vscode-button-background);
@@ -187,22 +318,44 @@
   border: 1px solid var(--vscode-input-border);
 }
 .input[type="submit"]:hover:not(:disabled),
-.button:hover:not(:disabled) {
+.button:hover:not(:disabled),
+.button.secondary:hover:not(:disabled) {
   background-color: var(--vscode-button-hoverBackground);
+  color: var(--vscode-button-foreground);
 }
 .input[type="submit"]:disabled,
 .button:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
 }
 .button.secondary {
-  color: var(--vscode-button-secondaryForeground);
-  background: var(--vscode-button-secondaryBackground);
-}
-.button.secondary:hover {
-  background-color: var(--vscode-button-secondaryHoverBackground);
+  color: var(--vscode-button-background);
+  background: var(--vscode-button-foreground);
+  border: 1px solid var(--vscode-button-background);
 }
 
-.input + .hint {
-  color: var(--vscode-descriptionForeground);
-  font-size: 0.8em;
+/** Error states */
+.input-container.error .pattern {
+  color: var(--vscode-errorForeground);
+}
+
+.input-container > .info.error {
+  min-width: 100%;
+}
+
+.input-container.error .input,
+.input.error,
+input:user-invalid {
+  border: 1px solid var(--vscode-errorForeground);
+}
+.status-icon {
+  font-size: 18px;
+  line-height: 0;
+  font-weight: 200;
+}
+.success .status-icon {
+  color: var(--vscode-testing-iconPassed);
+}
+.error .status-icon {
+  color: var(--vscode-testing-iconFailed);
 }
