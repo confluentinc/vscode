@@ -34,6 +34,7 @@ export function sendTelemetryIdentifyEvent({
   if (id) {
     logUsage(eventName, {
       identify: true,
+      status: "identify",
       user: { id, domain, social_connection },
     });
   }
