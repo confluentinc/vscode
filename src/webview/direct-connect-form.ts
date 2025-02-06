@@ -8,9 +8,7 @@ import {
   instanceOfBasicCredentials,
 } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
-import { InfoBanner } from "./uikit/InfoBanner";
-// Register the custom element
-customElements.define("info-banner", InfoBanner);
+
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
 addEventListener("DOMContentLoaded", () => {
@@ -213,9 +211,9 @@ class DirectConnectFormViewModel extends ViewModel {
     }
 
     let result: PostResponse | TestResponse;
-    if (submitter.value === "Test Connection") {
+    if (submitter.value === "Test") {
       result = await post("Test", data);
-    } else if (submitter.value === "Update Connection") {
+    } else if (submitter.value === "Update") {
       result = await post("Update", data);
     } else result = await post("Submit", data);
     this.success(result.success);
