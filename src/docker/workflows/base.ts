@@ -121,7 +121,8 @@ export abstract class LocalResourceWorkflow {
 
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
-      this.sendTelemetryEvent(UserEvent.DockerContainerStopped, {
+      this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+        status: "stopped",
         dockerContainerName: container.name,
       });
     }
