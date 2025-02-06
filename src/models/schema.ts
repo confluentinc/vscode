@@ -3,7 +3,14 @@ import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { ContainerTreeItem, CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
+import {
+  ConnectionId,
+  connectionIdToType,
+  EnvironmentId,
+  IResourceBase,
+  isCCloud,
+  ISearchable,
+} from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -97,13 +104,41 @@ export class Schema extends Data implements IResourceBase {
 }
 
 /** Thin ISearchable wrapper around a schema subject string. */
-export class Subject implements ISearchable {
+export class Subject implements IResourceBase, ISearchable {
+  connectionId!: ConnectionId;
+  environmentId!: EnvironmentId;
+  schemaRegistryId!: string;
+
   name!: string;
   id!: string;
 
-  constructor(name: string) {
-    this.name = name;
-    this.id = name;
+  /** Construct either from an existing Schema object or all of (subject name string, connectionid, envid, registry id) */
+  constructor(
+    nameOrSchema: string | Schema,
+    connectionId?: ConnectionId,
+    environmentId?: EnvironmentId,
+    schemaRegistryId?: string,
+  ) {
+    if (typeof nameOrSchema === "string") {
+      // Constructed from all 4 parts
+      this.name = nameOrSchema;
+      this.connectionId = connectionId!;
+      this.schemaRegistryId = schemaRegistryId!;
+      this.environmentId = environmentId!;
+    } else {
+      // Constructed from a Schema object having all 4 parts
+      const schema = nameOrSchema;
+      this.name = schema.subject;
+      this.connectionId = schema.connectionId;
+      this.schemaRegistryId = schema.schemaRegistryId;
+      this.environmentId = schema.environmentId!;
+    }
+
+    this.id = `${this.connectionId}-${this.schemaRegistryId}-${this.name}`;
+  }
+
+  get connectionType(): ConnectionType {
+    return connectionIdToType(this.connectionId);
   }
 
   searchableText(): string {

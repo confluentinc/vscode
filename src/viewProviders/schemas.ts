@@ -114,8 +114,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     if (element instanceof Schema) {
-      // if we're a schema, our parent is our Subject (which we carry as just a string).
-      return new Subject(element.subject);
+      // if we're a schema, our parent is our Subject.
+      return new Subject(element);
     }
     // Otherwise the parent of a container tree item is the root.
     return null;

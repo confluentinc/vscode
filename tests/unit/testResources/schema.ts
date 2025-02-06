@@ -1,6 +1,13 @@
-import { Schema, SchemaType } from "../../../src/models/schema";
+import { Schema, SchemaType, Subject } from "../../../src/models/schema";
 import { TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY } from "./schemaRegistry";
 import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "./topic";
+
+export const TEST_CCLOUD_SUBJECT: Subject = new Subject(
+  TEST_CCLOUD_KAFKA_TOPIC.name,
+  TEST_CCLOUD_SCHEMA_REGISTRY.connectionId,
+  TEST_CCLOUD_SCHEMA_REGISTRY.environmentId,
+  TEST_CCLOUD_SCHEMA_REGISTRY.id,
+);
 
 export const TEST_CCLOUD_SCHEMA = Schema.create({
   id: "100001",
