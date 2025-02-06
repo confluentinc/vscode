@@ -57,7 +57,7 @@ blocks:
   - name: "Build & Test (VS Code Insiders)"
     dependencies: []
     skip:
-      when: "branch_name != 'main' OR change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+      when: "branch != 'main' OR change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
       jobs:
         - name: "Build & Test (VS Code Insiders)"
