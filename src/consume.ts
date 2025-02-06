@@ -11,7 +11,6 @@ import {
   ViewColumn,
   WebviewPanel,
   window,
-  workspace,
 } from "vscode";
 import {
   canAccessSchemaForTopic,
@@ -700,14 +699,21 @@ function messageViewerStartPollingCommand(
             records.push("\t" + JSON.stringify(payload));
           }
         }
-        const content = `[\n${records.join(",\n")}\n]`;
-        workspace.openTextDocument({ content, language: "jsonc" }).then((preview) => {
-          return window.showTextDocument(preview, {
-            preview: false,
+        // use a single-instance provider to display a read-only document buffer with the messages
+        const filename = `${topic.name}-messages.json`;
+        const provider = new MessageDocumentProvider();
+        MessageDocumentProvider.message = `[\n${records.join(",\n")}\n]`;
+        // this is really only used for the filename:
+        const uri: Uri = provider.resourceToUri({ partition: -1, offset: -1 }, filename);
+        window
+          .showTextDocument(uri, {
+            preview: true,
             viewColumn: ViewColumn.Beside,
             preserveFocus: false,
+          })
+          .then((editor) => {
+            languages.setTextDocumentLanguage(editor.document, "json");
           });
-        });
         return null satisfies MessageResponse<"PreviewJSON">;
       }
       case "SearchMessages": {
