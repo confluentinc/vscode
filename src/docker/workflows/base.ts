@@ -60,7 +60,8 @@ export abstract class LocalResourceWorkflow {
   ): Promise<ContainerInspectResponse | undefined> {
     try {
       await startContainer(container.id);
-      this.sendTelemetryEvent(UserEvent.DockerContainerStarted, {
+      this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+        status: "started",
         dockerContainerName: container.name,
       });
     } catch (error) {
