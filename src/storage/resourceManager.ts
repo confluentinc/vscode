@@ -768,3 +768,13 @@ export function CustomConnectionSpecToJSON(spec: CustomConnectionSpec): any {
     formConnectionType: spec.formConnectionType,
   };
 }
+
+/** JSON-stringify a `Map`. Opposite of {@link stringToMap}. */
+export function mapToString(map: Map<any, any>): string {
+  return JSON.stringify(Object.fromEntries(map));
+}
+
+/** Convert a JSON-stringified Map back to a `Map`. Opposite of {@link mapToString}. */
+export function stringToMap(str: string): Map<any, any> {
+  return new Map(Object.entries(JSON.parse(str)));
+}

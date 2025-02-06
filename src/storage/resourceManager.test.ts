@@ -35,7 +35,9 @@ import {
   CustomConnectionSpecToJSON,
   DirectConnectionsById,
   getResourceManager,
+  mapToString,
   ResourceManager,
+  stringToMap,
   UriMetadata,
 } from "./resourceManager";
 
@@ -1226,5 +1228,30 @@ describe("CustomConnectionSpec object conversion", () => {
     const typedSpec = CustomConnectionSpecFromJSON(specObj);
 
     assert.deepStrictEqual(typedSpec, TEST_DIRECT_CONNECTION_FORM_SPEC);
+  });
+});
+
+describe("ResourceManager utility functions", function () {
+  it("mapToString() should correctly convert a Map to a string", () => {
+    const testMap = new Map([
+      ["key1", "value1"],
+      ["key2", "value2"],
+    ]);
+
+    const result = mapToString(testMap);
+
+    assert.strictEqual(result, `{"key1":"value1","key2":"value2"}`);
+  });
+
+  it("stringToMap() should correctly convert a string to a Map", () => {
+    const testString = `{"key1":"value1","key2":"value2"}`;
+
+    const result = stringToMap(testString);
+
+    assert.ok(result);
+    assert.ok(result instanceof Map);
+    assert.strictEqual(result.size, 2);
+    assert.strictEqual(result.get("key1"), "value1");
+    assert.strictEqual(result.get("key2"), "value2");
   });
 });
