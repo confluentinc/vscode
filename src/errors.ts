@@ -55,6 +55,16 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
   return chain;
 }
 
+export class WrappedResponseError extends Error {
+  constructor(
+    public readonly message: string,
+    public readonly cause: AnyResponseError,
+  ) {
+    super(message);
+    this.name = "WrappedResponseError";
+  }
+}
+
 /**
  * Log the provided error along with any additional information, and optionally send to Sentry.
  *
@@ -73,15 +83,46 @@ export async function logError(
   extra: Record<string, string> = {},
   sendTelemetry: boolean = false,
 ): Promise<void> {
-  let errorMessage: string = "";
+  const errorInfo: ErrorInfo | undefined = await extractErrorInformation(e, messagePrefix);
+  if (!errorInfo) {
+    // not an Error type, just log the message
+    logger.error(`${messagePrefix}: ${e}`, extra);
+    return;
+  }
+
+  logger.error(errorInfo.message, { ...errorInfo.errorContext, ...extra });
+  if (sendTelemetry) {
+    Sentry.captureException(e, {
+      contexts: { response: { status_code: errorInfo.responseStatusCode } },
+      extra: { ...errorInfo.errorContext, ...extra },
+    });
+  }
+}
+
+interface ErrorInfo {
+  e: unknown;
+  message: string;
+  errorContext: Record<string, string | number | boolean | null | undefined>;
+  responseStatusCode: number | undefined;
+}
+
+export async function extractErrorInformation(
+  e: unknown,
+  messagePrefix: string,
+): Promise<ErrorInfo | undefined> {
+  if (!(e instanceof Error)) {
+    return;
+  }
+
+  let message = "";
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
-  let responseStatusCode: number | undefined;
+  let responseStatusCode: number | undefined = undefined;
 
   if ((e as any).response) {
     // one of our ResponseError types, attempt to extract more information before logging
     const error = e as AnyResponseError;
     const errorBody = await error.response.clone().text();
-    errorMessage = `[${messagePrefix}] error response:`;
+    message = `[${messagePrefix}] error response:`;
     errorContext = {
       responseStatus: error.response.status,
       responseStatusText: error.response.statusText,
@@ -89,9 +130,14 @@ export async function logError(
       responseErrorType: error.name,
     };
     responseStatusCode = error.response.status;
+    // wrap the error and keep the current ResponseError as the `cause` property
+    e = new WrappedResponseError(
+      `ResponseError: ${error.response.status} ${error.response.statusText} @ ${error.response.url}`,
+      error,
+    );
   } else {
-    // something we caught that wasn't actually a ResponseError type but was passed in here anyway
-    errorMessage = `[${messagePrefix}] error: ${e}`;
+    // non-ResponseError Error type
+    message = `[${messagePrefix}] error: ${e}`;
     if (e instanceof Error) {
       // top-level error
       errorContext = {
@@ -111,14 +157,7 @@ export async function logError(
       }
     }
   }
-
-  logger.error(errorMessage, { ...errorContext, ...extra });
-  if (sendTelemetry) {
-    Sentry.captureException(e, {
-      contexts: { response: { status_code: responseStatusCode } },
-      extra: { ...errorContext, ...extra },
-    });
-  }
+  return { e, message, errorContext, responseStatusCode };
 }
 
 /** Shows the error notification with `message` and custom action buttons.
