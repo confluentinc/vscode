@@ -226,6 +226,10 @@ class DirectConnectFormViewModel extends ViewModel {
       this.loading(false);
       return;
     }
+    if (data["platform"] === "Confluent Cloud") {
+      data["kafka_auth_type"] = "API";
+      data["schema_auth_type"] = "API";
+    }
 
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
