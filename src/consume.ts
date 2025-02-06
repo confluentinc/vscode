@@ -700,7 +700,8 @@ function messageViewerStartPollingCommand(
           }
         }
         // use a single-instance provider to display a read-only document buffer with the messages
-        const filename = `${topic.name}-messages.json`;
+        // at the given timestamp, so the document isn't reused across multiple previews
+        const filename = `${topic.name}-messages-${new Date().getTime()}.json`;
         const provider = new MessageDocumentProvider();
         MessageDocumentProvider.message = `[\n${records.join(",\n")}\n]`;
         // this is really only used for the filename:
