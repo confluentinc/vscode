@@ -237,7 +237,6 @@ export abstract class LocalResourceWorkflow {
   sendTelemetryEvent(eventName: UserEvent, properties: Record<string, any>) {
     logUsage(eventName, {
       dockerImage: this.imageRepoTag,
-      extensionUserFlow: "Local Resource Management",
       localResourceKind: this.resourceKind,
       ...properties,
     });
