@@ -596,6 +596,7 @@ export async function testRun() {
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
   await runTests({
+    version: process.env.VSCODE_VERSION,
     extensionDevelopmentPath: resolve(DESTINATION),
     extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
     extensionTestsEnv: {
