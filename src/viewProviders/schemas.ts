@@ -134,27 +134,30 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     // - topic2-value (ContainerTreeItem<Schema>)
     //   - schema2-V1 (Schema)
 
+    // But since weaned off of the old GET /schemas route, the toplevel ContainerTreeItem<Schema>
+    // will never contain children and are acting as expandable/collapsable placeholders for the
+    // subject group, a Schema[] describing all of the versions bound to that subject.
+    //
+    // Once the user has asked to expand a ContainerTreeItem<Schema>, we'll fetch the schemas for
+    // just that single subject and show them as children of the ContainerTreeItem<Schema>.
+
+    if (!this.schemaRegistry) {
+      // No Schema Registry selected, so no schemas to show.
+      return [];
+    }
+
     let children: SchemasViewProviderData[] = [];
 
-    const loader = ResourceLoader.getInstance(this.schemaRegistry!.connectionId);
+    const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
     if (element instanceof ContainerTreeItem) {
       // expanded a subject container, so return the schemas for that subject.
       // Returns Schema[].
       children = await loader.getSchemaSubjectGroup(this.schemaRegistry!, element.label as string);
     } else {
-      if (this.schemaRegistry != null) {
-        // TODO: replace this with subject-loader call
-        const subjects =
-          (await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
-        // this ends up being an array of subject containers, each with schemas as .children:
-        children = subjects.length > 0 ? generateSubjectContainers(subjects) : [];
-
-        if (this.forceDeepRefresh) {
-          // Just honored the user's request for a deep refresh.
-          this.forceDeepRefresh = false;
-        }
-      }
+      const subjects = (await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
+      // this ends up being an array of subject containers, each with schemas as .children:
+      children = subjects.length > 0 ? generateSubjectContainers(subjects) : [];
     }
 
     if (this.itemSearchString) {
@@ -186,6 +189,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
     } else {
       this.treeView.message = undefined;
+    }
+
+    if (this.forceDeepRefresh) {
+      // Just honored the user's request for a deep refresh.
+      this.forceDeepRefresh = false;
     }
 
     return children;
