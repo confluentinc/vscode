@@ -46,7 +46,7 @@ blocks:
       when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
       jobs:
-        - name: "Build & Test"
+        - name: "Build & Test (VS Code)"
           commands:
             - make test
           # Not setting VSCODE_VERSION env var will default using the latest stable release version
@@ -60,7 +60,7 @@ blocks:
       when: "branch_name != 'main' || change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
       jobs:
-        - name: "Build & Test (Insiders)"
+        - name: "Build & Test (VS Code Insiders)"
           commands:
             - make test
           env_vars:
@@ -72,7 +72,7 @@ blocks:
             - make remove-test-env
 
   - name: "Bump microversion"
-    dependencies: ["Build & Test"]
+    dependencies: ["Build & Test (VS Code)"]
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -90,7 +90,7 @@ blocks:
             - make bump-microversion
 
   - name: "Set next version under development"
-    dependencies: ["Build & Test"]
+    dependencies: ["Build & Test (VS Code)"]
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
