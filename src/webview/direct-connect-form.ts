@@ -92,22 +92,31 @@ class DirectConnectFormViewModel extends ViewModel {
   success = this.signal(false);
   loading = this.signal(false);
 
-  /** Connection state & errors (seen after testing) */
+  /** Connection state & errors (displayed in UI after Test) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
   kafkaErrorMessage = this.signal<string | undefined>(undefined);
   kafkaStatusMessage = this.derive(() => {
-    if (this.kafkaState() === "FAILED") {
-      return this.kafkaErrorMessage();
-    } else if (this.kafkaState()) return "Connection test succeeded";
-    else return undefined;
+    if (this.kafkaState() === "FAILED") return this.kafkaErrorMessage();
+    else if (this.kafkaState() === "SUCCESS") return "Connection test succeeded";
+    else return `Kafka Cluster state: ${this.kafkaState()}`;
   });
+  showKafkaStatus = this.derive(() => {
+    return (
+      this.kafkaBootstrapServers() != null &&
+      this.kafkaState() !== undefined &&
+      this.kafkaState() !== "NONE"
+    );
+  });
+
   schemaState = this.signal<ConnectedState | undefined>(undefined);
   schemaErrorMessage = this.signal<string | undefined>(undefined);
   schemaStatusMessage = this.derive(() => {
-    if (this.schemaState() === "FAILED") {
-      return this.schemaErrorMessage();
-    } else if (this.schemaState()) return "Connection test succeeded";
-    else return undefined;
+    if (this.schemaState() === "FAILED") return this.schemaErrorMessage();
+    else if (this.schemaState() === "SUCCESS") return "Connection test succeeded";
+    else return `Schema Registry state: ${this.schemaState()}`;
+  });
+  showSchemaStatus = this.derive(() => {
+    return this.schemaState() !== undefined && this.schemaState() !== "NONE";
   });
 
   getCredentialsType(creds: any) {
