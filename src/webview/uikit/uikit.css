@@ -180,6 +180,10 @@
 .form-section:first-of-type {
   padding-top: 0;
 }
+.form-section:last-of-type {
+  padding-bottom: 0;
+  border-bottom: none;
+}
 .form-section > * {
   margin: unset;
 }
