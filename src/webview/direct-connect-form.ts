@@ -29,8 +29,10 @@ class DirectConnectFormViewModel extends ViewModel {
   platformType = this.derive<FormConnectionType>(() => {
     return this.spec()?.formConnectionType || "Apache Kafka";
   });
+
   // TODO this is not used anywhere but could be extra metadata for telemetry. We'll have to save it in the spec.
   // otherPlatformType = this.signal<string | undefined>(undefined);
+
   name = this.derive(() => {
     return this.spec()?.name || "";
   });
@@ -43,7 +45,9 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.kafka_cluster?.credentials;
   });
   kafkaAuthType = this.derive(() => {
-    return this.getCredentialsType(this.kafkaCreds());
+    if (this.platformType() === "Confluent Cloud")
+      return "API"; // CCloud only supports API
+    else return this.getCredentialsType(this.kafkaCreds());
   });
   kafkaUsername = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
@@ -69,7 +73,9 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.schema_registry?.credentials;
   });
   schemaAuthType = this.derive(() => {
-    return this.getCredentialsType(this.schemaCreds());
+    if (this.platformType() === "Confluent Cloud")
+      return "API"; // CCloud only supports API
+    else return this.getCredentialsType(this.schemaCreds());
   });
   schemaUsername = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
@@ -116,7 +122,9 @@ class DirectConnectFormViewModel extends ViewModel {
     else return `Schema Registry state: ${this.schemaState()}`;
   });
   showSchemaStatus = this.derive(() => {
-    return this.schemaState() !== undefined && this.schemaState() !== "NONE";
+    return (
+      this.schemaUri() != null && this.schemaState() !== undefined && this.schemaState() !== "NONE"
+    );
   });
 
   getCredentialsType(creds: any) {
