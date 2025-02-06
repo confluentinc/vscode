@@ -49,9 +49,6 @@ blocks:
         - name: "Build & Test"
           commands:
             - make test
-          env_vars:
-            - name: VSCODE_VERSION
-              value: 1.96.4
         - name: "Build & Test (Insiders)"
           commands:
             - make test
