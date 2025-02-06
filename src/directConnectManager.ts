@@ -174,7 +174,7 @@ export class DirectConnectionManager {
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
     // at this point incoming spec has placeholder secrets... look up the associated ConnectionSpec
-    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+    const currentSpec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
       incomingSpec.id,
     );
     if (!currentSpec) {
@@ -190,6 +190,13 @@ export class DirectConnectionManager {
       );
       return;
     }
+
+    logUsage(UserEvent.DirectConnectionAction, {
+      type: currentSpec.formConnectionType,
+      action: "updated",
+      withKafka: !!updatedSpec.kafka_cluster,
+      withSchemaRegistry: !!updatedSpec.schema_registry,
+    });
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
     // (spec comes first because the ConnectionSpec will try to override `id` as a string)
