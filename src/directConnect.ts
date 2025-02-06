@@ -139,8 +139,7 @@ export function getConnectionSpecFromFormData(
         username: formData["kafka_username"],
         password: formData["kafka_password"],
       };
-      // if CCloud we force it to be API
-    } else if (formData["platform"] === "Confluent Cloud" || formData.kafka_auth_type === "API") {
+    } else if (formData.kafka_auth_type === "API") {
       spec.kafka_cluster.credentials = {
         api_key: formData["kafka_api_key"],
         api_secret: formData["kafka_api_secret"],
@@ -161,8 +160,7 @@ export function getConnectionSpecFromFormData(
         username: formData["schema_username"],
         password: formData["schema_password"],
       };
-      // if CCloud we force it to be API
-    } else if (formData["platform"] === "Confluent Cloud" || formData.schema_auth_type === "API") {
+    } else if (formData.schema_auth_type === "API") {
       spec.schema_registry.credentials = {
         api_key: formData["schema_api_key"],
         api_secret: formData["schema_api_secret"],
