@@ -60,7 +60,8 @@ export abstract class LocalResourceWorkflow {
   ): Promise<ContainerInspectResponse | undefined> {
     try {
       await startContainer(container.id);
-      this.sendTelemetryEvent(UserEvent.DockerContainerStarted, {
+      this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+        status: "started",
         dockerContainerName: container.name,
       });
     } catch (error) {
@@ -120,7 +121,8 @@ export abstract class LocalResourceWorkflow {
 
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
-      this.sendTelemetryEvent(UserEvent.DockerContainerStopped, {
+      this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+        status: "stopped",
         dockerContainerName: container.name,
       });
     }
@@ -235,7 +237,6 @@ export abstract class LocalResourceWorkflow {
   sendTelemetryEvent(eventName: UserEvent, properties: Record<string, any>) {
     logUsage(eventName, {
       dockerImage: this.imageRepoTag,
-      extensionUserFlow: "Local Resource Management",
       localResourceKind: this.resourceKind,
       ...properties,
     });

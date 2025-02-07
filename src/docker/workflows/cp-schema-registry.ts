@@ -142,7 +142,8 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       showErrorNotificationWithButtons(`Failed to create ${this.resourceKind} container.`);
       return;
     }
-    this.sendTelemetryEvent(UserEvent.DockerContainerCreated, {
+    this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+      status: "created",
       dockerContainerName: container.name,
     });
     if (token.isCancellationRequested) return;
