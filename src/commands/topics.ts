@@ -23,6 +23,7 @@ import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import { logUsage, UserEvent } from "../telemetry/events";
 import {
   executeInWorkerPool,
   ExecutionResult,
@@ -194,6 +195,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     vscode.window.showErrorMessage("No topic selected.");
     return;
   }
+  logUsage(UserEvent.MessageProduceAction, { status: "started" });
 
   // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes
   const uriSchemes = ["file", "untitled", MESSAGE_URI_SCHEME];
@@ -207,11 +209,22 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     fileFilters,
   );
   if (!messageUri) {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "exited early from file/document quickpick",
+    });
     return;
   }
+  logUsage(UserEvent.MessageProduceAction, {
+    status: "picked file/document",
+    uriScheme: messageUri.scheme, // untitled, file, or confluent.topic.message
+  });
 
   const { content }: LoadedDocumentContent = await loadDocumentContent(messageUri);
   if (!content) {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "failed to load message content",
+      uriScheme: messageUri.scheme,
+    });
     vscode.window.showErrorMessage("No content found in the selected file.");
     return;
   }
@@ -224,6 +237,11 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   const diagnostics: readonly vscode.Diagnostic[] =
     JSON_DIAGNOSTIC_COLLECTION.get(messageUri) ?? [];
   if (diagnostics.length) {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "failed base JSON validation",
+      uriScheme: messageUri.scheme,
+      problemCount: diagnostics.length,
+    });
     showErrorNotificationWithButtons(
       "Unable to produce message(s): JSON schema validation failed.",
       {
@@ -237,6 +255,11 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   // document is valid, discard the listeners for that document
   docListeners.forEach((l) => l.dispose());
 
+  logUsage(UserEvent.MessageProduceAction, {
+    status: "passed base JSON validation",
+    uriScheme: messageUri.scheme,
+  });
+
   // always treat producing as a "bulk" action, even if there's only one message
   const contents: any[] = [];
   const msgContent: any = JSON.parse(content);
@@ -248,7 +271,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   // TODO: bump this number up?
   if (contents.length === 1) {
-    await produceMessages(contents, topic);
+    await produceMessages(contents, topic, messageUri);
   } else {
     // show progress notification for batch produce
     vscode.window.withProgress(
@@ -265,7 +288,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
         token: vscode.CancellationToken,
       ) => {
         progress.report({ increment: 0 });
-        await produceMessages(contents, topic, progress, token);
+        await produceMessages(contents, topic, messageUri, progress, token);
       },
     );
   }
@@ -278,6 +301,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 async function produceMessages(
   contents: any[],
   topic: KafkaTopic,
+  messageUri: vscode.Uri,
   progress?: vscode.Progress<{
     message?: string;
     increment?: number;
@@ -295,6 +319,13 @@ async function produceMessages(
 
   const successResults = results.filter(isSuccessResult);
   const errorResults = results.filter(isErrorResult);
+  logUsage(UserEvent.MessageProduceAction, {
+    status: "completed",
+    uriScheme: messageUri.scheme,
+    originalMessageCount: contents.length,
+    successResultCount: successResults.length,
+    errorResultCount: errorResults.length,
+  });
 
   const plural = contents.length > 1 ? "s" : "";
   logger.debug(
@@ -343,6 +374,13 @@ async function produceMessages(
             true, // duplicate MV to show updated filters
             messageViewerConfig,
           );
+          logUsage(UserEvent.MessageProduceAction, {
+            status: "opened message viewer",
+            uriScheme: messageUri.scheme,
+            originalMessageCount: contents.length,
+            successResultCount: successResults.length,
+            errorResultCount: errorResults.length,
+          });
         }
       });
   }
