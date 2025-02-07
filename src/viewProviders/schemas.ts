@@ -115,7 +115,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     if (element instanceof Schema) {
       // if we're a schema, our parent is our Subject.
-      return new Subject(element);
+      return element.subjectObject();
     }
     // Otherwise the parent of a container tree item is the root.
     return null;
@@ -147,23 +147,12 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
     if (element == null) {
-      // Toplevel: return the subjects.
-
-      // todo make this loader method return Subject[] instead of string[]
-      const subjects: string[] = await loader.getSubjects(
-        this.schemaRegistry,
-        this.forceDeepRefresh,
-      );
-
-      children = subjects.map((subject) => {
-        return new Subject(subject);
-      });
-
-      // this ends up being an array of subject containers, each with schemas as .children:
+      // Toplevel: return the subjects as Subject[].
+      children = await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh);
     } else if (element instanceof Subject) {
       // Selected a subject, so return the schemas bound to the subject.
       // Returns Schema[].
-      children = await loader.getSchemaSubjectGroup(this.schemaRegistry!, element.name);
+      children = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
     } else {
       // Selected a schema, no children there.
       children = [];

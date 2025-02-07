@@ -1,11 +1,15 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
+} from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -22,8 +26,7 @@ describe("SchemasViewProvider methods", () => {
   });
 
   it("getTreeItem() should return a SubjectTreeItem for a Subject instance", () => {
-    const subject = new Subject(TEST_CCLOUD_SCHEMA.subject);
-    const treeItem = provider.getTreeItem(subject);
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
     assert.ok(treeItem instanceof SubjectTreeItem);
   });
 });
@@ -126,8 +129,7 @@ describe("SchemasViewProvider search behavior", () => {
     // First schema subject matches search
     schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 
-    const subject = new Subject(TEST_CCLOUD_SCHEMA.subject);
-    const treeItem = provider.getTreeItem(subject);
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
 
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
