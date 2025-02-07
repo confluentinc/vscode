@@ -159,7 +159,7 @@ describe("ResourceManager Kafka cluster methods", function () {
     // set the first batch of clusters from the first environment
     await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // create and set the second batch of clusters for the new environment
-    const newEnvironmentId = "new-environment-id";
+    const newEnvironmentId = "new-environment-id" as EnvironmentId;
     const newClusters: CCloudKafkaCluster[] = [
       CCloudKafkaCluster.create({
         ...TEST_CCLOUD_KAFKA_CLUSTER,
