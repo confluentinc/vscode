@@ -8,15 +8,15 @@ import {
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
-import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem, SubjectTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 describe("SchemasViewProvider methods", () => {
   let provider: SchemasViewProvider;
 
-  before(() => {
+  before(async () => {
+    await getTestExtensionContext();
     provider = SchemasViewProvider.getInstance();
   });
 
@@ -37,16 +37,17 @@ describe("SchemasViewProvider search behavior", () => {
 
   let sandbox: sinon.SinonSandbox;
 
-  const TEST_CCLOUD_SCHEMA2 = Schema.create({
+  const TEST_CCLOUD_SUBJECT2 = Schema.create({
     ...TEST_CCLOUD_SCHEMA,
     subject: "foo-value",
     id: "100123",
-  });
-  const TEST_CCLOUD_SCHEMA3 = Schema.create({
+  }).subjectObject();
+
+  const TEST_CCLOUD_SUBJECT3 = Schema.create({
     ...TEST_CCLOUD_SCHEMA,
     subject: "bar-key",
     id: "100456",
-  });
+  }).subjectObject();
 
   before(async () => {
     await getTestExtensionContext();
@@ -58,9 +59,9 @@ describe("SchemasViewProvider search behavior", () => {
     // stub loader method for fetching schemas
     ccloudLoader = CCloudResourceLoader.getInstance();
     sandbox
-      .stub(ccloudLoader, "getSchemasForRegistry")
+      .stub(ccloudLoader, "getSubjects")
       // three sample schema versions across three subjects
-      .resolves([TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA2, TEST_CCLOUD_SCHEMA3]);
+      .resolves([TEST_CCLOUD_SUBJECT, TEST_CCLOUD_SUBJECT2, TEST_CCLOUD_SUBJECT3]);
 
     provider = SchemasViewProvider.getInstance();
     provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
@@ -78,32 +79,8 @@ describe("SchemasViewProvider search behavior", () => {
     const rootElements = await provider.getChildren();
 
     assert.strictEqual(rootElements.length, 1);
-    assert.ok(rootElements[0] instanceof ContainerTreeItem);
-    assert.strictEqual(
-      (rootElements[0] as ContainerTreeItem<Schema>).label,
-      TEST_CCLOUD_SCHEMA.subject,
-    );
-  });
-
-  it("getChildren() should return all schemas if parent subject matches search", async () => {
-    // Parent subject matches search
-    schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
-
-    const rootElements = await provider.getChildren();
-
-    assert.strictEqual(rootElements.length, 1);
-    assert.ok(rootElements[0] instanceof ContainerTreeItem);
-    assert.strictEqual(
-      (rootElements[0] as ContainerTreeItem<Schema>).label,
-      TEST_CCLOUD_SCHEMA.subject,
-    );
-
-    // expand subject container to get child schemas
-    const children = await provider.getChildren(rootElements[0]);
-
-    assert.strictEqual(children.length, 1);
-    assert.ok(children[0] instanceof Schema);
-    assert.strictEqual(children[0].subject, TEST_CCLOUD_SCHEMA.subject);
+    assert.ok(rootElements[0] instanceof Subject);
+    assert.strictEqual((rootElements[0] as Subject).name, TEST_CCLOUD_SCHEMA.subject);
   });
 
   it("getChildren() should show correct count in tree view message when items match search", async () => {
@@ -134,18 +111,4 @@ describe("SchemasViewProvider search behavior", () => {
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });
-
-  // it("getTreeItem() should collapse items when children exist but don't match search", async () => {
-  //   // Search for non-matching string
-  //   schemaSearchSet.fire("non-matching-search");
-
-  //   const container = new ContainerTreeItem<Schema>(
-  //     TEST_CCLOUD_SCHEMA.subject,
-  //     TreeItemCollapsibleState.Expanded,
-  //     [TEST_CCLOUD_SCHEMA],
-  //   );
-  //   const treeItem = provider.getTreeItem(container);
-
-  //   assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
-  // });
 });
