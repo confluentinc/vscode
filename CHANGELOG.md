@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.24.4
+
 ### Fixed
 
 - Updated workspace state storage to use stringified data after a breaking change in VS Code 1.97
