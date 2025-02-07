@@ -843,8 +843,8 @@ export function install(done) {
     return done(1);
   }
   // uninstall any existing extension first
-  // (may holler about "Extension 'confluent.vscode-confluent' is not installed.", but that's fine)
-  spawnSync("code", ["--uninstall-extension", "confluent.vscode-confluent"], {
+  // (may holler about "Extension 'confluentinc.vscode-confluent' is not installed.", but that's fine)
+  spawnSync("code", ["--uninstall-extension", "confluentinc.vscode-confluent"], {
     stdio: "inherit",
     shell: IS_WINDOWS,
   });
