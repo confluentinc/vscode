@@ -6,7 +6,13 @@ import {
   TEST_DIRECT_CONNECTION,
   TEST_LOCAL_CONNECTION,
 } from "../../../tests/unit/testResources/connection";
-import { Connection, ConnectionsResourceApi, ResponseError } from "../../clients/sidecar";
+import {
+  Connection,
+  ConnectionFromJSON,
+  ConnectionSpecToJSON,
+  ConnectionsResourceApi,
+  ResponseError,
+} from "../../clients/sidecar";
 
 import {
   tryToCreateConnection,
@@ -64,15 +70,21 @@ describe("sidecar/connections/index.ts", () => {
     });
 
     it(`${testConnection.spec.type}: tryToUpdateConnection() should update and return a connection`, async () => {
-      const updatedConnection: Connection = {
+      const updatedConnection: Connection = ConnectionFromJSON({
         ...testConnection,
         spec: { ...testConnection.spec, name: "updated-name" },
-      };
+      });
       stubConnectionsResourceApi.gatewayV1ConnectionsIdPatch.resolves(updatedConnection);
 
-      const connection = await tryToUpdateConnection(updatedConnection);
+      const connection = await tryToUpdateConnection(updatedConnection.spec);
 
-      assert.strictEqual(connection, updatedConnection);
+      // should've converted from the Connection type to the JSON type
+      const callArgs = stubConnectionsResourceApi.gatewayV1ConnectionsIdPatch.getCall(0).args;
+      assert.deepStrictEqual(callArgs[0], {
+        id: updatedConnection.id,
+        body: ConnectionSpecToJSON(updatedConnection.spec),
+      });
+      assert.deepStrictEqual(connection, updatedConnection);
     });
 
     it(`${testConnection.spec.type}: tryToDeleteConnection() should not re-throw 404 response errors`, async () => {
