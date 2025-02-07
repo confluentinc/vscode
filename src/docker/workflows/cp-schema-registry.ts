@@ -143,7 +143,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
       return;
     }
     this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
-      status: "created",
+      status: "container created",
       dockerContainerName: container.name,
     });
     if (token.isCancellationRequested) return;
