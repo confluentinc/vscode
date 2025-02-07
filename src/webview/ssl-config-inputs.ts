@@ -3,9 +3,14 @@ import { applyBindings, html } from "./bindings/bindings";
 import { TLSConfig } from "../clients/sidecar";
 
 export class SslConfig extends HTMLElement {
+  static formAssociated = true;
+  private _internals: ElementInternals;
+  constructor() {
+    super();
+    this._internals = this.attachInternals();
+  }
   os = ObservableScope();
-
-  // Internal state for the component
+  entries = new FormData();
   identifier = this.os.signal<string>("");
   configObj = this.os.signal<TLSConfig | undefined>(undefined);
   verifyHostname = this.os.derive(() => {
@@ -35,10 +40,16 @@ export class SslConfig extends HTMLElement {
     this.identifier(value);
   }
 
+  /** update the form data so it contains all the changed values on submit
+   * and dispatch a bubble event to the parent (host) for other actions
+   */
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.value;
+    const n = this.identifier() + "-ssl";
+    this.entries.set(n + "-" + name, value);
+    this._internals.setFormValue(this.entries);
     this.dispatchEvent(
       new CustomEvent("bubble", {
         detail: { namespace: this.identifier(), inputName: name, inputValue: value },
@@ -70,7 +81,7 @@ export class SslConfig extends HTMLElement {
         <option value="JKS">JKS</option>
         <option value="PKCS12">PKCS12</option>
         <option value="PEM">PEM</option>
-        <option value="UNKNOWN">UNKNOWN</option>
+        <option value="UNKNOWN" selected>Unknown</option>
       </select>
     </div>
     <div class="input-row">
