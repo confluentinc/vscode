@@ -8,6 +8,7 @@ export enum UserEvent {
   ExtensionActivation = "Extension Activation",
   InputBoxFilled = "Input Box Filled",
   LocalDockerAction = "Local Docker Action",
+  MessageProduceAction = "Message Produce Action",
   MessageViewerAction = "Message Viewer Action",
   NotificationButtonClicked = "Notification Button Clicked",
   ProjectScaffoldingAction = "Project Scaffolding Action",
