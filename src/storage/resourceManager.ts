@@ -1,5 +1,4 @@
 import { Mutex } from "async-mutex";
-import { Uri } from "vscode";
 import { StorageManager, getStorageManager } from ".";
 import {
   ConnectionSpec,
@@ -182,7 +181,7 @@ export class ResourceManager {
         // replace any existing clusters for the environment with the new clusters
         existingEnvClusters.set(envId, newClusters);
       }
-      await this.storage.setWorkspaceState(storageKey, existingEnvClusters);
+      await this.storage.setWorkspaceState(storageKey, mapToString(existingEnvClusters));
     });
   }
 
@@ -191,15 +190,18 @@ export class ResourceManager {
    * @returns The map of <environmentId (string), {@link CCloudKafkaCluster}[]>
    */
   async getCCloudKafkaClusters(): Promise<CCloudKafkaClustersByEnv> {
-    const plainJsonClustersByEnv: CCloudKafkaClustersByEnv =
-      (await this.storage.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS)) ??
-      new Map<string, CCloudKafkaCluster[]>();
-
-    // Promote each member in the map to be a true instance of CCloudKafkaCluster
+    // Get the JSON-stringified map from storage
+    const clustersByEnvString: string | undefined = await this.storage.getWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS,
+    );
+    const clustersByEnv: Map<string, object[]> = clustersByEnvString
+      ? stringToMap(clustersByEnvString)
+      : new Map<string, object[]>();
+    // cast any values back to CCloudKafkaCluster instances
     return new Map(
-      Array.from(plainJsonClustersByEnv).map(([envId, clusters]) => [
+      Array.from(clustersByEnv).map(([envId, clusters]) => [
         envId,
-        clusters.map((cluster) => CCloudKafkaCluster.create(cluster)),
+        clusters.map((cluster) => CCloudKafkaCluster.create(cluster as CCloudKafkaCluster)),
       ]),
     );
   }
@@ -246,7 +248,7 @@ export class ResourceManager {
       }
       const clusters = await this.getCCloudKafkaClusters();
       clusters.delete(environment);
-      await this.storage.setWorkspaceState(storageKey, clusters);
+      await this.storage.setWorkspaceState(storageKey, mapToString(clusters));
     });
   }
 
@@ -310,7 +312,7 @@ export class ResourceManager {
     });
     await this.storage.setWorkspaceState(
       WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
-      clustersByEnv,
+      mapToString(clustersByEnv),
     );
   }
 
@@ -319,20 +321,20 @@ export class ResourceManager {
    * @returns The map of <environmentId (string), {@link CCloudSchemaRegistry}>
    */
   async getCCloudSchemaRegistries(): Promise<CCloudSchemaRegistryByEnv> {
-    const clustersByEnvPlainJSON: CCloudSchemaRegistryByEnv | undefined =
-      await this.storage.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES);
-
-    if (clustersByEnvPlainJSON) {
-      // Promote each member to be an instance of SchemaRegistry
-      return new Map(
-        Array.from(clustersByEnvPlainJSON).map(([envId, cluster]) => [
-          envId,
-          CCloudSchemaRegistry.create(cluster),
-        ]),
-      );
-    } else {
-      return new Map<string, CCloudSchemaRegistry>();
-    }
+    // Get the JSON-stringified map from storage
+    const registriesByEnvString: string | undefined = await this.storage.getWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_SCHEMA_REGISTRIES,
+    );
+    const registriesByEnv: Map<string, object> = registriesByEnvString
+      ? stringToMap(registriesByEnvString)
+      : new Map<string, object>();
+    // cast any values back to CCloudSchemaRegistry instances
+    return new Map(
+      Array.from(registriesByEnv).map(([envId, registry]) => [
+        envId,
+        CCloudSchemaRegistry.create(registry as CCloudSchemaRegistry),
+      ]),
+    );
   }
 
   /**
@@ -374,7 +376,7 @@ export class ResourceManager {
       }
       const schemaRegistriesByEnv = await this.getCCloudSchemaRegistries();
       schemaRegistriesByEnv.delete(environment);
-      await this.storage.setWorkspaceState(storageKey, schemaRegistriesByEnv);
+      await this.storage.setWorkspaceState(storageKey, mapToString(schemaRegistriesByEnv));
     });
   }
 
@@ -396,16 +398,18 @@ export class ResourceManager {
     const key = this.topicKeyForCluster(cluster);
 
     await this.runWithMutex(key, async () => {
-      // Fetch the proper map from storage, or create a new one if none exists.
-      const topicsByCluster =
-        (await this.storage.getWorkspaceState<TopicsByKafkaCluster>(key)) ||
-        new Map<string, KafkaTopic[]>();
+      // Get the JSON-stringified map from storage
+      const topicsByClusterString: string | undefined =
+        await this.storage.getWorkspaceState<string>(key);
+      const topicsByCluster: Map<string, object[]> = topicsByClusterString
+        ? stringToMap(topicsByClusterString)
+        : new Map<string, object[]>();
 
       // Set the new topics for the cluster
       topicsByCluster.set(cluster.id, topics);
 
       // Now save the updated cluster topics into the proper key'd storage.
-      await this.storage.setWorkspaceState(key, topicsByCluster);
+      await this.storage.setWorkspaceState(key, mapToString(topicsByCluster));
     });
   }
 
@@ -418,18 +422,16 @@ export class ResourceManager {
   async getTopicsForCluster(cluster: KafkaCluster): Promise<KafkaTopic[] | undefined> {
     const key = this.topicKeyForCluster(cluster);
 
-    // Fetch the proper map from storage.
-    const topicsByCluster: TopicsByKafkaCluster | undefined =
-      await this.storage.getWorkspaceState<TopicsByKafkaCluster>(key);
-
-    if (topicsByCluster === undefined) {
-      return undefined;
-    }
+    // Get the JSON-stringified map from storage
+    const topicsByClusterString: string | undefined =
+      await this.storage.getWorkspaceState<string>(key);
+    const topicsByCluster: Map<string, object[]> = topicsByClusterString
+      ? stringToMap(topicsByClusterString)
+      : new Map<string, object[]>();
 
     // Will either be undefined or an array of plain json objects since
     // just deserialized from storage.
-    const vanillaJSONTopics = topicsByCluster.get(cluster.id);
-
+    const vanillaJSONTopics: object[] | undefined = topicsByCluster.get(cluster.id);
     if (vanillaJSONTopics === undefined) {
       return undefined;
     }
@@ -437,7 +439,7 @@ export class ResourceManager {
     // Promote each member to be an instance of KafkaTopic, return.
     // (Empty list will be returned as is, indicating that we know there are
     //  no topics in this cluster.)
-    return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic));
+    return vanillaJSONTopics.map((topic) => KafkaTopic.create(topic as KafkaTopic));
   }
 
   /**
@@ -491,7 +493,10 @@ export class ResourceManager {
       existingSchemasBySchemaRegistry.set(schemaRegistryId, schemas);
 
       // And repersist.
-      await this.storage.setWorkspaceState(workspaceKey, existingSchemasBySchemaRegistry);
+      await this.storage.setWorkspaceState(
+        workspaceKey,
+        mapToString(existingSchemasBySchemaRegistry),
+      );
     });
   }
 
@@ -517,12 +522,20 @@ export class ResourceManager {
    * @returns The map of <clusterId (string), {@link Schema}[]>
    */
   private async getSchemaMap(): Promise<CCloudSchemaBySchemaRegistry> {
-    const schemaObjectsBySchemaRegistry: CCloudSchemaBySchemaRegistry | undefined =
-      await this.storage.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMAS);
-    if (schemaObjectsBySchemaRegistry === undefined) {
-      return new Map<string, Schema[]>();
-    }
-    return schemaObjectsBySchemaRegistry;
+    // Get the JSON-stringified map from storage
+    const schemasBySchemaRegistryString: string | undefined = await this.storage.getWorkspaceState(
+      WorkspaceStorageKeys.CCLOUD_SCHEMAS,
+    );
+    const schemasBySchemaRegistry: Map<string, object[]> = schemasBySchemaRegistryString
+      ? stringToMap(schemasBySchemaRegistryString)
+      : new Map<string, object[]>();
+    // cast any values back to Schema instances
+    return new Map(
+      Array.from(schemasBySchemaRegistry).map(([schemaRegistryId, schemas]) => [
+        schemaRegistryId,
+        schemas.map((schema) => Schema.create(schema as Schema)),
+      ]),
+    );
   }
 
   /** Forget about all of the CCLoud schemas. */
@@ -560,147 +573,24 @@ export class ResourceManager {
     return await this.storage.getSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS);
   }
 
-  // Scratch storage for relating key/values to URIs, for files or otherwise.
-
-  /** Wholly reset this URI's extension metadata. Rewrites, does not merge.
-   * Should only be used when having just created a new file and needing to
-   * set multiple metadata values at once.
-   *
-   * See {@link mergeURIMetadata} for when needing to further annotate a possibly preexisting URI.
-   */
-  async setURIMetadata(uri: Uri, metadata: UriMetadata): Promise<void> {
-    const storageKey = WorkspaceStorageKeys.URI_METADATA;
-    await this.runWithMutex(storageKey, async () => {
-      const allMetadata =
-        (await this.storage.getWorkspaceState<AllUriMetadata>(storageKey)) ??
-        new Map<string, UriMetadata>();
-
-      allMetadata.set(uri.toString(), metadata);
-
-      await this.storage.setWorkspaceState(storageKey, allMetadata);
-    });
-  }
-
-  /** Merge new values into any preexisting extension URI metadata. Use when needing to further
-   * annotate a possibly preexisting URI.
-   *
-   * @returns The new metadata for the URI after the merge.
-   */
-  async mergeURIMetadata(uri: Uri, metadata: UriMetadata): Promise<UriMetadata> {
-    return await this.runWithMutex(WorkspaceStorageKeys.URI_METADATA, async () => {
-      const allMetadata =
-        (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
-        new Map<string, UriMetadata>();
-
-      const existingMetadata =
-        allMetadata.get(uri.toString()) ?? new Map<UriMetadataKeys, string>();
-
-      for (const [key, value] of metadata) {
-        existingMetadata.set(key, value);
-      }
-
-      allMetadata.set(uri.toString(), existingMetadata);
-
-      await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
-
-      return existingMetadata;
-    });
-  }
-
-  /**
-   * Merge a single new URI metadata value into preexisting metadata. See {@link mergeURIMetadata}
-   *
-   * @returns The new complete set of metadata for the URI after the merge.
-   */
-  async mergeURIMetadataValue(uri: Uri, key: UriMetadataKeys, value: string): Promise<UriMetadata> {
-    const metadata = new Map<UriMetadataKeys, string>();
-    metadata.set(key, value);
-    return await this.mergeURIMetadata(uri, metadata);
-  }
-
-  /** Get all of the extension metadata annotations for the given URI. */
-  async getUriMetadata(uri: Uri): Promise<UriMetadata | undefined> {
-    const allMetadata =
-      (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
-      new Map<string, UriMetadata>();
-
-    return allMetadata.get(uri.toString());
-  }
-  /** Get a single extension metadata value for a URI. Use when a codepath will only be
-   * interested in this single value. See {@link getUriMetadata} for when needing many values.
-   */
-  async getUriMetadataValue(uri: Uri, key: UriMetadataKeys): Promise<string | undefined> {
-    const metadata = await this.getUriMetadata(uri);
-    return metadata?.get(key);
-  }
-
-  /** Clear one or more metadata values from a URI.
-   * @returns The new metadata for the URI after the clear(s), or undefined if the URI has no metadata remaining.
-   */
-  async clearURIMetadataValues(
-    uri: Uri,
-    ...keys: UriMetadataKeys[]
-  ): Promise<UriMetadata | undefined> {
-    return await this.runWithMutex(WorkspaceStorageKeys.URI_METADATA, async () => {
-      const allMetadata =
-        (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
-        new Map<string, UriMetadata>();
-
-      let existingMetadata = allMetadata.get(uri.toString());
-      if (existingMetadata === undefined) {
-        return undefined;
-      }
-
-      for (const key of keys) {
-        existingMetadata.delete(key);
-      }
-
-      if (existingMetadata.size === 0) {
-        // all gone, remove the whole entry. Future calls
-        // to getUriMetadata() will return undefined.
-        allMetadata.delete(uri.toString());
-        existingMetadata = undefined;
-      } else {
-        allMetadata.set(uri.toString(), existingMetadata);
-      }
-
-      await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
-
-      return existingMetadata;
-    });
-  }
-
-  /** Forget all extension metadata for a URI. Useful if knowing that the URI was just destroyed. */
-  async deleteURIMetadata(uri: Uri): Promise<void> {
-    await this.runWithMutex(WorkspaceStorageKeys.URI_METADATA, async () => {
-      const allMetadata =
-        (await this.storage.getWorkspaceState<AllUriMetadata>(WorkspaceStorageKeys.URI_METADATA)) ??
-        new Map<string, UriMetadata>();
-
-      allMetadata.delete(uri.toString());
-
-      await this.storage.setWorkspaceState(WorkspaceStorageKeys.URI_METADATA, allMetadata);
-    });
-  }
-
   // DIRECT CONNECTIONS - entirely handled through SecretStorage
 
   /** Look up the {@link ConnectionId}:{@link ConnectionSpec} map for any existing `DIRECT` connections. */
   async getDirectConnections(): Promise<DirectConnectionsById> {
+    // Get the JSON-stringified map from storage
     const connectionsString: string | undefined = await this.storage.getSecret(
       SecretStorageKeys.DIRECT_CONNECTIONS,
     );
-    if (!connectionsString) {
-      return new Map<ConnectionId, CustomConnectionSpec>();
-    }
-    const connections: Map<ConnectionId, object> = JSON.parse(connectionsString);
-    const connectionsById = new Map(
-      Object.entries(connections).map(([id, spec]) => [
+    const connectionsById: Map<string, object> = connectionsString
+      ? stringToMap(connectionsString)
+      : new Map<string, object>();
+    // cast any values back to CustomConnectionSpec instances
+    return new Map(
+      Array.from(connectionsById).map(([id, spec]) => [
         id as ConnectionId,
         CustomConnectionSpecFromJSON(spec),
       ]),
     );
-    return connectionsById;
   }
 
   async getDirectConnection(id: ConnectionId): Promise<CustomConnectionSpec | null> {
@@ -732,7 +622,7 @@ export class ResourceManager {
     return await this.runWithMutex(key, async () => {
       const connections: DirectConnectionsById = await this.getDirectConnections();
       connections.delete(id);
-      await this.storage.setSecret(key, JSON.stringify(Object.fromEntries(connections)));
+      await this.storage.setSecret(key, mapToString(connections));
     });
   }
 
@@ -767,4 +657,14 @@ export function CustomConnectionSpecToJSON(spec: CustomConnectionSpec): any {
     ...ConnectionSpecToJSON(spec),
     formConnectionType: spec.formConnectionType,
   };
+}
+
+/** JSON-stringify a `Map`. Opposite of {@link stringToMap}. */
+export function mapToString(map: Map<any, any>): string {
+  return JSON.stringify(Object.fromEntries(map));
+}
+
+/** Convert a JSON-stringified Map back to a `Map`. Opposite of {@link mapToString}. */
+export function stringToMap(str: string): Map<any, any> {
+  return new Map(Object.entries(JSON.parse(str)));
 }
