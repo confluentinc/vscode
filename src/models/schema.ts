@@ -2,7 +2,7 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import { ContainerTreeItem, CustomMarkdownString } from "./main";
+import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
   connectionIdToType,
@@ -211,87 +211,6 @@ function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
 export enum SchemaKind {
   Key = "key",
   Value = "value",
-}
-
-/**
- * Groups {@link Schema}s by subject and sorts versions in descending order.
- * @param schemas List of schemas to group
- * @param topicName Optional topic name to filter schema subjects by
- * @remarks The resulting groups should be structured like:
- * ```
- *  - subject1
- *  -- version2
- *  -- version1
- *  - subject2
- *  -- version1
- *  ...etc
- * ```
- */
-export function generateSchemaSubjectGroups(
-  schemas: Schema[],
-  topicName?: string,
-): ContainerTreeItem<Schema>[] {
-  const schemaGroups: ContainerTreeItem<Schema>[] = [];
-  if (schemas.length === 0) {
-    return schemaGroups;
-  }
-
-  if (topicName) {
-    schemas = schemas.filter((schema) => schema.matchesTopicName(topicName));
-  }
-
-  // create a map of schema subjects to their respective schemas
-  const schemaSubjectGroups: Map<string, Schema[]> = new Map();
-  for (const schema of schemas) {
-    const subject = schema.subject;
-    if (!schemaSubjectGroups.has(subject)) {
-      schemaSubjectGroups.set(subject, []);
-    }
-    schemaSubjectGroups.get(subject)?.push(schema);
-  }
-  // convert the map to an array of ContainerTreeItems
-  for (const [subject, schemaGroup] of schemaSubjectGroups) {
-    // sort in version-descending order so the latest version is always at the top
-    schemaGroup.sort((a, b) => b.version - a.version);
-    // get string of unique schema types for the group
-    const schemaTypes = Array.from(new Set(schemaGroup.map((schema) => schema.type))).join(", ");
-    const schemaContainerItem = new ContainerTreeItem<Schema>(
-      subject,
-      vscode.TreeItemCollapsibleState.Collapsed,
-      schemaGroup,
-    );
-    // set the icon based on subject suffix
-    schemaContainerItem.iconPath = getSubjectIcon(subject, topicName !== undefined);
-
-    const contextValueParts: string[] = [];
-
-    // override description to show schema types + count
-    schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
-    if (schemaGroup.length > 1) {
-      // set context key indicating this group has multiple versions (so can be quickly diff'd, etc.)
-      contextValueParts.push("multiple-versions");
-    }
-
-    // set context value identifying this as a schema group
-    contextValueParts.push("schema-subject");
-
-    // dash-join all parts, assign to context value
-    schemaContainerItem.contextValue = contextValueParts.join("-");
-
-    schemaGroups.push(schemaContainerItem);
-  }
-
-  // sort multiple groups by subject
-  if (schemaGroups.length > 1) {
-    schemaGroups.sort((a, b) => {
-      // compare as strings, not TreeItemLabels
-      const labelA = a.label! as string;
-      const labelB = b.label! as string;
-      return labelA.localeCompare(labelB);
-    });
-  }
-
-  return schemaGroups;
 }
 
 /** Determine an icon for a schema subject,
