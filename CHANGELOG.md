@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Updated workspace state storage to use stringified data after a breaking change in VS Code 1.97
+  that prevents storing `Map` objects directly.
+
 ## 0.24.3
 
 ### Fixed
