@@ -150,8 +150,8 @@ class DirectConnectFormViewModel extends ViewModel {
   }
   async updateSslConfig(event: CustomEvent) {
     console.log("update ssl event", event.detail);
-    const { namespace, key, value } = event.detail;
-    await post("UpdateSpecValue", { namespace, key, value });
+    const { namespace, inputName, inputValue } = event.detail;
+    await post("UpdateSpecValue", { namespace, inputName, inputValue });
   }
 
   updateValue(event: Event) {
@@ -279,7 +279,7 @@ export function post(type: "Update", body: { [key: string]: unknown }): Promise<
 export function post(type: "GetConnectionSpec", body: any): Promise<CustomConnectionSpec | null>;
 export function post(
   type: "UpdateSpecValue",
-  body: { namespace: "kafka" | "schema"; key: string; value: string },
+  body: { namespace: "kafka" | "schema"; inputName: string; inputValue: string },
 ): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);

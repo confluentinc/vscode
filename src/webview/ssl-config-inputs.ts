@@ -35,7 +35,10 @@ export class SslConfig extends HTMLElement {
     this.identifier(value);
   }
 
-  updateValue(name: string, value: string) {
+  updateValue(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const name = input.name;
+    const value = input.value;
     this.dispatchEvent(
       new CustomEvent("bubble", {
         detail: { namespace: this.identifier(), inputName: name, inputValue: value },
@@ -51,7 +54,7 @@ export class SslConfig extends HTMLElement {
         id="verify_hostname"
         name="verify_hostname"
         data-attr-checked="this.verifyHostname() ? true : false"
-        data-on-change="this.updateValue('verify_hostname', true)"
+        data-on-change="this.updateValue(event)"
       />
       Verify Hostname
     </label>
@@ -62,7 +65,7 @@ export class SslConfig extends HTMLElement {
         id="truststore_type"
         name="truststore_type"
         data-attr-value="this.truststoreType()"
-        data-on-change="this.truststoreType(event.target.value)"
+        data-on-change="this.updateValue(event)"
       >
         <option value="JKS">JKS</option>
         <option value="PKCS12">PKCS12</option>
@@ -80,7 +83,7 @@ export class SslConfig extends HTMLElement {
           type="text"
           placeholder="/path/to/truststore"
           data-attr-value="this.truststorePath()"
-          data-on-change="this.updateValue(event.target.name, event.target.value)"
+          data-on-change="this.updateValue(event)"
         />
       </div>
       <div class="input-container">
@@ -91,7 +94,7 @@ export class SslConfig extends HTMLElement {
           name="truststore_password"
           type="password"
           data-attr-value="this.truststorePassword()"
-          data-on-change="this.updateValue('truststore_password', event.target.value)"
+          data-on-change="this.updateValue(event)"
         />
       </div>
     </div>
