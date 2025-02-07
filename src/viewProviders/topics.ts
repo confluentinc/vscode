@@ -18,6 +18,7 @@ import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { generateSchemaSubjectGroups, Schema, SchemaTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -66,6 +67,8 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   itemSearchString: string | null = null;
   /** Items directly matching the {@linkcode itemSearchString}, if provided. */
   searchMatches: Set<TopicViewProviderData> = new Set();
+  /** Count of all items returned from `getChildren()`. */
+  totalItemCount: number = 0;
 
   private static instance: TopicViewProvider | null = null;
   private constructor() {
@@ -147,6 +150,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       }
     }
 
+    this.totalItemCount += children.length;
     // filter the children based on the search string, if provided
     if (this.itemSearchString) {
       // if the parent item matches the search string, return all children so the user can expand
@@ -168,9 +172,15 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // update the tree view message to show how many results were found to match the search string
       // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
       // will never be called and the message won't update
-      const plural = this.searchMatches.size > 1 ? "s" : "";
+      const plural = this.totalItemCount > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
+        logUsage(UserEvent.ViewSearchAction, {
+          status: "view results filtered",
+          view: "Topics",
+          filteredItemCount: this.searchMatches.size,
+          totalItemCount: this.totalItemCount,
+        });
       } else {
         // let empty state take over
         this.treeView.message = undefined;
@@ -246,6 +256,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
       (searchString: string | null) => {
         logger.debug("topicSearchSet event fired, refreshing", { searchString });
+        logUsage(UserEvent.ViewSearchAction, {
+          status: `search string ${searchString ? "set" : "cleared"}`,
+          view: "Topics",
+          filteredItemCount: this.searchMatches.size,
+          totalItemCount: this.totalItemCount,
+        });
         this.setSearch(searchString);
         this.refresh();
       },
@@ -289,6 +305,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     setContextValue(ContextValues.topicSearchApplied, searchString !== null);
     // clear from any previous search filter
     this.searchMatches = new Set();
+    this.totalItemCount = 0;
   }
 }
 
