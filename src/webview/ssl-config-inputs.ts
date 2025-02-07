@@ -47,8 +47,8 @@ export class SslConfig extends HTMLElement {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.value;
-    const n = this.identifier() + "-ssl";
-    this.entries.set(n + "-" + name, value);
+    const n = this.identifier() + "_ssl";
+    this.entries.set(n + "_" + name, value);
     this._internals.setFormValue(this.entries);
     this.dispatchEvent(
       new CustomEvent("bubble", {
