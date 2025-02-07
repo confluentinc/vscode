@@ -3,13 +3,18 @@ import { applyBindings, html } from "./bindings/bindings";
 import { TLSConfig } from "../clients/sidecar";
 
 export class SslConfig extends HTMLElement {
+  static formAssociated = true;
+  private _internals: ElementInternals;
+  constructor() {
+    super();
+    this._internals = this.attachInternals();
+  }
   os = ObservableScope();
-
-  // Internal state for the component
+  entries = new FormData();
   identifier = this.os.signal<string>("");
   configObj = this.os.signal<TLSConfig | undefined>(undefined);
   verifyHostname = this.os.derive(() => {
-    return this.configObj()?.verify_hostname;
+    return this.configObj()?.verify_hostname || true;
   });
   truststorePath = this.os.derive(() => {
     return this.configObj()?.truststore?.path;
@@ -35,10 +40,16 @@ export class SslConfig extends HTMLElement {
     this.identifier(value);
   }
 
+  /** update the form data so it contains all the changed values on submit
+   * and dispatch a bubble event to the parent (host) for other actions
+   */
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.value;
+    const n = this.identifier() + "_ssl";
+    this.entries.set(n + "_" + name, value);
+    this._internals.setFormValue(this.entries);
     this.dispatchEvent(
       new CustomEvent("bubble", {
         detail: { namespace: this.identifier(), inputName: name, inputValue: value },
@@ -67,10 +78,9 @@ export class SslConfig extends HTMLElement {
         data-attr-value="this.truststoreType()"
         data-on-change="this.updateValue(event)"
       >
-        <option value="JKS">JKS</option>
+        <option value="JKS" selected>JKS</option>
         <option value="PKCS12">PKCS12</option>
         <option value="PEM">PEM</option>
-        <option value="UNKNOWN">UNKNOWN</option>
       </select>
     </div>
     <div class="input-row">

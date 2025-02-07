@@ -147,11 +147,23 @@ export function getConnectionSpecFromFormData(
   if (formData["bootstrap_servers"]) {
     spec.kafka_cluster = {
       bootstrap_servers: formData["bootstrap_servers"],
-      ssl: {
-        // formData will not have the SSL toggle if the input disabled, so we check that CCloud always enables SSL
-        enabled: formData["kafka_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
+    };
+    if (formData["kafka_ssl"] === "on") {
+      spec.kafka_cluster.ssl = {
+        ...spec.kafka_cluster.ssl,
+        enabled: true,
+        verify_hostname: formData["kafka_ssl_verify_hostname"] === "on" ? true : false,
+        truststore: {
+          type: formData["kafka_ssl_truststore_type"],
+          path: formData["kafka_ssl_truststore_path"],
+          password: formData["kafka_ssl_truststore_password"],
+        },
+        keystore: {
+          path: formData["kafka_ssl_keystore_path"],
+          password: formData["kafka_ssl_keystore_password"],
       },
     };
+    }
     if (formData.kafka_auth_type === "Basic") {
       spec.kafka_cluster.credentials = {
         username: formData["kafka_username"],
@@ -169,11 +181,23 @@ export function getConnectionSpecFromFormData(
   if (formData["uri"]) {
     spec.schema_registry = {
       uri: formData["uri"],
-      ssl: {
-        // formData will not have the SSL toggle if the input is disabled, so we check that CCloud always enables SSL
-        enabled: formData["schema_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
+    };
+    if (formData["schema_ssl"] === "on") {
+      spec.schema_registry.ssl = {
+        ...spec.schema_registry.ssl,
+        enabled: true,
+        verify_hostname: formData["schema_ssl_verify_hostname"] === "on" ? true : false,
+        truststore: {
+          type: formData["schema_ssl_truststore_type"],
+          path: formData["schema_ssl_truststore_path"],
+          password: formData["schema_ssl_truststore_password"],
+        },
+        keystore: {
+          path: formData["schema_ssl_keystore_path"],
+          password: formData["schema_ssl_keystore_password"],
       },
     };
+    }
     if (formData.schema_auth_type === "Basic") {
       spec.schema_registry.credentials = {
         username: formData["schema_username"],
