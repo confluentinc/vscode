@@ -2,6 +2,7 @@ import { ExtensionContext } from "vscode";
 import { getExtensionContext } from "../../context/extension";
 import { Logger } from "../../logging";
 import { SecretStorageKeys } from "../constants";
+import { mapToString } from "../resourceManager";
 import { BaseMigration } from "./base";
 
 const logger = new Logger("storage.migrations.v2");
@@ -62,7 +63,7 @@ export class MigrationV2 extends BaseMigration {
       logger.debug(`Adding 'ssl' defaults to ${updatedConnectionSpecs.size} ConnectionSpec(s)`);
       await context.secrets.store(
         SecretStorageKeys.DIRECT_CONNECTIONS,
-        JSON.stringify(Object.fromEntries(updatedConnectionSpecs)),
+        mapToString(updatedConnectionSpecs),
       );
     } else {
       logger.debug("No ConnectionSpecs to upgrade");
@@ -114,7 +115,7 @@ export class MigrationV2 extends BaseMigration {
       logger.debug(`Removing 'ssl' defaults from ${updatedConnectionSpecs.size} ConnectionSpec(s)`);
       await context.secrets.store(
         SecretStorageKeys.DIRECT_CONNECTIONS,
-        JSON.stringify(Object.fromEntries(updatedConnectionSpecs)),
+        mapToString(updatedConnectionSpecs),
       );
     } else {
       logger.debug("No ConnectionSpecs to downgrade");
