@@ -16,6 +16,20 @@ export const TEST_CCLOUD_SCHEMA = Schema.create({
 
 export const TEST_CCLOUD_SUBJECT: Subject = TEST_CCLOUD_SCHEMA.subjectObject();
 
+export const TEST_CCLOUD_KEY_SCHEMA = Schema.create({
+  id: "100003",
+  subject: `${TEST_CCLOUD_KAFKA_TOPIC.name}-key`,
+  version: 1,
+  type: SchemaType.Avro,
+  schemaRegistryId: TEST_CCLOUD_SCHEMA_REGISTRY.id,
+  environmentId: TEST_CCLOUD_SCHEMA_REGISTRY.environmentId,
+  connectionId: TEST_CCLOUD_SCHEMA_REGISTRY.connectionId,
+  connectionType: TEST_CCLOUD_SCHEMA_REGISTRY.connectionType,
+  isHighestVersion: true,
+});
+
+export const TEST_CCLOUD_KEY_SUBJECT: Subject = TEST_CCLOUD_KEY_SCHEMA.subjectObject();
+
 export const TEST_LOCAL_SCHEMA = Schema.create({
   id: "1",
   subject: `${TEST_LOCAL_KAFKA_TOPIC.name}-value`,

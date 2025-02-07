@@ -137,16 +137,7 @@ export abstract class ResourceLoader implements IResourceBase {
   ): Promise<Subject[]> {
     const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
 
-    const subjectStrings = await fetchSubjects(schemaRegistry);
-    return subjectStrings.map(
-      (subjectString) =>
-        new Subject(
-          subjectString,
-          schemaRegistry.connectionId,
-          schemaRegistry.environmentId,
-          schemaRegistry.id,
-        ),
-    );
+    return await fetchSubjects(schemaRegistry);
   }
 
   /**

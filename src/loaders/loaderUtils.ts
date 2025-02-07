@@ -9,7 +9,7 @@ import {
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
+import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -157,17 +157,29 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
 }
 
 /**
- * Fetch all of the subjects in the schema registry and return them as an array of sorted strings.
+ * Fetch all of the subjects in the schema registry and return them as an array of sorted Subject objects.
  * Does not store into the resource manager.
  */
-export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<string[]> {
+export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Subject[]> {
   const sidecarHandle = await getSidecar();
   const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
     schemaRegistry.id,
     schemaRegistry.connectionId,
   );
 
-  return (await client.list()).sort();
+  // Fetch + sort the subject strings from the SR.
+  const sortedSubjectStrings: string[] = (await client.list()).sort();
+
+  // Promote to Subject objects carrying the schema registry's metadata.
+  return sortedSubjectStrings.map(
+    (subjectString) =>
+      new Subject(
+        subjectString,
+        schemaRegistry.connectionId,
+        schemaRegistry.environmentId,
+        schemaRegistry.id,
+      ),
+  );
 }
 
 /**
