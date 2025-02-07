@@ -49,13 +49,12 @@ export interface PluginConfigInterface {
 
 /**
  * @export
+ * @enum {string}
  */
-export const PluginConfigInterfaceProtocolSchemeEnum = {
-  Empty: "",
-  MobyPluginsHttpV1: "moby.plugins.http/v1",
-} as const;
-export type PluginConfigInterfaceProtocolSchemeEnum =
-  (typeof PluginConfigInterfaceProtocolSchemeEnum)[keyof typeof PluginConfigInterfaceProtocolSchemeEnum];
+export enum PluginConfigInterfaceProtocolSchemeEnum {
+  Empty = "",
+  MobyPluginsHttpV1 = "moby.plugins.http/v1",
+}
 
 /**
  * Check if a given object implements the PluginConfigInterface interface.
