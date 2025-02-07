@@ -5,7 +5,7 @@ import {
   tryToUpdateConnection,
 } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../../clients/docker";
-import { Connection, ConnectionSpec, LocalConfigToJSON } from "../../clients/sidecar";
+import { Connection, ConnectionSpec } from "../../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
 import {
   getLocalSchemaRegistryImageName,
@@ -42,10 +42,10 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
   if (schemaRegistryUri) {
     spec = {
       ...LOCAL_CONNECTION_SPEC,
-      local_config: LocalConfigToJSON({
+      local_config: {
         ...LOCAL_CONNECTION_SPEC.local_config,
         schema_registry_uri: schemaRegistryUri,
-      }),
+      },
     };
   }
 
