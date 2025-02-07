@@ -13,6 +13,7 @@ export enum UserEvent {
   NotificationButtonClicked = "Notification Button Clicked",
   ProjectScaffoldingAction = "Project Scaffolding Action",
   SignedIn = "Signed In",
+  ViewSearchAction = "View Search Action",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */
