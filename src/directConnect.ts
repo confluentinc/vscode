@@ -97,18 +97,37 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     return { success: true, message: "Connection updated successfully." };
   }
 
+  /** Stores a map of options with key: value pairs that is then updated on form input
+   * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   */
+  let kafkaConfigUpdates: { [key: string]: string | boolean } = {};
+  let kafkaConfig = connection?.kafka_cluster || {};
+  Object.entries(kafkaConfig).map(([option, properties]) => {
+    if (typeof properties === "object" && properties !== null && "initial_value" in properties) {
+      kafkaConfigUpdates[option] = (properties as { initial_value: string }).initial_value ?? "";
+    }
+  });
+  function updateConfigValue(namespace: "kafka" | "schema", key: string, value: string) {
+    console.log(`Updating ${namespace} config value for ${key} to ${value}`);
+    if (namespace === "kafka") kafkaConfigUpdates[key] = value;
+    console.log("new obj", kafkaConfigUpdates);
+  }
+
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "Test":
         return (await testConnection(body)) satisfies MessageResponse<"Test">;
       case "Submit":
         return (await saveConnection(body)) satisfies MessageResponse<"Submit">;
+      case "Update":
+        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
       case "GetConnectionSpec": {
         const spec = connection ? cleanSpec(connection) : null;
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
-      case "Update":
-        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
+      case "UpdateSpecValue":
+        updateConfigValue(body.namespace, body.key, body.value);
+        return null satisfies MessageResponse<"UpdateSpecValue">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
