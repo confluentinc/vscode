@@ -14,7 +14,7 @@ export class SslConfig extends HTMLElement {
   identifier = this.os.signal<string>("");
   configObj = this.os.signal<TLSConfig | undefined>(undefined);
   verifyHostname = this.os.derive(() => {
-    return this.configObj()?.verify_hostname;
+    return this.configObj()?.verify_hostname || true;
   });
   truststorePath = this.os.derive(() => {
     return this.configObj()?.truststore?.path;
