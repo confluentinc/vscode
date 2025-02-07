@@ -41,6 +41,7 @@ describe("sendTelemetryIdentifyEvent", () => {
     Sinon.assert.called(logUsageStub);
     Sinon.assert.calledWith(logUsageStub, testEvent, {
       identify: true,
+      status: "identify",
       user: {
         id: "user123",
         domain: "mycooldomain.com",
@@ -66,6 +67,7 @@ describe("sendTelemetryIdentifyEvent", () => {
     Sinon.assert.called(logUsageStub);
     Sinon.assert.calledWith(logUsageStub, testEvent, {
       identify: true,
+      status: "identify",
       user: {
         id: "session123",
         domain: "example.com",
@@ -105,6 +107,7 @@ describe("sendTelemetryIdentifyEvent", () => {
 
     Sinon.assert.calledWith(logUsageStub, testEvent, {
       identify: true,
+      status: "identify",
       user: {
         id: "user1",
         domain: undefined,
