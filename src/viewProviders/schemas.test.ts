@@ -47,6 +47,8 @@ describe("SchemasViewProvider search behavior", () => {
     subject: "bar-key",
     id: "100456",
   });
+  // three sample schema versions across three subjects
+  const schemas = [TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA2, TEST_CCLOUD_SCHEMA3];
 
   before(async () => {
     await getTestExtensionContext();
@@ -57,10 +59,7 @@ describe("SchemasViewProvider search behavior", () => {
 
     // stub loader method for fetching schemas
     ccloudLoader = CCloudResourceLoader.getInstance();
-    sandbox
-      .stub(ccloudLoader, "getSchemasForRegistry")
-      // three sample schema versions across three subjects
-      .resolves([TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA2, TEST_CCLOUD_SCHEMA3]);
+    sandbox.stub(ccloudLoader, "getSchemasForRegistry").resolves(schemas);
 
     provider = SchemasViewProvider.getInstance();
     provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
@@ -107,13 +106,18 @@ describe("SchemasViewProvider search behavior", () => {
   });
 
   it("getChildren() should show correct count in tree view message when items match search", async () => {
-    // Search matching two subjects
     const searchStr = "-value";
     schemaSearchSet.fire("-value");
 
     await provider.getChildren();
 
-    assert.strictEqual(provider["treeView"].message, `Showing 2 results for "${searchStr}"`);
+    // Search matching two subjects
+    assert.strictEqual(provider.searchMatches.size, 2);
+    assert.strictEqual(provider.totalItemCount, schemas.length);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${schemas.length} results for "${searchStr}"`,
+    );
   });
 
   it("getChildren() should clear tree view message when search is cleared", async () => {
