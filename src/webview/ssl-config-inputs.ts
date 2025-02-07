@@ -36,9 +36,6 @@ export class SslConfig extends HTMLElement {
   }
 
   updateValue(name: string, value: string) {
-    console.log(name, value);
-    // We can use custom events to trigger reaction in the parent scope
-    //   that can bind to the event e.g. `data-on-something="this.handle(event.detail)"`
     this.dispatchEvent(
       new CustomEvent("bubble", {
         detail: { namespace: this.identifier(), inputName: name, inputValue: value },
