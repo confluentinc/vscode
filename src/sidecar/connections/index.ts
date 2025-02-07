@@ -2,6 +2,7 @@ import { getSidecar } from "..";
 import {
   Connection,
   ConnectionSpec,
+  ConnectionSpecToJSON,
   ConnectionsResourceApi,
   ResponseError,
 } from "../../clients/sidecar";
@@ -69,7 +70,7 @@ export async function tryToUpdateConnection(spec: ConnectionSpec): Promise<Conne
   try {
     connection = await client.gatewayV1ConnectionsIdPatch({
       id: spec.id!,
-      body: spec,
+      body: ConnectionSpecToJSON(spec),
     });
     logger.debug("updated connection:", { id: connection.id });
     return connection;
