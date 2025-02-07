@@ -99,18 +99,17 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
 
   /** Stores a map of options with key: value pairs that is then updated on form input
    * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   * TODO I'm not sure if I should "extrapolate" to make a sub component for all kafka...
+   * or at least we should update these in the same way?
+   * which would help with future "grouping" efforts and loading form file we discussed
    */
-  let kafkaConfigUpdates: { [key: string]: string | boolean } = {};
-  let kafkaConfig = connection?.kafka_cluster || {};
-  Object.entries(kafkaConfig).map(([option, properties]) => {
-    if (typeof properties === "object" && properties !== null && "initial_value" in properties) {
-      kafkaConfigUpdates[option] = (properties as { initial_value: string }).initial_value ?? "";
-    }
-  });
+  let kafkaSslConfigUpdates: { [key: string]: string | boolean } = {};
+  let schemaSslConfigUpdates: { [key: string]: string | boolean } = {};
   function updateConfigValue(namespace: "kafka" | "schema", key: string, value: string) {
-    console.log(`Updating ${namespace} config value for ${key} to ${value}`);
-    if (namespace === "kafka") kafkaConfigUpdates[key] = value;
-    console.log("new obj", kafkaConfigUpdates);
+    if (namespace === "kafka") kafkaSslConfigUpdates[key] = value;
+    console.log("new kafka ssl:", kafkaSslConfigUpdates);
+    if (namespace === "schema") schemaSslConfigUpdates[key] = value;
+    console.log("new schema ssl:", schemaSslConfigUpdates);
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
@@ -126,7 +125,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
       case "UpdateSpecValue":
-        updateConfigValue(body.namespace, body.key, body.value);
+        updateConfigValue(body.namespace, body.inputName, body.inputValue);
         return null satisfies MessageResponse<"UpdateSpecValue">;
     }
   };
