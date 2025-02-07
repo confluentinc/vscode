@@ -114,7 +114,8 @@ export async function runWorkflowWithProgress(
         });
 
         logger.debug(`running ${workflow.resourceKind} workflow`, { start });
-        workflow.sendTelemetryEvent(UserEvent.WorkflowInitiated, {
+        workflow.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+          status: "workflow initialized",
           start,
         });
         try {
@@ -124,13 +125,15 @@ export async function runWorkflowWithProgress(
             await workflow.stop(token, progress);
           }
           logger.debug(`finished ${workflow.resourceKind} workflow`, { start });
-          workflow.sendTelemetryEvent(UserEvent.WorkflowFinished, {
+          workflow.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+            status: "workflow completed",
             start,
           });
         } catch (error) {
           logger.error(`error running ${workflow.resourceKind} workflow`, error);
           if (error instanceof Error) {
-            workflow.sendTelemetryEvent(UserEvent.WorkflowErrored, {
+            workflow.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+              status: "workflow failed",
               start,
             });
             Sentry.captureException(error, {

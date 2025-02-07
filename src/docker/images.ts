@@ -47,7 +47,8 @@ export async function pullImage(repo: string, tag: string): Promise<void> {
       status: resp.raw.status,
       statusText: resp.raw.statusText,
     });
-    logUsage(UserEvent.DockerImagePulled, {
+    logUsage(UserEvent.LocalDockerAction, {
+      status: "image pulled",
       dockerImage: repoTag,
     });
   } catch (error) {
