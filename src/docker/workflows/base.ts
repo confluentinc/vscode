@@ -61,7 +61,7 @@ export abstract class LocalResourceWorkflow {
     try {
       await startContainer(container.id);
       this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
-        status: "started",
+        status: "container started",
         dockerContainerName: container.name,
       });
     } catch (error) {
@@ -122,7 +122,7 @@ export abstract class LocalResourceWorkflow {
     if (existingContainer.State?.Status === "running") {
       await stopContainer(container.id);
       this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
-        status: "stopped",
+        status: "container stopped",
         dockerContainerName: container.name,
       });
     }

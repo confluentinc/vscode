@@ -139,7 +139,7 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         break;
       }
       this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
-        status: "created",
+        status: "container created",
         dockerContainerName: container.name,
       });
       // then start the container
