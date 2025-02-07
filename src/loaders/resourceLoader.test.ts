@@ -7,7 +7,7 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { createTestTopicData } from "../../tests/unit/testUtils";
+import { createTestSubject, createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import { EnvironmentId } from "../models/resource";
 import * as loaderUtils from "./loaderUtils";
@@ -102,7 +102,10 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     ];
 
     fetchTopicsStub.resolves(topicsResponseData);
-    getSubjectsStub.resolves(["topic1-value", "topic2-key"]);
+    getSubjectsStub.resolves([
+      createTestSubject(TEST_LOCAL_SCHEMA_REGISTRY, "topic1-value"),
+      createTestSubject(TEST_LOCAL_SCHEMA_REGISTRY, "topic2-key"),
+    ]);
 
     const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
 
