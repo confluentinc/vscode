@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { Uri } from "vscode";
 import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -26,7 +25,7 @@ import { ConnectionId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
+import { WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
@@ -38,7 +37,6 @@ import {
   mapToString,
   ResourceManager,
   stringToMap,
-  UriMetadata,
 } from "./resourceManager";
 
 describe("ResourceManager (CCloud) environment methods", function () {
@@ -65,10 +63,10 @@ describe("ResourceManager (CCloud) environment methods", function () {
   });
 
   it("setCCloudEnvironments() should correctly store Environments", async () => {
-    await getResourceManager().setCCloudEnvironments(environments);
-    // verify the environments were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedEnvironments: CCloudEnvironment[] | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
+    const resourceManager = getResourceManager();
+    await resourceManager.setCCloudEnvironments(environments);
+    // verify the environments were stored correctly
+    let storedEnvironments: CCloudEnvironment[] = await resourceManager.getCCloudEnvironments();
     assert.ok(storedEnvironments);
     assert.deepStrictEqual(storedEnvironments, environments);
   });
@@ -144,10 +142,12 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: setCCloudKafkaClusters() should correctly store Kafka clusters", async () => {
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
-    // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
+    const resourceManager = getResourceManager();
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
+    // verify the clusters were stored correctly
+    let storedClustersByEnv: CCloudKafkaClustersByEnv =
+      await resourceManager.getCCloudKafkaClusters();
+
     assert.ok(storedClustersByEnv);
     assert.ok(storedClustersByEnv instanceof Map);
     assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
@@ -155,20 +155,27 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: setCCloudKafkaClusters() should add new environment keys if they don't exist", async () => {
+    const resourceManager = getResourceManager();
     // set the first batch of clusters from the first environment
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // create and set the second batch of clusters for the new environment
     const newEnvironmentId = "new-environment-id";
     const newClusters: CCloudKafkaCluster[] = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_CCLOUD_KAFKA_CLUSTER, id: "new-cluster-id-1", environmentId: newEnvironmentId },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_CCLOUD_KAFKA_CLUSTER, id: "new-cluster-id-2", environmentId: newEnvironmentId },
+      CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        id: "new-cluster-id-1",
+        environmentId: newEnvironmentId,
+      }),
+      CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        id: "new-cluster-id-2",
+        environmentId: newEnvironmentId,
+      }),
     ];
-    await getResourceManager().setCCloudKafkaClusters(newClusters);
+    await resourceManager.setCCloudKafkaClusters(newClusters);
     // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
+    let storedClustersByEnv: CCloudKafkaClustersByEnv =
+      await resourceManager.getCCloudKafkaClusters();
     assert.ok(storedClustersByEnv);
     // make sure both environments exist and the first wasn't overwritten
     assert.deepStrictEqual(storedClustersByEnv.get(newEnvironmentId), newClusters);
@@ -176,13 +183,14 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: setCCloudKafkaClusters() shouldn't duplicate clusters when setting clusters that already exist", async () => {
+    const resourceManager = getResourceManager();
     // set the clusters in the StorageManager before setting them again
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // set the clusters again
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // verify the clusters were not duplicated
-    let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
+    let storedClustersByEnv: CCloudKafkaClustersByEnv =
+      await resourceManager.getCCloudKafkaClusters();
     assert.ok(storedClustersByEnv);
     assert.ok(storedClustersByEnv instanceof Map);
     assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
@@ -272,11 +280,10 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("LOCAL: setLocalKafkaClusters() should correctly store Kafka clusters", async () => {
-    await getResourceManager().setLocalKafkaClusters(localClusters);
-    // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClusters: LocalKafkaCluster[] | undefined = await storageManager.getWorkspaceState(
-      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
-    );
+    const resourceManager = getResourceManager();
+    await resourceManager.setLocalKafkaClusters(localClusters);
+    // verify the clusters were stored correctly
+    const storedClusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
     assert.ok(storedClusters);
     assert.deepStrictEqual(storedClusters, localClusters);
   });
@@ -726,251 +733,6 @@ describe("ResourceManager schema tests", function () {
     await rm.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, []);
     const storedSchemas = await rm.getSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id);
     assert.deepStrictEqual(storedSchemas, []);
-  });
-});
-
-describe("ResourceManager URI metadata methods", function () {
-  let storageManager: StorageManager;
-  let rm: ResourceManager;
-
-  let schemaFileURI = Uri.parse("file:///path/to/file");
-
-  before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
-  });
-
-  beforeEach(async () => {
-    // fresh slate for each test
-    await storageManager.clearWorkspaceState();
-    rm = getResourceManager();
-  });
-
-  afterEach(async () => {
-    // clean up after each test
-    await storageManager.clearWorkspaceState();
-  });
-
-  it("setURIMetadata() should correctly store URI metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    // fetch back from resource manager
-    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadata, metadataFromStorage);
-
-    // overwrite with new metadata
-    metadata.clear();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "new-registry-id");
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const metadataFromStorageAgain = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadata, metadataFromStorageAgain);
-
-    // Separate URI should be stored separately.
-    const otherSchemaFileURI = Uri.parse("file:///path/to/other-file");
-    const otherMetadata: UriMetadata = new Map();
-    otherMetadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "other-registry-id");
-    otherMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-abc-value");
-    await rm.setURIMetadata(otherSchemaFileURI, otherMetadata);
-
-    // fetch this other metadata back from resource manager, should be fine.
-    const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
-    assert.deepStrictEqual(
-      otherMetadata,
-      otherMetadataFromStorage,
-      "other metadata should be stored",
-    );
-
-    // The first metadata should still be there unaffected by this second file uri key.
-    const metadataFromStorageAfterOther = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(
-      metadata,
-      metadataFromStorageAfterOther,
-      "first metadata should still be stored",
-    );
-  });
-
-  it("mergeURIMetadata() should correctly merge URI metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const newMetadata: UriMetadata = new Map();
-    newMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    const mergeReturn = await rm.mergeURIMetadata(schemaFileURI, newMetadata);
-
-    const expected: UriMetadata = new Map([...metadata, ...newMetadata]);
-    assert.deepStrictEqual(expected, mergeReturn);
-
-    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(expected, metadataFromStorage);
-  });
-
-  it("MergeURIMetadata() should correctly merge against prior unset metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-
-    // Merge against empty is same as set.
-    const merged = await rm.mergeURIMetadata(schemaFileURI, metadata);
-    assert.deepStrictEqual(merged, metadata);
-
-    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadata, metadataFromStorage);
-  });
-
-  it("mergeURIMetadataValue() should set individual keys properly", async () => {
-    // Set first key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-
-    // Set second key.
-    const afterSecondAssignment = await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-      "test-ccloud-topic-xyz-value",
-    );
-
-    // Fetch back and verify.
-
-    const fromStorage = await rm.getUriMetadata(schemaFileURI);
-
-    // Verify results.
-    const expected: UriMetadata = new Map();
-    expected.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    expected.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    assert.deepStrictEqual(fromStorage, expected);
-    assert.deepStrictEqual(afterSecondAssignment, expected);
-  });
-
-  it("getURIMetadata() should return undefined if no metadata is found", async () => {
-    const metadata = await rm.getUriMetadata(schemaFileURI);
-    assert.strictEqual(metadata, undefined);
-  });
-
-  it("getUriuMetadataValue() should return single value properly", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const registryId = await rm.getUriMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-    );
-    assert.strictEqual(registryId, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-  });
-
-  it("getUriMetadataValue() should return undefined if key is not found", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const missingValue = await rm.getUriMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-    );
-    assert.strictEqual(missingValue, undefined);
-  });
-
-  it("clearURIMetadataValues() should clear individual keys properly", async () => {
-    // Set first key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-
-    // Set second key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-      "test-ccloud-topic-xyz-value",
-    );
-
-    // Clear the first key.
-    await rm.clearURIMetadataValues(schemaFileURI, UriMetadataKeys.SCHEMA_REGISTRY_ID);
-
-    // Fetch back and verify.
-
-    const fromStorage = await rm.getUriMetadata(schemaFileURI);
-
-    // Verify results.
-    const expected: UriMetadata = new Map();
-    expected.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    assert.deepStrictEqual(fromStorage, expected);
-
-    // clear the second key, should return undefined since nothing retained anymore.
-    const results = await rm.clearURIMetadataValues(schemaFileURI, UriMetadataKeys.SCHEMA_SUBJECT);
-    assert.deepStrictEqual(results, undefined);
-  });
-
-  it("clearURIMetadataValues() should clear multiple keys properly", async () => {
-    // Set first key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-
-    // Set second key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-      "test-ccloud-topic-xyz-value",
-    );
-
-    // Clear both keys.
-    const returnData = await rm.clearURIMetadataValues(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-    );
-    assert.deepStrictEqual(undefined, returnData, "Expected return data to be undefined");
-
-    // Fetch back and verify.
-    const fromStorage = await rm.getUriMetadata(schemaFileURI);
-
-    // Verify results.
-    assert.deepStrictEqual(undefined, fromStorage, "Expected from storage to be undefined");
-  });
-
-  it("deleteURIMetadata() should correctly delete URI metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    // set second file URI metadata also.
-    const otherSchemaFileURI = Uri.parse("file:///path/to/other-file");
-    const otherMetadata: UriMetadata = new Map();
-    otherMetadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "other-registry-id");
-    otherMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-abc-value");
-    await rm.setURIMetadata(otherSchemaFileURI, otherMetadata);
-
-    // delete the first metadata
-    await rm.deleteURIMetadata(schemaFileURI);
-
-    // fetch first back from resource manager, expect undefined.
-    const metadataFromStorageAfterDelete = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadataFromStorageAfterDelete, undefined);
-
-    // fetch second back, expect it to still be there.
-    const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
-    assert.deepStrictEqual(otherMetadata, otherMetadataFromStorage);
   });
 });
 
