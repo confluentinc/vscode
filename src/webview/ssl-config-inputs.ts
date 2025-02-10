@@ -9,10 +9,13 @@ export class SslConfig extends HTMLElement {
     super();
     this._internals = this.attachInternals();
   }
+
   os = ObservableScope();
   entries = new FormData();
+
   identifier = this.os.signal<string>("");
   configObj = this.os.signal<TLSConfig | undefined>(undefined);
+
   verifyHostname = this.os.derive(() => {
     return this.configObj()?.verify_hostname || true;
   });
@@ -40,8 +43,8 @@ export class SslConfig extends HTMLElement {
     this.identifier(value);
   }
 
-  /** update the form data so it contains all the changed values on submit
-   * and dispatch a bubble event to the parent (host) for other actions
+  /** update the host form data so it contains all the changed values on submit
+   * and dispatch a bubble event to the host for other actions
    */
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
