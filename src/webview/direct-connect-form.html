@@ -207,11 +207,13 @@
             /><span>SSL enabled</span></label
           >
           <template data-if="this.kafkaSslEnabled()">
-            <ssl-config
-              data-prop-config="this.kafkaSslConfig()"
-              data-prop-namespace="'kafka'"
-              data-on-bubble="this.updateSslConfig(event)"
-            />
+            <div style="width: 100%">
+              <ssl-config
+                data-prop-config="this.kafkaSslConfig()"
+                data-prop-namespace="'kafka'"
+                data-on-bubble="this.updateSslConfig(event)"
+              />
+            </div>
           </template>
         </div>
         <div class="form-section">
@@ -337,11 +339,13 @@
             <span>SSL enabled</span></label
           >
           <template data-if="this.schemaSslEnabled()">
-            <ssl-config
-              data-prop-config="this.schemaSslConfig()"
-              data-prop-namespace="'schema'"
-              data-on-bubble="this.updateSslConfig(event)"
-            />
+            <div style="width: 100%">
+              <ssl-config
+                data-prop-config="this.schemaSslConfig()"
+                data-prop-namespace="'schema'"
+                data-on-bubble="this.updateSslConfig(event)"
+              />
+            </div>
           </template>
         </div>
         <div class="form-section button-group">

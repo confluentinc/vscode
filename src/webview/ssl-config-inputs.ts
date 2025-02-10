@@ -59,84 +59,98 @@ export class SslConfig extends HTMLElement {
 
   // Template for the component
   template = html`
-    <label class="checkbox" for="verify_hostname">
-      <input
-        type="checkbox"
-        id="verify_hostname"
-        name="verify_hostname"
-        data-attr-checked="this.verifyHostname() ? true : false"
-        data-on-change="this.updateValue(event)"
-      />
-      Verify Hostname
-    </label>
-    <div class="input-container">
-      <label for="truststore_type" class="label">TrustStore Type</label>
-      <select
-        class="input dropdown"
-        id="truststore_type"
-        name="truststore_type"
-        data-attr-value="this.truststoreType()"
-        data-on-change="this.updateValue(event)"
-      >
-        <option value="JKS" selected>JKS</option>
-        <option value="PKCS12">PKCS12</option>
-        <option value="PEM">PEM</option>
-      </select>
-    </div>
-    <div class="input-row">
-      <div class="input-container">
-        <label for="truststore_path" class="label">TrustStore Path</label>
-        <input
-          class="input"
-          id="truststore_path"
-          name="truststore_path"
-          type="text"
-          placeholder="/path/to/truststore"
-          data-attr-value="this.truststorePath()"
-          data-on-change="this.updateValue(event)"
-        />
+    <div class="form-section">
+      <div class="input-row">
+        <label class="checkbox" for="verify_hostname">
+          <input
+            type="checkbox"
+            id="verify_hostname"
+            name="verify_hostname"
+            data-attr-checked="this.verifyHostname() ? true : false"
+            data-on-change="this.updateValue(event)"
+          />
+          <span>Verify Hostname</span>
+        </label>
+        <div class="input-container">
+          <label for="truststore_type" class="label">TrustStore Type</label>
+          <select
+            class="input dropdown"
+            id="truststore_type"
+            name="truststore_type"
+            data-attr-value="this.truststoreType()"
+            data-on-change="this.updateValue(event)"
+          >
+            <option value="JKS" selected>JKS</option>
+            <option value="PKCS12">PKCS12</option>
+            <option value="PEM">PEM</option>
+          </select>
+        </div>
       </div>
-      <div class="input-container">
-        <label for="truststore_password" class="label">TrustStore Password</label>
-        <input
-          class="input"
-          id="truststore_password"
-          name="truststore_password"
-          type="password"
-          data-attr-value="this.truststorePassword()"
-          data-on-change="this.updateValue(event)"
-        />
+      <div class="input-row">
+        <div class="input-container">
+          <label for="truststore_path" class="label">TrustStore Path</label>
+          <input
+            class="input"
+            id="truststore_path"
+            name="truststore_path"
+            type="text"
+            placeholder="/path/to/truststore"
+            data-attr-value="this.truststorePath()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+        <div class="input-container">
+          <label for="truststore_password" class="label">TrustStore Password</label>
+          <input
+            class="input"
+            id="truststore_password"
+            name="truststore_password"
+            type="password"
+            data-attr-value="this.truststorePassword()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
       </div>
-    </div>
-
-    <div class="input-container">
-      <label for="keystore_path" class="label">KeyStore Path</label>
-      <input
-        class="input"
-        id="keystore_path"
-        name="keystore_path"
-        type="text"
-        placeholder="/path/to/keystore"
-        data-attr-value="this.keystorePath()"
-        data-on-change="this.updateValue(event)"
-      />
-    </div>
-    <div class="input-container">
-      <label for="keystore_password" class="label">KeyStore Password</label>
-      <input
-        class="input"
-        id="keystore_password"
-        name="keystore_password"
-        type="password"
-        data-attr-value="this.keystorePassword()"
-        data-on-change="this.updateValue(event)"
-      />
+      <div class="input-row">
+        <div class="input-container">
+          <label for="keystore_path" class="label">KeyStore Path</label>
+          <input
+            class="input"
+            id="keystore_path"
+            name="keystore_path"
+            type="text"
+            placeholder="/path/to/keystore"
+            data-attr-value="this.keystorePath()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+        <div class="input-container">
+          <label for="keystore_password" class="label">KeyStore Password</label>
+          <input
+            class="input"
+            id="keystore_password"
+            name="keystore_password"
+            type="password"
+            data-attr-value="this.keystorePassword()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+      </div>
     </div>
   `;
 
-  // Method called when the component is attached to the DOM
+  // This method is called when the component is attached to the DOM
   connectedCallback() {
     const shadow = this.attachShadow({ mode: "open" });
+    // Using stylesheet constructor to "adopt" the styles from VSCode host into the shadow DOM
+    // https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/adoptedStyleSheets#adopting_a_stylesheet
+    const sheet = new CSSStyleSheet();
+    for (let sh of document.styleSheets) {
+      for (let rule of sh.cssRules) {
+        sheet.insertRule(rule.cssText);
+      }
+    }
+    shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
   }
