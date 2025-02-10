@@ -78,10 +78,9 @@ export class SslConfig extends HTMLElement {
         data-attr-value="this.truststoreType()"
         data-on-change="this.updateValue(event)"
       >
-        <option value="JKS">JKS</option>
+        <option value="JKS" selected>JKS</option>
         <option value="PKCS12">PKCS12</option>
         <option value="PEM">PEM</option>
-        <option value="UNKNOWN" selected>Unknown</option>
       </select>
     </div>
     <div class="input-row">
