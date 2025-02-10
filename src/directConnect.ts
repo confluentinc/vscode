@@ -91,10 +91,10 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     const manager = DirectConnectionManager.getInstance();
     try {
       await manager.updateConnection(newSpec);
+      return { success: true, message: "Connection updated successfully." };
     } catch (error) {
       return { success: false, message: JSON.stringify(error) };
     }
-    return { success: true, message: "Connection updated successfully." };
   }
 
   /** Stores a map of options with key: value pairs that is then updated on form input
@@ -161,8 +161,8 @@ export function getConnectionSpecFromFormData(
         keystore: {
           path: formData["kafka_ssl_keystore_path"],
           password: formData["kafka_ssl_keystore_password"],
-      },
-    };
+        },
+      };
     }
     if (formData.kafka_auth_type === "Basic") {
       spec.kafka_cluster.credentials = {
@@ -195,8 +195,8 @@ export function getConnectionSpecFromFormData(
         keystore: {
           path: formData["schema_ssl_keystore_path"],
           password: formData["schema_ssl_keystore_password"],
-      },
-    };
+        },
+      };
     }
     if (formData.schema_auth_type === "Basic") {
       spec.schema_registry.credentials = {
