@@ -153,18 +153,28 @@ export function getConnectionSpecFromFormData(
         ...spec.kafka_cluster.ssl,
         enabled: true,
         verify_hostname: formData["kafka_ssl_verify_hostname"] === "on" ? true : false,
-        truststore: {
-          type: formData["kafka_ssl_truststore_type"],
-          path: formData["kafka_ssl_truststore_path"],
-          password: formData["kafka_ssl_truststore_password"],
-        },
-        keystore: {
-          path: formData["kafka_ssl_keystore_path"],
-          password: formData["kafka_ssl_keystore_password"],
-          type: formData["kafka_ssl_keystore_type"],
-          key_password: formData["kafka_ssl_keystore_key_password"],
-        },
       };
+      if (formData["kafka_ssl_truststore_path"]) {
+        spec.kafka_cluster.ssl = {
+          ...spec.kafka_cluster.ssl,
+          truststore: {
+            type: formData["kafka_ssl_truststore_type"],
+            path: formData["kafka_ssl_truststore_path"],
+            password: formData["kafka_ssl_truststore_password"],
+          },
+        };
+      }
+      if (formData["kafka_ssl_keystore_path"]) {
+        spec.kafka_cluster.ssl = {
+          ...spec.kafka_cluster.ssl,
+          keystore: {
+            path: formData["kafka_ssl_keystore_path"],
+            password: formData["kafka_ssl_keystore_password"],
+            type: formData["kafka_ssl_keystore_type"],
+            key_password: formData["kafka_ssl_keystore_key_password"],
+          },
+        };
+      }
     }
     if (formData.kafka_auth_type === "Basic") {
       spec.kafka_cluster.credentials = {
@@ -188,18 +198,28 @@ export function getConnectionSpecFromFormData(
         ...spec.schema_registry.ssl,
         enabled: true,
         verify_hostname: formData["schema_ssl_verify_hostname"] === "on" ? true : false,
-        truststore: {
-          type: formData["schema_ssl_truststore_type"],
-          path: formData["schema_ssl_truststore_path"],
-          password: formData["schema_ssl_truststore_password"],
-        },
-        keystore: {
-          path: formData["schema_ssl_keystore_path"],
-          password: formData["schema_ssl_keystore_password"],
-          type: formData["schema_ssl_keystore_type"],
-          key_password: formData["schema_ssl_keystore_key_password"],
-        },
       };
+      if (formData["schema_ssl_truststore_path"]) {
+        spec.schema_registry.ssl = {
+          ...spec.schema_registry.ssl,
+          truststore: {
+            type: formData["schema_ssl_truststore_type"],
+            path: formData["schema_ssl_truststore_path"],
+            password: formData["schema_ssl_truststore_password"],
+          },
+        };
+      }
+      if (formData["schema_ssl_keystore_path"]) {
+        spec.schema_registry.ssl = {
+          ...spec.schema_registry.ssl,
+          keystore: {
+            path: formData["schema_ssl_keystore_path"],
+            password: formData["schema_ssl_keystore_password"],
+            type: formData["schema_ssl_keystore_type"],
+            key_password: formData["schema_ssl_keystore_key_password"],
+          },
+        };
+      }
     }
     if (formData.schema_auth_type === "Basic") {
       spec.schema_registry.credentials = {
