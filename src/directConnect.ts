@@ -161,6 +161,8 @@ export function getConnectionSpecFromFormData(
         keystore: {
           path: formData["kafka_ssl_keystore_path"],
           password: formData["kafka_ssl_keystore_password"],
+          type: formData["kafka_ssl_keystore_type"],
+          key_password: formData["kafka_ssl_keystore_key_password"],
         },
       };
     }
@@ -195,6 +197,8 @@ export function getConnectionSpecFromFormData(
         keystore: {
           path: formData["schema_ssl_keystore_path"],
           password: formData["schema_ssl_keystore_password"],
+          type: formData["schema_ssl_keystore_type"],
+          key_password: formData["schema_ssl_keystore_key_password"],
         },
       };
     }
@@ -256,7 +260,7 @@ export function parseTestResult(connection: Connection): TestResponse {
   return result;
 }
 // Replace any sensitive fields from the connection spec before sending to the webview form
-function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
+export function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
   const clean = { ...connection };
   if (clean.kafka_cluster?.credentials) {
     if (instanceOfBasicCredentials(clean.kafka_cluster.credentials)) {
@@ -266,6 +270,15 @@ function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
       clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
     }
   }
+  if (clean.kafka_cluster?.ssl?.truststore?.password) {
+    clean.kafka_cluster.ssl.truststore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.kafka_cluster?.ssl?.keystore?.password) {
+    clean.kafka_cluster.ssl.keystore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.kafka_cluster?.ssl?.keystore?.key_password) {
+    clean.kafka_cluster.ssl.keystore.key_password = "fakeplaceholdersecrethere";
+  }
   if (clean.schema_registry?.credentials) {
     if (instanceOfBasicCredentials(clean.schema_registry.credentials)) {
       clean.schema_registry.credentials.password = "fakeplaceholdersecrethere";
@@ -273,6 +286,15 @@ function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
     if (instanceOfApiKeyAndSecret(clean.schema_registry.credentials)) {
       clean.schema_registry.credentials.api_secret = "fakeplaceholdersecrethere";
     }
+  }
+  if (clean.schema_registry?.ssl?.truststore?.password) {
+    clean.schema_registry.ssl.truststore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.schema_registry?.ssl?.keystore?.password) {
+    clean.schema_registry.ssl.keystore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.schema_registry?.ssl?.keystore?.key_password) {
+    clean.schema_registry.ssl.keystore.key_password = "fakeplaceholdersecrethere";
   }
   return clean;
 }
