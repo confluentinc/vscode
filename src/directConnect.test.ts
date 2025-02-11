@@ -133,6 +133,58 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
       assert.ok(!spec.schema_registry.credentials);
     });
+    it("should not include truststore or keystore for kafka if paths are empty", () => {
+      const formData = {
+        name: "Test Connection",
+        platform: "Kafka",
+        bootstrap_servers: "localhost:9092",
+        kafka_auth_type: "None",
+        uri: "http://localhost:8081",
+        schema_auth_type: "None",
+        kafka_ssl: "on",
+        kafka_ssl_truststore_path: "",
+        kafka_ssl_truststore_password: "hello",
+        kafka_ssl_keystore_path: "",
+        kafka_ssl_keystore_password: "world",
+      };
+
+      const spec = getConnectionSpecFromFormData(formData);
+
+      assert.strictEqual(spec.name, "Test Connection");
+      assert.ok(spec.kafka_cluster);
+      assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
+      assert.ok(spec.schema_registry);
+      assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
+      assert.ok(spec.kafka_cluster.ssl);
+      assert.ok(!spec.kafka_cluster.ssl.truststore);
+      assert.ok(!spec.kafka_cluster.ssl.keystore);
+    });
+    it("should not include truststore or keystore for schema if paths are empty", () => {
+      const formData = {
+        name: "Test Connection",
+        platform: "Kafka",
+        bootstrap_servers: "localhost:9092",
+        kafka_auth_type: "None",
+        uri: "http://localhost:8081",
+        schema_auth_type: "None",
+        schema_ssl: "on",
+        schema_ssl_truststore_path: "",
+        schema_ssl_truststore_password: "hello",
+        schema_ssl_keystore_path: "",
+        schema_ssl_keystore_password: "world",
+      };
+
+      const spec = getConnectionSpecFromFormData(formData);
+
+      assert.strictEqual(spec.name, "Test Connection");
+      assert.ok(spec.kafka_cluster);
+      assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
+      assert.ok(spec.schema_registry);
+      assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
+      assert.ok(spec.schema_registry.ssl);
+      assert.ok(!spec.schema_registry.ssl.truststore);
+      assert.ok(!spec.schema_registry.ssl.keystore);
+    });
   });
 
   describe("parseTestResult", () => {
@@ -243,7 +295,7 @@ describe("directConnect.ts", () => {
     });
   });
   describe("cleanSpec", () => {
-    it.only("should replace password fields in Basic credentials with `fakeplaceholdersecrethere` text", () => {
+    it("should replace password fields in Basic credentials with `fakeplaceholdersecrethere` text", () => {
       const spec = {
         id: "123" as ConnectionId,
         formConnectionType: "Apache Kafka" as FormConnectionType,
@@ -273,7 +325,7 @@ describe("directConnect.ts", () => {
         "fakeplaceholdersecrethere",
       );
     });
-    it.only("should replace password fields in API credentials with `fakeplaceholdersecrethere` text", () => {
+    it("should replace password fields in API credentials with `fakeplaceholdersecrethere` text", () => {
       const spec = {
         id: "123" as ConnectionId,
         formConnectionType: "Apache Kafka" as FormConnectionType,
@@ -306,7 +358,7 @@ describe("directConnect.ts", () => {
         "fakeplaceholdersecrethere",
       );
     });
-    it.only("should replace password fields in SSL with `fakeplaceholdersecrethere` text", () => {
+    it("should replace password fields in SSL with `fakeplaceholdersecrethere` text", () => {
       const spec = {
         id: "123" as ConnectionId,
         formConnectionType: "Apache Kafka" as FormConnectionType,
