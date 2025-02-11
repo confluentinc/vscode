@@ -34,6 +34,12 @@ export class SslConfig extends HTMLElement {
   keystorePassword = this.os.derive(() => {
     return this.configObj()?.keystore?.password;
   });
+  keystoreType = this.os.derive(() => {
+    return this.configObj()?.keystore?.type;
+  });
+  keystoreKeyPassword = this.os.derive(() => {
+    return this.configObj()?.keystore?.key_password;
+  });
 
   // Setter for message prop
   set config(value: TLSConfig) {
@@ -135,6 +141,17 @@ export class SslConfig extends HTMLElement {
             name="keystore_password"
             type="password"
             data-attr-value="this.keystorePassword()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+        <div class="input-container">
+          <label for="keystore_key_password" class="info">Key Password</label>
+          <input
+            class="input"
+            id="keystore_key_password"
+            name="keystore_key_password"
+            type="password"
+            data-attr-value="this.keystoreKeyPassword()"
             data-on-change="this.updateValue(event)"
           />
         </div>
