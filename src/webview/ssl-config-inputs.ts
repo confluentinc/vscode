@@ -82,7 +82,7 @@ export class SslConfig extends HTMLElement {
         data-attr-checked="this.verifyHostname() ? true : false"
         data-on-change="this.updateValue(event)"
       />
-      <span>Verify Hostname</span>
+      <span>Verify Server Hostname</span>
     </label>
     <div class="input-container">
       <label class="label">TrustStore Configuration</label>
@@ -199,5 +199,5 @@ export class SslConfig extends HTMLElement {
   }
 }
 
-// Register the custom element
+// Register the custom element in the ts file for the webview where it will be used (in this case, direct-connect-form.ts)
 // customElements.define("ssl-config", SslConfig);
