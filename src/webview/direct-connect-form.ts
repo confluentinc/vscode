@@ -239,7 +239,7 @@ class DirectConnectFormViewModel extends ViewModel {
       return;
     }
     if (data["platform"] === "Confluent Cloud") {
-      // these fields are disabled when CCloud selected, add them back in form data
+      // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_auth_type"] = "API";
       data["schema_auth_type"] = "API";
       data["kafka_ssl"] = "on";

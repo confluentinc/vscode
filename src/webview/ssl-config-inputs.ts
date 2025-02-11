@@ -2,6 +2,12 @@ import { ObservableScope } from "inertial";
 import { applyBindings, html } from "./bindings/bindings";
 import { TLSConfig } from "../clients/sidecar";
 
+/** Reusable Custom HTML Element (Web Component) for TLS Config
+ * This component is used in the Direct Connection form to configure SSL settings
+ * @element ssl-config
+ * @attr {string} namespace - ensure form inputs have unique ids, distinguish kafka & schema configs
+ * @attr {TLSConfig} config - the original spec's config to be updated, if it exists
+ */
 export class SslConfig extends HTMLElement {
   static formAssociated = true;
   private _internals: ElementInternals;
@@ -68,20 +74,21 @@ export class SslConfig extends HTMLElement {
 
   // Template for the component
   template = html`
-    <div class="form-section">
+    <label class="checkbox" for="verify_hostname">
+      <input
+        type="checkbox"
+        id="verify_hostname"
+        name="verify_hostname"
+        data-attr-checked="this.verifyHostname() ? true : false"
+        data-on-change="this.updateValue(event)"
+      />
+      <span>Verify Hostname</span>
+    </label>
+    <div class="input-container">
+      <label class="label">TrustStore Configuration</label>
       <div class="input-row">
-        <label class="checkbox" for="verify_hostname">
-          <input
-            type="checkbox"
-            id="verify_hostname"
-            name="verify_hostname"
-            data-attr-checked="this.verifyHostname() ? true : false"
-            data-on-change="this.updateValue(event)"
-          />
-          <span>Verify Hostname</span>
-        </label>
-        <div class="input-container">
-          <label for="truststore_type" class="label">TrustStore Type</label>
+        <div class="input-container" style="flex: 1">
+          <label for="truststore_type" class="info">Type</label>
           <select
             class="input dropdown"
             id="truststore_type"
@@ -94,10 +101,8 @@ export class SslConfig extends HTMLElement {
             <option value="PEM">PEM</option>
           </select>
         </div>
-      </div>
-      <div class="input-row">
         <div class="input-container">
-          <label for="truststore_path" class="label">TrustStore Path</label>
+          <label for="truststore_path" class="info">Path</label>
           <input
             class="input"
             id="truststore_path"
@@ -109,7 +114,7 @@ export class SslConfig extends HTMLElement {
           />
         </div>
         <div class="input-container">
-          <label for="truststore_password" class="label">TrustStore Password</label>
+          <label for="truststore_password" class="info">Password</label>
           <input
             class="input"
             id="truststore_password"
@@ -120,9 +125,26 @@ export class SslConfig extends HTMLElement {
           />
         </div>
       </div>
+    </div>
+    <div class="input-container">
+      <label class="label">KeyStore Configuration</label>
       <div class="input-row">
+        <div class="input-container" style="flex: 1">
+          <label for="keystore_type" class="info">Type</label>
+          <select
+            class="input dropdown"
+            id="keystore_type"
+            name="keystore_type"
+            data-attr-value="this.keystoreType()"
+            data-on-change="this.updateValue(event)"
+          >
+            <option value="JKS" selected>JKS</option>
+            <option value="PKCS12">PKCS12</option>
+            <option value="PEM">PEM</option>
+          </select>
+        </div>
         <div class="input-container">
-          <label for="keystore_path" class="label">KeyStore Path</label>
+          <label for="keystore_path" class="info">Path</label>
           <input
             class="input"
             id="keystore_path"
@@ -134,7 +156,7 @@ export class SslConfig extends HTMLElement {
           />
         </div>
         <div class="input-container">
-          <label for="keystore_password" class="label">KeyStore Password</label>
+          <label for="keystore_password" class="info">Password</label>
           <input
             class="input"
             id="keystore_password"
@@ -170,6 +192,7 @@ export class SslConfig extends HTMLElement {
         sheet.insertRule(rule.cssText);
       }
     }
+    sheet.insertRule(`:host { display: flex; flex-direction: column; gap: 12px; width: 100%; }`);
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
