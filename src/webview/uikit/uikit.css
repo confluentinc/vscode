@@ -171,10 +171,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-space_16, 16px);
-  padding: var(--space-space_32, 32px) 0px;
+  gap: 16px;
+  padding: 32px 0px;
   align-self: stretch;
-  border-bottom: 1px solid var(--Base-Base-05, #d4d4d4);
+  border-bottom: 1px solid #d4d4d4;
 }
 
 .form-section:first-of-type {
