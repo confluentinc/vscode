@@ -6,23 +6,21 @@ import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
-  TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { topicSearchSet } from "../emitters";
-import { CCloudResourceLoader, constructResourceLoaderSingletons } from "../loaders";
+import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
-import { StorageManager } from "../storage";
-import { getResourceManager } from "../storage/resourceManager";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { loadTopicSchemas, TopicViewProvider } from "./topics";
 
 describe("TopicViewProvider methods", () => {
   let provider: TopicViewProvider;
 
-  before(() => {
+  before(async () => {
+    await getTestExtensionContext();
     provider = TopicViewProvider.getInstance();
   });
 
@@ -45,83 +43,104 @@ describe("TopicViewProvider methods", () => {
   });
 });
 
-describe("TopicViewProvider helper functions", () => {
-  const topicName = "test-topic";
-  const valueSubject = `${topicName}-value`;
-  const preloadedSchemas: Schema[] = [
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 1, id: "1" }),
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 2, id: "2" }),
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1, id: "3" }),
-  ];
+describe("TopicViewProvider helper function loadTopicSchemas tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
 
-  let storageManager: StorageManager;
-  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
-
-  before(async () => {
-    storageManager = await getTestStorageManager();
-    constructResourceLoaderSingletons();
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderStub = sandbox.createStubInstance(ResourceLoader);
+    sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
   });
 
-  beforeEach(async () => {
-    // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+  afterEach(() => {
+    sandbox.restore();
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await storageManager.clearWorkspaceState();
+  function populateSchemas(schemas: Schema[]) {
+    const seenSubjectStrings: Set<string> = new Set();
+    const uniqueSubjects: Subject[] = [];
+    for (const schema of schemas) {
+      if (!seenSubjectStrings.has(schema.subject)) {
+        uniqueSubjects.push(schema.subjectObject());
+        seenSubjectStrings.add(schema.subject);
+      }
+    }
+
+    console.log("uniqueSubjects", Array.from(uniqueSubjects));
+
+    loaderStub.getSubjects.resolves(Array.from(uniqueSubjects));
+  }
+
+  function populateSchemaSubjectGroups(schemas: Schema[]) {
+    loaderStub.getSchemaSubjectGroup.callsFake(async (arg1: any, subjectName: string) => {
+      const matchingSchemas = schemas.filter((schema) => schema.subject === subjectName);
+      return matchingSchemas;
+    });
+  }
+
+  it("If no related schemas, then empty array is returned", async () => {
+    // None correspond to TEST_CCLOUD_KAFKA_TOPIC.
+    const preloadedSchemas: Schema[] = [
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "foo-value", version: 1, id: "1" }),
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "foo-value", version: 2, id: "2" }),
+      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1, id: "3" }),
+    ];
+
+    populateSchemas(preloadedSchemas);
+
+    const schemas = await loadTopicSchemas(TEST_CCLOUD_KAFKA_TOPIC);
+    assert.deepStrictEqual(schemas, []);
   });
 
-  // TODO: update this once local schemas are supported
-  it("loadTopicSchemas() should not return schemas for topics w/o any known related schemas", async () => {
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+  it("If related schemas, then they are returned in proper ContainerTreeItem<Schema> instances", async () => {
+    const preloadedSchemas: Schema[] = [
+      Schema.create({
+        ...TEST_CCLOUD_SCHEMA,
+        subject: "test-ccloud-topic-value",
+        version: 1,
+        id: "1",
+      }),
+      Schema.create({
+        ...TEST_CCLOUD_SCHEMA,
+        subject: "test-ccloud-topic-value",
+        version: 2,
+        id: "2",
+      }),
+      Schema.create({
+        ...TEST_CCLOUD_SCHEMA,
+        subject: "test-ccloud-topic-key",
+        version: 1,
+        id: "3",
+      }),
+      Schema.create({
+        ...TEST_CCLOUD_SCHEMA,
+        subject: "unrelated-topic-value",
+        version: 1,
+        id: "7",
+      }),
+    ];
 
-    // TODO: This actually tries to talk out through to docker / local schema registry now.
-    // We should stub out the interaction methods, probably for a specific local schema registry.
-    // test suite. Right now, this would fail if you have docker running, local schema registry
-    // running, and with the right subject ('test-topic-value') in the local schema registry.
+    populateSchemas(preloadedSchemas);
+    populateSchemaSubjectGroups(preloadedSchemas);
 
-    const topic = TEST_LOCAL_KAFKA_TOPIC.copy({ name: topicName });
-    const schemas = await loadTopicSchemas(topic);
-    assert.ok(Array.isArray(schemas));
-    assert.equal(schemas.length, 0);
-  });
-
-  it("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
-    // preload Schema Registry + schemas (usually done when loading environments)
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, preloadedSchemas);
-    // set the loader-level cache state to true as if we had already loaded the schemas
-    ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
-    // and the coarse resources
-    ccloudResourceLoader["coarseLoadingComplete"] = true;
-
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });
-    // Should return a nonempty ContainerTreeItem describing the schema group.
-    const schemas = await loadTopicSchemas(topic);
-
-    assert.ok(Array.isArray(schemas));
-    // more specific testing is in `src/models/schema.test.ts` for the `generateSchemaSubjectGroups()`
-    // function, but for here we just care about getting one schema subject container item back
-    assert.equal(schemas.length, 1);
-    assert.equal(schemas[0].label, valueSubject);
-  });
-
-  it("loadTopicSchemas() should not return schemas for CCloud Kafka topics if none are available in extension state", async () => {
-    await getResourceManager().setSchemasForRegistry(
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-      preloadedSchemas,
-    );
-    // set the loader-level cache state to true as if we had already loaded the schemas
-    ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
-
-    const topic = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: topicName });
-
-    const schemas = await loadTopicSchemas(topic);
-    assert.ok(Array.isArray(schemas));
-    assert.equal(schemas.length, 0);
+    // Should get back in the form of two separate ContainerTreeItem<Schema> instances.
+    const schemaContainers = await loadTopicSchemas(TEST_CCLOUD_KAFKA_TOPIC);
+    assert.strictEqual(schemaContainers.length, 2);
+    for (const schemaContainer of schemaContainers) {
+      assert.ok(schemaContainer instanceof ContainerTreeItem);
+      assert.equal(schemaContainer.collapsibleState, TreeItemCollapsibleState.Collapsed);
+      assert.ok(schemaContainer.children.length > 0);
+      if (schemaContainer.label === "test-ccloud-topic-value") {
+        assert.equal(schemaContainer.children.length, 2);
+        assert.equal(schemaContainer.description, "AVRO (2)");
+        assert.equal(schemaContainer.contextValue, "multiple-versions-schema-subject");
+      } else if (schemaContainer.label === "test-ccloud-topic-key") {
+        assert.equal(schemaContainer.children.length, 1);
+        assert.equal(schemaContainer.description, "AVRO (1)");
+        assert.equal(schemaContainer.contextValue, "schema-subject");
+      }
+    }
   });
 });
 

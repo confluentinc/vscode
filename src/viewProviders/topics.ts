@@ -364,7 +364,7 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
 
     const firstSchema = group[0];
     item.description = `${firstSchema.type} (${group.length})`;
-    const propertyParts: string[] = new Array<string>(2);
+    const propertyParts: string[] = new Array<string>();
 
     if (group.length > 1) {
       propertyParts.push("multiple-versions");
