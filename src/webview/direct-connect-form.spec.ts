@@ -21,6 +21,7 @@ function render(template: string, variables: Record<string, any>) {
       "input",
       "label",
       "select",
+      "option",
       "template",
       "vscode-dropdown",
       "vscode-option",
@@ -61,44 +62,42 @@ test("renders form html correctly", async ({ page }) => {
 
   await page.setContent(html);
 
-  // Check if the form is rendered correctly
   const form = await page.$("form");
   expect(form).not.toBeNull();
 
-  // Check if the connection type radio buttons are present
-  const radioButtons = await page.$$("input[type='radio'][name='platform']");
-  expect(radioButtons.length).toBe(4);
+  // Check for our various field types to be in the form:
+  const typeSelect = await page.$$("select[name='platform']");
+  expect(typeSelect).not.toBeNull();
+  const typeOptions = await typeSelect[0].$$("option");
+  expect(typeOptions.length).toBe(4);
 
-  // Check if the connection name input is present
   const connectionNameInput = await page.$("input[name='name']");
   expect(connectionNameInput).not.toBeNull();
 
-  // Check if the bootstrap servers input is present
   const bootstrapServersInput = await page.$("input[name='bootstrap_servers']");
   expect(bootstrapServersInput).not.toBeNull();
 
-  // Check if the SSL enabled checkbox is present
   const sslCheckbox = await page.$("input[type='checkbox'][name='kafka_ssl']");
   expect(sslCheckbox).not.toBeNull();
 
-  // Check if the authentication type radio buttons are present
-  const authRadioButtons = await page.$$("input[type='radio'][name='kafka_auth_type']");
-  expect(authRadioButtons.length).toBe(3);
+  const authKafka = await page.$$("select[name='kafka_auth_type']");
+  expect(authKafka).not.toBe(null);
+  const authKafkaOptions = await authKafka[0].$$("option");
+  expect(authKafkaOptions.length).toBe(3);
 
-  // Check if the schema registry URL input is present
   const schemaUrlInput = await page.$("input[name='uri']");
   expect(schemaUrlInput).not.toBeNull();
 
-  // Check if the schema registry SSL enabled checkbox is present
   const schemaSslCheckbox = await page.$("input[type='checkbox'][name='schema_ssl']");
   expect(schemaSslCheckbox).not.toBeNull();
 
-  // Check if the schema registry authentication type radio buttons are present
-  const schemaAuthRadioButtons = await page.$$("input[type='radio'][name='schema_auth_type']");
-  expect(schemaAuthRadioButtons.length).toBe(3);
+  const authSchema = await page.$$("select[name='schema_auth_type']");
+  expect(authSchema).not.toBe(null);
+  const authSchemaOptions = await authSchema[0].$$("option");
+  expect(authSchemaOptions.length).toBe(3);
 });
 
-test("submits the form with dummy data", async ({ execute, page }) => {
+test("submits the form with defaults & dummy data", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -116,29 +115,27 @@ test("submits the form with dummy data", async ({ execute, page }) => {
     window.dispatchEvent(new Event("DOMContentLoaded"));
   });
 
-  // Fill out the form with dummy data
-  await page.check("input[type=radio][name=platform][value='Apache Kafka']");
+  // Fill out the form with dummy data & submit
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name=bootstrap_servers]", "localhost:9092");
   await page.fill("input[name=uri]", "http://localhost:8081");
-
-  // Submit the form
-  await page.click("input[type=submit][value='Save Connection']");
+  await page.click("input[type=submit][value='Save']");
   const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
   const specCall = await specCallHandle.jsonValue();
   expect(specCall[0]).toBe("GetConnectionSpec");
+
   // Check if the form submission was successful
   const submitCallHandle = await sendWebviewMessage.evaluateHandle(
     (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
   );
   const submitCall = await submitCallHandle?.jsonValue();
   expect(submitCall).not.toBeUndefined();
-  // @ts-expect-error we already checked for undefined
-  expect(submitCall[0]).toBe("Submit");
-  // @ts-expect-error we already checked for undefined
-  expect(submitCall[1]).toEqual({
+  const submitCallName = submitCall?.[0];
+  expect(submitCallName).toBe("Submit");
+  const submitCallData = submitCall?.[1];
+  expect(submitCallData).toEqual({
     bootstrap_servers: "localhost:9092",
-    kafka_auth_type: "on",
+    kafka_auth_type: "None",
     name: "Test Connection",
     platform: "Apache Kafka",
     schema_auth_type: "None",
