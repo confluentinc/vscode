@@ -21,6 +21,7 @@ function render(template: string, variables: Record<string, any>) {
       "input",
       "label",
       "select",
+      "option",
       "template",
       "vscode-dropdown",
       "vscode-option",
