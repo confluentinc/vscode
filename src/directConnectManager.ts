@@ -408,18 +408,22 @@ export function mergeSecrets(
       incomingSchemaTLS.keystore.key_password = currentSchemaTLS.keystore.key_password;
     }
   }
+  const kafkaSslEnabled =
+    incomingSpec.kafka_cluster?.ssl?.enabled ?? currentSpec.kafka_cluster?.ssl?.enabled ?? true;
 
+  const schemaSslEnabled =
+    incomingSpec.schema_registry?.ssl?.enabled ?? currentSpec.schema_registry?.ssl?.enabled ?? true;
   const mergedSpec: ConnectionSpec = {
     ...incomingSpec,
     kafka_cluster: incomingSpec.kafka_cluster && {
       ...incomingSpec.kafka_cluster,
       credentials: incomingKafkaCreds,
-      ssl: incomingKafkaTLS,
+      ssl: { enabled: kafkaSslEnabled, ...currentKafkaTLS, ...incomingKafkaTLS },
     },
     schema_registry: incomingSpec.schema_registry && {
       ...incomingSpec.schema_registry,
       credentials: incomingSchemaCreds,
-      ssl: incomingSchemaTLS,
+      ssl: { enabled: schemaSslEnabled, ...currentSchemaTLS, ...incomingSchemaTLS },
     },
   };
   return mergedSpec;
