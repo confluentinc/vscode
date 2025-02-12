@@ -10,12 +10,13 @@ import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Schema, SchemaType, Subject } from "../models/schema";
+import { Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
+import { determineSubject, SubjectishArgument } from "./schemaUtils";
 
 const logger = new Logger("commands.schemaUpload");
 
@@ -26,14 +27,12 @@ const logger = new Logger("commands.schemaUpload");
  */
 
 /**
- * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from an inline action on a schema
- * subject container in the Schemas view.
+ * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from an inline actions:
+ *  1. On a Subect treeitem in the Schemas view (passing in a Subject)
+ *  2. On one of a topic's schema subject group in the Topics view (passing in a ContainerTreeItem<Schema>)
  */
-export async function uploadSchemaForSubjectFromfile(subject: Subject) {
-  if (!(subject instanceof Subject)) {
-    logger.error("uploadSchemaForSubjectFromfile called without a Subject object");
-    return;
-  }
+export async function uploadSchemaForSubjectFromfile(subjectish: SubjectishArgument) {
+  const subject = determineSubject("uploadSchemaForSubjectFromfile", subjectish);
   const loader = ResourceLoader.getInstance(subject.connectionId);
   const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
   await uploadSchemaFromFile(registry, subject.name);
