@@ -69,6 +69,8 @@ test("renders form html correctly", async ({ page }) => {
   // Check if the connection type inputs are present
   const typeSelect = await page.$$("select[name='platform']");
   expect(typeSelect).not.toBeNull();
+  const typeOptions = await typeSelect[0].$$("option");
+  expect(typeOptions.length).toBe(4);
 
   // Check if the connection name input is present
   const connectionNameInput = await page.$("input[name='name']");
@@ -85,6 +87,8 @@ test("renders form html correctly", async ({ page }) => {
   // Check if the kafka authentication type select is present
   const authKafka = await page.$$("select[name='kafka_auth_type']");
   expect(authKafka).not.toBe(null);
+  const authKafkaOptions = await authKafka[0].$$("option");
+  expect(authKafkaOptions.length).toBe(3);
 
   // Check if the schema registry URL input is present
   const schemaUrlInput = await page.$("input[name='uri']");
@@ -97,9 +101,11 @@ test("renders form html correctly", async ({ page }) => {
   // Check if the schema registry authentication type is present
   const authSchema = await page.$$("select[name='schema_auth_type']");
   expect(authSchema).not.toBe(null);
+  const authSchemaOptions = await authSchema[0].$$("option");
+  expect(authSchemaOptions.length).toBe(3);
 });
 
-test("submits the form with dummy data", async ({ execute, page }) => {
+test("submits the form with defaults & dummy data", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
