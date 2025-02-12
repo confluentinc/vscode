@@ -149,7 +149,6 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaStatusMessage(undefined);
   }
   async updateSslConfig(event: CustomEvent) {
-    console.log("update ssl event", event.detail);
     const { namespace, inputName, inputValue } = event.detail;
     await post("UpdateSpecValue", { namespace, inputName, inputValue });
   }
