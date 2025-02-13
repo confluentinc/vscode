@@ -132,102 +132,102 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
 }
 
 export function getConnectionSpecFromFormData(
-  formData: any,
+  formData: { [key: string]: any },
   connectionId?: ConnectionId,
 ): CustomConnectionSpec {
   const spec: CustomConnectionSpec = {
     id: connectionId ?? (randomUUID() as ConnectionId),
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
-    formConnectionType: formData["platform"],
+    formConnectionType: formData["formConnectionType"],
   };
 
-  if (formData["bootstrap_servers"]) {
+  if (formData["kafka_cluster.bootstrap_servers"]) {
     spec.kafka_cluster = {
-      bootstrap_servers: formData["bootstrap_servers"],
+      bootstrap_servers: formData["kafka_cluster.bootstrap_servers"],
     };
-    if (formData["kafka_ssl"] === "on") {
+    if (formData["kafka_cluster.ssl.enabled"] === "on") {
       spec.kafka_cluster.ssl = {
         ...spec.kafka_cluster.ssl,
         enabled: true,
-        verify_hostname: formData["kafka_ssl_verify_hostname"] === "on" ? true : false,
+        verify_hostname: formData["kafka_cluster.ssl.verify_hostname"] === "on" ? true : false,
       };
-      if (formData["kafka_ssl_truststore_path"]) {
+      if (formData["kafka_cluster.ssl.truststore.path"]) {
         spec.kafka_cluster.ssl = {
           ...spec.kafka_cluster.ssl,
           truststore: {
-            type: formData["kafka_ssl_truststore_type"],
-            path: formData["kafka_ssl_truststore_path"],
-            password: formData["kafka_ssl_truststore_password"],
+            type: formData["kafka_cluster.ssl.truststore.type"],
+            path: formData["kafka_cluster.ssl.truststore.path"],
+            password: formData["kafka_cluster.ssl.truststore.password"],
           },
         };
       }
-      if (formData["kafka_ssl_keystore_path"]) {
+      if (formData["kafka_cluster.ssl.keystore.path"]) {
         spec.kafka_cluster.ssl = {
           ...spec.kafka_cluster.ssl,
           keystore: {
-            path: formData["kafka_ssl_keystore_path"],
-            password: formData["kafka_ssl_keystore_password"],
-            type: formData["kafka_ssl_keystore_type"],
-            key_password: formData["kafka_ssl_keystore_key_password"],
+            path: formData["kafka_cluster.ssl.keystore.path"],
+            password: formData["kafka_cluster.ssl.keystore.password"],
+            type: formData["kafka_cluster.ssl.keystore.type"],
+            key_password: formData["kafka_cluster.ssl.keystore.key_password"],
           },
         };
       }
     }
-    if (formData.kafka_auth_type === "Basic") {
+    if (formData["kafka_cluster.auth_type"] === "Basic") {
       spec.kafka_cluster.credentials = {
-        username: formData["kafka_username"],
-        password: formData["kafka_password"],
+        username: formData["kafka_cluster.credentials.username"],
+        password: formData["kafka_cluster.credentials.password"],
       };
-    } else if (formData.kafka_auth_type === "API") {
+    } else if (formData["kafka_cluster.auth_type"] === "API") {
       spec.kafka_cluster.credentials = {
-        api_key: formData["kafka_api_key"],
-        api_secret: formData["kafka_api_secret"],
+        api_key: formData["kafka_cluster.credentials.api_key"],
+        api_secret: formData["kafka_cluster.credentials.api_secret"],
       };
     }
   }
 
-  if (formData["uri"]) {
+  if (formData["schema_registry.uri"]) {
     spec.schema_registry = {
-      uri: formData["uri"],
+      uri: formData["schema_registry.uri"],
     };
-    if (formData["schema_ssl"] === "on") {
+    if (formData["schema_registry.ssl.enabled"] === "on") {
       spec.schema_registry.ssl = {
         ...spec.schema_registry.ssl,
         enabled: true,
-        verify_hostname: formData["schema_ssl_verify_hostname"] === "on" ? true : false,
+        verify_hostname: formData["schema_registry.ssl.verify_hostname"] === "on" ? true : false,
       };
-      if (formData["schema_ssl_truststore_path"]) {
+      if (formData["schema_registry.ssl.truststore.path"]) {
         spec.schema_registry.ssl = {
           ...spec.schema_registry.ssl,
           truststore: {
-            type: formData["schema_ssl_truststore_type"],
-            path: formData["schema_ssl_truststore_path"],
-            password: formData["schema_ssl_truststore_password"],
+            type: formData["schema_registry.ssl.truststore.type"],
+            path: formData["schema_registry.ssl.truststore.path"],
+            password: formData["schema_registry.ssl.truststore.password"],
           },
         };
       }
-      if (formData["schema_ssl_keystore_path"]) {
+      if (formData["schema_registry.ssl.keystore.path"]) {
         spec.schema_registry.ssl = {
           ...spec.schema_registry.ssl,
           keystore: {
-            path: formData["schema_ssl_keystore_path"],
-            password: formData["schema_ssl_keystore_password"],
-            type: formData["schema_ssl_keystore_type"],
-            key_password: formData["schema_ssl_keystore_key_password"],
+            path: formData["schema_registry.ssl.keystore.path"],
+            password: formData["schema_registry.ssl.keystore.password"],
+            type: formData["schema_registry.ssl.keystore.type"],
+            key_password: formData["schema_registry.ssl.keystore.key_password"],
           },
         };
       }
     }
-    if (formData.schema_auth_type === "Basic") {
+    if (formData["schema_registry.auth_type"] === "Basic") {
       spec.schema_registry.credentials = {
-        username: formData["schema_username"],
-        password: formData["schema_password"],
+        username: formData["schema_registry.credentials.username"],
+        password: formData["schema_registry.credentials.password"],
       };
-    } else if (formData.schema_auth_type === "API") {
+    } else if (formData["schema_registry.auth_type"] === "API") {
       spec.schema_registry.credentials = {
-        api_key: formData["schema_api_key"],
-        api_secret: formData["schema_api_secret"],
+        api_key: formData["schema_registry.credentials.api_key"],
+        api_secret: formData["schema_registry.credentials.api_secret"],
       };
     }
   }
@@ -313,4 +313,18 @@ export function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpe
     clean.schema_registry.ssl.keystore.key_password = "fakeplaceholdersecrethere";
   }
   return clean;
+}
+
+export function setValueAtPath(obj: any, path: string, value: any): void {
+  const keys = path.split(".");
+  let current = obj;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (!current[keys[i]]) {
+      current[keys[i]] = {};
+    }
+    current = current[keys[i]];
+  }
+
+  current[keys[keys.length - 1]] = value;
 }
