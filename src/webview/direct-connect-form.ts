@@ -148,13 +148,17 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaErrorMessage(undefined);
     this.schemaStatusMessage(undefined);
   }
-  async updateSslConfig(event: CustomEvent) {
-    const { namespace, inputName, inputValue } = event.detail;
-    await post("UpdateSpecValue", { namespace, inputName, inputValue });
-  }
 
-  updateValue(event: Event) {
+  async updateSslConfig(event: CustomEvent) {
+    const { inputName, inputValue } = event.detail;
+    await post("UpdateSpecValue", { inputName, inputValue });
+  }
+  async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
+    // auth_type doesn't exist in spec; used to determine which credentials to include
+    if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
+      await post("UpdateSpecValue", { inputName: input.name, inputValue: input.value });
+    }
     switch (input.name) {
       case "platform":
         this.platformType(input.value as FormConnectionType);
@@ -168,43 +172,43 @@ class DirectConnectFormViewModel extends ViewModel {
       // case "other-platform":
       //   this.otherPlatformType(input.value);
       //   break;
-      case "name":
-        this.name(input.value);
-        break;
-      case "bootstrap_servers":
-        this.kafkaBootstrapServers(input.value);
-        break;
-      case "kafka_auth_type":
+      // case "name":
+      //   this.name(input.value);
+      //   break;
+      // case "kafka_cluster.bootstrap_servers":
+      //   this.kafkaBootstrapServers(input.value);
+      //   break;
+      case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         this.clearKafkaCreds();
         break;
-      case "schema_auth_type":
+      case "schema_registry.auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
         this.clearSchemaCreds();
         break;
-      case "uri":
-        this.schemaUri(input.value);
-        break;
-      case "kafka_username":
-        this.kafkaUsername(input.value);
-        break;
-      case "kafka_api_key":
-        this.kafkaApiKey(input.value);
-        break;
-      case "schema_username":
-        this.schemaUsername(input.value);
-        break;
-      case "schema_api_key":
-        this.schemaApiKey(input.value);
-        break;
-      case "kafka_ssl":
+      // case "schema_registry.uri":
+      //   this.schemaUri(input.value);
+      //   break;
+      // case "kafka_cluster.credentials.username":
+      //   this.kafkaUsername(input.value);
+      //   break;
+      // case "kafka_api_key":
+      //   this.kafkaApiKey(input.value);
+      //   break;
+      // case "schema_username":
+      //   this.schemaUsername(input.value);
+      //   break;
+      // case "schema_api_key":
+      //   this.schemaApiKey(input.value);
+      //   break;
+      case "kafka_cluster.ssl.enabled":
         this.kafkaSslEnabled(input.checked);
         break;
-      case "schema_ssl":
+      case "schema_registry.ssl.enabled":
         this.schemaSslEnabled(input.checked);
         break;
       default:
-        console.warn(`Unhandled input update: ${input.name}`);
+        console.log(`Unhandled input update: ${input.name}`);
     }
   }
 
@@ -232,17 +236,17 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
-    if (!data["bootstrap_servers"] && !data["uri"]) {
+    if (!data["kafka_cluster.bootstrap_servers"] && !data["schema_registry.uri"]) {
       this.message("Please provide either Kafka cluster or Schema Registry details");
       this.loading(false);
       return;
     }
     if (data["platform"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
-      data["kafka_auth_type"] = "API";
-      data["schema_auth_type"] = "API";
-      data["kafka_ssl"] = "on";
-      data["schema_ssl"] = "on";
+      data["kafka_cluster.auth_type"] = "API";
+      data["schema_registry.auth_type"] = "API"; // FIXME do we even use this in host?
+      data["kafka_cluster.ssl"] = "on";
+      data["schema_registry.ssl"] = "on";
     }
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
