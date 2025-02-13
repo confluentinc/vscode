@@ -28,6 +28,7 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Give the sidecar more time to start up, log more sidecar startup errors into sentry.
+- Now message viewer is able to consume messages whose key or value schemas use an AVRO schema which specifies a non-record structure as the toplevel entity, such as an AVRO long, string, or enum.
 
 ## 0.24.4
 
