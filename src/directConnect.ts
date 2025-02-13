@@ -107,9 +107,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   let schemaSslConfigUpdates: { [key: string]: string | boolean } = {};
   function updateConfigValue(namespace: "kafka" | "schema", key: string, value: string) {
     if (namespace === "kafka") kafkaSslConfigUpdates[key] = value;
-    console.log("new kafka ssl:", kafkaSslConfigUpdates);
     if (namespace === "schema") schemaSslConfigUpdates[key] = value;
-    console.log("new schema ssl:", schemaSslConfigUpdates);
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
