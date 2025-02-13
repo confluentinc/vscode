@@ -97,17 +97,13 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     }
   }
 
-  /** Stores a map of options with key: value pairs that is then updated on form input
-   * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
-   * TODO I'm not sure if I should "extrapolate" to make a sub component for all kafka...
-   * or at least we should update these in the same way?
-   * which would help with future "grouping" efforts and loading form file we discussed
+  /** Stores state of spec updates in flight; updated on form input
+   * This also makes it so that users don't lose inputs when the form goes in the background
    */
-  let kafkaSslConfigUpdates: { [key: string]: string | boolean } = {};
-  let schemaSslConfigUpdates: { [key: string]: string | boolean } = {};
-  function updateConfigValue(namespace: "kafka" | "schema", key: string, value: string) {
-    if (namespace === "kafka") kafkaSslConfigUpdates[key] = value;
-    if (namespace === "schema") schemaSslConfigUpdates[key] = value;
+  let specUpdatedValues: Partial<CustomConnectionSpec> = {};
+  function updateSpecValue(inputName: string, value: string) {
+    setValueAtPath(specUpdatedValues, inputName, value);
+    console.log("Updated values: ", specUpdatedValues);
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
@@ -119,11 +115,13 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       case "Update":
         return (await updateConnection(body)) satisfies MessageResponse<"Update">;
       case "GetConnectionSpec": {
-        const spec = connection ? cleanSpec(connection) : null;
+        const spec = connection
+          ? { ...cleanSpec(connection), ...specUpdatedValues }
+          : specUpdatedValues;
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
       case "UpdateSpecValue":
-        updateConfigValue(body.namespace, body.inputName, body.inputValue);
+        updateSpecValue(body.inputName, body.inputValue);
         return null satisfies MessageResponse<"UpdateSpecValue">;
     }
   };
@@ -139,7 +137,7 @@ export function getConnectionSpecFromFormData(
     id: connectionId ?? (randomUUID() as ConnectionId),
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
-    formConnectionType: formData["formConnectionType"],
+    formConnectionType: formData["formconnectiontype"],
   };
 
   if (formData["kafka_cluster.bootstrap_servers"]) {
