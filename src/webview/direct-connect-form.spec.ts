@@ -97,6 +97,112 @@ test("renders form html correctly", async ({ page }) => {
   const authSchemaOptions = await authSchema[0].$$("option");
   expect(authSchemaOptions.length).toBe(3);
 });
+test.only("renders form with connection spec values for edit", async ({ execute, page }) => {
+  const SPEC_SAMPLE = {
+    id: "123",
+    name: "Sample",
+    type: "DIRECT",
+    kafka_cluster: {
+      bootstrap_servers: "localhost:9092",
+      ssl: {
+        enabled: true,
+        keystore: {
+          path: "/path/to/keystore.jks",
+          type: "JKS",
+          password: "keystore-password",
+          key_password: "key-password",
+        },
+        truststore: {
+          path: "/path/to/truststore.jks",
+          type: "JKS",
+          password: "truststore-password",
+        },
+      },
+    },
+  };
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    const SPEC_SAMPLE = {
+      id: "123",
+      name: "Sample",
+      type: "DIRECT",
+      kafka_cluster: {
+        bootstrap_servers: "localhost:9092",
+        ssl: {
+          enabled: true,
+          keystore: {
+            path: "/path/to/keystore.jks",
+            type: "JKS",
+            password: "keystore-password",
+            key_password: "key-password",
+          },
+          truststore: {
+            path: "/path/to/truststore.jks",
+            type: "JKS",
+            password: "truststore-password",
+          },
+        },
+      },
+    };
+    stub.withArgs("Submit").resolves(null);
+    stub.withArgs("GetConnectionSpec").resolves(SPEC_SAMPLE);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    // redispatching because the page already exists for some time
+    // before we actually import the view model application
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  const form = await page.$("form");
+  expect(form).not.toBeNull();
+
+  // Check that the form fields are populated with the connection spec values
+  const nameInput = await page.$("input[name='name']");
+  expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
+
+  const bootstrapServersInput = await page.$("input[name='bootstrap_servers']");
+  expect(await bootstrapServersInput?.getAttribute("value")).toBe(
+    SPEC_SAMPLE.kafka_cluster.bootstrap_servers,
+  );
+
+  // const uriInput = await page.$("input[name='uri']");
+  // expect(await uriInput?.getAttribute("value")).toBe(SPEC_SAMPLE.uri);
+
+  const kafkaSslCheckbox = await page.$("input[type='checkbox'][name='kafka_ssl']");
+  expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
+
+  const keystorePathInput = await page.$("input[name='keystore_path']");
+  expect(await keystorePathInput?.getAttribute("value")).toBe(
+    SPEC_SAMPLE.kafka_cluster.ssl.keystore.path,
+  );
+
+  const keystorePasswordInput = await page.$("input[name='keystore_password']");
+  expect(await keystorePasswordInput?.getAttribute("value")).toBe(
+    SPEC_SAMPLE.kafka_cluster.ssl.keystore.password,
+  );
+
+  const keystoreKeyPasswordInput = await page.$("input[name='keystore_key_password']");
+  expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
+    SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
+  );
+
+  const truststorePathInput = await page.$("input[name='truststore_path']");
+  expect(await truststorePathInput?.getAttribute("value")).toBe(
+    SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
+  );
+
+  const truststorePasswordInput = await page.$("input[name='truststore_password']");
+  expect(await truststorePasswordInput?.getAttribute("value")).toBe(
+    SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
+  );
+});
 
 test("submits the form with defaults & dummy data", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
