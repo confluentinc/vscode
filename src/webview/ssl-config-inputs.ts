@@ -62,23 +62,25 @@ export class SslConfig extends HTMLElement {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.value;
-    const n = this.identifier() + "_ssl";
-    this.entries.set(n + "_" + name, value);
+    this.entries.set(name, value);
     this._internals.setFormValue(this.entries);
     this.dispatchEvent(
       new CustomEvent("bubble", {
-        detail: { namespace: this.identifier(), inputName: name, inputValue: value },
+        detail: { inputName: name, inputValue: value },
       }),
     );
   }
 
+  inputId(name: string) {
+    return this.identifier() + ".ssl." + name;
+  }
   // Template for the component
   template = html`
-    <label class="checkbox" for="verify_hostname">
+    <label class="checkbox" data-attr-for="this.inputId('verify_hostname')">
       <input
         type="checkbox"
-        id="verify_hostname"
-        name="verify_hostname"
+        data-attr-id="this.inputId('verify_hostname')"
+        data-attr-name="this.inputId('verify_hostname')"
         data-attr-checked="this.verifyHostname() ? true : false"
         data-on-change="this.updateValue(event)"
       />
@@ -88,11 +90,11 @@ export class SslConfig extends HTMLElement {
       <label class="label">TrustStore Configuration</label>
       <div class="input-row">
         <div class="input-container" style="flex: 1">
-          <label for="truststore_type" class="info">Type</label>
+          <label data-attr-for="this.inputId('truststore.type')" class="info">Type</label>
           <select
             class="input dropdown"
-            id="truststore_type"
-            name="truststore_type"
+            data-attr-id="this.inputId('truststore.type')"
+            data-attr-name="this.inputId('truststore.type')"
             data-attr-value="this.truststoreType()"
             data-on-change="this.updateValue(event)"
           >
@@ -102,11 +104,11 @@ export class SslConfig extends HTMLElement {
           </select>
         </div>
         <div class="input-container">
-          <label for="truststore_path" class="info">Path</label>
+          <label data-attr-for="this.inputId('truststore.path')" class="info">Path</label>
           <input
             class="input"
-            id="truststore_path"
-            name="truststore_path"
+            data-attr-id="this.inputId('truststore.path')"
+            data-attr-name="this.inputId('truststore.path')"
             type="text"
             placeholder="/path/to/truststore"
             data-attr-value="this.truststorePath()"
@@ -114,11 +116,11 @@ export class SslConfig extends HTMLElement {
           />
         </div>
         <div class="input-container">
-          <label for="truststore_password" class="info">Password</label>
+          <label data-attr-for="this.inputId('truststore.password')" class="info">Password</label>
           <input
             class="input"
-            id="truststore_password"
-            name="truststore_password"
+            data-attr-id="this.inputId('truststore.password')"
+            data-attr-name="this.inputId('truststore.password')"
             type="password"
             data-attr-value="this.truststorePassword()"
             data-on-change="this.updateValue(event)"
@@ -130,11 +132,11 @@ export class SslConfig extends HTMLElement {
       <label class="label">KeyStore Configuration</label>
       <div class="input-row">
         <div class="input-container" style="flex: 1">
-          <label for="keystore_type" class="info">Type</label>
+          <label data-attr-for="this.inputId('keystore.type')" class="info">Type</label>
           <select
             class="input dropdown"
-            id="keystore_type"
-            name="keystore_type"
+            data-attr-id="this.inputId('keystore.type')"
+            data-attr-name="this.inputId('keystore.type')"
             data-attr-value="this.keystoreType()"
             data-on-change="this.updateValue(event)"
           >
@@ -144,11 +146,11 @@ export class SslConfig extends HTMLElement {
           </select>
         </div>
         <div class="input-container">
-          <label for="keystore_path" class="info">Path</label>
+          <label data-attr-for="this.inputId('keystore.path')" class="info">Path</label>
           <input
             class="input"
-            id="keystore_path"
-            name="keystore_path"
+            data-attr-id="this.inputId('keystore.path')"
+            data-attr-name="this.inputId('keystore.path')"
             type="text"
             placeholder="/path/to/keystore"
             data-attr-value="this.keystorePath()"
@@ -156,22 +158,24 @@ export class SslConfig extends HTMLElement {
           />
         </div>
         <div class="input-container">
-          <label for="keystore_password" class="info">Password</label>
+          <label data-attr-for="this.inputId('keystore.password')" class="info">Password</label>
           <input
             class="input"
-            id="keystore_password"
-            name="keystore_password"
+            data-attr-id="this.inputId('keystore.password')"
+            data-attr-name="this.inputId('keystore.password')"
             type="password"
             data-attr-value="this.keystorePassword()"
             data-on-change="this.updateValue(event)"
           />
         </div>
         <div class="input-container">
-          <label for="keystore_key_password" class="info">Key Password</label>
+          <label data-attr-for="this.inputId('keystore.key_password')" class="info"
+            >Key Password</label
+          >
           <input
             class="input"
-            id="keystore_key_password"
-            name="keystore_key_password"
+            data-attr-id="this.inputId('keystore.key_password')"
+            data-attr-name="this.inputId('keystore.key_password')"
             type="password"
             data-attr-value="this.keystoreKeyPassword()"
             data-on-change="this.updateValue(event)"
