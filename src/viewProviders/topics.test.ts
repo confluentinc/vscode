@@ -1,13 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TreeItemCollapsibleState } from "vscode";
+import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
-  TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { IconNames } from "../constants";
 import { topicSearchSet } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
@@ -135,10 +136,12 @@ describe("TopicViewProvider helper function loadTopicSchemas tests", () => {
         assert.equal(schemaContainer.children.length, 2);
         assert.equal(schemaContainer.description, "AVRO (2)");
         assert.equal(schemaContainer.contextValue, "multiple-versions-schema-subject");
+        assert.equal((schemaContainer.iconPath as ThemeIcon).id, IconNames.VALUE_SUBJECT);
       } else if (schemaContainer.label === "test-ccloud-topic-key") {
         assert.equal(schemaContainer.children.length, 1);
         assert.equal(schemaContainer.description, "AVRO (1)");
         assert.equal(schemaContainer.contextValue, "schema-subject");
+        assert.equal((schemaContainer.iconPath as ThemeIcon).id, IconNames.KEY_SUBJECT);
       }
     }
   });
@@ -151,7 +154,8 @@ describe("TopicViewProvider search behavior", () => {
   let sandbox: sinon.SinonSandbox;
   let getTopicsForClusterStub: sinon.SinonStub;
   let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
-  let getSchemasForEnvironmentIdStub: sinon.SinonStub;
+  let getSubjectsStub: sinon.SinonStub;
+  let getSchemaSubjectGroupStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
@@ -163,12 +167,8 @@ describe("TopicViewProvider search behavior", () => {
     // stub the methods called while inside loadTopicSchemas() since we can't stub it directly
     ccloudLoader = CCloudResourceLoader.getInstance();
     getTopicsForClusterStub = sandbox.stub(ccloudLoader, "getTopicsForCluster").resolves([]);
-    getSchemaRegistryForEnvironmentIdStub = sandbox
-      .stub(ccloudLoader, "getSchemaRegistryForEnvironmentId")
-      .resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
-    getSchemasForEnvironmentIdStub = sandbox
-      .stub(ccloudLoader, "getSchemasForEnvironmentId")
-      .resolves([]);
+    getSubjectsStub = sandbox.stub(ccloudLoader, "getSubjects").resolves([]);
+    getSchemaSubjectGroupStub = sandbox.stub(ccloudLoader, "getSchemaSubjectGroup").resolves([]);
 
     provider = TopicViewProvider.getInstance();
     provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
@@ -191,8 +191,11 @@ describe("TopicViewProvider search behavior", () => {
   });
 
   it("getChildren() should filter schema subject containers based on search string", async () => {
-    getSchemaRegistryForEnvironmentIdStub.resolves(TEST_CCLOUD_SCHEMA_REGISTRY);
-    getSchemasForEnvironmentIdStub.resolves([TEST_CCLOUD_SCHEMA]);
+    getSubjectsStub.resolves([
+      TEST_CCLOUD_SCHEMA.subjectObject(),
+      TEST_LOCAL_SCHEMA.subjectObject(), // has different subject name at least. Should be skipped 'cause won't match search.
+    ]);
+    getSchemaSubjectGroupStub.resolves([TEST_CCLOUD_SCHEMA]);
     // Schema subject matches the search string
     topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 

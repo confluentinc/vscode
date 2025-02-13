@@ -16,7 +16,7 @@ import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { Schema, SchemaTreeItem, subjectMatchesTopicName } from "../models/schema";
+import { getSubjectIcon, Schema, SchemaTreeItem, subjectMatchesTopicName } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -330,14 +330,20 @@ export async function getTopicsForCluster(
  * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
  */
 export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTreeItem<Schema>[]> {
-  // Get all the subjects from the topic's cluster's environment's schema registry.
-  // Filter by those corresponding to the topic in quesion.
-  // For each remaining subjects, get the schema version array
-  // Assemble into a ContainerTreeItem<Schema>[]
+  /*
+    1. Get all the subjects from the topic's cluster's environment's schema registry.
+    2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
+    3. For each of those subjects, get the correspoinding schema version array
+    4. Assemble each subject + schemas into a ContainerTreeItem<Schema>, collect into an array thereof.
+    5. Return the array.
+  */
 
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
+  // 1. Get all the subjects from the topic's cluster's environment's schema registry.
   const subjects = await loader.getSubjects(topic.environmentId);
+
+  // 2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
   const topicName = topic.name;
   const schemaSubjects = subjects.filter((subject) =>
     subjectMatchesTopicName(subject.name, topicName),
@@ -347,6 +353,7 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
     return [];
   }
 
+  // 3. For each of those subjects, get the correspoinding schema version array
   // Load all the schema versions for each subject in the matching subjects
   // concurrently.
   const subjectGroupRequests = schemaSubjects.map((subject) =>
@@ -354,15 +361,20 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
   );
   const subjectGroups = await Promise.all(subjectGroupRequests);
 
+  // 4. Assemble each subject + schemas into a ContainerTreeItem<Schema>, collect into an array thereof.
   // Create a ContainerTreeItem<Schema> for each subject group.
   const schemaContainers: ContainerTreeItem<Schema>[] = subjectGroups.map((group) => {
+    const firstSchema = group[0];
+    const subject = firstSchema.subject;
+
     const item = new ContainerTreeItem(
-      group[0].subject, // label
+      subject, // label
       vscode.TreeItemCollapsibleState.Collapsed,
       group,
     );
 
-    const firstSchema = group[0];
+    item.iconPath = getSubjectIcon(subject, topicName !== undefined);
+
     item.description = `${firstSchema.type} (${group.length})`;
     const propertyParts: string[] = new Array<string>();
 

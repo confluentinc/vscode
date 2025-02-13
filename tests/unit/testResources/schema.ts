@@ -36,6 +36,7 @@ export const TEST_LOCAL_SCHEMA = Schema.create({
   version: 1,
   type: SchemaType.Avro,
   schemaRegistryId: TEST_LOCAL_SCHEMA_REGISTRY.id,
+  environmentId: TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
   connectionId: TEST_LOCAL_SCHEMA_REGISTRY.connectionId,
   connectionType: TEST_LOCAL_SCHEMA_REGISTRY.connectionType,
   isHighestVersion: true,
