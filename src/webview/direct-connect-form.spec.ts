@@ -97,7 +97,7 @@ test("renders form html correctly", async ({ page }) => {
   const authSchemaOptions = await authSchema[0].$$("option");
   expect(authSchemaOptions.length).toBe(3);
 });
-test.only("renders form with connection spec values for edit", async ({ execute, page }) => {
+test("renders form with connection spec values for edit", async ({ execute, page }) => {
   const SPEC_SAMPLE = {
     id: "123",
     name: "Sample",
