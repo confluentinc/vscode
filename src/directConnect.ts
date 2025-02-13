@@ -137,7 +137,7 @@ export function getConnectionSpecFromFormData(
     id: connectionId ?? (randomUUID() as ConnectionId),
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
-    formConnectionType: formData["formConnectionType"],
+    formConnectionType: formData["formconnectiontype"],
   };
 
   if (formData["kafka_cluster.bootstrap_servers"]) {
