@@ -6,13 +6,13 @@ import { ConnectionId } from "./models/resource";
 import { FormConnectionType } from "./webview/direct-connect-form";
 
 describe("directConnect.ts", () => {
-  describe("getConnectionSpecFromFormData", () => {
+  describe.only("getConnectionSpecFromFormData", () => {
     it("should not include `schema_registry` if not provided", async () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        bootstrap_servers: "localhost:9092",
-        kafka_auth_type: "None",
+        formConnectionType: "Apache Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "None",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
@@ -22,19 +22,15 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
       assert.strictEqual(spec.schema_registry, undefined);
     });
-
     it("should not include `kafka_cluster` if not provided", async () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        uri: "http://localhost:8081",
-        schema_auth_type: "API",
-        schema_api_key: "key",
-        schema_api_secret: "secret",
+        formConnectionType: "Apache Kafka",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
-
       assert.strictEqual(spec.name, "Test Connection");
       assert.ok(!spec.kafka_cluster);
       assert.strictEqual(spec.schema_registry?.uri, "http://localhost:8081");
@@ -42,15 +38,15 @@ describe("directConnect.ts", () => {
     it("should return a valid CustomConnectionSpec with Basic auth credentials", () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        bootstrap_servers: "localhost:9092",
-        kafka_auth_type: "Basic",
-        kafka_username: "user",
-        kafka_password: "pass",
-        uri: "http://localhost:8081",
-        schema_auth_type: "Basic",
-        schema_username: "user",
-        schema_password: "pass",
+        formConnectionType: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "Basic",
+        "kafka_cluster.credentials.username": "user",
+        "kafka_cluster.credentials.password": "pass",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "Basic",
+        "schema_registry.credentials.username": "user",
+        "schema_registry.credentials.password": "pass",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
@@ -75,19 +71,18 @@ describe("directConnect.ts", () => {
       // @ts-expect-error - incomplete types from OpenAPI
       assert.strictEqual(spec.schema_registry?.credentials?.password, "pass");
     });
-
     it("should return a valid CustomConnectionSpec with API key credentials", () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        bootstrap_servers: "localhost:9092",
-        kafka_auth_type: "API",
-        kafka_api_key: "key",
-        kafka_api_secret: "secret",
-        uri: "http://localhost:8081",
-        schema_auth_type: "API",
-        schema_api_key: "key",
-        schema_api_secret: "secret",
+        formConnectionType: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "API",
+        "kafka_cluster.credentials.api_key": "key",
+        "kafka_cluster.credentials.api_secret": "secret",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "API",
+        "schema_registry.credentials.api_key": "key",
+        "schema_registry.credentials.api_secret": "secret",
       };
       const spec = getConnectionSpecFromFormData(formData);
 
@@ -115,11 +110,11 @@ describe("directConnect.ts", () => {
     it("should not include credentials if the auth type is None", () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        bootstrap_servers: "localhost:9092",
-        kafka_auth_type: "None",
-        uri: "http://localhost:8081",
-        schema_auth_type: "None",
+        formConnectionType: "Apache Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "None",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
@@ -136,16 +131,16 @@ describe("directConnect.ts", () => {
     it("should not include truststore or keystore for kafka if paths are empty", () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        bootstrap_servers: "localhost:9092",
-        kafka_auth_type: "None",
-        uri: "http://localhost:8081",
-        schema_auth_type: "None",
-        kafka_ssl: "on",
-        kafka_ssl_truststore_path: "",
-        kafka_ssl_truststore_password: "hello",
-        kafka_ssl_keystore_path: "",
-        kafka_ssl_keystore_password: "world",
+        formConnectionType: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "None",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
+        "kafka_cluster.ssl.enabled": "on",
+        "kafka_cluster.ssl.truststore.path": "",
+        "kafka_cluster.ssl.truststore.password": "hello",
+        "kafka_cluster.ssl.keystore.path": "",
+        "kafka_cluster.ssl.keystore.password": "world",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
@@ -162,16 +157,16 @@ describe("directConnect.ts", () => {
     it("should not include truststore or keystore for schema if paths are empty", () => {
       const formData = {
         name: "Test Connection",
-        platform: "Kafka",
-        bootstrap_servers: "localhost:9092",
-        kafka_auth_type: "None",
-        uri: "http://localhost:8081",
-        schema_auth_type: "None",
-        schema_ssl: "on",
-        schema_ssl_truststore_path: "",
-        schema_ssl_truststore_password: "hello",
-        schema_ssl_keystore_path: "",
-        schema_ssl_keystore_password: "world",
+        formConnectionType: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "None",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
+        "schema_registry.ssl.enabled": "on",
+        "schema_registry.ssl.truststore.path": "",
+        "schema_registry.ssl.truststore.password": "hello",
+        "schema_registry.ssl.keystore.path": "",
+        "schema_registry.ssl.keystore.password": "world",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
