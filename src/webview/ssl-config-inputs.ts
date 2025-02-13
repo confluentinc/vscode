@@ -1,0 +1,203 @@
+import { ObservableScope } from "inertial";
+import { applyBindings, html } from "./bindings/bindings";
+import { TLSConfig } from "../clients/sidecar";
+
+/** Reusable Custom HTML Element (Web Component) for SSL Advanced Config
+ * This component is used in the Direct Connection form to configure SSL settings
+ * @element ssl-config
+ * @attr {string} namespace - ensure form inputs have unique ids, distinguish kafka & schema configs
+ * @attr {TLSConfig} config - the original spec's config to be updated, if it exists
+ */
+export class SslConfig extends HTMLElement {
+  static formAssociated = true;
+  private _internals: ElementInternals;
+  constructor() {
+    super();
+    this._internals = this.attachInternals();
+  }
+
+  os = ObservableScope();
+  entries = new FormData();
+
+  identifier = this.os.signal<string>("");
+  configObj = this.os.signal<TLSConfig | undefined>(undefined);
+
+  verifyHostname = this.os.derive(() => {
+    return this.configObj()?.verify_hostname || true;
+  });
+  truststorePath = this.os.derive(() => {
+    return this.configObj()?.truststore?.path;
+  });
+  truststorePassword = this.os.derive(() => {
+    return this.configObj()?.truststore?.password;
+  });
+  truststoreType = this.os.derive(() => {
+    return this.configObj()?.truststore?.type;
+  });
+  keystorePath = this.os.derive(() => {
+    return this.configObj()?.keystore?.path;
+  });
+  keystorePassword = this.os.derive(() => {
+    return this.configObj()?.keystore?.password;
+  });
+  keystoreType = this.os.derive(() => {
+    return this.configObj()?.keystore?.type;
+  });
+  keystoreKeyPassword = this.os.derive(() => {
+    return this.configObj()?.keystore?.key_password;
+  });
+
+  // Setter for message prop
+  set config(value: TLSConfig) {
+    this.configObj(value);
+  }
+  set namespace(value: string) {
+    this.identifier(value);
+  }
+
+  /** update the host form data so it contains all the changed values on submit
+   * and dispatch a bubble event to the host for other actions
+   */
+  updateValue(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const name = input.name;
+    const value = input.value;
+    const n = this.identifier() + "_ssl";
+    this.entries.set(n + "_" + name, value);
+    this._internals.setFormValue(this.entries);
+    this.dispatchEvent(
+      new CustomEvent("bubble", {
+        detail: { namespace: this.identifier(), inputName: name, inputValue: value },
+      }),
+    );
+  }
+
+  // Template for the component
+  template = html`
+    <label class="checkbox" for="verify_hostname">
+      <input
+        type="checkbox"
+        id="verify_hostname"
+        name="verify_hostname"
+        data-attr-checked="this.verifyHostname() ? true : false"
+        data-on-change="this.updateValue(event)"
+      />
+      <span>Verify Server Hostname</span>
+    </label>
+    <div class="input-container">
+      <label class="label">TrustStore Configuration</label>
+      <div class="input-row">
+        <div class="input-container" style="flex: 1">
+          <label for="truststore_type" class="info">Type</label>
+          <select
+            class="input dropdown"
+            id="truststore_type"
+            name="truststore_type"
+            data-attr-value="this.truststoreType()"
+            data-on-change="this.updateValue(event)"
+          >
+            <option value="JKS" selected>JKS</option>
+            <option value="PKCS12">PKCS12</option>
+            <option value="PEM">PEM</option>
+          </select>
+        </div>
+        <div class="input-container">
+          <label for="truststore_path" class="info">Path</label>
+          <input
+            class="input"
+            id="truststore_path"
+            name="truststore_path"
+            type="text"
+            placeholder="/path/to/truststore"
+            data-attr-value="this.truststorePath()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+        <div class="input-container">
+          <label for="truststore_password" class="info">Password</label>
+          <input
+            class="input"
+            id="truststore_password"
+            name="truststore_password"
+            type="password"
+            data-attr-value="this.truststorePassword()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="input-container">
+      <label class="label">KeyStore Configuration</label>
+      <div class="input-row">
+        <div class="input-container" style="flex: 1">
+          <label for="keystore_type" class="info">Type</label>
+          <select
+            class="input dropdown"
+            id="keystore_type"
+            name="keystore_type"
+            data-attr-value="this.keystoreType()"
+            data-on-change="this.updateValue(event)"
+          >
+            <option value="JKS" selected>JKS</option>
+            <option value="PKCS12">PKCS12</option>
+            <option value="PEM">PEM</option>
+          </select>
+        </div>
+        <div class="input-container">
+          <label for="keystore_path" class="info">Path</label>
+          <input
+            class="input"
+            id="keystore_path"
+            name="keystore_path"
+            type="text"
+            placeholder="/path/to/keystore"
+            data-attr-value="this.keystorePath()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+        <div class="input-container">
+          <label for="keystore_password" class="info">Password</label>
+          <input
+            class="input"
+            id="keystore_password"
+            name="keystore_password"
+            type="password"
+            data-attr-value="this.keystorePassword()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+        <div class="input-container">
+          <label for="keystore_key_password" class="info">Key Password</label>
+          <input
+            class="input"
+            id="keystore_key_password"
+            name="keystore_key_password"
+            type="password"
+            data-attr-value="this.keystoreKeyPassword()"
+            data-on-change="this.updateValue(event)"
+          />
+        </div>
+      </div>
+    </div>
+  `;
+
+  // This method is called when the component is attached to the DOM
+  connectedCallback() {
+    const shadow = this.attachShadow({ mode: "open" });
+    // Using stylesheet constructor to "adopt" the styles from VSCode host into the shadow DOM
+    // https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/adoptedStyleSheets#adopting_a_stylesheet
+    const sheet = new CSSStyleSheet();
+    for (let sh of document.styleSheets) {
+      for (let rule of sh.cssRules) {
+        sheet.insertRule(rule.cssText);
+      }
+    }
+    sheet.insertRule(`:host { display: flex; flex-direction: column; gap: 12px; width: 100%; }`);
+    shadow.adoptedStyleSheets = [sheet];
+    shadow.innerHTML = this.template;
+    applyBindings(shadow, this.os, this);
+  }
+}
+
+// Register the custom element in the ts file for the webview where it will be used (in this case, direct-connect-form.ts)
+// customElements.define("ssl-config", SslConfig);

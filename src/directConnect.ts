@@ -91,10 +91,23 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     const manager = DirectConnectionManager.getInstance();
     try {
       await manager.updateConnection(newSpec);
+      return { success: true, message: "Connection updated successfully." };
     } catch (error) {
       return { success: false, message: JSON.stringify(error) };
     }
-    return { success: true, message: "Connection updated successfully." };
+  }
+
+  /** Stores a map of options with key: value pairs that is then updated on form input
+   * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   * TODO I'm not sure if I should "extrapolate" to make a sub component for all kafka...
+   * or at least we should update these in the same way?
+   * which would help with future "grouping" efforts and loading form file we discussed
+   */
+  let kafkaSslConfigUpdates: { [key: string]: string | boolean } = {};
+  let schemaSslConfigUpdates: { [key: string]: string | boolean } = {};
+  function updateConfigValue(namespace: "kafka" | "schema", key: string, value: string) {
+    if (namespace === "kafka") kafkaSslConfigUpdates[key] = value;
+    if (namespace === "schema") schemaSslConfigUpdates[key] = value;
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
@@ -103,12 +116,15 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
         return (await testConnection(body)) satisfies MessageResponse<"Test">;
       case "Submit":
         return (await saveConnection(body)) satisfies MessageResponse<"Submit">;
+      case "Update":
+        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
       case "GetConnectionSpec": {
         const spec = connection ? cleanSpec(connection) : null;
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
-      case "Update":
-        return (await updateConnection(body)) satisfies MessageResponse<"Update">;
+      case "UpdateSpecValue":
+        updateConfigValue(body.namespace, body.inputName, body.inputValue);
+        return null satisfies MessageResponse<"UpdateSpecValue">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
@@ -129,11 +145,35 @@ export function getConnectionSpecFromFormData(
   if (formData["bootstrap_servers"]) {
     spec.kafka_cluster = {
       bootstrap_servers: formData["bootstrap_servers"],
-      ssl: {
-        // formData will not have the SSL toggle if the input disabled, so we check that CCloud always enables SSL
-        enabled: formData["kafka_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
-      },
     };
+    if (formData["kafka_ssl"] === "on") {
+      spec.kafka_cluster.ssl = {
+        ...spec.kafka_cluster.ssl,
+        enabled: true,
+        verify_hostname: formData["kafka_ssl_verify_hostname"] === "on" ? true : false,
+      };
+      if (formData["kafka_ssl_truststore_path"]) {
+        spec.kafka_cluster.ssl = {
+          ...spec.kafka_cluster.ssl,
+          truststore: {
+            type: formData["kafka_ssl_truststore_type"],
+            path: formData["kafka_ssl_truststore_path"],
+            password: formData["kafka_ssl_truststore_password"],
+          },
+        };
+      }
+      if (formData["kafka_ssl_keystore_path"]) {
+        spec.kafka_cluster.ssl = {
+          ...spec.kafka_cluster.ssl,
+          keystore: {
+            path: formData["kafka_ssl_keystore_path"],
+            password: formData["kafka_ssl_keystore_password"],
+            type: formData["kafka_ssl_keystore_type"],
+            key_password: formData["kafka_ssl_keystore_key_password"],
+          },
+        };
+      }
+    }
     if (formData.kafka_auth_type === "Basic") {
       spec.kafka_cluster.credentials = {
         username: formData["kafka_username"],
@@ -150,11 +190,35 @@ export function getConnectionSpecFromFormData(
   if (formData["uri"]) {
     spec.schema_registry = {
       uri: formData["uri"],
-      ssl: {
-        // formData will not have the SSL toggle if the input is disabled, so we check that CCloud always enables SSL
-        enabled: formData["schema_ssl"] === "on" || formData["platform"] === "Confluent Cloud",
-      },
     };
+    if (formData["schema_ssl"] === "on") {
+      spec.schema_registry.ssl = {
+        ...spec.schema_registry.ssl,
+        enabled: true,
+        verify_hostname: formData["schema_ssl_verify_hostname"] === "on" ? true : false,
+      };
+      if (formData["schema_ssl_truststore_path"]) {
+        spec.schema_registry.ssl = {
+          ...spec.schema_registry.ssl,
+          truststore: {
+            type: formData["schema_ssl_truststore_type"],
+            path: formData["schema_ssl_truststore_path"],
+            password: formData["schema_ssl_truststore_password"],
+          },
+        };
+      }
+      if (formData["schema_ssl_keystore_path"]) {
+        spec.schema_registry.ssl = {
+          ...spec.schema_registry.ssl,
+          keystore: {
+            path: formData["schema_ssl_keystore_path"],
+            password: formData["schema_ssl_keystore_password"],
+            type: formData["schema_ssl_keystore_type"],
+            key_password: formData["schema_ssl_keystore_key_password"],
+          },
+        };
+      }
+    }
     if (formData.schema_auth_type === "Basic") {
       spec.schema_registry.credentials = {
         username: formData["schema_username"],
@@ -212,7 +276,7 @@ export function parseTestResult(connection: Connection): TestResponse {
   return result;
 }
 // Replace any sensitive fields from the connection spec before sending to the webview form
-function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
+export function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
   const clean = { ...connection };
   if (clean.kafka_cluster?.credentials) {
     if (instanceOfBasicCredentials(clean.kafka_cluster.credentials)) {
@@ -222,6 +286,15 @@ function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
       clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
     }
   }
+  if (clean.kafka_cluster?.ssl?.truststore?.password) {
+    clean.kafka_cluster.ssl.truststore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.kafka_cluster?.ssl?.keystore?.password) {
+    clean.kafka_cluster.ssl.keystore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.kafka_cluster?.ssl?.keystore?.key_password) {
+    clean.kafka_cluster.ssl.keystore.key_password = "fakeplaceholdersecrethere";
+  }
   if (clean.schema_registry?.credentials) {
     if (instanceOfBasicCredentials(clean.schema_registry.credentials)) {
       clean.schema_registry.credentials.password = "fakeplaceholdersecrethere";
@@ -229,6 +302,15 @@ function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpec {
     if (instanceOfApiKeyAndSecret(clean.schema_registry.credentials)) {
       clean.schema_registry.credentials.api_secret = "fakeplaceholdersecrethere";
     }
+  }
+  if (clean.schema_registry?.ssl?.truststore?.password) {
+    clean.schema_registry.ssl.truststore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.schema_registry?.ssl?.keystore?.password) {
+    clean.schema_registry.ssl.keystore.password = "fakeplaceholdersecrethere";
+  }
+  if (clean.schema_registry?.ssl?.keystore?.key_password) {
+    clean.schema_registry.ssl.keystore.key_password = "fakeplaceholdersecrethere";
   }
   return clean;
 }

@@ -8,7 +8,9 @@ import {
   instanceOfBasicCredentials,
 } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
-
+import { SslConfig } from "./ssl-config-inputs";
+// Register the custom element
+customElements.define("ssl-config", SslConfig);
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
 addEventListener("DOMContentLoaded", () => {
@@ -64,6 +66,9 @@ class DirectConnectFormViewModel extends ViewModel {
   kafkaSslEnabled = this.derive(() => {
     return this.spec()?.kafka_cluster?.ssl?.enabled || this.platformType() === "Confluent Cloud";
   });
+  kafkaSslConfig = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl || {};
+  });
 
   /** Schema Registry */
   schemaUri = this.derive(() => {
@@ -92,7 +97,9 @@ class DirectConnectFormViewModel extends ViewModel {
   schemaSslEnabled = this.derive(() => {
     return this.spec()?.schema_registry?.ssl?.enabled || this.platformType() === "Confluent Cloud";
   });
-
+  schemaSslConfig = this.derive(() => {
+    return this.spec()?.schema_registry?.ssl || {};
+  });
   /** Form State */
   message = this.signal("");
   success = this.signal(false);
@@ -140,6 +147,10 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaState(undefined);
     this.schemaErrorMessage(undefined);
     this.schemaStatusMessage(undefined);
+  }
+  async updateSslConfig(event: CustomEvent) {
+    const { namespace, inputName, inputValue } = event.detail;
+    await post("UpdateSpecValue", { namespace, inputName, inputValue });
   }
 
   updateValue(event: Event) {
@@ -227,10 +238,12 @@ class DirectConnectFormViewModel extends ViewModel {
       return;
     }
     if (data["platform"] === "Confluent Cloud") {
+      // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_auth_type"] = "API";
       data["schema_auth_type"] = "API";
+      data["kafka_ssl"] = "on";
+      data["schema_ssl"] = "on";
     }
-
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
       result = await post("Test", data);
@@ -263,8 +276,12 @@ export type TestResponse = {
 
 export function post(type: "Test", body: any): Promise<TestResponse>;
 export function post(type: "Submit", body: any): Promise<PostResponse>;
-export function post(type: "GetConnectionSpec", body: any): Promise<CustomConnectionSpec | null>;
 export function post(type: "Update", body: { [key: string]: unknown }): Promise<PostResponse>;
+export function post(type: "GetConnectionSpec", body: any): Promise<CustomConnectionSpec | null>;
+export function post(
+  type: "UpdateSpecValue",
+  body: { namespace: "kafka" | "schema"; inputName: string; inputValue: string },
+): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
