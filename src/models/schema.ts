@@ -2,8 +2,15 @@ import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
-import { ContainerTreeItem, CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud } from "./resource";
+import { CustomMarkdownString } from "./main";
+import {
+  ConnectionId,
+  connectionIdToType,
+  EnvironmentId,
+  IResourceBase,
+  isCCloud,
+  ISearchable,
+} from "./resource";
 
 export enum SchemaType {
   Avro = "AVRO",
@@ -88,11 +95,67 @@ export class Schema extends Data implements IResourceBase {
     return "";
   }
 
+  /** Produce a Subject instance from this Schema.*/
+  subjectObject(): Subject {
+    if (!this.environmentId) {
+      throw new Error("Schema missing environmentId, unable to create Subject object.");
+    }
+    return new Subject(this.subject, this.connectionId, this.environmentId, this.schemaRegistryId);
+  }
+
   searchableText(): string {
     // NOTE: based on the availability of schema-specific data at the time of SchemasViewProvider
     // loading, the Subject containers won't actually have any Schema children, so we can't offer
     // any searchability on them.
     return "";
+  }
+}
+
+/**
+ * Thin ISearchable wrapper around a schema subject string. Needs to carry the metadata
+ * from its source schema registry with it for later API calls.
+ */
+export class Subject implements IResourceBase, ISearchable {
+  connectionId!: ConnectionId;
+  environmentId!: EnvironmentId;
+  schemaRegistryId!: string;
+
+  name!: string;
+  id!: string;
+
+  /**
+   * Construct from subject name string, connectionid, envid, registry id.
+   *  */
+  constructor(
+    name: string,
+    connectionId: ConnectionId,
+    environmentId: EnvironmentId,
+    schemaRegistryId: string,
+  ) {
+    this.name = name;
+    this.connectionId = connectionId;
+    this.schemaRegistryId = schemaRegistryId;
+    this.environmentId = environmentId;
+
+    this.id = `${this.connectionId}-${this.schemaRegistryId}-${this.name}`;
+  }
+
+  get connectionType(): ConnectionType {
+    return connectionIdToType(this.connectionId);
+  }
+
+  searchableText(): string {
+    return this.name;
+  }
+}
+
+/** Tree item representing a subject */
+export class SubjectTreeItem extends vscode.TreeItem {
+  constructor(subject: Subject) {
+    super(subject.name, vscode.TreeItemCollapsibleState.Collapsed);
+    this.iconPath = getSubjectIcon(subject.name);
+    this.id = subject.name;
+    this.contextValue = "schema-subject";
   }
 }
 
@@ -148,87 +211,6 @@ function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
 export enum SchemaKind {
   Key = "key",
   Value = "value",
-}
-
-/**
- * Groups {@link Schema}s by subject and sorts versions in descending order.
- * @param schemas List of schemas to group
- * @param topicName Optional topic name to filter schema subjects by
- * @remarks The resulting groups should be structured like:
- * ```
- *  - subject1
- *  -- version2
- *  -- version1
- *  - subject2
- *  -- version1
- *  ...etc
- * ```
- */
-export function generateSchemaSubjectGroups(
-  schemas: Schema[],
-  topicName?: string,
-): ContainerTreeItem<Schema>[] {
-  const schemaGroups: ContainerTreeItem<Schema>[] = [];
-  if (schemas.length === 0) {
-    return schemaGroups;
-  }
-
-  if (topicName) {
-    schemas = schemas.filter((schema) => schema.matchesTopicName(topicName));
-  }
-
-  // create a map of schema subjects to their respective schemas
-  const schemaSubjectGroups: Map<string, Schema[]> = new Map();
-  for (const schema of schemas) {
-    const subject = schema.subject;
-    if (!schemaSubjectGroups.has(subject)) {
-      schemaSubjectGroups.set(subject, []);
-    }
-    schemaSubjectGroups.get(subject)?.push(schema);
-  }
-  // convert the map to an array of ContainerTreeItems
-  for (const [subject, schemaGroup] of schemaSubjectGroups) {
-    // sort in version-descending order so the latest version is always at the top
-    schemaGroup.sort((a, b) => b.version - a.version);
-    // get string of unique schema types for the group
-    const schemaTypes = Array.from(new Set(schemaGroup.map((schema) => schema.type))).join(", ");
-    const schemaContainerItem = new ContainerTreeItem<Schema>(
-      subject,
-      vscode.TreeItemCollapsibleState.Collapsed,
-      schemaGroup,
-    );
-    // set the icon based on subject suffix
-    schemaContainerItem.iconPath = getSubjectIcon(subject, topicName !== undefined);
-
-    const contextValueParts: string[] = [];
-
-    // override description to show schema types + count
-    schemaContainerItem.description = `${schemaTypes} (${schemaGroup.length})`;
-    if (schemaGroup.length > 1) {
-      // set context key indicating this group has multiple versions (so can be quickly diff'd, etc.)
-      contextValueParts.push("multiple-versions");
-    }
-
-    // set context value identifying this as a schema group
-    contextValueParts.push("schema-subject");
-
-    // dash-join all parts, assign to context value
-    schemaContainerItem.contextValue = contextValueParts.join("-");
-
-    schemaGroups.push(schemaContainerItem);
-  }
-
-  // sort multiple groups by subject
-  if (schemaGroups.length > 1) {
-    schemaGroups.sort((a, b) => {
-      // compare as strings, not TreeItemLabels
-      const labelA = a.label! as string;
-      const labelB = b.label! as string;
-      return labelA.localeCompare(labelB);
-    });
-  }
-
-  return schemaGroups;
 }
 
 /** Determine an icon for a schema subject,

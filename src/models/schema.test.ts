@@ -3,13 +3,7 @@ import "mocha";
 import * as vscode from "vscode";
 import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
-import {
-  Schema,
-  SchemaType,
-  generateSchemaSubjectGroups,
-  getSubjectIcon,
-  subjectMatchesTopicName,
-} from "./schema";
+import { Schema, SchemaType, getSubjectIcon, subjectMatchesTopicName } from "./schema";
 
 describe("Schema model methods", () => {
   it(".matchesTopicName() success / fail tests", () => {
@@ -80,6 +74,7 @@ describe("Schema model methods", () => {
   });
 });
 
+/*
 // TODO: update the `as Schema[]` sections below once ContainerTreeItem<T> is implemented
 describe("Schema helper functions", () => {
   const valueSubject = "test-topic-value";
@@ -130,39 +125,6 @@ describe("Schema helper functions", () => {
     }),
   ];
 
-  it("generateSchemaSubjectGroups() should group schemas under a subject-labeled container item", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-    assert.equal(groups.length, 3, `should have three subject groups, got ${groups.length}`);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.ok(testTopicGroup);
-    assert.equal(testTopicGroup.label, valueSubject);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.ok(anotherTopicGroup);
-    assert.equal(anotherTopicGroup.label, keySubject);
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    assert.ok(extraTopicGroup);
-    assert.equal(extraTopicGroup.label, otherSubject);
-  });
-
-  it("generateSchemaSubjectGroups() should contain the correct number of schemas as children", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children;
-    assert.equal(testTopicSchemas.length, 2);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children;
-    assert.equal(anotherTopicSchemas.length, 1);
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children;
-    assert.equal(extraTopicSchemas.length, 3);
-  });
-
   it("generateSchemaSubjectGroups() should show the schema type and version count in the description", () => {
     const groups = generateSchemaSubjectGroups(schemas);
 
@@ -174,34 +136,6 @@ describe("Schema helper functions", () => {
 
     const extraTopicGroup = groups.find((group) => group.label === otherSubject);
     assert.equal(extraTopicGroup?.description, "JSON (3)");
-  });
-
-  it("generateSchemaSubjectGroups() should sort subjects' schemas in version-descending order", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children;
-    assert.equal(
-      testTopicSchemas[0].version,
-      2,
-      `first version should be 2, got v${testTopicSchemas[0].version}`,
-    );
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children;
-    assert.equal(
-      anotherTopicSchemas[0].version,
-      1,
-      `first version should be 1, got v${anotherTopicSchemas[0].version}`,
-    );
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children;
-    assert.equal(
-      extraTopicSchemas[0].version,
-      3,
-      `first version should be 3, got v${extraTopicSchemas[0].version}`,
-    );
   });
 
   it("generateSchemaSubjectGroups() should set the context value to include 'multiple-versions' if a subject has more than one schema", () => {
@@ -247,6 +181,8 @@ describe("Schema helper functions", () => {
     assert.equal(extraTopicIcon.id, new vscode.ThemeIcon(IconNames.OTHER_SUBJECT).id);
   });
 });
+
+*/
 
 describe("getSubjectIcon", () => {
   for (const [subject, expected] of [

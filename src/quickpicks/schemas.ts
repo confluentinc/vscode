@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ResourceLoader } from "../loaders/";
 import { getConnectionLabel } from "../models/resource";
-import { getSubjectIcon, SchemaType } from "../models/schema";
+import { getSubjectIcon, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
@@ -15,7 +15,7 @@ export async function schemaSubjectQuickPick(
 ): Promise<string | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
 
-  const schemaSubjects = await loader.getSubjects(schemaRegistry);
+  const schemaSubjects: Subject[] = await loader.getSubjects(schemaRegistry);
 
   // Convert to quickpick items, first entry to create a new schema / subject followed by a separator
   const newSchemaLabel = "Create new schema / subject";
@@ -35,8 +35,8 @@ export async function schemaSubjectQuickPick(
   // with the description as the subject name for easy return value.
   for (const subject of schemaSubjects) {
     subjectItems.push({
-      label: subject,
-      iconPath: getSubjectIcon(subject),
+      label: subject.name,
+      iconPath: getSubjectIcon(subject.name),
     });
   }
 
