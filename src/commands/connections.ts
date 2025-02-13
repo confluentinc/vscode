@@ -11,6 +11,8 @@ import { SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
+import { ConnectionSpecFromJSON } from "../clients/sidecar";
+import { FormConnectionType } from "../webview/direct-connect-form";
 
 const logger = new Logger("commands.connections");
 
@@ -97,7 +99,57 @@ export async function addSSLPemPath() {
 export async function createNewDirectConnection() {
   // ignore any arguments passed through this command function (e.g. if something was highlighted
   // in the Resources view) so we always open the "Create a new connection" form
-  openDirectConnectionForm(null);
+  // Open a quickpick to choose either from file or manual entry
+  const createMethod = await window.showQuickPick(
+    [
+      { label: "FILE", description: "Select a JSON file with connection details" },
+      { label: "FORM", description: "Enter connection details manually" },
+    ],
+    {
+      placeHolder: "How would you like to create a new connection?",
+      ignoreFocusOut: true,
+    },
+  );
+  if (createMethod?.label === "FILE") {
+    console.log("Opening file dialog");
+    const newSpecUris: Uri[] | undefined = await window.showOpenDialog({
+      openLabel: "Select",
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        "JSON Files": ["json"],
+      },
+    });
+
+    if (newSpecUris && newSpecUris.length > 0) {
+      try {
+        const newSpecPath: string = newSpecUris[0].fsPath;
+        console.log(newSpecPath);
+        // read the file and parse it as a JSON object
+        const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
+        const jsonSpec: CustomConnectionSpec = JSON.parse(fileContent.toString());
+        console.log("json", jsonSpec);
+        // validate the JSON object against the ConnectionSpec schema
+        const newSpec = {
+          ...ConnectionSpecFromJSON(jsonSpec),
+          id: "FILE_UPLOAD" as ConnectionId, // TODO change ConnectionId in form when saving, use this to differentiate?
+          formConnectionType: "Apache Kafka" as FormConnectionType,
+        };
+        console.log("new spec to open with:", newSpec);
+        // if valid, use it to open the Direct Connection form (will have the fields pre-filled)
+        openDirectConnectionForm(newSpec);
+        // if invalid, show an error message with the validation errors
+      } catch (error) {
+        console.log(error);
+        window.showErrorMessage("Error parsing spec file");
+        return;
+      }
+    }
+  } else {
+    console.log("else no file block");
+    openDirectConnectionForm(null);
+  }
 }
 
 export async function deleteDirectConnection(item: DirectEnvironment) {
