@@ -6,11 +6,11 @@ import { ConnectionId } from "./models/resource";
 import { FormConnectionType } from "./webview/direct-connect-form";
 
 describe("directConnect.ts", () => {
-  describe.only("getConnectionSpecFromFormData", () => {
+  describe("getConnectionSpecFromFormData", () => {
     it("should not include `schema_registry` if not provided", async () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Apache Kafka",
+        formconnectiontype: "Apache Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "None",
       };
@@ -25,7 +25,7 @@ describe("directConnect.ts", () => {
     it("should not include `kafka_cluster` if not provided", async () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Apache Kafka",
+        formconnectiontype: "Apache Kafka",
         "schema_registry.uri": "http://localhost:8081",
         "schema_registry.auth_type": "None",
       };
@@ -38,7 +38,7 @@ describe("directConnect.ts", () => {
     it("should return a valid CustomConnectionSpec with Basic auth credentials", () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Kafka",
+        formconnectiontype: "Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "Basic",
         "kafka_cluster.credentials.username": "user",
@@ -74,7 +74,7 @@ describe("directConnect.ts", () => {
     it("should return a valid CustomConnectionSpec with API key credentials", () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Kafka",
+        formconnectiontype: "Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "API",
         "kafka_cluster.credentials.api_key": "key",
@@ -110,7 +110,7 @@ describe("directConnect.ts", () => {
     it("should not include credentials if the auth type is None", () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Apache Kafka",
+        formconnectiontype: "Apache Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "None",
         "schema_registry.uri": "http://localhost:8081",
@@ -131,7 +131,7 @@ describe("directConnect.ts", () => {
     it("should not include truststore or keystore for kafka if paths are empty", () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Kafka",
+        formconnectiontype: "Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "None",
         "schema_registry.uri": "http://localhost:8081",
@@ -157,7 +157,7 @@ describe("directConnect.ts", () => {
     it("should not include truststore or keystore for schema if paths are empty", () => {
       const formData = {
         name: "Test Connection",
-        formConnectionType: "Kafka",
+        formconnectiontype: "Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "None",
         "schema_registry.uri": "http://localhost:8081",
