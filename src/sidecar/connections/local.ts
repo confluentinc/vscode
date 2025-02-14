@@ -45,6 +45,8 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
       schema_registry: {
         ...LOCAL_CONNECTION_SPEC.schema_registry,
         uri: schemaRegistryUri,
+        // disable SSL for local connections
+        ssl: { enabled: false },
       },
     };
   }
