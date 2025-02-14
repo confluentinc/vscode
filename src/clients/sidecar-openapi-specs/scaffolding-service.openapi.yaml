@@ -5,10 +5,6 @@ openapi: 3.0.0
 info:
   title: Scaffolding API
   version: 0.0.1
-  contact:
-    name: DTX
-    url: https://confluent.slack.com/app_redirect?channel=dtx-eng
-    email: dtx-eng@confluent.io
   x-api-id: 05ee8438-54db-4838-9df1-a3981492e4de
   x-api-group: scaffold/v1
   x-audience: external-public
@@ -19,10 +15,6 @@ info:
 servers:
   - url: https://api.confluent.cloud
     description: Confluent Cloud production
-  - url: https://api.stag.cpdev.cloud
-    description: Confluent Cloud staging
-  - url: https://api.devel.cpdev.cloud
-    description: Confluent Cloud development
 paths:
   /scaffold/v1/template-collections:
     x-lifecycle-stage: Early Access
