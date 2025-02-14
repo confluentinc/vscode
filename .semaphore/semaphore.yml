@@ -140,5 +140,5 @@ promotions:
       when: "result = 'passed' and branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
   - name: Third Party Notices
     pipeline_file: third-party-notices.yml
-    auto-promote:
+    auto_promote:
       when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
