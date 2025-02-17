@@ -14,7 +14,7 @@
       <div class="form-header">
         <h1
           class="heading"
-          data-text="this.spec() ? 'Edit connection details' : 'Create a new connection'"
+          data-text="this.editing() ? 'Edit connection details' : 'Create a new connection'"
         ></h1>
         <p class="form-description">
           Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
@@ -337,8 +337,8 @@
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             />
-            <span>SSL enabled</span></label
-          >
+            <span>SSL enabled</span>
+          </label>
           <template data-if="this.schemaSslEnabled()">
             <ssl-config
               data-prop-config="this.schemaSslConfig()"
@@ -363,7 +363,7 @@
           <input
             class="button"
             type="submit"
-            data-attr-value="this.spec() ? 'Update' : 'Save'"
+            data-attr-value="this.editing() ? 'Update' : 'Save'"
             data-attr-disabled="this.loading()"
           />
         </div>

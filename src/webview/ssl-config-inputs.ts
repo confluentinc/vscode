@@ -63,8 +63,6 @@ export class SslConfig extends HTMLElement {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.type === "checkbox" ? input.checked : input.value;
-    const value = input.value;
-    this.entries.set(name, value);
     this.entries.set(name, value.toString());
     this._internals.setFormValue(this.entries);
 
