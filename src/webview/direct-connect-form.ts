@@ -155,10 +155,13 @@ class DirectConnectFormViewModel extends ViewModel {
   }
   async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
+    const value = input.type === "checkbox" ? input.checked : input.value;
+
     // auth_type doesn't exist in spec; used to determine which credentials to include
     if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
-      await post("UpdateSpecValue", { inputName: input.name, inputValue: input.value });
+      await post("UpdateSpecValue", { inputName: input.name, inputValue: value });
     }
+
     switch (input.name) {
       case "platform":
         this.platformType(input.value as FormConnectionType);
@@ -245,8 +248,8 @@ class DirectConnectFormViewModel extends ViewModel {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.auth_type"] = "API";
       data["schema_registry.auth_type"] = "API"; // FIXME do we even use this in host?
-      data["kafka_cluster.ssl"] = "on";
-      data["schema_registry.ssl"] = "on";
+      data["kafka_cluster.ssl"] = "true";
+      data["schema_registry.ssl"] = "true";
     }
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
