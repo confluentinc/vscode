@@ -103,7 +103,6 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   let specUpdatedValues: Partial<CustomConnectionSpec> = {};
   function updateSpecValue(inputName: string, value: string) {
     setValueAtPath(specUpdatedValues, inputName, value);
-    console.log("Updated values: ", specUpdatedValues);
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
@@ -121,7 +120,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
       case "UpdateSpecValue":
-        updateSpecValue(body.inputName, body.inputValue);
+        updateSpecValue(body.inputName, body.inputValue.toString());
         return null satisfies MessageResponse<"UpdateSpecValue">;
     }
   };
@@ -144,11 +143,11 @@ export function getConnectionSpecFromFormData(
     spec.kafka_cluster = {
       bootstrap_servers: formData["kafka_cluster.bootstrap_servers"],
     };
-    if (formData["kafka_cluster.ssl.enabled"] === "on") {
+    if (formData["kafka_cluster.ssl.enabled"]) {
       spec.kafka_cluster.ssl = {
         ...spec.kafka_cluster.ssl,
         enabled: true,
-        verify_hostname: formData["kafka_cluster.ssl.verify_hostname"] === "on" ? true : false,
+        verify_hostname: formData["kafka_cluster.ssl.verify_hostname"],
       };
       if (formData["kafka_cluster.ssl.truststore.path"]) {
         spec.kafka_cluster.ssl = {
@@ -189,11 +188,11 @@ export function getConnectionSpecFromFormData(
     spec.schema_registry = {
       uri: formData["schema_registry.uri"],
     };
-    if (formData["schema_registry.ssl.enabled"] === "on") {
+    if (formData["schema_registry.ssl.enabled"]) {
       spec.schema_registry.ssl = {
         ...spec.schema_registry.ssl,
         enabled: true,
-        verify_hostname: formData["schema_registry.ssl.verify_hostname"] === "on" ? true : false,
+        verify_hostname: formData["schema_registry.ssl.verify_hostname"],
       };
       if (formData["schema_registry.ssl.truststore.path"]) {
         spec.schema_registry.ssl = {

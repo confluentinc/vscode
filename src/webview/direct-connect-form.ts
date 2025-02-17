@@ -64,7 +64,8 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
   });
   kafkaSslEnabled = this.derive(() => {
-    return this.spec()?.kafka_cluster?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+    if (this.spec()?.kafka_cluster?.ssl?.enabled === false) return false;
+    else return true;
   });
   kafkaSslConfig = this.derive(() => {
     return this.spec()?.kafka_cluster?.ssl || {};
@@ -95,7 +96,8 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.schemaCreds() ? "fakeplaceholdersecrethere" : "";
   });
   schemaSslEnabled = this.derive(() => {
-    return this.spec()?.schema_registry?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+    if (this.spec()?.schema_registry?.ssl?.enabled === false) return false;
+    else return true;
   });
   schemaSslConfig = this.derive(() => {
     return this.spec()?.schema_registry?.ssl || {};
@@ -104,7 +106,9 @@ class DirectConnectFormViewModel extends ViewModel {
   message = this.signal("");
   success = this.signal(false);
   loading = this.signal(false);
-
+  editing = this.derive(() => {
+    return this.spec()?.id ? true : false;
+  });
   /** Connection state & errors (displayed in UI after Test) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
   kafkaErrorMessage = this.signal<string | undefined>(undefined);
@@ -155,12 +159,15 @@ class DirectConnectFormViewModel extends ViewModel {
   }
   async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
+    const value = input.type === "checkbox" ? input.checked : input.value;
+
     // auth_type doesn't exist in spec; used to determine which credentials to include
     if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
-      await post("UpdateSpecValue", { inputName: input.name, inputValue: input.value });
+      await post("UpdateSpecValue", { inputName: input.name, inputValue: value.toString() });
     }
+
     switch (input.name) {
-      case "platform":
+      case "formconnectiontype":
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
           this.kafkaAuthType("API");
@@ -245,8 +252,8 @@ class DirectConnectFormViewModel extends ViewModel {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.auth_type"] = "API";
       data["schema_registry.auth_type"] = "API"; // FIXME do we even use this in host?
-      data["kafka_cluster.ssl"] = "on";
-      data["schema_registry.ssl"] = "on";
+      data["kafka_cluster.ssl"] = "true";
+      data["schema_registry.ssl"] = "true";
     }
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
