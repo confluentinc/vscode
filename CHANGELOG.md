@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
+  keystore and trustore settings
+
 ### Added
 
 - Progress indicator when producing large batches of messages to Kafka topics to improve visibility
