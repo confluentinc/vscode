@@ -102,9 +102,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
    */
   let specUpdatedValues: Partial<CustomConnectionSpec> = {};
   function updateSpecValue(inputName: string, value: string) {
-    console.log("sending update: ", inputName, value);
     setValueAtPath(specUpdatedValues, inputName, value);
-    console.log("Updated values: ", specUpdatedValues);
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
