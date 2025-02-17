@@ -23,7 +23,8 @@ export class SslConfig extends HTMLElement {
   configObj = this.os.signal<TLSConfig | undefined>(undefined);
 
   verifyHostname = this.os.derive(() => {
-    return this.configObj()?.verify_hostname || true;
+    if (this.configObj()?.verify_hostname === false) return false;
+    else return true;
   });
   truststorePath = this.os.derive(() => {
     return this.configObj()?.truststore?.path;
@@ -61,9 +62,12 @@ export class SslConfig extends HTMLElement {
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
+    const value = input.type === "checkbox" ? input.checked : input.value;
     const value = input.value;
     this.entries.set(name, value);
+    this.entries.set(name, value.toString());
     this._internals.setFormValue(this.entries);
+
     this.dispatchEvent(
       new CustomEvent("bubble", {
         detail: { inputName: name, inputValue: value },
@@ -81,8 +85,9 @@ export class SslConfig extends HTMLElement {
         type="checkbox"
         data-attr-id="this.inputId('verify_hostname')"
         data-attr-name="this.inputId('verify_hostname')"
-        data-attr-checked="this.verifyHostname() ? true : false"
-        data-on-change="this.updateValue(event)"
+        data-attr-checked="this.verifyHostname()"
+        data-on-change="this.updateValue(event);"
+        data-attr-value="this.verifyHostname()"
       />
       <span>Verify Server Hostname</span>
     </label>
