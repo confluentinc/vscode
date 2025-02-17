@@ -304,7 +304,7 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.uri": "http://localhost:8081",
-    "kafka_cluster.ssl.enabled": "on",
+    "kafka_cluster.ssl.enabled": "true",
   });
 });
 test("submits the form with namespaced ssl advanced config fields when filled", async ({
@@ -332,7 +332,6 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
-  await page.check("input[type=checkbox][name='kafka_cluster.ssl.verify_hostname']");
 
   await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
@@ -359,8 +358,7 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.uri": "",
-    "kafka_cluster.ssl.enabled": "on",
-    "kafka_cluster.ssl.verify_hostname": "on",
+    "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.ssl.keystore.key_password": "key-password",
     "kafka_cluster.ssl.keystore.password": "keystore-password",
     "kafka_cluster.ssl.keystore.path": "/path/to/keystore",
@@ -498,7 +496,7 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
     "schema_registry.uri": "",
-    "kafka_cluster.ssl.enabled": "on",
+    "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.ssl.keystore.password": "new-keystore-password",
     "kafka_cluster.ssl.keystore.path": "/new/path/to/keystore.jks",
     "kafka_cluster.ssl.truststore.password": "",

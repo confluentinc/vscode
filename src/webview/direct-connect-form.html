@@ -14,7 +14,7 @@
       <div class="form-header">
         <h1
           class="heading"
-          data-text="this.spec() ? 'Edit connection details' : 'Create a new connection'"
+          data-text="this.editing() ? 'Edit connection details' : 'Create a new connection'"
         ></h1>
         <p class="form-description">
           Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
@@ -202,7 +202,8 @@
               id="kafka_cluster.ssl.enabled"
               name="kafka_cluster.ssl.enabled"
               data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the cluster?'"
-              data-attr-checked="this.kafkaSslEnabled() ? true : false"
+              data-attr-checked="this.kafkaSslEnabled()"
+              data-attr-value="this.kafkaSslEnabled()"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             /><span>SSL enabled</span></label
@@ -331,12 +332,13 @@
               id="schema_registry.ssl.enabled"
               name="schema_registry.ssl.enabled"
               data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the registry?'"
-              data-attr-checked="this.schemaSslEnabled() ? true : false"
+              data-attr-checked="this.schemaSslEnabled()"
+              data-attr-value="this.schemaSslEnabled()"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             />
-            <span>SSL enabled</span></label
-          >
+            <span>SSL enabled</span>
+          </label>
           <template data-if="this.schemaSslEnabled()">
             <ssl-config
               data-prop-config="this.schemaSslConfig()"
@@ -361,7 +363,7 @@
           <input
             class="button"
             type="submit"
-            data-attr-value="this.spec() ? 'Update' : 'Save'"
+            data-attr-value="this.editing() ? 'Update' : 'Save'"
             data-attr-disabled="this.loading()"
           />
         </div>
