@@ -28,8 +28,6 @@ blocks:
       prologue:
         commands:
           - checkout
-          - sem-version java 21
-          - . vault-setup
       jobs:
       - name: "Update third party notices PR"
         dependencies: []
