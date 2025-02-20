@@ -132,6 +132,7 @@ describe("ResourceViewProvider methods", () => {
 
 describe("ResourceViewProvider loading functions", () => {
   let sandbox: sinon.SinonSandbox;
+  let setContextValueStub: sinon.SinonStub;
 
   before(async () => {
     // activate the extension once before this test suite runs
@@ -140,6 +141,7 @@ describe("ResourceViewProvider loading functions", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
   });
 
   afterEach(() => {
@@ -193,6 +195,16 @@ describe("ResourceViewProvider loading functions", () => {
     assert.equal(result.collapsibleState, TreeItemCollapsibleState.Expanded);
     assert.equal(result.description, TEST_LOCAL_KAFKA_CLUSTER.uri);
     assert.deepStrictEqual(result.children, [TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY]);
+    sinon.assert.calledWith(
+      setContextValueStub,
+      contextValues.ContextValues.localKafkaClusterAvailable,
+      true,
+    );
+    sinon.assert.calledWith(
+      setContextValueStub,
+      contextValues.ContextValues.localSchemaRegistryAvailable,
+      true,
+    );
   });
 
   it("loadLocalResources() should return a Local placeholder when no clusters are discoverable", async () => {
@@ -207,6 +219,34 @@ describe("ResourceViewProvider loading functions", () => {
     assert.equal(result.collapsibleState, TreeItemCollapsibleState.None);
     assert.equal(result.description, "(Not running)");
     assert.deepStrictEqual(result.children, []);
+    sinon.assert.calledWith(
+      setContextValueStub,
+      contextValues.ContextValues.localKafkaClusterAvailable,
+      false,
+    );
+    sinon.assert.calledWith(
+      setContextValueStub,
+      contextValues.ContextValues.localSchemaRegistryAvailable,
+      false,
+    );
+  });
+
+  it("loadLocalResources() should not set context values to true when no local resources are found", async () => {
+    // empty local environment
+    sandbox.stub(local, "getLocalResources").resolves([TEST_LOCAL_ENVIRONMENT]);
+
+    await loadLocalResources();
+
+    sinon.assert.calledWith(
+      setContextValueStub,
+      contextValues.ContextValues.localKafkaClusterAvailable,
+      false,
+    );
+    sinon.assert.calledWith(
+      setContextValueStub,
+      contextValues.ContextValues.localSchemaRegistryAvailable,
+      false,
+    );
   });
 
   it("loadDirectResources() should return an empty array when no direct connections exist", async () => {
