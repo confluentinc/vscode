@@ -1,5 +1,6 @@
 /** Sample test suite spellings of complex websocket messages */
 
+import { CCLOUD_AUTH_CALLBACK_URI } from "../../../src/constants";
 import { ConnectionEventAction, Message, MessageType } from "../../../src/ws/messageTypes";
 
 export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTION_EVENT> = {
@@ -25,7 +26,7 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
         type: "CCLOUD",
         ccloud_config: {
           organization_id: undefined,
-          ide_auth_callback_uri: "vscode://confluentinc.vscode-confluent/authCallback",
+          ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
         },
         kafka_cluster: undefined,
         local_config: undefined,
