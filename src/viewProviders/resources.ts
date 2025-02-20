@@ -550,7 +550,7 @@ export async function loadLocalResources(): Promise<
     });
     // update the UI based on whether or not we have local resources available
     await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
+      setContextValue(ContextValues.localKafkaClusterAvailable, localKafkaClusters.length > 0),
       setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
     ]);
     // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
