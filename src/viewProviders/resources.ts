@@ -535,24 +535,20 @@ export async function loadLocalResources(): Promise<
 
   const localEnvs: LocalEnvironment[] = await getLocalResources();
   logger.debug(`got ${localEnvs.length} local environment(s) from GQL query`);
+
+  const localKafkaClusters: LocalKafkaCluster[] = [];
+  const localSchemaRegistries: LocalSchemaRegistry[] = [];
   if (localEnvs.length > 0) {
     const connectedId = "local-container-connected";
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
     // unpack the local resources to more easily update the UI elements
-    const localKafkaClusters: LocalKafkaCluster[] = [];
-    const localSchemaRegistries: LocalSchemaRegistry[] = [];
     localEnvs.forEach((env: LocalEnvironment) => {
       localKafkaClusters.push(...env.kafkaClusters);
       if (env.schemaRegistry) {
         localSchemaRegistries.push(env.schemaRegistry);
       }
     });
-    // update the UI based on whether or not we have local resources available
-    await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
-      setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
-    ]);
     // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
     localContainerItem.id = `local-connected-${EXTENSION_VERSION}`;
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
@@ -563,6 +559,12 @@ export async function loadLocalResources(): Promise<
     getResourceManager().setLocalKafkaClusters(localKafkaClusters);
     localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
   }
+
+  // update the UI based on whether or not we have local resources available
+  await Promise.all([
+    setContextValue(ContextValues.localKafkaClusterAvailable, localKafkaClusters.length > 0),
+    setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
+  ]);
 
   return localContainerItem;
 }
