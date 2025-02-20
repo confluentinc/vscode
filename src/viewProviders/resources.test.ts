@@ -231,7 +231,7 @@ describe("ResourceViewProvider loading functions", () => {
     );
   });
 
-  it("loadLocalResources() should not fire context value updates when no local resources are found", async () => {
+  it("loadLocalResources() should not set context values to true when no local resources are found", async () => {
     // empty local environment
     sandbox.stub(local, "getLocalResources").resolves([TEST_LOCAL_ENVIRONMENT]);
 
