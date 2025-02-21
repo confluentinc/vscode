@@ -117,27 +117,4 @@ collect-notices-vsix:
 # to the PR if the version check fails.
 .PHONY: check-sidecar-versions
 check-sidecar-versions:
-	@TEMP_OUTPUT=$$(mktemp); \
-	COLORED_OUTPUT=$$(mktemp); \
-	./scripts/check-sidecar-versions.sh > "$$COLORED_OUTPUT" 2>&1; \
-	EXIT_CODE=$$?; \
-	cat "$$COLORED_OUTPUT" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" > "$$TEMP_OUTPUT"; \
-	if [ "$$EXIT_CODE" -ne 0 ] && [ "$$CI" = "true" ] && [ -n "$$SEMAPHORE_GIT_PR_NUMBER" ]; then \
-		echo "Version check failed. Posting comment to PR $$SEMAPHORE_GIT_PR_NUMBER"; \
-		gh api \
-			--method POST \
-			-H "Accept: application/vnd.github+json" \
-			"/repos/confluentinc/vscode/issues/$$SEMAPHORE_GIT_PR_NUMBER/comments" \
-			-f body="❌ **Sidecar Version Check Failed** ([$$SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))
-
-\`\`\`
-$$(cat "$$TEMP_OUTPUT")
-\`\`\`
-
-Either:
-1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or
-2. Run \`gulp apigen\` to regenerate the client code"; \
-	fi; \
-	cat "$$COLORED_OUTPUT"; \
-	rm -f "$$TEMP_OUTPUT" "$$COLORED_OUTPUT"; \
-	exit "$$EXIT_CODE"
+	@./scripts/check-sidecar-versions.sh
