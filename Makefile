@@ -39,10 +39,10 @@ validate-bump:
 .PHONY: bump-microversion
 bump-microversion:
 	export VERSION_OVERRIDE=$(shell cat ./.versions/next.txt) ;\
-    export VERSION_POST=$(MICROVERSION_POST) ;\
-    export BUMP=none ;\
-    export SKIP_TAG_RELEASE=true ;\
-    $(MAKE) release-ci
+		export VERSION_POST=$(MICROVERSION_POST) ;\
+		export BUMP=none ;\
+		export SKIP_TAG_RELEASE=true ;\
+		$(MAKE) release-ci
 
 .PHONY: release-current-version
 release-current-version:
@@ -112,3 +112,20 @@ update-third-party-notices-pr:
 .PHONY: collect-notices-vsix
 collect-notices-vsix:
 	@./scripts/notices/collect-notices-vsix.sh
+
+.PHONY: check-sidecar-versions
+check-sidecar-versions:
+	@TEMP_OUTPUT=$$(mktemp) && \
+		./scripts/check-sidecar-versions.sh > $$TEMP_OUTPUT 2>&1; \
+		EXIT_CODE=$$?; \
+		if [ $$EXIT_CODE -ne 0 ] && [ "$$CI" = "true" ] && [ -n "$$SEMAPHORE_GIT_PR_NUMBER" ]; then \
+			echo "Version check failed. Posting comment to PR #$$SEMAPHORE_GIT_PR_NUMBER"; \
+			gh api \
+				--method POST \
+				-H "Accept: application/vnd.github+json" \
+				/repos/confluentinc/vscode/issues/$$SEMAPHORE_GIT_PR_NUMBER/comments \
+				-f body="❌ **Sidecar Version Check Failed** ([commit](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))\n\n\`\`\`\n$$(cat $$TEMP_OUTPUT)\n\`\`\`\n\nPlease ensure the sidecar version in \`.versions/ide-sidecar.txt\` matches both the OpenAPI spec and generated client code versions."; \
+		fi; \
+		cat $$TEMP_OUTPUT; \
+		rm -f $$TEMP_OUTPUT; \
+		exit $$EXIT_CODE
