@@ -1,4 +1,5 @@
 apis/ConnectionsResourceApi.ts
+apis/DefaultApi.ts
 apis/FeatureFlagsApi.ts
 apis/HandshakeResourceApi.ts
 apis/KafkaConsumeResourceApi.ts
@@ -9,6 +10,7 @@ apis/PreferencesResourceApi.ts
 apis/VersionResourceApi.ts
 apis/index.ts
 index.ts
+models/Action.ts
 models/ApiKeyAndSecret.ts
 models/AuthError.ts
 models/AuthErrors.ts
@@ -45,9 +47,11 @@ models/PartitionOffset.ts
 models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
+models/RBACRequest.ts
 models/SchemaRegistryConfig.ts
 models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
+models/Scope.ts
 models/ScramCredentials.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
