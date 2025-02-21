@@ -116,16 +116,20 @@ collect-notices-vsix:
 .PHONY: check-sidecar-versions
 check-sidecar-versions:
 	@TEMP_OUTPUT=$$(mktemp) && \
-		./scripts/check-sidecar-versions.sh > $$TEMP_OUTPUT 2>&1; \
+		COLORED_OUTPUT=$$(mktemp) && \
+		./scripts/check-sidecar-versions.sh > $$COLORED_OUTPUT 2>&1; \
 		EXIT_CODE=$$?; \
+		# Strip ANSI color codes for GitHub comment
+		sed 's/\x1b\[[0-9;]*m//g' $$COLORED_OUTPUT > $$TEMP_OUTPUT; \
 		if [ $$EXIT_CODE -ne 0 ] && [ "$$CI" = "true" ] && [ -n "$$SEMAPHORE_GIT_PR_NUMBER" ]; then \
 			echo "Version check failed. Posting comment to PR #$$SEMAPHORE_GIT_PR_NUMBER"; \
 			gh api \
 				--method POST \
 				-H "Accept: application/vnd.github+json" \
 				/repos/confluentinc/vscode/issues/$$SEMAPHORE_GIT_PR_NUMBER/comments \
-				-f body="❌ **Sidecar Version Check Failed** ([commit](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))\n\n\`\`\`\n$$(cat $$TEMP_OUTPUT)\n\`\`\`\n\nPlease ensure the sidecar version in \`.versions/ide-sidecar.txt\` matches both the OpenAPI spec and generated client code versions."; \
+				-f body="❌ **Sidecar Version Check Failed** ([$$SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))\n\n\`\`\`\n$$(cat $$TEMP_OUTPUT)\n\`\`\`\n\nEither:\n1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or\n2. Run \`gulp apigen\` to regenerate the client code"; \
 		fi; \
-		cat $$TEMP_OUTPUT; \
-		rm -f $$TEMP_OUTPUT; \
+		# Show colored output in terminal
+		cat $$COLORED_OUTPUT; \
+		rm -f $$TEMP_OUTPUT $$COLORED_OUTPUT; \
 		exit $$EXIT_CODE
