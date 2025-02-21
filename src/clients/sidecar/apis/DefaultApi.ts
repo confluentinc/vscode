@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Confluent DTX Outpost API
- * API for the Confluent DTX Outpost, part of the Confluent extension for VS Code
+ * Confluent ide-sidecar API
+ * API for the Confluent ide-sidecar, part of Confluent for VS Code
  *
  * The version of the OpenAPI document: 1.0.1
  * Contact: vscode@confluent.io
@@ -13,6 +13,12 @@
  */
 
 import * as runtime from "../runtime";
+import type { RBACRequest } from "../models/index";
+import { RBACRequestFromJSON, RBACRequestToJSON } from "../models/index";
+
+export interface ApiMetadataSecurityV2alpha1AuthorizePutRequest {
+  RBACRequest: RBACRequest;
+}
 
 /**
  *
@@ -20,31 +26,47 @@ import * as runtime from "../runtime";
 export class DefaultApi extends runtime.BaseAPI {
   /**
    */
-  async gatewayV1CallbackGetRaw(
+  async apiMetadataSecurityV2alpha1AuthorizePutRaw(
+    requestParameters: ApiMetadataSecurityV2alpha1AuthorizePutRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<void>> {
+  ): Promise<runtime.ApiResponse<Array<string>>> {
+    if (requestParameters["RBACRequest"] == null) {
+      throw new runtime.RequiredError(
+        "RBACRequest",
+        'Required parameter "RBACRequest" was null or undefined when calling apiMetadataSecurityV2alpha1AuthorizePut().',
+      );
+    }
+
     const queryParameters: any = {};
 
     const headerParameters: runtime.HTTPHeaders = {};
 
+    headerParameters["Content-Type"] = "application/json";
+
     const response = await this.request(
       {
-        path: `/gateway/v1/callback`,
-        method: "GET",
+        path: `/api/metadata/security/v2alpha1/authorize`,
+        method: "PUT",
         headers: headerParameters,
         query: queryParameters,
+        body: RBACRequestToJSON(requestParameters["RBACRequest"]),
       },
       initOverrides,
     );
 
-    return new runtime.VoidApiResponse(response);
+    return new runtime.JSONApiResponse<any>(response);
   }
 
   /**
    */
-  async gatewayV1CallbackGet(
+  async apiMetadataSecurityV2alpha1AuthorizePut(
+    requestParameters: ApiMetadataSecurityV2alpha1AuthorizePutRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<void> {
-    await this.gatewayV1CallbackGetRaw(initOverrides);
+  ): Promise<Array<string>> {
+    const response = await this.apiMetadataSecurityV2alpha1AuthorizePutRaw(
+      requestParameters,
+      initOverrides,
+    );
+    return await response.value();
   }
 }
