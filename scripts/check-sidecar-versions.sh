@@ -23,39 +23,20 @@ NC='\033[0m'
 # Enable color output
 export TERM=xterm-color
 
-# Function to capture and post output
-handle_version_mismatch() {
-    local TEMP_OUTPUT=$(mktemp)
-    local MESSAGE="$1"
-    local INSTRUCTION="$2"
+# Message templates
+PR_COMMENT_HEADER="#### Sidecar Version Check Failed (https://github.com/confluentinc/vscode/commit/${SEMAPHORE_GIT_SHA})"
+OPENAPI_MISMATCH_MSG="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${OPENAPI_SPEC_PATH}"
+CLIENT_MISMATCH_MSG="Make sure to run \`gulp apigen\` to regenerate sidecar client code"
 
-    # Generate clean output first (no colors)
-    {
-        printf "❌ %s\n\n" "$MESSAGE"
-        printf "%s\n\n" "$INSTRUCTION"
-        printf "%s: %s\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
-        printf "%s: %s\n" "$3" "$4"
-        if [ -n "$5" ] && [ -n "$6" ]; then
-            printf "%s: %s\n" "$5" "$6"
-        fi
-    } > "$TEMP_OUTPUT"
-
-    # Show colored output in terminal with added colors
-    {
-        printf "❌ ${RED}%s${NC}\n\n" "$MESSAGE"
-        if [[ "$INSTRUCTION" == *"gulp apigen"* ]]; then
-            printf "Make sure to run '${BLUE}gulp apigen${NC}' to regenerate sidecar client code.\n\n"
-        else
-            printf "Make sure to copy ${GRAY}%s${NC} to ${BLUE}%s${NC}.\n\n" \
-                "https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml" \
-                "$OPENAPI_SPEC_PATH"
-        fi
-        printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
-        printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$3" "$4"
-        if [ -n "$5" ] && [ -n "$6" ]; then
-            printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$5" "$6"
-        fi
-    }
+# Compare versions: sidecar vs OpenAPI spec vs client code
+if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
+    # Show colored output in terminal
+    printf "❌ ${RED}OpenAPI spec version mismatch!${NC}\n\n"
+    printf "Make sure to copy ${GRAY}%s${NC} to ${BLUE}%s${NC}.\n\n" \
+        "https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml" \
+        "$OPENAPI_SPEC_PATH"
+    printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
+    printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
 
     # Post GitHub comment if in CI
     if [ "$CI" = "true" ] && [ -n "$SEMAPHORE_GIT_PR_NUMBER" ]; then
@@ -64,40 +45,41 @@ handle_version_mismatch() {
             --method POST \
             -H "Accept: application/vnd.github+json" \
             "/repos/confluentinc/vscode/issues/$SEMAPHORE_GIT_PR_NUMBER/comments" \
-            -f body="**Sidecar Version Check Failed** (https://github.com/confluentinc/vscode/commit/$SEMAPHORE_GIT_SHA)
+            -f body="${PR_COMMENT_HEADER}
 
-\`\`\`
-$(cat "$TEMP_OUTPUT")
-\`\`\`
+OpenAPI spec version mismatch:
+- ${SIDECAR_VERSION_PATH}: ${SIDECAR_VERSION} :white_check_mark:
+- ${OPENAPI_SPEC_PATH}: ${OPENAPI_SPEC_VERSION} :x:
 
-Either:
-1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or
-2. Run \`gulp apigen\` to regenerate the client code"
+${OPENAPI_MISMATCH_MSG}"
     fi
-
-    rm -f "$TEMP_OUTPUT"
     exit 1
-}
 
-# Compare versions: sidecar vs OpenAPI spec vs client code
-if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
-    MESSAGE="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${OPENAPI_SPEC_PATH}."
-    
-    handle_version_mismatch \
-        "OpenAPI spec version mismatch!" \
-        "$MESSAGE" \
-        "$OPENAPI_SPEC_PATH" \
-        "$OPENAPI_SPEC_VERSION"
 elif [ "$OPENAPI_SPEC_VERSION" != "$CLIENT_VERSION" ]; then
-    MESSAGE="Make sure to run 'gulp apigen' to regenerate sidecar client code."
+    # Show colored output in terminal
+    printf "❌ ${RED}Client code version mismatch!${NC}\n\n"
+    printf "Make sure to run '${BLUE}gulp apigen${NC}' to regenerate sidecar client code.\n\n"
+    printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
+    printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
+    printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$CLIENT_CODE_PATH" "$CLIENT_VERSION"
 
-    handle_version_mismatch \
-        "Client code version mismatch!" \
-        "$MESSAGE" \
-        "$OPENAPI_SPEC_PATH" \
-        "$OPENAPI_SPEC_VERSION" \
-        "$CLIENT_CODE_PATH" \
-        "$CLIENT_VERSION"
+    # Post GitHub comment if in CI
+    if [ "$CI" = "true" ] && [ -n "$SEMAPHORE_GIT_PR_NUMBER" ]; then
+        echo "Version check failed. Posting comment to PR #$SEMAPHORE_GIT_PR_NUMBER"
+        gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/confluentinc/vscode/issues/$SEMAPHORE_GIT_PR_NUMBER/comments" \
+            -f body="${PR_COMMENT_HEADER}
+
+Client code version mismatch:
+- ${SIDECAR_VERSION_PATH}: ${SIDECAR_VERSION} :white_check_mark:
+- ${OPENAPI_SPEC_PATH}: ${OPENAPI_SPEC_VERSION} :white_check_mark:
+- ${CLIENT_CODE_PATH}: ${CLIENT_VERSION} :x:
+
+${CLIENT_MISMATCH_MSG}"
+    fi
+    exit 1
 fi
 
 printf "✅ All versions match: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION"
