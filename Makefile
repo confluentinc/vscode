@@ -112,3 +112,7 @@ update-third-party-notices-pr:
 .PHONY: collect-notices-vsix
 collect-notices-vsix:
 	@./scripts/notices/collect-notices-vsix.sh
+
+.PHONY: check-sidecar-versions
+check-sidecar-versions:
+	@./scripts/check-sidecar-versions.sh
