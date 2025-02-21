@@ -28,7 +28,18 @@ handle_version_mismatch() {
     local TEMP_OUTPUT=$(mktemp)
     local MESSAGE="$1"
 
-    # Capture colored output first
+    # Generate clean output first (no colors)
+    {
+        printf "❌ %s\n\n" "$MESSAGE"
+        printf "%s\n\n" "$2" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g"
+        printf "%s: %s\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
+        printf "%s: %s\n" "$3" "$(echo "$4" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g")"
+        if [ -n "$5" ] && [ -n "$6" ]; then
+            printf "%s: %s\n" "$5" "$(echo "$6" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g")"
+        fi
+    } > "$TEMP_OUTPUT"
+
+    # Show colored output in terminal
     {
         printf "❌ ${RED}%s${NC}\n\n%s\n\n" "$MESSAGE" "$2"
         printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
@@ -36,7 +47,7 @@ handle_version_mismatch() {
         if [ -n "$5" ] && [ -n "$6" ]; then
             printf "${GRAY}%s${NC}: %s${NC}\n" "$5" "$6"
         fi
-    } | tee >(sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" > "$TEMP_OUTPUT")
+    }
 
     # Post GitHub comment if in CI
     if [ "$CI" = "true" ] && [ -n "$SEMAPHORE_GIT_PR_NUMBER" ]; then
