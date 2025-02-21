@@ -45,7 +45,7 @@ handle_version_mismatch() {
             --method POST \
             -H "Accept: application/vnd.github+json" \
             "/repos/confluentinc/vscode/issues/$SEMAPHORE_GIT_PR_NUMBER/comments" \
-            -f body="❌ **Sidecar Version Check Failed** ([failing commit $SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$SEMAPHORE_GIT_SHA))
+            -f body="**Sidecar Version Check Failed** (https://github.com/confluentinc/vscode/commit/$SEMAPHORE_GIT_SHA)
 
 \`\`\`
 $(cat "$TEMP_OUTPUT")
