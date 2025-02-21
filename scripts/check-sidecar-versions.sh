@@ -31,7 +31,7 @@ CLIENT_CODE_LINK="[runtime.ts](${GH_PR_PATH_PREFIX}/${CLIENT_CODE_PATH})"
 
 # Message templates
 PR_COMMENT_HEADER="### Sidecar Version Check Failed (https://github.com/confluentinc/vscode/commit/${SEMAPHORE_GIT_PR_SHA})"
-OPENAPI_MISMATCH_MSG="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${IDE_SIDECAR_LINK}"
+OPENAPI_MISMATCH_MSG="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${OPENAPI_SPEC_LINK}"
 CLIENT_MISMATCH_MSG="Make sure to run \`gulp apigen\` to regenerate sidecar client code"
 
 # Compare versions: sidecar vs OpenAPI spec vs client code
