@@ -12,18 +12,9 @@
  * Do not edit the class manually.
  */
 
+import type { Connection, ConnectionSpec, ConnectionsList } from "../models/index";
+import { ConnectionFromJSON, ConnectionSpecToJSON, ConnectionsListFromJSON } from "../models/index";
 import * as runtime from "../runtime";
-import type { Connection, ConnectionSpec, ConnectionsList, Failure } from "../models/index";
-import {
-  ConnectionFromJSON,
-  ConnectionToJSON,
-  ConnectionSpecFromJSON,
-  ConnectionSpecToJSON,
-  ConnectionsListFromJSON,
-  ConnectionsListToJSON,
-  FailureFromJSON,
-  FailureToJSON,
-} from "../models/index";
 
 export interface GatewayV1ConnectionsIdDeleteRequest {
   id: string;
