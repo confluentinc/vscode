@@ -27,14 +27,14 @@ export TERM=xterm-color
 # Compare versions: sidecar vs OpenAPI spec vs client code
 if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
     printf "❌ ${RED}OpenAPI spec version mismatch!${NC}\n\nMake sure to copy ${GRAY}https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml${NC} to ${BLUE}%s${NC}.\n\n" "$OPENAPI_SPEC_PATH"
-    printf "${GRAY}%s${NC} -> ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
-    printf "${GRAY}%s${NC} -> ${RED}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
+    printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
+    printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
     exit 1
 elif [ "$OPENAPI_SPEC_VERSION" != "$CLIENT_VERSION" ]; then
     printf "❌ ${RED}Client code version mismatch!${NC}\n\nMake sure to run '${BLUE}gulp apigen${NC}' to regenerate sidecar client code.\n\n"
-    printf "${GRAY}%s${NC} -> ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
-    printf "${GRAY}%s${NC} -> ${GREEN}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
-    printf "${GRAY}%s${NC} -> ${RED}%s${NC}\n" "$CLIENT_CODE_PATH" "$CLIENT_VERSION"
+    printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
+    printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
+    printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$CLIENT_CODE_PATH" "$CLIENT_VERSION"
     exit 1
 fi
 
