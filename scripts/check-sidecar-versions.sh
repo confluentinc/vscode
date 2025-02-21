@@ -27,15 +27,17 @@ export TERM=xterm-color
 handle_version_mismatch() {
     local TEMP_OUTPUT=$(mktemp)
     local MESSAGE="$1"
+    # Strip color codes from the second argument
+    local CLEAN_MESSAGE="$(echo "$2" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g")"
 
     # Generate clean output first (no colors)
     {
         printf "❌ %s\n\n" "$MESSAGE"
-        printf "%s\n\n" "$2" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g"
+        printf "%s\n\n" "$CLEAN_MESSAGE"
         printf "%s: %s\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
-        printf "%s: %s\n" "$3" "$(echo "$4" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g")"
+        printf "%s: %s\n" "$3" "${4//\033[*([0-9;])m/}"
         if [ -n "$5" ] && [ -n "$6" ]; then
-            printf "%s: %s\n" "$5" "$(echo "$6" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g")"
+            printf "%s: %s\n" "$5" "${6//\033[*([0-9;])m/}"
         fi
     } > "$TEMP_OUTPUT"
 
