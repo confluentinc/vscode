@@ -28,7 +28,11 @@ PR_COMMENT_HEADER="### Sidecar Version Check Failed (https://github.com/confluen
 OPENAPI_MISMATCH_MSG="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${OPENAPI_SPEC_PATH}"
 CLIENT_MISMATCH_MSG="Make sure to run \`gulp apigen\` to regenerate sidecar client code"
 
+# GitHub PR links
 GH_PR_PATH_PREFIX=https://github.com/confluentinc/vscode/blob/${SEMAPHORE_GIT_SHA}
+IDE_SIDECAR_LINK="[ide-sidecar.txt](${GH_PR_PATH_PREFIX}/${SIDECAR_VERSION_PATH})"
+OPENAPI_SPEC_LINK="[sidecar.openapi.yaml](${GH_PR_PATH_PREFIX}/${OPENAPI_SPEC_PATH})"
+CLIENT_CODE_LINK="[runtime.ts](${GH_PR_PATH_PREFIX}/${CLIENT_CODE_PATH})"
 
 # Compare versions: sidecar vs OpenAPI spec vs client code
 if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
@@ -36,7 +40,7 @@ if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
     printf "❌ ${RED}OpenAPI spec version mismatch!${NC}\n\n"
     printf "Make sure to copy ${GRAY}%s${NC} to ${BLUE}%s${NC}.\n\n" \
         "https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml" \
-        "${GH_PR_PATH_PREFIX}/${OPENAPI_SPEC_PATH}"
+        "$IDE_SIDECAR_LINK"
     printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
     printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
 
@@ -50,8 +54,8 @@ if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
             -f body="${PR_COMMENT_HEADER}
 
 OpenAPI spec version mismatch:
-- ${GH_PR_PATH_PREFIX}/${SIDECAR_VERSION_PATH}: \`${SIDECAR_VERSION}\` :white_check_mark:
-- ${GH_PR_PATH_PREFIX}/${OPENAPI_SPEC_PATH}: \`${OPENAPI_SPEC_VERSION}\` :x:
+- ${IDE_SIDECAR_LINK}: \`${SIDECAR_VERSION}\` :white_check_mark:
+- ${OPENAPI_SPEC_LINK}: \`${OPENAPI_SPEC_VERSION}\` :x:
 
 ${OPENAPI_MISMATCH_MSG}"
     fi
@@ -75,9 +79,9 @@ elif [ "$OPENAPI_SPEC_VERSION" != "$CLIENT_VERSION" ]; then
             -f body="${PR_COMMENT_HEADER}
 
 Client code version mismatch:
-- ${GH_PR_PATH_PREFIX}/${SIDECAR_VERSION_PATH}: \`${SIDECAR_VERSION}\` :white_check_mark:
-- ${GH_PR_PATH_PREFIX}/${OPENAPI_SPEC_PATH}: \`${OPENAPI_SPEC_VERSION}\` :white_check_mark:
-- ${GH_PR_PATH_PREFIX}/${CLIENT_CODE_PATH}: \`${CLIENT_VERSION}\` :x:
+- ${IDE_SIDECAR_LINK}: \`${SIDECAR_VERSION}\` :white_check_mark:
+- ${OPENAPI_SPEC_LINK}: \`${OPENAPI_SPEC_VERSION}\` :white_check_mark:
+- ${CLIENT_CODE_LINK}: \`${CLIENT_VERSION}\` :x:
 
 ${CLIENT_MISMATCH_MSG}"
     fi
