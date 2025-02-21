@@ -39,10 +39,10 @@ validate-bump:
 .PHONY: bump-microversion
 bump-microversion:
 	export VERSION_OVERRIDE=$(shell cat ./.versions/next.txt) ;\
-    export VERSION_POST=$(MICROVERSION_POST) ;\
-    export BUMP=none ;\
-    export SKIP_TAG_RELEASE=true ;\
-    $(MAKE) release-ci
+		export VERSION_POST=$(MICROVERSION_POST) ;\
+		export BUMP=none ;\
+		export SKIP_TAG_RELEASE=true ;\
+		$(MAKE) release-ci
 
 .PHONY: release-current-version
 release-current-version:
@@ -112,3 +112,9 @@ update-third-party-notices-pr:
 .PHONY: collect-notices-vsix
 collect-notices-vsix:
 	@./scripts/notices/collect-notices-vsix.sh
+
+# Captures the output of the version check, strips away any ANSI escape codes, and posts a comment
+# to the PR if the version check fails.
+.PHONY: check-sidecar-versions
+check-sidecar-versions:
+	@./scripts/check-sidecar-versions.sh
