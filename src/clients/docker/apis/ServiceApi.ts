@@ -424,10 +424,9 @@ export class ServiceApi extends runtime.BaseAPI {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ServiceUpdateOperationRegistryAuthFromEnum = {
-  Spec: "spec",
-  PreviousSpec: "previous-spec",
-} as const;
-export type ServiceUpdateOperationRegistryAuthFromEnum =
-  (typeof ServiceUpdateOperationRegistryAuthFromEnum)[keyof typeof ServiceUpdateOperationRegistryAuthFromEnum];
+export enum ServiceUpdateOperationRegistryAuthFromEnum {
+  Spec = "spec",
+  PreviousSpec = "previous-spec",
+}
