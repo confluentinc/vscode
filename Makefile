@@ -120,7 +120,7 @@ check-sidecar-versions:
 		./scripts/check-sidecar-versions.sh > $$COLORED_OUTPUT 2>&1; \
 		EXIT_CODE=$$?; \
 		# Strip ANSI color codes for GitHub comment
-		sed 's/\x1b\[[0-9;]*m//g' $$COLORED_OUTPUT > $$TEMP_OUTPUT; \
+		cat "$$COLORED_OUTPUT" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" > "$$TEMP_OUTPUT"; \
 		if [ $$EXIT_CODE -ne 0 ] && [ "$$CI" = "true" ] && [ -n "$$SEMAPHORE_GIT_PR_NUMBER" ]; then \
 			echo "Version check failed. Posting comment to PR #$$SEMAPHORE_GIT_PR_NUMBER"; \
 			gh api \
