@@ -100,7 +100,7 @@ export async function logError(
 }
 
 interface ErrorInfo {
-  e: unknown;
+  error: Error;
   message: string;
   errorContext: Record<string, string | number | boolean | null | undefined>;
   responseStatusCode: number | undefined;
@@ -113,51 +113,52 @@ export async function extractErrorInformation(
   if (!(e instanceof Error)) {
     return;
   }
+  const error = e as Error;
 
   let message = "";
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
-  let responseStatusCode: number | undefined = undefined;
+  let responseStatusCode: number | undefined;
 
-  if ((e as any).response) {
+  if ((error as AnyResponseError).response) {
     // one of our ResponseError types, attempt to extract more information before logging
-    const error = e as AnyResponseError;
-    const errorBody = await error.response.clone().text();
+    const responseError = e as AnyResponseError;
+    const resp: Response = responseError.response;
+    const errorBody: string = await resp.clone().text();
     message = `[${messagePrefix}] error response:`;
     errorContext = {
-      responseStatus: error.response.status,
-      responseStatusText: error.response.statusText,
+      responseStatus: resp.status,
+      responseStatusText: resp.statusText,
       responseBody: errorBody.slice(0, 5000), // limit to 5000 characters
       responseErrorType: error.name,
     };
-    responseStatusCode = error.response.status;
+    responseStatusCode = responseError.response.status;
     // wrap the error and keep the current ResponseError as the `cause` property
     e = new WrappedResponseError(
-      `ResponseError: ${error.response.status} ${error.response.statusText} @ ${error.response.url}`,
-      error,
+      `ResponseError: ${resp.status} ${resp.statusText} @ ${resp.url}`,
+      responseError,
     );
   } else {
     // non-ResponseError Error type
     message = `[${messagePrefix}] error: ${e}`;
-    if (e instanceof Error) {
-      // top-level error
+    errorContext = {
+      errorType: e.name,
+      errorMessage: e.message,
+      errorStack: e.stack,
+    };
+  }
+
+  // also handle any nested errors starting from the `cause` property
+  if (hasErrorCause(error)) {
+    const errorChain = getNestedErrorChain(error.cause);
+    if (errorChain.length) {
       errorContext = {
-        errorType: e.name,
-        errorMessage: e.message,
-        errorStack: e.stack,
+        ...errorContext,
+        errors: JSON.stringify(errorChain, null, 2),
       };
-      // also handle any nested errors starting from the `cause` property
-      if (hasErrorCause(e)) {
-        const errorChain = getNestedErrorChain(e.cause);
-        if (errorChain.length) {
-          errorContext = {
-            ...errorContext,
-            errors: JSON.stringify(errorChain, null, 2),
-          };
-        }
-      }
     }
   }
-  return { e, message, errorContext, responseStatusCode };
+
+  return { error, message, errorContext, responseStatusCode };
 }
 
 /** Shows the error notification with `message` and custom action buttons.
