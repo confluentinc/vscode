@@ -23,16 +23,16 @@ NC='\033[0m'
 # Enable color output
 export TERM=xterm-color
 
-# Message templates
-PR_COMMENT_HEADER="### Sidecar Version Check Failed (https://github.com/confluentinc/vscode/commit/${SEMAPHORE_GIT_SHA})"
-OPENAPI_MISMATCH_MSG="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${OPENAPI_SPEC_PATH}"
-CLIENT_MISMATCH_MSG="Make sure to run \`gulp apigen\` to regenerate sidecar client code"
-
-# GitHub PR links
-GH_PR_PATH_PREFIX=https://github.com/confluentinc/vscode/blob/${SEMAPHORE_GIT_SHA}
+# Markdown links for GH PR comment
+GH_PR_PATH_PREFIX=https://github.com/confluentinc/vscode/blob/${SEMAPHORE_GIT_PR_SHA}
 IDE_SIDECAR_LINK="[ide-sidecar.txt](${GH_PR_PATH_PREFIX}/${SIDECAR_VERSION_PATH})"
 OPENAPI_SPEC_LINK="[sidecar.openapi.yaml](${GH_PR_PATH_PREFIX}/${OPENAPI_SPEC_PATH})"
 CLIENT_CODE_LINK="[runtime.ts](${GH_PR_PATH_PREFIX}/${CLIENT_CODE_PATH})"
+
+# Message templates
+PR_COMMENT_HEADER="### Sidecar Version Check Failed (https://github.com/confluentinc/vscode/commit/${SEMAPHORE_GIT_PR_SHA})"
+OPENAPI_MISMATCH_MSG="Make sure to copy https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml to ${IDE_SIDECAR_LINK}"
+CLIENT_MISMATCH_MSG="Make sure to run \`gulp apigen\` to regenerate sidecar client code"
 
 # Compare versions: sidecar vs OpenAPI spec vs client code
 if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
@@ -40,7 +40,7 @@ if [ "$SIDECAR_VERSION" != "$OPENAPI_SPEC_VERSION" ]; then
     printf "❌ ${RED}OpenAPI spec version mismatch!${NC}\n\n"
     printf "Make sure to copy ${GRAY}%s${NC} to ${BLUE}%s${NC}.\n\n" \
         "https://github.com/confluentinc/ide-sidecar/blob/v${SIDECAR_VERSION}/src/generated/resources/openapi.yaml" \
-        "$IDE_SIDECAR_LINK"
+        "$OPENAPI_SPEC_PATH"
     printf "${GRAY}%s${NC}: ${GREEN}%s${NC}\n" "$SIDECAR_VERSION_PATH" "$SIDECAR_VERSION"
     printf "${GRAY}%s${NC}: ${RED}%s${NC}\n" "$OPENAPI_SPEC_PATH" "$OPENAPI_SPEC_VERSION"
 
