@@ -31,8 +31,10 @@ import { SecretStorageKeys } from "../storage/constants";
  * Output channel for viewing sidecar logs.
  * @remarks We aren't using a `LogOutputChannel` since we could end up doubling the timestamp+level info.
  */
-export const sidecarOutputChannel: vscode.OutputChannel =
-  vscode.window.createOutputChannel("Confluent (Sidecar)");
+export const sidecarOutputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel(
+  "Confluent (Sidecar)",
+  { log: true },
+);
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
@@ -520,11 +522,12 @@ export class SidecarManager {
           });
         }
       }
-      sidecarOutputChannel.appendLine(line);
+
+      appendSidecarLogToOutputChannel(line);
     });
 
     this.logTailer.on("error", (data: any) => {
-      sidecarOutputChannel.appendLine(`Error: ${data.toString()}`);
+      sidecarOutputChannel.error(`Error: ${data.toString()}`);
     });
   }
 
@@ -653,5 +656,76 @@ export function killSidecar(process_id: number) {
   } else {
     process.kill(process_id, "SIGTERM");
     logger.debug(`Killed old sidecar process ${process_id}`);
+  }
+}
+
+/** @see https://quarkus.io/guides/logging#logging-format */
+interface SidecarLogFormat {
+  timestamp: string;
+  sequence: number;
+  loggerClassName: string; // usually "org.jboss.logging.Logger"
+  loggerName: string;
+  level: string;
+  message: string;
+  threadName: string;
+  threadId: number;
+  mdc: Record<string, unknown>;
+  ndc: string;
+  hostName: string;
+  processName: string;
+  processId: number;
+}
+
+/**
+ * Parse and append a sidecar log line to the {@link sidecarOutputChannel output channel} based on
+ * its `level`.
+ */
+export function appendSidecarLogToOutputChannel(line: string) {
+  // DEBUGGING: uncomment to see raw log lines in the output channel
+  // sidecarOutputChannel.trace(line);
+
+  let log: SidecarLogFormat;
+  try {
+    log = JSON.parse(line) as SidecarLogFormat;
+  } catch (e) {
+    if (e instanceof Error) {
+      sidecarOutputChannel.error(`Failed to parse log line: ${e.message}\n\t${line}`);
+    }
+    return;
+  }
+  if (!(log.level && log.loggerName && log.message)) {
+    sidecarOutputChannel.appendLine(line);
+    return;
+  }
+
+  let logMsg = `[${log.loggerName}] ${log.message}`;
+  if (log.mdc) {
+    // convert record to `key=value, key2=value2` format
+    try {
+      const diagnosticContext: string = Object.entries(log.mdc)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(", ");
+      logMsg += diagnosticContext;
+    } catch {
+      logMsg += `mdc=${JSON.stringify(log.mdc)}`;
+    }
+  }
+
+  switch (log.level) {
+    case "DEBUG":
+      sidecarOutputChannel.debug(logMsg);
+      break;
+    case "INFO":
+      sidecarOutputChannel.info(logMsg);
+      break;
+    case "WARN":
+      sidecarOutputChannel.warn(logMsg);
+      break;
+    case "ERROR":
+      sidecarOutputChannel.error(logMsg);
+      break;
+    default:
+      // still shows up as `info` in the output channel
+      sidecarOutputChannel.appendLine(logMsg);
   }
 }
