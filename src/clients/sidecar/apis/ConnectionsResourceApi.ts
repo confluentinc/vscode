@@ -269,7 +269,7 @@ export class ConnectionsResourceApi extends runtime.BaseAPI {
 
     const response = await this.request(
       {
-        path: `/gateway/v1/TEST_MISSING_PATH`,
+        path: `/gateway/v1/connections`,
         method: "POST",
         headers: headerParameters,
         query: queryParameters,
