@@ -128,16 +128,15 @@ check-sidecar-versions:
 			--method POST \
 			-H "Accept: application/vnd.github+json" \
 			"/repos/confluentinc/vscode/issues/$$SEMAPHORE_GIT_PR_NUMBER/comments" \
-			-f body=$$(printf '%s\n%s\n%s\n%s\n%s\n%s' \
-				"❌ **Sidecar Version Check Failed** ([$$SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))" \
-				"" \
-				"\`\`\`" \
-				"$$(cat $$TEMP_OUTPUT)" \
-				"\`\`\`" \
-				"" \
-				"Either:" \
-				"1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or" \
-				"2. Run \`gulp apigen\` to regenerate the client code"); \
+			-f body="❌ **Sidecar Version Check Failed** ([$$SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))
+
+\`\`\`
+$$(cat "$$TEMP_OUTPUT")
+\`\`\`
+
+Either:
+1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or
+2. Run \`gulp apigen\` to regenerate the client code"; \
 	fi; \
 	cat "$$COLORED_OUTPUT"; \
 	rm -f "$$TEMP_OUTPUT" "$$COLORED_OUTPUT"; \
