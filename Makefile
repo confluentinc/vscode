@@ -113,21 +113,22 @@ update-third-party-notices-pr:
 collect-notices-vsix:
 	@./scripts/notices/collect-notices-vsix.sh
 
+# Captures the output of the version check, strips away any ANSI escape codes, and posts a comment
+# to the PR if the version check fails.
 .PHONY: check-sidecar-versions
 check-sidecar-versions:
-	@set -e; \
-	TEMP_OUTPUT=$$(mktemp); \
+	@TEMP_OUTPUT=$$(mktemp); \
 	COLORED_OUTPUT=$$(mktemp); \
-	./scripts/check-sidecar-versions.sh > "$$COLORED_OUTPUT" 2>&1; \
+	./scripts/check-sidecar-versions.sh > "$$COLORED_OUTPUT" 2>&1 || true; \
 	EXIT_CODE=$$?; \
 	cat "$$COLORED_OUTPUT" | sed -E "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" > "$$TEMP_OUTPUT"; \
 	if [ "$$EXIT_CODE" -ne 0 ] && [ "$$CI" = "true" ] && [ -n "$$SEMAPHORE_GIT_PR_NUMBER" ]; then \
-		echo "Version check failed. Posting comment to PR #$$SEMAPHORE_GIT_PR_NUMBER"; \
+		echo "Version check failed. Posting comment to PR $$SEMAPHORE_GIT_PR_NUMBER"; \
 		gh api \
 			--method POST \
 			-H "Accept: application/vnd.github+json" \
 			"/repos/confluentinc/vscode/issues/$$SEMAPHORE_GIT_PR_NUMBER/comments" \
-			-f body="❌ **Sidecar Version Check Failed** ([failing commit $$SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))\n\n\`\`\`\n$$(cat "$$TEMP_OUTPUT")\n\`\`\`\n\nEither:\n1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or\n2. Run \`gulp apigen\` to regenerate the client code"; \
+			-f body="❌ **Sidecar Version Check Failed** ([$$SEMAPHORE_GIT_SHA](https://github.com/confluentinc/vscode/commit/$$SEMAPHORE_GIT_SHA))\n\n\`\`\`\n$$(cat "$$TEMP_OUTPUT")\n\`\`\`\n\nEither:\n1. Update [.versions/ide-sidecar.txt](https://github.com/confluentinc/vscode/blob/main/.versions/ide-sidecar.txt) to match the OpenAPI spec version, or\n2. Run \`gulp apigen\` to regenerate the client code"; \
 	fi; \
 	cat "$$COLORED_OUTPUT"; \
 	rm -f "$$TEMP_OUTPUT" "$$COLORED_OUTPUT"; \
