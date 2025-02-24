@@ -7,7 +7,7 @@ import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sid
 import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
-import { Logger } from "../logging";
+import { Logger, outputChannel } from "../logging";
 import { getStorageManager } from "../storage";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import {
@@ -22,19 +22,10 @@ import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
 import { normalize } from "path";
 import { Tail } from "tail";
-import { EXTENSION_VERSION } from "../constants";
+import { EXTENSION_VERSION, SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
-
-/**
- * Output channel for viewing sidecar logs.
- * @remarks We aren't using a `LogOutputChannel` since we could end up doubling the timestamp+level info.
- */
-export const sidecarOutputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel(
-  "Confluent (Sidecar)",
-  { log: true },
-);
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
@@ -487,13 +478,13 @@ export class SidecarManager {
     try {
       this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
     } catch (e) {
-      sidecarOutputChannel.appendLine(
+      SIDECAR_OUTPUT_CHANNEL.appendLine(
         `Failed to tail sidecar log file "${SIDECAR_LOGFILE_PATH}": ${e}`,
       );
       return;
     }
 
-    sidecarOutputChannel.appendLine(
+    SIDECAR_OUTPUT_CHANNEL.appendLine(
       `Tailing the extension's sidecar logs from "${SIDECAR_LOGFILE_PATH}" ...`,
     );
 
@@ -527,7 +518,7 @@ export class SidecarManager {
     });
 
     this.logTailer.on("error", (data: any) => {
-      sidecarOutputChannel.error(`Error: ${data.toString()}`);
+      outputChannel.error(`Error tailing sidecar log: ${data.toString()}`);
     });
   }
 
@@ -677,7 +668,7 @@ interface SidecarLogFormat {
 }
 
 /**
- * Parse and append a sidecar log line to the {@link sidecarOutputChannel output channel} based on
+ * Parse and append a sidecar log line to the {@link SIDECAR_OUTPUT_CHANNEL output channel} based on
  * its `level`.
  */
 export function appendSidecarLogToOutputChannel(line: string) {
@@ -689,12 +680,12 @@ export function appendSidecarLogToOutputChannel(line: string) {
     log = JSON.parse(line) as SidecarLogFormat;
   } catch (e) {
     if (e instanceof Error) {
-      sidecarOutputChannel.error(`Failed to parse log line: ${e.message}\n\t${line}`);
+      outputChannel.error(`Failed to parse sidecar log line: ${e.message}\n\t${line}`);
     }
     return;
   }
   if (!(log.level && log.loggerName && log.message)) {
-    sidecarOutputChannel.appendLine(line);
+    SIDECAR_OUTPUT_CHANNEL.appendLine(line);
     return;
   }
 
@@ -713,19 +704,19 @@ export function appendSidecarLogToOutputChannel(line: string) {
 
   switch (log.level) {
     case "DEBUG":
-      sidecarOutputChannel.debug(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.debug(logMsg);
       break;
     case "INFO":
-      sidecarOutputChannel.info(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.info(logMsg);
       break;
     case "WARN":
-      sidecarOutputChannel.warn(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.warn(logMsg);
       break;
     case "ERROR":
-      sidecarOutputChannel.error(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.error(logMsg);
       break;
     default:
       // still shows up as `info` in the output channel
-      sidecarOutputChannel.appendLine(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.appendLine(logMsg);
   }
 }
