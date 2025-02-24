@@ -673,7 +673,7 @@ interface SidecarLogFormat {
  */
 export function appendSidecarLogToOutputChannel(line: string) {
   // DEBUGGING: uncomment to see raw log lines in the output channel
-  // sidecarOutputChannel.trace(line);
+  // SIDECAR_OUTPUT_CHANNEL.trace(line);
 
   let log: SidecarLogFormat;
   try {
@@ -685,6 +685,7 @@ export function appendSidecarLogToOutputChannel(line: string) {
     return;
   }
   if (!(log.level && log.loggerName && log.message)) {
+    // log the raw object at `info` level:
     SIDECAR_OUTPUT_CHANNEL.appendLine(line);
     return;
   }
