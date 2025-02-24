@@ -10,225 +10,152 @@
     <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
   </head>
   <body>
-    <main class="container">
-      <h1>Configure Topic: <span data-text="this.topicName()"></span></h1>
-      <template data-if="this.cCloudLink()">
-        <p>
-          To configure advanced options,
-          <a data-attr-href="this.settingsLink()">visit topic settings in Confluent Cloud.</a>
-        </p>
-      </template>
-      <template data-if="this.errorOnSubmit()">
-        <p class="error" data-text="this.errorOnSubmit()"></p>
-      </template>
-      <form data-on-submit="this.handleSubmit(event)">
-        <div class="input-container">
-          <label for="cleanup-policy" class="label">Cleanup Policy</label>
-          <span class="description"
-            >The retention policy to use on old log segments.
-            <a
-              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy"
-              >More info.</a
-            ></span
-          >
-          <select
-            id="cleanup-policy"
-            class="input dropdown"
-            name="cleanup.policy"
-            data-prop-value="this.cleanupPolicy()"
-            data-on-change="this.handleChange(event)"
-          >
-            <option value="delete">Delete</option>
-            <option value="compact">Compact</option>
-            <option value="compact,delete">Compact, Delete</option>
-          </select>
-          <span class="info error"></span>
+    <main class="webview-form">
+      <div class="form-header">
+        <h1 class="heading">Configure Topic: <span data-text="this.topicName()"></span></h1>
+        <template data-if="this.cCloudLink()">
+          <p class="form-description">
+            To configure advanced options,
+            <a data-attr-href="this.settingsLink()">visit topic settings in Confluent Cloud.</a>
+          </p>
+        </template>
+        <template data-if="this.errorOnSubmit()">
+          <p class="error" data-text="this.errorOnSubmit()"></p>
+        </template>
+      </div>
+      <form class="form-container" data-on-submit="this.handleSubmit(event)">
+        <div class="form-section">
+          <h2 class="form-section-heading">Settings</h2>
+          <div class="input-container">
+            <label for="cleanup-policy" class="label">Cleanup Policy</label>
+            <select
+              id="cleanup-policy"
+              class="input dropdown"
+              name="cleanup.policy"
+              data-prop-value="this.cleanupPolicy()"
+              data-on-change="this.handleChange(event)"
+            >
+              <option value="delete">Delete</option>
+              <option value="compact">Compact</option>
+              <option value="compact,delete">Compact, Delete</option>
+            </select>
+            <span class="field-description"
+              >The retention policy to use on old log segments.
+              <a
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#cleanup-policy"
+                >More info.</a
+              ></span
+            >
+          </div>
+          <div class="input-container">
+            <label for="retention-size" class="label">Retention Size</label>
+            <select
+              class="input dropdown"
+              id="retention-size"
+              name="retention.bytes"
+              data-prop-value="this.retentionSize()"
+              data-on-change="this.handleChange(event)"
+            >
+              <option value="1048576">1 MB</option>
+              <option value="1073741824">1 GB</option>
+              <option value="1099511627776">1 TB</option>
+              <option value="-1">Infinite</option>
+            </select>
+            <span class="field-description"
+              >The maximum size a partition can grow to before it is discarded to free up space.
+              <a
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes"
+                >More info.</a
+              ></span
+            >
+          </div>
+          <div class="input-container">
+            <label for="retention-ms" class="label">Retention Time</label>
+            <select
+              class="input dropdown"
+              id="retention-ms"
+              name="retention.ms"
+              data-prop-value="this.retentionMs()"
+              data-on-change="this.handleChange(event)"
+            >
+              <option value="3600000">1 Hour</option>
+              <option value="86400000">1 Day</option>
+              <option value="604800000">1 Week</option>
+              <option value="2592000000">1 Month</option>
+              <option value="31536000000">1 Year (365 days)</option>
+              <option value="-1">Infinite</option>
+            </select>
+            <span class="field-description"
+              >The amount of time to retain data.
+              <a
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms"
+                >More info.</a
+              ></span
+            >
+          </div>
+          <div class="input-container">
+            <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
+            <div class="input-row">
+              <input
+                class="input"
+                id="max-message-bytes"
+                name="max.message.bytes"
+                type="number"
+                min="0"
+                max="20971520"
+                data-prop-value="this.maxMessageBytes()"
+                data-on-change="this.handleChange(event)"
+              /><span class="info error"></span>
+            </div>
+            <span class="field-description"
+              >The maximum message size that can be appended to this topic, in bytes.
+              <a
+                href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes"
+                >More info.</a
+              ></span
+            >
+          </div>
         </div>
-        <div class="input-container">
-          <label for="retention-size" class="label">Retention Size</label>
-          <span class="description"
-            >The maximum size a partition can grow to before it is discarded to free up space.
-            <a
-              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-bytes"
-              >More info.</a
-            ></span
-          >
-          <select
-            class="input dropdown"
-            id="retention-size"
-            name="retention.bytes"
-            data-prop-value="this.retentionSize()"
-            data-on-change="this.handleChange(event)"
-          >
-            <option value="1048576">1 MB</option>
-            <option value="1073741824">1 GB</option>
-            <option value="1099511627776">1 TB</option>
-            <option value="-1">Infinite</option>
-          </select>
-          <span class="info error"></span>
-        </div>
-        <div class="input-container">
-          <label for="retention-ms" class="label">Retention Time</label>
-          <span class="description"
-            >The amount of time to retain data.
-            <a
-              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#retention-ms"
-              >More info.</a
-            ></span
-          >
-          <select
-            class="input dropdown"
-            id="retention-ms"
-            name="retention.ms"
-            data-prop-value="this.retentionMs()"
-            data-on-change="this.handleChange(event)"
-          >
-            <option value="3600000">1 Hour</option>
-            <option value="86400000">1 Day</option>
-            <option value="604800000">1 Week</option>
-            <option value="2592000000">1 Month</option>
-            <option value="31536000000">1 Year (365 days)</option>
-            <option value="-1">Infinite</option>
-          </select>
-          <span class="info error"></span>
-        </div>
-        <div class="input-container">
-          <label for="max-message-bytes" class="label">Max Message Size (Bytes)</label>
-          <span class="description"
-            >The maximum message size that can be appended to this topic, in bytes.
-            <a
-              href="https://docs.confluent.io/cloud/current/client-apps/topics/manage.html#max-message-bytes"
-              >More info.</a
-            ></span
-          >
+        <div class="form-section button-group">
           <input
-            class="input"
-            id="max-message-bytes"
-            name="max.message.bytes"
-            type="number"
-            min="0"
-            max="20971520"
-            data-prop-value="this.maxMessageBytes()"
-            data-on-change="this.handleChange(event)"
-          />
-          <span class="info error"></span>
-        </div>
-        <div class="flex-row">
-          <input
-            class="button ghost"
+            class="button secondary"
             type="button"
             value="Reset changes"
             data-on-click="this.resetChanges()"
             data-attr-disabled="!this.hasChanges()"
-          /><input
-            class="button primary"
+          />
+          <template data-if="this.success()">
+            <div data-attr-class="this.success() ? 'info success' : 'info'">
+              <span class="status-icon" data-text="this.success() ? '✓' : ''"></span>
+              <span
+                data-text="this.success() ? 'Configuration updated successfully.' : 'An error occurred during update.'"
+              ></span>
+            </div>
+          </template>
+          <input
+            class="button"
             type="submit"
             value="Save changes"
             data-attr-disabled="!this.hasChanges() || this.hasValidationErrors()"
           />
         </div>
-        <template data-if="this.success()">
-          <p class="info success">
-            Data updated successfully. You may close this tab or make additional changes.
-          </p>
-        </template>
       </form>
     </main>
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('topic-config-form.js')}"></script>
     <style nonce="${nonce}">
-      body {
-        max-width: 1000px;
-        font-size: 15px;
-        margin: 0 auto;
+      .info.error {
+        position: relative;
       }
-      .container {
-        padding: 60px 80px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      .container > * {
-        margin-bottom: unset;
-      }
-      .flex-row {
-        display: flex;
-        gap: 16px;
-      }
-      h1 {
-        font-size: 26px;
-      }
-      form {
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-        gap: 20px;
-        margin-top: 26px;
-      }
-      .input-container {
-        display: grid;
-        grid-template-columns: max-content 2fr;
-        gap: 5px 16px;
-        width: 100%;
-        font-weight: 500;
-        align-items: end;
-      }
-      @media screen and (max-width: 800px) {
-        body {
-          max-width: unset;
-        }
-        .container {
-          padding: 20px 50px;
-        }
-        .input-container {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          padding-bottom: 5px;
-          align-items: start;
-        }
-      }
-      .input-container > .info.error {
-        min-width: 100%;
-        grid-column: span 2;
-      }
-      .input {
-        width: 250px;
-      }
-      .label {
-        margin-bottom: 0;
-      }
-      .description {
-        grid-row: span 2;
-        font-weight: 700;
-        color: var(--vscode-descriptionForeground);
-        font-size: 13px;
-      }
-      .info {
-        color: var(--vscode-descriptionForeground);
-        font-weight: 700;
-        font-size: 13px;
-      }
-      .success {
-        color: var(--vscode-panelTitle-activeForeground);
-      }
-      .error {
-        color: var(--vscode-errorForeground);
-      }
-      .input.error {
-        border: 1px solid var(--vscode-errorForeground);
-      }
-      input:disabled {
-        cursor: not-allowed;
-      }
-      .button.ghost {
-        background-color: transparent;
-        border: none;
-        color: var(--vscode-descriptionForeground);
-        padding: 5px 0;
-      }
-      .button.ghost:hover:not(:disabled) {
-        color: var(--vscode-button-background);
+      .input.error + .info.error::before {
+        content: " x ";
+        font-size: 18px;
+        line-height: 0;
+        font-weight: 200;
+        color: var(--vscode-testing-iconFailed);
+        position: absolute;
+        top: 6px;
+        left: -10px;
       }
     </style>
   </body>
