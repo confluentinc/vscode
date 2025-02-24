@@ -622,6 +622,12 @@ export async function testRun() {
     let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
     let context = libReport.createContext({ coverageMap: data });
     report.execute(context);
+    // create interactive HTML report for local runs
+    let htmlReport = reports.create("html", {
+      dir: "./coverage/html",
+      verbose: true,
+    });
+    htmlReport.execute(context);
     // clean up temp file used for coverage reporting
     await unlink("./coverage.json");
   }
