@@ -7,7 +7,7 @@ import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sid
 import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
-import { Logger } from "../logging";
+import { Logger, outputChannel } from "../logging";
 import { getStorageManager } from "../storage";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import {
@@ -22,17 +22,10 @@ import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
 import { normalize } from "path";
 import { Tail } from "tail";
-import { EXTENSION_VERSION } from "../constants";
+import { EXTENSION_VERSION, SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
-
-/**
- * Output channel for viewing sidecar logs.
- * @remarks We aren't using a `LogOutputChannel` since we could end up doubling the timestamp+level info.
- */
-export const sidecarOutputChannel: vscode.OutputChannel =
-  vscode.window.createOutputChannel("Confluent (Sidecar)");
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
@@ -485,13 +478,13 @@ export class SidecarManager {
     try {
       this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
     } catch (e) {
-      sidecarOutputChannel.appendLine(
+      SIDECAR_OUTPUT_CHANNEL.appendLine(
         `Failed to tail sidecar log file "${SIDECAR_LOGFILE_PATH}": ${e}`,
       );
       return;
     }
 
-    sidecarOutputChannel.appendLine(
+    SIDECAR_OUTPUT_CHANNEL.appendLine(
       `Tailing the extension's sidecar logs from "${SIDECAR_LOGFILE_PATH}" ...`,
     );
 
@@ -520,11 +513,12 @@ export class SidecarManager {
           });
         }
       }
-      sidecarOutputChannel.appendLine(line);
+
+      appendSidecarLogToOutputChannel(line);
     });
 
     this.logTailer.on("error", (data: any) => {
-      sidecarOutputChannel.appendLine(`Error: ${data.toString()}`);
+      outputChannel.error(`Error tailing sidecar log: ${data.toString()}`);
     });
   }
 
@@ -653,5 +647,73 @@ export function killSidecar(process_id: number) {
   } else {
     process.kill(process_id, "SIGTERM");
     logger.debug(`Killed old sidecar process ${process_id}`);
+  }
+}
+
+/** @see https://quarkus.io/guides/logging#logging-format */
+interface SidecarLogFormat {
+  timestamp: string;
+  sequence: number;
+  loggerClassName: string; // usually "org.jboss.logging.Logger"
+  loggerName: string;
+  level: string;
+  message: string;
+  threadName: string;
+  threadId: number;
+  mdc: Record<string, unknown>;
+  ndc: string;
+  hostName: string;
+  processName: string;
+  processId: number;
+}
+
+/**
+ * Parse and append a sidecar log line to the {@link SIDECAR_OUTPUT_CHANNEL output channel} based on
+ * its `level`.
+ */
+export function appendSidecarLogToOutputChannel(line: string) {
+  // DEBUGGING: uncomment to see raw log lines in the output channel
+  // SIDECAR_OUTPUT_CHANNEL.trace(line);
+
+  let log: SidecarLogFormat;
+  try {
+    log = JSON.parse(line) as SidecarLogFormat;
+  } catch (e) {
+    if (e instanceof Error) {
+      outputChannel.error(`Failed to parse sidecar log line: ${e.message}\n\t${line}`);
+    }
+    return;
+  }
+  if (!(log.level && log.loggerName && log.message)) {
+    // log the raw object at `info` level:
+    SIDECAR_OUTPUT_CHANNEL.appendLine(line);
+    return;
+  }
+
+  let logMsg = `[${log.loggerName}] ${log.message}`;
+
+  const logArgs = [];
+  if (log.mdc && Object.keys(log.mdc).length > 0) {
+    logArgs.push(log.mdc);
+  }
+
+  switch (log.level) {
+    case "DEBUG":
+      SIDECAR_OUTPUT_CHANNEL.debug(logMsg, ...logArgs);
+      break;
+    case "INFO":
+      SIDECAR_OUTPUT_CHANNEL.info(logMsg, ...logArgs);
+      break;
+    case "WARN":
+      SIDECAR_OUTPUT_CHANNEL.warn(logMsg, ...logArgs);
+      break;
+    case "ERROR":
+      SIDECAR_OUTPUT_CHANNEL.error(logMsg, ...logArgs);
+      break;
+    default:
+      // still shows up as `info` in the output channel
+      SIDECAR_OUTPUT_CHANNEL.appendLine(
+        `[${log.level}] ${logMsg} ${logArgs.length > 0 ? JSON.stringify(logArgs) : ""}`.trim(),
+      );
   }
 }
