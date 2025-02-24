@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.25.0
+
 ### Added
 
 - Progress indicator when producing large batches of messages to Kafka topics to improve visibility
