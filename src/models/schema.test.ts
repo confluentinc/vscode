@@ -1,12 +1,14 @@
 import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
-import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_SCHEMA, TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
 import {
   Schema,
+  SchemaTreeItem,
   SchemaType,
   generateSchemaSubjectGroups,
+  getLanguageTypes,
   getSubjectIcon,
   subjectMatchesTopicName,
 } from "./schema";
@@ -77,6 +79,30 @@ describe("Schema model methods", () => {
       version: 1,
     });
     assert.equal(schema.fileName(), "test-topic.100123.v1.confluent.avsc");
+  });
+
+  it("nextVersionDraftFileName() should return the correct file name", () => {
+    const schema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+      subject: "test-topicValue",
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+      version: 1,
+    });
+
+    // 0 as draft number means simpler filename.
+    assert.equal(schema.nextVersionDraftFileName(0), `test-topicValue.v2-draft.confluent.avsc`);
+    assert.equal(schema.nextVersionDraftFileName(1), `test-topicValue.v2-draft-1.confluent.avsc`);
+  });
+
+  it("ccloudUrl getter should return the correct URL", () => {
+    // ccloud schemas have a ccloud url.
+    assert.equal(
+      TEST_CCLOUD_SCHEMA.ccloudUrl,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA.environmentId}/schema-registry/schemas/${TEST_CCLOUD_SCHEMA.subject}`,
+    );
+
+    // Non-ccloud schemas do not
+    assert.equal(TEST_LOCAL_SCHEMA.ccloudUrl, "");
   });
 });
 
@@ -273,4 +299,40 @@ describe("getSubjectIcon", () => {
       assert.deepEqual(icon, new vscode.ThemeIcon(expected as IconNames));
     });
   }
+});
+
+describe("getLanguageTypes", () => {
+  type SchemaLanguagePair = [SchemaType, string[]];
+  const schemaLanguagePairs: SchemaLanguagePair[] = [
+    [SchemaType.Avro, ["avroavsc", "json"]],
+    [SchemaType.Json, ["json"]],
+    [SchemaType.Protobuf, ["proto3", "proto"]],
+  ];
+
+  for (const [schemaType, expected] of schemaLanguagePairs) {
+    it(`should return ${expected} for schema type ${schemaType}`, () => {
+      const languageType = getLanguageTypes(schemaType);
+      assert.deepEqual(languageType, expected);
+    });
+  }
+
+  it(`Schema.get`);
+});
+
+describe("SchemaTreeItem", () => {
+  it("constructor should set the correct contextValue", () => {
+    const evolvableShema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error Require<T>
+      isHighestVersion: true,
+    });
+    const evolvableTreeItem = new SchemaTreeItem(evolvableShema);
+    assert.equal(evolvableTreeItem.contextValue, "ccloud-evolvable-schema");
+
+    const unevolvableSchema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error Require<T>
+      isHighestVersion: false,
+    });
+    const unevolvableTreeItem = new SchemaTreeItem(unevolvableSchema);
+    assert.equal(unevolvableTreeItem.contextValue, "ccloud-schema");
+  });
 });
