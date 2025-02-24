@@ -1,4 +1,4 @@
-import { env, extensions } from "vscode";
+import { env, extensions, LogOutputChannel, window } from "vscode";
 import { ConnectionSpec } from "./clients/sidecar";
 import { ConnectionId } from "./models/resource";
 
@@ -70,3 +70,12 @@ export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name!;
 export const LOCAL_KAFKA_REST_PORT = 8082; // TODO: make this configurable once the sidecar supports it
 /** The name of the "local" {@link Environment} manageable by the extension via Docker. */
 export const LOCAL_ENVIRONMENT_NAME = "Local"; // not shown anywhere currently
+
+/**
+ * Output channel for viewing sidecar logs.
+ * @remarks We aren't using a `LogOutputChannel` since we could end up doubling the timestamp+level info.
+ */
+export const SIDECAR_OUTPUT_CHANNEL: LogOutputChannel = window.createOutputChannel(
+  "Confluent (Sidecar)",
+  { log: true },
+);
