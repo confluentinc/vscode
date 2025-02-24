@@ -24,8 +24,9 @@ All notable changes to this extension will be documented in this file.
   `GET /subjects` route results.
 - Message Viewer's "Open consumed messages as JSON" feature now opens messages in a read-only
   document, which can be used to produce messages to other topics.
-- The "Confluent (Sidecar)" output channel now uses the `LogOutputChannel` API and can be combined
-  with the "Confluent" log output channel in the Output panel.
+- Improved logging in the "Confluent (Sidecar)" output channel by implementing the
+  `LogOutputChannel` API. When using VS Code 1.97 or higher, these logs can now be combined with the
+  "Confluent" output channel for unified log viewing.
 
 ### Fixed
 
