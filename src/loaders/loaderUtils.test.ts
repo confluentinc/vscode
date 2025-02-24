@@ -71,9 +71,10 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     stubbedSubjectsV1Api.list.resolves(subjectsRaw);
 
     const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    const subjectStrings = subjects.map((s) => s.name);
 
     // be sure to test against a wholly separate array, 'cause .sort() is in-place.
-    assert.deepStrictEqual(subjects, ["subject1", "subject2", "subject3"]);
+    assert.deepStrictEqual(subjectStrings, ["subject1", "subject2", "subject3"]);
   });
 
   it("fetchSchemaSubjectGroup() should fetch versions of schemas for a given subject", async () => {
@@ -106,11 +107,13 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     );
 
     assert.equal(schemas.length, versions.length);
-    // Should be in the right order ...
+
+    // Should be in the right order (descending by version)...
     assert.deepEqual(
       schemas.map((schema) => schema.version),
-      versions,
+      versions.sort((a, b) => b - a),
     );
+
     // And each schema should have the right properties as from fakeGetSchemaByVersion().
     for (const schema of schemas) {
       assert.equal(schema.subject, subject);
