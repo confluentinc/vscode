@@ -153,7 +153,6 @@ describe("TopicViewProvider search behavior", () => {
 
   let sandbox: sinon.SinonSandbox;
   let getTopicsForClusterStub: sinon.SinonStub;
-  let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
   let getSubjectsStub: sinon.SinonStub;
   let getSchemaSubjectGroupStub: sinon.SinonStub;
 

@@ -9,12 +9,12 @@ const logger = new Logger("commands.schemaUtils");
  * Some commands will be invoked using either depending on if invoked from
  * the schema registry view or the kafka cluster / topics view.
  */
-export type SubjectishArgument = Subject | ContainerTreeItem<Schema>;
+export type Subjectish = Subject | ContainerTreeItem<Schema>;
 
 /**
- * Convert a SubjectishArgument to its corresponding Subject.
+ * Convert a Subjectish to its corresponding Subject.
  */
-export function determineSubject(callpoint: string, subjectish: SubjectishArgument): Subject {
+export function determineSubject(callpoint: string, subjectish: Subjectish): Subject {
   if (!(subjectish instanceof Subject) && !(subjectish instanceof ContainerTreeItem)) {
     const msg = `${callpoint} called with invalid argument type`;
     logger.error(msg, subjectish);
@@ -30,13 +30,13 @@ export function determineSubject(callpoint: string, subjectish: SubjectishArgume
 }
 
 /**
- * Convert a SubjectishArgument to its corresponding latest Schema.
+ * Convert a Subjectish to its corresponding latest Schema.
  * @param subjectish
  * @returns
  */
 export async function determineLatestSchema(
   callpoint: string,
-  subjectish: SubjectishArgument,
+  subjectish: Subjectish,
 ): Promise<Schema> {
   if (!(subjectish instanceof Subject) && !(subjectish instanceof ContainerTreeItem)) {
     const msg = `${callpoint} called with invalid argument type`;

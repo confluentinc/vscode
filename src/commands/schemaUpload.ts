@@ -16,7 +16,7 @@ import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schem
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
-import { determineSubject, SubjectishArgument } from "./schemaUtils";
+import { determineSubject, Subjectish } from "./schemaUtils";
 
 const logger = new Logger("commands.schemaUpload");
 
@@ -31,7 +31,7 @@ const logger = new Logger("commands.schemaUpload");
  *  1. On a Subect treeitem in the Schemas view (passing in a Subject)
  *  2. On one of a topic's schema subject group in the Topics view (passing in a ContainerTreeItem<Schema>)
  */
-export async function uploadSchemaForSubjectFromfile(subjectish: SubjectishArgument) {
+export async function uploadSchemaForSubjectFromfile(subjectish: Subjectish) {
   const subject = determineSubject("uploadSchemaForSubjectFromfile", subjectish);
   const loader = ResourceLoader.getInstance(subject.connectionId);
   const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);

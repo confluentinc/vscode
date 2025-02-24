@@ -11,7 +11,7 @@ import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
-import { determineLatestSchema, SubjectishArgument } from "./schemaUtils";
+import { determineLatestSchema, Subjectish } from "./schemaUtils";
 
 const logger = new Logger("commands.schemas");
 
@@ -147,7 +147,7 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
 }
 
 /** Drop into read-only viewing the latest version of the schema in the subject group.  */
-async function viewLatestLocallyCommand(subjectish: SubjectishArgument) {
+async function viewLatestLocallyCommand(subjectish: Subjectish) {
   const schema: Schema = await determineLatestSchema("viewLatestLocallyCommand", subjectish);
   await viewLocallyCommand(schema);
 }
@@ -190,7 +190,7 @@ async function evolveSchemaCommand(schema: Schema) {
 }
 
 /** Drop into evolving the latest version of the schema in the subject group. */
-async function evolveSchemaSubjectCommand(subjectish: SubjectishArgument) {
+async function evolveSchemaSubjectCommand(subjectish: Subjectish) {
   const schema: Schema = await determineLatestSchema("evolveSchemaSubjectCommand", subjectish);
 
   await evolveSchemaCommand(schema);

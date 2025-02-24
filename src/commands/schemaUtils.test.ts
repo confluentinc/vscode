@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 
 import { ResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
-import { determineLatestSchema, determineSubject, SubjectishArgument } from "./schemaUtils";
+import { determineLatestSchema, determineSubject, Subjectish } from "./schemaUtils";
 
 import { TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SUBJECT } from "../../tests/unit/testResources";
 
@@ -26,7 +26,7 @@ describe("commands::schemaUtils determineSubject tests", () => {
 
   it("should throw error for invalid argument type", () => {
     assert.throws(
-      () => determineSubject("test", {} as SubjectishArgument),
+      () => determineSubject("test", {} as Subjectish),
       /called with invalid argument type/,
     );
   });
@@ -69,7 +69,7 @@ describe("commands::schemaUtils determineLatestSchema tests", () => {
 
   it("should throw error for invalid argument type", async () => {
     await assert.rejects(
-      async () => await determineLatestSchema("test", {} as SubjectishArgument),
+      async () => await determineLatestSchema("test", {} as Subjectish),
       /called with invalid argument type/,
     );
   });
