@@ -1,10 +1,11 @@
 import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
-import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
+import { TEST_CCLOUD_SCHEMA, TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
 import {
   Schema,
+  SchemaTreeItem,
   SchemaType,
   generateSchemaSubjectGroups,
   getLanguageTypes,
@@ -91,6 +92,17 @@ describe("Schema model methods", () => {
     // 0 as draft number means simpler filename.
     assert.equal(schema.nextVersionDraftFileName(0), `test-topicValue.v2-draft.confluent.avsc`);
     assert.equal(schema.nextVersionDraftFileName(1), `test-topicValue.v2-draft-1.confluent.avsc`);
+  });
+
+  it("ccloudUrl getter should return the correct URL", () => {
+    // ccloud schemas have a ccloud url.
+    assert.equal(
+      TEST_CCLOUD_SCHEMA.ccloudUrl,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA.environmentId}/schema-registry/schemas/${TEST_CCLOUD_SCHEMA.subject}`,
+    );
+
+    // Non-ccloud schemas do not
+    assert.equal(TEST_LOCAL_SCHEMA.ccloudUrl, "");
   });
 });
 
@@ -305,4 +317,22 @@ describe("getLanguageTypes", () => {
   }
 
   it(`Schema.get`);
+});
+
+describe("SchemaTreeItem", () => {
+  it("constructor should set the correct contextValue", () => {
+    const evolvableShema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error Require<T>
+      isHighestVersion: true,
+    });
+    const evolvableTreeItem = new SchemaTreeItem(evolvableShema);
+    assert.equal(evolvableTreeItem.contextValue, "ccloud-evolvable-schema");
+
+    const unevolvableSchema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error Require<T>
+      isHighestVersion: false,
+    });
+    const unevolvableTreeItem = new SchemaTreeItem(unevolvableSchema);
+    assert.equal(unevolvableTreeItem.contextValue, "ccloud-schema");
+  });
 });
