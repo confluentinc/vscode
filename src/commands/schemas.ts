@@ -11,6 +11,7 @@ import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
+import { determineLatestSchema, SubjectishArgument } from "./schemaUtils";
 
 const logger = new Logger("commands.schemas");
 
@@ -146,19 +147,9 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
 }
 
 /** Drop into read-only viewing the latest version of the schema in the subject group.  */
-async function viewLatestLocallyCommand(schemaGroup: ContainerTreeItem<Schema>) {
-  if (!(schemaGroup instanceof ContainerTreeItem)) {
-    logger.error("viewLatestLocallyCommand called with invalid argument type", schemaGroup);
-    return;
-  }
-
-  if (schemaGroup.children.length === 0) {
-    logger.error("viewLatestLocallyCommand called with no schemas", schemaGroup);
-    return;
-  }
-
-  // View the first schema in the group. Will be the highest versioned one.
-  await viewLocallyCommand(schemaGroup.children[0]);
+async function viewLatestLocallyCommand(subjectish: SubjectishArgument) {
+  const schema: Schema = await determineLatestSchema("viewLatestLocallyCommand", subjectish);
+  await viewLocallyCommand(schema);
 }
 
 /**
@@ -199,19 +190,10 @@ async function evolveSchemaCommand(schema: Schema) {
 }
 
 /** Drop into evolving the latest version of the schema in the subject group. */
-async function evolveSchemaSubjectCommand(schemaGroup: ContainerTreeItem<Schema>) {
-  if (!(schemaGroup instanceof ContainerTreeItem)) {
-    logger.error("evolveSchemaSubjectCommand called with invalid argument type", schemaGroup);
-    return;
-  }
+async function evolveSchemaSubjectCommand(subjectish: SubjectishArgument) {
+  const schema: Schema = await determineLatestSchema("evolveSchemaSubjectCommand", subjectish);
 
-  if (schemaGroup.children.length === 0) {
-    logger.error("evolveSchemaSubjectCommand called with no schemas", schemaGroup);
-    return;
-  }
-
-  // Evolve the first schema in the group. Will be the highest versioned one.
-  await evolveSchemaCommand(schemaGroup.children[0]);
+  await evolveSchemaCommand(schema);
 }
 
 /**
