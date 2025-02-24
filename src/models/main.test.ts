@@ -22,6 +22,24 @@ describe("ContainerTreeItem tests", () => {
     assert.strictEqual(container.children.length, 3);
   });
 
+  it("searchableText()", () => {
+    const stringLabelContainer = new ContainerTreeItem(
+      "string label",
+      TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    assert.strictEqual(stringLabelContainer.searchableText(), "string label (0)");
+
+    // test branch where label is a TreeItemLabel
+    const treeItemLabel = { label: "tree item label" };
+    const treeItemLabelContainer = new ContainerTreeItem(
+      treeItemLabel,
+      TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    assert.strictEqual(treeItemLabelContainer.searchableText(), "tree item label (0)");
+  });
+
   it("ContainerTreeItem constructor throws on duplicate ids", () => {
     const children = [new MockContainerChild("1"), new MockContainerChild("1")];
     assert.throws(
