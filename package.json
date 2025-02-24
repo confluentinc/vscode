@@ -875,12 +875,12 @@
         },
         {
           "command": "confluent.diff.selectForCompare",
-          "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
           "command": "confluent.diff.compareWithSelected",
-          "when": "confluent.resourceSelectedForCompare && view == confluent-schemas && viewItem =~ /.*-schema$/",
+          "when": "confluent.resourceSelectedForCompare && (view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
