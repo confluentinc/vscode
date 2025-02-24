@@ -56,14 +56,6 @@ export class Schema extends Data implements IResourceBase {
   }
 
   /**
-   * Get possible language types for this kind of extension in priority order.
-   * Used to try to rendezvous on a language type that the user might have installed.
-   */
-  languageTypes(): string[] {
-    return getLanguageTypes(this.type);
-  }
-
-  /**
    * Return a file name for this schema.
    */
   fileName(): string {
