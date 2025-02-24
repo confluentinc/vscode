@@ -691,33 +691,29 @@ export function appendSidecarLogToOutputChannel(line: string) {
   }
 
   let logMsg = `[${log.loggerName}] ${log.message}`;
-  if (log.mdc) {
-    // convert record to `key=value, key2=value2` format
-    try {
-      const diagnosticContext: string = Object.entries(log.mdc)
-        .map(([key, value]) => `${key}=${value}`)
-        .join(", ");
-      logMsg += diagnosticContext;
-    } catch {
-      logMsg += `mdc=${JSON.stringify(log.mdc)}`;
-    }
+
+  let context: Record<string, any> = {};
+  if (log.mdc && Object.keys(log.mdc).length > 0) {
+    context = { ...context, ...log.mdc };
   }
 
   switch (log.level) {
     case "DEBUG":
-      SIDECAR_OUTPUT_CHANNEL.debug(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.debug(logMsg, context);
       break;
     case "INFO":
-      SIDECAR_OUTPUT_CHANNEL.info(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.info(logMsg, context);
       break;
     case "WARN":
-      SIDECAR_OUTPUT_CHANNEL.warn(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.warn(logMsg, context);
       break;
     case "ERROR":
-      SIDECAR_OUTPUT_CHANNEL.error(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.error(logMsg, context);
       break;
     default:
       // still shows up as `info` in the output channel
-      SIDECAR_OUTPUT_CHANNEL.appendLine(logMsg);
+      SIDECAR_OUTPUT_CHANNEL.appendLine(
+        `[${log.level}] ${logMsg} ${Object.keys(context).length > 0 ? JSON.stringify(context) : ""}`,
+      );
   }
 }

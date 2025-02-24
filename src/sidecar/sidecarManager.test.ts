@@ -200,18 +200,19 @@ describe("appendSidecarLogToOutputChannel() tests", () => {
 
   it("handles MDC context", () => {
     /** @see https://quarkus.io/guides/logging#use-mdc-to-add-contextual-log-information */
+    const mdc = {
+      key1: "value1",
+      key2: "value2",
+    };
     const logLineWithMdc = JSON.stringify({
       level: "INFO",
       loggerName: "test",
       message: "test message",
-      mdc: {
-        key1: "value1",
-        key2: "value2",
-      },
+      mdc,
     });
 
     appendSidecarLogToOutputChannel(logLineWithMdc);
 
-    sinon.assert.calledWith(infoStub, "[test] test messagekey1=value1, key2=value2");
+    sinon.assert.calledWith(infoStub, "[test] test message", mdc);
   });
 });
