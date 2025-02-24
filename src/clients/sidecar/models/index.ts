@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from "./Action";
 export * from "./ApiKeyAndSecret";
 export * from "./AuthError";
 export * from "./AuthErrors";
@@ -36,9 +37,11 @@ export * from "./PartitionOffset";
 export * from "./Preferences";
 export * from "./PreferencesMetadata";
 export * from "./PreferencesSpec";
+export * from "./RBACRequest";
 export * from "./SchemaRegistryConfig";
 export * from "./SchemaRegistryConfigCredentials";
 export * from "./SchemaRegistryStatus";
+export * from "./Scope";
 export * from "./ScramCredentials";
 export * from "./SidecarAccessToken";
 export * from "./SidecarVersionResponse";

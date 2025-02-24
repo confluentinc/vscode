@@ -6,7 +6,7 @@ version: v1.0
 name: build-test-release
 agent:
   machine:
-    type: s1-prod-ubuntu20-04-amd64-1
+    type: s1-prod-ubuntu24-04-amd64-1
 
 auto_cancel:
   running:
@@ -133,18 +133,16 @@ blocks:
           - export GIT_BRANCH=$SEMAPHORE_GIT_BRANCH
           - make validate-bump
 
-  - name: "Update third party notices PR"
-    dependencies: ["Bump microversion"]
-    run:
-      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
-    task:
-      jobs:
-        - name: "Update Third Party Notices PR"
-          commands:
-            - make update-third-party-notices-pr
-
 promotions:
   - name: Multi-Arch VSIX Packaging and Upload
     pipeline_file: multi-arch-packaging.yml
     auto_promote:
       when: "result = 'passed' and branch =~ '.*' and change_in('/release.svg', {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+  - name: Third Party Notices
+    pipeline_file: third-party-notices.yml
+    auto_promote:
+      when: "branch =~ '.*' and change_in(['/package.json', '/NOTICE.txt', '/scripts/notices/NOTICE-vsix_PREAMBLE.txt'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
+  - name: Validate Sidecar Version
+    pipeline_file: validate-sidecar-version.yml
+    auto_promote:
+      when: "result = 'passed' and change_in(['/.versions/ide-sidecar.txt', '/src/clients/sidecar-openapi-specs/sidecar.openapi.yaml'], {default_branch: 'main', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', pipeline_file: 'ignore'})"
