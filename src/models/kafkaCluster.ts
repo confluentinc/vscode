@@ -93,7 +93,7 @@ export class KafkaClusterTreeItem extends TreeItem {
 }
 
 // todo make this a method of KafkaCluster family.
-function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
+export function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${resource.iconName}) Kafka Cluster`)
     .appendMarkdown("\n\n---");
