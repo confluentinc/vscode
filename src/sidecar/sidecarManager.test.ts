@@ -224,7 +224,10 @@ describe("appendSidecarLogToOutputChannel() tests", () => {
 
     appendSidecarLogToOutputChannel(logLine);
 
-    sinon.assert.calledWith(appendLineStub, `[UNKNOWN] [test] test message ${JSON.stringify(mdc)}`);
+    sinon.assert.calledWith(
+      appendLineStub,
+      `[UNKNOWN] [test] test message ${JSON.stringify([mdc])}`,
+    );
   });
 
   it("handles MDC data", () => {

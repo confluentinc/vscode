@@ -692,28 +692,28 @@ export function appendSidecarLogToOutputChannel(line: string) {
 
   let logMsg = `[${log.loggerName}] ${log.message}`;
 
-  let context: Record<string, any> = {};
+  const logArgs = [];
   if (log.mdc && Object.keys(log.mdc).length > 0) {
-    context = { ...context, ...log.mdc };
+    logArgs.push(log.mdc);
   }
 
   switch (log.level) {
     case "DEBUG":
-      SIDECAR_OUTPUT_CHANNEL.debug(logMsg, context);
+      SIDECAR_OUTPUT_CHANNEL.debug(logMsg, ...logArgs);
       break;
     case "INFO":
-      SIDECAR_OUTPUT_CHANNEL.info(logMsg, context);
+      SIDECAR_OUTPUT_CHANNEL.info(logMsg, ...logArgs);
       break;
     case "WARN":
-      SIDECAR_OUTPUT_CHANNEL.warn(logMsg, context);
+      SIDECAR_OUTPUT_CHANNEL.warn(logMsg, ...logArgs);
       break;
     case "ERROR":
-      SIDECAR_OUTPUT_CHANNEL.error(logMsg, context);
+      SIDECAR_OUTPUT_CHANNEL.error(logMsg, ...logArgs);
       break;
     default:
       // still shows up as `info` in the output channel
       SIDECAR_OUTPUT_CHANNEL.appendLine(
-        `[${log.level}] ${logMsg} ${Object.keys(context).length > 0 ? JSON.stringify(context) : ""}`.trim(),
+        `[${log.level}] ${logMsg} ${logArgs.length > 0 ? JSON.stringify(logArgs) : ""}`.trim(),
       );
   }
 }
