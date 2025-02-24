@@ -198,7 +198,36 @@ describe("appendSidecarLogToOutputChannel() tests", () => {
     sinon.assert.calledWith(appendLineStub, logLine);
   });
 
-  it("handles MDC context", () => {
+  it("handles unexpected log levels", () => {
+    const logLine = JSON.stringify({
+      level: "UNKNOWN",
+      loggerName: "test",
+      message: "test message",
+    });
+
+    appendSidecarLogToOutputChannel(logLine);
+
+    sinon.assert.calledWith(appendLineStub, `[UNKNOWN] [test] test message`);
+  });
+
+  it("handles unexpected log levels with MDC data", () => {
+    const mdc = {
+      key1: "value1",
+      key2: "value2",
+    };
+    const logLine = JSON.stringify({
+      level: "UNKNOWN",
+      loggerName: "test",
+      message: "test message",
+      mdc,
+    });
+
+    appendSidecarLogToOutputChannel(logLine);
+
+    sinon.assert.calledWith(appendLineStub, `[UNKNOWN] [test] test message ${JSON.stringify(mdc)}`);
+  });
+
+  it("handles MDC data", () => {
     /** @see https://quarkus.io/guides/logging#use-mdc-to-add-contextual-log-information */
     const mdc = {
       key1: "value1",

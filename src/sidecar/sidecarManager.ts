@@ -713,7 +713,7 @@ export function appendSidecarLogToOutputChannel(line: string) {
     default:
       // still shows up as `info` in the output channel
       SIDECAR_OUTPUT_CHANNEL.appendLine(
-        `[${log.level}] ${logMsg} ${Object.keys(context).length > 0 ? JSON.stringify(context) : ""}`,
+        `[${log.level}] ${logMsg} ${Object.keys(context).length > 0 ? JSON.stringify(context) : ""}`.trim(),
       );
   }
 }
