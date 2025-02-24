@@ -56,7 +56,7 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, SIDECAR_OUTPUT_CHANNEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -76,7 +76,7 @@ import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
-import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
+import { getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
@@ -137,7 +137,7 @@ async function _activateExtension(
 
   // register the log output channels and debugging commands before anything else, in case we need
   // to reset global/workspace state or there's a problem further down with extension activation
-  context.subscriptions.push(outputChannel, sidecarOutputChannel, ...registerDebugCommands());
+  context.subscriptions.push(outputChannel, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
   // automatically display and focus the Confluent extension output channel in development mode
   // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
   // host window during debugging
