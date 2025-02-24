@@ -9,6 +9,7 @@ import { CCLOUD_CONNECTION_ID, LOCAL_CONNECTION_ID } from "../constants";
 import {
   ConnectionId,
   connectionIdToType,
+  getConnectionLabel,
   isCCloud,
   isDirect,
   isLocal,
@@ -70,5 +71,23 @@ describe("isSearchable", () => {
 
   it("should return false for undefined", () => {
     assert.equal(isSearchable(undefined), false);
+  });
+});
+
+describe("getConnectionLabel", () => {
+  it("should return Local for Local", () => {
+    assert.equal(getConnectionLabel(ConnectionType.Local), "Local");
+  });
+
+  it("should return Confluent Cloud for Ccloud", () => {
+    assert.equal(getConnectionLabel(ConnectionType.Ccloud), "Confluent Cloud");
+  });
+
+  it("should return Other for Direct", () => {
+    assert.equal(getConnectionLabel(ConnectionType.Direct), "Other");
+  });
+
+  it("Should throw an error for an unknown connection type", () => {
+    assert.throws(() => getConnectionLabel("unknown" as ConnectionType));
   });
 });
