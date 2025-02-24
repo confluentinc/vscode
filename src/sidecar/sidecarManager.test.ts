@@ -1,7 +1,15 @@
 import * as assert from "assert";
 import "mocha";
+import * as sinon from "sinon";
+import { SIDECAR_OUTPUT_CHANNEL } from "../constants";
+import { outputChannel } from "../logging";
 import { SIDECAR_LOGFILE_PATH } from "./constants";
-import { constructSidecarEnv, wasConnRefused, killSidecar } from "./sidecarManager";
+import {
+  appendSidecarLogToOutputChannel,
+  constructSidecarEnv,
+  killSidecar,
+  wasConnRefused,
+} from "./sidecarManager";
 
 describe("Test wasConnRefused", () => {
   it("wasConnRefused() should return true for various spellings of a connection refused error", () => {
@@ -99,5 +107,112 @@ describe("killSidecar() tests", () => {
 
     // restore
     process.kill = kill;
+  });
+});
+
+describe("appendSidecarLogToOutputChannel() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let debugStub: sinon.SinonStub;
+  let infoStub: sinon.SinonStub;
+  let warnStub: sinon.SinonStub;
+  let errorStub: sinon.SinonStub;
+  let appendLineStub: sinon.SinonStub;
+
+  let mainOutputErrorStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    debugStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "debug");
+    infoStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "info");
+    warnStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "warn");
+    errorStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "error");
+    appendLineStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "appendLine");
+
+    mainOutputErrorStub = sandbox.stub(outputChannel, "error");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("handles valid JSON logs with different levels", () => {
+    const testCases = [
+      {
+        input: JSON.stringify({
+          level: "DEBUG",
+          loggerName: "test",
+          message: "debug message",
+        }),
+        expectedStub: debugStub,
+        expectedMessage: "[test] debug message",
+      },
+      {
+        input: JSON.stringify({
+          level: "INFO",
+          loggerName: "test",
+          message: "info message",
+        }),
+        expectedStub: infoStub,
+        expectedMessage: "[test] info message",
+      },
+      {
+        input: JSON.stringify({
+          level: "WARN",
+          loggerName: "test",
+          message: "warn message",
+        }),
+        expectedStub: warnStub,
+        expectedMessage: "[test] warn message",
+      },
+      {
+        input: JSON.stringify({
+          level: "ERROR",
+          loggerName: "test",
+          message: "error message",
+        }),
+        expectedStub: errorStub,
+        expectedMessage: "[test] error message",
+      },
+    ];
+
+    testCases.forEach((testCase) => {
+      appendSidecarLogToOutputChannel(testCase.input);
+
+      sinon.assert.calledWith(testCase.expectedStub, testCase.expectedMessage);
+    });
+  });
+
+  it("handles invalid JSON", () => {
+    appendSidecarLogToOutputChannel("invalid json");
+
+    sinon.assert.calledWith(mainOutputErrorStub, sinon.match(/Failed to parse sidecar log line/));
+  });
+
+  it("handles log objects with missing fields", () => {
+    const logLine = JSON.stringify({ level: "INFO" });
+
+    appendSidecarLogToOutputChannel(logLine);
+
+    sinon.assert.calledWith(appendLineStub, logLine);
+  });
+
+  it("handles MDC context", () => {
+    /** @see https://quarkus.io/guides/logging#use-mdc-to-add-contextual-log-information */
+    const mdc = {
+      key1: "value1",
+      key2: "value2",
+    };
+    const logLineWithMdc = JSON.stringify({
+      level: "INFO",
+      loggerName: "test",
+      message: "test message",
+      mdc,
+    });
+
+    appendSidecarLogToOutputChannel(logLineWithMdc);
+
+    sinon.assert.calledWith(infoStub, "[test] test message", mdc);
   });
 });

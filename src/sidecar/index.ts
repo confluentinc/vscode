@@ -5,8 +5,6 @@ import { SidecarManager } from "./sidecarManager";
 
 export { SidecarHandle } from "./sidecarHandle";
 
-export { sidecarOutputChannel } from "./sidecarManager";
-
 /*
   This is the sidecar manager module. It manages the sidecar process, starting it up, handshaking with it, and configuring
   OpenAPI and GraphQL clients with the sidecar's auth token.
