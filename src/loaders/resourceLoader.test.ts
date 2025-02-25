@@ -2,12 +2,12 @@ import assert from "assert";
 import * as sinon from "sinon";
 import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
-import { EnvironmentId } from "../models/resource";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -41,15 +41,6 @@ describe("ResourceLoader::getSubjects()", () => {
     sandbox.restore();
   });
 
-  it("Hates not finding schema registry by id", async () => {
-    getSchemaRegistryForEnvironmentIdStub.resolves(undefined);
-
-    await assert.rejects(
-      loaderInstance.getSubjects("unknown-environment-id" as EnvironmentId),
-      /No schema registry found for environment/,
-    );
-  });
-
   it("Hates schema registry from wrong environment", async () => {
     // This is a valid schema registry id, but it is not from the local environment.
     await assert.rejects(
@@ -70,6 +61,17 @@ describe("ResourceLoader::getSubjects()", () => {
 
       assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
     }
+  });
+
+  it("Returns empty array when resolveSchemaRegistry() cannot find a schema registry", async () => {
+    // Set up for no schema registry within the environment,
+    // so that resolveSchemaRegistry() will throw "No schema registry found for environment".
+    getSchemaRegistryForEnvironmentIdStub.resolves(undefined);
+
+    // getSubjects() should eat that error and return empty array.
+    const subjects = await loaderInstance.getSubjects(TEST_LOCAL_ENVIRONMENT_ID);
+
+    assert.deepStrictEqual(subjects, []);
   });
 });
 
@@ -107,6 +109,28 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     assert.strictEqual(topics.length, 3);
     assert.ok(topics[0].hasSchema);
     assert.ok(topics[1].hasSchema);
+    assert.ok(!topics[2].hasSchema);
+
+    assert.ok(getSubjectsStub.calledOnce);
+    assert.ok(fetchTopicsStub.calledOnce);
+  });
+
+  it("Returns topics without schemas if getSubjects() returns empty array", async () => {
+    const topicsResponseData: TopicData[] = [
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic1", ["READ", "WRITE"]),
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic2", ["READ", "WRITE"]),
+      createTestTopicData(TEST_LOCAL_KAFKA_CLUSTER.id, "topic3", ["READ", "WRITE"]),
+    ];
+
+    fetchTopicsStub.resolves(topicsResponseData);
+    // as when there is no schema registry in the environment.
+    getSubjectsStub.resolves([]);
+
+    const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
+
+    assert.strictEqual(topics.length, 3);
+    assert.ok(!topics[0].hasSchema);
+    assert.ok(!topics[1].hasSchema);
     assert.ok(!topics[2].hasSchema);
 
     assert.ok(getSubjectsStub.calledOnce);
