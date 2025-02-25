@@ -251,7 +251,7 @@ class DirectConnectFormViewModel extends ViewModel {
     if (data["platform"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.auth_type"] = "API";
-      data["schema_registry.auth_type"] = "API"; // FIXME do we even use this in host?
+      data["schema_registry.auth_type"] = "API";
       data["kafka_cluster.ssl"] = "true";
       data["schema_registry.ssl"] = "true";
     }
