@@ -348,7 +348,7 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
     await import("./direct-connect-form");
     window.dispatchEvent(new Event("DOMContentLoaded"));
   });
-  // FIXME DO NOT USE $$$$$$$ thanks a lot Copilot
+
   const form = page.locator("form");
   await expect(form).toBeVisible();
 
