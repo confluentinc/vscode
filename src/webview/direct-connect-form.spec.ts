@@ -63,96 +63,56 @@ test("renders form html correctly", async ({ page }) => {
 
   await page.setContent(html);
 
-  const form = await page.$("form");
-  expect(form).not.toBeNull();
+  const form = page.locator("form");
+  await expect(form).toBeVisible();
 
-  // Check for our various field types to be in the form:
-  const typeSelect = await page.$$("select[name='formconnectiontype']");
-  expect(typeSelect).not.toBeNull();
-  const typeOptions = await typeSelect[0].$$("option");
-  expect(typeOptions.length).toBe(4);
+  // Check for our various field types to be visible in the form:
+  const typeSelect = page.locator("select[name='formconnectiontype']");
+  await expect(typeSelect).toBeVisible();
+  const typeOptions = await typeSelect.locator("option").all();
+  await expect(typeOptions.length).toBe(4);
 
-  const connectionNameInput = await page.$("input[name='name']");
-  expect(connectionNameInput).not.toBeNull();
+  const connectionNameInput = page.locator("input[name='name']");
+  await expect(connectionNameInput).toBeVisible();
 
-  const bootstrapServersInput = await page.$("input[name='kafka_cluster.bootstrap_servers']");
-  expect(bootstrapServersInput).not.toBeNull();
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  await expect(bootstrapServersInput).toBeVisible();
 
-  const sslCheckbox = await page.$("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
-  expect(sslCheckbox).not.toBeNull();
+  const sslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
+  await expect(sslCheckbox).toBeVisible();
 
-  const authKafka = await page.$$("select[name='kafka_cluster.auth_type']");
-  expect(authKafka).not.toBe(null);
-  const authKafkaOptions = await authKafka[0].$$("option");
-  expect(authKafkaOptions.length).toBe(3);
+  const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
+  await expect(authKafka).not.toBe(null);
+  const authKafkaOptions = await authKafka.locator("option").all();
+  await expect(authKafkaOptions.length).toBe(3);
 
-  const schemaUrlInput = await page.$("input[name='schema_registry.uri']");
-  expect(schemaUrlInput).not.toBeNull();
+  const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
+  await expect(schemaUrlInput).toBeVisible();
 
-  const schemaSslCheckbox = await page.$(
+  const schemaSslCheckbox = page.locator(
     "input[type='checkbox'][name='schema_registry.ssl.enabled']",
   );
-  expect(schemaSslCheckbox).not.toBeNull();
+  await expect(schemaSslCheckbox).toBeVisible();
 
-  const authSchema = await page.$$("select[name='schema_registry.auth_type']");
-  expect(authSchema).not.toBe(null);
-  const authSchemaOptions = await authSchema[0].$$("option");
-  expect(authSchemaOptions.length).toBe(3);
+  const authSchema = page.locator("select[name='schema_registry.auth_type']");
+  await expect(authSchema).not.toBe(null);
+  const authSchemaOptions = await authSchema.locator("option").all();
+  await expect(authSchemaOptions.length).toBe(3);
 });
 test("renders form with existing connection spec values for edit", async ({ execute, page }) => {
-  const SPEC_SAMPLE = {
-    id: "123",
-    name: "Sample",
-    type: "DIRECT",
-    kafka_cluster: {
-      bootstrap_servers: "localhost:9092",
-      ssl: {
-        enabled: true,
-        keystore: {
-          path: "/path/to/keystore.jks",
-          type: "JKS",
-          password: "keystore-password",
-          key_password: "key-password",
-        },
-        truststore: {
-          path: "/path/to/truststore.jks",
-          type: "JKS",
-          password: "truststore-password",
-        },
-      },
-    },
-  };
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
   });
 
-  await execute(async (stub) => {
-    const SPEC_SAMPLE = {
-      id: "123",
-      name: "Sample",
-      type: "DIRECT",
-      kafka_cluster: {
-        bootstrap_servers: "localhost:9092",
-        ssl: {
-          enabled: true,
-          keystore: {
-            path: "/path/to/keystore.jks",
-            type: "JKS",
-            password: "keystore-password",
-            key_password: "key-password",
-          },
-          truststore: {
-            path: "/path/to/truststore.jks",
-            type: "JKS",
-            password: "truststore-password",
-          },
-        },
-      },
-    };
-    stub.withArgs("Submit").resolves(null);
-    stub.withArgs("GetConnectionSpec").resolves(SPEC_SAMPLE);
-  }, sendWebviewMessage);
+  await execute(
+    async (stub, sample) => {
+      stub.withArgs("Submit").resolves(null);
+      stub.withArgs("GetConnectionSpec").resolves(sample);
+    },
+    sendWebviewMessage,
+    SPEC_SAMPLE,
+  );
 
   await execute(async () => {
     await import("./main");
@@ -165,50 +125,50 @@ test("renders form with existing connection spec values for edit", async ({ exec
   const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
   const specCall = await specCallHandle.jsonValue();
   expect(specCall[0]).toBe("GetConnectionSpec");
-  const form = await page.$("form");
-  expect(form).not.toBeNull();
+  const form = page.locator("form");
+  await expect(form).toBeVisible();
 
   // Check that the form fields are populated with the connection spec values
-  const nameInput = await page.$("input[name='name']");
-  expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
+  const nameInput = page.locator("input[name='name']");
+  await expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
 
-  const bootstrapServersInput = await page.$("input[name='kafka_cluster.bootstrap_servers']");
-  expect(await bootstrapServersInput?.getAttribute("value")).toBe(
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  await expect(await bootstrapServersInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.bootstrap_servers,
   );
 
-  // const uriInput = await page.$("input[name='schema_registry.uri']");
-  // expect(await uriInput?.getAttribute("value")).toBe(SPEC_SAMPLE.uri);
+  const uriInput = page.locator("input[name='schema_registry.uri']");
+  await expect(await uriInput?.getAttribute("value")).toBe(SPEC_SAMPLE.schema_registry.uri);
 
-  const kafkaSslCheckbox = await page.$("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
-  expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
+  const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
+  await expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
 
-  const keystorePathInput = await page.$("input[name='kafka_cluster.ssl.keystore.path']");
-  expect(await keystorePathInput?.getAttribute("value")).toBe(
+  const keystorePathInput = page.locator("input[name='kafka_cluster.ssl.keystore.path']");
+  await expect(await keystorePathInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.path,
   );
 
-  const keystorePasswordInput = await page.$("input[name='kafka_cluster.ssl.keystore.password']");
-  expect(await keystorePasswordInput?.getAttribute("value")).toBe(
+  const keystorePasswordInput = page.locator("input[name='kafka_cluster.ssl.keystore.password']");
+  await expect(await keystorePasswordInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.password,
   );
 
-  const keystoreKeyPasswordInput = await page.$(
+  const keystoreKeyPasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.keystore.key_password']",
   );
-  expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
+  await expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
   );
 
-  const truststorePathInput = await page.$("input[name='kafka_cluster.ssl.truststore.path']");
-  expect(await truststorePathInput?.getAttribute("value")).toBe(
+  const truststorePathInput = page.locator("input[name='kafka_cluster.ssl.truststore.path']");
+  await expect(await truststorePathInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
   );
 
-  const truststorePasswordInput = await page.$(
+  const truststorePasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.truststore.password']",
   );
-  expect(await truststorePasswordInput?.getAttribute("value")).toBe(
+  await expect(await truststorePasswordInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
   );
 });
@@ -235,9 +195,6 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
   await page.click("input[type=submit][value='Save']");
-  const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
-  const specCall = await specCallHandle.jsonValue();
-  expect(specCall[0]).toBe("GetConnectionSpec");
 
   // Check if the form submission was successful
   const submitCallHandle = await sendWebviewMessage.evaluateHandle(
@@ -251,9 +208,11 @@ test("submits the form with defaults & dummy data", async ({ execute, page }) =>
   expect(submitCallData).toEqual({
     "kafka_cluster.bootstrap_servers": "localhost:9092",
     "kafka_cluster.auth_type": "None",
+    "kafka_cluster.ssl.enabled": "true",
     name: "Test Connection",
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
+    "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "http://localhost:8081",
   });
 });
@@ -283,28 +242,28 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
+  const verify = page.locator("input[type=checkbox][name='kafka_cluster.ssl.verify_hostname']");
+  await expect(verify).toBeChecked();
 
-  // Check that ssl config fields show FIXME NC
-  // const verify = await page.$("input[type=checkbox][name='kafka_cluster.ssl.verify_hostname']");
-  // expect(verify).not.toBeNull();
-  // Submit the form
+  // Submit and check the form data
   await page.click("input[type=submit][value='Save']");
   const submitCallHandle = await sendWebviewMessage.evaluateHandle(
     (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
   );
   const submitCall = await submitCallHandle?.jsonValue();
   expect(submitCall).not.toBeUndefined();
-  // @ts-expect-error we already checked for undefined
-  expect(submitCall[0]).toBe("Submit");
-  // @ts-expect-error we already checked for undefined
-  expect(submitCall[1]).toEqual({
+  const submitCallName = submitCall?.[0];
+  expect(submitCallName).toBe("Submit");
+  const submitCallData = submitCall?.[1];
+  expect(submitCallData).toEqual({
     "kafka_cluster.bootstrap_servers": "localhost:9092",
     "kafka_cluster.auth_type": "None",
+    "kafka_cluster.ssl.enabled": "true",
     name: "Test Connection",
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
+    "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "http://localhost:8081",
-    "kafka_cluster.ssl.enabled": "true",
   });
 });
 test("submits the form with namespaced ssl advanced config fields when filled", async ({
@@ -357,6 +316,7 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
     name: "Test Connection",
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
+    "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "",
     "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.ssl.keystore.key_password": "key-password",
@@ -369,107 +329,67 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
   });
 });
 test("adds only edited ssl fields to form data", async ({ execute, page }) => {
-  const SPEC_SAMPLE = {
-    id: "123",
-    name: "Sample",
-    type: "DIRECT",
-    kafka_cluster: {
-      bootstrap_servers: "localhost:9092",
-      ssl: {
-        enabled: true,
-        keystore: {
-          path: "/path/to/keystore.jks",
-          type: "JKS",
-          password: "keystore-password",
-          key_password: "key-password",
-        },
-        truststore: {
-          path: "/path/to/truststore.jks",
-          type: "JKS",
-          password: "truststore-password",
-        },
-      },
-    },
-  };
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
   });
 
-  await execute(async (stub) => {
-    const SPEC_SAMPLE = {
-      id: "123",
-      name: "Sample",
-      type: "DIRECT",
-      kafka_cluster: {
-        bootstrap_servers: "localhost:9092",
-        ssl: {
-          enabled: true,
-          keystore: {
-            path: "/path/to/keystore.jks",
-            type: "JKS",
-            password: "keystore-password",
-            key_password: "key-password",
-          },
-          truststore: {
-            path: "/path/to/truststore.jks",
-            type: "JKS",
-            password: "truststore-password",
-          },
-        },
-      },
-    };
-    stub.withArgs("Update").resolves({ success: true });
-    stub.withArgs("GetConnectionSpec").resolves(SPEC_SAMPLE);
-  }, sendWebviewMessage);
+  await execute(
+    async (stub, sample) => {
+      stub.withArgs("Update").resolves({ success: true });
+      stub.withArgs("GetConnectionSpec").resolves(sample);
+    },
+    sendWebviewMessage,
+    SPEC_SAMPLE,
+  );
 
   await execute(async () => {
     await import("./main");
     await import("./direct-connect-form");
     window.dispatchEvent(new Event("DOMContentLoaded"));
   });
-
-  const form = await page.$("form");
-  expect(form).not.toBeNull();
+  // FIXME DO NOT USE $$$$$$$ thanks a lot Copilot
+  const form = page.locator("form");
+  await expect(form).toBeVisible();
 
   // Check that the form fields are populated with the connection spec values
-  const nameInput = await page.$("input[name='name']");
-  expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
+  const nameInput = page.locator("input[name='name']");
+  await expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
 
-  const bootstrapServersInput = await page.$("input[name='kafka_cluster.bootstrap_servers']");
-  expect(await bootstrapServersInput?.getAttribute("value")).toBe(
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  await expect(await bootstrapServersInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.bootstrap_servers,
   );
 
-  const kafkaSslCheckbox = await page.$("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
-  expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
+  const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
+  await expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
 
-  const keystorePathInput = await page.$("input[name='kafka_cluster.ssl.keystore.path']");
-  expect(await keystorePathInput?.getAttribute("value")).toBe(
+  const keystorePathInput = page.locator("input[name='kafka_cluster.ssl.keystore.path']");
+  await expect(await keystorePathInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.path,
   );
 
-  const keystorePasswordInput = await page.$("input[name='kafka_cluster.ssl.keystore.password']");
-  expect(await keystorePasswordInput?.getAttribute("value")).toBe(
+  const keystorePasswordInput = page.locator("input[name='kafka_cluster.ssl.keystore.password']");
+  await expect(await keystorePasswordInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.password,
   );
 
-  const keystoreKeyPasswordInput = await page.$(
+  const keystoreKeyPasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.keystore.key_password']",
   );
-  expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
+  await expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
   );
 
-  const truststorePathInput = await page.$("input[name='kafka_cluster.ssl.truststore.path']");
-  expect(await truststorePathInput?.getAttribute("value")).toBe(
+  const truststorePathInput = page.locator("input[name='kafka_cluster.ssl.truststore.path']");
+  await expect(await truststorePathInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
   );
 
-  const truststorePasswordInput = await page.$(
+  const truststorePasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.truststore.password']",
   );
-  expect(await truststorePasswordInput?.getAttribute("value")).toBe(
+  await expect(await truststorePasswordInput?.getAttribute("value")).toBe(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
   );
 
@@ -495,7 +415,8 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
     name: "Sample",
     formconnectiontype: "Apache Kafka",
     "schema_registry.auth_type": "None",
-    "schema_registry.uri": "",
+    "schema_registry.ssl.enabled": "true",
+    "schema_registry.uri": "http://localhost:8081",
     "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.ssl.keystore.password": "new-keystore-password",
     "kafka_cluster.ssl.keystore.path": "/new/path/to/keystore.jks",
@@ -504,3 +425,31 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
     "kafka_cluster.ssl.truststore.type": "PKCS12",
   });
 });
+const SPEC_SAMPLE = {
+  id: "123",
+  name: "Sample",
+  type: "DIRECT",
+  kafka_cluster: {
+    bootstrap_servers: "localhost:9092",
+    ssl: {
+      enabled: true,
+      keystore: {
+        path: "/path/to/keystore.jks",
+        type: "JKS",
+        password: "keystore-password",
+        key_password: "key-password",
+      },
+      truststore: {
+        path: "/path/to/truststore.jks",
+        type: "JKS",
+        password: "truststore-password",
+      },
+    },
+  },
+  schema_registry: {
+    uri: "http://localhost:8081",
+    ssl: {
+      enabled: true,
+    },
+  },
+};
