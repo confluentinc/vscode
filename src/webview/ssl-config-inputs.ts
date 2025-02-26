@@ -48,7 +48,7 @@ export class SslConfig extends HTMLElement {
     return this.configObj()?.keystore?.key_password;
   });
 
-  // Setter for message prop
+  // Setters for component props
   set config(value: TLSConfig) {
     this.configObj(value);
   }
@@ -56,7 +56,7 @@ export class SslConfig extends HTMLElement {
     this.identifier(value);
   }
 
-  /** update the host form data so it contains all the changed values on submit
+  /** Update the host form data so it contains all the changed values on submit
    * and dispatch a bubble event to the host for other actions
    */
   updateValue(event: Event) {
@@ -104,9 +104,11 @@ export class SslConfig extends HTMLElement {
               data-attr-value="this.truststoreType()"
               data-on-change="this.updateValue(event)"
             >
-              <option value="JKS" selected>JKS</option>
-              <option value="PKCS12">PKCS12</option>
-              <option value="PEM">PEM</option>
+              <option value="JKS" data-attr-selected="this.truststoreType() === 'JKS'">JKS</option>
+              <option value="PKCS12" data-attr-selected="this.truststoreType() === 'PKCS12'">
+                PKCS12
+              </option>
+              <option value="PEM" data-attr-selected="this.truststoreType() === 'PEM'">PEM</option>
             </select>
           </div>
           <div class="input-container">
@@ -146,9 +148,11 @@ export class SslConfig extends HTMLElement {
               data-attr-value="this.keystoreType()"
               data-on-change="this.updateValue(event)"
             >
-              <option value="JKS" selected>JKS</option>
-              <option value="PKCS12">PKCS12</option>
-              <option value="PEM">PEM</option>
+              <option value="JKS" data-attr-selected="this.keystoreType() === 'JKS'">JKS</option>
+              <option value="PKCS12" data-attr-selected="this.keystoreType() === 'PKCS12'">
+                PKCS12
+              </option>
+              <option value="PEM" data-attr-selected="this.keystoreType() === 'PEM'">PEM</option>
             </select>
           </div>
           <div class="input-container">
