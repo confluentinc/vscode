@@ -1,4 +1,5 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
+import { posix } from "path";
 import { registerCommandWithLogging } from ".";
 import { getCCloudAuthSession } from "../authn/utils";
 import { openDirectConnectionForm } from "../directConnect";
@@ -231,6 +232,55 @@ export async function editDirectConnection(item: ConnectionId | DirectEnvironmen
   openDirectConnectionForm(spec);
 }
 
+export async function shareDirectConnection(item: DirectEnvironment) {
+  // look up the associated ConnectionSpec
+  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+    item.connectionId,
+  );
+
+  // This shouldn't happen since we open from the item view, but for insurance...
+  if (!spec) {
+    logger.error("Direct connection not found, can't share");
+    window.showErrorMessage("Connection not found.");
+    ResourceViewProvider.getInstance().refresh();
+    return;
+  }
+
+  const SAVE_LABEL = "Save JSON file";
+  const folderUri = await window.showOpenDialog({
+    openLabel: SAVE_LABEL,
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    // Parameter might be ignored on some OSes (e.g. macOS)
+    title: SAVE_LABEL,
+  });
+
+  if (!folderUri || folderUri.length !== 1) {
+    // User cancelled before choosing a folder
+    // TODO Log it
+    // logUsage(UserEvent.ScaffoldCancelled, {
+    //   templateName: pickedTemplate.spec!.display_name,
+    // });
+    window.showInformationMessage("File saved cancelled.");
+  } else {
+    try {
+      const shareable = { ...spec, id: undefined };
+      const specJson = JSON.stringify(shareable, null, 2);
+      const destination = folderUri[0];
+      const name = spec.name ? spec.name : "connection";
+      const fileName = name.trim().replace(/\s+/g, "_") + ".json";
+      await workspace.fs.writeFile(
+        Uri.file(posix.join(destination.fsPath, fileName)),
+        new TextEncoder().encode(specJson),
+      );
+    } catch (err) {
+      logger.error(`Failed to save file: ${err}`);
+      window.showErrorMessage("Unable to save connection spec file.");
+    }
+  }
+}
+
 export function registerConnectionCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.connections.ccloud.signIn", ccloudSignIn),
@@ -240,6 +290,7 @@ export function registerConnectionCommands(): Disposable[] {
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
     // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
+    registerCommandWithLogging("confluent.connections.direct.share", shareDirectConnection),
   ];
 }
 
