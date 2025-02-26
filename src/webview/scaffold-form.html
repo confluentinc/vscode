@@ -20,13 +20,14 @@
         </p>
       </div>
       <form class="form-container" data-on-submit="this.handleSubmit(event)">
-        <template data-if="this.noOptions()">
-          <p class="form-description">
-            There are no configurable options for this template. Click Generate & Save to continue.
-          </p>
-        </template>
         <div class="form-section">
           <h2 class="form-section-heading">Options</h2>
+          <template data-if="this.noOptions()">
+            <p class="form-description">
+              There are no configurable options for this template. Click Generate & Save to
+              continue.
+            </p>
+          </template>
           <template data-for="field of this.options()">
             <div class="content-wrapper">
               <template data-if="this.getEnumField(this.field())">

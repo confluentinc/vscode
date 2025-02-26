@@ -135,9 +135,21 @@ export abstract class ResourceLoader implements IResourceBase {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
   ): Promise<Subject[]> {
-    const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
-
-    return await fetchSubjects(schemaRegistry);
+    try {
+      const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
+      return await fetchSubjects(schemaRegistry);
+    } catch (error) {
+      logger.error("Error fetching subjects", error);
+      if (
+        error instanceof Error &&
+        error.message.match(/No schema registry found for environment/)
+      ) {
+        // Expected error when no schema registry found for the environment.
+        // Act as if there are no subjects / schemas.
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**

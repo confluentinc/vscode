@@ -272,14 +272,20 @@ async function waitForTopicToBeDeleted(
   throw new Error(`${topicKind} topic "${topicName}" was not deleted within ${timeoutMs}ms`);
 }
 
-async function copyBootstrapServers(item: KafkaCluster) {
+export async function copyBootstrapServers(item: KafkaCluster) {
   const bootstrapServers = item.bootstrapServers;
   if (!bootstrapServers) {
     return;
   }
 
-  await vscode.env.clipboard.writeText(bootstrapServers);
-  vscode.window.showInformationMessage(`Copied "${bootstrapServers}" to clipboard.`);
+  // Strip away any protocol:// prefix from each comma separated bootstrap server
+  const stripped = bootstrapServers
+    .split(",")
+    .map((server) => server.replace(/^[^:]+:\/\//, ""))
+    .join(",");
+
+  await vscode.env.clipboard.writeText(stripped);
+  vscode.window.showInformationMessage(`Copied "${stripped}" to clipboard.`);
 }
 
 export function registerKafkaClusterCommands(): vscode.Disposable[] {

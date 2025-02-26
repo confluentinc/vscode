@@ -10,31 +10,33 @@ import { WorkspaceStorageKeys } from "../storage/constants";
 
 const logger = new Logger("commands.diffs");
 
-async function selectForCompareCommand(item: any) {
+export async function selectForCompareCommand(item: any) {
   if (!item) {
     return;
   }
   const uri: vscode.Uri = convertItemToUri(item);
   logger.debug("Selected item for compare", uri);
-  await getStorageManager().setWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI, uri);
+  // convert to string before storing so we can Uri.parse it later since Uri is not serializable
+  await getStorageManager().setWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI, uri.toString());
   // allows the "Compare with Selected" command to be used
   await setContextValue(ContextValues.resourceSelectedForCompare, true);
 }
 
-async function compareWithSelectedCommand(item: any) {
+export async function compareWithSelectedCommand(item: any) {
   if (!item) {
     return;
   }
   const uri2: vscode.Uri = convertItemToUri(item);
   logger.debug("Comparing with selected item", uri2);
-
-  const uri1: vscode.Uri | undefined = await getStorageManager().getWorkspaceState(
+  const uri1str: string | undefined = await getStorageManager().getWorkspaceState(
     WorkspaceStorageKeys.DIFF_BASE_URI,
   );
-  if (!uri1) {
+  if (!uri1str) {
     logger.error("No resource selected for compare; this shouldn't happen", uri2);
     return;
   }
+  // convert back to Uri
+  const uri1: vscode.Uri = vscode.Uri.parse(uri1str);
 
   // replace fsPaths with ~ if they contain $HOME
   const uri1Path = uri1.fsPath.replace(homedir(), "~");

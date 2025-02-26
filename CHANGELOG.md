@@ -27,12 +27,14 @@ All notable changes to this extension will be documented in this file.
 - Improved logging in the "Confluent (Sidecar)" output channel by implementing the
   `LogOutputChannel` API. When using VS Code 1.97 or higher, these logs can now be combined with the
   "Confluent" output channel for unified log viewing.
+- Updated the URL templates for viewing schemas and schema registries in CCloud (now under "stream-governance/schema-registry/data-contracts")
 
 ### Fixed
 
 - Give the sidecar more time to start up, log more sidecar startup errors into sentry.
 - Now message viewer is able to consume messages whose key or value schemas use an AVRO schema which
   specifies a non-record structure as the toplevel entity, such as an AVRO long, string, or enum.
+- Copying Kafka cluster bootstrap server(s) to clipboard now omits any `<protocol>://` prefixes.
 
 ## 0.24.4
 
