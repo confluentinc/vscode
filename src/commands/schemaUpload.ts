@@ -10,17 +10,17 @@ import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
-import { determineSubject, Subjectish } from "./schemaUtils";
 
 const logger = new Logger("commands.schemaUpload");
 
-/** Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions.
+/**
+ * Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions.
  *
  * uploadNewSchema() command is registered over in ./schemas.ts, but the actual implementation is here.
  * All other exported functions are exported for the tests in schemaUpload.test.ts.
@@ -31,8 +31,10 @@ const logger = new Logger("commands.schemaUpload");
  *  1. On a Subect treeitem in the Schemas view (passing in a Subject)
  *  2. On one of a topic's schema subject group in the Topics view (passing in a ContainerTreeItem<Schema>)
  */
-export async function uploadSchemaForSubjectFromfile(subjectish: Subjectish) {
-  const subject = determineSubject("uploadSchemaForSubjectFromfile", subjectish);
+export async function uploadSchemaForSubjectFromfile(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    throw new Error("uploadSchemaForSubjectFromfile called with invalid argument type");
+  }
   const loader = ResourceLoader.getInstance(subject.connectionId);
   const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
   await uploadSchemaFromFile(registry, subject.name);

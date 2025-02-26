@@ -14,9 +14,14 @@ import { TopicFetchError } from "../loaders/loaderUtils";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { getSubjectIcon, Schema, SchemaTreeItem, subjectMatchesTopicName } from "../models/schema";
+import {
+  Schema,
+  SchemaTreeItem,
+  Subject,
+  subjectMatchesTopicName,
+  SubjectWithSchemasTreeItem,
+} from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -27,7 +32,7 @@ const logger = new Logger("viewProviders.topics");
  * The types managed by the {@link TopicViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
  */
-type TopicViewProviderData = KafkaTopic | ContainerTreeItem<Schema> | Schema;
+type TopicViewProviderData = KafkaTopic | Subject | Schema;
 
 export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -101,15 +106,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {
     let treeItem: vscode.TreeItem;
     if (element instanceof KafkaTopic) {
-      logger.debug("Creating tree item for KafkaTopic", { element });
       treeItem = new KafkaTopicTreeItem(element);
-    } else if (element instanceof Schema) {
-      logger.debug("Creating tree item for Schema", { element });
-      treeItem = new SchemaTreeItem(element);
+    } else if (element instanceof Subject) {
+      treeItem = new SubjectWithSchemasTreeItem(element);
     } else {
-      // should only be left with ContainerTreeItems
-      logger.debug("returning expected ContainerTreeItem", { element });
-      treeItem = element;
+      // must be individual Schema.
+      treeItem = new SchemaTreeItem(element);
     }
 
     if (this.itemSearchString) {
@@ -133,11 +135,11 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof KafkaTopic) {
-        // return schema-subject containers
+        // return schema-subject containers in form of SubjectWithSchemas[]
         children = await loadTopicSchemas(element);
-      } else if (element instanceof ContainerTreeItem) {
-        // schema-subject container, return schema versions for the topic
-        children = element.children;
+      } else if (element instanceof Subject) {
+        // Subject carrying schemas as from loadTopicSchemas, return schema versions for the topic
+        children = element.schemas!;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
@@ -329,18 +331,21 @@ export async function getTopicsForCluster(
  * by subject as {@link ContainerTreeItem}s, with the {@link Schema}s in version-descending order.
  * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
  */
-export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTreeItem<Schema>[]> {
+export async function loadTopicSchemas(topic: KafkaTopic): Promise<Subject[]> {
   /*
     1. Get all the subjects from the topic's cluster's environment's schema registry.
     2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
     3. For each of those subjects, get the correspoinding schema version array
-    4. Assemble each subject + schemas into a ContainerTreeItem<Schema>, collect into an array thereof.
-    5. Return the array.
+    4. Assemble each subject + schemas into a Subject holding the schemas, collect into an array of Subject.
+    5. Return said array.
   */
 
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
   // 1. Get all the subjects from the topic's cluster's environment's schema registry.
+
+  // (Because this gets called each time a different topic is expanded, it is imperative that the subject
+  //  list is cached in the loader regardless of loader implemenation, issue #1051)
   const subjects = await loader.getSubjects(topic.environmentId);
 
   // 2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
@@ -361,32 +366,21 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTree
   );
   const subjectGroups = await Promise.all(subjectGroupRequests);
 
-  // 4. Assemble each subject + schemas into a ContainerTreeItem<Schema>, collect into an array thereof.
-  // Create a ContainerTreeItem<Schema> for each subject group.
-  const schemaContainers: ContainerTreeItem<Schema>[] = subjectGroups.map((group) => {
+  // 4. Group by each subject: a Subject carrying the schemas, collect into an array thereof.
+  const schemaContainers: Subject[] = subjectGroups.map((group: Schema[]) => {
     const firstSchema = group[0];
-    const subject = firstSchema.subject;
 
-    const item = new ContainerTreeItem(
-      subject, // label
-      vscode.TreeItemCollapsibleState.Collapsed,
+    // Roll this Schema[] into a Subject object with a Schema[] payload.
+    // (This is the only place in the codebase where a Subject is created with a Schema[] payload.)
+    return new Subject(
+      firstSchema.subject,
+      topic.connectionId,
+      topic.environmentId,
+      firstSchema.schemaRegistryId,
       group,
     );
-
-    item.iconPath = getSubjectIcon(subject, topicName !== undefined);
-
-    item.description = `${firstSchema.type} (${group.length})`;
-    const propertyParts: string[] = new Array<string>();
-
-    if (group.length > 1) {
-      propertyParts.push("multiple-versions");
-    }
-    propertyParts.push("schema-subject");
-
-    item.contextValue = propertyParts.join("-");
-
-    return item;
   });
 
+  // 5. Return said array.
   return schemaContainers;
 }

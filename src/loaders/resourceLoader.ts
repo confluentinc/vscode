@@ -15,7 +15,6 @@ import {
   fetchTopics,
 } from "./loaderUtils";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const logger = new Logger("resourceLoader");
 
 /**
