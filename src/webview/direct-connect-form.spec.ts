@@ -291,11 +291,11 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
-
+  // Click to show the advanced settings, then fill them in
+  await page.click("p:has-text('Advanced SSL Configuration')");
   await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
-
   await page.selectOption("select[name='kafka_cluster.ssl.keystore.type']", "PEM");
   await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
   await page.fill("input[name='kafka_cluster.ssl.keystore.password']", "keystore-password");
