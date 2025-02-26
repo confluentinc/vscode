@@ -8,7 +8,9 @@ import {
   instanceOfBasicCredentials,
 } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
-
+import { SslConfig } from "./ssl-config-inputs";
+// Register the custom element
+customElements.define("ssl-config", SslConfig);
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
 addEventListener("DOMContentLoaded", () => {
@@ -62,7 +64,11 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
   });
   kafkaSslEnabled = this.derive(() => {
-    return this.spec()?.kafka_cluster?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+    if (this.spec()?.kafka_cluster?.ssl?.enabled === false) return false;
+    else return true;
+  });
+  kafkaSslConfig = this.derive(() => {
+    return this.spec()?.kafka_cluster?.ssl || {};
   });
 
   /** Schema Registry */
@@ -90,14 +96,19 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.schemaCreds() ? "fakeplaceholdersecrethere" : "";
   });
   schemaSslEnabled = this.derive(() => {
-    return this.spec()?.schema_registry?.ssl?.enabled || this.platformType() === "Confluent Cloud";
+    if (this.spec()?.schema_registry?.ssl?.enabled === false) return false;
+    else return true;
   });
-
+  schemaSslConfig = this.derive(() => {
+    return this.spec()?.schema_registry?.ssl || {};
+  });
   /** Form State */
   message = this.signal("");
   success = this.signal(false);
   loading = this.signal(false);
-
+  editing = this.derive(() => {
+    return this.spec()?.id ? true : false;
+  });
   /** Connection state & errors (displayed in UI after Test) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
   kafkaErrorMessage = this.signal<string | undefined>(undefined);
@@ -142,10 +153,21 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaStatusMessage(undefined);
   }
 
-  updateValue(event: Event) {
+  async updateSslConfig(event: CustomEvent) {
+    const { inputName, inputValue } = event.detail;
+    await post("UpdateSpecValue", { inputName, inputValue });
+  }
+  async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
+    const value = input.type === "checkbox" ? input.checked : input.value;
+
+    // auth_type doesn't exist in spec; used to determine which credentials to include
+    if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
+      await post("UpdateSpecValue", { inputName: input.name, inputValue: value.toString() });
+    }
+
     switch (input.name) {
-      case "platform":
+      case "formconnectiontype":
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
           this.kafkaAuthType("API");
@@ -157,43 +179,43 @@ class DirectConnectFormViewModel extends ViewModel {
       // case "other-platform":
       //   this.otherPlatformType(input.value);
       //   break;
-      case "name":
-        this.name(input.value);
-        break;
-      case "bootstrap_servers":
-        this.kafkaBootstrapServers(input.value);
-        break;
-      case "kafka_auth_type":
+      // case "name":
+      //   this.name(input.value);
+      //   break;
+      // case "kafka_cluster.bootstrap_servers":
+      //   this.kafkaBootstrapServers(input.value);
+      //   break;
+      case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         this.clearKafkaCreds();
         break;
-      case "schema_auth_type":
+      case "schema_registry.auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
         this.clearSchemaCreds();
         break;
-      case "uri":
-        this.schemaUri(input.value);
-        break;
-      case "kafka_username":
-        this.kafkaUsername(input.value);
-        break;
-      case "kafka_api_key":
-        this.kafkaApiKey(input.value);
-        break;
-      case "schema_username":
-        this.schemaUsername(input.value);
-        break;
-      case "schema_api_key":
-        this.schemaApiKey(input.value);
-        break;
-      case "kafka_ssl":
+      // case "schema_registry.uri":
+      //   this.schemaUri(input.value);
+      //   break;
+      // case "kafka_cluster.credentials.username":
+      //   this.kafkaUsername(input.value);
+      //   break;
+      // case "kafka_api_key":
+      //   this.kafkaApiKey(input.value);
+      //   break;
+      // case "schema_username":
+      //   this.schemaUsername(input.value);
+      //   break;
+      // case "schema_api_key":
+      //   this.schemaApiKey(input.value);
+      //   break;
+      case "kafka_cluster.ssl.enabled":
         this.kafkaSslEnabled(input.checked);
         break;
-      case "schema_ssl":
+      case "schema_registry.ssl.enabled":
         this.schemaSslEnabled(input.checked);
         break;
       default:
-        console.warn(`Unhandled input update: ${input.name}`);
+        console.log(`Unhandled input update: ${input.name}`);
     }
   }
 
@@ -221,16 +243,18 @@ class DirectConnectFormViewModel extends ViewModel {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
-    if (!data["bootstrap_servers"] && !data["uri"]) {
+    if (!data["kafka_cluster.bootstrap_servers"] && !data["schema_registry.uri"]) {
       this.message("Please provide either Kafka cluster or Schema Registry details");
       this.loading(false);
       return;
     }
     if (data["platform"] === "Confluent Cloud") {
-      data["kafka_auth_type"] = "API";
-      data["schema_auth_type"] = "API";
+      // these fields are disabled when CCloud selected; add them back in form data
+      data["kafka_cluster.auth_type"] = "API";
+      data["schema_registry.auth_type"] = "API";
+      data["kafka_cluster.ssl"] = "true";
+      data["schema_registry.ssl"] = "true";
     }
-
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
       result = await post("Test", data);
@@ -263,8 +287,15 @@ export type TestResponse = {
 
 export function post(type: "Test", body: any): Promise<TestResponse>;
 export function post(type: "Submit", body: any): Promise<PostResponse>;
-export function post(type: "GetConnectionSpec", body: any): Promise<CustomConnectionSpec | null>;
 export function post(type: "Update", body: { [key: string]: unknown }): Promise<PostResponse>;
+export function post(
+  type: "GetConnectionSpec",
+  body: any,
+): Promise<Partial<CustomConnectionSpec> | null>;
+export function post(
+  type: "UpdateSpecValue",
+  body: { inputName: string; inputValue: string },
+): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
