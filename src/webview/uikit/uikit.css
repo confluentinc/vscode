@@ -220,6 +220,24 @@
   width: 100%;
   border-width: 0;
 }
+.input-sub-group {
+  background: var(--vscode-sideBar-background);
+  color: var(--vscode-sideBar-foreground);
+  padding: 0 16px;
+  border-radius: 5px;
+  border: 1px solid var(--vscode-sideBar-border);
+}
+.input-sub-group .heading {
+  font-size: 15px;
+  margin: 8px 0;
+}
+.input-sub-group p {
+  font-size: inherit;
+  margin: 16px 0;
+}
+.input-sub-group > .input-container {
+  margin-bottom: 12px;
+}
 /** shorter inputs and dropdowns can be side-by-side */
 .input-row {
   display: flex;
