@@ -11,7 +11,7 @@ export enum UserEvent {
   MessageViewerAction = "Message Viewer Action",
   NotificationButtonClicked = "Notification Button Clicked",
   ProjectScaffoldingAction = "Project Scaffolding Action",
-  SignedIn = "Signed In",
+  CCloudAuthentication = "CCloud Authentication",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */

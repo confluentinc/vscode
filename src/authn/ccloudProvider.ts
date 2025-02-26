@@ -18,7 +18,7 @@ import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
-import { UserEvent } from "../telemetry/events";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
 import { openExternal } from "./ccloudStateHandling";
@@ -152,6 +152,11 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw e;
     }
 
+    logUsage(UserEvent.CCloudAuthentication, {
+      status: "signed in",
+    });
+
+    // sign-in completed, wait for the connection to become usable
     const authenticatedConnection = await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
       throw new Error("CCloud connection failed to become usable after authentication.");
@@ -160,7 +165,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // User signed in successfully so we send an identify event to Segment
     if (authenticatedConnection.status.authentication.user) {
       sendTelemetryIdentifyEvent({
-        eventName: UserEvent.SignedIn,
+        eventName: UserEvent.CCloudAuthentication,
         userInfo: authenticatedConnection.status.authentication.user,
         session: undefined,
       });
@@ -306,6 +311,10 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       }
       return;
     }
+
+    logUsage(UserEvent.CCloudAuthentication, {
+      status: "signed out",
+    });
 
     // tell the sidecar to delete the connection and update the auth status "secret" in storage
     // to prevent any last-minute requests from passing through the middleware
