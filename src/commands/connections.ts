@@ -268,7 +268,8 @@ export async function shareDirectConnection(item: DirectEnvironment) {
       const shareable = { ...spec, id: undefined };
       const specJson = JSON.stringify(shareable, null, 2);
       const destination = folderUri[0];
-      const fileName = spec.name + ".json";
+      const name = spec.name ? spec.name : "connection";
+      const fileName = name.trim().replace(/\s+/g, "_") + ".json";
       await workspace.fs.writeFile(
         Uri.file(posix.join(destination.fsPath, fileName)),
         new TextEncoder().encode(specJson),
