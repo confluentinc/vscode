@@ -29,7 +29,7 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   region!: Enforced<string>;
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas`;
+    return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts`;
   }
 }
 

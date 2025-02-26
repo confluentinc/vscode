@@ -75,7 +75,7 @@ export class Schema extends Data implements IResourceBase {
 
   get ccloudUrl(): string {
     if (isCCloud(this)) {
-      return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/schemas/${this.subject}`;
+      return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.subject}`;
     }
     return "";
   }
