@@ -88,6 +88,12 @@
         "category": "Confluent: Connections"
       },
       {
+        "command": "confluent.connections.direct.export",
+        "icon": "$(file-code)",
+        "title": "Save connection configuration as json file",
+        "category": "Confluent: Connections"
+      },
+      {
         "command": "confluent.connections.addSSLPemPath",
         "icon": "$(key)",
         "title": "Add SSL/TLS PEM Path",
@@ -591,6 +597,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.connections.direct.export",
+          "when": "false"
+        },
+        {
           "command": "confluent.copyOrganizationId",
           "when": "false"
         },
@@ -866,6 +876,11 @@
           "command": "confluent.connections.direct.edit",
           "when": "viewItem == direct-environment",
           "group": "inline@2"
+        },
+        {
+          "command": "confluent.connections.direct.export",
+          "when": "viewItem == direct-environment",
+          "group": "inline@4"
         },
         {
           "command": "confluent.organizations.use",
