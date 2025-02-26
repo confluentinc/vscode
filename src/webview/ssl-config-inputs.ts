@@ -99,7 +99,7 @@ export class SslConfig extends HTMLElement {
         data-attr-aria-expanded="this.showTLS()"
         class="heading"
       >
-        <span data-text="this.showTLS() ? '^' : '>'"></span>
+        <span data-text="this.showTLS() ? '-' : '+'"></span>
         Advanced SSL Configuration
       </p>
       <template data-if="this.showTLS()">
