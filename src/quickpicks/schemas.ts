@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ResourceLoader } from "../loaders/";
 import { getConnectionLabel } from "../models/resource";
-import { getSubjectIcon, SchemaType } from "../models/schema";
+import { getSubjectIcon, Schema, SchemaType } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
@@ -12,6 +12,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
  */
 export async function schemaSubjectQuickPick(
   schemaRegistry: SchemaRegistry,
+  title?: string,
 ): Promise<string | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
 
@@ -43,7 +44,9 @@ export async function schemaSubjectQuickPick(
   const chosenSubject: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
     subjectItems,
     {
+      title,
       placeHolder: "Select existing subject or to create a new one",
+      ignoreFocusOut: true,
     },
   );
 
@@ -65,6 +68,7 @@ export async function schemaTypeQuickPick(): Promise<SchemaType | undefined> {
   const schemaTypes = Object.values(SchemaType);
   const chosenType = await vscode.window.showQuickPick(schemaTypes, {
     placeHolder: "Choose a schema type",
+    ignoreFocusOut: true,
   });
 
   if (!chosenType) {
@@ -72,4 +76,40 @@ export async function schemaTypeQuickPick(): Promise<SchemaType | undefined> {
   }
 
   return chosenType as SchemaType;
+}
+
+/** Quickpick over the versions of a schema based on its subject. */
+export async function schemaVersionQuickPick(
+  schemaRegistry: SchemaRegistry,
+  subject: string,
+): Promise<Schema | undefined> {
+  const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
+  const schemaVersions: Schema[] = await loader.getSchemasForEnvironmentId(
+    schemaRegistry.environmentId,
+  );
+  const schemasMatchingSubject: Schema[] = schemaVersions.filter(
+    (schema) => schema.subject === subject,
+  );
+
+  const versionItems: vscode.QuickPickItem[] = schemasMatchingSubject.map((schema) => ({
+    label: `v${schema.version.toString()}`,
+    description: schema.isHighestVersion ? `${schema.id} (latest)` : schema.id,
+  }));
+  const chosenVersionItem: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
+    versionItems,
+    {
+      title: `Schema versions for ${subject}`,
+      placeHolder: "Select a schema version",
+      ignoreFocusOut: true,
+    },
+  );
+
+  if (!chosenVersionItem) {
+    return;
+  }
+  return schemaVersions.find(
+    (schema) =>
+      schema.id === chosenVersionItem.description?.split(" ")[0] &&
+      schema.version === parseInt(chosenVersionItem.label.replace("v", ""), 10),
+  );
 }
