@@ -235,6 +235,10 @@
   font-size: inherit;
   margin: 16px 0;
 }
+.input-sub-group.hidden {
+  background-color: transparent;
+  padding: 0 8px;
+}
 /** shorter inputs and dropdowns can be side-by-side */
 .input-row {
   display: flex;
