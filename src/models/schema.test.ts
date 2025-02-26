@@ -98,7 +98,7 @@ describe("Schema model methods", () => {
     // ccloud schemas have a ccloud url.
     assert.equal(
       TEST_CCLOUD_SCHEMA.ccloudUrl,
-      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA.environmentId}/schema-registry/schemas/${TEST_CCLOUD_SCHEMA.subject}`,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA.environmentId}/stream-governance/schema-registry/data-contracts/${TEST_CCLOUD_SCHEMA.subject}`,
     );
 
     // Non-ccloud schemas do not
