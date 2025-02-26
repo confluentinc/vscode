@@ -93,14 +93,14 @@ export class SslConfig extends HTMLElement {
       />
       <span>Verify Server Hostname</span>
     </label>
-    <div data-attr-class="this.showTLS() ? 'input-sub-group' : 'input-sub-group hidden'">
+    <div class="input-sub-group">
       <p
         data-on-click="this.showTLS(!this.showTLS())"
         data-attr-aria-expanded="this.showTLS()"
         class="heading"
       >
         <span data-text="this.showTLS() ? '^' : '>'"></span>
-        SSL Configuration
+        Advanced SSL Configuration
       </p>
       <template data-if="this.showTLS()">
         <p class="info">Optional settings for advanced SSL configuration</p>
