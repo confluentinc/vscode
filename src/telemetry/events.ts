@@ -3,36 +3,15 @@ import { getTelemetryLogger } from "./telemetryLogger";
 
 /** The names of user events that can be logged when telemetry is enabled. */
 export enum UserEvent {
-  ActivatedWithSession = "Activated With Session",
-
   CommandInvoked = "Command Invoked",
-
   DirectConnectionAction = "Direct Connection Action",
-
-  DockerContainerCreated = "Docker Container Created",
-  DockerContainerStarted = "Docker Container Started",
-  DockerContainerStopped = "Docker Container Stopped",
-  DockerImagePulled = "Docker Image Pulled",
-
-  ExtensionActivated = "Extension Activated",
-
+  ExtensionActivation = "Extension Activation",
   InputBoxFilled = "Input Box Filled",
-
+  LocalDockerAction = "Local Docker Action",
   MessageViewerAction = "Message Viewer Action",
-
   NotificationButtonClicked = "Notification Button Clicked",
-
-  ScaffoldTemplatePicked = "Scaffold Template Picked",
-  ScaffoldFormSubmitted = "Scaffold Form Submitted",
-  ScaffoldCancelled = "Scaffold Cancelled",
-  ScaffoldCompleted = "Scaffold Completed",
-  ScaffoldFolderOpened = "Scaffold Folder Opened",
-
-  SignedIn = "Signed In",
-
-  WorkflowInitiated = "Workflow Initiated",
-  WorkflowFinished = "Workflow Finished",
-  WorkflowErrored = "Workflow Errored",
+  ProjectScaffoldingAction = "Project Scaffolding Action",
+  CCloudAuthentication = "CCloud Authentication",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */
