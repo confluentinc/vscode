@@ -97,7 +97,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     }
   }
 
-  /** Stores state of spec updates in flight; updated on form input
+  /** Stores state of spec updates in progress; updated on form input
    * This also makes it so that users don't lose inputs when the form goes in the background
    */
   let specUpdatedValues: Partial<CustomConnectionSpec> = {};
