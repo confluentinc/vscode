@@ -61,7 +61,7 @@ export class SslConfig extends HTMLElement {
   }
 
   /** Update the host form data so it contains all the changed values on submit
-   * and dispatch a bubble event to the host for other actions
+   * and dispatch a change event to the host for other actions
    */
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -71,7 +71,7 @@ export class SslConfig extends HTMLElement {
     this._internals.setFormValue(this.entries);
 
     this.dispatchEvent(
-      new CustomEvent("bubble", {
+      new CustomEvent("change", {
         detail: { inputName: name, inputValue: value },
       }),
     );
