@@ -22,8 +22,14 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
         key: {
           description: "The key of the message",
         },
+        key_schema: {
+          $ref: "#/definitions/schemaInfo",
+        },
         value: {
           description: "The value of the message",
+        },
+        value_schema: {
+          $ref: "#/definitions/schemaInfo",
         },
         headers: {
           type: "array",
@@ -58,5 +64,49 @@ export const PRODUCE_MESSAGE_SCHEMA: JSONSchema = {
       },
       required: ["key", "value"],
     },
+    schemaInfo: {
+      type: "object",
+      properties: {
+        // TODO: add Schema Registry URI?
+        schema_version: {
+          type: "integer",
+          description: "The version number of the schema",
+        },
+        subject: {
+          type: "string",
+          description: "The subject of the schema",
+        },
+        subject_name_strategy: {
+          type: "string",
+          description: "The subject name strategy",
+          enum: ["TOPIC_NAME", "RECORD_NAME", "TOPIC_RECORD_NAME"],
+        },
+      },
+      required: ["schema_version", "subject", "subject_name_strategy"],
+    },
   },
 };
+
+export interface ProduceMessage {
+  key?: string;
+  key_schema?: SchemaInfo;
+  value?: string;
+  value_schema?: SchemaInfo;
+  headers?: MessageHeader[];
+  partition_id?: number;
+  timestamp?: number;
+}
+
+export interface SchemaInfo {
+  // TODO: add Schema Registry URI?
+  schema_version: number;
+  subject: string;
+  subject_name_strategy: string;
+  type: "BINARY" | "JSON" | "STRING" | undefined;
+}
+
+export interface MessageHeader {
+  name?: string;
+  key?: string;
+  value: string;
+}
