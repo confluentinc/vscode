@@ -17,7 +17,7 @@ import { showErrorNotificationWithButtons } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { isCCloud, isDirect } from "../models/resource";
+import { isCCloud } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -27,7 +27,6 @@ import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
 import { PRODUCE_MESSAGE_SCHEMA, SchemaInfo } from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
-import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
 import {
   executeInWorkerPool,
@@ -488,20 +487,8 @@ export async function createProduceRequestData(
   keySchemaInfo?: any,
   valueSchemaInfo?: any,
 ): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
-  let forCCloudTopic = false;
-  if (isCCloud(topic)) {
-    forCCloudTopic = true;
-  } else if (isDirect(topic)) {
-    // look up the formConnectionType for this topic's connection
-    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-      topic.connectionId,
-    );
-    if (spec?.formConnectionType === "Confluent Cloud") {
-      forCCloudTopic = true;
-    }
-  }
-
   // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
+  const forCCloudTopic = isCCloud(topic);
   const schemaless = "JSON";
   const schemaType: { type?: string } = {};
   if (forCCloudTopic && !(keySchema || keySchemaInfo || valueSchema || valueSchemaInfo)) {
