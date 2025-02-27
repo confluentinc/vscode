@@ -123,18 +123,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   async getChildren(element?: SchemasViewProviderData): Promise<SchemasViewProviderData[]> {
     // we should get the following hierarchy/structure of tree items from this method:
-    // - topic1-value (ContainerTreeItem<Schema>)
-    //   - schema1-V2 (Schema)
-    //   - schema1-V1 (Schema)
-    // - topic2-value (ContainerTreeItem<Schema>)
-    //   - schema2-V1 (Schema)
-
-    // But since weaned off of the old GET /schemas route, the toplevel ContainerTreeItem<Schema>
-    // will never contain children and are acting as expandable/collapsable placeholders for the
-    // subject group, a Schema[] describing all of the versions bound to that subject.
+    // - topic1-value (Subject w/o schemas fetched preemptively)
+    //   - schema1-V2 (Schema) (once the Subject is expanded)
+    //   - schema1-V1 (Schema) (once the Subject is expanded)
+    // - topic2-value (Subject w/o schemas schemas fetched preemptively)
+    //   - schema2-V1 (Schema) (once the Subject is expanded)
     //
-    // Once the user has asked to expand a ContainerTreeItem<Schema>, we'll fetch the schemas for
-    // just that single subject and show them as children of the ContainerTreeItem<Schema>.
+    // Once the user has asked to expand a Subject, we'll on-demand fetch the Schema[] for
+    // just that single Subject and return them as the children of the Subject.
 
     if (!this.schemaRegistry) {
       // No Schema Registry selected, so no subjects or schemas to show.

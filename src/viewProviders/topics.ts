@@ -325,10 +325,12 @@ export async function getTopicsForCluster(
 }
 
 /**
- * Load the subjects + schemas related to the given topic as a ContainerTreeItem<Schema>[].
+ * Load the subjects + schemas related to the given topic as a Subject[], where each Subject carries
+ * an array of Schema instances within.
+ *
  * @param topic The Kafka topic to load schemas for.
- * @returns An array of {@link ContainerTreeItem} objects representing the topic's schemas, grouped
- * by subject as {@link ContainerTreeItem}s, with the {@link Schema}s in version-descending order.
+ * @returns An array of {@link Subject} objects representing the topic's schemas, grouped
+ * by subject as {@link Schema}s, with the {@link Schema}s in version-descending order.
  * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
  */
 export async function loadTopicSchemas(topic: KafkaTopic): Promise<Subject[]> {
