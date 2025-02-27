@@ -49,6 +49,7 @@ export class Subject implements IResourceBase, ISearchable {
 
   id!: string;
 
+  /** Will be not-null only when topics view controller's getChildren() called on a topic. */
   schemas: Schema[] | null;
 
   constructor(
