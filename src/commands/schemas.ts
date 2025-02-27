@@ -5,7 +5,7 @@ import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/sc
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { ContainerTreeItem } from "../models/main";
-import { getLanguageTypes, Schema, SchemaType } from "../models/schema";
+import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
@@ -146,19 +146,32 @@ async function openLatestSchemasCommand(topic: KafkaTopic) {
 }
 
 /** Drop into read-only viewing the latest version of the schema in the subject group.  */
-async function viewLatestLocallyCommand(schemaGroup: ContainerTreeItem<Schema>) {
-  if (!(schemaGroup instanceof ContainerTreeItem)) {
-    logger.error("viewLatestLocallyCommand called with invalid argument type", schemaGroup);
-    return;
+async function viewLatestLocallyCommand(subject: Subject) {
+  const schema: Schema = await determineLatestSchema("viewLatestLocallyCommand", subject);
+  await viewLocallyCommand(schema);
+}
+
+/**
+ * Get the latest schema from a subject, possibly fetching from the schema registry if needed.
+ * @param subjectish
+ * @returns
+ */
+export async function determineLatestSchema(callpoint: string, subject: Subject): Promise<Schema> {
+  if (!(subject instanceof Subject)) {
+    const msg = `${callpoint} called with invalid argument type`;
+    logger.error(msg, subject);
+    throw new Error(msg);
   }
 
-  if (schemaGroup.children.length === 0) {
-    logger.error("viewLatestLocallyCommand called with no schemas", schemaGroup);
-    return;
+  if (subject.schemas) {
+    // Is already carrying schemas (as from when the subject coming from topics view)
+    return subject.schemas[0];
+  } else {
+    // Must promote the subject to its subject group, then get the first (latest) schema.
+    const loader = ResourceLoader.getInstance(subject.connectionId);
+    const schemaGroup = await loader.getSchemaSubjectGroup(subject.environmentId, subject.name);
+    return schemaGroup[0];
   }
-
-  // View the first schema in the group. Will be the highest versioned one.
-  await viewLocallyCommand(schemaGroup.children[0]);
 }
 
 /**
@@ -199,19 +212,10 @@ async function evolveSchemaCommand(schema: Schema) {
 }
 
 /** Drop into evolving the latest version of the schema in the subject group. */
-async function evolveSchemaSubjectCommand(schemaGroup: ContainerTreeItem<Schema>) {
-  if (!(schemaGroup instanceof ContainerTreeItem)) {
-    logger.error("evolveSchemaSubjectCommand called with invalid argument type", schemaGroup);
-    return;
-  }
+async function evolveSchemaSubjectCommand(subject: Subject) {
+  const schema: Schema = await determineLatestSchema("evolveSchemaSubjectCommand", subject);
 
-  if (schemaGroup.children.length === 0) {
-    logger.error("evolveSchemaSubjectCommand called with no schemas", schemaGroup);
-    return;
-  }
-
-  // Evolve the first schema in the group. Will be the highest versioned one.
-  await evolveSchemaCommand(schemaGroup.children[0]);
+  await evolveSchemaCommand(schema);
 }
 
 /**

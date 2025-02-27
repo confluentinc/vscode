@@ -6,17 +6,20 @@ import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
-import { Schema } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CannotLoadSchemasError,
+  determineLatestSchema,
   diffLatestSchemasCommand,
   getLatestSchemasForTopic,
 } from "./schemas";
@@ -207,6 +210,44 @@ function generateGetLatestSchemasForTopicTests<
     });
   };
 }
+
+describe("commands::schema determineLatestSchema() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderStub = sandbox.createStubInstance(ResourceLoader);
+    sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return first Schema from a Subject carrying Schemas", async () => {
+    const result = await determineLatestSchema("test", TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.strictEqual(result, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0]);
+  });
+
+  it("should fetch and return latest Schema when given Subject", async () => {
+    const expectedSchema = TEST_CCLOUD_SCHEMA;
+    const subject = TEST_CCLOUD_SUBJECT;
+
+    loaderStub.getSchemaSubjectGroup.resolves([expectedSchema]);
+
+    const result = await determineLatestSchema("test", subject);
+
+    assert.strictEqual(result, expectedSchema);
+  });
+
+  it("should throw error for invalid argument type", async () => {
+    await assert.rejects(
+      async () => await determineLatestSchema("test", {} as Subject),
+      /called with invalid argument type/,
+    );
+  });
+});
 
 /**
  * Generic interface for types with a constructor function (i.e. a real class)
