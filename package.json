@@ -109,26 +109,6 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.debugtools.globalState.showWebView",
-        "title": "Show Global State Inspector",
-        "category": "Confluent: Debug Tools"
-      },
-      {
-        "command": "confluent.debugtools.globalState.reset",
-        "title": "Reset Global State",
-        "category": "Confluent: Debug Tools"
-      },
-      {
-        "command": "confluent.debugtools.workspaceState.showWebView",
-        "title": "Show Workspace State Inspector",
-        "category": "Confluent: Debug Tools"
-      },
-      {
-        "command": "confluent.debugtools.workspaceState.reset",
-        "title": "Reset Workspace State",
-        "category": "Confluent: Debug Tools"
-      },
-      {
         "command": "confluent.docker.setSocketPath",
         "icon": "$(key)",
         "title": "Set Docker Socket Path",
@@ -629,22 +609,6 @@
         {
           "command": "confluent.copyResourceUri",
           "when": "false"
-        },
-        {
-          "command": "confluent.debugtools.globalState.showWebView",
-          "when": "true"
-        },
-        {
-          "command": "confluent.debugtools.globalState.reset",
-          "when": "true"
-        },
-        {
-          "command": "confluent.debugtools.workspaceState.showWebView",
-          "when": "true"
-        },
-        {
-          "command": "confluent.debugtools.workspaceState.reset",
-          "when": "true"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
