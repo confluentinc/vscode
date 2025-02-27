@@ -179,7 +179,7 @@ export class SubjectWithSchemasTreeItem extends vscode.TreeItem {
     // correlated with the subject, so set defaultToValueSubject to true.
     this.iconPath = getSubjectIcon(subject.name, true);
     this.id = subject.name;
-    this.description = `SubjectWithSchemasTreeItem ${schemas[0].type} (${subject.schemas.length})`;
+    this.description = `${schemas[0].type} (${subject.schemas.length})`;
 
     const propertyParts: string[] = new Array<string>();
     if (schemas.length > 1) {

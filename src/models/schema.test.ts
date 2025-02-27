@@ -8,7 +8,8 @@ import {
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
-import { IconNames } from "../constants";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { EnvironmentId } from "./resource";
 import {
   Schema,
   SchemaTreeItem,
@@ -177,11 +178,19 @@ describe("SchemaTreeItem", () => {
 });
 
 describe("SubjectWithSchemasTreeItem", () => {
-  it("constructor should set the correct contextValue when multiple schema versions present", () => {
+  it("constructor should do the right things when multiple schema versions present", () => {
     const subjectWithSchemasTreeItem = new SubjectWithSchemasTreeItem(
       TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
     );
     assert.equal(subjectWithSchemasTreeItem.contextValue, "multiple-versions-schema-subject");
+
+    assert.equal(subjectWithSchemasTreeItem.label, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
+    assert.equal(subjectWithSchemasTreeItem.id, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
+    assert.equal(
+      subjectWithSchemasTreeItem.collapsibleState,
+      vscode.TreeItemCollapsibleState.Collapsed,
+    );
+    assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
   });
 
   it("constructor should set the correct contextValue when only one schema version present", () => {
@@ -201,5 +210,20 @@ describe("SubjectWithSchemasTreeItem", () => {
 
   it("constructor hates on subjects with no schemas", () => {
     assert.throws(() => new SubjectWithSchemasTreeItem(TEST_CCLOUD_SUBJECT));
+  });
+
+  it("Test subject icon determination", () => {
+    for (const [name, expected] of [
+      ["test-key", IconNames.KEY_SUBJECT],
+      ["test-value", IconNames.VALUE_SUBJECT],
+      // Should default to value subject even if doesn't smell like it.
+      ["test-other", IconNames.VALUE_SUBJECT],
+    ]) {
+      const subject = new Subject(name, CCLOUD_CONNECTION_ID, "envId" as EnvironmentId, "srId", [
+        TEST_CCLOUD_SCHEMA,
+      ]);
+      const subjectTreeItem = new SubjectWithSchemasTreeItem(subject);
+      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, expected);
+    }
   });
 });
