@@ -153,10 +153,6 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaStatusMessage(undefined);
   }
 
-  async updateSslConfig(event: CustomEvent) {
-    const { inputName, inputValue } = event.detail;
-    await post("UpdateSpecValue", { inputName, inputValue });
-  }
   async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const value = input.type === "checkbox" ? input.checked : input.value;

@@ -212,7 +212,7 @@
             <ssl-config
               data-prop-config="this.kafkaSslConfig()"
               data-prop-namespace="'kafka_cluster'"
-              data-on-change="this.updateSslConfig(event)"
+              data-on-change="this.updateValue(event.detail)"
             />
           </template>
         </div>
@@ -343,7 +343,7 @@
             <ssl-config
               data-prop-config="this.schemaSslConfig()"
               data-prop-namespace="'schema_registry'"
-              data-on-change="this.updateSslConfig(event)"
+              data-on-change="this.updateValue(event.detail)"
             />
           </template>
         </div>
