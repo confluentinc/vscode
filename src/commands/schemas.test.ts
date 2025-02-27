@@ -1,22 +1,24 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import * as vscode from "vscode";
 import { commands } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_CCLOUD_KEY_SCHEMA_REVISED,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
-import { ContainerTreeItem } from "../models/main";
-import { Schema } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CannotLoadSchemasError,
+  determineLatestSchema,
   diffLatestSchemasCommand,
   getLatestSchemasForTopic,
 } from "./schemas";
@@ -35,47 +37,31 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   });
 
   it("diffLatestSchemasCommand should execute the correct commands when invoked on a proper schema group", async () => {
-    // Make a 3-version schema group ...
-    const oldestSchemaVersion = Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: "my-topic-value",
-      version: 0,
-      id: "1",
-    });
-
-    const olderSchemaVersion = Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: "my-topic-value",
-      version: 1,
-      id: "2",
-    });
-    const latestSchemaVersion = Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: "my-topic-value",
-      version: 2,
-      id: "3",
-    });
-    const schemaGroup = new ContainerTreeItem<Schema>(
-      "my-topic-value",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [latestSchemaVersion, olderSchemaVersion, oldestSchemaVersion],
-    );
-
     // directly call what command "confluent.schemas.diffMostRecentVersions" would call (made harder to invoke
     // because it's a command, and we've stubbed out vscode command execution)
-    await diffLatestSchemasCommand(schemaGroup);
-    assert.ok(executeCommandStub.calledWith("confluent.diff.selectForCompare", olderSchemaVersion));
+    await diffLatestSchemasCommand(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.ok(
-      executeCommandStub.calledWith("confluent.diff.compareWithSelected", latestSchemaVersion),
+      executeCommandStub.calledWith(
+        "confluent.diff.selectForCompare",
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![1],
+      ),
+    );
+    assert.ok(
+      executeCommandStub.calledWith(
+        "confluent.diff.compareWithSelected",
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0],
+      ),
     );
   });
 
   it("diffLatestSchemasCommand should not execute commands if there are fewer than two schemas in the group", async () => {
     // (this should not happen if the schema group was generated correctly, but diffLatestSchemasCommand guards against it)
-    const schemaGroup = new ContainerTreeItem<Schema>(
-      "my-topic-value",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "my-topic-value", version: 1 })],
+    const schemaGroup = new Subject(
+      TEST_CCLOUD_SUBJECT.name,
+      TEST_CCLOUD_SUBJECT.connectionId,
+      TEST_CCLOUD_SUBJECT.environmentId,
+      TEST_CCLOUD_SUBJECT.schemaRegistryId,
+      [TEST_CCLOUD_KEY_SCHEMA_REVISED],
     );
 
     await diffLatestSchemasCommand(schemaGroup);
@@ -207,6 +193,44 @@ function generateGetLatestSchemasForTopicTests<
     });
   };
 }
+
+describe("commands::schema determineLatestSchema() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderStub = sandbox.createStubInstance(ResourceLoader);
+    sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return first Schema from a Subject carrying Schemas", async () => {
+    const result = await determineLatestSchema("test", TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.strictEqual(result, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0]);
+  });
+
+  it("should fetch and return latest Schema when given Subject", async () => {
+    const expectedSchema = TEST_CCLOUD_SCHEMA;
+    const subject = TEST_CCLOUD_SUBJECT;
+
+    loaderStub.getSchemaSubjectGroup.resolves([expectedSchema]);
+
+    const result = await determineLatestSchema("test", subject);
+
+    assert.strictEqual(result, expectedSchema);
+  });
+
+  it("should throw error for invalid argument type", async () => {
+    await assert.rejects(
+      async () => await determineLatestSchema("test", {} as Subject),
+      /called with invalid argument type/,
+    );
+  });
+});
 
 /**
  * Generic interface for types with a constructor function (i.e. a real class)
