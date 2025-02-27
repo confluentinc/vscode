@@ -1,18 +1,18 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { ThemeIcon, TreeItemCollapsibleState } from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { IconNames } from "../constants";
 import { topicSearchSet } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem, Subject } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectWithSchemasTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { loadTopicSchemas, TopicViewProvider } from "./topics";
@@ -35,12 +35,12 @@ describe("TopicViewProvider methods", () => {
     assert.ok(treeItem instanceof KafkaTopicTreeItem);
   });
 
-  it("getTreeItem() should pass ContainerTreeItems through directly", () => {
-    const container = new ContainerTreeItem<Schema>("test", TreeItemCollapsibleState.Collapsed, [
-      TEST_CCLOUD_SCHEMA,
-    ]);
-    const treeItem = provider.getTreeItem(container);
-    assert.deepStrictEqual(treeItem, container);
+  it("getTreeItem() should return a SubjectWithSchemasTreeItem when given a Subject", () => {
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.ok(treeItem instanceof SubjectWithSchemasTreeItem);
+    // TEST_CCLOUD_SUBJECT_WITH_SCHEMAS has multiple schemas, so the contextValue
+    // should be "multiple-versions-schema-subject"
+    assert.strictEqual(treeItem.contextValue, "multiple-versions-schema-subject");
   });
 });
 
@@ -92,58 +92,6 @@ describe("TopicViewProvider helper function loadTopicSchemas tests", () => {
 
     const schemas = await loadTopicSchemas(TEST_CCLOUD_KAFKA_TOPIC);
     assert.deepStrictEqual(schemas, []);
-  });
-
-  it("If related schemas, then they are returned in proper ContainerTreeItem<Schema> instances", async () => {
-    const preloadedSchemas: Schema[] = [
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        subject: "test-ccloud-topic-value",
-        version: 1,
-        id: "1",
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        subject: "test-ccloud-topic-value",
-        version: 2,
-        id: "2",
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        subject: "test-ccloud-topic-key",
-        version: 1,
-        id: "3",
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        subject: "unrelated-topic-value",
-        version: 1,
-        id: "7",
-      }),
-    ];
-
-    populateSchemas(preloadedSchemas);
-    populateSchemaSubjectGroups(preloadedSchemas);
-
-    // Should get back in the form of two separate ContainerTreeItem<Schema> instances.
-    const schemaContainers = await loadTopicSchemas(TEST_CCLOUD_KAFKA_TOPIC);
-    assert.strictEqual(schemaContainers.length, 2);
-    for (const schemaContainer of schemaContainers) {
-      assert.ok(schemaContainer instanceof ContainerTreeItem);
-      assert.equal(schemaContainer.collapsibleState, TreeItemCollapsibleState.Collapsed);
-      assert.ok(schemaContainer.children.length > 0);
-      if (schemaContainer.label === "test-ccloud-topic-value") {
-        assert.equal(schemaContainer.children.length, 2);
-        assert.equal(schemaContainer.description, "AVRO (2)");
-        assert.equal(schemaContainer.contextValue, "multiple-versions-schema-subject");
-        assert.equal((schemaContainer.iconPath as ThemeIcon).id, IconNames.VALUE_SUBJECT);
-      } else if (schemaContainer.label === "test-ccloud-topic-key") {
-        assert.equal(schemaContainer.children.length, 1);
-        assert.equal(schemaContainer.description, "AVRO (1)");
-        assert.equal(schemaContainer.contextValue, "schema-subject");
-        assert.equal((schemaContainer.iconPath as ThemeIcon).id, IconNames.KEY_SUBJECT);
-      }
-    }
   });
 });
 
@@ -200,12 +148,11 @@ describe("TopicViewProvider search behavior", () => {
 
     const children = await provider.getChildren(TEST_CCLOUD_KAFKA_TOPIC);
 
+    // Will be a Subject carrying one single Schema, TEST_CCLOUD_SCHEMA.
     assert.strictEqual(children.length, 1);
-    assert.ok(children[0] instanceof ContainerTreeItem);
-    // skip all the subject container assertions; just check that the schema made it in
-    assert.deepStrictEqual((children[0] as ContainerTreeItem<Schema>).children, [
-      TEST_CCLOUD_SCHEMA,
-    ]);
+    assert.ok(children[0] instanceof Subject);
+    assert.equal(children[0].name, TEST_CCLOUD_SCHEMA.subject);
+    assert.equal(children[0].schemas!.length, 1);
   });
 
   it("getChildren() should show correct count in tree view message when items match search", async () => {
@@ -242,11 +189,9 @@ describe("TopicViewProvider search behavior", () => {
     // Schema ID matches the search string
     topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 
-    const treeItem = await provider.getTreeItem(
-      new ContainerTreeItem(TEST_CCLOUD_SCHEMA.subject, TreeItemCollapsibleState.None, []),
-    );
+    const treeItem = await provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
 
-    assert.ok(treeItem instanceof ContainerTreeItem);
+    assert.ok(treeItem instanceof SubjectWithSchemasTreeItem);
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });

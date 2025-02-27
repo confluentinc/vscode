@@ -25,10 +25,31 @@ export const TEST_CCLOUD_KEY_SCHEMA = Schema.create({
   environmentId: TEST_CCLOUD_SCHEMA_REGISTRY.environmentId,
   connectionId: TEST_CCLOUD_SCHEMA_REGISTRY.connectionId,
   connectionType: TEST_CCLOUD_SCHEMA_REGISTRY.connectionType,
+  isHighestVersion: false,
+});
+
+/** TEST_CCLOUD_KEY_SCHEMA, revised. */
+export const TEST_CCLOUD_KEY_SCHEMA_REVISED = Schema.create({
+  ...TEST_CCLOUD_SCHEMA,
+  id: "100004",
+  version: 2,
   isHighestVersion: true,
 });
 
 export const TEST_CCLOUD_KEY_SUBJECT: Subject = TEST_CCLOUD_KEY_SCHEMA.subjectObject();
+
+/** A Subject group containing two schema versions */
+export const TEST_CCLOUD_SUBJECT_WITH_SCHEMAS = new Subject(
+  TEST_CCLOUD_SUBJECT.name,
+  TEST_CCLOUD_SUBJECT.connectionId,
+  TEST_CCLOUD_SUBJECT.environmentId,
+  TEST_CCLOUD_SUBJECT.schemaRegistryId,
+  [
+    // Latest versions always come first
+    TEST_CCLOUD_KEY_SCHEMA_REVISED,
+    TEST_CCLOUD_SCHEMA,
+  ],
+);
 
 export const TEST_LOCAL_SCHEMA = Schema.create({
   id: "1",

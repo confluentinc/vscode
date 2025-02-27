@@ -1,12 +1,20 @@
 import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
-import { TEST_CCLOUD_SCHEMA, TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_KEY_SCHEMA_REVISED,
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_SCHEMA,
+} from "../../tests/unit/testResources";
 import { IconNames } from "../constants";
 import {
   Schema,
   SchemaTreeItem,
   SchemaType,
+  Subject,
+  SubjectWithSchemasTreeItem,
   getLanguageTypes,
   getSubjectIcon,
   subjectMatchesTopicName,
@@ -165,5 +173,33 @@ describe("SchemaTreeItem", () => {
     });
     const unevolvableTreeItem = new SchemaTreeItem(unevolvableSchema);
     assert.equal(unevolvableTreeItem.contextValue, "ccloud-schema");
+  });
+});
+
+describe("SubjectWithSchemasTreeItem", () => {
+  it("constructor should set the correct contextValue when multiple schema versions present", () => {
+    const subjectWithSchemasTreeItem = new SubjectWithSchemasTreeItem(
+      TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+    );
+    assert.equal(subjectWithSchemasTreeItem.contextValue, "multiple-versions-schema-subject");
+  });
+
+  it("constructor should set the correct contextValue when only one schema version present", () => {
+    const testSubject = new Subject(
+      TEST_CCLOUD_SUBJECT.name,
+      TEST_CCLOUD_SUBJECT.connectionId,
+      TEST_CCLOUD_SUBJECT.environmentId,
+      TEST_CCLOUD_SUBJECT.schemaRegistryId,
+      [
+        // Just one single subject
+        TEST_CCLOUD_KEY_SCHEMA_REVISED,
+      ],
+    );
+    const subjectWithSchemasTreeItem = new SubjectWithSchemasTreeItem(testSubject);
+    assert.equal(subjectWithSchemasTreeItem.contextValue, "schema-subject");
+  });
+
+  it("constructor hates on subjects with no schemas", () => {
+    assert.throws(() => new SubjectWithSchemasTreeItem(TEST_CCLOUD_SUBJECT));
   });
 });

@@ -103,7 +103,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     this.refresh();
   }
 
-  getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {
+  getTreeItem(element: TopicViewProviderData): vscode.TreeItem {
     let treeItem: vscode.TreeItem;
     if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
