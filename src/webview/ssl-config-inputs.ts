@@ -63,7 +63,7 @@ export class SslConfig extends HTMLElement {
   /** Update the host form data so it contains all the changed values on submit
    * and dispatch a change event to the host for other actions
    */
-  updateValue(event: Event) {
+  updateValue(event: InputEvent) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.type === "checkbox" ? input.checked : input.value;
@@ -71,8 +71,8 @@ export class SslConfig extends HTMLElement {
     this._internals.setFormValue(this.entries);
 
     this.dispatchEvent(
-      new CustomEvent("change", {
-        detail: { inputName: name, inputValue: value },
+      new CustomEvent<InputEvent>("change", {
+        detail: event,
       }),
     );
   }
