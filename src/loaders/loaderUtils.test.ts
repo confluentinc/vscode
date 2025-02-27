@@ -12,7 +12,7 @@ import {
   SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
 import * as loaderUtils from "../loaders/loaderUtils";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, Subject } from "../models/schema";
 import * as sidecar from "../sidecar";
 
 // as from fetchTopics() result.
@@ -26,7 +26,16 @@ export const topicsResponseData: TopicData[] = [
 describe("loaderUtils correlateTopicsWithSchemaSubjects() test", () => {
   it("should correlate topics with schema subjects as strings", () => {
     // topic 1-3 will be correlated with schema subjects, topic 4 will not.
-    const subjects: string[] = ["topic1-value", "topic2-key", "topic3-Foo"];
+    const subjectStrings: string[] = ["topic1-value", "topic2-key", "topic3-Foo"];
+    const subjects: Subject[] = subjectStrings.map(
+      (name) =>
+        new Subject(
+          name,
+          TEST_LOCAL_SCHEMA_REGISTRY.connectionId,
+          TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+          TEST_LOCAL_SCHEMA_REGISTRY.id,
+        ),
+    );
 
     const results = loaderUtils.correlateTopicsWithSchemaSubjects(
       TEST_LOCAL_KAFKA_CLUSTER,
@@ -71,9 +80,10 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     stubbedSubjectsV1Api.list.resolves(subjectsRaw);
 
     const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    const subjectStrings = subjects.map((s) => s.name);
 
     // be sure to test against a wholly separate array, 'cause .sort() is in-place.
-    assert.deepStrictEqual(subjects, ["subject1", "subject2", "subject3"]);
+    assert.deepStrictEqual(subjectStrings, ["subject1", "subject2", "subject3"]);
   });
 
   it("fetchSchemaSubjectGroup() should fetch versions of schemas for a given subject", async () => {
@@ -106,11 +116,13 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     );
 
     assert.equal(schemas.length, versions.length);
-    // Should be in the right order ...
+
+    // Should be in the right order (descending by version)...
     assert.deepEqual(
       schemas.map((schema) => schema.version),
-      versions,
+      versions.sort((a, b) => b - a),
     );
+
     // And each schema should have the right properties as from fakeGetSchemaByVersion().
     for (const schema of schemas) {
       assert.equal(schema.subject, subject);
