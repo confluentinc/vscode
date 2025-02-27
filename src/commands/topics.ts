@@ -22,7 +22,6 @@ import { isCCloud, isDirect } from "../models/resource";
 import { Schema } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { schemaRegistryQuickPick } from "../quickpicks/schemaRegistries";
 import { schemaSubjectQuickPick, schemaVersionQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
@@ -452,31 +451,42 @@ export async function createProduceRequestData(
   keySchemaInfo?: any,
   valueSchemaInfo?: any,
 ): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
-  const schemaless = "JSON";
-  const schemaType: { type?: string } = {};
-  if (!(keySchema || keySchemaInfo || valueSchema || valueSchemaInfo)) {
-    // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
-    if (isCCloud(topic)) {
-      schemaType.type = schemaless;
-    } else if (isDirect(topic)) {
-      // look up the formConnectionType for this topic's connection
-      const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-        topic.connectionId,
-      );
-      if (spec?.formConnectionType === "Confluent Cloud") {
-        schemaType.type = schemaless;
-      }
+  let forCCloudTopic = false;
+  if (isCCloud(topic)) {
+    forCCloudTopic = true;
+  } else if (isDirect(topic)) {
+    // look up the formConnectionType for this topic's connection
+    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+      topic.connectionId,
+    );
+    if (spec?.formConnectionType === "Confluent Cloud") {
+      forCCloudTopic = true;
     }
   }
 
+  // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
+  const schemaless = "JSON";
+  const schemaType: { type?: string } = {};
+  if (forCCloudTopic && !(keySchema || keySchemaInfo || valueSchema || valueSchemaInfo)) {
+    schemaType.type = schemaless;
+  }
+
   // message-provided schema information takes precedence over quickpicked schema
-  const keySchemaData: SchemaInfo | undefined = extractSchemaInfo(keySchemaInfo, keySchema);
+  const keySchemaData: SchemaInfo | undefined = extractSchemaInfo(
+    keySchemaInfo,
+    keySchema,
+    forCCloudTopic,
+  );
   const keyData: ProduceRequestData = {
     ...schemaType,
     ...(keySchemaData ?? {}),
     data: key,
   };
-  const valueSchemaData: SchemaInfo | undefined = extractSchemaInfo(valueSchemaInfo, valueSchema);
+  const valueSchemaData: SchemaInfo | undefined = extractSchemaInfo(
+    valueSchemaInfo,
+    valueSchema,
+    forCCloudTopic,
+  );
   const valueData: ProduceRequestData = {
     ...schemaType,
     ...(valueSchemaData ?? {}),
@@ -492,16 +502,21 @@ export async function createProduceRequestData(
 export function extractSchemaInfo(
   schemaInfo: any,
   schema: Schema | undefined,
+  forCCloudTopic: boolean,
 ): SchemaInfo | undefined {
   if (!(schemaInfo || schema)) {
     return;
   }
-  return {
-    schema_version: schemaInfo?.schema_version ?? schema?.version,
-    subject: schemaInfo?.subject ?? schema?.subject,
-    subject_name_strategy: schemaInfo?.subject_name_strategy ?? "TOPIC_NAME",
-    type: undefined, // unset since the sidecar rejects this with a 400
-  };
+  const schema_version = schemaInfo?.schema_version ?? schema?.version;
+  const subject = schemaInfo?.subject ?? schema?.subject;
+  const subject_name_strategy = schemaInfo?.subject_name_strategy ?? "TOPIC_NAME";
+
+  if (forCCloudTopic) {
+    // unset subject_name_strategy and type
+    return { schema_version, subject, subject_name_strategy: undefined, type: undefined };
+  }
+  // drop type since the sidecar rejects this with a 400
+  return { schema_version, subject, subject_name_strategy, type: undefined };
 }
 
 export function registerTopicCommands(): vscode.Disposable[] {
@@ -538,21 +553,13 @@ export async function promptForSchemaKinds(topic: KafkaTopic): Promise<{
   const items: vscode.QuickPickItem[] = [
     {
       label: "Key Schema",
-      description:
-        topicKeySubjects.length > 0
-          ? `Associated subject(s): ${topicKeySubjects.join(", ")}`
-          : undefined,
-      detail: "Enable to select a schema for the message `key`",
+      description: topicKeySubjects.length > 0 ? topicKeySubjects.join(", ") : undefined,
       picked: topicKeySubjects.length > 0,
       iconPath: new vscode.ThemeIcon(IconNames.KEY_SUBJECT),
     },
     {
       label: "Value Schema",
-      description:
-        topicHasValueSchemas.length > 0
-          ? `Associated subject(s): ${topicHasValueSchemas.join(", ")}`
-          : undefined,
-      detail: "Enable to select a schema the message `value`",
+      description: topicHasValueSchemas.length > 0 ? topicHasValueSchemas.join(", ") : undefined,
       picked: topicHasValueSchemas.length > 0,
       iconPath: new vscode.ThemeIcon(IconNames.VALUE_SUBJECT),
     },
@@ -576,7 +583,7 @@ export function subjectsToStrings(subjects: ContainerTreeItem<Schema>[]): string
 }
 
 /**
- * Prompt the user to select a schema to use when producing messages to a topic.
+ * Prompt the user to select a schema subject+version to use when producing messages to a topic.
  * @param topic The Kafka topic to produce messages to
  * @param kind Whether this is for a 'key' or 'value' schema
  * @returns The selected {@link Schema}, or `undefined` if user cancelled
@@ -585,22 +592,17 @@ export async function promptForSchema(
   topic: KafkaTopic,
   kind: "key" | "value",
 ): Promise<Schema | undefined> {
-  // look up any associated SR instance for this topic
+  // look up the associated SR instance for this topic
   const loader = ResourceLoader.getInstance(topic.connectionId);
   const schemaRegistries: SchemaRegistry[] = await loader.getSchemaRegistries();
-  const defaultRegistry: SchemaRegistry | undefined = schemaRegistries.find(
+  const registry: SchemaRegistry | undefined = schemaRegistries.find(
     (registry) => registry.environmentId === topic.environmentId,
   );
-
-  // prompt for the Schema Registry to use, highlighting the default registry for this topic
-  // (if it exists)
-  const registry: SchemaRegistry | undefined = await schemaRegistryQuickPick(
-    defaultRegistry?.id,
-    `Producing to ${topic.name}: ${kind} schema`,
-  );
   if (!registry) {
+    showErrorNotificationWithButtons(`No Schema Registry available for topic "${topic.name}".`);
     return;
   }
+
   const schemaSubject: string | undefined = await schemaSubjectQuickPick(
     registry,
     `Producing to ${topic.name}: ${kind} schema`,
