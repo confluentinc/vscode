@@ -1,12 +1,14 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import {
+  TEST_CCLOUD_KEY_SUBJECT,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { createTestTopicData } from "../../tests/unit/testUtils";
+import { createTestSubject, createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
@@ -50,7 +52,7 @@ describe("ResourceLoader::getSubjects()", () => {
   });
 
   it("Returns subjects when called with right schema registry or env id", async () => {
-    const fetchSubjectsStubReturns = ["subject1", "subject2", "subject3"];
+    const fetchSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
     fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
 
     for (const inputParam of [
@@ -102,7 +104,10 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
     ];
 
     fetchTopicsStub.resolves(topicsResponseData);
-    getSubjectsStub.resolves(["topic1-value", "topic2-key"]);
+    getSubjectsStub.resolves([
+      createTestSubject(TEST_LOCAL_SCHEMA_REGISTRY, "topic1-value"),
+      createTestSubject(TEST_LOCAL_SCHEMA_REGISTRY, "topic2-key"),
+    ]);
 
     const topics = await loaderInstance.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
 

@@ -5,7 +5,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
-import { Schema } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
@@ -93,7 +93,7 @@ export abstract class ResourceLoader implements IResourceBase {
     forceRefresh: boolean = false,
   ): Promise<KafkaTopic[]> {
     // Deep fetch the topics and schema registry subject names concurrently.
-    const [subjects, responseTopics]: [string[], TopicData[]] = await Promise.all([
+    const [subjects, responseTopics]: [Subject[], TopicData[]] = await Promise.all([
       this.getSubjects(cluster.environmentId!, forceRefresh),
       fetchTopics(cluster),
     ]);
@@ -128,7 +128,7 @@ export abstract class ResourceLoader implements IResourceBase {
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
-  ): Promise<string[]> {
+  ): Promise<Subject[]> {
     try {
       const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
       return await fetchSubjects(schemaRegistry);
