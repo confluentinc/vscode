@@ -425,6 +425,60 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
     "kafka_cluster.ssl.truststore.type": "PKCS12",
   });
 });
+test("adds advanced ssl fields even if section is collapsed", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    // redispatching because the page already exists for some time
+    // before we actually import the view model application
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in our kafka + kafka ssl config settings
+  await page.fill("input[name=name]", "Test Connection");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
+  // Click to show the advanced settings, then fill them in
+  await page.click("p:has-text('Advanced SSL Configuration')");
+  await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
+  await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
+  await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
+
+  // Click to hide the advanced settings, then submit the form
+  await page.click("p:has-text('Advanced SSL Configuration')");
+  await expect(page.locator("input[name='kafka_cluster.ssl.truststore.path']")).not.toBeVisible();
+  await page.click("input[type=submit][value='Save']");
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+  // Verify correct form data
+  expect(submitCall?.[1]).toEqual({
+    name: "Test Connection",
+    formconnectiontype: "Apache Kafka",
+    "kafka_cluster.bootstrap_servers": "localhost:9092",
+    "kafka_cluster.auth_type": "None",
+    "kafka_cluster.ssl.enabled": "true",
+    "kafka_cluster.ssl.truststore.password": "truststore-password",
+    "kafka_cluster.ssl.truststore.path": "/path/to/truststore",
+    "kafka_cluster.ssl.truststore.type": "PEM",
+    "schema_registry.auth_type": "None",
+    "schema_registry.ssl.enabled": "true",
+    "schema_registry.uri": "",
+  });
+});
+
 const SPEC_SAMPLE = {
   id: "123",
   name: "Sample",
