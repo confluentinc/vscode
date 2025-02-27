@@ -98,12 +98,7 @@ export abstract class ResourceLoader implements IResourceBase {
       fetchTopics(cluster),
     ]);
 
-    return correlateTopicsWithSchemaSubjects(
-      cluster,
-      responseTopics,
-      // erode Subject[] to just string[]
-      subjects.map((s) => s.name),
-    );
+    return correlateTopicsWithSchemaSubjects(cluster, responseTopics, subjects);
   }
 
   // Schema registry methods

@@ -5,13 +5,13 @@ import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { topicSearchSet } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaTreeItem, Subject, SubjectWithSchemasTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -71,13 +71,6 @@ describe("TopicViewProvider helper function loadTopicSchemas tests", () => {
     console.log("uniqueSubjects", Array.from(uniqueSubjects));
 
     loaderStub.getSubjects.resolves(Array.from(uniqueSubjects));
-  }
-
-  function populateSchemaSubjectGroups(schemas: Schema[]) {
-    loaderStub.getSchemaSubjectGroup.callsFake(async (arg1: any, subjectName: string) => {
-      const matchingSchemas = schemas.filter((schema) => schema.subject === subjectName);
-      return matchingSchemas;
-    });
   }
 
   it("If no related schemas, then empty array is returned", async () => {
@@ -199,13 +192,7 @@ describe("TopicViewProvider search behavior", () => {
   it("getTreeItem() should expand topic items when their schemas match search", async () => {
     const topic = KafkaTopic.create({
       ...TEST_CCLOUD_KAFKA_TOPIC,
-      children: [
-        new ContainerTreeItem<Schema>(
-          TEST_CCLOUD_SCHEMA.subject,
-          TreeItemCollapsibleState.Collapsed,
-          [],
-        ),
-      ],
+      children: [TEST_CCLOUD_SUBJECT],
     });
     // Schema subject matches search
     topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
@@ -218,13 +205,7 @@ describe("TopicViewProvider search behavior", () => {
   it("getTreeItem() should collapse topic items when schemas exist but don't match search", async () => {
     const topic = KafkaTopic.create({
       ...TEST_CCLOUD_KAFKA_TOPIC,
-      children: [
-        new ContainerTreeItem<Schema>(
-          TEST_CCLOUD_SCHEMA.subject,
-          TreeItemCollapsibleState.Collapsed,
-          [],
-        ),
-      ],
+      children: [TEST_CCLOUD_SUBJECT],
     });
     // Search string doesn't match topic or schema
     topicSearchSet.fire("non-matching-search");

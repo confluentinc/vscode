@@ -12,7 +12,7 @@ import {
   SubjectsV1Api,
 } from "../clients/schemaRegistryRest";
 import * as loaderUtils from "../loaders/loaderUtils";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, Subject } from "../models/schema";
 import * as sidecar from "../sidecar";
 
 // as from fetchTopics() result.
@@ -26,7 +26,16 @@ export const topicsResponseData: TopicData[] = [
 describe("loaderUtils correlateTopicsWithSchemaSubjects() test", () => {
   it("should correlate topics with schema subjects as strings", () => {
     // topic 1-3 will be correlated with schema subjects, topic 4 will not.
-    const subjects: string[] = ["topic1-value", "topic2-key", "topic3-Foo"];
+    const subjectStrings: string[] = ["topic1-value", "topic2-key", "topic3-Foo"];
+    const subjects: Subject[] = subjectStrings.map(
+      (name) =>
+        new Subject(
+          name,
+          TEST_LOCAL_SCHEMA_REGISTRY.connectionId,
+          TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+          TEST_LOCAL_SCHEMA_REGISTRY.id,
+        ),
+    );
 
     const results = loaderUtils.correlateTopicsWithSchemaSubjects(
       TEST_LOCAL_KAFKA_CLUSTER,

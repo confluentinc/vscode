@@ -1,4 +1,3 @@
-import { TreeItemCollapsibleState } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import {
@@ -8,7 +7,6 @@ import {
 } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ContainerTreeItem } from "../models/main";
 import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
@@ -75,19 +73,11 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 export function correlateTopicsWithSchemaSubjects(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
-  subjects: string[],
+  subjects: Subject[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const matchingSubjects: string[] = subjects.filter((subject) =>
-      subjectMatchesTopicName(subject, topic.topic_name),
-    );
-
-    // HACK: we need to create children to allow searching the Topics view by schema subject; this
-    // will only allow the topic to "match" and be returned from the TopicsViewProvider's
-    // `getChildren()` method, and then once the topic is expanded, it will show the real subject
-    // container(s), which will be the source of truth for subjects+schemas
-    const subjectChildren: ContainerTreeItem<Schema>[] = matchingSubjects.map(
-      (subject) => new ContainerTreeItem<Schema>(subject, TreeItemCollapsibleState.Collapsed, []),
+    const matchingSubjects: Subject[] = subjects.filter((subject) =>
+      subjectMatchesTopicName(subject.name, topic.topic_name),
     );
 
     return KafkaTopic.create({
@@ -103,7 +93,7 @@ export function correlateTopicsWithSchemaSubjects(
       environmentId: cluster.environmentId,
       hasSchema: matchingSubjects.length > 0,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
-      children: subjectChildren,
+      children: matchingSubjects,
     });
   });
 

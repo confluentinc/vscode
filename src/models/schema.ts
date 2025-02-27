@@ -181,6 +181,7 @@ export class SubjectWithSchemasTreeItem extends vscode.TreeItem {
     this.id = subject.name;
     this.description = `${schemas[0].type} (${subject.schemas.length})`;
 
+    // /.*multiple-versions.*schema-subject/
     const propertyParts: string[] = new Array<string>();
     if (schemas.length > 1) {
       propertyParts.push("multiple-versions");
