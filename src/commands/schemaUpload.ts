@@ -27,9 +27,9 @@ const logger = new Logger("commands.schemaUpload");
  */
 
 /**
- * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from a inline actions:
- *  1. On a Subject treeitem in the Schemas view (passing in a Subject)
- *  2. On one of a topic's schema subject group in the Topics view (passing in a Subject)
+ * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from:
+ *  1. A Subject from the Schemas view
+ *  2. On one of a topic's subject's in the Topics view
  */
 export async function uploadSchemaForSubjectFromfile(subject: Subject) {
   if (!(subject instanceof Subject)) {
