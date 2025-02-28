@@ -157,7 +157,7 @@ pip install offvsix
 offvsix confluentinc.vscode-confluent
 ```
 
-To install by using the UI using an online connection, follow these steps:
+To install by using the UI with an online connection, follow these steps:
 
 1. Download the VSIX file appropriate for your machine.
 
