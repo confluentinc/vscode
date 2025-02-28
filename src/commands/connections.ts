@@ -104,8 +104,8 @@ export async function createNewDirectConnection() {
   // Open a quickpick to choose either from file or manual entry
   const createMethod = await window.showQuickPick(
     [
-      { label: "Load from file", description: "Select a JSON file with connection details" },
       { label: "Fill in form", description: "Enter connection details manually" },
+      { label: "Load from file", description: "Select a JSON file with connection details" },
     ],
     {
       placeHolder: "How would you like to create a new connection?",
@@ -130,24 +130,21 @@ export async function createNewDirectConnection() {
     if (newSpecUris && newSpecUris.length > 0) {
       try {
         const newSpecPath: string = newSpecUris[0].fsPath;
-        console.log(newSpecPath);
         // read the file and parse it as a JSON object
         const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
         const jsonSpec: CustomConnectionSpec = JSON.parse(fileContent.toString());
-        console.log("json", jsonSpec);
         // validate the JSON object against the ConnectionSpec schema
         const newSpec = {
           ...ConnectionSpecFromJSON(jsonSpec),
-          id: "FILE_UPLOAD" as ConnectionId, // TODO change ConnectionId in form when saving, use this to differentiate?
+          id: "FILE_UPLOAD" as ConnectionId,
           formConnectionType: "Apache Kafka" as FormConnectionType,
         };
-        console.log("new spec to open with:", newSpec);
-        // if valid, use it to open the Direct Connection form (will have the fields pre-filled)
+        // use it to open the Direct Connection form (form will populate the fields with spec values)
         openDirectConnectionForm(newSpec);
         // if invalid, show an error message with the validation errors
       } catch (error) {
-        console.log(error);
-        window.showErrorMessage("Error parsing spec file");
+        window.showErrorMessage("Error parsing spec file. See logs for details.");
+        logger.error(`Error parsing spec file: ${error}`);
         return;
       }
     }
