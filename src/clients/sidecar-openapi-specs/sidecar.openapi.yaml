@@ -96,6 +96,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SimpleConsumeMultiPartitionResponse"
+  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records:
+    post:
+      tags:
+      - Kafka Produce Resource
+      parameters:
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: topic_name
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dry_run
+        in: query
+        schema:
+          default: false
+          type: boolean
+      - name: x-connection-id
+        in: header
+        description: Connection ID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /gateway/v1/connections:
     get:
       tags:
@@ -1288,8 +1326,8 @@ components:
           - UP
           - DOWN
           type: string
+        name:
+          type: string
         data:
           type: object
           nullable: true
-        name:
-          type: string
