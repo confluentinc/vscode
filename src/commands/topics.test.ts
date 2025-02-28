@@ -188,6 +188,7 @@ describe("commands/topics.ts createProduceRequestData()", function () {
       TEST_CCLOUD_KAFKA_TOPIC,
       "test-key",
       "test-value",
+      false,
     );
 
     assert.deepStrictEqual(result, {
@@ -203,7 +204,12 @@ describe("commands/topics.ts createProduceRequestData()", function () {
   });
 
   it("should create request data without 'type' for local topics", async function () {
-    const result = await createProduceRequestData(TEST_LOCAL_KAFKA_TOPIC, "test-key", "test-value");
+    const result = await createProduceRequestData(
+      TEST_LOCAL_KAFKA_TOPIC,
+      "test-key",
+      "test-value",
+      false,
+    );
 
     assert.deepStrictEqual(result, {
       keyData: {
@@ -226,6 +232,7 @@ describe("commands/topics.ts createProduceRequestData()", function () {
       TEST_DIRECT_KAFKA_TOPIC,
       "test-key",
       "test-value",
+      false,
     );
 
     assert.deepStrictEqual(result, {
