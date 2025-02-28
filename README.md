@@ -143,7 +143,7 @@ Additionally, for Windows ARM-64, you may use Windows Subsystem for Linux
 You can install the Confluent extension by using the VS Code UI or by using the
 `code --install-extension` command in the terminal.
 
-To install by using the UI, follow these steps:
+To install by using the UI with an online connection, follow these steps:
 
 1. Download the VSIX file appropriate for your machine.
 
@@ -158,6 +158,22 @@ To install in the terminal, run the following command:
 
 ```
 code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
+```
+
+### Offline `.vsix` file installation
+
+If you need to install from a VSIX offline (and assuming you have [python](https://www.python.org/), [pip](https://pypi.org/project/pip/), and [offvsix](https://github.com/gni/offvsix), you can follow these steps:
+
+```
+mkdir offvsix
+cd offvsix
+
+python3 -m venv .
+. bin/activate
+
+pip install offvsix
+
+offvsix confluentinc.vscode-confluent
 ```
 
 ## Outputs
