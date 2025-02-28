@@ -7,9 +7,11 @@ import {
   ProduceRequestData,
   ProduceRequestHeader,
   ProduceResponse,
+  RecordsV3Api,
   ResponseError,
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
+import { KafkaProduceResourceApi } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
@@ -302,9 +304,10 @@ async function produceMessages(
   }>,
   token?: vscode.CancellationToken,
 ) {
+  const forCCloudTopic = isCCloud(topic);
   // TODO: make maxWorkers a user setting?
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
-    (content) => produceMessage(content, topic, keySchema, valueSchema),
+    (content) => produceMessage(content, topic, keySchema, valueSchema, forCCloudTopic),
     contents,
     { maxWorkers: 20, taskName: "produceMessage" },
     progress,
@@ -385,10 +388,8 @@ export async function produceMessage(
   topic: KafkaTopic,
   keySchema: Schema | undefined,
   valueSchema: Schema | undefined,
+  forCCloudTopic: boolean,
 ): Promise<ProduceResult> {
-  const sidecar = await getSidecar();
-  const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
-
   // convert any provided headers to the correct format, ensuring the `value` is base64-encoded
   const headers: ProduceRequestHeader[] = (content.headers ?? []).map(
     (header: any): ProduceRequestHeader => ({
@@ -401,6 +402,7 @@ export async function produceMessage(
     topic,
     content.key,
     content.value,
+    forCCloudTopic,
     keySchema,
     valueSchema,
     content.key_schema,
@@ -418,13 +420,27 @@ export async function produceMessage(
   const request: ProduceRecordRequest = {
     topic_name: topic.name,
     cluster_id: topic.clusterId,
-    ProduceRequest: produceRequest,
   };
 
   let response: ProduceResponse | undefined;
   let timestamp = new Date();
 
-  response = await recordsApi.produceRecord(request);
+  const sidecar = await getSidecar();
+  if (forCCloudTopic) {
+    const ccloudClient: KafkaProduceResourceApi = sidecar.getKafkaProduceResourceApi(
+      topic.connectionId,
+    );
+    const ccloudResponse = await ccloudClient.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost({
+      ...request,
+      x_connection_id: topic.connectionId,
+      dry_run: false,
+      body: produceRequest,
+    });
+    response = ccloudResponse as ProduceResponse;
+  } else {
+    const client: RecordsV3Api = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
+    response = await client.produceRecord({ ...request, ProduceRequest: produceRequest });
+  }
   // we may get a misleading `status: 200` with a nested `error_code` in the response body
   // ...but we may also get `error_code: 200` with a successful message
   if (response.error_code >= 400) {
@@ -445,13 +461,13 @@ export async function createProduceRequestData(
   topic: KafkaTopic,
   key: any,
   value: any,
+  forCCloudTopic: boolean,
   keySchema?: Schema | undefined,
   valueSchema?: Schema | undefined,
   keySchemaInfo?: any,
   valueSchemaInfo?: any,
 ): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
   // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
-  const forCCloudTopic = isCCloud(topic);
   const schemaless = "JSON";
   const schemaType: { type?: string } = {};
   if (forCCloudTopic && !(keySchema || keySchemaInfo || valueSchema || valueSchemaInfo)) {
@@ -459,21 +475,13 @@ export async function createProduceRequestData(
   }
 
   // message-provided schema information takes precedence over quickpicked schema
-  const keySchemaData: SchemaInfo | undefined = extractSchemaInfo(
-    keySchemaInfo,
-    keySchema,
-    forCCloudTopic,
-  );
+  const keySchemaData: SchemaInfo | undefined = extractSchemaInfo(keySchemaInfo, keySchema);
   const keyData: ProduceRequestData = {
     ...schemaType,
     ...(keySchemaData ?? {}),
     data: key,
   };
-  const valueSchemaData: SchemaInfo | undefined = extractSchemaInfo(
-    valueSchemaInfo,
-    valueSchema,
-    forCCloudTopic,
-  );
+  const valueSchemaData: SchemaInfo | undefined = extractSchemaInfo(valueSchemaInfo, valueSchema);
   const valueData: ProduceRequestData = {
     ...schemaType,
     ...(valueSchemaData ?? {}),
@@ -489,7 +497,6 @@ export async function createProduceRequestData(
 export function extractSchemaInfo(
   schemaInfo: any,
   schema: Schema | undefined,
-  forCCloudTopic: boolean,
 ): SchemaInfo | undefined {
   if (!(schemaInfo || schema)) {
     return;
@@ -498,10 +505,6 @@ export function extractSchemaInfo(
   const subject = schemaInfo?.subject ?? schema?.subject;
   const subject_name_strategy = schemaInfo?.subject_name_strategy ?? "TOPIC_NAME";
 
-  if (forCCloudTopic) {
-    // unset subject_name_strategy and type
-    return { schema_version, subject, subject_name_strategy: undefined, type: undefined };
-  }
   // drop type since the sidecar rejects this with a 400
   return { schema_version, subject, subject_name_strategy, type: undefined };
 }
