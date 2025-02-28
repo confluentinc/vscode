@@ -12,9 +12,8 @@ import { ExtensionContextNotSetError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
-import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { generateSchemaSubjectGroups, Schema, SchemaTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -25,7 +24,7 @@ const logger = new Logger("viewProviders.schemas");
  * The types managed by the {@link SchemasViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
  */
-type SchemasViewProviderData = ContainerTreeItem<Schema> | Schema;
+type SchemasViewProviderData = Subject | Schema;
 
 export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -94,11 +93,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   getTreeItem(element: SchemasViewProviderData): vscode.TreeItem {
     let treeItem: vscode.TreeItem;
 
-    if (element instanceof Schema) {
-      treeItem = new SchemaTreeItem(element);
+    if (element instanceof Subject) {
+      treeItem = new SubjectTreeItem(element);
     } else {
-      // ContainerTreeItem
-      treeItem = element;
+      // must be a Schema
+      treeItem = new SchemaTreeItem(element);
     }
 
     if (this.itemSearchString) {
@@ -115,12 +114,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     if (element instanceof Schema) {
-      // if we're a schema, our parent is (an equivalent) container tree item (that will have the right label (the schema subject))
-      return new ContainerTreeItem<Schema>(
-        element.subject,
-        vscode.TreeItemCollapsibleState.Collapsed,
-        [],
-      );
+      // if we're a schema, our parent is our Subject.
+      return element.subjectObject();
     }
     // Otherwise the parent of a container tree item is the root.
     return null;
@@ -128,33 +123,49 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   async getChildren(element?: SchemasViewProviderData): Promise<SchemasViewProviderData[]> {
     // we should get the following hierarchy/structure of tree items from this method:
-    // - topic1-value (ContainerTreeItem<Schema>)
-    //   - schema1-V2 (Schema)
-    //   - schema1-V1 (Schema)
-    // - topic2-value (ContainerTreeItem<Schema>)
-    //   - schema2-V1 (Schema)
+    // - topic1-value (Subject w/o schemas fetched preemptively)
+    //   - schema1-V2 (Schema) (once the Subject is expanded)
+    //   - schema1-V1 (Schema) (once the Subject is expanded)
+    // - topic2-value (Subject w/o schemas schemas fetched preemptively)
+    //   - schema2-V1 (Schema) (once the Subject is expanded)
+    //
+    // Once the user has asked to expand a Subject, we'll on-demand fetch the Schema[] for
+    // just that single Subject and return them as the children of the Subject.
 
-    let children: SchemasViewProviderData[] = [];
+    if (!this.schemaRegistry) {
+      // No Schema Registry selected, so no subjects or schemas to show.
+      return [];
+    }
 
-    if (element instanceof ContainerTreeItem) {
-      // expanded a subject container, so return the schemas for that subject
-      // TODO: replace this with call to list schema versions from subject
-      children = element.children;
-      // Schema items are leaf nodes, so we don't need to handle them here
-    } else {
-      if (this.schemaRegistry != null) {
-        const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
-        // TODO: replace this with subject-loader call
-        const schemas =
-          (await loader.getSchemasForRegistry(this.schemaRegistry, this.forceDeepRefresh)) ?? [];
-        // this ends up being an array of subject containers, each with schemas as .children:
-        children = schemas.length > 0 ? generateSchemaSubjectGroups(schemas) : [];
+    // What will be returned.
+    let children: SchemasViewProviderData[];
 
-        if (this.forceDeepRefresh) {
-          // Just honored the user's request for a deep refresh.
-          this.forceDeepRefresh = false;
-        }
+    const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+
+    if (element == null) {
+      // Toplevel: return the subjects as Subject[].
+      children = await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh);
+    } else if (element instanceof Subject) {
+      if (element.schemas) {
+        // Already fetched the schemas for this subject.
+        return element.schemas;
+      } else {
+        // Selected a subject, so assign children to the schemas bound to the subject,
+        // which we fetch now on demand.
+        // While here, also update the subject with knowledge of the schemas
+        // so that 1) we don't fetch them again, and
+        // 2) we can update the TreeItem with additional information based on the schemas.
+        element.schemas = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
+
+        // Refresh the element since now is revised and will produce a
+        // new tree item with updated description, etc.
+        this._onDidChangeTreeData.fire(element);
+
+        children = element.schemas;
       }
+    } else {
+      // Selected a schema, no children there.
+      children = [];
     }
 
     if (this.itemSearchString) {
@@ -186,6 +197,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
     } else {
       this.treeView.message = undefined;
+    }
+
+    if (this.forceDeepRefresh) {
+      // Just honored the user's request for a deep refresh.
+      this.forceDeepRefresh = false;
     }
 
     return children;
