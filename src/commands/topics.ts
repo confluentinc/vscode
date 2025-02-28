@@ -11,7 +11,10 @@ import {
   ResponseError,
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
-import { KafkaProduceResourceApi } from "../clients/sidecar";
+import {
+  ProduceRequest as CCloudProduceRequest,
+  ConfluentCloudProduceRecordsResourceApi,
+} from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
@@ -426,31 +429,23 @@ export async function produceMessage(
   let timestamp = new Date();
 
   const sidecar = await getSidecar();
+
   if (forCCloudTopic) {
-    const ccloudClient: KafkaProduceResourceApi = sidecar.getKafkaProduceResourceApi(
-      topic.connectionId,
-    );
+    const ccloudClient: ConfluentCloudProduceRecordsResourceApi =
+      sidecar.getConfluentCloudProduceRecordsResourceApi(topic.connectionId);
     const ccloudResponse = await ccloudClient.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost({
       ...request,
       x_connection_id: topic.connectionId,
       dry_run: false,
-      body: produceRequest,
+      ProduceRequest: produceRequest as CCloudProduceRequest,
     });
     response = ccloudResponse as ProduceResponse;
   } else {
+    // non-CCloud topic route:
     const client: RecordsV3Api = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
     response = await client.produceRecord({ ...request, ProduceRequest: produceRequest });
   }
-  // we may get a misleading `status: 200` with a nested `error_code` in the response body
-  // ...but we may also get `error_code: 200` with a successful message
-  if (response.error_code >= 400) {
-    throw new ResponseError(
-      new Response("", {
-        status: response.error_code,
-        statusText: response.message,
-      }),
-    );
-  }
+
   timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
 
   return { timestamp, response };
