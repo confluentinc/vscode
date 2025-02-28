@@ -4,7 +4,6 @@ apis/DefaultApi.ts
 apis/FeatureFlagsApi.ts
 apis/HandshakeResourceApi.ts
 apis/KafkaConsumeResourceApi.ts
-apis/KafkaProduceResourceApi.ts
 apis/LoginRealmResourceApi.ts
 apis/MicroProfileHealthApi.ts
 apis/OAuthCallbackResourceApi.ts
