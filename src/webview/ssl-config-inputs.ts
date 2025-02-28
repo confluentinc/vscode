@@ -97,7 +97,7 @@ export class SslConfig extends HTMLElement {
       <p
         data-on-click="this.showTLS(!this.showTLS())"
         data-attr-aria-expanded="this.showTLS()"
-        class="heading"
+        class="heading clickable"
       >
         <span data-text="this.showTLS() ? '-' : '+'"></span>
         Advanced SSL Configuration

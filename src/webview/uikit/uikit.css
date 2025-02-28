@@ -352,6 +352,10 @@
   border: 1px solid var(--vscode-button-background);
 }
 
+.heading.clickable {
+  cursor: pointer;
+}
+
 /** Error states */
 .input-container.error .pattern {
   color: var(--vscode-errorForeground);
