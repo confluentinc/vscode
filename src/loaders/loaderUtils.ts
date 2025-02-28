@@ -1,4 +1,3 @@
-import { TreeItemCollapsibleState } from "vscode";
 import { toKafkaTopicOperations } from "../authz/types";
 import { ResponseError, TopicData, TopicDataList, TopicV3Api } from "../clients/kafkaRest";
 import {
@@ -8,8 +7,7 @@ import {
 } from "../clients/schemaRegistryRest";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaType, subjectMatchesTopicName } from "../models/schema";
+import { Schema, SchemaType, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -75,19 +73,11 @@ export async function fetchTopics(cluster: KafkaCluster): Promise<TopicData[]> {
 export function correlateTopicsWithSchemaSubjects(
   cluster: KafkaCluster,
   topicsRespTopics: TopicData[],
-  subjects: string[],
+  subjects: Subject[],
 ): KafkaTopic[] {
   const topics: KafkaTopic[] = topicsRespTopics.map((topic) => {
-    const matchingSubjects: string[] = subjects.filter((subject) =>
-      subjectMatchesTopicName(subject, topic.topic_name),
-    );
-
-    // HACK: we need to create children to allow searching the Topics view by schema subject; this
-    // will only allow the topic to "match" and be returned from the TopicsViewProvider's
-    // `getChildren()` method, and then once the topic is expanded, it will show the real subject
-    // container(s), which will be the source of truth for subjects+schemas
-    const subjectChildren: ContainerTreeItem<Schema>[] = matchingSubjects.map(
-      (subject) => new ContainerTreeItem<Schema>(subject, TreeItemCollapsibleState.Collapsed, []),
+    const matchingSubjects: Subject[] = subjects.filter((subject) =>
+      subjectMatchesTopicName(subject.name, topic.topic_name),
     );
 
     return KafkaTopic.create({
@@ -103,7 +93,7 @@ export function correlateTopicsWithSchemaSubjects(
       environmentId: cluster.environmentId,
       hasSchema: matchingSubjects.length > 0,
       operations: toKafkaTopicOperations(topic.authorized_operations!),
-      children: subjectChildren,
+      children: matchingSubjects,
     });
   });
 
@@ -157,17 +147,29 @@ export async function fetchSchemas(schemaRegistry: SchemaRegistry): Promise<Sche
 }
 
 /**
- * Fetch all of the subjects in the schema registry and return them as an array of sorted strings.
+ * Fetch all of the subjects in the schema registry and return them as an array of sorted Subject objects.
  * Does not store into the resource manager.
  */
-export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<string[]> {
+export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Subject[]> {
   const sidecarHandle = await getSidecar();
   const client: SubjectsV1Api = sidecarHandle.getSubjectsV1Api(
     schemaRegistry.id,
     schemaRegistry.connectionId,
   );
 
-  return (await client.list()).sort();
+  // Fetch + sort the subject strings from the SR.
+  const sortedSubjectStrings: string[] = (await client.list()).sort();
+
+  // Promote to Subject objects carrying the schema registry's metadata.
+  return sortedSubjectStrings.map(
+    (subjectString) =>
+      new Subject(
+        subjectString,
+        schemaRegistry.connectionId,
+        schemaRegistry.environmentId,
+        schemaRegistry.id,
+      ),
+  );
 }
 
 /**
@@ -175,6 +177,8 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<str
  * of each version and return them as an array of {@link Schema}.
  *
  * The returned array of schema metadata concerning a a single subject is called a "subject group".
+ *
+ * @returns An array of all the schemas for the subject in the schema registry, sorted descending by version.
  */
 export async function fetchSchemaSubjectGroup(
   schemaRegistry: SchemaRegistry,
@@ -188,6 +192,10 @@ export async function fetchSchemaSubjectGroup(
 
   // Learn all of the live version numbers for the subject in one round trip.
   const versions: number[] = await client.listVersions({ subject });
+
+  // Reverse sort versions to get the highest version first. This will then
+  // become the order of the returned array of Schema.
+  versions.sort((a, b) => b - a);
 
   // Now prep to fetch each of the versions concurrently via concurrent
   // calls to fetchSchemaVersion() driven by executeInWorkerPool().
