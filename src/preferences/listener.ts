@@ -3,6 +3,7 @@ import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
 import {
   ENABLE_PRODUCE_MESSAGES,
+  LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
 } from "./constants";
@@ -34,6 +35,15 @@ export function createConfigChangeListener(): Disposable {
         // if the user disables server cert verification, trust all certs
         const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
         await updatePreferences({ trust_all_certificates: trustAllCerts });
+        return;
+      }
+
+      if (event.affectsConfiguration(LOCAL_DOCKER_SOCKET_PATH)) {
+        // just log it so we don't have to log every time we use it
+        logger.debug(
+          `"${LOCAL_DOCKER_SOCKET_PATH}" changed:`,
+          configs.get(LOCAL_DOCKER_SOCKET_PATH),
+        );
         return;
       }
 
