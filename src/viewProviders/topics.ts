@@ -336,7 +336,7 @@ export async function getTopicsForCluster(
 export async function loadTopicSchemas(topic: KafkaTopic): Promise<Subject[]> {
   /*
     1. Get all the subjects from the topic's cluster's environment's schema registry.
-    2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
+    2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
     3. For each of those subjects, get the correspoinding schema version array
     4. Assemble each subject + schemas into a Subject holding the schemas, collect into an array of Subject.
     5. Return said array.
