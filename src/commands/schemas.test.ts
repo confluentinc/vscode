@@ -3,9 +3,9 @@ import sinon from "sinon";
 import { commands } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
-  TEST_CCLOUD_KEY_SCHEMA_REVISED,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SCHEMA_REVISED,
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -61,7 +61,7 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
       TEST_CCLOUD_SUBJECT.connectionId,
       TEST_CCLOUD_SUBJECT.environmentId,
       TEST_CCLOUD_SUBJECT.schemaRegistryId,
-      [TEST_CCLOUD_KEY_SCHEMA_REVISED],
+      [TEST_CCLOUD_SCHEMA_REVISED],
     );
 
     await diffLatestSchemasCommand(schemaGroup);

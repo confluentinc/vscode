@@ -20,7 +20,7 @@ import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/sc
 const logger = new Logger("commands.schemaUpload");
 
 /**
- * Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions.
+ * Module for the "upload schema to schema registry" command ("confluent.schemas.upload") and related functions.
  *
  * uploadNewSchema() command is registered over in ./schemas.ts, but the actual implementation is here.
  * All other exported functions are exported for the tests in schemaUpload.test.ts.
@@ -29,7 +29,7 @@ const logger = new Logger("commands.schemaUpload");
 /**
  * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from:
  *  1. A Subject from the Schemas view
- *  2. On one of a topic's subject's in the Topics view
+ *  2. On one of a topic's subjects in the Topics view
  */
 export async function uploadSchemaForSubjectFromfile(subject: Subject) {
   if (!(subject instanceof Subject)) {

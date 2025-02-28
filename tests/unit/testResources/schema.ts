@@ -14,6 +14,14 @@ export const TEST_CCLOUD_SCHEMA = Schema.create({
   isHighestVersion: true,
 });
 
+/** TEST_CCLOUD_KEY_SCHEMA, revised. */
+export const TEST_CCLOUD_SCHEMA_REVISED = Schema.create({
+  ...TEST_CCLOUD_SCHEMA,
+  id: "100004",
+  version: 2,
+  isHighestVersion: true,
+});
+
 export const TEST_CCLOUD_SUBJECT: Subject = TEST_CCLOUD_SCHEMA.subjectObject();
 
 export const TEST_CCLOUD_KEY_SCHEMA = Schema.create({
@@ -28,14 +36,6 @@ export const TEST_CCLOUD_KEY_SCHEMA = Schema.create({
   isHighestVersion: false,
 });
 
-/** TEST_CCLOUD_KEY_SCHEMA, revised. */
-export const TEST_CCLOUD_KEY_SCHEMA_REVISED = Schema.create({
-  ...TEST_CCLOUD_SCHEMA,
-  id: "100004",
-  version: 2,
-  isHighestVersion: true,
-});
-
 /** A subject w/o knowledge of the schemas bound to it. */
 export const TEST_CCLOUD_KEY_SUBJECT: Subject = TEST_CCLOUD_KEY_SCHEMA.subjectObject();
 
@@ -45,7 +45,7 @@ export const TEST_CCLOUD_SUBJECT_WITH_SCHEMA = new Subject(
   TEST_CCLOUD_SUBJECT.connectionId,
   TEST_CCLOUD_SUBJECT.environmentId,
   TEST_CCLOUD_SUBJECT.schemaRegistryId,
-  [TEST_CCLOUD_KEY_SCHEMA_REVISED],
+  [TEST_CCLOUD_SCHEMA_REVISED],
 );
 
 /** A Subject group containing two schema versions */
@@ -56,7 +56,7 @@ export const TEST_CCLOUD_SUBJECT_WITH_SCHEMAS = new Subject(
   TEST_CCLOUD_SUBJECT.schemaRegistryId,
   [
     // Latest versions always come first
-    TEST_CCLOUD_KEY_SCHEMA_REVISED,
+    TEST_CCLOUD_SCHEMA_REVISED,
     TEST_CCLOUD_SCHEMA,
   ],
 );
