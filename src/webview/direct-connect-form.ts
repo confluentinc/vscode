@@ -159,7 +159,7 @@ class DirectConnectFormViewModel extends ViewModel {
 
     // auth_type doesn't exist in spec; used to determine which credentials to include
     if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
-      await post("UpdateSpecValue", { inputName: input.name, inputValue: value.toString() });
+      await post("UpdateSpecValue", { inputName: input.name, inputValue: value });
     }
 
     switch (input.name) {
@@ -248,8 +248,8 @@ class DirectConnectFormViewModel extends ViewModel {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.auth_type"] = "API";
       data["schema_registry.auth_type"] = "API";
-      data["kafka_cluster.ssl"] = "true";
-      data["schema_registry.ssl"] = "true";
+      data["kafka_cluster.ssl.enabled"] = "true";
+      data["schema_registry.ssl.enabled"] = "true";
     }
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
@@ -290,7 +290,7 @@ export function post(
 ): Promise<Partial<CustomConnectionSpec> | null>;
 export function post(
   type: "UpdateSpecValue",
-  body: { inputName: string; inputValue: string },
+  body: { inputName: string; inputValue: string | boolean },
 ): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);

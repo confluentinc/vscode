@@ -170,6 +170,11 @@ export function getConnectionSpecFromFormData(
           },
         };
       }
+    } else {
+      // since we default the input to true, this case means the user unchecked the box for ssl enabled
+      spec.kafka_cluster.ssl = {
+        enabled: false,
+      };
     }
     if (formData["kafka_cluster.auth_type"] === "Basic") {
       spec.kafka_cluster.credentials = {
@@ -215,6 +220,11 @@ export function getConnectionSpecFromFormData(
           },
         };
       }
+    } else {
+      // since we default the input to true, this case means the user unchecked the box for ssl enabled
+      spec.schema_registry.ssl = {
+        enabled: false,
+      };
     }
     if (formData["schema_registry.auth_type"] === "Basic") {
       spec.schema_registry.credentials = {
