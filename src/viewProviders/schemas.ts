@@ -126,7 +126,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     // - topic1-value (Subject w/o schemas fetched preemptively)
     //   - schema1-V2 (Schema) (once the Subject is expanded)
     //   - schema1-V1 (Schema) (once the Subject is expanded)
-    // - topic2-value (Subject w/o schemas schemas fetched preemptively)
+    // - topic2-value (Subject w/o schemas fetched preemptively)
     //   - schema2-V1 (Schema) (once the Subject is expanded)
     //
     // Once the user has asked to expand a Subject, we'll on-demand fetch the Schema[] for
