@@ -4,6 +4,7 @@ import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
@@ -25,8 +26,13 @@ describe("SchemasViewProvider methods", () => {
     assert.ok(treeItem instanceof SchemaTreeItem);
   });
 
-  it("getTreeItem() should return a SubjectTreeItem for a Subject instance", () => {
+  it("getTreeItem() should return a SubjectTreeItem for a Subject instance w/o schemas", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
+    assert.ok(treeItem instanceof SubjectTreeItem);
+  });
+
+  it("getTreeItem() should return a SubjectTreeItem for a Subject instance with schemas", () => {
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.ok(treeItem instanceof SubjectTreeItem);
   });
 });

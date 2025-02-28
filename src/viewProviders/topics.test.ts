@@ -12,7 +12,7 @@ import {
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { topicSearchSet } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { Schema, SchemaTreeItem, Subject, SubjectWithSchemasTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 import { loadTopicSchemas, TopicViewProvider } from "./topics";
@@ -35,12 +35,9 @@ describe("TopicViewProvider methods", () => {
     assert.ok(treeItem instanceof KafkaTopicTreeItem);
   });
 
-  it("getTreeItem() should return a SubjectWithSchemasTreeItem when given a Subject", () => {
+  it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
-    assert.ok(treeItem instanceof SubjectWithSchemasTreeItem);
-    // TEST_CCLOUD_SUBJECT_WITH_SCHEMAS has multiple schemas, so the contextValue
-    // should be "multiple-versions-schema-subject"
-    assert.strictEqual(treeItem.contextValue, "multiple-versions-schema-subject");
+    assert.ok(treeItem instanceof SubjectTreeItem);
   });
 });
 
@@ -184,7 +181,7 @@ describe("TopicViewProvider search behavior", () => {
 
     const treeItem = await provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
 
-    assert.ok(treeItem instanceof SubjectWithSchemasTreeItem);
+    assert.ok(treeItem instanceof SubjectTreeItem);
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
   });

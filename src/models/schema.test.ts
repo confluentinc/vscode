@@ -2,9 +2,9 @@ import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
 import {
-  TEST_CCLOUD_KEY_SCHEMA_REVISED,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
@@ -15,7 +15,7 @@ import {
   SchemaTreeItem,
   SchemaType,
   Subject,
-  SubjectWithSchemasTreeItem,
+  SubjectTreeItem,
   getLanguageTypes,
   getSubjectIcon,
   subjectMatchesTopicName,
@@ -177,11 +177,29 @@ describe("SchemaTreeItem", () => {
   });
 });
 
-describe("SubjectWithSchemasTreeItem", () => {
+describe("SubjectTreeItem", () => {
+  it("constructor should do the right things when no schemas present", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT);
+    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+
+    assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+    assert.equal(subjectTreeItem.description, undefined);
+  });
+
+  it("constructor should do the right things when single schema version present", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
+    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+
+    assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+    assert.equal(subjectTreeItem.description, "AVRO (1)");
+  });
+
   it("constructor should do the right things when multiple schema versions present", () => {
-    const subjectWithSchemasTreeItem = new SubjectWithSchemasTreeItem(
-      TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
-    );
+    const subjectWithSchemasTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.equal(subjectWithSchemasTreeItem.contextValue, "multiple-versions-schema-subject");
 
     assert.equal(subjectWithSchemasTreeItem.label, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
@@ -191,25 +209,6 @@ describe("SubjectWithSchemasTreeItem", () => {
       vscode.TreeItemCollapsibleState.Collapsed,
     );
     assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
-  });
-
-  it("constructor should set the correct contextValue when only one schema version present", () => {
-    const testSubject = new Subject(
-      TEST_CCLOUD_SUBJECT.name,
-      TEST_CCLOUD_SUBJECT.connectionId,
-      TEST_CCLOUD_SUBJECT.environmentId,
-      TEST_CCLOUD_SUBJECT.schemaRegistryId,
-      [
-        // Just one single subject
-        TEST_CCLOUD_KEY_SCHEMA_REVISED,
-      ],
-    );
-    const subjectWithSchemasTreeItem = new SubjectWithSchemasTreeItem(testSubject);
-    assert.equal(subjectWithSchemasTreeItem.contextValue, "schema-subject");
-  });
-
-  it("constructor hates on subjects with no schemas", () => {
-    assert.throws(() => new SubjectWithSchemasTreeItem(TEST_CCLOUD_SUBJECT));
   });
 
   it("Test subject icon determination", () => {
@@ -222,7 +221,7 @@ describe("SubjectWithSchemasTreeItem", () => {
       const subject = new Subject(name, CCLOUD_CONNECTION_ID, "envId" as EnvironmentId, "srId", [
         TEST_CCLOUD_SCHEMA,
       ]);
-      const subjectTreeItem = new SubjectWithSchemasTreeItem(subject);
+      const subjectTreeItem = new SubjectTreeItem(subject);
       assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, expected);
     }
   });

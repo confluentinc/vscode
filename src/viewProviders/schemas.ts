@@ -13,13 +13,7 @@ import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import {
-  Schema,
-  SchemaTreeItem,
-  Subject,
-  SubjectTreeItem,
-  SubjectWithSchemasTreeItem,
-} from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -100,13 +94,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     let treeItem: vscode.TreeItem;
 
     if (element instanceof Subject) {
-      if (element.schemas) {
-        // Subject with schemas already fetched.
-        treeItem = new SubjectWithSchemasTreeItem(element);
-      } else {
-        // Subject without schemas fetched.
-        treeItem = new SubjectTreeItem(element);
-      }
+      treeItem = new SubjectTreeItem(element);
     } else {
       // must be a Schema
       treeItem = new SchemaTreeItem(element);
@@ -162,14 +150,18 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         // Already fetched the schemas for this subject.
         return element.schemas;
       } else {
-        // Selected a subject, so return the schemas bound to the subject.
-        // Returns Schema[].
-        children = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
-        element.schemas = children as Schema[];
+        // Selected a subject, so assign children to the schemas bound to the subject,
+        // which we fetch now on demand.
+        // While here, also update the subject with knowledge of the schemas
+        // so that 1) we don't fetch them again, and
+        // 2) we can update the TreeItem with additional information based on the schemas.
+        element.schemas = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
 
-        // refresh the element since now is revised and will produce a
-        // new tree item type (SubjectWithSchemasTreeItem where before was SubjectTreeItem)
+        // Refresh the element since now is revised and will produce a
+        // new tree item with updated description, etc.
         this._onDidChangeTreeData.fire(element);
+
+        children = element.schemas;
       }
     } else {
       // Selected a schema, no children there.

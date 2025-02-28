@@ -36,7 +36,17 @@ export const TEST_CCLOUD_KEY_SCHEMA_REVISED = Schema.create({
   isHighestVersion: true,
 });
 
+/** A subject w/o knowledge of the schemas bound to it. */
 export const TEST_CCLOUD_KEY_SUBJECT: Subject = TEST_CCLOUD_KEY_SCHEMA.subjectObject();
+
+/** A Subject group containing single schema version. */
+export const TEST_CCLOUD_SUBJECT_WITH_SCHEMA = new Subject(
+  TEST_CCLOUD_SUBJECT.name,
+  TEST_CCLOUD_SUBJECT.connectionId,
+  TEST_CCLOUD_SUBJECT.environmentId,
+  TEST_CCLOUD_SUBJECT.schemaRegistryId,
+  [TEST_CCLOUD_KEY_SCHEMA_REVISED],
+);
 
 /** A Subject group containing two schema versions */
 export const TEST_CCLOUD_SUBJECT_WITH_SCHEMAS = new Subject(

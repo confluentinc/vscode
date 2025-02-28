@@ -20,7 +20,7 @@ import {
   SchemaTreeItem,
   Subject,
   subjectMatchesTopicName,
-  SubjectWithSchemasTreeItem,
+  SubjectTreeItem,
 } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
@@ -108,7 +108,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
     } else if (element instanceof Subject) {
-      treeItem = new SubjectWithSchemasTreeItem(element);
+      treeItem = new SubjectTreeItem(element);
     } else {
       // must be individual Schema.
       treeItem = new SchemaTreeItem(element);

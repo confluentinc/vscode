@@ -155,39 +155,28 @@ export class Schema extends Data implements IResourceBase {
   }
 }
 
-/** Tree item representing a (single) subject */
+/**
+ * Tree item representing a (single) subject, either with or without knowledge
+ * of the schema bindings it contains.
+ */
 export class SubjectTreeItem extends vscode.TreeItem {
   constructor(subject: Subject) {
     super(subject.name, vscode.TreeItemCollapsibleState.Collapsed);
-    this.iconPath = getSubjectIcon(subject.name);
+
     this.id = subject.name;
-    this.contextValue = "schema-subject";
-  }
-}
 
-/** Tree item representing a subject + schemas within that subject. Only used within topic view controller at this time. */
-export class SubjectWithSchemasTreeItem extends vscode.TreeItem {
-  constructor(subject: Subject) {
-    super(subject.name, vscode.TreeItemCollapsibleState.Collapsed);
-
-    if (!subject.schemas) {
-      throw new Error("SubjectWithSchemasTreeItem created with a subject not carrying schemas!");
-    }
-
-    const schemas = subject.schemas;
-
-    // Only used within topic view controller at this time, so we definitely know the subject is either a value or key subject
-    // correlated with the subject, so set defaultToValueSubject to true.
-    this.iconPath = getSubjectIcon(subject.name, true);
-    this.id = subject.name;
-    this.description = `${schemas[0].type} (${subject.schemas.length})`;
+    // If we have schema bindings, then err on the side of showing the value icon
+    const errOnValueSubject: boolean = subject.schemas != null;
+    this.iconPath = getSubjectIcon(subject.name, errOnValueSubject);
 
     const propertyParts: string[] = new Array<string>();
-    if (schemas.length > 1) {
-      propertyParts.push("multiple-versions");
+    if (subject.schemas) {
+      this.description = `${subject.schemas[0].type} (${subject.schemas.length})`;
+      if (subject.schemas.length > 1) {
+        propertyParts.push("multiple-versions");
+      }
     }
     propertyParts.push("schema-subject");
-
     this.contextValue = propertyParts.join("-");
   }
 }
