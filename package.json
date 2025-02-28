@@ -88,9 +88,9 @@
         "category": "Confluent: Connections"
       },
       {
-        "command": "confluent.connections.direct.share",
-        "icon": "$(share)",
-        "title": "Download connection as json file for sharing",
+        "command": "confluent.connections.direct.export",
+        "icon": "$(file-code)",
+        "title": "Save connection configuration as json file",
         "category": "Confluent: Connections"
       },
       {
@@ -597,7 +597,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.connections.direct.share",
+          "command": "confluent.connections.direct.export",
           "when": "false"
         },
         {
@@ -878,7 +878,7 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.connections.direct.share",
+          "command": "confluent.connections.direct.export",
           "when": "viewItem == direct-environment",
           "group": "inline@4"
         },

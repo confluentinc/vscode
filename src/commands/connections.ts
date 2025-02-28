@@ -103,16 +103,19 @@ export async function createNewDirectConnection() {
   // Open a quickpick to choose either from file or manual entry
   const createMethod = await window.showQuickPick(
     [
-      { label: "FILE", description: "Select a JSON file with connection details" },
-      { label: "FORM", description: "Enter connection details manually" },
+      { label: "Load from file", description: "Select a JSON file with connection details" },
+      { label: "Fill in form", description: "Enter connection details manually" },
     ],
     {
       placeHolder: "How would you like to create a new connection?",
       ignoreFocusOut: true,
     },
   );
-  if (createMethod?.label === "FILE") {
-    console.log("Opening file dialog");
+  if (!createMethod) {
+    // User exited the quick pick without making a choice
+    return;
+  }
+  if (createMethod?.label === "Load from file") {
     const newSpecUris: Uri[] | undefined = await window.showOpenDialog({
       openLabel: "Select",
       canSelectFiles: true,
@@ -148,7 +151,6 @@ export async function createNewDirectConnection() {
       }
     }
   } else {
-    console.log("else no file block");
     openDirectConnectionForm(null);
   }
 }
@@ -232,7 +234,7 @@ export async function editDirectConnection(item: ConnectionId | DirectEnvironmen
   openDirectConnectionForm(spec);
 }
 
-export async function shareDirectConnection(item: DirectEnvironment) {
+export async function exportDirectConnection(item: DirectEnvironment) {
   // look up the associated ConnectionSpec
   const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
     item.connectionId,
@@ -246,37 +248,56 @@ export async function shareDirectConnection(item: DirectEnvironment) {
     return;
   }
 
-  const SAVE_LABEL = "Save JSON file";
-  const folderUri = await window.showOpenDialog({
-    openLabel: SAVE_LABEL,
-    canSelectFiles: false,
-    canSelectFolders: true,
-    canSelectMany: false,
-    // Parameter might be ignored on some OSes (e.g. macOS)
-    title: SAVE_LABEL,
-  });
+  // Notify the user that the project was generated successfully
+  const selection = await window.showWarningMessage(
+    `Connection details contain sensitive data and local file paths!`,
+    {
+      modal: true,
+      detail: `Files may contain sensitive information like API Keys. Use caution when sharing and saving them. Any file paths will need to be updated to match the path to file on a local user's machine`,
+    },
+    { title: "Save file" },
+    { title: "Remove secrets" },
+    { title: "Cancel", isCloseAffordance: true },
+  );
+  if (selection !== undefined && selection.title !== "Cancel") {
+    if (selection.title === "Remove secrets") {
+      // TODO NC remove secrets from the spec (use "clean" method?)
+      window.showErrorMessage("File not saved. Secrets removal coming soon.");
+      return;
+    }
+    const SAVE_LABEL = "Save file";
+    const folderUri = await window.showOpenDialog({
+      openLabel: SAVE_LABEL,
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      // Parameter might be ignored on some OSes (e.g. macOS)
+      title: SAVE_LABEL,
+    });
 
-  if (!folderUri || folderUri.length !== 1) {
-    // User cancelled before choosing a folder
-    // TODO Log it
-    // logUsage(UserEvent.ScaffoldCancelled, {
-    //   templateName: pickedTemplate.spec!.display_name,
-    // });
-    window.showInformationMessage("File saved cancelled.");
-  } else {
-    try {
-      const shareable = { ...spec, id: undefined };
-      const specJson = JSON.stringify(shareable, null, 2);
-      const destination = folderUri[0];
-      const name = spec.name ? spec.name : "connection";
-      const fileName = name.trim().replace(/\s+/g, "_") + ".json";
-      await workspace.fs.writeFile(
-        Uri.file(posix.join(destination.fsPath, fileName)),
-        new TextEncoder().encode(specJson),
-      );
-    } catch (err) {
-      logger.error(`Failed to save file: ${err}`);
-      window.showErrorMessage("Unable to save connection spec file.");
+    if (!folderUri || folderUri.length !== 1) {
+      // User cancelled before choosing a folder
+      // TODO Log it
+      // logUsage(UserEvent.ScaffoldCancelled, {
+      //   templateName: pickedTemplate.spec!.display_name,
+      // });
+      window.showInformationMessage("File saved cancelled.");
+      return;
+    } else {
+      try {
+        const shareable = { ...spec, id: undefined };
+        const specJson = JSON.stringify(shareable, null, 2);
+        const destination = folderUri[0];
+        const name = spec.name ? spec.name : "connection";
+        const fileName = name.trim().replace(/\s+/g, "_") + ".json";
+        await workspace.fs.writeFile(
+          Uri.file(posix.join(destination.fsPath, fileName)),
+          new TextEncoder().encode(specJson),
+        );
+      } catch (err) {
+        logger.error(`Failed to save file: ${err}`);
+        window.showErrorMessage("Unable to save connection spec file.");
+      }
     }
   }
 }
@@ -290,7 +311,7 @@ export function registerConnectionCommands(): Disposable[] {
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
     // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
-    registerCommandWithLogging("confluent.connections.direct.share", shareDirectConnection),
+    registerCommandWithLogging("confluent.connections.direct.export", exportDirectConnection),
   ];
 }
 
