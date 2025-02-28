@@ -76,14 +76,15 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
   });
 
   it("fetchSubjects() should return subjects sorted", async () => {
-    const subjectsRaw = ["subject2", "subject3", "subject1"];
+    const subjectsRaw = ["Subject2", "subject3", "subject1"];
     stubbedSubjectsV1Api.list.resolves(subjectsRaw);
 
     const subjects = await loaderUtils.fetchSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
     const subjectStrings = subjects.map((s) => s.name);
 
     // be sure to test against a wholly separate array, 'cause .sort() is in-place.
-    assert.deepStrictEqual(subjectStrings, ["subject1", "subject2", "subject3"]);
+    // Will do a locale search which is case independent
+    assert.deepStrictEqual(subjectStrings, ["subject1", "Subject2", "subject3"]);
   });
 
   it("fetchSchemaSubjectGroup() should fetch versions of schemas for a given subject", async () => {
