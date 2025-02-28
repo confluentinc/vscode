@@ -1,13 +1,21 @@
 import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
-import { TEST_CCLOUD_SCHEMA, TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
-import { IconNames } from "../constants";
+import {
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_SCHEMA,
+} from "../../tests/unit/testResources";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { EnvironmentId } from "./resource";
 import {
   Schema,
   SchemaTreeItem,
   SchemaType,
-  generateSchemaSubjectGroups,
+  Subject,
+  SubjectTreeItem,
   getLanguageTypes,
   getSubjectIcon,
   subjectMatchesTopicName,
@@ -106,174 +114,6 @@ describe("Schema model methods", () => {
   });
 });
 
-// TODO: update the `as Schema[]` sections below once ContainerTreeItem<T> is implemented
-describe("Schema helper functions", () => {
-  const valueSubject = "test-topic-value";
-  const keySubject = "test-topic-key";
-  const otherSubject = "test-topic";
-  const schemas: Schema[] = [
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: valueSubject,
-      version: 1,
-      type: SchemaType.Avro,
-      id: "1",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: valueSubject,
-      version: 2,
-      type: SchemaType.Avro,
-      id: "2",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: keySubject,
-      version: 1,
-      type: SchemaType.Protobuf,
-      id: "3",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: otherSubject,
-      version: 1,
-      type: SchemaType.Json,
-      id: "4",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: otherSubject,
-      version: 3,
-      type: SchemaType.Json,
-      id: "5",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: otherSubject,
-      version: 2,
-      type: SchemaType.Json,
-      id: "6",
-    }),
-  ];
-
-  it("generateSchemaSubjectGroups() should group schemas under a subject-labeled container item", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-    assert.equal(groups.length, 3, `should have three subject groups, got ${groups.length}`);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.ok(testTopicGroup);
-    assert.equal(testTopicGroup.label, valueSubject);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.ok(anotherTopicGroup);
-    assert.equal(anotherTopicGroup.label, keySubject);
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    assert.ok(extraTopicGroup);
-    assert.equal(extraTopicGroup.label, otherSubject);
-  });
-
-  it("generateSchemaSubjectGroups() should contain the correct number of schemas as children", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children;
-    assert.equal(testTopicSchemas.length, 2);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children;
-    assert.equal(anotherTopicSchemas.length, 1);
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children;
-    assert.equal(extraTopicSchemas.length, 3);
-  });
-
-  it("generateSchemaSubjectGroups() should show the schema type and version count in the description", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(testTopicGroup?.description, "AVRO (2)");
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(anotherTopicGroup?.description, "PROTOBUF (1)");
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    assert.equal(extraTopicGroup?.description, "JSON (3)");
-  });
-
-  it("generateSchemaSubjectGroups() should sort subjects' schemas in version-descending order", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children;
-    assert.equal(
-      testTopicSchemas[0].version,
-      2,
-      `first version should be 2, got v${testTopicSchemas[0].version}`,
-    );
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children;
-    assert.equal(
-      anotherTopicSchemas[0].version,
-      1,
-      `first version should be 1, got v${anotherTopicSchemas[0].version}`,
-    );
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children;
-    assert.equal(
-      extraTopicSchemas[0].version,
-      3,
-      `first version should be 3, got v${extraTopicSchemas[0].version}`,
-    );
-  });
-
-  it("generateSchemaSubjectGroups() should set the context value to include 'multiple-versions' if a subject has more than one schema", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const mvRe = /multiple-versions/;
-    // valueSubject has two schema versions, so it should have the context value clause.
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(mvRe.test(testTopicGroup!.contextValue!), true);
-
-    // Only one version, so no context value.
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(mvRe.test(anotherTopicGroup!.contextValue!), false);
-  });
-
-  it("generateSchemaSubjectGroups() should set the context value to end with 'schema-subject'", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const schemaGroupRe = /schema-subject$/;
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(schemaGroupRe.test(testTopicGroup!.contextValue!), true);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(schemaGroupRe.test(anotherTopicGroup!.contextValue!), true);
-  });
-
-  it("generateSchemaSubjectGroups() should assign the correct icon based on schema subject suffix", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    // value schemas should have the symbol-object icon
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicIcon = testTopicGroup!.iconPath as vscode.ThemeIcon;
-    assert.equal(testTopicIcon.id, new vscode.ThemeIcon(IconNames.VALUE_SUBJECT).id);
-
-    // key schemas should have the key icon
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicIcon = anotherTopicGroup!.iconPath as vscode.ThemeIcon;
-    assert.equal(anotherTopicIcon.id, new vscode.ThemeIcon(IconNames.KEY_SUBJECT).id);
-
-    // other schemas should have the question icon
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicIcon = extraTopicGroup!.iconPath as vscode.ThemeIcon;
-    assert.equal(extraTopicIcon.id, new vscode.ThemeIcon(IconNames.OTHER_SUBJECT).id);
-  });
-});
-
 describe("getSubjectIcon", () => {
   for (const [subject, expected] of [
     ["test-key", IconNames.KEY_SUBJECT],
@@ -334,5 +174,55 @@ describe("SchemaTreeItem", () => {
     });
     const unevolvableTreeItem = new SchemaTreeItem(unevolvableSchema);
     assert.equal(unevolvableTreeItem.contextValue, "ccloud-schema");
+  });
+});
+
+describe("SubjectTreeItem", () => {
+  it("constructor should do the right things when no schemas present", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT);
+    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+
+    assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+    assert.equal(subjectTreeItem.description, undefined);
+  });
+
+  it("constructor should do the right things when single schema version present", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
+    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+
+    assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+    assert.equal(subjectTreeItem.description, "AVRO (1)");
+  });
+
+  it("constructor should do the right things when multiple schema versions present", () => {
+    const subjectWithSchemasTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.equal(subjectWithSchemasTreeItem.contextValue, "multiple-versions-schema-subject");
+
+    assert.equal(subjectWithSchemasTreeItem.label, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
+    assert.equal(subjectWithSchemasTreeItem.id, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
+    assert.equal(
+      subjectWithSchemasTreeItem.collapsibleState,
+      vscode.TreeItemCollapsibleState.Collapsed,
+    );
+    assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
+  });
+
+  it("Test subject icon determination", () => {
+    for (const [name, expected] of [
+      ["test-key", IconNames.KEY_SUBJECT],
+      ["test-value", IconNames.VALUE_SUBJECT],
+      // Should default to value subject even if doesn't smell like it.
+      ["test-other", IconNames.VALUE_SUBJECT],
+    ]) {
+      const subject = new Subject(name, CCLOUD_CONNECTION_ID, "envId" as EnvironmentId, "srId", [
+        TEST_CCLOUD_SCHEMA,
+      ]);
+      const subjectTreeItem = new SubjectTreeItem(subject);
+      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, expected);
+    }
   });
 });
