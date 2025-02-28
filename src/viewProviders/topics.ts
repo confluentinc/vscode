@@ -135,7 +135,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof KafkaTopic) {
-        // return schema-subject containers in form of SubjectWithSchemas[]
+        // return schema-subject containers in form of Subject[] each carrying Schema[]s.
         children = await loadTopicSchemas(element);
       } else if (element instanceof Subject) {
         // Subject carrying schemas as from loadTopicSchemas, return schema versions for the topic
@@ -337,7 +337,7 @@ export async function loadTopicSchemas(topic: KafkaTopic): Promise<Subject[]> {
   /*
     1. Get all the subjects from the topic's cluster's environment's schema registry.
     2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
-    3. For each of those subjects, get the correspoinding schema version array
+    3. For each of those subjects, get the corresponding schema version array
     4. Assemble each subject + schemas into a Subject holding the schemas, collect into an array of Subject.
     5. Return said array.
   */
