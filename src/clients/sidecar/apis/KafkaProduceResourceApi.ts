@@ -25,7 +25,7 @@ export interface GatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRequest {
 /**
  *
  */
-export class KafkaProduceResourceApi extends runtime.BaseAPI {
+export class ConfluentCloudProduceRecordsResourceApi extends runtime.BaseAPI {
   /**
    */
   async gatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRaw(
