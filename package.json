@@ -89,7 +89,7 @@
       },
       {
         "command": "confluent.connections.direct.export",
-        "icon": "$(file-code)",
+        "icon": "$(desktop-download)",
         "title": "Save connection configuration as json file",
         "category": "Confluent: Connections"
       },
