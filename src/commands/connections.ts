@@ -14,6 +14,7 @@ import { CustomConnectionSpec, getResourceManager } from "../storage/resourceMan
 import { ResourceViewProvider } from "../viewProviders/resources";
 import { ConnectionSpecFromJSON } from "../clients/sidecar";
 import { FormConnectionType } from "../webview/direct-connect-form";
+import { EXTENSION_VERSION } from "../constants";
 
 const logger = new Logger("commands.connections");
 
@@ -285,7 +286,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
       return;
     } else {
       try {
-        const shareable = { ...spec, id: undefined };
+        const shareable = { ...spec, id: undefined, extVersion: EXTENSION_VERSION };
         const specJson = JSON.stringify(shareable, null, 2);
         const destination = folderUri[0];
         const name = spec.name ? spec.name : "connection";
