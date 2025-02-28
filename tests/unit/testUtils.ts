@@ -4,6 +4,8 @@ import { TopicData, TopicDataFromJSON } from "../../src/clients/kafkaRest/models
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
 import { Logger } from "../../src/logging";
+import { Subject } from "../../src/models/schema";
+import { SchemaRegistry } from "../../src/models/schemaRegistry";
 import { StorageManager } from "../../src/storage";
 
 const logger = new Logger("tests.testUtils");
@@ -89,4 +91,14 @@ export function createTestTopicData(
     },
     authorized_operations: authorizedOperations,
   });
+}
+
+/** Create test suite Subject objects for use in tests. */
+export function createTestSubject(schemaRegistry: SchemaRegistry, name: string): Subject {
+  return new Subject(
+    name,
+    schemaRegistry.connectionId,
+    schemaRegistry.environmentId,
+    schemaRegistry.id,
+  );
 }
