@@ -158,7 +158,7 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Sub
   );
 
   // Fetch + sort the subject strings from the SR.
-  const sortedSubjectStrings: string[] = (await client.list()).sort();
+  const sortedSubjectStrings: string[] = (await client.list()).sort((a, b) => a.localeCompare(b));
 
   // Promote to Subject objects carrying the schema registry's metadata.
   return sortedSubjectStrings.map(
