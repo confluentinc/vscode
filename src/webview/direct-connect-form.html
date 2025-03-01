@@ -14,7 +14,7 @@
       <div class="form-header">
         <h1
           class="heading"
-          data-text="this.spec() ? 'Edit connection details' : 'Create a new connection'"
+          data-text="this.editing() ? 'Edit connection details' : 'Create a new connection'"
         ></h1>
         <p class="form-description">
           Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
@@ -43,8 +43,8 @@
             <label class="label">Connection Type</label>
             <select
               class="input dropdown"
-              id="platform"
-              name="platform"
+              id="formconnectiontype"
+              name="formconnectiontype"
               data-on-change="this.updateValue(event)"
             >
               <option
@@ -100,8 +100,8 @@
             <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
             <input
               class="input"
-              id="bootstrap_servers"
-              name="bootstrap_servers"
+              id="kafka_cluster.bootstrap_servers"
+              name="kafka_cluster.bootstrap_servers"
               type="text"
               placeholder="host:port, host2:port2"
               data-attr-value="this.kafkaBootstrapServers()"
@@ -113,11 +113,11 @@
             >
           </div>
           <div class="input-container">
-            <label for="kafka_auth_type" class="label">Authentication Type</label>
+            <label for="kafka_cluster.auth_type" class="label">Authentication Type</label>
             <select
               class="input dropdown"
-              id="kafka_auth_type"
-              name="kafka_auth_type"
+              id="kafka_cluster.auth_type"
+              name="kafka_cluster.auth_type"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
@@ -144,11 +144,11 @@
           <template data-if="this.kafkaAuthType() === 'Basic'">
             <div class="input-row">
               <div class="input-container">
-                <label for="kafka_username" class="label">Username</label>
+                <label for="kafka_cluster.credentials.username" class="label">Username</label>
                 <input
                   class="input"
-                  id="kafka_username"
-                  name="kafka_username"
+                  id="kafka_cluster.credentials.username"
+                  name="kafka_cluster.credentials.username"
                   type="text"
                   data-attr-value="this.kafkaUsername()"
                   data-on-change="this.updateValue(event)"
@@ -156,14 +156,15 @@
                 />
               </div>
               <div class="input-container">
-                <label for="kafka_password" class="label">Password</label>
+                <label for="kafka_cluster.credentials.password" class="label">Password</label>
                 <input
                   class="input"
-                  id="kafka_password"
-                  name="kafka_password"
+                  id="kafka_cluster.credentials.password"
+                  name="kafka_cluster.credentials.password"
                   type="password"
                   data-attr-value="this.kafkaSecret()"
                   required
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
@@ -171,11 +172,11 @@
           <template data-if="this.kafkaAuthType() === 'API'">
             <div class="input-row">
               <div class="input-container">
-                <label for="kafka_api_key" class="label">API Key</label>
+                <label for="kafka_cluster.credentials.api_key" class="label">API Key</label>
                 <input
                   class="input"
-                  id="api_key"
-                  name="kafka_api_key"
+                  id="kafka_cluster.credentials.api_key"
+                  name="kafka_cluster.credentials.api_key"
                   type="text"
                   data-attr-required="this.kafkaBootstrapServers() !== ''"
                   data-attr-value="this.kafkaApiKey()"
@@ -183,11 +184,11 @@
                 />
               </div>
               <div class="input-container">
-                <label for="kafka_api_secret" class="label">API Secret</label>
+                <label for="kafka_cluster.credentials.api_secret" class="label">API Secret</label>
                 <input
                   class="input"
-                  id="api_secret"
-                  name="kafka_api_secret"
+                  id="kafka_cluster.credentials.api_secret"
+                  name="kafka_cluster.credentials.api_secret"
                   data-attr-value="this.kafkaSecret()"
                   type="password"
                   data-attr-required="this.kafkaBootstrapServers() !== ''"
@@ -195,17 +196,26 @@
               </div>
             </div>
           </template>
-          <label class="checkbox" for="kafka_ssl">
+          <label class="checkbox" for="kafka_cluster.ssl.enabled">
             <input
               type="checkbox"
-              id="kafka_ssl"
-              name="kafka_ssl"
+              id="kafka_cluster.ssl.enabled"
+              name="kafka_cluster.ssl.enabled"
               data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the cluster?'"
-              data-attr-checked="this.kafkaSslEnabled() ? true : false"
+              data-attr-checked="this.kafkaSslEnabled()"
+              data-attr-value="this.kafkaSslEnabled()"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             /><span>SSL enabled</span></label
           >
+          <template data-if="this.kafkaSslEnabled()">
+            <ssl-config
+              data-prop-config="this.kafkaSslConfig()"
+              data-prop-namespace="'kafka_cluster'"
+              data-on-change="this.updateValue(event.detail)"
+              data-on-getfile="this.getFile(event.detail)"
+            />
+          </template>
         </div>
         <div class="form-section">
           <template data-if="this.showSchemaStatus()">
@@ -218,11 +228,11 @@
           </template>
           <h2 class="form-section-heading">Schema Registry</h2>
           <div class="input-container">
-            <label for="uri" class="label">URL</label>
+            <label for="schema_registry.uri" class="label">URL</label>
             <input
               class="input"
-              id="uri"
-              name="uri"
+              id="schema_registry.uri"
+              name="schema_registry.uri"
               type="url"
               pattern="https?://.*"
               title="URL must begin with http or https"
@@ -235,11 +245,11 @@
             >
           </div>
           <div class="input-container">
-            <label for="schema_auth_type" class="label">Authentication Type</label>
+            <label for="schema_registry.auth_type" class="label">Authentication Type</label>
             <select
               class="input dropdown"
-              id="schema_auth_type"
-              name="schema_auth_type"
+              id="schema_registry.auth_type"
+              name="schema_registry.auth_type"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
@@ -266,11 +276,11 @@
           <template data-if="this.schemaAuthType() === 'Basic'">
             <div class="input-row">
               <div class="input-container">
-                <label for="schema_username" class="label">Username</label>
+                <label for="schema_registry.credentials.username" class="label">Username</label>
                 <input
                   class="input"
-                  id="schema_username"
-                  name="schema_username"
+                  id="schema_registry.credentials.username"
+                  name="schema_registry.credentials.username"
                   type="text"
                   data-attr-value="this.schemaUsername()"
                   data-attr-required="this.schemaUri() !== ''"
@@ -278,11 +288,11 @@
                 />
               </div>
               <div class="input-container">
-                <label for="schema_password" class="label">Password</label>
+                <label for="schema_registry.credentials.password" class="label">Password</label>
                 <input
                   class="input"
-                  id="schema_password"
-                  name="schema_password"
+                  id="schema_registry.credentials.password"
+                  name="schema_registry.credentials.password"
                   type="password"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaSecret()"
@@ -293,11 +303,11 @@
           <template data-if="this.schemaAuthType() === 'API'">
             <div class="input-row">
               <div class="input-container">
-                <label for="schema_api_key" class="label">API Key</label>
+                <label for="schema_registry.credentials.api_key" class="label">API Key</label>
                 <input
                   class="input"
-                  id="schema_api_key"
-                  name="schema_api_key"
+                  id="schema_registry.credentials.api_key"
+                  name="schema_registry.credentials.api_key"
                   type="text"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaApiKey()"
@@ -305,11 +315,11 @@
                 />
               </div>
               <div class="input-container">
-                <label for="schema_api_secret" class="label">API Secret</label>
+                <label for="schema_registry.credentials.api_secret" class="label">API Secret</label>
                 <input
                   class="input"
-                  id="schema_api_secret"
-                  name="schema_api_secret"
+                  id="schema_registry.credentials.api_secret"
+                  name="schema_registry.credentials.api_secret"
                   type="password"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaSecret()"
@@ -317,18 +327,27 @@
               </div>
             </div>
           </template>
-          <label class="checkbox" for="schema_ssl">
+          <label class="checkbox" for="schema_registry.ssl.enabled">
             <input
               type="checkbox"
-              id="schema_ssl"
-              name="schema_ssl"
+              id="schema_registry.ssl.enabled"
+              name="schema_registry.ssl.enabled"
               data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the registry?'"
-              data-attr-checked="this.schemaSslEnabled() ? true : false"
+              data-attr-checked="this.schemaSslEnabled()"
+              data-attr-value="this.schemaSslEnabled()"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             />
-            <span>SSL enabled</span></label
-          >
+            <span>SSL enabled</span>
+          </label>
+          <template data-if="this.schemaSslEnabled()">
+            <ssl-config
+              data-prop-config="this.schemaSslConfig()"
+              data-prop-namespace="'schema_registry'"
+              data-on-change="this.updateValue(event.detail)"
+              data-on-getfile="this.getFile(event.detail)"
+            />
+          </template>
         </div>
         <div class="form-section button-group">
           <input
@@ -346,7 +365,7 @@
           <input
             class="button"
             type="submit"
-            data-attr-value="this.spec() ? 'Update' : 'Save'"
+            data-attr-value="this.editing() ? 'Update' : 'Save'"
             data-attr-disabled="this.loading()"
           />
         </div>
