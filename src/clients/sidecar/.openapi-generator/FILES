@@ -1,3 +1,4 @@
+apis/ConfluentCloudProduceRecordsResourceApi.ts
 apis/ConnectionsResourceApi.ts
 apis/DefaultApi.ts
 apis/FeatureFlagsApi.ts
@@ -47,6 +48,11 @@ models/PartitionOffset.ts
 models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
+models/ProduceRequest.ts
+models/ProduceRequestData.ts
+models/ProduceRequestHeader.ts
+models/ProduceResponse.ts
+models/ProduceResponseData.ts
 models/RBACRequest.ts
 models/SchemaRegistryConfig.ts
 models/SchemaRegistryConfigCredentials.ts

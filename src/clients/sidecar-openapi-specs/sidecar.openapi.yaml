@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.162.0
+  version: 0.163.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -96,6 +96,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SimpleConsumeMultiPartitionResponse"
+  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records:
+    post:
+      tags:
+      - Confluent Cloud Produce Records Resource
+      parameters:
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: topic_name
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dry_run
+        in: query
+        schema:
+          default: false
+          type: boolean
+      - name: x-connection-id
+        in: header
+        description: Connection ID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProduceRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProduceResponse"
   /gateway/v1/connections:
     get:
       tags:
@@ -699,6 +737,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Connection"
+    Date:
+      format: date
+      type: string
+      example: 2022-03-10
     Error:
       description: Describes a particular error encountered while performing an operation.
       type: object
@@ -1039,6 +1081,95 @@ components:
             type: string
         trust_all_certificates:
           type: boolean
+    ProduceRequest:
+      type: object
+      properties:
+        partition_id:
+          format: int32
+          type: integer
+        headers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProduceRequestHeader"
+        key:
+          $ref: "#/components/schemas/ProduceRequestData"
+        value:
+          $ref: "#/components/schemas/ProduceRequestData"
+        timestamp:
+          $ref: "#/components/schemas/Date"
+    ProduceRequestData:
+      type: object
+      properties:
+        type:
+          type: string
+        subject:
+          type: string
+        subject_name_strategy:
+          type: string
+        schema_id:
+          format: int32
+          type: integer
+        schema_version:
+          format: int32
+          type: integer
+        schema:
+          type: string
+        data: {}
+    ProduceRequestHeader:
+      required:
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          format: binary
+          type: string
+    ProduceResponse:
+      required:
+      - error_code
+      type: object
+      properties:
+        error_code:
+          format: int32
+          type: integer
+        message:
+          type: string
+        cluster_id:
+          type: string
+        topic_name:
+          type: string
+        partition_id:
+          format: int32
+          type: integer
+        offset:
+          format: int64
+          type: integer
+        timestamp:
+          $ref: "#/components/schemas/Date"
+        key:
+          $ref: "#/components/schemas/ProduceResponseData"
+        value:
+          $ref: "#/components/schemas/ProduceResponseData"
+    ProduceResponseData:
+      required:
+      - size
+      - type
+      type: object
+      properties:
+        size:
+          format: int64
+          type: integer
+        type:
+          type: string
+        subject:
+          type: string
+        schema_id:
+          format: int32
+          type: integer
+        schema_version:
+          format: int32
+          type: integer
     RBACRequest:
       type: object
       properties:
@@ -1283,13 +1414,13 @@ components:
     HealthCheck:
       type: object
       properties:
+        data:
+          type: object
+          nullable: true
         status:
           enum:
           - UP
           - DOWN
           type: string
-        data:
-          type: object
-          nullable: true
         name:
           type: string
