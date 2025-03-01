@@ -12,10 +12,21 @@
  * Do not edit the class manually.
  */
 
-import type { ProduceRequestData } from "./ProduceRequestData";
-import { ProduceRequestDataFromJSON, ProduceRequestDataToJSON } from "./ProduceRequestData";
+import { mapValues } from "../runtime";
 import type { ProduceRequestHeader } from "./ProduceRequestHeader";
-import { ProduceRequestHeaderFromJSON, ProduceRequestHeaderToJSON } from "./ProduceRequestHeader";
+import {
+  ProduceRequestHeaderFromJSON,
+  ProduceRequestHeaderFromJSONTyped,
+  ProduceRequestHeaderToJSON,
+  ProduceRequestHeaderToJSONTyped,
+} from "./ProduceRequestHeader";
+import type { ProduceRequestData } from "./ProduceRequestData";
+import {
+  ProduceRequestDataFromJSON,
+  ProduceRequestDataFromJSONTyped,
+  ProduceRequestDataToJSON,
+  ProduceRequestDataToJSONTyped,
+} from "./ProduceRequestData";
 
 /**
  *
