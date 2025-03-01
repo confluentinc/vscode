@@ -4,6 +4,9 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
+  keystore and truststore settings
+
 ## 0.25.0
 
 ### Added
