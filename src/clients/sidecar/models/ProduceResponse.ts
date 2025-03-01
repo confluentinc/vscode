@@ -12,8 +12,14 @@
  * Do not edit the class manually.
  */
 
+import { mapValues } from "../runtime";
 import type { ProduceResponseData } from "./ProduceResponseData";
-import { ProduceResponseDataFromJSON, ProduceResponseDataToJSON } from "./ProduceResponseData";
+import {
+  ProduceResponseDataFromJSON,
+  ProduceResponseDataFromJSONTyped,
+  ProduceResponseDataToJSON,
+  ProduceResponseDataToJSONTyped,
+} from "./ProduceResponseData";
 
 /**
  *
