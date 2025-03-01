@@ -1171,9 +1171,9 @@
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
-    "@sentry/node": "^8.17.0",
-    "@sentry/profiling-node": "^8.17.0",
-    "@sentry/rollup-plugin": "^2.21.1",
+    "@sentry/node": "^9.3.0",
+    "@sentry/profiling-node": "^9.3.0",
+    "@sentry/rollup-plugin": "^3.2.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "archiver": "^7.0.1",
