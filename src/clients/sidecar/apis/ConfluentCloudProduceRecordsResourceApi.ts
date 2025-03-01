@@ -12,9 +12,14 @@
  * Do not edit the class manually.
  */
 
-import type { ProduceRequest, ProduceResponse } from "../models/index";
-import { ProduceRequestToJSON, ProduceResponseFromJSON } from "../models/index";
 import * as runtime from "../runtime";
+import type { ProduceRequest, ProduceResponse } from "../models/index";
+import {
+  ProduceRequestFromJSON,
+  ProduceRequestToJSON,
+  ProduceResponseFromJSON,
+  ProduceResponseToJSON,
+} from "../models/index";
 
 export interface GatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRequest {
   cluster_id: string;
