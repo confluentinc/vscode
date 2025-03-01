@@ -1,6 +1,6 @@
 import { ObservableScope } from "inertial";
 import { applyBindings, html } from "./bindings/bindings";
-import { TLSConfig } from "../clients/sidecar";
+import { type TLSConfig } from "../clients/sidecar";
 
 /** Reusable Custom HTML Element (Web Component) for SSL Advanced Config
  * This component is used in the Direct Connection form to configure SSL settings
