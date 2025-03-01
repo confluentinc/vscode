@@ -1183,6 +1183,7 @@
     "gql.tada": "^1.8.3",
     "graphql": "^16.8.2",
     "inertial": "^0.4.1",
+    "opentelemetry-instrumentation-fetch-node": "^1.2.3",
     "tail": "^2.2.6",
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
