@@ -352,6 +352,11 @@
   border: 1px solid var(--vscode-button-background);
 }
 
+.info > .button {
+  padding: 2px;
+  font-size: smaller;
+}
+
 .heading.clickable {
   cursor: pointer;
 }
