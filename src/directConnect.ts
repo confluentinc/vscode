@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { ViewColumn, window } from "vscode";
+import { Uri, ViewColumn, window } from "vscode";
 import {
   AuthErrors,
   ConnectedState,
@@ -97,6 +97,17 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     }
   }
 
+  async function getAbsoluteFilePath(body: { inputId: string }): Promise<string> {
+    const fileIUris: Uri[] | undefined = await window.showOpenDialog({
+      openLabel: "Select",
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+    });
+    const path = fileIUris?.[0].fsPath || "";
+    updateSpecValue(body.inputId, path);
+    return path;
+  }
   /** Stores state of spec updates in progress; updated on form input
    * This also makes it so that users don't lose inputs when the form goes in the background
    */
@@ -119,6 +130,8 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
           : specUpdatedValues;
         return spec satisfies MessageResponse<"GetConnectionSpec">;
       }
+      case "GetFilePath":
+        return (await getAbsoluteFilePath(body)) satisfies MessageResponse<"GetFilePath">;
       case "UpdateSpecValue":
         updateSpecValue(body.inputName, body.inputValue.toString());
         return null satisfies MessageResponse<"UpdateSpecValue">;

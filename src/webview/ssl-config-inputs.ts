@@ -60,6 +60,13 @@ export class SslConfig extends HTMLElement {
     this.identifier(value);
   }
 
+  handleFileSelection(inputId: string) {
+    this.dispatchEvent(
+      new CustomEvent("getfile", {
+        detail: { inputId },
+      }),
+    );
+  }
   /** Update the host form data so it contains all the changed values on submit
    * and dispatch a change event to the host for other actions
    */
@@ -128,7 +135,16 @@ export class SslConfig extends HTMLElement {
               </select>
             </div>
             <div class="input-container">
-              <label data-attr-for="this.inputId('truststore.path')" class="info">Path</label>
+              <label data-attr-for="this.inputId('truststore.path')" class="info"
+                >Path
+                <span
+                  class="button secondary"
+                  data-attr-id="this.inputId('truststore.path')"
+                  data-attr-name="this.inputId('truststore.path')"
+                  data-on-click="this.handleFileSelection(this.inputId('truststore.path'))"
+                  >Choose file</span
+                ></label
+              >
               <input
                 class="input"
                 data-attr-id="this.inputId('truststore.path')"
@@ -174,7 +190,16 @@ export class SslConfig extends HTMLElement {
               </select>
             </div>
             <div class="input-container">
-              <label data-attr-for="this.inputId('keystore.path')" class="info">Path</label>
+              <label data-attr-for="this.inputId('keystore.path')" class="info"
+                >Path
+                <span
+                  class="button secondary"
+                  data-attr-id="this.inputId('keystore.path')"
+                  data-attr-name="this.inputId('keystore.path')"
+                  data-on-click="this.handleFileSelection(this.inputId('keystore.path'))"
+                  >Choose file</span
+                ></label
+              >
               <input
                 class="input"
                 data-attr-id="this.inputId('keystore.path')"
@@ -185,6 +210,8 @@ export class SslConfig extends HTMLElement {
                 data-on-change="this.updateValue(event)"
               />
             </div>
+          </div>
+          <div class="input-row">
             <div class="input-container">
               <label data-attr-for="this.inputId('keystore.password')" class="info">Password</label>
               <input

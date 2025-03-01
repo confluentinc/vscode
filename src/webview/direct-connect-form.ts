@@ -153,6 +153,10 @@ class DirectConnectFormViewModel extends ViewModel {
     this.schemaStatusMessage(undefined);
   }
 
+  async getFile(detail: { inputId: string }) {
+    const newPath = await post("GetFilePath", detail);
+    this.spec(await post("GetConnectionSpec", {}));
+  }
   async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const value = input.type === "checkbox" ? input.checked : input.value;
@@ -292,6 +296,7 @@ export function post(
   type: "UpdateSpecValue",
   body: { inputName: string; inputValue: string | boolean },
 ): Promise<null>;
+export function post(type: "GetFilePath", body: { inputId: string }): Promise<string>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
