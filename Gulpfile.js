@@ -256,7 +256,7 @@ function getSentryReleaseVersion() {
   if (IS_CI) {
     return "vscode-confluent@" + version;
   }
-  return "vscode-confluent@" + version + "-" + revision;
+  return "vscode-confluent@dev" + version + "-" + revision;
 }
 
 /** Get the Sentry token, dsn from Vault and get the appropriate Sentry "release" ID from the getSentryReleaseVersion, and
