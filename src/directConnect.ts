@@ -8,7 +8,7 @@ import {
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
 } from "./clients/sidecar";
-import { DirectConnectionManager } from "./directConnectManager";
+import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { post, PostResponse, TestResponse } from "./webview/direct-connect-form";
@@ -51,12 +51,21 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
    * Takes form data and processes it to send along to the directConnectManager.ts
    * Gets response from manager and passes back to Form in the PostResponse format */
   async function saveConnection(body: any): Promise<PostResponse> {
-    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body);
-
+    let updatedSpec = getConnectionSpecFromFormData(body);
+    // Merge secrets back in from the original connection when importing
+    if (connection) {
+      if (action === "import") {
+        // @ts-expect-error TODO: fix type, mergeSecrets returns ConnectionSpec we have CustomConnectionSpec
+        updatedSpec = mergeSecrets(connection, updatedSpec);
+      }
+    }
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
-    const { connection, errorMessage } = await manager.createConnection(spec, false);
-    if (errorMessage || !connection) {
+    const { connection: newConnection, errorMessage } = await manager.createConnection(
+      updatedSpec,
+      false,
+    );
+    if (errorMessage || !newConnection) {
       return {
         success: false,
         message: errorMessage ?? "Unknown error while creating connection",
@@ -76,7 +85,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   async function testConnection(body: any): Promise<TestResponse> {
     let connectionId = undefined;
     // for a Test on "Edit" form; sending the id so we can look up secrets
-    if (connection) connectionId = connection?.id as ConnectionId;
+    if (action === "update") connectionId = connection?.id as ConnectionId;
     const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
     const manager = DirectConnectionManager.getInstance();
     const { connection: testConnection, errorMessage } = await manager.createConnection(spec, true);
