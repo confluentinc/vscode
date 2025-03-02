@@ -10,10 +10,13 @@ import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
-import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import {
+  CustomConnectionSpec,
+  CustomConnectionSpecFromJSON,
+  getResourceManager,
+} from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
-import { ConnectionSpecFromJSON } from "../clients/sidecar";
-import { FormConnectionType } from "../webview/direct-connect-form";
+import { instanceOfConnectionSpec } from "../clients/sidecar";
 import { EXTENSION_VERSION } from "../constants";
 
 const logger = new Logger("commands.connections");
@@ -132,16 +135,20 @@ export async function createNewDirectConnection() {
         const newSpecPath: string = newSpecUris[0].fsPath;
         // read the file and parse it as a JSON object
         const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
-        const jsonSpec: CustomConnectionSpec = JSON.parse(fileContent.toString());
-        // validate the JSON object against the ConnectionSpec schema
-        const newSpec = {
-          ...ConnectionSpecFromJSON(jsonSpec),
-          id: "FILE_UPLOAD" as ConnectionId,
-          formConnectionType: "Apache Kafka" as FormConnectionType,
-        };
-        // use it to open the Direct Connection form (form will populate the fields with spec values)
-        openDirectConnectionForm(newSpec);
-        // if invalid, show an error message with the validation errors
+        const jsonSpec = JSON.parse(fileContent.toString());
+        if (instanceOfConnectionSpec(jsonSpec)) {
+          // validate the JSON object against the ConnectionSpec schema
+          const newSpec = {
+            ...CustomConnectionSpecFromJSON(jsonSpec),
+            id: "FILE_UPLOAD" as ConnectionId,
+          };
+          // use it to open the Direct Connection form (form will populate the fields with spec values)
+          openDirectConnectionForm(newSpec);
+        } else {
+          // if invalid connection, show an error message with the validation errors
+          window.showErrorMessage("Invalid connection spec file.");
+          logger.error("Invalid connection spec file.", jsonSpec);
+        }
       } catch (error) {
         window.showErrorMessage("Error parsing spec file. See logs for details.");
         logger.error(`Error parsing spec file: ${error}`);

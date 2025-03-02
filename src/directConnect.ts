@@ -121,6 +121,11 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   function updateSpecValue(inputName: string, value: string) {
     setValueAtPath(specUpdatedValues, inputName, value);
   }
+  function getSpec() {
+    return connection && (action === "update" || action === "import")
+      ? { ...cleanSpec(connection), ...specUpdatedValues }
+      : specUpdatedValues;
+  }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
@@ -131,10 +136,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       case "Update":
         return (await updateConnection(body)) satisfies MessageResponse<"Update">;
       case "GetConnectionSpec": {
-        const spec = connection
-          ? { ...cleanSpec(connection), ...specUpdatedValues }
-          : specUpdatedValues;
-        return spec satisfies MessageResponse<"GetConnectionSpec">;
+        return getSpec() satisfies MessageResponse<"GetConnectionSpec">;
       }
       case "GetFilePath":
         return (await getAbsoluteFilePath(body)) satisfies MessageResponse<"GetFilePath">;
