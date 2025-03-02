@@ -8,7 +8,7 @@ import {
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
 } from "./clients/sidecar";
-import { DirectConnectionManager } from "./directConnectManager";
+import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { post, PostResponse, TestResponse } from "./webview/direct-connect-form";
@@ -24,12 +24,18 @@ type MessageResponse<MessageType extends string> = Awaited<
 const directConnectWebviewCache = new WebviewPanelCache();
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
-  const connectionUUID = connection?.id || randomUUID();
+  const connectionUUID = connection?.id || (randomUUID() as ConnectionId);
+  const action: "new" | "update" | "import" = !connection?.id
+    ? "new"
+    : connection.id === "FILE_UPLOAD"
+      ? "import"
+      : "update";
   // Set up the webview, checking for existing form for this connection
+  const title = `${action} connection`;
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
     { id: connectionUUID, multiple: false, template: connectionFormTemplate },
     `direct-connect-${connectionUUID}`,
-    connection?.id ? "Edit Connection" : "New Connection",
+    title,
     ViewColumn.One,
     {
       enableScripts: true,
@@ -45,12 +51,21 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
    * Takes form data and processes it to send along to the directConnectManager.ts
    * Gets response from manager and passes back to Form in the PostResponse format */
   async function saveConnection(body: any): Promise<PostResponse> {
-    const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body);
-
+    let updatedSpec = getConnectionSpecFromFormData(body);
+    // Merge secrets back in from the original connection when importing
+    if (connection && action === "import") {
+      console.log("imported connection?? This isn't what I expect", connection);
+      // @ts-expect-error TODO: fix type, mergeSecrets returns ConnectionSpec we have CustomConnectionSpec
+      updatedSpec = mergeSecrets(connection, updatedSpec);
+      console.log("merged spec", updatedSpec);
+    }
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
-    const { connection, errorMessage } = await manager.createConnection(spec, false);
-    if (errorMessage || !connection) {
+    const { connection: newConnection, errorMessage } = await manager.createConnection(
+      updatedSpec,
+      false,
+    );
+    if (errorMessage || !newConnection) {
       return {
         success: false,
         message: errorMessage ?? "Unknown error while creating connection",
@@ -70,7 +85,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   async function testConnection(body: any): Promise<TestResponse> {
     let connectionId = undefined;
     // for a Test on "Edit" form; sending the id so we can look up secrets
-    if (connection) connectionId = connection?.id as ConnectionId;
+    if (action === "update") connectionId = connection?.id as ConnectionId;
     const spec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
     const manager = DirectConnectionManager.getInstance();
     const { connection: testConnection, errorMessage } = await manager.createConnection(spec, true);
@@ -115,6 +130,16 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   function updateSpecValue(inputName: string, value: string) {
     setValueAtPath(specUpdatedValues, inputName, value);
   }
+  function getSpec() {
+    if (connection) {
+      if (action === "import") {
+        return { ...connection, ...specUpdatedValues };
+      } else if (action === "update") {
+        return { ...cleanSpec(connection), ...specUpdatedValues };
+      }
+    }
+    return { ...specUpdatedValues };
+  }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
@@ -125,10 +150,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       case "Update":
         return (await updateConnection(body)) satisfies MessageResponse<"Update">;
       case "GetConnectionSpec": {
-        const spec = connection
-          ? { ...cleanSpec(connection), ...specUpdatedValues }
-          : specUpdatedValues;
-        return spec satisfies MessageResponse<"GetConnectionSpec">;
+        return getSpec() satisfies MessageResponse<"GetConnectionSpec">;
       }
       case "GetFilePath":
         return (await getAbsoluteFilePath(body)) satisfies MessageResponse<"GetFilePath">;
