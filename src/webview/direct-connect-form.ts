@@ -106,8 +106,12 @@ class DirectConnectFormViewModel extends ViewModel {
   message = this.signal("");
   success = this.signal(false);
   loading = this.signal(false);
+  imported = this.derive(() => {
+    return this.spec()?.id === "FILE_UPLOAD" ? true : false;
+  });
   editing = this.derive(() => {
-    return this.spec()?.id ? true : false;
+    if (this.spec()?.id && !this.imported()) return true;
+    else return false;
   });
   /** Connection state & errors (displayed in UI after Test) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);

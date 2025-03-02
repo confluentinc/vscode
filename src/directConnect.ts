@@ -24,12 +24,18 @@ type MessageResponse<MessageType extends string> = Awaited<
 const directConnectWebviewCache = new WebviewPanelCache();
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
-  const connectionUUID = connection?.id || randomUUID();
+  const connectionUUID = connection?.id || (randomUUID() as ConnectionId);
+  const action: "new" | "update" | "import" = !connection?.id
+    ? "new"
+    : connection.id === "FILE_UPLOAD"
+      ? "import"
+      : "update";
   // Set up the webview, checking for existing form for this connection
+  const title = `${action} connection`;
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
     { id: connectionUUID, multiple: false, template: connectionFormTemplate },
     `direct-connect-${connectionUUID}`,
-    connection?.id ? "Edit Connection" : "New Connection",
+    title,
     ViewColumn.One,
     {
       enableScripts: true,
