@@ -23,10 +23,10 @@
           </p>
         </template>
         <template data-if="!this.imported()">
-        <p class="form-description">
-          Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
-          cancel all changes.
-        </p>
+          <p class="form-description">
+            Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
+            cancel all changes.
+          </p>
         </template>
       </div>
       <form class="form-container" data-on-submit="this.handleSubmit(event)">
@@ -200,6 +200,7 @@
                   data-attr-value="this.kafkaSecret()"
                   type="password"
                   data-attr-required="this.kafkaBootstrapServers() !== ''"
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
@@ -304,6 +305,7 @@
                   type="password"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaSecret()"
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
@@ -331,6 +333,7 @@
                   type="password"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaSecret()"
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
