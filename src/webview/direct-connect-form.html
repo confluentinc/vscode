@@ -14,12 +14,20 @@
       <div class="form-header">
         <h1
           class="heading"
-          data-text="this.editing() ? 'Edit connection details' : 'Create a new connection'"
+          data-text="this.editing() ? 'Edit connection details' : this.imported() ? 'Import connection' : 'Create a new connection'"
         ></h1>
+        <template data-if="this.imported()">
+          <p class="form-description">
+            This information was imported. Double-check that fields have populated as expected, and
+            update any file paths to work on your machine.
+          </p>
+        </template>
+        <template data-if="!this.imported()">
         <p class="form-description">
           Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
           cancel all changes.
         </p>
+        </template>
       </div>
       <form class="form-container" data-on-submit="this.handleSubmit(event)">
         <div class="form-section">
