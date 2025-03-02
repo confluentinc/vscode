@@ -261,7 +261,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
       detail: `Files may contain sensitive information like API Keys. Use caution when sharing and saving them. Any file paths will need to be updated to match the path to file on a local user's machine`,
     },
     { title: "Save file" },
-    { title: "Remove secrets" },
+    // { title: "Remove secrets" }, // TODO coming soon
     { title: "Cancel", isCloseAffordance: true },
   );
   if (selection !== undefined && selection.title !== "Cancel") {
