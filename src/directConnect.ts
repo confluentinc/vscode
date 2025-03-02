@@ -53,11 +53,11 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   async function saveConnection(body: any): Promise<PostResponse> {
     let updatedSpec = getConnectionSpecFromFormData(body);
     // Merge secrets back in from the original connection when importing
-    if (connection) {
-      if (action === "import") {
-        // @ts-expect-error TODO: fix type, mergeSecrets returns ConnectionSpec we have CustomConnectionSpec
-        updatedSpec = mergeSecrets(connection, updatedSpec);
-      }
+    if (connection && action === "import") {
+      console.log("imported connection?? This isn't what I expect", connection);
+      // @ts-expect-error TODO: fix type, mergeSecrets returns ConnectionSpec we have CustomConnectionSpec
+      updatedSpec = mergeSecrets(connection, updatedSpec);
+      console.log("merged spec", updatedSpec);
     }
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
@@ -131,9 +131,14 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     setValueAtPath(specUpdatedValues, inputName, value);
   }
   function getSpec() {
-    return connection && (action === "update" || action === "import")
-      ? { ...cleanSpec(connection), ...specUpdatedValues }
-      : specUpdatedValues;
+    if (connection) {
+      if (action === "import") {
+        return { ...connection, ...specUpdatedValues };
+      } else if (action === "update") {
+        return { ...cleanSpec(connection), ...specUpdatedValues };
+      }
+    }
+    return { ...specUpdatedValues };
   }
 
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
