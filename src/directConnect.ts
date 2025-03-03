@@ -54,10 +54,8 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     let updatedSpec = getConnectionSpecFromFormData(body);
     // Merge secrets back in from the original connection when importing
     if (connection && action === "import") {
-      console.log("imported connection?? This isn't what I expect", connection);
       // @ts-expect-error TODO: fix type, mergeSecrets returns ConnectionSpec we have CustomConnectionSpec
       updatedSpec = mergeSecrets(connection, updatedSpec);
-      console.log("merged spec", updatedSpec);
     }
     let result: PostResponse = { success: false, message: "" };
     const manager = DirectConnectionManager.getInstance();
