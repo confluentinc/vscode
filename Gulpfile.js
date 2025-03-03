@@ -252,9 +252,23 @@ function getSentryReleaseVersion() {
     process.env.SENTRY_ENV = "development";
   }
 
-  // If CI, don't use the revision
+  // If CI, don't use the revision since this will either be a real prod release or a manually-
+  // triggered CI build (most likely from a PR that needs more click-testing)
   if (IS_CI) {
-    return "vscode-confluent@" + version;
+    // see https://docs.semaphoreci.com/reference/env-vars#git-branch
+    const upstream = process.env.SEMAPHORE_GIT_BRANCH;
+    const downstream = process.env.SEMAPHORE_GIT_WORKING_BRANCH;
+    console.log(`CI build branches: Upstream: ${upstream}, Downstream: ${downstream}`);
+    // see https://docs.semaphoreci.com/reference/env-vars#pr-number
+    const prNumber = process.env.SEMAPHORE_GIT_PR_NUMBER;
+    console.log(`CI build PR: ${prNumber}`);
+    if (prNumber !== undefined) {
+      // PR build (upstream branch doesn't matter since it isn't a real prod release)
+      return `vscode-confluent@pr${prNumber}-${version}`;
+    } else {
+      // build on main or a release branch
+      return "vscode-confluent@" + version;
+    }
   }
   // include `dev` prefix to doubly-inform Sentry that this is not a normal prod release version
   // and doesn't follow the normal X.Y.Z semver format and accidentally match a "latest release" rule
@@ -280,7 +294,9 @@ function setupSentry() {
     else console.error(sentryToken.stderr.toString());
   } else {
     process.env.SENTRY_AUTH_TOKEN = sentryToken.stdout.toString().trim();
-    process.env.SENTRY_RELEASE = getSentryReleaseVersion();
+    const sentryRelease = getSentryReleaseVersion();
+    console.log(`Setting SENTRY_RELEASE to "${sentryRelease}"`);
+    process.env.SENTRY_RELEASE = sentryRelease;
   }
   const sentryDsn = spawnSync(
     "vault",
