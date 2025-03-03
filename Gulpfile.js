@@ -256,7 +256,9 @@ function getSentryReleaseVersion() {
   if (IS_CI) {
     return "vscode-confluent@" + version;
   }
-  return "vscode-confluent@" + version + "-" + revision;
+  // include `dev` prefix to doubly-inform Sentry that this is not a normal prod release version
+  // and doesn't follow the normal X.Y.Z semver format and accidentally match a "latest release" rule
+  return "vscode-confluent@dev" + version + "-" + revision;
 }
 
 /** Get the Sentry token, dsn from Vault and get the appropriate Sentry "release" ID from the getSentryReleaseVersion, and
