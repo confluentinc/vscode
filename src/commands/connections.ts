@@ -248,7 +248,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
     return;
   }
 
-  // Notify the user that the project was generated successfully
+  // Notify the user that the file may contain secrets
   const selection = await window.showWarningMessage(
     `May contain sensitive data`,
     {
