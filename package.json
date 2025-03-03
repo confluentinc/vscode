@@ -1167,7 +1167,7 @@
     "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
-    "typescript-eslint": "^8.0.0-alpha.28"
+    "typescript-eslint": "^8.25.0"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
