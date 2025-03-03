@@ -182,7 +182,7 @@ export abstract class ResourceLoader implements IResourceBase {
     /*
       1. Get all the subjects from the topic's cluster's environment's schema registry.
       2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
-      3. For each of those subjects, get the correspoinding schema version array
+      3. For each of those subjects, get the corresponding schema version array
       4. Assemble each subject + schemas into a Subject holding the schemas, collect into an array of Subject.
       5. Return said array.
     */
@@ -193,7 +193,7 @@ export abstract class ResourceLoader implements IResourceBase {
     //  list is cached in the loader regardless of loader implemenation, issue #1051)
     const subjects = await this.getSubjects(topic.environmentId);
 
-    // 2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
+    // 2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
     const schemaSubjects = subjects.filter((subject) =>
       subjectMatchesTopicName(subject.name, topic.name),
     );
