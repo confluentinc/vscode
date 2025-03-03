@@ -174,7 +174,7 @@ export class DirectConnectionManager {
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
     // at this point incoming spec has placeholder secrets... look up the associated ConnectionSpec
-    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+    const currentSpec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
       incomingSpec.id,
     );
     if (!currentSpec) {
@@ -190,6 +190,13 @@ export class DirectConnectionManager {
       );
       return;
     }
+
+    logUsage(UserEvent.DirectConnectionAction, {
+      type: currentSpec.formConnectionType,
+      action: "updated",
+      withKafka: !!updatedSpec.kafka_cluster,
+      withSchemaRegistry: !!updatedSpec.schema_registry,
+    });
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
     // (spec comes first because the ConnectionSpec will try to override `id` as a string)
@@ -354,15 +361,69 @@ export function mergeSecrets(
       }
     }
   }
+
+  // need to replace ssl.truststore.password, ssl.keystore.password, ssl.keystore.key_password (if they have a placeholder & we have a secret stored)
+  const incomingKafkaTLS = incomingSpec.kafka_cluster?.ssl;
+  const currentKafkaTLS = currentSpec.kafka_cluster?.ssl;
+  if (incomingKafkaTLS) {
+    if (
+      incomingKafkaTLS.truststore?.password === "fakeplaceholdersecrethere" &&
+      currentKafkaTLS?.truststore?.password
+    ) {
+      incomingKafkaTLS.truststore.password = currentKafkaTLS.truststore.password;
+    }
+    if (
+      incomingKafkaTLS.keystore?.password === "fakeplaceholdersecrethere" &&
+      currentKafkaTLS?.keystore?.password
+    ) {
+      incomingKafkaTLS.keystore.password = currentKafkaTLS.keystore.password;
+    }
+    if (
+      incomingKafkaTLS.keystore?.key_password === "fakeplaceholdersecrethere" &&
+      currentKafkaTLS?.keystore?.key_password
+    ) {
+      incomingKafkaTLS.keystore.key_password = currentKafkaTLS.keystore.key_password;
+    }
+  }
+
+  const incomingSchemaTLS = incomingSpec.schema_registry?.ssl;
+  const currentSchemaTLS = currentSpec.schema_registry?.ssl;
+  if (incomingSchemaTLS) {
+    if (
+      incomingSchemaTLS.truststore?.password === "fakeplaceholdersecrethere" &&
+      currentSchemaTLS?.truststore?.password
+    ) {
+      incomingSchemaTLS.truststore.password = currentSchemaTLS.truststore.password;
+    }
+    if (
+      incomingSchemaTLS.keystore?.password === "fakeplaceholdersecrethere" &&
+      currentSchemaTLS?.keystore?.password
+    ) {
+      incomingSchemaTLS.keystore.password = currentSchemaTLS.keystore.password;
+    }
+    if (
+      incomingSchemaTLS.keystore?.key_password === "fakeplaceholdersecrethere" &&
+      currentSchemaTLS?.keystore?.key_password
+    ) {
+      incomingSchemaTLS.keystore.key_password = currentSchemaTLS.keystore.key_password;
+    }
+  }
+  const kafkaSslEnabled =
+    incomingSpec.kafka_cluster?.ssl?.enabled ?? currentSpec.kafka_cluster?.ssl?.enabled ?? true;
+
+  const schemaSslEnabled =
+    incomingSpec.schema_registry?.ssl?.enabled ?? currentSpec.schema_registry?.ssl?.enabled ?? true;
   const mergedSpec: ConnectionSpec = {
     ...incomingSpec,
     kafka_cluster: incomingSpec.kafka_cluster && {
       ...incomingSpec.kafka_cluster,
       credentials: incomingKafkaCreds,
+      ssl: { enabled: kafkaSslEnabled, ...currentKafkaTLS, ...incomingKafkaTLS },
     },
     schema_registry: incomingSpec.schema_registry && {
       ...incomingSpec.schema_registry,
       credentials: incomingSchemaCreds,
+      ssl: { enabled: schemaSslEnabled, ...currentSchemaTLS, ...incomingSchemaTLS },
     },
   };
   return mergedSpec;

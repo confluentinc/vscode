@@ -13,56 +13,58 @@
  */
 
 import * as runtime from "../runtime";
-import type {
-  SimpleConsumeMultiPartitionRequest,
-  SimpleConsumeMultiPartitionResponse,
-} from "../models/index";
+import type { ProduceRequest, ProduceResponse } from "../models/index";
 import {
-  SimpleConsumeMultiPartitionRequestFromJSON,
-  SimpleConsumeMultiPartitionRequestToJSON,
-  SimpleConsumeMultiPartitionResponseFromJSON,
-  SimpleConsumeMultiPartitionResponseToJSON,
+  ProduceRequestFromJSON,
+  ProduceRequestToJSON,
+  ProduceResponseFromJSON,
+  ProduceResponseToJSON,
 } from "../models/index";
 
-export interface GatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRequest {
+export interface GatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRequest {
   cluster_id: string;
   topic_name: string;
   x_connection_id: string;
-  SimpleConsumeMultiPartitionRequest?: SimpleConsumeMultiPartitionRequest;
+  dry_run?: boolean;
+  ProduceRequest?: ProduceRequest;
 }
 
 /**
  *
  */
-export class KafkaConsumeResourceApi extends runtime.BaseAPI {
+export class ConfluentCloudProduceRecordsResourceApi extends runtime.BaseAPI {
   /**
    */
-  async gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
-    requestParameters: GatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRequest,
+  async gatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRaw(
+    requestParameters: GatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<runtime.ApiResponse<SimpleConsumeMultiPartitionResponse>> {
+  ): Promise<runtime.ApiResponse<ProduceResponse>> {
     if (requestParameters["cluster_id"] == null) {
       throw new runtime.RequiredError(
         "cluster_id",
-        'Required parameter "cluster_id" was null or undefined when calling gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePost().',
+        'Required parameter "cluster_id" was null or undefined when calling gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost().',
       );
     }
 
     if (requestParameters["topic_name"] == null) {
       throw new runtime.RequiredError(
         "topic_name",
-        'Required parameter "topic_name" was null or undefined when calling gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePost().',
+        'Required parameter "topic_name" was null or undefined when calling gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost().',
       );
     }
 
     if (requestParameters["x_connection_id"] == null) {
       throw new runtime.RequiredError(
         "x_connection_id",
-        'Required parameter "x_connection_id" was null or undefined when calling gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePost().',
+        'Required parameter "x_connection_id" was null or undefined when calling gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost().',
       );
     }
 
     const queryParameters: any = {};
+
+    if (requestParameters["dry_run"] != null) {
+      queryParameters["dry_run"] = requestParameters["dry_run"];
+    }
 
     const headerParameters: runtime.HTTPHeaders = {};
 
@@ -74,7 +76,7 @@ export class KafkaConsumeResourceApi extends runtime.BaseAPI {
 
     const response = await this.request(
       {
-        path: `/gateway/v1/clusters/{cluster_id}/topics/{topic_name}/partitions/-/consume`
+        path: `/gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records`
           .replace(`{${"cluster_id"}}`, encodeURIComponent(String(requestParameters["cluster_id"])))
           .replace(
             `{${"topic_name"}}`,
@@ -83,25 +85,21 @@ export class KafkaConsumeResourceApi extends runtime.BaseAPI {
         method: "POST",
         headers: headerParameters,
         query: queryParameters,
-        body: SimpleConsumeMultiPartitionRequestToJSON(
-          requestParameters["SimpleConsumeMultiPartitionRequest"],
-        ),
+        body: ProduceRequestToJSON(requestParameters["ProduceRequest"]),
       },
       initOverrides,
     );
 
-    return new runtime.JSONApiResponse(response, (jsonValue) =>
-      SimpleConsumeMultiPartitionResponseFromJSON(jsonValue),
-    );
+    return new runtime.JSONApiResponse(response, (jsonValue) => ProduceResponseFromJSON(jsonValue));
   }
 
   /**
    */
-  async gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePost(
-    requestParameters: GatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRequest,
+  async gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost(
+    requestParameters: GatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
-  ): Promise<SimpleConsumeMultiPartitionResponse> {
-    const response = await this.gatewayV1ClustersClusterIdTopicsTopicNamePartitionsConsumePostRaw(
+  ): Promise<ProduceResponse> {
+    const response = await this.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPostRaw(
       requestParameters,
       initOverrides,
     );

@@ -104,14 +104,17 @@ export async function activate(
   observabilityContext.extensionActivated = false;
 
   logger.info(`Extension ${context.extension.id}" activate() triggered.`);
+  logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
     logger.info("Extension fully activated");
     observabilityContext.extensionActivated = true;
+    logUsage(UserEvent.ExtensionActivation, { status: "completed" });
   } catch (e) {
     logger.error("Error activating extension:", e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
     Sentry.captureException(e);
+    logUsage(UserEvent.ExtensionActivation, { status: "failed" });
     throw e;
   }
 
@@ -129,8 +132,6 @@ export async function activate(
 async function _activateExtension(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
-  logUsage(UserEvent.ExtensionActivated);
-
   // must be done first to allow any other downstream callers to call `getExtensionContext()`
   // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
   setExtensionContext(context);
@@ -366,7 +367,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // Send an Identify event to Segment with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
-      eventName: UserEvent.ActivatedWithSession,
+      eventName: UserEvent.ExtensionActivation,
       userInfo: undefined,
       session: cloudSession,
     });

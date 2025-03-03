@@ -51,7 +51,8 @@ export const scaffoldProjectRequest = async () => {
   }
 
   if (pickedTemplate !== undefined) {
-    logUsage(UserEvent.ScaffoldTemplatePicked, {
+    logUsage(UserEvent.ProjectScaffoldingAction, {
+      status: "template picked",
       templateName: pickedTemplate.spec!.display_name,
     });
   } else {
@@ -99,7 +100,8 @@ export const scaffoldProjectRequest = async () => {
         return null satisfies MessageResponse<"SetOptionValue">;
       }
       case "Submit": {
-        logUsage(UserEvent.ScaffoldFormSubmitted, {
+        logUsage(UserEvent.ProjectScaffoldingAction, {
+          status: "form submitted",
           templateName: templateSpec.display_name,
         });
         let res: PostResponse = { success: false, message: "Failed to apply template." };
@@ -150,7 +152,8 @@ async function applyTemplate(
 
     if (!fileUris || fileUris.length !== 1) {
       // This means the user cancelled @ save dialog. Show a message and return
-      logUsage(UserEvent.ScaffoldCancelled, {
+      logUsage(UserEvent.ProjectScaffoldingAction, {
+        status: "cancelled before save",
         templateName: pickedTemplate.spec!.display_name,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
@@ -160,7 +163,8 @@ async function applyTemplate(
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
     await extractZipContents(arrayBuffer, destination);
-    logUsage(UserEvent.ScaffoldCompleted, {
+    logUsage(UserEvent.ProjectScaffoldingAction, {
+      status: "project generated",
       templateName: pickedTemplate.spec!.display_name,
     });
     // Notify the user that the project was generated successfully
@@ -175,7 +179,8 @@ async function applyTemplate(
       // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
       // reusing the current one
       const keepsExistingWindow = selection.title === "Open in New Window";
-      logUsage(UserEvent.ScaffoldFolderOpened, {
+      logUsage(UserEvent.ProjectScaffoldingAction, {
+        status: "project folder opened",
         templateName: pickedTemplate.spec!.display_name,
         keepsExistingWindow,
       });
