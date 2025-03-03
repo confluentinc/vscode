@@ -160,9 +160,9 @@ To install in the terminal, run the following command:
 code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
 ```
 
-### Offline `.vsix` file installation
+### `.vsix` file installation via offvsix
 
-If you need to install from a VSIX offline (and assuming you have [python](https://www.python.org/), [pip](https://pypi.org/project/pip/), and [offvsix](https://github.com/gni/offvsix), you can follow these steps:
+If you have been struggling with pre-downloading extension payloads (and assuming you have [python](https://www.python.org/), [pip](https://pypi.org/project/pip/), and [offvsix](https://github.com/gni/offvsix), you can follow these steps:
 
 ```
 mkdir offvsix
