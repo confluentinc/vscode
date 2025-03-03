@@ -6,10 +6,14 @@ import {
   TEST_CCLOUD_SUBJECT,
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_KAFKA_TOPIC,
+  TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
+  TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { createTestSubject, createTestTopicData } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
+import { Schema, Subject } from "../models/schema";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -25,7 +29,7 @@ describe("ResourceLoader::getSubjects()", () => {
   let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
   let fetchSubjectsStub: sinon.SinonStub;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sandbox = sinon.createSandbox();
 
     fetchSubjectsStub = sandbox.stub(loaderUtils, "fetchSubjects");
@@ -140,5 +144,61 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
 
     assert.ok(getSubjectsStub.calledOnce);
     assert.ok(fetchTopicsStub.calledOnce);
+  });
+});
+
+describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let loaderInstance: ResourceLoader;
+  let getSubjectsStub: sinon.SinonStub;
+  let getSchemaSubjectGroupStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    loaderInstance = LocalResourceLoader.getInstance();
+    getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
+    getSchemaSubjectGroupStub = sandbox.stub(loaderInstance, "getSchemaSubjectGroup");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  /** Set up return result from getSubjects API call based on the given schemas */
+  function populateSubjects(schemas: Schema[]) {
+    const seenSubjectStrings: Set<string> = new Set();
+    const uniqueSubjects: Subject[] = [];
+    for (const schema of schemas) {
+      if (!seenSubjectStrings.has(schema.subject)) {
+        uniqueSubjects.push(schema.subjectObject());
+        seenSubjectStrings.add(schema.subject);
+      }
+    }
+
+    getSubjectsStub.resolves(Array.from(uniqueSubjects));
+  }
+
+  it("Returns related subjects+schemas for a topic", async () => {
+    populateSubjects(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas!);
+    getSchemaSubjectGroupStub.resolves(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
+
+    // Should return single subject group with schemas.
+    const subjects = await loaderInstance.getTopicSubjectGroups(TEST_LOCAL_KAFKA_TOPIC);
+    assert.deepStrictEqual(subjects, [TEST_LOCAL_SUBJECT_WITH_SCHEMAS]);
+  });
+
+  it("If no related subjects, then empty array is returned", async () => {
+    // None of these schema/subjects correspond to TEST_LOCAL_KAFKA_TOPIC.
+    const preloadedSchemas: Schema[] = [
+      Schema.create({ ...TEST_LOCAL_SCHEMA, subject: "foo-value", version: 1, id: "1" }),
+      Schema.create({ ...TEST_LOCAL_SCHEMA, subject: "foo-value", version: 2, id: "2" }),
+      Schema.create({ ...TEST_LOCAL_SCHEMA, subject: "other-topic", version: 1, id: "3" }),
+    ];
+
+    populateSubjects(preloadedSchemas);
+
+    const schemas = await loaderInstance.getTopicSubjectGroups(TEST_LOCAL_KAFKA_TOPIC);
+    assert.deepStrictEqual(schemas, []);
   });
 });
