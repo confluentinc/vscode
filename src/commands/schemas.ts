@@ -313,39 +313,16 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
 
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(topic.environmentId);
-  if (!schemaRegistry) {
-    throw new CannotLoadSchemasError(
-      `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,
-    );
+  const topicSchemaGroups = await loader.getTopicSubjectGroups(topic);
+
+  if (topicSchemaGroups.length === 0) {
+    throw new CannotLoadSchemasError(`Topic "${topic.name}" has no related schemas in registry.`);
   }
 
-  const allSchemas = await loader.getSchemasForRegistry(schemaRegistry);
-
-  if (allSchemas.length === 0) {
-    throw new CannotLoadSchemasError(
-      `Schema registry "${schemaRegistry.id}" had no schemas, but we expected it to have some for topic "${topic.name}"`,
-    );
-  }
-
-  // Filter for schemas related to this topic.
-  const topicSchemas = allSchemas.filter((schema) => schema.matchesTopicName(topic.name));
-
-  // Now make map of schema subject -> highest version'd schema for said subject
-  const nameToHighestVersion = new Map<string, Schema>();
-  for (const schema of topicSchemas) {
-    const existing = nameToHighestVersion.get(schema.subject);
-    if (existing === undefined || existing.version < schema.version) {
-      nameToHighestVersion.set(schema.subject, schema);
-    }
-  }
-
-  if (nameToHighestVersion.size === 0) {
-    throw new CannotLoadSchemasError(`No schemas found for topic "${topic.name}"!`);
-  }
-
-  // Return flattend values from the map, the list of highest-versioned schemas related to the topic.
-  return [...nameToHighestVersion.values()];
+  // Return array of the highest versioned schemas. They
+  // will be the first schema in each subject group per return contract
+  // of getTopicSubjectGroups().
+  return topicSchemaGroups.map((sg) => sg.schemas![0]);
 }
 
 /**
