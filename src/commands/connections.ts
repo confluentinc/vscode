@@ -104,10 +104,11 @@ export async function createNewDirectConnection() {
   // ignore any arguments passed through this command function (e.g. if something was highlighted
   // in the Resources view) so we always open the "Create a new connection" form
   // Open a quickpick to choose either from file or manual entry
+  const importLabel = "Import from file";
   const createMethod = await window.showQuickPick(
     [
       { label: "Enter manually", description: "Enter connection details by filling in a form" },
-      { label: "Import from file", description: "Select a JSON file with connection details" },
+      { label: importLabel, description: "Select a JSON file with connection details" },
     ],
     {
       placeHolder: "How would you like to create a new connection?",
@@ -118,7 +119,7 @@ export async function createNewDirectConnection() {
     // User exited the quick pick without making a choice
     return;
   }
-  if (createMethod?.label === "Load from file") {
+  if (createMethod?.label === importLabel) {
     const newSpecUris: Uri[] | undefined = await window.showOpenDialog({
       openLabel: "Select",
       canSelectFiles: true,
