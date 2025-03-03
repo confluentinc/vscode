@@ -16,7 +16,6 @@ import {
   getResourceManager,
 } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
-import { instanceOfConnectionSpec } from "../clients/sidecar";
 import { EXTENSION_VERSION } from "../constants";
 
 const logger = new Logger("commands.connections");
@@ -107,8 +106,8 @@ export async function createNewDirectConnection() {
   // Open a quickpick to choose either from file or manual entry
   const createMethod = await window.showQuickPick(
     [
-      { label: "Fill in form", description: "Enter connection details manually" },
-      { label: "Load from file", description: "Select a JSON file with connection details" },
+      { label: "Enter manually", description: "Enter connection details by filling in a form" },
+      { label: "Import from file", description: "Select a JSON file with connection details" },
     ],
     {
       placeHolder: "How would you like to create a new connection?",
@@ -136,19 +135,14 @@ export async function createNewDirectConnection() {
         // read the file and parse it as a JSON object
         const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
         const jsonSpec = JSON.parse(fileContent.toString());
-        if (instanceOfConnectionSpec(jsonSpec)) {
-          // validate the JSON object against the ConnectionSpec schema
-          const newSpec = {
-            ...CustomConnectionSpecFromJSON(jsonSpec),
-            id: "FILE_UPLOAD" as ConnectionId,
-          };
-          // use it to open the Direct Connection form (form will populate the fields with spec values)
-          openDirectConnectionForm(newSpec);
-        } else {
-          // if invalid connection, show an error message with the validation errors
-          window.showErrorMessage("Invalid connection spec file.");
-          logger.error("Invalid connection spec file.", jsonSpec);
-        }
+
+        // validate the JSON object against the ConnectionSpec schema
+        const newSpec = {
+          ...CustomConnectionSpecFromJSON(jsonSpec),
+          id: "FILE_UPLOAD" as ConnectionId,
+        };
+        // use it to open the Direct Connection form (form will populate the fields with spec values)
+        openDirectConnectionForm(newSpec);
       } catch (error) {
         window.showErrorMessage("Error parsing spec file. See logs for details.");
         logger.error(`Error parsing spec file: ${error}`);
@@ -255,12 +249,13 @@ export async function exportDirectConnection(item: DirectEnvironment) {
 
   // Notify the user that the project was generated successfully
   const selection = await window.showWarningMessage(
-    `Connection details contain sensitive data and local file paths!`,
+    `May contain sensitive data`,
     {
       modal: true,
-      detail: `Files may contain sensitive information like API Keys. Use caution when sharing and saving them. Any file paths will need to be updated to match the path to file on a local user's machine`,
+      detail:
+        "Exported file may contain sensitive information like API keys, secrets, and local file paths. Use caution when saving and sharing connection files.",
     },
-    { title: "Save file" },
+    { title: "Export" },
     // { title: "Remove secrets" }, // TODO coming soon
     { title: "Cancel", isCloseAffordance: true },
   );
