@@ -15,13 +15,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import {
-  Schema,
-  SchemaTreeItem,
-  Subject,
-  subjectMatchesTopicName,
-  SubjectTreeItem,
-} from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -136,7 +130,8 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof KafkaTopic) {
         // return schema-subject containers in form of Subject[] each carrying Schema[]s.
-        children = await loadTopicSchemas(element);
+        const loader = ResourceLoader.getInstance(element.connectionId);
+        children = await loader.getTopicSubjectGroups(element);
       } else if (element instanceof Subject) {
         // Subject carrying schemas as from loadTopicSchemas, return schema versions for the topic
         children = element.schemas!;
@@ -302,7 +297,8 @@ export function getTopicViewProvider() {
   return TopicViewProvider.getInstance();
 }
 
-/** Determine the topics offered from this cluster. If topics are already known
+/**
+ * Determine the topics offered from this cluster. If topics are already known
  * from a prior sidecar fetch, return those, otherwise deep fetch from sidecar.
  */
 export async function getTopicsForCluster(
@@ -322,67 +318,4 @@ export async function getTopicsForCluster(
     }
     return [];
   }
-}
-
-/**
- * Load the subjects + schemas related to the given topic as a Subject[], where each Subject carries
- * an array of Schema instances within.
- *
- * @param topic The Kafka topic to load schemas for.
- * @returns An array of {@link Subject} objects representing the topic's schemas, grouped
- * by subject as {@link Schema}s, with the {@link Schema}s in version-descending order.
- * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
- */
-export async function loadTopicSchemas(topic: KafkaTopic): Promise<Subject[]> {
-  /*
-    1. Get all the subjects from the topic's cluster's environment's schema registry.
-    2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
-    3. For each of those subjects, get the corresponding schema version array
-    4. Assemble each subject + schemas into a Subject holding the schemas, collect into an array of Subject.
-    5. Return said array.
-  */
-
-  const loader = ResourceLoader.getInstance(topic.connectionId);
-
-  // 1. Get all the subjects from the topic's cluster's environment's schema registry.
-
-  // (Because this gets called each time a different topic is expanded, it is imperative that the subject
-  //  list is cached in the loader regardless of loader implemenation, issue #1051)
-  const subjects = await loader.getSubjects(topic.environmentId);
-
-  // 2. Filter by those corresponding to the topic in quesion. Will usually get one or two subjects.
-  const topicName = topic.name;
-  const schemaSubjects = subjects.filter((subject) =>
-    subjectMatchesTopicName(subject.name, topicName),
-  );
-
-  if (!schemaSubjects.length) {
-    return [];
-  }
-
-  // 3. For each of those subjects, get the correspoinding schema version array
-  // Load all the schema versions for each subject in the matching subjects
-  // concurrently.
-  const subjectGroupRequests = schemaSubjects.map((subject) =>
-    loader.getSchemaSubjectGroup(topic.environmentId, subject.name),
-  );
-  const subjectGroups = await Promise.all(subjectGroupRequests);
-
-  // 4. Group by each subject: a Subject carrying the schemas, collect into an array thereof.
-  const schemaContainers: Subject[] = subjectGroups.map((group: Schema[]) => {
-    const firstSchema = group[0];
-
-    // Roll this Schema[] into a Subject object with a Schema[] payload.
-    // (This is the only place in the codebase where a Subject is created with a Schema[] payload.)
-    return new Subject(
-      firstSchema.subject,
-      topic.connectionId,
-      topic.environmentId,
-      firstSchema.schemaRegistryId,
-      group,
-    );
-  });
-
-  // 5. Return said array.
-  return schemaContainers;
 }

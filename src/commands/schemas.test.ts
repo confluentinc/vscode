@@ -11,6 +11,7 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
+  TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
 import { Schema, Subject } from "../models/schema";
@@ -131,65 +132,43 @@ function generateGetLatestSchemasForTopicTests<
       );
     });
 
-    it("hates topics without schema registry", async function () {
-      // mock resourceLoader.getCCloudSchemaRegistry() to return undefined, no schema registry
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(undefined);
+    it("hates topics without subject groups", async function () {
+      resourceLoader.getTopicSubjectGroups.resolves([]);
       await assert.rejects(
         async () => {
           await getLatestSchemasForTopic(testTopic);
         },
         raisedCannotLoadSchemasErrorMatcher(
-          /Could not determine schema registry for topic "test-topic" believed to have related schemas/,
+          /Topic "test-topic" has no related schemas in registry/,
         ),
-      );
-    });
-
-    it("hates empty schema registry", async function () {
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
-      resourceLoader.getSchemasForRegistry.resolves([]);
-      await assert.rejects(
-        async () => {
-          await getLatestSchemasForTopic(testTopic);
-        },
-        raisedCannotLoadSchemasErrorMatcher(
-          /Schema registry .* had no schemas, but we expected it to have some for topic "test-topic"/,
-        ),
-      );
-    });
-
-    it("hates when no schemas match topic", async function () {
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
-      resourceLoader.getSchemasForRegistry.resolves([
-        Schema.create({ ...testSchema, subject: "some-other-topic-value" }),
-      ]);
-      await assert.rejects(
-        async () => {
-          await getLatestSchemasForTopic(testTopic);
-        },
-        raisedCannotLoadSchemasErrorMatcher(/No schemas found for topic "test-topic"/),
       );
     });
 
     it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
       resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
-      resourceLoader.getSchemasForRegistry.resolves([
-        Schema.create({ ...testSchema, subject: "test-topic-value", version: 1 }),
-        Schema.create({ ...testSchema, subject: "test-topic-value", version: 2 }),
-        Schema.create({ ...testSchema, subject: "test-topic-key", version: 1 }),
+
+      // Doesn't really matter that we're mixing local and CCloud here, just wanting to test returning
+      // multiple subjects with multiple schemas each.
+      resourceLoader.getTopicSubjectGroups.resolves([
+        TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
       ]);
 
       const fetchedLatestSchemas = await getLatestSchemasForTopic(testTopic);
       assert.strictEqual(fetchedLatestSchemas.length, 2);
 
-      const expectedSubjectToVersion = new Map([
-        ["test-topic-value", 2],
-        ["test-topic-key", 1],
+      const expectedSubjectToVersion: Map<string, number> = new Map([
+        [TEST_LOCAL_SUBJECT_WITH_SCHEMAS.name, 2],
+        [TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name, 2],
       ]);
 
       for (const schema of fetchedLatestSchemas) {
         assert.strictEqual(schema.version, expectedSubjectToVersion.get(schema.subject));
         expectedSubjectToVersion.delete(schema.subject);
       }
+
+      // should have been all.
+      assert.strictEqual(expectedSubjectToVersion.size, 0);
     });
   };
 }

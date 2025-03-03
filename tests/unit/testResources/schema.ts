@@ -70,5 +70,24 @@ export const TEST_LOCAL_SCHEMA = Schema.create({
   environmentId: TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
   connectionId: TEST_LOCAL_SCHEMA_REGISTRY.connectionId,
   connectionType: TEST_LOCAL_SCHEMA_REGISTRY.connectionType,
+  isHighestVersion: false,
+});
+
+export const TEST_LOCAL_SCHEMA_REVISED = Schema.create({
+  ...TEST_LOCAL_SCHEMA,
+  id: "2",
+  version: 2,
   isHighestVersion: true,
 });
+
+// No knowledge of the schemas bound to it.
+export const TEST_LOCAL_SUBJECT: Subject = TEST_LOCAL_SCHEMA.subjectObject();
+
+// And with schema knowledge.
+export const TEST_LOCAL_SUBJECT_WITH_SCHEMAS = new Subject(
+  TEST_LOCAL_SUBJECT.name,
+  TEST_LOCAL_SUBJECT.connectionId,
+  TEST_LOCAL_SUBJECT.environmentId,
+  TEST_LOCAL_SUBJECT.schemaRegistryId,
+  [TEST_LOCAL_SCHEMA_REVISED, TEST_LOCAL_SCHEMA],
+);

@@ -11,11 +11,11 @@ import {
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { topicSearchSet } from "../emitters";
-import { CCloudResourceLoader, ResourceLoader } from "../loaders";
-import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
+import { CCloudResourceLoader } from "../loaders";
+import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
-import { loadTopicSchemas, TopicViewProvider } from "./topics";
+import { TopicViewProvider } from "./topics";
 
 describe("TopicViewProvider methods", () => {
   let provider: TopicViewProvider;
@@ -38,50 +38,6 @@ describe("TopicViewProvider methods", () => {
   it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.ok(treeItem instanceof SubjectTreeItem);
-  });
-});
-
-describe("TopicViewProvider helper function loadTopicSchemas tests", () => {
-  let sandbox: sinon.SinonSandbox;
-  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
-
-  beforeEach(() => {
-    sandbox = sinon.createSandbox();
-    loaderStub = sandbox.createStubInstance(ResourceLoader);
-    sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
-  });
-
-  afterEach(() => {
-    sandbox.restore();
-  });
-
-  function populateSchemas(schemas: Schema[]) {
-    const seenSubjectStrings: Set<string> = new Set();
-    const uniqueSubjects: Subject[] = [];
-    for (const schema of schemas) {
-      if (!seenSubjectStrings.has(schema.subject)) {
-        uniqueSubjects.push(schema.subjectObject());
-        seenSubjectStrings.add(schema.subject);
-      }
-    }
-
-    console.log("uniqueSubjects", Array.from(uniqueSubjects));
-
-    loaderStub.getSubjects.resolves(Array.from(uniqueSubjects));
-  }
-
-  it("If no related schemas, then empty array is returned", async () => {
-    // None correspond to TEST_CCLOUD_KAFKA_TOPIC.
-    const preloadedSchemas: Schema[] = [
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "foo-value", version: 1, id: "1" }),
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "foo-value", version: 2, id: "2" }),
-      Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1, id: "3" }),
-    ];
-
-    populateSchemas(preloadedSchemas);
-
-    const schemas = await loadTopicSchemas(TEST_CCLOUD_KAFKA_TOPIC);
-    assert.deepStrictEqual(schemas, []);
   });
 });
 
