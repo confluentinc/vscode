@@ -257,16 +257,11 @@ export async function exportDirectConnection(item: DirectEnvironment) {
         "Exported file may contain sensitive information like API keys, secrets, and local file paths. Use caution when saving and sharing connection files.",
     },
     { title: "Export" },
-    // { title: "Remove secrets" }, // TODO coming soon
+    // { title: "Remove secrets" }, // TODO NC future feature
     { title: "Cancel", isCloseAffordance: true },
   );
   if (selection !== undefined && selection.title !== "Cancel") {
-    if (selection.title === "Remove secrets") {
-      // TODO NC remove secrets from the spec (use "clean" method?)
-      window.showErrorMessage("File not saved. Secrets removal coming soon.");
-      return;
-    }
-    const SAVE_LABEL = "Save file";
+    const SAVE_LABEL = "Export connection";
     const folderUri = await window.showOpenDialog({
       openLabel: SAVE_LABEL,
       canSelectFiles: false,
@@ -277,12 +272,8 @@ export async function exportDirectConnection(item: DirectEnvironment) {
     });
 
     if (!folderUri || folderUri.length !== 1) {
-      // User cancelled before choosing a folder
-      // TODO Log it
-      // logUsage(UserEvent.ScaffoldCancelled, {
-      //   templateName: pickedTemplate.spec!.display_name,
-      // });
-      window.showInformationMessage("File saved cancelled.");
+      // User cancelled before choosing a folder, quietly exit
+      // TODO Log it maybe?
       return;
     } else {
       try {
@@ -291,10 +282,16 @@ export async function exportDirectConnection(item: DirectEnvironment) {
         const destination = folderUri[0];
         const name = spec.name ? spec.name : "connection";
         const fileName = name.trim().replace(/\s+/g, "_") + ".json";
-        await workspace.fs.writeFile(
-          Uri.file(posix.join(destination.fsPath, fileName)),
-          new TextEncoder().encode(specJson),
+        const filePath = posix.join(destination.fsPath, fileName);
+        await workspace.fs.writeFile(Uri.file(filePath), new TextEncoder().encode(specJson));
+        const selection = await window.showInformationMessage(
+          `Connection file saved at ${filePath}`,
+          { title: "Open" },
         );
+        if (selection !== undefined && selection.title !== "Dismiss") {
+          // TODO log it??
+          await workspace.openTextDocument(Uri.file(filePath));
+        }
       } catch (err) {
         logger.error(`Failed to save file: ${err}`);
         window.showErrorMessage("Unable to save connection spec file.");
