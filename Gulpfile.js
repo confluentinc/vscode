@@ -252,9 +252,22 @@ function getSentryReleaseVersion() {
     process.env.SENTRY_ENV = "development";
   }
 
-  // If CI, don't use the revision
+  // If CI, don't use the revision (this will either be a real prod relese or a manually-triggered
+  // CI build from a PR)
   if (IS_CI) {
-    return "vscode-confluent@" + version;
+    const upstream = process.env.SEMAPHORE_GIT_BRANCH;
+    const downstream = process.env.SEMAPHORE_GIT_WORKING_BRANCH;
+    console.log(`CI build branches: Upstream: ${upstream}, Downstream: ${downstream}`);
+    const prNumber = process.env.SEMAPHORE_GIT_PR_NUMBER;
+    console.log(`CI build PR: ${prNumber}`);
+    const releaseBranchPattern = /^v\d+\.\d+\.x$/; // e.g. v0.25.x
+    if (upstream === "main" || releaseBranchPattern.test(upstream)) {
+      // PR build against main or a release branch
+      return `vscode-confluent@pr${prNumber}-${version}`;
+    } else {
+      // build on main or a release branch
+      return "vscode-confluent@" + version;
+    }
   }
   // include `dev` prefix to doubly-inform Sentry that this is not a normal prod release version
   // and doesn't follow the normal X.Y.Z semver format and accidentally match a "latest release" rule
