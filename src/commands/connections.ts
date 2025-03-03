@@ -1,4 +1,5 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
+import { posix } from "path";
 import { registerCommandWithLogging } from ".";
 import { getCCloudAuthSession } from "../authn/utils";
 import { openDirectConnectionForm } from "../directConnect";
@@ -9,8 +10,13 @@ import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
 import { SSL_PEM_PATHS } from "../preferences/constants";
 import { deleteCCloudConnection } from "../sidecar/connections/ccloud";
-import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import {
+  CustomConnectionSpec,
+  CustomConnectionSpecFromJSON,
+  getResourceManager,
+} from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
+import { EXTENSION_VERSION } from "../constants";
 
 const logger = new Logger("commands.connections");
 
@@ -97,7 +103,56 @@ export async function addSSLPemPath() {
 export async function createNewDirectConnection() {
   // ignore any arguments passed through this command function (e.g. if something was highlighted
   // in the Resources view) so we always open the "Create a new connection" form
-  openDirectConnectionForm(null);
+  // Open a quickpick to choose either from file or manual entry
+  const importLabel = "Import from file";
+  const createMethod = await window.showQuickPick(
+    [
+      { label: "Enter manually", description: "Enter connection details by filling in a form" },
+      { label: importLabel, description: "Select a JSON file with connection details" },
+    ],
+    {
+      placeHolder: "How would you like to create a new connection?",
+      ignoreFocusOut: true,
+    },
+  );
+  if (!createMethod) {
+    // User exited the quick pick without making a choice
+    return;
+  }
+  if (createMethod?.label === importLabel) {
+    const newSpecUris: Uri[] | undefined = await window.showOpenDialog({
+      openLabel: "Select",
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        "JSON Files": ["json"],
+      },
+    });
+
+    if (newSpecUris && newSpecUris.length > 0) {
+      try {
+        const newSpecPath: string = newSpecUris[0].fsPath;
+        // read the file and parse it as a JSON object
+        const fileContent = await workspace.fs.readFile(Uri.file(newSpecPath));
+        const jsonSpec = JSON.parse(fileContent.toString());
+
+        // validate the JSON object against the ConnectionSpec schema
+        const newSpec = {
+          ...CustomConnectionSpecFromJSON(jsonSpec),
+          id: "FILE_UPLOAD" as ConnectionId,
+        };
+        // use it to open the Direct Connection form (form will populate the fields with spec values)
+        openDirectConnectionForm(newSpec);
+      } catch (error) {
+        window.showErrorMessage("Error parsing spec file. See logs for details.");
+        logger.error(`Error parsing spec file: ${error}`);
+        return;
+      }
+    }
+  } else {
+    openDirectConnectionForm(null);
+  }
 }
 
 export async function deleteDirectConnection(item: DirectEnvironment) {
@@ -179,6 +234,75 @@ export async function editDirectConnection(item: ConnectionId | DirectEnvironmen
   openDirectConnectionForm(spec);
 }
 
+export async function exportDirectConnection(item: DirectEnvironment) {
+  // look up the associated ConnectionSpec
+  const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+    item.connectionId,
+  );
+
+  // This shouldn't happen since we open from the item view, but for insurance...
+  if (!spec) {
+    logger.error("Direct connection not found, can't share");
+    window.showErrorMessage("Connection not found.");
+    ResourceViewProvider.getInstance().refresh();
+    return;
+  }
+
+  // Notify the user that the project was generated successfully
+  const selection = await window.showWarningMessage(
+    `May contain sensitive data`,
+    {
+      modal: true,
+      detail:
+        "Exported file may contain sensitive information like API keys, secrets, and local file paths. Use caution when saving and sharing connection files.",
+    },
+    { title: "Export" },
+    // { title: "Remove secrets" }, // TODO coming soon
+    { title: "Cancel", isCloseAffordance: true },
+  );
+  if (selection !== undefined && selection.title !== "Cancel") {
+    if (selection.title === "Remove secrets") {
+      // TODO NC remove secrets from the spec (use "clean" method?)
+      window.showErrorMessage("File not saved. Secrets removal coming soon.");
+      return;
+    }
+    const SAVE_LABEL = "Save file";
+    const folderUri = await window.showOpenDialog({
+      openLabel: SAVE_LABEL,
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      // Parameter might be ignored on some OSes (e.g. macOS)
+      title: SAVE_LABEL,
+    });
+
+    if (!folderUri || folderUri.length !== 1) {
+      // User cancelled before choosing a folder
+      // TODO Log it
+      // logUsage(UserEvent.ScaffoldCancelled, {
+      //   templateName: pickedTemplate.spec!.display_name,
+      // });
+      window.showInformationMessage("File saved cancelled.");
+      return;
+    } else {
+      try {
+        const shareable = { ...spec, id: undefined, extVersion: EXTENSION_VERSION };
+        const specJson = JSON.stringify(shareable, null, 2);
+        const destination = folderUri[0];
+        const name = spec.name ? spec.name : "connection";
+        const fileName = name.trim().replace(/\s+/g, "_") + ".json";
+        await workspace.fs.writeFile(
+          Uri.file(posix.join(destination.fsPath, fileName)),
+          new TextEncoder().encode(specJson),
+        );
+      } catch (err) {
+        logger.error(`Failed to save file: ${err}`);
+        window.showErrorMessage("Unable to save connection spec file.");
+      }
+    }
+  }
+}
+
 export function registerConnectionCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.connections.ccloud.signIn", ccloudSignIn),
@@ -188,6 +312,7 @@ export function registerConnectionCommands(): Disposable[] {
     registerCommandWithLogging("confluent.connections.direct.delete", deleteDirectConnection),
     // registerCommandWithLogging("confluent.connections.direct.rename", renameDirectConnection),
     registerCommandWithLogging("confluent.connections.direct.edit", editDirectConnection),
+    registerCommandWithLogging("confluent.connections.direct.export", exportDirectConnection),
   ];
 }
 
