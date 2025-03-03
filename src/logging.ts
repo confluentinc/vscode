@@ -21,7 +21,7 @@ export const LOGFILE_PATH: string = join(tmpdir(), LOGFILE_NAME);
  * @remarks We're using a {@link LogOutputChannel} instead of a {@link OutputChannel}
  * because it includes timestamps and colored log levels in the output by default.
  */
-export const outputChannel = window.createOutputChannel("Confluent", { log: true });
+export const OUTPUT_CHANNEL = window.createOutputChannel("Confluent", { log: true });
 
 const callpointCounter = new Map<string, number>();
 
@@ -90,19 +90,19 @@ export class Logger {
     try {
       switch (level) {
         case "trace":
-          outputChannel.trace(fullMessage, ...args);
+          OUTPUT_CHANNEL.trace(fullMessage, ...args);
           break;
         case "debug":
-          outputChannel.debug(fullMessage, ...args);
+          OUTPUT_CHANNEL.debug(fullMessage, ...args);
           break;
         case "info":
-          outputChannel.info(fullMessage, ...args);
+          OUTPUT_CHANNEL.info(fullMessage, ...args);
           break;
         case "warn":
-          outputChannel.warn(fullMessage, ...args);
+          OUTPUT_CHANNEL.warn(fullMessage, ...args);
           break;
         case "error":
-          outputChannel.error(fullMessage, ...args);
+          OUTPUT_CHANNEL.error(fullMessage, ...args);
           break;
       }
       // don't write trace logs to the log file
