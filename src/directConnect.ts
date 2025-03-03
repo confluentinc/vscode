@@ -31,7 +31,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       ? "import"
       : "update";
   // Set up the webview, checking for existing form for this connection
-  const title = `${action} connection`;
+  const title = `${action.charAt(0).toUpperCase() + action.slice(1)} Connection`;
   const [directConnectForm, formExists] = directConnectWebviewCache.findOrCreate(
     { id: connectionUUID, multiple: false, template: connectionFormTemplate },
     `direct-connect-${connectionUUID}`,
