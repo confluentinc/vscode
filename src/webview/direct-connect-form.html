@@ -14,12 +14,20 @@
       <div class="form-header">
         <h1
           class="heading"
-          data-text="this.editing() ? 'Edit connection details' : 'Create a new connection'"
+          data-text="this.editing() ? 'Edit connection details' : this.imported() ? 'Import connection' : 'Create a new connection'"
         ></h1>
-        <p class="form-description">
-          Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
-          cancel all changes.
-        </p>
+        <template data-if="this.imported()">
+          <p class="form-description">
+            Connection information imported from file. Confirm the imported values and make any
+            other updates, such as file paths, as needed.
+          </p>
+        </template>
+        <template data-if="!this.imported()">
+          <p class="form-description">
+            Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
+            cancel all changes.
+          </p>
+        </template>
       </div>
       <form class="form-container" data-on-submit="this.handleSubmit(event)">
         <div class="form-section">
@@ -192,6 +200,7 @@
                   data-attr-value="this.kafkaSecret()"
                   type="password"
                   data-attr-required="this.kafkaBootstrapServers() !== ''"
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
@@ -296,6 +305,7 @@
                   type="password"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaSecret()"
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
@@ -323,6 +333,7 @@
                   type="password"
                   data-attr-required="this.schemaUri() !== ''"
                   data-attr-value="this.schemaSecret()"
+                  data-on-change="this.updateValue(event)"
                 />
               </div>
             </div>
