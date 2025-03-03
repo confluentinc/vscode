@@ -1,12 +1,19 @@
-import { createWriteStream, existsSync, readdirSync, renameSync, statSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { LogOutputChannel, OutputChannel, window } from "vscode";
+import { createStream, RotatingFileStream } from "rotating-file-stream";
+import { LogOutputChannel, window } from "vscode";
 
 export const LOGFILE_NAME = `vscode-confluent-${process.pid}.log`;
-const MAX_LOG_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB max file size
+
+/** Max size of any log file written to disk.
+ * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
+const MAX_LOG_FILE_SIZE = "100K"; // 10MB max file size
+/** Number of log files to keep.
+ * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#maxfiles */
 const MAX_LOG_FILES = 3; // only keep 3 log files at a time
+/** How often log files should rotate if they don't exceed {@link MAX_LOG_FILE_SIZE}.
+ * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#interval */
+const LOG_ROTATION_INTERVAL = "1d"; // rotate log files daily
 
 /**
  * Default path to store downloadable log files for this extension instance.
@@ -18,10 +25,12 @@ export const LOGFILE_PATH: string = join(tmpdir(), LOGFILE_NAME);
 
 /**
  * Main "Confluent" output channel.
- * @remarks We're using a {@link LogOutputChannel} instead of a {@link OutputChannel}
+ * @remarks We're using a {@link LogOutputChannel} instead of an `OutputChannel`
  * because it includes timestamps and colored log levels in the output by default.
  */
-export const outputChannel = window.createOutputChannel("Confluent", { log: true });
+export const OUTPUT_CHANNEL: LogOutputChannel = window.createOutputChannel("Confluent", {
+  log: true,
+});
 
 const callpointCounter = new Map<string, number>();
 
@@ -90,19 +99,19 @@ export class Logger {
     try {
       switch (level) {
         case "trace":
-          outputChannel.trace(fullMessage, ...args);
+          OUTPUT_CHANNEL.trace(fullMessage, ...args);
           break;
         case "debug":
-          outputChannel.debug(fullMessage, ...args);
+          OUTPUT_CHANNEL.debug(fullMessage, ...args);
           break;
         case "info":
-          outputChannel.info(fullMessage, ...args);
+          OUTPUT_CHANNEL.info(fullMessage, ...args);
           break;
         case "warn":
-          outputChannel.warn(fullMessage, ...args);
+          OUTPUT_CHANNEL.warn(fullMessage, ...args);
           break;
         case "error":
-          outputChannel.error(fullMessage, ...args);
+          OUTPUT_CHANNEL.error(fullMessage, ...args);
           break;
       }
       // don't write trace logs to the log file
@@ -126,9 +135,11 @@ export class Logger {
 
     return new Promise<void>((resolve, reject) => {
       try {
-        this.rotateLogFileIfNeeded();
-
-        const logWriteStream = createWriteStream(LOGFILE_PATH, { flags: "a" });
+        const logWriteStream: RotatingFileStream = createStream(`${tmpdir()}/${LOGFILE_NAME}`, {
+          size: MAX_LOG_FILE_SIZE,
+          maxFiles: MAX_LOG_FILES,
+          interval: LOG_ROTATION_INTERVAL,
+        });
         logWriteStream.once("error", (error) => {
           console.error("Error writing to log file:", error);
           logWriteStream.end();
@@ -148,61 +159,5 @@ export class Logger {
         resolve();
       }
     });
-  }
-
-  /** Check if the current log file exceeds size limit and rotate if needed */
-  private rotateLogFileIfNeeded(): void {
-    try {
-      // no need to rotate if the file doesn't exist or it's under the size limit
-      if (!existsSync(LOGFILE_PATH)) {
-        return;
-      }
-      const stats = statSync(LOGFILE_PATH);
-      if (stats.size < MAX_LOG_FILE_SIZE_BYTES) {
-        return;
-      }
-
-      this.rotateLogFiles();
-    } catch (error) {
-      console.error("Error checking log file size:", error);
-    }
-  }
-
-  /** Handle the log file rotation */
-  private rotateLogFiles(): void {
-    try {
-      const logDir: string = tmpdir();
-      const logFilePrefix: string = LOGFILE_NAME.split("-")[0]; // "vscode-confluent"
-      const logFiles: string[] = readdirSync(logDir)
-        .filter(
-          (file) =>
-            file.startsWith(logFilePrefix) && file.endsWith(".log") && file !== LOGFILE_NAME,
-        )
-        .map((file) => join(logDir, file))
-        .sort(); // sort by name (including timestamp) to get oldest first
-
-      // remove oldest log file(s) if we have more than the max number
-      while (logFiles.length >= MAX_LOG_FILES) {
-        const oldestFile = logFiles.shift();
-        if (oldestFile) {
-          unlinkSync(oldestFile);
-        }
-      }
-
-      // create new log file with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const newLogPath = join(tmpdir(), `${logFilePrefix}-${timestamp}-${process.pid}.log`);
-
-      // rename current file to archived name (or just delete if renaming fails)
-      try {
-        createWriteStream(newLogPath).close();
-        renameSync(LOGFILE_PATH, newLogPath);
-      } catch {
-        // if rename fails, just delete the old file
-        unlinkSync(LOGFILE_PATH);
-      }
-    } catch (error) {
-      console.error("Error rotating log files:", error);
-    }
   }
 }
