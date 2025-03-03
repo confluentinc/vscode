@@ -313,17 +313,10 @@ export async function getLatestSchemasForTopic(topic: KafkaTopic): Promise<Schem
 
   const loader = ResourceLoader.getInstance(topic.connectionId);
 
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(topic.environmentId);
-  if (!schemaRegistry) {
-    throw new CannotLoadSchemasError(
-      `Could not determine schema registry for topic "${topic.name}" believed to have related schemas.`,
-    );
-  }
-
   const topicSchemaGroups = await loader.getTopicSubjectGroups(topic);
 
   if (topicSchemaGroups.length === 0) {
-    throw new CannotLoadSchemasError(`Topic "${topic.name}" has no related schemas!`);
+    throw new CannotLoadSchemasError(`Topic "${topic.name}" has no related schemas in registry.`);
   }
 
   // Return array of the highest versioned schemas. They
