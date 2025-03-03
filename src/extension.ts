@@ -66,7 +66,7 @@ import { EventListener } from "./docker/eventListener";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { constructResourceLoaderSingletons } from "./loaders";
-import { Logger, outputChannel } from "./logging";
+import { Logger, OUTPUT_CHANNEL } from "./logging";
 import {
   ENABLE_PRODUCE_MESSAGES,
   SSL_PEM_PATHS,
@@ -137,7 +137,7 @@ async function _activateExtension(
 
   // register the log output channels and debugging commands before anything else, in case we need
   // to reset global/workspace state or there's a problem further down with extension activation
-  context.subscriptions.push(outputChannel, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
+  context.subscriptions.push(OUTPUT_CHANNEL, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
   // automatically display and focus the Confluent extension output channel in development mode
   // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
   // host window during debugging
