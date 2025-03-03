@@ -182,8 +182,8 @@ export abstract class ResourceLoader implements IResourceBase {
     /*
       1. Get all the subjects from the topic's cluster's environment's schema registry.
       2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
-      3. For each of those subjects, get the correspondingloadTopicSchemas schema version array
-      4. Assemble each subject + schemas into a Subject holding the schemas, collect into an array of Subject.
+      3. For each of those subjects, get the corresponding array of schema versions.
+      4. Assemble each subject + schemas array into an array of Subject holding its own schemas.
       5. Return said array.
     */
 
@@ -202,7 +202,7 @@ export abstract class ResourceLoader implements IResourceBase {
       return [];
     }
 
-    // 3. For each of those subjects, get the corresponding schema version array
+    // 3. For each of those subjects, get the corresponding schema version array.
     // Load all the schema versions for each subject in the matching subjects
     // concurrently.
     const subjectGroupRequests = schemaSubjects.map((subject) =>
