@@ -127,6 +127,7 @@
               id="kafka_cluster.auth_type"
               name="kafka_cluster.auth_type"
               data-on-change="this.updateValue(event)"
+              data-value="this.kafkaAuthType()"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
               <option
@@ -139,17 +140,50 @@
                 value="Basic"
                 data-attr-selected="this.kafkaAuthType() === 'Basic' ? true : false"
               >
-                Username & Password
+                Username & Password (SASL/PLAIN)
               </option>
               <option
                 value="API"
                 data-attr-selected="this.kafkaAuthType() === 'API' ? true : false"
               >
-                API Credentials
+                API Credentials (SASL/PLAIN)
+              </option>
+              <option
+                value="SCRAM"
+                data-attr-selected="this.kafkaAuthType() === 'SCRAM' ? true : false"
+              >
+                SASL/SCRAM
               </option>
             </select>
           </div>
-          <template data-if="this.kafkaAuthType() === 'Basic'">
+          <template data-if="this.kafkaAuthType() === 'SCRAM'">
+            <div class="input-container">
+              <label for="kafka_cluster.credentials.hash_algorithm" class="label"
+                >Hash Algorithm</label
+              >
+              <select
+                class="input dropdown"
+                id="kafka_cluster.credentials.hash_algorithm"
+                name="kafka_cluster.credentials.hash_algorithm"
+                data-value="this.kafkaHash()"
+                data-on-change="this.updateValue(event)"
+              >
+                <option
+                  value="SCRAM_SHA_256"
+                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_256'"
+                >
+                  SCRAM-SHA-256
+                </option>
+                <option
+                  value="SCRAM_SHA_512"
+                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_512'"
+                >
+                  SCRAM-SHA-512
+                </option>
+              </select>
+            </div>
+          </template>
+          <template data-if="this.kafkaAuthType() === 'Basic' || this.kafkaAuthType() === 'SCRAM'">
             <div class="input-row">
               <div class="input-container">
                 <label for="kafka_cluster.credentials.username" class="label">Username</label>

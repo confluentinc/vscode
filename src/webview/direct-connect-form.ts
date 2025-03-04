@@ -6,6 +6,7 @@ import {
   ConnectedState,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfScramCredentials,
 } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
 import { SslConfig } from "./ssl-config-inputs";
@@ -69,6 +70,10 @@ class DirectConnectFormViewModel extends ViewModel {
   });
   kafkaSslConfig = this.derive(() => {
     return this.spec()?.kafka_cluster?.ssl || {};
+  });
+  kafkaHash = this.derive(() => {
+    // @ts-expect-error the types don't know which credentials are present
+    return this.spec()?.kafka_cluster?.credentials?.hash_algorithm ?? "SCRAM_SHA_256";
   });
 
   /** Schema Registry */
@@ -146,6 +151,7 @@ class DirectConnectFormViewModel extends ViewModel {
     if (!creds || typeof creds !== "object") return "None";
     if (instanceOfBasicCredentials(creds)) return "Basic";
     if (instanceOfApiKeyAndSecret(creds)) return "API";
+    if (instanceOfScramCredentials(creds)) return "SCRAM";
     return "None";
   }
   resetTestResults() {
@@ -288,4 +294,4 @@ export type FormConnectionType =
   | "Confluent Platform"
   | "Other";
 
-type SupportedAuthTypes = "None" | "Basic" | "API";
+type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM";
