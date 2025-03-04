@@ -331,11 +331,14 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     const resourceSearchSetSub: vscode.Disposable = resourceSearchSet.event(
       (searchString: string | null) => {
         logger.debug("resourceSearchSet event fired, refreshing", { searchString });
+        // mainly captures the last state of the search internals to see if search was adjusted after
+        // a previous search was used, or if this is the first time search is being used
         logUsage(UserEvent.ViewSearchAction, {
           status: `search string ${searchString ? "set" : "cleared"}`,
           view: "Resources",
-          filteredItemCount: this.searchMatches.size,
-          totalItemCount: this.totalItemCount,
+          hadExistingSearchString: this.itemSearchString !== null,
+          lastFilteredItemCount: this.searchMatches.size,
+          lastTotalItemCount: this.totalItemCount,
         });
         this.setSearch(searchString);
         this.refresh();

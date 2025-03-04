@@ -273,11 +273,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     const schemaSearchSetSub: vscode.Disposable = schemaSearchSet.event(
       (searchString: string | null) => {
         logger.debug("schemaSearchSet event fired, refreshing", { searchString });
+        // mainly captures the last state of the search internals to see if search was adjusted after
+        // a previous search was used, or if this is the first time search is being used
         logUsage(UserEvent.ViewSearchAction, {
           status: `search string ${searchString ? "set" : "cleared"}`,
           view: "Schemas",
-          filteredItemCount: this.searchMatches.size,
-          totalItemCount: this.totalItemCount,
+          hadExistingSearchString: this.itemSearchString !== null,
+          lastFilteredItemCount: this.searchMatches.size,
+          lastTotalItemCount: this.totalItemCount,
         });
         this.setSearch(searchString);
         this.refresh();
