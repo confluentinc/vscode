@@ -62,11 +62,19 @@ export class SslConfig extends HTMLElement {
   }
 
   handleFileSelection(inputId: string) {
-    this.dispatchEvent(
+    const fileGot: boolean = this.dispatchEvent(
       new CustomEvent("getfile", {
         detail: { inputId },
       }),
     );
+
+    if (fileGot) {
+      // this makes sure we get the latest file path,
+      // it also collapses then expands the section in background
+      const config = { ...this.configObj() };
+      // @ts-expect-error typescript is complaining because some values can be undefined
+      this.configObj(config); // Update the source signal
+    }
   }
   /** Update the host form data so it contains all the changed values on submit
    * and dispatch a change event to the host for other actions
