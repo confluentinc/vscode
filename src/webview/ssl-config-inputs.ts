@@ -146,7 +146,7 @@ export class SslConfig extends HTMLElement {
           </label>
         </div>
         <div class="input-container">
-          <label class="label">KeyStore Configuration</label>
+          <label class="label">Key Store Configuration</label>
           <div class="input-row">
             <div class="input-container" style="flex: 1">
               <label data-attr-for="this.getInputId('keystore.type')" class="info">Type</label>
@@ -216,7 +216,7 @@ export class SslConfig extends HTMLElement {
           </div>
         </div>
         <div class="input-container">
-          <label class="label">TrustStore Configuration</label>
+          <label class="label">Trust Store Configuration</label>
           <div class="input-row">
             <div class="input-container" style="flex: 1">
               <label data-attr-for="this.getInputId('truststore.type')" class="info">Type</label>
