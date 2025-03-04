@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.163.0
+  version: 0.165.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -508,14 +508,14 @@ components:
           type: string
         api_secret:
           description: The API secret to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 1024
           minLength: 1
           type: string
           allOf:
           - $ref: "#/components/schemas/ApiSecret"
     ApiSecret:
       description: A user-provided API secret that is always masked in responses
-      maxLength: 64
+      maxLength: 1024
       minLength: 1
       type: string
     AuthError:
@@ -562,7 +562,7 @@ components:
           type: string
         password:
           description: The password to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 1024
           minLength: 1
           type: string
           allOf:
@@ -1047,7 +1047,7 @@ components:
           type: integer
     Password:
       description: A user-provided password that is always masked in responses
-      maxLength: 64
+      maxLength: 1024
       minLength: 1
       type: string
     Preferences:
@@ -1262,7 +1262,7 @@ components:
           type: string
         scram_password:
           description: The password to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 1024
           minLength: 1
           type: string
           allOf:
@@ -1402,25 +1402,25 @@ components:
     HealthResponse:
       type: object
       properties:
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
           - UP
           - DOWN
           type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheck"
     HealthCheck:
       type: object
       properties:
         data:
           type: object
           nullable: true
+        name:
+          type: string
         status:
           enum:
           - UP
           - DOWN
-          type: string
-        name:
           type: string
