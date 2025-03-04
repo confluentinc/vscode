@@ -89,7 +89,7 @@ blocks:
           type: s1-prod-ubuntu20-04-arm64-1
       jobs: *build-test-jobs
       epilogue: *build-test-epilogue
-  
+
   - name: "Build & Test (darwin x64)"
     dependencies: []
     skip: *build-test-skip
@@ -125,10 +125,6 @@ blocks:
   - name: "Bump microversion"
     dependencies:
       - "Build & Test (linux x64)"
-      - "Build & Test (linux arm64)"
-      - "Build & Test (darwin x64)"
-      - "Build & Test (darwin arm64)"
-      - "Build & Test (win32 x64)"
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -148,10 +144,6 @@ blocks:
   - name: "Set next version under development"
     dependencies:
       - "Build & Test (linux x64)"
-      - "Build & Test (linux arm64)"
-      - "Build & Test (darwin x64)"
-      - "Build & Test (darwin arm64)"
-      - "Build & Test (win32 x64)"
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
