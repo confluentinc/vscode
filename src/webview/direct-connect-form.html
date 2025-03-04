@@ -215,7 +215,7 @@
               data-attr-value="this.kafkaSslEnabled()"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-            /><span>SSL enabled</span></label
+            /><span>SSL/TLS enabled</span></label
           >
           <template data-if="this.kafkaSslEnabled()">
             <ssl-config
@@ -349,7 +349,7 @@
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             />
-            <span>SSL enabled</span>
+            <span>SSL/TLS enabled</span>
           </label>
           <template data-if="this.schemaSslEnabled()">
             <ssl-config
