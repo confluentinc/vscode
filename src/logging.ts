@@ -1,27 +1,25 @@
 import { tmpdir } from "os";
-import { join } from "path";
-import { createStream, RotatingFileStream } from "rotating-file-stream";
+import { createStream, Generator, RotatingFileStream } from "rotating-file-stream";
 import { LogOutputChannel, window } from "vscode";
 
 export const LOGFILE_NAME = `vscode-confluent-${process.pid}.log`;
-
-/** Max size of any log file written to disk.
- * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
-const MAX_LOG_FILE_SIZE = "100K"; // 10MB max file size
-/** Number of log files to keep.
- * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#maxfiles */
-const MAX_LOG_FILES = 3; // only keep 3 log files at a time
-/** How often log files should rotate if they don't exceed {@link MAX_LOG_FILE_SIZE}.
- * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#interval */
-const LOG_ROTATION_INTERVAL = "1d"; // rotate log files daily
-
 /**
  * Default path to store downloadable log files for this extension instance.
  *
  * The main difference between this and the ExtensionContext.logUri (where LogOutputChannel lines
  * are written) is this will include ALL log levels, not just the ones enabled in the output channel.
  */
-export const LOGFILE_PATH: string = join(tmpdir(), LOGFILE_NAME);
+export const LOGFILE_DIR = tmpdir();
+
+/** Max size of any log file written to disk.
+ * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
+const MAX_LOG_FILE_SIZE = "20K"; // 10MB max file size
+/** Number of log files to keep.
+ * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#maxfiles */
+const MAX_LOG_FILES = 3; // only keep 3 log files at a time
+/** How often log files should rotate if they don't exceed {@link MAX_LOG_FILE_SIZE}.
+ * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#interval */
+const LOG_ROTATION_INTERVAL = "1d"; // rotate log files daily
 
 /**
  * Main "Confluent" output channel.
@@ -135,24 +133,14 @@ export class Logger {
 
     return new Promise<void>((resolve, reject) => {
       try {
-        const logWriteStream: RotatingFileStream = createStream(`${tmpdir()}/${LOGFILE_NAME}`, {
-          size: MAX_LOG_FILE_SIZE,
-          maxFiles: MAX_LOG_FILES,
-          interval: LOG_ROTATION_INTERVAL,
-        });
-        logWriteStream.once("error", (error) => {
-          console.error("Error writing to log file:", error);
-          logWriteStream.end();
-          reject(error);
-        });
-        logWriteStream.write(Buffer.from(formattedMessage), (error) => {
+        const stream = getLogFileStream();
+        stream.write(formattedMessage, (error) => {
           if (error) {
             console.error("Error writing to log file:", error);
-            logWriteStream.end();
             reject(error);
+          } else {
+            resolve();
           }
-          // waits for any remaining data to be written to the file before closing the stream
-          logWriteStream.end(() => resolve());
         });
       } catch (error) {
         console.error("Unexpected error during log file operations:", error);
@@ -161,3 +149,38 @@ export class Logger {
     });
   }
 }
+
+/** Single stream to allow rotating-file-stream to keep track of file sizes and rotation timing. */
+let logFileStream: RotatingFileStream | undefined;
+
+export function getLogFileStream(): RotatingFileStream {
+  if (!logFileStream) {
+    logFileStream = createStream(rotatingFilenameGenerator, {
+      size: MAX_LOG_FILE_SIZE,
+      maxSize: MAX_LOG_FILE_SIZE,
+      maxFiles: MAX_LOG_FILES,
+      interval: LOG_ROTATION_INTERVAL,
+      path: LOGFILE_DIR,
+      encoding: "utf-8",
+    });
+  }
+  return logFileStream;
+}
+
+function pad(num: number) {
+  return (num > 9 ? "" : "0") + num;
+}
+
+const rotatingFilenameGenerator: Generator = (time: number | Date, index?: number): string => {
+  if (!time) return LOGFILE_NAME;
+
+  if (!(time instanceof Date)) {
+    time = new Date(time);
+  }
+  const month = time.getFullYear() + "" + pad(time.getMonth() + 1);
+  const day = pad(time.getDate());
+  const hour = pad(time.getHours());
+  const minute = pad(time.getMinutes());
+
+  return `${month}/${month}${day}-${hour}${minute}-${index}-${LOGFILE_NAME}`;
+};

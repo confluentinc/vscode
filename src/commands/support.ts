@@ -7,7 +7,7 @@ import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { LOGFILE_NAME, LOGFILE_PATH, Logger } from "../logging";
+import { LOGFILE_DIR, LOGFILE_NAME, Logger } from "../logging";
 import { SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
 
 const logger = new Logger("commands.support");
@@ -59,7 +59,7 @@ function openSettings() {
 
 /** Return the file URI for the extension's log file, normalized for the user's OS. */
 function extensionLogFileUri(): Uri {
-  return Uri.file(normalize(LOGFILE_PATH));
+  return Uri.joinPath(Uri.file(LOGFILE_DIR), LOGFILE_NAME);
 }
 
 /** Return the file URI for the sidecar's log file, normalized for the user's OS. */
