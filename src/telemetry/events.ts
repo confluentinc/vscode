@@ -2,7 +2,7 @@ import { TelemetryTrustedValue } from "vscode";
 import { Logger } from "../logging";
 import { getTelemetryLogger } from "./telemetryLogger";
 
-const logger = new Logger("telemetry/events");
+const logger = new Logger("telemetry.events");
 
 /** The names of user events that can be logged when telemetry is enabled. */
 export enum UserEvent {
