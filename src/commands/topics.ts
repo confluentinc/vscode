@@ -25,6 +25,7 @@ import { isCCloud } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { ALLOW_OLDER_SCHEMA_VERSIONS, USE_TOPIC_NAME_STRATEGY } from "../preferences/constants";
 import {
   schemaSubjectQuickPick,
   schemaVersionQuickPick,
@@ -583,26 +584,35 @@ export async function promptForSchema(
     return;
   }
 
-  // prompt for the naming strategy first, which will help narrow down subjects to pick from
-  const strategy: SubjectNameStrategy | undefined = await subjectNameStrategyQuickPick(topic, kind);
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+
+  const useTopicNameStrategy: boolean = config.get(USE_TOPIC_NAME_STRATEGY) ?? true;
+  let strategy: SubjectNameStrategy | undefined;
+  if (!useTopicNameStrategy) {
+    // if the user has disabled the topic name strategy, we need to prompt for the subject name
+    // strategy first, which will help narrow down subjects
+    strategy = await subjectNameStrategyQuickPick(topic, kind);
+  } else {
+    strategy = SubjectNameStrategy.TOPIC_NAME;
+  }
   if (!strategy) {
+    // setting is enabled but the user left the quickpick
     return;
   }
 
   let schemaSubject: string | undefined;
   if (strategy === SubjectNameStrategy.TOPIC_NAME) {
     // we have the topic name and the kind, so we just need to make sure the subject exists and
-    // fast-track to the version picking
-    const subject = `${topic.name}-${kind}`;
+    // fast-track to getting the schema version
+    schemaSubject = `${topic.name}-${kind}`;
     const schemaSubjects: Subject[] = await loader.getSubjects(registry);
-    const subjectExists = schemaSubjects.some((s) => s.name === subject);
+    const subjectExists = schemaSubjects.some((s) => s.name === schemaSubject);
     if (!subjectExists) {
       showErrorNotificationWithButtons(
         `No "${kind}" schema subject found for topic "${topic.name}".`,
       );
       return;
     }
-    return await schemaVersionQuickPick(registry, subject);
   } else {
     // TODO: split logic between TOPIC_RECORD_NAME and RECORD_NAME
     schemaSubject = await schemaSubjectQuickPick(
@@ -616,5 +626,19 @@ export async function promptForSchema(
     return;
   }
 
-  return await schemaVersionQuickPick(registry, schemaSubject);
+  const allowOlderSchemaVersions: boolean = config.get(ALLOW_OLDER_SCHEMA_VERSIONS, false);
+  if (allowOlderSchemaVersions) {
+    // allow the user to select a specific schema version
+    return await schemaVersionQuickPick(registry, schemaSubject);
+  }
+  // look up the latest schema version for the given subject
+  const schemaVersions: Schema[] = await loader.getSchemasForEnvironmentId(registry.environmentId);
+  const latestSchema: Schema | undefined = schemaVersions
+    .filter((schema) => schema.subject === schemaSubject)
+    .sort((a, b) => b.version - a.version)[0];
+  if (!latestSchema) {
+    showErrorNotificationWithButtons(`No schema versions found for subject "${schemaSubject}".`);
+    return;
+  }
+  return latestSchema;
 }
