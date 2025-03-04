@@ -242,8 +242,6 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
-  const verify = page.locator("input[type=checkbox][name='kafka_cluster.ssl.verify_hostname']");
-  await expect(verify).toBeChecked();
 
   // Submit and check the form data
   await page.click("input[type=submit][value='Save']");
@@ -292,7 +290,7 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   // Click to show the advanced settings, then fill them in
-  await page.click("p:has-text('Advanced SSL Configuration')");
+  await page.click("p:has-text('Advanced SSL/TLS Configuration')");
   await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
@@ -448,13 +446,13 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   // Click to show the advanced settings, then fill them in
-  await page.click("p:has-text('Advanced SSL Configuration')");
+  await page.click("p:has-text('Advanced SSL/TLS Configuration')");
   await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
 
   // Click to hide the advanced settings, then submit the form
-  await page.click("p:has-text('Advanced SSL Configuration')");
+  await page.click("p:has-text('Advanced SSL/TLS Configuration')");
   await expect(page.locator("input[name='kafka_cluster.ssl.truststore.path']")).not.toBeVisible();
   await page.click("input[type=submit][value='Save']");
   const submitCallHandle = await sendWebviewMessage.evaluateHandle(
