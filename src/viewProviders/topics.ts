@@ -64,6 +64,8 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
+  /** Count of how many times the user has set a search string */
+  searchStringSetCount: number = 0;
   /** Items directly matching the {@linkcode itemSearchString}, if provided. */
   searchMatches: Set<TopicViewProviderData> = new Set();
   /** Count of all items returned from `getChildren()`. */
@@ -175,16 +177,18 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       const plural = this.totalItemCount > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
         this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
-        logUsage(UserEvent.ViewSearchAction, {
-          status: "view results filtered",
-          view: "Topics",
-          filteredItemCount: this.searchMatches.size,
-          totalItemCount: this.totalItemCount,
-        });
       } else {
         // let empty state take over
         this.treeView.message = undefined;
       }
+      logUsage(UserEvent.ViewSearchAction, {
+        status: "view results filtered",
+        view: "Topics",
+        fromItemExpansion: element !== undefined,
+        searchStringSetCount: this.searchStringSetCount,
+        filteredItemCount: this.searchMatches.size,
+        totalItemCount: this.totalItemCount,
+      });
     } else {
       this.treeView.message = undefined;
     }
@@ -258,9 +262,14 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
         logger.debug("topicSearchSet event fired, refreshing", { searchString });
         // mainly captures the last state of the search internals to see if search was adjusted after
         // a previous search was used, or if this is the first time search is being used
+        if (searchString !== null) {
+          // used to group search events without sending the search string itself
+          this.searchStringSetCount++;
+        }
         logUsage(UserEvent.ViewSearchAction, {
           status: `search string ${searchString ? "set" : "cleared"}`,
           view: "Topics",
+          searchStringSetCount: this.searchStringSetCount,
           hadExistingSearchString: this.itemSearchString !== null,
           lastFilteredItemCount: this.searchMatches.size,
           lastTotalItemCount: this.totalItemCount,
