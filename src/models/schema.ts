@@ -1,4 +1,5 @@
 import { Data, type Require as Enforced } from "dataclass";
+import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
@@ -190,7 +191,9 @@ export class SchemaTreeItem extends vscode.TreeItem {
     const label = `v${resource.version}`;
     super(label, vscode.TreeItemCollapsibleState.None);
 
-    this.id = `${resource.id}-${resource.subject}-${resource.version}`;
+    this.id = randomUUID();
+
+    // `${resource.id}-${resource.subject}-${resource.version}`;
     // internal properties
     this.resource = resource;
     // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the

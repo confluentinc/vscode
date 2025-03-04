@@ -115,10 +115,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   // we're not handling just `Schema` here since we may be expanding a container tree item
   getTreeItem(element: SchemasViewProviderData): vscode.TreeItem {
-    // logger.debug("schema view controller getTreeItem called", { element });
     let treeItem: vscode.TreeItem;
 
     if (element instanceof Subject) {
+      logger.debug(
+        `schema view controller getTreeItem called on subject ${element.name}, ${element.schemas?.length}`,
+      );
+
       treeItem = new SubjectTreeItem(element);
     } else {
       // must be a Schema
@@ -138,9 +141,10 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
+    logger.debug("getParent called", { element });
     if (element instanceof Schema) {
-      // if we're a schema, our parent is our Subject.
-      return element.subjectObject();
+      // if we're a schema, our parent is our Subject as found in our map
+      return this.subjectsInTreeView.get(element.subject)!;
     }
     // Otherwise the parent of a container tree item is the root.
     return null;
@@ -157,7 +161,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     // Once the user has asked to expand a Subject, we'll on-demand fetch the Schema[] for
     // just that single Subject and return them as the children of the Subject.
 
-    logger.debug("schema view controller getChildren called", { element });
+    logger.debug(
+      `schema view controller getChildren called with ${element ? "a subject" : "nothing"}, , ${(element as any)?.schemas?.length}`,
+    );
 
     if (!this.schemaRegistry) {
       // No Schema Registry selected, so no subjects or schemas to show.
@@ -188,6 +194,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
       if (element.schemas) {
         // Already fetched the schemas for this subject.
+        logger.warn("Wacky: getChildren() called on subject with known schemas already.");
         return element.schemas;
       } else {
         // Selected a subject, so assign children to the schemas bound to the subject,
@@ -196,6 +203,12 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         // so that 1) we don't fetch them again, and
         // 2) we can update the TreeItem with additional information based on the schemas.
         children = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
+
+        // Update the in-subjectsInTreeView subject with the now-known schemas.
+        element.schemas = children as Schema[];
+
+        // Update the tree item for the subject to reflect the new schemas.
+        this._onDidChangeTreeData.fire(element);
       }
     } else {
       // Selected a schema, no children there.
