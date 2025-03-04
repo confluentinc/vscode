@@ -97,11 +97,17 @@ export interface ProduceMessage {
   timestamp?: number;
 }
 
+export enum SubjectNameStrategy {
+  TOPIC_NAME = "TOPIC_NAME",
+  RECORD_NAME = "RECORD_NAME",
+  TOPIC_RECORD_NAME = "TOPIC_RECORD_NAME",
+}
+
 export interface SchemaInfo {
   // TODO: add Schema Registry URI?
   schema_version: number;
   subject: string;
-  subject_name_strategy: "TOPIC_NAME" | "RECORD_NAME" | "TOPIC_RECORD_NAME" | undefined;
+  subject_name_strategy: SubjectNameStrategy | undefined;
   type: "BINARY" | "JSON" | "STRING" | undefined;
 }
 

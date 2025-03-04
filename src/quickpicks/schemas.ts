@@ -1,8 +1,11 @@
 import * as vscode from "vscode";
+import { IconNames } from "../constants";
 import { ResourceLoader } from "../loaders/";
 import { getConnectionLabel } from "../models/resource";
 import { getSubjectIcon, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
+import { KafkaTopic } from "../models/topic";
+import { SubjectNameStrategy } from "../schemas/produceMessageSchema";
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
  * @returns nonempty string if user chose an existing subject name.
@@ -12,25 +15,29 @@ import { SchemaRegistry } from "../models/schemaRegistry";
  */
 export async function schemaSubjectQuickPick(
   schemaRegistry: SchemaRegistry,
+  includeCreateNew: boolean = true,
   title?: string,
 ): Promise<string | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
 
   const schemaSubjects: Subject[] = await loader.getSubjects(schemaRegistry);
 
-  // Convert to quickpick items, first entry to create a new schema / subject followed by a separator
-  const newSchemaLabel = "Create new schema / subject";
-  let subjectItems: vscode.QuickPickItem[] = [
-    {
-      label: newSchemaLabel,
-      iconPath: new vscode.ThemeIcon("add"),
-    },
-    {
-      kind: vscode.QuickPickItemKind.Separator,
-      // TODO: Perhaps also mix in the 'environment' name here, esp. if ccloud-y or in future direct connect?
-      label: getConnectionLabel(loader.connectionType),
-    },
-  ];
+  let subjectItems: vscode.QuickPickItem[] = [];
+
+  const newSchemaLabel = "Create new subject";
+  if (includeCreateNew) {
+    subjectItems.push(
+      {
+        label: newSchemaLabel,
+        iconPath: new vscode.ThemeIcon("add"),
+      },
+      {
+        kind: vscode.QuickPickItemKind.Separator,
+        // TODO: Perhaps also mix in the 'environment' name here, esp. if ccloud-y or in future direct connect?
+        label: getConnectionLabel(loader.connectionType),
+      },
+    );
+  }
 
   // Wire up all of the exsting schema registry subjects as items
   // with the description as the subject name for easy return value.
@@ -112,4 +119,119 @@ export async function schemaVersionQuickPick(
       schema.id === chosenVersionItem.description?.split(" ")[0] &&
       schema.version === parseInt(chosenVersionItem.label.replace("v", ""), 10),
   );
+}
+
+/**
+ * Quickpick to (multi-)select which schema kind (key and/or value).
+ *
+ * If the provided `topic` is already associated with a schema based on the `TopicNameStrategy`,
+ * pre-select that kind.
+ */
+export async function subjectKindMultiSelect(topic: KafkaTopic): Promise<{
+  keySchemaSelected: boolean;
+  valueSchemaSelected: boolean;
+}> {
+  // pre-pick any schema kinds that are already associated with this topic
+  const topicKeySubjects: Subject[] = topic.children.filter((subject: Subject) =>
+    subject.name.endsWith("-key"),
+  );
+  const topicValueSubjects: Subject[] = topic.children.filter((subject: Subject) =>
+    subject.name.endsWith("-value"),
+  );
+
+  const items: vscode.QuickPickItem[] = [
+    {
+      label: "Key Schema",
+      description:
+        topicKeySubjects.length > 0
+          ? topicKeySubjects.map((subject) => subject.name).join(", ")
+          : undefined,
+      picked: topicKeySubjects.length > 0,
+      iconPath: new vscode.ThemeIcon(IconNames.KEY_SUBJECT),
+    },
+    {
+      label: "Value Schema",
+      description:
+        topicValueSubjects.length > 0
+          ? topicValueSubjects.map((subject) => subject.name).join(", ")
+          : undefined,
+      picked: topicValueSubjects.length > 0,
+      iconPath: new vscode.ThemeIcon(IconNames.VALUE_SUBJECT),
+    },
+  ];
+
+  const selectedItems = await vscode.window.showQuickPick(items, {
+    canPickMany: true,
+    title: `Producing to ${topic.name}: Select Schema Kind(s)`,
+    placeHolder: "Select which schema kinds to include (none for schemaless JSON)",
+    ignoreFocusOut: true,
+  });
+
+  return {
+    keySchemaSelected: selectedItems?.some((item) => item.label === "Key Schema") ?? false,
+    valueSchemaSelected: selectedItems?.some((item) => item.label === "Value Schema") ?? false,
+  };
+}
+
+/** Extension of {@link vscode.QuickPickItem} to include the {@link SubjectNameStrategy} as `strategy`. */
+type StrategyQuickPickItem = vscode.QuickPickItem & {
+  strategy: SubjectNameStrategy;
+};
+
+/**
+ * Quickpick to select which subject name strategy to use.
+ *
+ * @param topic The topic to produce to, used to pre-fill the subject name.
+ * @param kind The kind of schema (key or value) to reference.
+ */
+export async function subjectNameStrategyQuickPick(
+  topic: KafkaTopic,
+  kind: "key" | "value",
+): Promise<SubjectNameStrategy | undefined> {
+  const docsLabel = "View Documentation";
+  const docsLink =
+    "https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview";
+
+  const items: (vscode.QuickPickItem | StrategyQuickPickItem)[] = [
+    {
+      label: "TopicNameStrategy",
+      strategy: SubjectNameStrategy.TOPIC_NAME,
+      description: `${topic.name}-${kind} (default)`,
+    },
+    {
+      label: "TopicRecordNameStrategy",
+      strategy: SubjectNameStrategy.TOPIC_RECORD_NAME,
+      description: `${topic.name}-<fully-qualified record name>`,
+    },
+    {
+      label: "RecordNameStrategy",
+      strategy: SubjectNameStrategy.RECORD_NAME,
+      description: `<fully-qualified record name>`,
+    },
+    {
+      label: "",
+      kind: vscode.QuickPickItemKind.Separator,
+    },
+    {
+      label: docsLabel,
+      iconPath: new vscode.ThemeIcon("link-external"),
+    },
+  ];
+
+  const selectedItem = await vscode.window.showQuickPick(items, {
+    title: `Producing to ${topic.name}: ${kind} Subject Name Strategy`,
+    placeHolder: "Select which subject naming strategy to use",
+    ignoreFocusOut: true,
+  });
+  if (!selectedItem) {
+    return;
+  }
+
+  if (selectedItem.label === docsLabel) {
+    // open docs page in the user's default browser
+    vscode.env.openExternal(vscode.Uri.parse(docsLink));
+    return;
+  }
+
+  return (selectedItem as StrategyQuickPickItem).strategy;
 }
