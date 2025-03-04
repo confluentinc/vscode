@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { SIDECAR_OUTPUT_CHANNEL } from "../constants";
-import { Logger, outputChannel } from "../logging";
+import { Logger, OUTPUT_CHANNEL } from "../logging";
 import { getStorageManager } from "../storage";
 
 const logger = new Logger("commands.debugtools");
@@ -179,7 +179,7 @@ async function generateHtmlContent(stateKind: "global" | "workspace"): Promise<s
 async function showOutputChannelCommand() {
   // make sure the Output panel is visible first
   await vscode.commands.executeCommand("workbench.panel.output.focus");
-  outputChannel.show();
+  OUTPUT_CHANNEL.show();
 }
 
 async function showSidecarOutputChannelCommand() {
