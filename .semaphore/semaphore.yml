@@ -50,10 +50,28 @@ blocks:
         machine:
           type: s1-prod-ubuntu20-04-amd64-1
       jobs: &build-test-jobs
-        - name: "Build & Test"
+        - name: "Build & Test (VS Code)"
           commands:
             - make test
+          # Not setting VSCODE_VERSION env var will default using the latest stable release version
       epilogue: &build-test-epilogue
+        always:
+          commands:
+            - make remove-test-env
+
+  - name: "Build & Test (VS Code Insiders)"
+    dependencies: []
+    skip:
+      when: "branch != 'main' AND change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    task:
+      jobs:
+        - name: "Build & Test (VS Code Insiders)"
+          commands:
+            - make test
+          env_vars:
+            - name: VSCODE_VERSION
+              value: insiders
+      epilogue:
         always:
           commands:
             - make remove-test-env
