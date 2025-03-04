@@ -1,7 +1,7 @@
 /** Module describing workspace<-->sidecar websocket messages. */
 
 import { randomUUID } from "crypto";
-import { Connection } from "../clients/sidecar";
+import { Connection, ConnectionFromJSON, instanceOfConnection } from "../clients/sidecar";
 
 /**
  * All websocket message types, message.header_type values.
@@ -50,22 +50,13 @@ export interface MessageHeaders {
   message_id: string;
 }
 
-export interface ReplyMessageHeaders extends MessageHeaders {
-  /** Used to correlate responses to requests. Holds message_id value of the message being replied to. */
-  response_to_id: string;
-}
-
-/** Construct and return either a MessageHeaders or ReplyMessageHeaders given the message type and possible response_to_id value. */
-export function newMessageHeaders<T extends MessageType>(
-  message_type: T,
-  response_to_id?: string,
-): MessageHeaderMap[T] {
+/** Construct and return a MessageHeaders given the message type, providing the `originator` and `message_id` fields. */
+export function newMessageHeaders<T extends MessageType>(message_type: T): MessageHeaders {
   return {
     message_type,
     originator: process.pid.toString(),
     message_id: randomUUID().toString(),
-    ...(response_to_id ? { response_to_id } : {}),
-  } as MessageHeaderMap[T];
+  };
 }
 
 /**
@@ -73,13 +64,8 @@ export function newMessageHeaders<T extends MessageType>(
  * is determined by the message type.
  **/
 export interface Message<T extends MessageType> {
-  headers: MessageHeaderMap[T];
+  headers: MessageHeaders;
   body: MessageBodyMap[T];
-}
-
-/** A message whose headers carry field "response_to_id", indicating is a response message. */
-export interface ResponseMessage<T extends MessageType> extends Message<T> {
-  headers: ReplyMessageHeaders;
 }
 
 /**
@@ -107,10 +93,15 @@ export interface ProtocolErrorBody {
 
 /** Describes what kind of change happened in a CONNECTION_EVENT message. */
 export enum ConnectionEventAction {
+  /** From a POST to the Connections API. (Workspace -> sidecar HTTP requests.) */
   CREATED = "CREATED",
+  /** From a PUT/PATCH to the Connections API. (Workspace -> sidecar HTTP requests.) */
   UPDATED = "UPDATED",
+  /** From a DELETE to the Connections API. (Workspace -> sidecar HTTP requests.) */
   DELETED = "DELETED",
+  /** When we establish a connection based on its config(s) and the `status.<config>.state` resolves to `SUCCESS`. (Async updates from the sidecar.) */
   CONNECTED = "CONNECTED",
+  /** When we lose a connection based on its config(s) and the `status.<config>.state` resolves to `FAILED`. (Async updates from the sidecar.) */
   DISCONNECTED = "DISCONNECTED",
 }
 
@@ -129,14 +120,42 @@ export type MessageBodyMap = {
 };
 
 /**
- * Type mapping of message type -> corresponding headers type.
- * Dictates which messages whose headers should have `response_to_id` field.`
+ * Function signature for functions that perform higher-order decoding of message bodies
+ * above and beyond what the JSON.parse() call does. Like, say, decoding dates-as-strings to Date objects, etc.
+ * */
+type MessageBodyDecoder<T extends MessageType> = (body: MessageBodyMap[T]) => MessageBodyMap[T];
+
+/**
+ * Map of message type -> function that higher-level decodes the message body. If the
+ * body is already in the correct form just from json.parse(), should be null.
+ *
+ * Message types whose bodies need higher-level decoding (say, string -> Date conversion)
+ * implement or reference those decoding functions here.
+ *
+ * All message types must be present in the map so as to require developers to think about
+ * this need when adding new message types.
  */
-type MessageHeaderMap = {
-  [MessageType.WORKSPACE_HELLO]: MessageHeaders;
-  [MessageType.WORKSPACE_COUNT_CHANGED]: MessageHeaders;
-  [MessageType.CONNECTION_EVENT]: MessageHeaders;
-  [MessageType.PROTOCOL_ERROR]: ReplyMessageHeaders;
+export const MessageBodyDecoders: { [K in MessageType]: MessageBodyDecoder<K> | null } = {
+  [MessageType.WORKSPACE_HELLO]: null,
+  [MessageType.WORKSPACE_COUNT_CHANGED]: null,
+  [MessageType.CONNECTION_EVENT]: (body: ConnectionEventBody) => {
+    // generic object -> Connection object conversion (includes string -> Date conversions)
+    body.connection = ConnectionFromJSON(body.connection);
+
+    // explicitly check and raise if any date coversion fails, because JS can't be bothered to throw an error on invalid date strings
+    for (const dateField of [
+      body.connection.status.authentication?.requires_authentication_at,
+      body.connection.status.ccloud?.requires_authentication_at,
+    ] as (Date | undefined)[]) {
+      if (dateField && isNaN(dateField.valueOf())) {
+        throw new Error(
+          "MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid requires_authentication_at date",
+        );
+      }
+    }
+    return body;
+  },
+  [MessageType.PROTOCOL_ERROR]: null,
 };
 
 /**
@@ -158,7 +177,16 @@ export function validateMessageBody(messageType: MessageType, body: unknown): vo
       throw new Error(`Invalid body for message type ${MessageType.PROTOCOL_ERROR}`);
     }
   } else if (messageType === MessageType.CONNECTION_EVENT) {
-    // lots of other possible things to test, too many to list here for now.
+    const connEventBody = body as ConnectionEventBody;
+    // Ensure body.action is a valid ConnectionEventAction
+    if (!Object.values(ConnectionEventAction).includes(connEventBody.action)) {
+      throw new Error(
+        `MessageBodyDeserializers[MessageType.CONNECTION_EVENT]: Invalid ConnectionEventAction: ${connEventBody.action}`,
+      );
+    }
+    if (!instanceOfConnection(connEventBody.connection)) {
+      throw new Error(`Invalid body for message type ${MessageType.CONNECTION_EVENT}`);
+    }
   } else {
     throw new Error(`validateMessageBody(): Unknown message type: ${messageType}`);
   }

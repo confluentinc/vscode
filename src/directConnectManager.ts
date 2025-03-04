@@ -6,11 +6,14 @@ import {
   ConnectionSpec,
   ConnectionsResourceApi,
   ConnectionType,
+  instanceOfApiKeyAndSecret,
+  instanceOfBasicCredentials,
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
 import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
+import { DirectResourceLoader, ResourceLoader } from "./loaders";
 import { Logger } from "./logging";
 import { ConnectionId, isDirect } from "./models/resource";
 import { getSidecar } from "./sidecar";
@@ -18,11 +21,9 @@ import {
   tryToCreateConnection,
   tryToDeleteConnection,
   tryToUpdateConnection,
-  waitForConnectionToBeStable,
 } from "./sidecar/connections";
+import { ConnectionStateWatcher, waitForConnectionToBeStable } from "./sidecar/connections/watcher";
 import { SecretStorageKeys } from "./storage/constants";
-import { DirectResourceLoader } from "./storage/directResourceLoader";
-import { ResourceLoader } from "./storage/resourceLoader";
 import {
   CustomConnectionSpec,
   DirectConnectionsById,
@@ -173,7 +174,7 @@ export class DirectConnectionManager {
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
     // at this point incoming spec has placeholder secrets... look up the associated ConnectionSpec
-    const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
+    const currentSpec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
       incomingSpec.id,
     );
     if (!currentSpec) {
@@ -189,6 +190,13 @@ export class DirectConnectionManager {
       );
       return;
     }
+
+    logUsage(UserEvent.DirectConnectionAction, {
+      type: currentSpec.formConnectionType,
+      action: "updated",
+      withKafka: !!updatedSpec.kafka_cluster,
+      withSchemaRegistry: !!updatedSpec.schema_registry,
+    });
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
     // (spec comes first because the ConnectionSpec will try to override `id` as a string)
@@ -304,9 +312,19 @@ export class DirectConnectionManager {
         `created and checked ${connectionIdsToCheck.length} new connection(s), firing event`,
       );
     }
+
+    // rehydrate the websocket connection state watcher with the known connections to let it fire
+    // off events as needed and determine connection stability, and also let any callers of the
+    // watcher's `getLatestConnectionEvent` method get the latest connection status (e.g. if they
+    // missed the initial event(s))
+    const watcher = ConnectionStateWatcher.getInstance();
+    sidecarDirectConnections.forEach((conn) => {
+      watcher.cacheConnectionIfNeeded(conn);
+    });
   }
 }
-function mergeSecrets(
+
+export function mergeSecrets(
   currentSpec: ConnectionSpec,
   incomingSpec: CustomConnectionSpec,
 ): ConnectionSpec {
@@ -314,15 +332,16 @@ function mergeSecrets(
   const currentKafkaCreds = currentSpec.kafka_cluster?.credentials;
   // if there are kafka credentials we need to check/replace the secrets
   if (incomingKafkaCreds) {
-    if ("password" in incomingKafkaCreds) {
+    if (instanceOfBasicCredentials(incomingKafkaCreds)) {
       if (incomingKafkaCreds.password === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingKafkaCreds.password = currentKafkaCreds.password;
+        if (currentKafkaCreds && instanceOfBasicCredentials(currentKafkaCreds)) {
+          incomingKafkaCreds.password = currentKafkaCreds.password;
+        }
       }
-    } else if ("api_secret" in incomingKafkaCreds) {
+    } else if (instanceOfApiKeyAndSecret(incomingKafkaCreds)) {
       if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
+        if (currentKafkaCreds && instanceOfApiKeyAndSecret(currentKafkaCreds))
+          incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
       }
     }
   }
@@ -330,27 +349,81 @@ function mergeSecrets(
   const incomingSchemaCreds = incomingSpec.schema_registry?.credentials;
   const currentSchemaCreds = currentSpec.schema_registry?.credentials;
   if (incomingSchemaCreds) {
-    if ("password" in incomingSchemaCreds) {
+    if (instanceOfBasicCredentials(incomingSchemaCreds)) {
       if (incomingSchemaCreds.password === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingSchemaCreds.password = currentSchemaCreds.password;
+        if (currentSchemaCreds && instanceOfBasicCredentials(currentSchemaCreds))
+          incomingSchemaCreds.password = currentSchemaCreds.password;
       }
-    } else if ("api_secret" in incomingSchemaCreds) {
+    } else if (instanceOfApiKeyAndSecret(incomingSchemaCreds)) {
       if (incomingSchemaCreds.api_secret === "fakeplaceholdersecrethere") {
-        // @ts-expect-error the types don't know which credentials are present
-        incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
+        if (currentSchemaCreds && instanceOfApiKeyAndSecret(currentSchemaCreds))
+          incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
       }
     }
   }
+
+  // need to replace ssl.truststore.password, ssl.keystore.password, ssl.keystore.key_password (if they have a placeholder & we have a secret stored)
+  const incomingKafkaTLS = incomingSpec.kafka_cluster?.ssl;
+  const currentKafkaTLS = currentSpec.kafka_cluster?.ssl;
+  if (incomingKafkaTLS) {
+    if (
+      incomingKafkaTLS.truststore?.password === "fakeplaceholdersecrethere" &&
+      currentKafkaTLS?.truststore?.password
+    ) {
+      incomingKafkaTLS.truststore.password = currentKafkaTLS.truststore.password;
+    }
+    if (
+      incomingKafkaTLS.keystore?.password === "fakeplaceholdersecrethere" &&
+      currentKafkaTLS?.keystore?.password
+    ) {
+      incomingKafkaTLS.keystore.password = currentKafkaTLS.keystore.password;
+    }
+    if (
+      incomingKafkaTLS.keystore?.key_password === "fakeplaceholdersecrethere" &&
+      currentKafkaTLS?.keystore?.key_password
+    ) {
+      incomingKafkaTLS.keystore.key_password = currentKafkaTLS.keystore.key_password;
+    }
+  }
+
+  const incomingSchemaTLS = incomingSpec.schema_registry?.ssl;
+  const currentSchemaTLS = currentSpec.schema_registry?.ssl;
+  if (incomingSchemaTLS) {
+    if (
+      incomingSchemaTLS.truststore?.password === "fakeplaceholdersecrethere" &&
+      currentSchemaTLS?.truststore?.password
+    ) {
+      incomingSchemaTLS.truststore.password = currentSchemaTLS.truststore.password;
+    }
+    if (
+      incomingSchemaTLS.keystore?.password === "fakeplaceholdersecrethere" &&
+      currentSchemaTLS?.keystore?.password
+    ) {
+      incomingSchemaTLS.keystore.password = currentSchemaTLS.keystore.password;
+    }
+    if (
+      incomingSchemaTLS.keystore?.key_password === "fakeplaceholdersecrethere" &&
+      currentSchemaTLS?.keystore?.key_password
+    ) {
+      incomingSchemaTLS.keystore.key_password = currentSchemaTLS.keystore.key_password;
+    }
+  }
+  const kafkaSslEnabled =
+    incomingSpec.kafka_cluster?.ssl?.enabled ?? currentSpec.kafka_cluster?.ssl?.enabled ?? true;
+
+  const schemaSslEnabled =
+    incomingSpec.schema_registry?.ssl?.enabled ?? currentSpec.schema_registry?.ssl?.enabled ?? true;
   const mergedSpec: ConnectionSpec = {
     ...incomingSpec,
     kafka_cluster: incomingSpec.kafka_cluster && {
       ...incomingSpec.kafka_cluster,
       credentials: incomingKafkaCreds,
+      ssl: { enabled: kafkaSslEnabled, ...currentKafkaTLS, ...incomingKafkaTLS },
     },
     schema_registry: incomingSpec.schema_registry && {
       ...incomingSpec.schema_registry,
       credentials: incomingSchemaCreds,
+      ssl: { enabled: schemaSslEnabled, ...currentSchemaTLS, ...incomingSchemaTLS },
     },
   };
   return mergedSpec;

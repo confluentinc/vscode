@@ -1,9 +1,25 @@
 import * as assert from "assert";
 import "mocha";
 import * as vscode from "vscode";
-import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources";
-import { IconNames } from "../constants";
-import { Schema, SchemaType, generateSchemaSubjectGroups, getSubjectIcon } from "./schema";
+import {
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_SCHEMA,
+} from "../../tests/unit/testResources";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { EnvironmentId } from "./resource";
+import {
+  Schema,
+  SchemaTreeItem,
+  SchemaType,
+  Subject,
+  SubjectTreeItem,
+  getLanguageTypes,
+  getSubjectIcon,
+  subjectMatchesTopicName,
+} from "./schema";
 
 describe("Schema model methods", () => {
   it(".matchesTopicName() success / fail tests", () => {
@@ -23,6 +39,14 @@ describe("Schema model methods", () => {
       ["test-topic-MyRecordSchema", "test-topic-MyRecordSchema", false], // isn't TopicRecordNameStrategy, but exact match, which is nothing.
     ];
     for (const [subject, topic, expected] of testSchemas) {
+      // Test subjectMatchesTopicName() directly, the underlying implementation.
+      assert.equal(
+        subjectMatchesTopicName(subject, topic),
+        expected,
+        `subject: ${subject}, topic: ${topic}`,
+      );
+
+      // and also the passthrough (legacy, will probably end up being removed) method on the Schema class.
       const schema = Schema.create({ ...TEST_CCLOUD_SCHEMA, subject });
       assert.equal(
         schema.matchesTopicName(topic),
@@ -64,173 +88,29 @@ describe("Schema model methods", () => {
     });
     assert.equal(schema.fileName(), "test-topic.100123.v1.confluent.avsc");
   });
-});
 
-// TODO: update the `as Schema[]` sections below once ContainerTreeItem<T> is implemented
-describe("Schema helper functions", () => {
-  const valueSubject = "test-topic-value";
-  const keySubject = "test-topic-key";
-  const otherSubject = "test-topic";
-  const schemas: Schema[] = [
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: valueSubject,
+  it("nextVersionDraftFileName() should return the correct file name", () => {
+    const schema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+      subject: "test-topicValue",
+      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
       version: 1,
-      type: SchemaType.Avro,
-      id: "1",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: valueSubject,
-      version: 2,
-      type: SchemaType.Avro,
-      id: "2",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: keySubject,
-      version: 1,
-      type: SchemaType.Protobuf,
-      id: "3",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: otherSubject,
-      version: 1,
-      type: SchemaType.Json,
-      id: "4",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: otherSubject,
-      version: 3,
-      type: SchemaType.Json,
-      id: "5",
-    }),
-    Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: otherSubject,
-      version: 2,
-      type: SchemaType.Json,
-      id: "6",
-    }),
-  ];
+    });
 
-  it("generateSchemaSubjectGroups() should group schemas under a subject-labeled container item", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-    assert.equal(groups.length, 3, `should have three subject groups, got ${groups.length}`);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.ok(testTopicGroup);
-    assert.equal(testTopicGroup.label, valueSubject);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.ok(anotherTopicGroup);
-    assert.equal(anotherTopicGroup.label, keySubject);
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    assert.ok(extraTopicGroup);
-    assert.equal(extraTopicGroup.label, otherSubject);
+    // 0 as draft number means simpler filename.
+    assert.equal(schema.nextVersionDraftFileName(0), `test-topicValue.v2-draft.confluent.avsc`);
+    assert.equal(schema.nextVersionDraftFileName(1), `test-topicValue.v2-draft-1.confluent.avsc`);
   });
 
-  it("generateSchemaSubjectGroups() should contain the correct number of schemas as children", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children;
-    assert.equal(testTopicSchemas.length, 2);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children;
-    assert.equal(anotherTopicSchemas.length, 1);
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children;
-    assert.equal(extraTopicSchemas.length, 3);
-  });
-
-  it("generateSchemaSubjectGroups() should show the schema type and version count in the description", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(testTopicGroup?.description, "AVRO (2)");
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(anotherTopicGroup?.description, "PROTOBUF (1)");
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    assert.equal(extraTopicGroup?.description, "JSON (3)");
-  });
-
-  it("generateSchemaSubjectGroups() should sort subjects' schemas in version-descending order", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicSchemas = testTopicGroup!.children;
+  it("ccloudUrl getter should return the correct URL", () => {
+    // ccloud schemas have a ccloud url.
     assert.equal(
-      testTopicSchemas[0].version,
-      2,
-      `first version should be 2, got v${testTopicSchemas[0].version}`,
+      TEST_CCLOUD_SCHEMA.ccloudUrl,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA.environmentId}/stream-governance/schema-registry/data-contracts/${TEST_CCLOUD_SCHEMA.subject}`,
     );
 
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicSchemas = anotherTopicGroup!.children;
-    assert.equal(
-      anotherTopicSchemas[0].version,
-      1,
-      `first version should be 1, got v${anotherTopicSchemas[0].version}`,
-    );
-
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicSchemas = extraTopicGroup!.children;
-    assert.equal(
-      extraTopicSchemas[0].version,
-      3,
-      `first version should be 3, got v${extraTopicSchemas[0].version}`,
-    );
-  });
-
-  it("generateSchemaSubjectGroups() should set the context value to include 'multiple-versions' if a subject has more than one schema", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const mvRe = /multiple-versions/;
-    // valueSubject has two schema versions, so it should have the context value clause.
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(mvRe.test(testTopicGroup!.contextValue!), true);
-
-    // Only one version, so no context value.
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(mvRe.test(anotherTopicGroup!.contextValue!), false);
-  });
-
-  it("generateSchemaSubjectGroups() should set the context value to end with 'schema-subject'", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    const schemaGroupRe = /schema-subject$/;
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    assert.equal(schemaGroupRe.test(testTopicGroup!.contextValue!), true);
-
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    assert.equal(schemaGroupRe.test(anotherTopicGroup!.contextValue!), true);
-  });
-
-  it("generateSchemaSubjectGroups() should assign the correct icon based on schema subject suffix", () => {
-    const groups = generateSchemaSubjectGroups(schemas);
-
-    // value schemas should have the symbol-object icon
-    const testTopicGroup = groups.find((group) => group.label === valueSubject);
-    const testTopicIcon = testTopicGroup!.iconPath as vscode.ThemeIcon;
-    assert.equal(testTopicIcon.id, new vscode.ThemeIcon(IconNames.VALUE_SUBJECT).id);
-
-    // key schemas should have the key icon
-    const anotherTopicGroup = groups.find((group) => group.label === keySubject);
-    const anotherTopicIcon = anotherTopicGroup!.iconPath as vscode.ThemeIcon;
-    assert.equal(anotherTopicIcon.id, new vscode.ThemeIcon(IconNames.KEY_SUBJECT).id);
-
-    // other schemas should have the question icon
-    const extraTopicGroup = groups.find((group) => group.label === otherSubject);
-    const extraTopicIcon = extraTopicGroup!.iconPath as vscode.ThemeIcon;
-    assert.equal(extraTopicIcon.id, new vscode.ThemeIcon(IconNames.OTHER_SUBJECT).id);
+    // Non-ccloud schemas do not
+    assert.equal(TEST_LOCAL_SCHEMA.ccloudUrl, "");
   });
 });
 
@@ -259,4 +139,90 @@ describe("getSubjectIcon", () => {
       assert.deepEqual(icon, new vscode.ThemeIcon(expected as IconNames));
     });
   }
+});
+
+describe("getLanguageTypes", () => {
+  type SchemaLanguagePair = [SchemaType, string[]];
+  const schemaLanguagePairs: SchemaLanguagePair[] = [
+    [SchemaType.Avro, ["avroavsc", "json"]],
+    [SchemaType.Json, ["json"]],
+    [SchemaType.Protobuf, ["proto3", "proto"]],
+  ];
+
+  for (const [schemaType, expected] of schemaLanguagePairs) {
+    it(`should return ${expected} for schema type ${schemaType}`, () => {
+      const languageType = getLanguageTypes(schemaType);
+      assert.deepEqual(languageType, expected);
+    });
+  }
+
+  it(`Schema.get`);
+});
+
+describe("SchemaTreeItem", () => {
+  it("constructor should set the correct contextValue", () => {
+    const evolvableShema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error Require<T>
+      isHighestVersion: true,
+    });
+    const evolvableTreeItem = new SchemaTreeItem(evolvableShema);
+    assert.equal(evolvableTreeItem.contextValue, "ccloud-evolvable-schema");
+
+    const unevolvableSchema = TEST_CCLOUD_SCHEMA.copy({
+      // @ts-expect-error Require<T>
+      isHighestVersion: false,
+    });
+    const unevolvableTreeItem = new SchemaTreeItem(unevolvableSchema);
+    assert.equal(unevolvableTreeItem.contextValue, "ccloud-schema");
+  });
+});
+
+describe("SubjectTreeItem", () => {
+  it("constructor should do the right things when no schemas present", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT);
+    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+
+    assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+    assert.equal(subjectTreeItem.description, undefined);
+  });
+
+  it("constructor should do the right things when single schema version present", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
+    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+
+    assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
+    assert.equal(subjectTreeItem.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+    assert.equal(subjectTreeItem.description, "AVRO (1)");
+  });
+
+  it("constructor should do the right things when multiple schema versions present", () => {
+    const subjectWithSchemasTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.equal(subjectWithSchemasTreeItem.contextValue, "multiple-versions-schema-subject");
+
+    assert.equal(subjectWithSchemasTreeItem.label, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
+    assert.equal(subjectWithSchemasTreeItem.id, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
+    assert.equal(
+      subjectWithSchemasTreeItem.collapsibleState,
+      vscode.TreeItemCollapsibleState.Collapsed,
+    );
+    assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
+  });
+
+  it("Test subject icon determination", () => {
+    for (const [name, expected] of [
+      ["test-key", IconNames.KEY_SUBJECT],
+      ["test-value", IconNames.VALUE_SUBJECT],
+      // Should default to value subject even if doesn't smell like it.
+      ["test-other", IconNames.VALUE_SUBJECT],
+    ]) {
+      const subject = new Subject(name, CCLOUD_CONNECTION_ID, "envId" as EnvironmentId, "srId", [
+        TEST_CCLOUD_SCHEMA,
+      ]);
+      const subjectTreeItem = new SubjectTreeItem(subject);
+      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, expected);
+    }
+  });
 });

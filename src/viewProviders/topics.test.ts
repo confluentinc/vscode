@@ -1,25 +1,27 @@
 import * as assert from "assert";
-import * as vscode from "vscode";
+import * as sinon from "sinon";
+import { TreeItemCollapsibleState } from "vscode";
 import {
+  TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
-  TEST_CCLOUD_SCHEMA_REGISTRY,
-  TEST_LOCAL_KAFKA_TOPIC,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
-import { getTestStorageManager } from "../../tests/unit/testUtils";
-import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem } from "../models/schema";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import { topicSearchSet } from "../emitters";
+import { CCloudResourceLoader } from "../loaders";
+import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
-import { StorageManager } from "../storage";
-import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
-import { constructResourceLoaderSingletons } from "../storage/resourceLoaderInitialization";
-import { getResourceManager } from "../storage/resourceManager";
-import { TopicViewProvider, loadTopicSchemas } from "./topics";
+import { SEARCH_DECORATION_URI_SCHEME } from "./search";
+import { TopicViewProvider } from "./topics";
 
 describe("TopicViewProvider methods", () => {
   let provider: TopicViewProvider;
 
-  before(() => {
+  before(async () => {
+    await getTestExtensionContext();
     provider = TopicViewProvider.getInstance();
   });
 
@@ -33,93 +35,144 @@ describe("TopicViewProvider methods", () => {
     assert.ok(treeItem instanceof KafkaTopicTreeItem);
   });
 
-  it("getTreeItem() should pass ContainerTreeItems through directly", () => {
-    const container = new ContainerTreeItem<Schema>(
-      "test",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [TEST_CCLOUD_SCHEMA],
-    );
-    const treeItem = provider.getTreeItem(container);
-    assert.deepStrictEqual(treeItem, container);
+  it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.ok(treeItem instanceof SubjectTreeItem);
   });
 });
 
-describe("TopicViewProvider helper functions", () => {
-  const topicName = "test-topic";
-  const valueSubject = `${topicName}-value`;
-  const preloadedSchemas: Schema[] = [
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 1, id: "1" }),
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: valueSubject, version: 2, id: "2" }),
-    Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "other-topic", version: 1, id: "3" }),
-  ];
+describe("TopicViewProvider search behavior", () => {
+  let provider: TopicViewProvider;
+  let ccloudLoader: CCloudResourceLoader;
 
-  let storageManager: StorageManager;
-  const ccloudResourceLoader = CCloudResourceLoader.getInstance();
+  let sandbox: sinon.SinonSandbox;
+  let getTopicsForClusterStub: sinon.SinonStub;
+  let getSubjectsStub: sinon.SinonStub;
+  let getSchemaSubjectGroupStub: sinon.SinonStub;
 
   before(async () => {
-    storageManager = await getTestStorageManager();
-    constructResourceLoaderSingletons();
+    await getTestExtensionContext();
   });
 
   beforeEach(async () => {
-    // fresh slate for each test
-    await storageManager.clearWorkspaceState();
+    sandbox = sinon.createSandbox();
+
+    // stub the methods called while inside loadTopicSchemas() since we can't stub it directly
+    ccloudLoader = CCloudResourceLoader.getInstance();
+    getTopicsForClusterStub = sandbox.stub(ccloudLoader, "getTopicsForCluster").resolves([]);
+    getSubjectsStub = sandbox.stub(ccloudLoader, "getSubjects").resolves([]);
+    getSchemaSubjectGroupStub = sandbox.stub(ccloudLoader, "getSchemaSubjectGroup").resolves([]);
+
+    provider = TopicViewProvider.getInstance();
+    provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
   });
 
-  afterEach(async () => {
-    // clean up after each test
-    await storageManager.clearWorkspaceState();
+  afterEach(() => {
+    TopicViewProvider["instance"] = null;
+    sandbox.restore();
   });
 
-  // TODO: update this once local schemas are supported
-  it("loadTopicSchemas() should not return schemas for topics w/o any known related schemas", async () => {
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
+  it("getChildren() should filter root-level topics based on search string", async () => {
+    getTopicsForClusterStub.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
+    // Topic name matches the search string
+    topicSearchSet.fire(TEST_CCLOUD_KAFKA_TOPIC.name);
 
-    // TODO: This actually tries to talk out through to docker / local schema registry now.
-    // We should stub out the interaction methods, probably for a specific local schema registry.
-    // test suite. Right now, this would fail if you have docker running, local schema registry
-    // running, and with the right subject ('test-topic-value') in the local schema registry.
+    const rootElements = await provider.getChildren();
 
-    const topic = TEST_LOCAL_KAFKA_TOPIC.copy({ name: topicName });
-    const schemas = await loadTopicSchemas(topic);
-    assert.ok(Array.isArray(schemas));
-    assert.equal(schemas.length, 0);
+    assert.strictEqual(rootElements.length, 1);
+    assert.deepStrictEqual(rootElements[0], TEST_CCLOUD_KAFKA_TOPIC);
   });
 
-  it("loadTopicSchemas() should return schemas for CCloud Kafka topics when available", async () => {
-    // preload Schema Registry + schemas (usually done when loading environments)
-    const resourceManager = getResourceManager();
-    await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
-    await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, preloadedSchemas);
-    // set the loader-level cache state to true as if we had already loaded the schemas
-    ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
-    // and the coarse resources
-    ccloudResourceLoader["coarseLoadingComplete"] = true;
+  it("getChildren() should filter schema subject containers based on search string", async () => {
+    getSubjectsStub.resolves([
+      TEST_CCLOUD_SCHEMA.subjectObject(),
+      TEST_LOCAL_SCHEMA.subjectObject(), // has different subject name at least. Should be skipped 'cause won't match search.
+    ]);
+    getSchemaSubjectGroupStub.resolves([TEST_CCLOUD_SCHEMA]);
+    // Schema subject matches the search string
+    topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 
-    // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-    const topic = TEST_CCLOUD_KAFKA_TOPIC.copy({ name: topicName });
-    // Should return a nonempty ContainerTreeItem describing the schema group.
-    const schemas = await loadTopicSchemas(topic);
+    const children = await provider.getChildren(TEST_CCLOUD_KAFKA_TOPIC);
 
-    assert.ok(Array.isArray(schemas));
-    // more specific testing is in `src/models/schema.test.ts` for the `generateSchemaSubjectGroups()`
-    // function, but for here we just care about getting one schema subject container item back
-    assert.equal(schemas.length, 1);
-    assert.equal(schemas[0].label, valueSubject);
+    // Will be a Subject carrying one single Schema, TEST_CCLOUD_SCHEMA.
+    assert.strictEqual(children.length, 1);
+    assert.ok(children[0] instanceof Subject);
+    assert.equal(children[0].name, TEST_CCLOUD_SCHEMA.subject);
+    assert.equal(children[0].schemas!.length, 1);
   });
 
-  it("loadTopicSchemas() should not return schemas for CCloud Kafka topics if none are available in extension state", async () => {
-    await getResourceManager().setSchemasForRegistry(
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-      preloadedSchemas,
+  it("getChildren() should show correct count in tree view message when items match search", async () => {
+    getTopicsForClusterStub.resolves([
+      TEST_CCLOUD_KAFKA_TOPIC,
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "other-topic" }),
+    ]);
+    // Topic name matches the search string of one topic
+    const searchStr = TEST_CCLOUD_KAFKA_TOPIC.name;
+    topicSearchSet.fire(searchStr);
+
+    await provider.getChildren();
+
+    assert.strictEqual(provider.searchMatches.size, 1);
+    assert.strictEqual(provider.totalItemCount, 2);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${searchStr}"`,
     );
-    // set the loader-level cache state to true as if we had already loaded the schemas
-    ccloudResourceLoader["schemaRegistryCacheStates"].set(TEST_CCLOUD_SCHEMA_REGISTRY.id, true);
+  });
 
-    const topic = KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: topicName });
+  it("getChildren() should clear tree view message when search is cleared", async () => {
+    // Search cleared
+    topicSearchSet.fire(null);
 
-    const schemas = await loadTopicSchemas(topic);
-    assert.ok(Array.isArray(schemas));
-    assert.equal(schemas.length, 0);
+    await provider.getChildren();
+
+    assert.strictEqual(provider["treeView"].message, undefined);
+  });
+
+  it("getTreeItem() should set the resourceUri of topic items whose name matches the search string", async () => {
+    // Topic name matches the search string
+    topicSearchSet.fire(TEST_CCLOUD_KAFKA_TOPIC.name);
+
+    const treeItem = await provider.getTreeItem(TEST_CCLOUD_KAFKA_TOPIC);
+
+    assert.ok(treeItem instanceof KafkaTopicTreeItem);
+    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+  });
+
+  it("getTreeItem() should set the resourceUri of schema subject containers whose subject matches the search string", async () => {
+    // Schema ID matches the search string
+    topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
+
+    const treeItem = await provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+
+    assert.ok(treeItem instanceof SubjectTreeItem);
+    assert.ok(treeItem.resourceUri);
+    assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+  });
+
+  it("getTreeItem() should expand topic items when their schemas match search", async () => {
+    const topic = KafkaTopic.create({
+      ...TEST_CCLOUD_KAFKA_TOPIC,
+      children: [TEST_CCLOUD_SUBJECT],
+    });
+    // Schema subject matches search
+    topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
+
+    const treeItem = await provider.getTreeItem(topic);
+
+    assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Expanded);
+  });
+
+  it("getTreeItem() should collapse topic items when schemas exist but don't match search", async () => {
+    const topic = KafkaTopic.create({
+      ...TEST_CCLOUD_KAFKA_TOPIC,
+      children: [TEST_CCLOUD_SUBJECT],
+    });
+    // Search string doesn't match topic or schema
+    topicSearchSet.fire("non-matching-search");
+
+    const treeItem = await provider.getTreeItem(topic);
+
+    assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
   });
 });

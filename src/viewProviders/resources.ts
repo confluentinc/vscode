@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
+import { ConnectionStatus } from "../clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
   EXTENSION_VERSION,
@@ -16,11 +17,13 @@ import {
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
+  resourceSearchSet,
 } from "../emitters";
-import { ExtensionContextNotSetError } from "../errors";
+import { ExtensionContextNotSetError, showErrorNotificationWithButtons } from "../errors";
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import {
   CCloudEnvironment,
@@ -37,7 +40,7 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel, isDirect } from "../models/resource";
+import { ConnectionId, ConnectionLabel, isDirect, ISearchable } from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -45,9 +48,13 @@ import {
   SchemaRegistry,
   SchemaRegistryTreeItem,
 } from "../models/schemaRegistry";
-import { hasCCloudAuthSession, updateLocalConnection } from "../sidecar/connections";
-import { CCloudResourceLoader } from "../storage/ccloudResourceLoader";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
+import { updateLocalConnection } from "../sidecar/connections/local";
+import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
+import { logUsage, UserEvent } from "../telemetry/events";
+import { updateCollapsibleStateFromSearch } from "./collapsing";
+import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 const logger = new Logger("viewProviders.resources");
 
@@ -93,6 +100,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   // events to us via connectionUsable emitter.
   private cachedLoadingStates: Map<string, boolean> = new Map();
 
+  /** String to filter items returned by `getChildren`, if provided. */
+  itemSearchString: string | null = null;
+  /** Count of how many times the user has set a search string */
+  searchStringSetCount: number = 0;
+  /** Items directly matching the {@linkcode itemSearchString}, if provided. */
+  searchMatches: Set<ResourceViewProviderData> = new Set();
+  /** Count of all items returned from `getChildren()`. */
+  totalItemCount: number = 0;
+
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
@@ -127,19 +143,32 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   }
 
   async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
+    let treeItem: vscode.TreeItem;
     if (element instanceof Environment) {
       if (isDirect(element)) {
         // update contextValues for all known direct environments, not just the one that was updated
         await this.updateEnvironmentContextValues();
       }
-      return new EnvironmentTreeItem(element);
+      treeItem = new EnvironmentTreeItem(element);
     } else if (element instanceof KafkaCluster) {
-      return new KafkaClusterTreeItem(element);
+      treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
-      return new SchemaRegistryTreeItem(element);
+      treeItem = new SchemaRegistryTreeItem(element);
+    } else {
+      // should only be left with ContainerTreeItems
+      treeItem = element;
     }
-    // should only be left with ContainerTreeItems
-    return element;
+
+    if (this.itemSearchString) {
+      if (itemMatchesSearch(element, this.itemSearchString)) {
+        // special URI scheme to decorate the tree item with a dot to the right of the label,
+        // and color the label, description, and decoration so it stands out in the tree view
+        treeItem.resourceUri = vscode.Uri.parse(`${SEARCH_DECORATION_URI_SCHEME}:/${element.id}`);
+      }
+      treeItem = updateCollapsibleStateFromSearch(element, treeItem, this.itemSearchString);
+    }
+
+    return treeItem;
   }
 
   async getChildren(element?: ResourceViewProviderData): Promise<ResourceViewProviderData[]> {
@@ -150,25 +179,24 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       this.rehydratedDirectConnections = true;
     }
 
+    let children: ResourceViewProviderData[] = [];
+
     if (element) {
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof ContainerTreeItem) {
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
-        return element.children;
+        children = element.children;
       } else if (element instanceof CCloudEnvironment) {
-        return await getCCloudEnvironmentChildren(element);
+        children = await getCCloudEnvironmentChildren(element);
       } else if (element instanceof DirectEnvironment) {
-        const children: DirectResources[] = [];
         if (element.kafkaClusters)
           children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
         if (element.schemaRegistry) children.push(element.schemaRegistry);
         logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
-        return children;
       }
     } else {
-      // --- ROOT-LEVEL ITEMS ---
-      // NOTE: we end up here when the tree is first loaded
+      // start loading the root-level items
       const resourcePromises: [
         Promise<ContainerTreeItem<CCloudEnvironment>>,
         Promise<ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>>,
@@ -180,17 +208,21 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>,
         DirectEnvironment[],
       ] = await Promise.all(resourcePromises);
+      children = [ccloudContainer, localContainer, ...directEnvironments];
 
       if (this.forceDeepRefresh) {
+        // reset the flag after the initial deep refresh
         this.forceDeepRefresh = false;
       }
 
+      // store instances of the environments for any per-item updates that need to happen later
       if (ccloudContainer) {
         const ccloudEnvs = (ccloudContainer as ContainerTreeItem<CCloudEnvironment>).children;
         ccloudEnvs.forEach((env) => this.environmentsMap.set(env.id, env));
       }
       // TODO: we aren't tracking LocalEnvironments yet, so skip that here
       if (directEnvironments) {
+        const watcher = ConnectionStateWatcher.getInstance();
         directEnvironments.forEach((env) => {
           // if we have a cached loading state for this environment
           // (due to websocket events coming in before the graphql query completes),
@@ -200,14 +232,61 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             env.isLoading = cachedLoading;
             this.cachedLoadingStates.delete(env.id);
           }
+          // if our ConnectionStatusWatcher was either rehydrated with connection info from the
+          // list-connections (HTTP) endpoint or has received a websocket event for this connection,
+          // update the environment with the latest status (e.g. `FAILED` state reasons)
+          const latestStatus: ConnectionStatus | undefined = watcher.getLatestConnectionEvent(
+            env.connectionId,
+          )?.connection.status;
+          if (latestStatus) {
+            env = this.updateEnvironmentFromConnectionStatus(env, latestStatus);
+          }
           this.environmentsMap.set(env.id, env);
         });
       }
-
-      return [ccloudContainer, localContainer, ...directEnvironments];
     }
 
-    return [];
+    this.totalItemCount += children.length;
+    if (this.itemSearchString) {
+      // if the parent item matches the search string, return all children so the user can expand
+      // and see them all, even if just the parent item matched and shows the highlight(s)
+      const parentMatched = element && itemMatchesSearch(element, this.itemSearchString);
+      if (!parentMatched) {
+        // filter the children based on the search string
+        children = filterItems(
+          [...children] as ISearchable[],
+          this.itemSearchString,
+        ) as ResourceViewProviderData[];
+      }
+      // aggregate all elements that directly match the search string (not just how many were
+      // returned in the tree view since children of directly-matching parents will be included)
+      const matchingChildren = children.filter((child) =>
+        itemMatchesSearch(child, this.itemSearchString!),
+      );
+      matchingChildren.forEach((child) => this.searchMatches.add(child));
+      // update the tree view message to show how many results were found to match the search string
+      // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
+      // will never be called and the message won't update
+      const plural = this.totalItemCount > 1 ? "s" : "";
+      if (this.searchMatches.size > 0) {
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
+      } else {
+        // let empty state take over
+        this.treeView.message = undefined;
+      }
+      logUsage(UserEvent.ViewSearchAction, {
+        status: "view results filtered",
+        view: "Resources",
+        fromItemExpansion: element !== undefined,
+        searchStringSetCount: this.searchStringSetCount,
+        filteredItemCount: this.searchMatches.size,
+        totalItemCount: this.totalItemCount,
+      });
+    } else {
+      this.treeView.message = undefined;
+    }
+
+    return children;
   }
 
   /** Set up event listeners for this view provider. */
@@ -249,8 +328,31 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     );
 
     const connectionUsableSub: vscode.Disposable = connectionStable.event((id: ConnectionId) => {
+      logger.debug("connectionStable event fired", { id });
       this.refreshConnection(id, false);
     });
+
+    const resourceSearchSetSub: vscode.Disposable = resourceSearchSet.event(
+      (searchString: string | null) => {
+        logger.debug("resourceSearchSet event fired, refreshing", { searchString });
+        // mainly captures the last state of the search internals to see if search was adjusted after
+        // a previous search was used, or if this is the first time search is being used
+        if (searchString !== null) {
+          // used to group search events without sending the search string itself
+          this.searchStringSetCount++;
+        }
+        logUsage(UserEvent.ViewSearchAction, {
+          status: `search string ${searchString ? "set" : "cleared"}`,
+          view: "Resources",
+          searchStringSetCount: this.searchStringSetCount,
+          hadExistingSearchString: this.itemSearchString !== null,
+          lastFilteredItemCount: this.searchMatches.size,
+          lastTotalItemCount: this.totalItemCount,
+        });
+        this.setSearch(searchString);
+        this.refresh();
+      },
+    );
 
     return [
       ccloudConnectedSub,
@@ -259,6 +361,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       localKafkaConnectedSub,
       localSchemaRegistryConnectedSub,
       connectionUsableSub,
+      resourceSearchSetSub,
     ];
   }
 
@@ -273,8 +376,9 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       default: {
         // direct connections are treated as environments, so we can look up the direct "environment"
         // by its connection ID
-        const environment = this.environmentsMap.get(id);
+        let environment = this.environmentsMap.get(id) as DirectEnvironment | undefined;
         if (environment) {
+          logger.debug(`refreshing direct environment id="${id}" with loading state: ${loading}`);
           if (!loading) {
             // if the connection is usable, we need to refresh the children of the environment
             // to potentially show the Kafka clusters and Schema Registry and update the collapsible
@@ -284,6 +388,13 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             if (directEnv) {
               environment.kafkaClusters = directEnv.kafkaClusters;
               environment.schemaRegistry = directEnv.schemaRegistry;
+            }
+            // we also need to check for any `FAILED` states' error messages for the Kafka and/or
+            // Schema Registry configs based on the last websocket event
+            const lastStatus: ConnectionStatus | undefined =
+              ConnectionStateWatcher.getInstance().getLatestConnectionEvent(id)?.connection.status;
+            if (lastStatus) {
+              environment = this.updateEnvironmentFromConnectionStatus(environment, lastStatus);
             }
           }
           environment.isLoading = loading;
@@ -298,6 +409,25 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         }
       }
     }
+  }
+
+  /** Update a {@linkcode DirectEnvironment} with the latest connection status from the sidecar.
+   * Used to surface error messages for specific configs through the UI. */
+  updateEnvironmentFromConnectionStatus(
+    env: DirectEnvironment,
+    status: ConnectionStatus,
+  ): DirectEnvironment {
+    if (!isDirect(env)) {
+      return env;
+    }
+    logger.debug("updating environment with last status from connection state watcher", {
+      id: env.id,
+    });
+    // if either of these are undefined, we clear any error text that will be seen in the tooltips;
+    // otherwise we display the error message(s) in the tooltip
+    env.kafkaConnectionFailed = status.kafka_cluster?.errors?.sign_in?.message;
+    env.schemaRegistryConnectionFailed = status.schema_registry?.errors?.sign_in?.message;
+    return env;
   }
 
   /** Update the context values for the current environment's resource availability. This is used
@@ -333,6 +463,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         this.environmentsMap.delete(id);
       }
     });
+  }
+
+  /** Update internal state when the search string is set or unset. */
+  setSearch(searchString: string | null): void {
+    // set/unset the filter so any calls to getChildren() will filter appropriately
+    this.itemSearchString = searchString;
+    // set context value to toggle between "search" and "clear search" actions
+    setContextValue(ContextValues.resourceSearchApplied, searchString !== null);
+    // clear from any previous search filter
+    this.searchMatches = new Set();
+    this.totalItemCount = 0;
   }
 }
 
@@ -375,13 +516,7 @@ export async function loadCCloudResources(
       const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
       logger.error(msg, e);
       Sentry.captureException(e);
-      vscode.window.showErrorMessage(msg, "Open Logs", "File Issue").then(async (action) => {
-        if (action === "Open Logs") {
-          vscode.commands.executeCommand("confluent.showOutputChannel");
-        } else if (action === "File Issue") {
-          vscode.commands.executeCommand("confluent.support.issue");
-        }
-      });
+      showErrorNotificationWithButtons(msg);
     }
 
     cloudContainerItem.collapsibleState =
@@ -436,24 +571,20 @@ export async function loadLocalResources(): Promise<
 
   const localEnvs: LocalEnvironment[] = await getLocalResources();
   logger.debug(`got ${localEnvs.length} local environment(s) from GQL query`);
+
+  const localKafkaClusters: LocalKafkaCluster[] = [];
+  const localSchemaRegistries: LocalSchemaRegistry[] = [];
   if (localEnvs.length > 0) {
     const connectedId = "local-container-connected";
     // enable the "Stop Local Resources" action
     localContainerItem.contextValue = connectedId;
     // unpack the local resources to more easily update the UI elements
-    const localKafkaClusters: LocalKafkaCluster[] = [];
-    const localSchemaRegistries: LocalSchemaRegistry[] = [];
     localEnvs.forEach((env: LocalEnvironment) => {
       localKafkaClusters.push(...env.kafkaClusters);
       if (env.schemaRegistry) {
         localSchemaRegistries.push(env.schemaRegistry);
       }
     });
-    // update the UI based on whether or not we have local resources available
-    await Promise.all([
-      setContextValue(ContextValues.localKafkaClusterAvailable, localEnvs.length > 0),
-      setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
-    ]);
     // XXX: adjust the ID to ensure the collapsible state is correctly updated in the UI
     localContainerItem.id = `local-connected-${EXTENSION_VERSION}`;
     localContainerItem.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
@@ -464,6 +595,12 @@ export async function loadLocalResources(): Promise<
     getResourceManager().setLocalKafkaClusters(localKafkaClusters);
     localContainerItem.children = [...localKafkaClusters, ...localSchemaRegistries];
   }
+
+  // update the UI based on whether or not we have local resources available
+  await Promise.all([
+    setContextValue(ContextValues.localKafkaClusterAvailable, localKafkaClusters.length > 0),
+    setContextValue(ContextValues.localSchemaRegistryAvailable, localSchemaRegistries.length > 0),
+  ]);
 
   return localContainerItem;
 }

@@ -6,30 +6,26 @@ import {
   ApplyScaffoldV1TemplateOperationRequest,
   ListScaffoldV1TemplatesRequest,
   ScaffoldV1Template,
-  ScaffoldV1TemplateCollection,
-  ScaffoldV1TemplateCollectionList,
   ScaffoldV1TemplateList,
   ScaffoldV1TemplateSpec,
-  TemplateCollectionsScaffoldV1Api,
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
-import { Logger } from "./logging";
 import { getSidecar } from "./sidecar";
 
 import { ExtensionContext, ViewColumn } from "vscode";
+import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
-import { logResponseError } from "./errors";
+import { logError } from "./errors";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import { type post } from "./webview/scaffold-form";
+import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
 
-const logger = new Logger("scaffold");
 const scaffoldWebviewCache = new WebviewPanelCache();
 
 export const registerProjectGenerationCommand = (context: ExtensionContext) => {
@@ -49,13 +45,14 @@ export const scaffoldProjectRequest = async () => {
       (template) => template.spec!.display_name === pickedItem?.label,
     );
   } catch (err) {
-    logResponseError(err, "template listing", {}, true);
+    logError(err, "template listing", {}, true);
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return;
   }
 
   if (pickedTemplate !== undefined) {
-    logUsage(UserEvent.ScaffoldTemplatePicked, {
+    logUsage(UserEvent.ProjectScaffoldingAction, {
+      status: "template picked",
       templateName: pickedTemplate.spec!.display_name,
     });
   } else {
@@ -87,7 +84,7 @@ export const scaffoldProjectRequest = async () => {
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }
-  let successfullyAppliedTemplate = false;
+
   const processMessage = async (...[type, body]: Parameters<MessageSender>) => {
     switch (type) {
       case "GetTemplateSpec": {
@@ -102,16 +99,19 @@ export const scaffoldProjectRequest = async () => {
         updateOptionValue(key, value);
         return null satisfies MessageResponse<"SetOptionValue">;
       }
-      case "Submit":
-        logUsage(UserEvent.ScaffoldFormSubmitted, {
+      case "Submit": {
+        logUsage(UserEvent.ProjectScaffoldingAction, {
+          status: "form submitted",
           templateName: templateSpec.display_name,
         });
+        let res: PostResponse = { success: false, message: "Failed to apply template." };
         if (pickedTemplate) {
-          successfullyAppliedTemplate = await applyTemplate(pickedTemplate, body.data);
-        }
-        // only dispose the form if the template was successfully applied
-        if (successfullyAppliedTemplate) optionsForm.dispose();
-        return null satisfies MessageResponse<"Submit">;
+          res = await applyTemplate(pickedTemplate, body.data);
+          // only dispose the form if the template was successfully applied
+          if (res.success) optionsForm.dispose();
+        } else vscode.window.showErrorMessage("Failed to apply template.");
+        return res satisfies MessageResponse<"Submit">;
+      }
     }
   };
   const disposable = handleWebviewMessage(optionsForm.webview, processMessage);
@@ -121,7 +121,7 @@ export const scaffoldProjectRequest = async () => {
 async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
-): Promise<boolean> {
+): Promise<PostResponse> {
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
 
   const stringifiedOptions = Object.fromEntries(
@@ -134,6 +134,7 @@ async function applyTemplate(
       options: stringifiedOptions,
     },
   };
+
   try {
     const applyTemplateResponse: Blob = await client.applyScaffoldV1Template(request);
 
@@ -151,17 +152,19 @@ async function applyTemplate(
 
     if (!fileUris || fileUris.length !== 1) {
       // This means the user cancelled @ save dialog. Show a message and return
-      logUsage(UserEvent.ScaffoldCancelled, {
+      logUsage(UserEvent.ProjectScaffoldingAction, {
+        status: "cancelled before save",
         templateName: pickedTemplate.spec!.display_name,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
-      return false;
+      return { success: false, message: "Project generation cancelled before save." };
     }
 
     const destination = await getNonConflictingDirPath(fileUris[0], pickedTemplate);
 
     await extractZipContents(arrayBuffer, destination);
-    logUsage(UserEvent.ScaffoldCompleted, {
+    logUsage(UserEvent.ProjectScaffoldingAction, {
+      status: "project generated",
       templateName: pickedTemplate.spec!.display_name,
     });
     // Notify the user that the project was generated successfully
@@ -176,7 +179,8 @@ async function applyTemplate(
       // if "true" is set in the `vscode.openFolder` command, it will open a new window instead of
       // reusing the current one
       const keepsExistingWindow = selection.title === "Open in New Window";
-      logUsage(UserEvent.ScaffoldFolderOpened, {
+      logUsage(UserEvent.ProjectScaffoldingAction, {
+        status: "project folder opened",
         templateName: pickedTemplate.spec!.display_name,
         keepsExistingWindow,
       });
@@ -186,19 +190,26 @@ async function applyTemplate(
         keepsExistingWindow,
       );
     }
-    return true;
+    return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    logResponseError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
-    const action = await vscode.window.showErrorMessage(
-      "There was an error while generating the project. Try again or file an issue.",
-      { title: "Try again" },
-      { title: "Report an issue" },
-    );
-    if (action !== undefined) {
-      const cmd = action.title === "Try again" ? "confluent.scaffold" : "confluent.support.issue";
-      await vscode.commands.executeCommand(cmd);
+    logError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
+    let message = "Failed to generate template. An unknown error occurred.";
+    if (e instanceof Error) {
+      message = e.message;
+      // instanceof ResponseError check fails, but we can check if the response property exists & use it
+      const response = (e as ResponseError).response;
+      if (response) {
+        const status = response.status;
+        try {
+          const payload = await response.json().then((json) => JSON.stringify(json));
+          message = `Failed to generate template. ${status}: ${response.statusText}. ${payload}`;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (jsonError) {
+          message = `Failed to generate template. Unable to parse error response: ${e}`;
+        }
+      }
     }
-    return false;
+    return { success: false, message };
   }
 }
 
@@ -269,25 +280,9 @@ async function pickTemplate(
 async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
 
-  // list collections first
-  const collectionsClient: TemplateCollectionsScaffoldV1Api =
-    new TemplateCollectionsScaffoldV1Api();
-  const collectionsResponse: ScaffoldV1TemplateCollectionList =
-    await collectionsClient.listScaffoldV1TemplateCollections({});
-  const collections: ScaffoldV1TemplateCollection[] = Array.from(collectionsResponse.data);
-  if (collections.length === 0) {
-    throw new Error("No template collections found");
-  }
-
-  // then use one of them to list all available templates
-  const vscodeCollection = collections.find((collection) => collection.spec!.name === "vscode");
-  if (!vscodeCollection) {
-    throw new Error("No vscode template collection found");
-  }
-
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
   const requestBody: ListScaffoldV1TemplatesRequest = {
-    template_collection_name: vscodeCollection.spec!.name!,
+    template_collection_name: "vscode",
   };
   return await client.listScaffoldV1Templates(requestBody);
 }

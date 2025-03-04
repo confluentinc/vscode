@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/node";
-import * as fs from "fs";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
@@ -12,11 +11,25 @@ import {
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
 import { MessageViewerConfig } from "../consume";
-import { logResponseError } from "../errors";
+import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
+import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
+import { isCCloud, isDirect } from "../models/resource";
 import { KafkaTopic } from "../models/topic";
+import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
+import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
+import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
+import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
+import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
+import { logUsage, UserEvent } from "../telemetry/events";
+import {
+  executeInWorkerPool,
+  ExecutionResult,
+  isErrorResult,
+  isSuccessResult,
+} from "../utils/workerPool";
 import { getTopicViewProvider } from "../viewProviders/topics";
 import { WebviewPanelCache } from "../webview-cache";
 import { handleWebviewMessage } from "../webview/comms/comms";
@@ -177,93 +190,300 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
   editConfigForm.onDidDispose(() => disposable.dispose());
 }
 
-async function produceMessageFromFile(topic: KafkaTopic) {
+export async function produceMessagesFromDocument(topic: KafkaTopic) {
   if (!topic) {
     vscode.window.showErrorMessage("No topic selected.");
     return;
   }
-  const options: vscode.OpenDialogOptions = {
-    canSelectMany: false,
-    openLabel: "Select JSON file",
-    filters: {
-      "JSON files": ["json"],
-    },
+  logUsage(UserEvent.MessageProduceAction, { status: "started" });
+
+  // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes
+  const uriSchemes = ["file", "untitled", MESSAGE_URI_SCHEME];
+  const languageIds = ["json"];
+  const fileFilters = {
+    "JSON files": ["json"],
+  };
+  const messageUri: vscode.Uri | undefined = await uriQuickpick(
+    uriSchemes,
+    languageIds,
+    fileFilters,
+  );
+  if (!messageUri) {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "exited early from file/document quickpick",
+    });
+    return;
+  }
+  logUsage(UserEvent.MessageProduceAction, {
+    status: "picked file/document",
+    uriScheme: messageUri.scheme, // untitled, file, or confluent.topic.message
+  });
+
+  const { content }: LoadedDocumentContent = await loadDocumentContent(messageUri);
+  if (!content) {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "failed to load message content",
+      uriScheme: messageUri.scheme,
+    });
+    vscode.window.showErrorMessage("No content found in the selected file.");
+    return;
+  }
+
+  // load the produce-message schema and validate the incoming document
+  const docListeners: vscode.Disposable[] = await validateDocument(
+    messageUri,
+    PRODUCE_MESSAGE_SCHEMA,
+  );
+  const diagnostics: readonly vscode.Diagnostic[] =
+    JSON_DIAGNOSTIC_COLLECTION.get(messageUri) ?? [];
+  if (diagnostics.length) {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "failed base JSON validation",
+      uriScheme: messageUri.scheme,
+      problemCount: diagnostics.length,
+    });
+    showErrorNotificationWithButtons(
+      "Unable to produce message(s): JSON schema validation failed.",
+      {
+        "Show Validation Errors": () => {
+          vscode.commands.executeCommand("workbench.action.showErrorsWarnings");
+        },
+      },
+    );
+    return;
+  }
+  // document is valid, discard the listeners for that document
+  docListeners.forEach((l) => l.dispose());
+
+  logUsage(UserEvent.MessageProduceAction, {
+    status: "passed base JSON validation",
+    uriScheme: messageUri.scheme,
+  });
+
+  // always treat producing as a "bulk" action, even if there's only one message
+  const contents: any[] = [];
+  const msgContent: any = JSON.parse(content);
+  if (Array.isArray(msgContent)) {
+    contents.push(...msgContent);
+  } else {
+    contents.push(msgContent);
+  }
+
+  // TODO: bump this number up?
+  if (contents.length === 1) {
+    await produceMessages(contents, topic, messageUri);
+  } else {
+    // show progress notification for batch produce
+    vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Producing ${contents.length.toLocaleString()} message${contents.length > 1 ? "s" : ""} to topic "${topic.name}"...`,
+        cancellable: true,
+      },
+      async (
+        progress: vscode.Progress<{
+          message?: string;
+          increment?: number;
+        }>,
+        token: vscode.CancellationToken,
+      ) => {
+        progress.report({ increment: 0 });
+        await produceMessages(contents, topic, messageUri, progress, token);
+      },
+    );
+  }
+}
+
+/**
+ * Produce multiple messages to a Kafka topic through a worker pool and display info and/or error
+ * notifications depending on the {@link ExecutionResult}s.
+ */
+async function produceMessages(
+  contents: any[],
+  topic: KafkaTopic,
+  messageUri: vscode.Uri,
+  progress?: vscode.Progress<{
+    message?: string;
+    increment?: number;
+  }>,
+  token?: vscode.CancellationToken,
+) {
+  // TODO: make maxWorkers a user setting?
+  const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
+    (content) => produceMessage(content, topic),
+    contents,
+    { maxWorkers: 20, taskName: "produceMessage" },
+    progress,
+    token,
+  );
+
+  const successResults = results.filter(isSuccessResult);
+  const errorResults = results.filter(isErrorResult);
+  logUsage(UserEvent.MessageProduceAction, {
+    status: "completed",
+    uriScheme: messageUri.scheme,
+    originalMessageCount: contents.length,
+    successResultCount: successResults.length,
+    errorResultCount: errorResults.length,
+  });
+
+  const plural = contents.length > 1 ? "s" : "";
+  logger.debug(
+    `produced ${successResults.length}/${contents.length} message${plural} produced to topic "${topic.name}"`,
+  );
+  const ofTotal = plural ? ` of ${contents.length.toLocaleString()}` : "";
+
+  if (successResults.length) {
+    // set up a time window around the produced message(s) for message viewer
+    const bufferMs = 500;
+    const firstMessageTime = successResults[0].result.timestamp.getTime() - bufferMs;
+    const lastMessageTime =
+      successResults[successResults.length - 1].result.timestamp.getTime() + bufferMs;
+    // aggregate all unique partitions from the produce responses
+    const uniquePartitions: Set<number> = new Set();
+    successResults.forEach(({ result }) => {
+      if (result.response?.partition_id) {
+        uniquePartitions.add(result.response.partition_id);
+      }
+    });
+    // if there was only one message, we can also filter by key (if it exists)
+    let textFilter: string | undefined;
+    if (successResults.length === 1 && contents[0].key) {
+      textFilter = String(contents[0].key);
+    }
+
+    const buttonLabel = `View Message${plural}`;
+    vscode.window
+      .showInformationMessage(
+        `Successfully produced ${successResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}".`,
+        buttonLabel,
+      )
+      .then((selection) => {
+        if (selection) {
+          // open the message viewer to show a ~1sec window around the produced message(s)
+          // ...with the message key and/or partition filtered if available
+          const messageViewerConfig = MessageViewerConfig.create({
+            // don't change the consume query params, just filter to show this last message
+            timestampFilter: [firstMessageTime, lastMessageTime],
+            partitionFilter: uniquePartitions.size === 1 ? Array.from(uniquePartitions) : undefined,
+            textFilter,
+          });
+          vscode.commands.executeCommand(
+            "confluent.topic.consume",
+            topic,
+            true, // duplicate MV to show updated filters
+            messageViewerConfig,
+          );
+          logUsage(UserEvent.MessageProduceAction, {
+            status: "opened message viewer",
+            uriScheme: messageUri.scheme,
+            originalMessageCount: contents.length,
+            successResultCount: successResults.length,
+            errorResultCount: errorResults.length,
+          });
+        }
+      });
+  }
+
+  if (errorResults.length) {
+    const errorMessages = errorResults.map(({ error }) => error).join("\n");
+    // this format isn't great if there are multiple errors, but it's better than nothing
+    showErrorNotificationWithButtons(
+      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
+    );
+  }
+}
+
+interface ProduceResult {
+  timestamp: Date;
+  response: ProduceResponse;
+}
+
+/** Produce a single message to a Kafka topic. */
+export async function produceMessage(content: any, topic: KafkaTopic): Promise<ProduceResult> {
+  const sidecar = await getSidecar();
+  const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
+
+  // convert any provided headers to the correct format, ensuring the `value` is base64-encoded
+  const headers: ProduceRequestHeader[] = (content.headers ?? []).map(
+    (header: any): ProduceRequestHeader => ({
+      name: header.key ? header.key : header.name,
+      value: Buffer.from(header.value).toString("base64"),
+    }),
+  );
+  // dig up any schema-related information we may need in the request body
+  const { keyData, valueData } = await createProduceRequestData(topic, content.key, content.value);
+
+  const produceRequest: ProduceRequest = {
+    headers,
+    key: keyData,
+    value: valueData,
+    // if these made it through the validation step, no other handling is needed
+    partition_id: content.partition_id,
+    timestamp: content.timestamp ? new Date(content.timestamp) : undefined,
+  };
+  const request: ProduceRecordRequest = {
+    topic_name: topic.name,
+    cluster_id: topic.clusterId,
+    ProduceRequest: produceRequest,
   };
 
-  const fileUri = await vscode.window.showOpenDialog(options);
-  if (fileUri && fileUri[0]) {
-    const filePath = fileUri[0].fsPath;
-    const message = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  let response: ProduceResponse | undefined;
+  let timestamp = new Date();
 
-    if (!message.key || !message.value || !Array.isArray(message.headers)) {
-      vscode.window.showErrorMessage(`Message must have a key, value, and headers.`);
-      return;
-    }
-
-    const sidecar = await getSidecar();
-    const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
-
-    // convert headers to the correct format, ensuring the value is base64-encoded
-    const headers: ProduceRequestHeader[] = message.headers.map(
-      (header: any): ProduceRequestHeader => ({
-        name: header.key ? header.key : header.name,
-        value: Buffer.from(header.value).toString("base64"),
+  response = await recordsApi.produceRecord(request);
+  // we may get a misleading `status: 200` with a nested `error_code` in the response body
+  // ...but we may also get `error_code: 200` with a successful message
+  if (response.error_code >= 400) {
+    throw new ResponseError(
+      new Response("", {
+        status: response.error_code,
+        statusText: response.message,
       }),
     );
+  }
+  timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
 
-    // TODO: add schema information here once we have it
-    const key: ProduceRequestData = { data: message.key };
-    const value: ProduceRequestData = { data: message.value };
+  return { timestamp, response };
+}
 
-    const produceRequest: ProduceRequest = {
-      headers,
-      key,
-      value,
-    };
-    const request: ProduceRecordRequest = {
-      topic_name: topic.name,
-      cluster_id: topic.clusterId,
-      ProduceRequest: produceRequest,
-    };
+export async function createProduceRequestData(
+  topic: KafkaTopic,
+  key: any,
+  value: any,
+): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
+  // TODO: add schema information here for key and/or value once we have it
 
-    try {
-      const resp: ProduceResponse = await recordsApi.produceRecord(request);
-      vscode.window
-        .showInformationMessage(
-          `Success: Produced message to topic "${topic.name}".`,
-          "View Message",
-        )
-        .then((selection) => {
-          if (selection) {
-            // open the message viewer to show a ~1sec window around the produced message
-            const msgTime = resp.timestamp ? resp.timestamp.getTime() : Date.now() - 500;
-            // ...with the message key used to search, and partition filtered if available
-            const messageViewerConfig = MessageViewerConfig.create({
-              // don't change the consume query params, just filter to show this last message
-              timestampFilter: [msgTime, msgTime + 500],
-              partitionFilter: resp.partition_id ? [resp.partition_id] : undefined,
-              textFilter: String(message.key),
-            });
-            vscode.commands.executeCommand(
-              "confluent.topic.consume",
-              topic,
-              true, // duplicate MV to show updated filters
-              messageViewerConfig,
-            );
-          }
-        });
-    } catch (error: any) {
-      logResponseError(error, "topic produce from file"); // not sending to Sentry by default
-      if (error instanceof ResponseError) {
-        const body = await error.response.clone().text();
-        vscode.window.showErrorMessage(
-          `Error response while trying to produce message: ${error.response.status} ${error.response.statusText}: ${body}`,
-        );
-      } else {
-        vscode.window.showErrorMessage(`Failed to produce message: ${error.message}`);
-      }
+  const schemaless = "JSON";
+  // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
+  const schemaType: { type?: string } = {};
+  if (isCCloud(topic)) {
+    schemaType.type = schemaless;
+  } else if (isDirect(topic)) {
+    // look up the formConnectionType for this topic's connection
+    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
+      topic.connectionId,
+    );
+    if (spec?.formConnectionType === "Confluent Cloud") {
+      schemaType.type = schemaless;
     }
   }
+
+  const keyData: ProduceRequestData = {
+    ...schemaType,
+    data: key,
+    // schema_version: null,
+    // subject: null,
+    // subject_name_strategy: null,
+  };
+  const valueData: ProduceRequestData = {
+    ...schemaType,
+    data: value,
+    // schema_version: null,
+    // subject: null,
+    // subject_name_strategy: null,
+  };
+  return { keyData, valueData };
 }
 
 export function registerTopicCommands(): vscode.Disposable[] {
@@ -275,6 +495,6 @@ export function registerTopicCommands(): vscode.Disposable[] {
       copyKafkaClusterBootstrapUrl,
     ),
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
-    registerCommandWithLogging("confluent.topic.produce.fromFile", produceMessageFromFile),
+    registerCommandWithLogging("confluent.topic.produce.fromDocument", produceMessagesFromDocument),
   ];
 }

@@ -10,6 +10,7 @@ import {
 } from "../clients/docker";
 import * as contextValues from "../context/values";
 import { localKafkaConnected } from "../emitters";
+import * as localConnections from "../sidecar/connections/local";
 import * as configs from "./configs";
 import { DEFAULT_KAFKA_IMAGE_REPO } from "./constants";
 import { EventListener, SystemEventMessage } from "./eventListener";
@@ -473,6 +474,8 @@ describe("docker/eventListener.ts EventListener methods", function () {
     // stub the setContextValue and localKafkaConnected.fire methods so we can assert that they're called
     const setContextValueStub = sandbox.stub(contextValues, "setContextValue").resolves();
     const localKafkaConnectedFireStub = sandbox.stub(localKafkaConnected, "fire");
+    // stub updateLocalConnection since we don't care about the actual connection update for this test
+    sandbox.stub(localConnections, "updateLocalConnection").resolves();
 
     await eventListener.handleContainerStartEvent(TEST_CONTAINER_EVENT);
 

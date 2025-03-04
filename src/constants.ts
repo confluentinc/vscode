@@ -1,10 +1,13 @@
-import { extensions } from "vscode";
+import { env, extensions, LogOutputChannel, window } from "vscode";
 import { ConnectionSpec } from "./clients/sidecar";
 import { ConnectionId } from "./models/resource";
 
 export const EXTENSION_ID = "confluentinc.vscode-confluent";
 /** The version of the extension, as defined in package.json. */
 export const EXTENSION_VERSION: string = extensions.getExtension(EXTENSION_ID)!.packageJSON.version;
+
+/** The URI used when completing the CCloud authentication flow in the browser. */
+export const CCLOUD_AUTH_CALLBACK_URI = `${env.uriScheme}://${EXTENSION_ID}/authCallback`;
 
 /**
  * Ids to use with ThemeIcons for different Confluent/Kafka resources
@@ -40,9 +43,12 @@ export const AUTH_PROVIDER_LABEL = "Confluent Cloud";
 
 /** Single CCloud connection spec to be used with the sidecar Connections API. */
 export const CCLOUD_CONNECTION_SPEC: ConnectionSpec = {
-  id: "vscode-confluent-cloud-connection",
+  id: `${env.uriScheme}-confluent-cloud-connection`,
   name: "Confluent Cloud",
   type: "CCLOUD",
+  ccloud_config: {
+    ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
+  },
 };
 // these two avoid the need to use `CCLOUD_CONNECTION_SPEC.id!` or `CCLOUD_CONNECTION_SPEC.name!`
 // everywhere in the codebase
@@ -51,7 +57,7 @@ export const CCLOUD_CONNECTION_NAME = CCLOUD_CONNECTION_SPEC.name!;
 
 /** Single local connection spec to be used with the sidecar Connections API. */
 export const LOCAL_CONNECTION_SPEC: ConnectionSpec = {
-  id: "vscode-local-connection",
+  id: `${env.uriScheme}-local-connection`,
   name: "Local",
   type: "LOCAL",
 };
@@ -64,3 +70,12 @@ export const LOCAL_CONNECTION_NAME = LOCAL_CONNECTION_SPEC.name!;
 export const LOCAL_KAFKA_REST_PORT = 8082; // TODO: make this configurable once the sidecar supports it
 /** The name of the "local" {@link Environment} manageable by the extension via Docker. */
 export const LOCAL_ENVIRONMENT_NAME = "Local"; // not shown anywhere currently
+
+/**
+ * Output channel for viewing sidecar logs.
+ * @remarks We aren't using a `LogOutputChannel` since we could end up doubling the timestamp+level info.
+ */
+export const SIDECAR_OUTPUT_CHANNEL: LogOutputChannel = window.createOutputChannel(
+  "Confluent (Sidecar)",
+  { log: true },
+);

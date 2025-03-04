@@ -1,4 +1,6 @@
+apis/ConfluentCloudProduceRecordsResourceApi.ts
 apis/ConnectionsResourceApi.ts
+apis/DefaultApi.ts
 apis/FeatureFlagsApi.ts
 apis/HandshakeResourceApi.ts
 apis/KafkaConsumeResourceApi.ts
@@ -9,6 +11,7 @@ apis/PreferencesResourceApi.ts
 apis/VersionResourceApi.ts
 apis/index.ts
 index.ts
+models/Action.ts
 models/ApiKeyAndSecret.ts
 models/AuthError.ts
 models/AuthErrors.ts
@@ -26,6 +29,7 @@ models/ConnectionType.ts
 models/ConnectionsList.ts
 models/ExceededFields.ts
 models/Failure.ts
+models/HashAlgorithm.ts
 models/HealthCheck.ts
 models/HealthResponse.ts
 models/JsonNode.ts
@@ -44,9 +48,17 @@ models/PartitionOffset.ts
 models/Preferences.ts
 models/PreferencesMetadata.ts
 models/PreferencesSpec.ts
+models/ProduceRequest.ts
+models/ProduceRequestData.ts
+models/ProduceRequestHeader.ts
+models/ProduceResponse.ts
+models/ProduceResponseData.ts
+models/RBACRequest.ts
 models/SchemaRegistryConfig.ts
 models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
+models/Scope.ts
+models/ScramCredentials.ts
 models/SidecarAccessToken.ts
 models/SidecarVersionResponse.ts
 models/SimpleConsumeMultiPartitionRequest.ts

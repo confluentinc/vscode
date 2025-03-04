@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { Uri } from "vscode";
 import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -11,25 +10,33 @@ import {
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources";
 import {
-  TEST_DIRECT_CONNECTION,
+  TEST_DIRECT_CONNECTION_FORM_SPEC,
   TEST_DIRECT_CONNECTION_ID,
 } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
-import { ConnectionSpec } from "../clients/sidecar";
+import {
+  ConnectionSpec,
+  KafkaClusterConfigFromJSON,
+  KafkaClusterConfigToJSON,
+} from "../clients/sidecar";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, EnvironmentId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
+import { WorkspaceStorageKeys } from "./constants";
 import {
   CCloudKafkaClustersByEnv,
   CCloudSchemaRegistryByEnv,
+  CustomConnectionSpec,
+  CustomConnectionSpecFromJSON,
+  CustomConnectionSpecToJSON,
   DirectConnectionsById,
   getResourceManager,
+  mapToString,
   ResourceManager,
-  UriMetadata,
+  stringToMap,
 } from "./resourceManager";
 
 describe("ResourceManager (CCloud) environment methods", function () {
@@ -56,10 +63,10 @@ describe("ResourceManager (CCloud) environment methods", function () {
   });
 
   it("setCCloudEnvironments() should correctly store Environments", async () => {
-    await getResourceManager().setCCloudEnvironments(environments);
-    // verify the environments were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedEnvironments: CCloudEnvironment[] | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_ENVIRONMENTS);
+    const resourceManager = getResourceManager();
+    await resourceManager.setCCloudEnvironments(environments);
+    // verify the environments were stored correctly
+    let storedEnvironments: CCloudEnvironment[] = await resourceManager.getCCloudEnvironments();
     assert.ok(storedEnvironments);
     assert.deepStrictEqual(storedEnvironments, environments);
   });
@@ -135,10 +142,12 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: setCCloudKafkaClusters() should correctly store Kafka clusters", async () => {
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
-    // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
+    const resourceManager = getResourceManager();
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
+    // verify the clusters were stored correctly
+    let storedClustersByEnv: CCloudKafkaClustersByEnv =
+      await resourceManager.getCCloudKafkaClusters();
+
     assert.ok(storedClustersByEnv);
     assert.ok(storedClustersByEnv instanceof Map);
     assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
@@ -146,20 +155,27 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: setCCloudKafkaClusters() should add new environment keys if they don't exist", async () => {
+    const resourceManager = getResourceManager();
     // set the first batch of clusters from the first environment
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // create and set the second batch of clusters for the new environment
-    const newEnvironmentId = "new-environment-id";
+    const newEnvironmentId = "new-environment-id" as EnvironmentId;
     const newClusters: CCloudKafkaCluster[] = [
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_CCLOUD_KAFKA_CLUSTER, id: "new-cluster-id-1", environmentId: newEnvironmentId },
-      // @ts-expect-error: update dataclass so we don't have to add `T as Require<T>`
-      { ...TEST_CCLOUD_KAFKA_CLUSTER, id: "new-cluster-id-2", environmentId: newEnvironmentId },
+      CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        id: "new-cluster-id-1",
+        environmentId: newEnvironmentId,
+      }),
+      CCloudKafkaCluster.create({
+        ...TEST_CCLOUD_KAFKA_CLUSTER,
+        id: "new-cluster-id-2",
+        environmentId: newEnvironmentId,
+      }),
     ];
-    await getResourceManager().setCCloudKafkaClusters(newClusters);
+    await resourceManager.setCCloudKafkaClusters(newClusters);
     // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
+    let storedClustersByEnv: CCloudKafkaClustersByEnv =
+      await resourceManager.getCCloudKafkaClusters();
     assert.ok(storedClustersByEnv);
     // make sure both environments exist and the first wasn't overwritten
     assert.deepStrictEqual(storedClustersByEnv.get(newEnvironmentId), newClusters);
@@ -167,13 +183,14 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("CCLOUD: setCCloudKafkaClusters() shouldn't duplicate clusters when setting clusters that already exist", async () => {
+    const resourceManager = getResourceManager();
     // set the clusters in the StorageManager before setting them again
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // set the clusters again
-    await getResourceManager().setCCloudKafkaClusters(ccloudClusters);
+    await resourceManager.setCCloudKafkaClusters(ccloudClusters);
     // verify the clusters were not duplicated
-    let storedClustersByEnv: CCloudKafkaClustersByEnv | undefined =
-      await storageManager.getWorkspaceState(WorkspaceStorageKeys.CCLOUD_KAFKA_CLUSTERS);
+    let storedClustersByEnv: CCloudKafkaClustersByEnv =
+      await resourceManager.getCCloudKafkaClusters();
     assert.ok(storedClustersByEnv);
     assert.ok(storedClustersByEnv instanceof Map);
     assert.ok(storedClustersByEnv.has(TEST_CCLOUD_ENVIRONMENT.id));
@@ -263,11 +280,10 @@ describe("ResourceManager Kafka cluster methods", function () {
   });
 
   it("LOCAL: setLocalKafkaClusters() should correctly store Kafka clusters", async () => {
-    await getResourceManager().setLocalKafkaClusters(localClusters);
-    // verify the clusters were stored correctly by checking through the StorageManager instead of the ResourceManager
-    let storedClusters: LocalKafkaCluster[] | undefined = await storageManager.getWorkspaceState(
-      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
-    );
+    const resourceManager = getResourceManager();
+    await resourceManager.setLocalKafkaClusters(localClusters);
+    // verify the clusters were stored correctly
+    const storedClusters: LocalKafkaCluster[] = await resourceManager.getLocalKafkaClusters();
     assert.ok(storedClusters);
     assert.deepStrictEqual(storedClusters, localClusters);
   });
@@ -339,7 +355,10 @@ describe("ResourceManager (CCloud) Schema Registry methods", function () {
   });
 
   it("CCLOUD: setCCloudSchemaRegistries() should correctly store Schema Registries", async () => {
-    const secondCloudEnvironment = { ...TEST_CCLOUD_ENVIRONMENT, id: "second-cloud-env-id" };
+    const secondCloudEnvironment = {
+      ...TEST_CCLOUD_ENVIRONMENT,
+      id: "second-cloud-env-id" as EnvironmentId,
+    };
     const secondSchemaRegistry = CCloudSchemaRegistry.create({
       ...TEST_CCLOUD_SCHEMA_REGISTRY,
       environmentId: secondCloudEnvironment.id,
@@ -720,251 +739,6 @@ describe("ResourceManager schema tests", function () {
   });
 });
 
-describe("ResourceManager URI metadata methods", function () {
-  let storageManager: StorageManager;
-  let rm: ResourceManager;
-
-  let schemaFileURI = Uri.parse("file:///path/to/file");
-
-  before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
-  });
-
-  beforeEach(async () => {
-    // fresh slate for each test
-    await storageManager.clearWorkspaceState();
-    rm = getResourceManager();
-  });
-
-  afterEach(async () => {
-    // clean up after each test
-    await storageManager.clearWorkspaceState();
-  });
-
-  it("setURIMetadata() should correctly store URI metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    // fetch back from resource manager
-    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadata, metadataFromStorage);
-
-    // overwrite with new metadata
-    metadata.clear();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "new-registry-id");
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const metadataFromStorageAgain = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadata, metadataFromStorageAgain);
-
-    // Separate URI should be stored separately.
-    const otherSchemaFileURI = Uri.parse("file:///path/to/other-file");
-    const otherMetadata: UriMetadata = new Map();
-    otherMetadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "other-registry-id");
-    otherMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-abc-value");
-    await rm.setURIMetadata(otherSchemaFileURI, otherMetadata);
-
-    // fetch this other metadata back from resource manager, should be fine.
-    const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
-    assert.deepStrictEqual(
-      otherMetadata,
-      otherMetadataFromStorage,
-      "other metadata should be stored",
-    );
-
-    // The first metadata should still be there unaffected by this second file uri key.
-    const metadataFromStorageAfterOther = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(
-      metadata,
-      metadataFromStorageAfterOther,
-      "first metadata should still be stored",
-    );
-  });
-
-  it("mergeURIMetadata() should correctly merge URI metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const newMetadata: UriMetadata = new Map();
-    newMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    const mergeReturn = await rm.mergeURIMetadata(schemaFileURI, newMetadata);
-
-    const expected: UriMetadata = new Map([...metadata, ...newMetadata]);
-    assert.deepStrictEqual(expected, mergeReturn);
-
-    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(expected, metadataFromStorage);
-  });
-
-  it("MergeURIMetadata() should correctly merge against prior unset metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-
-    // Merge against empty is same as set.
-    const merged = await rm.mergeURIMetadata(schemaFileURI, metadata);
-    assert.deepStrictEqual(merged, metadata);
-
-    const metadataFromStorage = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadata, metadataFromStorage);
-  });
-
-  it("mergeURIMetadataValue() should set individual keys properly", async () => {
-    // Set first key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-
-    // Set second key.
-    const afterSecondAssignment = await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-      "test-ccloud-topic-xyz-value",
-    );
-
-    // Fetch back and verify.
-
-    const fromStorage = await rm.getUriMetadata(schemaFileURI);
-
-    // Verify results.
-    const expected: UriMetadata = new Map();
-    expected.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    expected.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    assert.deepStrictEqual(fromStorage, expected);
-    assert.deepStrictEqual(afterSecondAssignment, expected);
-  });
-
-  it("getURIMetadata() should return undefined if no metadata is found", async () => {
-    const metadata = await rm.getUriMetadata(schemaFileURI);
-    assert.strictEqual(metadata, undefined);
-  });
-
-  it("getUriuMetadataValue() should return single value properly", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const registryId = await rm.getUriMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-    );
-    assert.strictEqual(registryId, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-  });
-
-  it("getUriMetadataValue() should return undefined if key is not found", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    const missingValue = await rm.getUriMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-    );
-    assert.strictEqual(missingValue, undefined);
-  });
-
-  it("clearURIMetadataValues() should clear individual keys properly", async () => {
-    // Set first key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-
-    // Set second key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-      "test-ccloud-topic-xyz-value",
-    );
-
-    // Clear the first key.
-    await rm.clearURIMetadataValues(schemaFileURI, UriMetadataKeys.SCHEMA_REGISTRY_ID);
-
-    // Fetch back and verify.
-
-    const fromStorage = await rm.getUriMetadata(schemaFileURI);
-
-    // Verify results.
-    const expected: UriMetadata = new Map();
-    expected.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    assert.deepStrictEqual(fromStorage, expected);
-
-    // clear the second key, should return undefined since nothing retained anymore.
-    const results = await rm.clearURIMetadataValues(schemaFileURI, UriMetadataKeys.SCHEMA_SUBJECT);
-    assert.deepStrictEqual(results, undefined);
-  });
-
-  it("clearURIMetadataValues() should clear multiple keys properly", async () => {
-    // Set first key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-
-    // Set second key.
-    await rm.mergeURIMetadataValue(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-      "test-ccloud-topic-xyz-value",
-    );
-
-    // Clear both keys.
-    const returnData = await rm.clearURIMetadataValues(
-      schemaFileURI,
-      UriMetadataKeys.SCHEMA_REGISTRY_ID,
-      UriMetadataKeys.SCHEMA_SUBJECT,
-    );
-    assert.deepStrictEqual(undefined, returnData, "Expected return data to be undefined");
-
-    // Fetch back and verify.
-    const fromStorage = await rm.getUriMetadata(schemaFileURI);
-
-    // Verify results.
-    assert.deepStrictEqual(undefined, fromStorage, "Expected from storage to be undefined");
-  });
-
-  it("deleteURIMetadata() should correctly delete URI metadata", async () => {
-    const metadata: UriMetadata = new Map();
-    metadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    metadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-xyz-value");
-
-    await rm.setURIMetadata(schemaFileURI, metadata);
-
-    // set second file URI metadata also.
-    const otherSchemaFileURI = Uri.parse("file:///path/to/other-file");
-    const otherMetadata: UriMetadata = new Map();
-    otherMetadata.set(UriMetadataKeys.SCHEMA_REGISTRY_ID, "other-registry-id");
-    otherMetadata.set(UriMetadataKeys.SCHEMA_SUBJECT, "test-ccloud-topic-abc-value");
-    await rm.setURIMetadata(otherSchemaFileURI, otherMetadata);
-
-    // delete the first metadata
-    await rm.deleteURIMetadata(schemaFileURI);
-
-    // fetch first back from resource manager, expect undefined.
-    const metadataFromStorageAfterDelete = await rm.getUriMetadata(schemaFileURI);
-    assert.deepStrictEqual(metadataFromStorageAfterDelete, undefined);
-
-    // fetch second back, expect it to still be there.
-    const otherMetadataFromStorage = await rm.getUriMetadata(otherSchemaFileURI);
-    assert.deepStrictEqual(otherMetadata, otherMetadataFromStorage);
-  });
-});
-
 describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;
 
@@ -984,7 +758,7 @@ describe("ResourceManager direct connection methods", function () {
 
   it("addDirectConnection() should correctly store a direct connection spec", async () => {
     // preload one connection
-    const spec = TEST_DIRECT_CONNECTION.spec;
+    const spec = TEST_DIRECT_CONNECTION_FORM_SPEC;
     await rm.addDirectConnection(spec);
 
     // make sure it exists
@@ -993,7 +767,8 @@ describe("ResourceManager direct connection methods", function () {
     assert.deepStrictEqual(storedSpecs, new Map([[TEST_DIRECT_CONNECTION_ID, spec]]));
     assert.deepStrictEqual(storedSpecs.get(TEST_DIRECT_CONNECTION_ID), spec);
 
-    const storedSpec: ConnectionSpec | null =
+    // and that it also exists when fetched directly
+    const storedSpec: CustomConnectionSpec | null =
       await rm.getDirectConnection(TEST_DIRECT_CONNECTION_ID);
     assert.ok(storedSpec);
     assert.deepStrictEqual(storedSpec, spec);
@@ -1019,9 +794,9 @@ describe("ResourceManager direct connection methods", function () {
     // preload two connections
     const connId1: ConnectionId = TEST_DIRECT_CONNECTION_ID;
     const connId2: ConnectionId = "other-id" as ConnectionId;
-    const specs: ConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION.spec,
-      { ...TEST_DIRECT_CONNECTION.spec, id: connId2 },
+    const specs: CustomConnectionSpec[] = [
+      TEST_DIRECT_CONNECTION_FORM_SPEC,
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: connId2 },
     ];
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
@@ -1043,10 +818,10 @@ describe("ResourceManager direct connection methods", function () {
 
   it("deleteDirectConnections() should delete all direct connections", async () => {
     // preload multiple connections
-    const specs: ConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION.spec,
-      { ...TEST_DIRECT_CONNECTION.spec, id: "other-id" },
-      { ...TEST_DIRECT_CONNECTION.spec, id: "another-id" },
+    const specs: CustomConnectionSpec[] = [
+      TEST_DIRECT_CONNECTION_FORM_SPEC,
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "other-id" as ConnectionId },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "another-id" as ConnectionId },
     ];
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
@@ -1148,5 +923,100 @@ describe("ResourceManager general utility methods", function () {
     const existingLocalTopics = await resourceManager.getTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER);
     assert.ok(existingLocalTopics);
     assert.equal(existingLocalTopics.length, 1);
+  });
+});
+
+describe("CustomConnectionSpec object conversion", () => {
+  it("CustomConnectionSpecFromJSON should correctly convert objects to typed CustomConnectionSpecs", () => {
+    const plainObj = {
+      id: TEST_DIRECT_CONNECTION_ID,
+      name: "Test Connection",
+      type: "DIRECT",
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "localhost:9092",
+      },
+    };
+
+    const spec = CustomConnectionSpecFromJSON(plainObj);
+
+    assert.ok(spec);
+    assert.strictEqual(spec.id, TEST_DIRECT_CONNECTION_ID);
+    // TODO: figure out how to test for branded string types?
+    assert.strictEqual(spec.name, "Test Connection");
+    assert.strictEqual(spec.type, "DIRECT");
+    assert.strictEqual(spec.formConnectionType, "Apache Kafka");
+    // ensure all KafkaClusterConfig fields are present
+    assert.deepStrictEqual(
+      spec.kafka_cluster,
+      KafkaClusterConfigFromJSON({
+        bootstrap_servers: "localhost:9092",
+      }),
+    );
+  });
+
+  it("CustomConnectionSpecFromJSON should handle null input", () => {
+    const spec = CustomConnectionSpecFromJSON(null);
+
+    assert.strictEqual(spec, null);
+  });
+
+  it("CustomConnectionSpecToJSON should correctly convert a typed CustomConnectionSpec to a plain object", () => {
+    // don't use existing test data since it will include all fields
+    const spec: object = {
+      id: TEST_DIRECT_CONNECTION_ID,
+      name: "Test Connection",
+      type: "DIRECT",
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "localhost:9092",
+      },
+    };
+
+    const plainObj = CustomConnectionSpecToJSON(spec as CustomConnectionSpec);
+    assert.ok(plainObj);
+    assert.strictEqual(plainObj.id, TEST_DIRECT_CONNECTION_ID);
+    assert.strictEqual(plainObj.name, "Test Connection");
+    assert.strictEqual(plainObj.type, "DIRECT");
+    assert.strictEqual(plainObj.formConnectionType, "Apache Kafka");
+    assert.deepStrictEqual(
+      plainObj.kafka_cluster,
+      KafkaClusterConfigToJSON({
+        bootstrap_servers: "localhost:9092",
+      }),
+    );
+  });
+
+  it("CustomConnectionSpec conversion should be reversible", () => {
+    // use the existing test spec which has all fields
+    const specObj = CustomConnectionSpecToJSON(TEST_DIRECT_CONNECTION_FORM_SPEC);
+    const typedSpec = CustomConnectionSpecFromJSON(specObj);
+
+    assert.deepStrictEqual(typedSpec, TEST_DIRECT_CONNECTION_FORM_SPEC);
+  });
+});
+
+describe("ResourceManager utility functions", function () {
+  it("mapToString() should correctly convert a Map to a string", () => {
+    const testMap = new Map([
+      ["key1", "value1"],
+      ["key2", "value2"],
+    ]);
+
+    const result = mapToString(testMap);
+
+    assert.strictEqual(result, `{"key1":"value1","key2":"value2"}`);
+  });
+
+  it("stringToMap() should correctly convert a string to a Map", () => {
+    const testString = `{"key1":"value1","key2":"value2"}`;
+
+    const result = stringToMap(testString);
+
+    assert.ok(result);
+    assert.ok(result instanceof Map);
+    assert.strictEqual(result.size, 2);
+    assert.strictEqual(result.get("key1"), "value1");
+    assert.strictEqual(result.get("key2"), "value2");
   });
 });

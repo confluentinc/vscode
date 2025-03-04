@@ -5,7 +5,7 @@ import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
-import { ExtensionContextNotSetError, logResponseError } from "../errors";
+import { ExtensionContextNotSetError, logError } from "../errors";
 import { Logger } from "../logging";
 import { fetchPreferences } from "../preferences/updates";
 import {
@@ -13,15 +13,15 @@ import {
   createCCloudConnection,
   deleteCCloudConnection,
   getCCloudConnection,
-  waitForConnectionToBeStable,
-} from "../sidecar/connections";
+} from "../sidecar/connections/ccloud";
+import { waitForConnectionToBeStable } from "../sidecar/connections/watcher";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getResourceManager } from "../storage/resourceManager";
-import { UserEvent } from "../telemetry/events";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
-import { openExternal, pollCCloudConnectionAuth } from "./ccloudPolling";
+import { openExternal } from "./ccloudStateHandling";
 
 const logger = new Logger("authn.ccloudProvider");
 
@@ -137,7 +137,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         vscode.window.showErrorMessage(
           `Error during Confluent Cloud sign-in process: ${e.message}`,
         );
-        logResponseError(
+        logError(
           e,
           "browser sign-in flow",
           {
@@ -152,15 +152,20 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw e;
     }
 
+    logUsage(UserEvent.CCloudAuthentication, {
+      status: "signed in",
+    });
+
+    // sign-in completed, wait for the connection to become usable
     const authenticatedConnection = await waitForConnectionToBeStable(CCLOUD_CONNECTION_ID);
     if (!authenticatedConnection) {
       throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
-    // User logged in successfully so we send an identify event to Segment
+    // User signed in successfully so we send an identify event to Segment
     if (authenticatedConnection.status.authentication.user) {
       sendTelemetryIdentifyEvent({
-        eventName: UserEvent.SignedIn,
+        eventName: UserEvent.CCloudAuthentication,
         userInfo: authenticatedConnection.status.authentication.user,
         session: undefined,
       });
@@ -168,7 +173,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     // we want to continue regardless of whether or not the user dismisses the notification,
     // so we aren't awaiting this:
     vscode.window.showInformationMessage(
-      `Successfully logged in to Confluent Cloud as ${authenticatedConnection.status.authentication.user?.username}`,
+      `Successfully signed in to Confluent Cloud as ${authenticatedConnection.status.authentication.user?.username}`,
     );
     logger.debug("createSession() successfully authenticated with Confluent Cloud");
     // update the auth status in the secret store so other workspaces can be notified of the change
@@ -307,6 +312,10 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       return;
     }
 
+    logUsage(UserEvent.CCloudAuthentication, {
+      status: "signed out",
+    });
+
     // tell the sidecar to delete the connection and update the auth status "secret" in storage
     // to prevent any last-minute requests from passing through the middleware
     await Promise.all([
@@ -394,7 +403,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Logging in to [Confluent Cloud](${uri})...`,
+        title: `Signing in to [Confluent Cloud](${uri})...`,
         cancellable: true,
       },
       async (_, token) => {
@@ -427,7 +436,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     });
   }
 
-  /** Only used for when the user clicks "Cancel" during the "Logging in..." progress notification. */
+  /** Only used for when the user clicks "Cancel" during the "Signing in..." progress notification. */
   private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
     return new Promise<void>((_, reject) =>
       token.onCancellationRequested(async () => {
@@ -457,7 +466,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       removed: [],
       changed: [],
     });
-    pollCCloudConnectionAuth.start();
     this.updateContextValue(true);
 
     // updating secrets is cross-workspace-scoped
@@ -478,7 +486,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     logger.debug("handleSessionRemoved()", { updateSecret });
     this.updateContextValue(false);
     await clearCurrentCCloudResources();
-    pollCCloudConnectionAuth.stop();
     if (!this._session) {
       logger.debug("handleSessionRemoved(): no cached `_session` to remove; this shouldn't happen");
     } else {
@@ -511,7 +518,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       createIfNone: false,
     });
     if (!session) {
-      // SCENARIO 1: user logged out / auth session was removed
+      // SCENARIO 1: user signed out / auth session was removed
       // if we had a session before, we need to remove it and stop polling for auth status, as well
       // as inform the Accounts action to show the sign-in badge again
       if (this._session) {
@@ -522,7 +529,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         );
       }
     } else {
-      // SCENARIO 2: user logged in / auth session was added
+      // SCENARIO 2: user signed in / auth session was added
       // add a new auth session to the Accounts action, populate this instance's cached session state,
       // and start polling for auth status
       this.handleSessionCreated(session);

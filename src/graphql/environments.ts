@@ -1,7 +1,9 @@
 import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
+import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { getSidecar } from "../sidecar";
 
@@ -11,8 +13,6 @@ import { getSidecar } from "../sidecar";
  */
 export async function getEnvironments(): Promise<CCloudEnvironment[]> {
   let envs: CCloudEnvironment[] = [];
-
-  const sidecar = await getSidecar();
 
   const query = graphql(`
     query environments($id: String!) {
@@ -40,7 +40,16 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
     }
   `);
 
-  const response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
+  const sidecar = await getSidecar();
+  let response;
+  try {
+    response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
+  } catch (error) {
+    logError(error, "CCloud environments", { connectionId: CCLOUD_CONNECTION_ID }, true);
+    showErrorNotificationWithButtons(`Failed to fetch CCloud resources: ${error}`);
+    return envs;
+  }
+
   const environments = response.ccloudConnectionById?.environments;
   if (!environments) {
     return envs;
@@ -70,7 +79,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
     if (env.schemaRegistry) {
       schemaRegistry = CCloudSchemaRegistry.create({
         ...env.schemaRegistry,
-        environmentId: env.id,
+        environmentId: env.id as EnvironmentId,
       });
     }
 

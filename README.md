@@ -143,7 +143,7 @@ Additionally, for Windows ARM-64, you may use Windows Subsystem for Linux
 You can install the Confluent extension by using the VS Code UI or by using the
 `code --install-extension` command in the terminal.
 
-To install by using the UI, follow these steps:
+To install by using the UI with an online connection, follow these steps:
 
 1. Download the VSIX file appropriate for your machine.
 
@@ -158,6 +158,22 @@ To install in the terminal, run the following command:
 
 ```
 code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
+```
+
+### `.vsix` file installation via offvsix
+
+If you have been struggling with pre-downloading extension payloads (and assuming you have [python](https://www.python.org/), [pip](https://pypi.org/project/pip/), and [offvsix](https://github.com/gni/offvsix), you can follow these steps:
+
+```
+mkdir offvsix
+cd offvsix
+
+python3 -m venv .
+. bin/activate
+
+pip install offvsix
+
+offvsix confluentinc.vscode-confluent
 ```
 
 ## Outputs
@@ -205,6 +221,9 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 - Preview links for non-default organizations work only after switching to the non-default
   organization in the Confluent Cloud UI in your browser.
 - When using multiple users on a single machine, only one user can run the extension at a time.
+- Searching for schemas in the Topics and Schemas views is limited to the `subject` field only.
+  Searching by other fields, such as `id` and `version`, is not supported due to cost and
+  performance considerations.
 
 ## Support
 

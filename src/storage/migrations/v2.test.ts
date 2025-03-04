@@ -9,7 +9,7 @@ import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../../tests/unit/testResour
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { ConnectionId } from "../../models/resource";
 import { FormConnectionType } from "../../webview/direct-connect-form";
-import { CustomConnectionSpec, DirectConnectionsById } from "../resourceManager";
+import { CustomConnectionSpec, DirectConnectionsById, mapToString } from "../resourceManager";
 import { MigrationV2 } from "./v2";
 
 describe("storage/migrations/v2", () => {
@@ -60,7 +60,7 @@ describe("storage/migrations/v2", () => {
       const testV1Map: DirectConnectionsById = new Map(
         testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
       );
-      secretsGetStub.resolves(JSON.stringify(Object.fromEntries(testV1Map)));
+      secretsGetStub.resolves(mapToString(testV1Map));
 
       await migration.upgradeSecretStorage();
 
@@ -91,7 +91,7 @@ describe("storage/migrations/v2", () => {
       const testV1Map: DirectConnectionsById = new Map(
         testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
       );
-      secretsGetStub.resolves(JSON.stringify(Object.fromEntries(testV1Map)));
+      secretsGetStub.resolves(mapToString(testV1Map));
 
       await migration.upgradeSecretStorage();
 
@@ -115,7 +115,7 @@ describe("storage/migrations/v2", () => {
 
   it("upgradeSecretStorage() should handle empty connection spec map", async () => {
     // we could just use "{}" but my trust is shaken
-    secretsGetStub.resolves(JSON.stringify(Object.fromEntries(new Map())));
+    secretsGetStub.resolves(mapToString(new Map()));
 
     await migration.upgradeSecretStorage();
 
@@ -139,7 +139,7 @@ describe("storage/migrations/v2", () => {
     const testV2Map: DirectConnectionsById = new Map(
       testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
     );
-    secretsGetStub.resolves(JSON.stringify(Object.fromEntries(testV2Map)));
+    secretsGetStub.resolves(mapToString(testV2Map));
 
     await migration.downgradeSecretStorage();
 
@@ -169,7 +169,7 @@ describe("storage/migrations/v2", () => {
     const testV2Map: DirectConnectionsById = new Map(
       testSpecs.map((spec): [ConnectionId, CustomConnectionSpec] => [spec.id, spec]),
     );
-    secretsGetStub.resolves(JSON.stringify(Object.fromEntries(testV2Map)));
+    secretsGetStub.resolves(mapToString(testV2Map));
 
     await migration.downgradeSecretStorage();
 
@@ -189,7 +189,7 @@ describe("storage/migrations/v2", () => {
 
   it("downgradeSecretStorage() should handle empty connection spec map", async () => {
     // we could just use "{}" but my trust is shaken
-    secretsGetStub.resolves(JSON.stringify(Object.fromEntries(new Map())));
+    secretsGetStub.resolves(mapToString(new Map()));
 
     await migration.downgradeSecretStorage();
 

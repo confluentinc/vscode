@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.24.0-18",
+  "version": "0.26.0-22",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -39,7 +39,6 @@
     "kstreams",
     "kafka streams",
     "schema",
-    "schema registry",
     "producer",
     "consumer",
     "kafka consumer",
@@ -59,9 +58,15 @@
     ],
     "commands": [
       {
-        "command": "confluent.connections.ccloud.logIn",
-        "icon": "$(plus)",
-        "title": "Log in to Confluent Cloud",
+        "command": "confluent.connections.ccloud.signIn",
+        "icon": "$(sign-in)",
+        "title": "Sign in to Confluent Cloud",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.ccloud.signOut",
+        "icon": "$(sign-out)",
+        "title": "Sign out from Confluent Cloud",
         "category": "Confluent: Connections"
       },
       {
@@ -80,6 +85,12 @@
         "command": "confluent.connections.direct.edit",
         "icon": "$(pencil)",
         "title": "Edit Connection",
+        "category": "Confluent: Connections"
+      },
+      {
+        "command": "confluent.connections.direct.export",
+        "icon": "$(desktop-download)",
+        "title": "Export as JSON",
         "category": "Confluent: Connections"
       },
       {
@@ -102,26 +113,6 @@
         "command": "confluent.copyResourceUri",
         "title": "Copy URI",
         "category": "Confluent: Resources"
-      },
-      {
-        "command": "confluent.debugtools.globalState.showWebView",
-        "title": "Show Global State Inspector",
-        "category": "Confluent: Debug Tools"
-      },
-      {
-        "command": "confluent.debugtools.globalState.reset",
-        "title": "Reset Global State",
-        "category": "Confluent: Debug Tools"
-      },
-      {
-        "command": "confluent.debugtools.workspaceState.showWebView",
-        "title": "Show Workspace State Inspector",
-        "category": "Confluent: Debug Tools"
-      },
-      {
-        "command": "confluent.debugtools.workspaceState.reset",
-        "title": "Reset Workspace State",
-        "category": "Confluent: Debug Tools"
       },
       {
         "command": "confluent.docker.setSocketPath",
@@ -206,6 +197,17 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Resources View"
+      },
+      {
+        "command": "confluent.resources.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Resources View"
+      },
+      {
         "command": "confluent.scaffold",
         "title": "Generate New Project",
         "category": "Confluent: Project"
@@ -262,6 +264,17 @@
         "command": "confluent.schemas.copySchemaRegistryId",
         "title": "Copy Schema Registry ID",
         "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Schemas View"
+      },
+      {
+        "command": "confluent.schemas.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Schemas View"
       },
       {
         "command": "confluent.showOutputChannel",
@@ -338,7 +351,7 @@
         "enablement": "false"
       },
       {
-        "command": "confluent.topic.produce.fromFile",
+        "command": "confluent.topic.produce.fromDocument",
         "title": "Produce Message to Kafka Topic from schemaless JSON file",
         "icon": "$(send)",
         "category": "Confluent: Topic"
@@ -384,6 +397,17 @@
         "command": "confluent.topics.copyKafkaClusterBootstrapServers",
         "title": "Copy Kafka Cluster Bootstrap Server(s)",
         "category": "Confluent: Topics"
+      },
+      {
+        "command": "confluent.topics.search",
+        "icon": "$(search)",
+        "title": "Search",
+        "category": "Confluent: Topics View"
+      },
+      {
+        "command": "confluent.topics.search.clear",
+        "title": "Clear Search",
+        "category": "Confluent: Topics View"
       },
       {
         "command": "confluent.openCCloudLink",
@@ -451,6 +475,26 @@
         }
       }
     },
+    "keybindings": [
+      {
+        "command": "confluent.resources.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-resources"
+      },
+      {
+        "command": "confluent.topics.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-topics"
+      },
+      {
+        "command": "confluent.schemas.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "focusedView == confluent-schemas"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -485,11 +529,17 @@
     "viewsWelcome": [
       {
         "view": "confluent-resources",
-        "contents": "No resources found."
+        "contents": "No resources found.",
+        "when": "!confluent.resourceSearchApplied"
+      },
+      {
+        "view": "confluent-resources",
+        "contents": "No resources match search string. [Clear search](command:confluent.resources.search.clear) or [try a new search](command:confluent.resources.search).",
+        "when": "confluent.resourceSearchApplied"
       },
       {
         "view": "confluent-schemas",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nAlternatively, [start Schema Registry locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Schema Registry instance.",
+        "contents": "No Schema Registries available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Schema Registry locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Schema Registry instance.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable)"
       },
       {
@@ -500,11 +550,16 @@
       {
         "view": "confluent-schemas",
         "contents": "No schemas found.\n[Create Schema](command:confluent.schemas.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected && !confluent.schemaSearchApplied"
+      },
+      {
+        "view": "confluent-schemas",
+        "contents": "No schemas match search string. [Clear search](command:confluent.schemas.search.clear) or [try a new search](command:confluent.schemas.search).",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable) && confluent.schemaRegistrySelected && confluent.schemaSearchApplied"
       },
       {
         "view": "confluent-topics",
-        "contents": "No connections available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.logIn)\nAlternatively, [start Kafka locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Kafka cluster.",
+        "contents": "No Kafka clusters available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)\nAlternatively, [start Kafka locally](command:confluent.docker.startLocalResources) with Docker or [connect directly](command:confluent.connections.direct) to a Kafka cluster.",
         "when": "!(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)"
       },
       {
@@ -515,14 +570,23 @@
       {
         "view": "confluent-topics",
         "contents": "No topics found.\n[Create Topic](command:confluent.topics.create)",
-        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected"
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && !confluent.topicSearchApplied"
+      },
+      {
+        "view": "confluent-topics",
+        "contents": "No topics match search string. [Clear search](command:confluent.topics.search.clear) or [try a new search](command:confluent.topics.search).",
+        "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && confluent.topicSearchApplied"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "confluent.connections.ccloud.logIn",
+          "command": "confluent.connections.ccloud.signIn",
           "when": "!confluent.ccloudConnectionAvailable"
+        },
+        {
+          "command": "confluent.connections.ccloud.signOut",
+          "when": "confluent.ccloudConnectionAvailable"
         },
         {
           "command": "confluent.connections.direct.delete",
@@ -530,6 +594,10 @@
         },
         {
           "command": "confluent.connections.direct.edit",
+          "when": "false"
+        },
+        {
+          "command": "confluent.connections.direct.export",
           "when": "false"
         },
         {
@@ -545,28 +613,12 @@
           "when": "false"
         },
         {
-          "command": "confluent.topic.produce.fromFile",
+          "command": "confluent.topic.produce.fromDocument",
           "when": "false"
         },
         {
           "command": "confluent.copyResourceUri",
           "when": "false"
-        },
-        {
-          "command": "confluent.debugtools.globalState.showWebView",
-          "when": "true"
-        },
-        {
-          "command": "confluent.debugtools.globalState.reset",
-          "when": "true"
-        },
-        {
-          "command": "confluent.debugtools.workspaceState.showWebView",
-          "when": "true"
-        },
-        {
-          "command": "confluent.debugtools.workspaceState.reset",
-          "when": "true"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
@@ -581,6 +633,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.resources.search.clear",
+          "when": "confluent.resourceSearchApplied"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -589,11 +645,7 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemas.upload",
-          "when": "false"
-        },
-        {
-          "command": "confluent.schemas.uploadForSubject",
+          "command": "confluent.schemas.copySchemaRegistryId",
           "when": "false"
         },
         {
@@ -609,7 +661,15 @@
           "when": "false"
         },
         {
-          "command": "confluent.schemas.copySchemaRegistryId",
+          "command": "confluent.schemas.search.clear",
+          "when": "confluent.schemaSearchApplied"
+        },
+        {
+          "command": "confluent.schemas.upload",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.uploadForSubject",
           "when": "false"
         },
         {
@@ -637,6 +697,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.topics.search.clear",
+          "when": "confluent.topicSearchApplied"
+        },
+        {
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "false"
         }
@@ -662,34 +726,54 @@
       ],
       "view/title": [
         {
+          "command": "confluent.resources.search",
+          "when": "view == confluent-resources && !confluent.resourceSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.resources.search.clear",
+          "when": "view == confluent-resources && confluent.resourceSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.connections.direct",
           "when": "view == confluent-resources",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.refresh",
           "when": "view == confluent-resources",
-          "group": "navigation@2"
+          "group": "navigation@3"
+        },
+        {
+          "command": "confluent.schemas.search",
+          "when": "view == confluent-schemas && !confluent.schemaSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.schemas.search.clear",
+          "when": "view == confluent-schemas && confluent.schemaSearchApplied",
+          "group": "navigation@1"
         },
         {
           "command": "confluent.schemas.create",
           "when": "view == confluent-schemas",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.schemas.upload",
           "when": "view == confluent-schemas && confluent.schemaRegistrySelected",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.resources.schema-registry.select",
           "when": "view == confluent-schemas && (confluent.ccloudConnectionAvailable || confluent.localSchemaRegistryAvailable || confluent.directSchemaRegistryAvailable)",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.schemas.refresh",
           "when": "view == confluent-schemas",
-          "group": "navigation@4"
+          "group": "navigation@5"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
@@ -697,19 +781,29 @@
           "group": "2_copy@1"
         },
         {
+          "command": "confluent.topics.search",
+          "when": "view == confluent-topics && !confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.topics.search.clear",
+          "when": "view == confluent-topics && confluent.topicSearchApplied",
+          "group": "navigation@1"
+        },
+        {
           "command": "confluent.topics.create",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "confluent.resources.kafka-cluster.select",
           "when": "view == confluent-topics && (confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable)",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "confluent.topics.refresh",
           "when": "view == confluent-topics",
-          "group": "navigation@3"
+          "group": "navigation@4"
         },
         {
           "command": "confluent.topics.copyKafkaClusterId",
@@ -755,12 +849,12 @@
         },
         {
           "command": "confluent.diff.selectForCompare",
-          "when": "view == confluent-schemas && viewItem =~ /.*-schema$/",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
           "command": "confluent.diff.compareWithSelected",
-          "when": "confluent.resourceSelectedForCompare && view == confluent-schemas && viewItem =~ /.*-schema$/",
+          "when": "confluent.resourceSelectedForCompare && (view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*-schema$/",
           "group": "3_compare"
         },
         {
@@ -769,7 +863,7 @@
           "group": "inline@2"
         },
         {
-          "command": "confluent.connections.ccloud.logIn",
+          "command": "confluent.connections.ccloud.signIn",
           "when": "viewItem == resources-ccloud-container",
           "group": "inline@1"
         },
@@ -784,7 +878,17 @@
           "group": "inline@2"
         },
         {
+          "command": "confluent.connections.direct.export",
+          "when": "viewItem == direct-environment",
+          "group": "inline@1"
+        },
+        {
           "command": "confluent.organizations.use",
+          "when": "viewItem == resources-ccloud-container-connected",
+          "group": "inline@1"
+        },
+        {
+          "command": "confluent.connections.ccloud.signOut",
           "when": "viewItem == resources-ccloud-container-connected",
           "group": "inline@2"
         },
@@ -879,7 +983,7 @@
           "group": "4_copy@3"
         },
         {
-          "command": "confluent.topic.produce.fromFile",
+          "command": "confluent.topic.produce.fromDocument",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
           "group": "inline@1"
         },
@@ -965,13 +1069,13 @@
           {
             "id": "connect-local-cluster",
             "title": "Connect to Kafka",
-            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.ccloud.logIn)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
+            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
             },
             "completionEvents": [
-              "onCommand:command:confluent.connections.ccloud.logIn",
+              "onCommand:command:confluent.connections.ccloud.signIn",
               "onCommand:confluent.docker.startLocalResources"
             ]
           },
@@ -1051,6 +1155,7 @@
     "@types/gulp": "^4.0.17",
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.67",
+    "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
     "@types/vscode": "^1.87.0",
@@ -1060,7 +1165,7 @@
     "@vscode/vsce": "^3.1.0",
     "dotenv": "^16.4.5",
     "esbuild": "^0.21.4",
-    "eslint": "^9.4.0",
+    "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "globals": "^15.4.0",
@@ -1074,15 +1179,16 @@
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollwright": "^0.0.6",
+    "sanitize-html": "^2.14.0",
     "sinon": "^18.0.1",
     "typescript": "^5.4.2",
-    "typescript-eslint": "^8.0.0-alpha.28"
+    "typescript-eslint": "^8.25.0"
   },
   "dependencies": {
     "@segment/analytics-node": "^2.1.2",
-    "@sentry/node": "^8.17.0",
-    "@sentry/profiling-node": "^8.17.0",
-    "@sentry/rollup-plugin": "^2.21.1",
+    "@sentry/node": "^9.3.0",
+    "@sentry/profiling-node": "^9.3.0",
+    "@sentry/rollup-plugin": "^3.2.1",
     "@vscode/codicons": "^0.0.36",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "archiver": "^7.0.1",
@@ -1092,9 +1198,11 @@
     "gql.tada": "^1.8.3",
     "graphql": "^16.8.2",
     "inertial": "^0.4.1",
+    "opentelemetry-instrumentation-fetch-node": "^1.2.3",
     "tail": "^2.2.6",
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
+    "vscode-json-languageservice": "^5.4.2",
     "ws": "^8.18.0"
   }
 }

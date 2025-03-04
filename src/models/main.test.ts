@@ -1,39 +1,73 @@
 import * as assert from "assert";
 import { TreeItemCollapsibleState } from "vscode";
-import { ContainerTreeItem } from "./main";
+import { ContainerTreeItem, IdItem } from "./main";
+import { ISearchable } from "./resource";
 
-class MockIdItem {
+/** Mock class to be used as a child of a {@link ContainerTreeItem} for testing. */
+class MockContainerChild implements IdItem, ISearchable {
   constructor(public id: string) {}
-}
-
-class MockContainerTreeItem extends ContainerTreeItem<MockIdItem> {
-  constructor(label: string, children: MockIdItem[]) {
-    super(label, TreeItemCollapsibleState.Collapsed, children);
+  searchableText(): string {
+    return this.id;
   }
 }
 
 describe("ContainerTreeItem tests", () => {
   it("ContainerTreeItem constructor likes items with distinct ids", () => {
-    const children = [new MockIdItem("1"), new MockIdItem("2"), new MockIdItem("3")];
-    const container = new MockContainerTreeItem("label", children);
+    const children = [
+      new MockContainerChild("1"),
+      new MockContainerChild("2"),
+      new MockContainerChild("3"),
+    ];
+    const container = new ContainerTreeItem("label", TreeItemCollapsibleState.Collapsed, children);
     assert.strictEqual(container.children.length, 3);
   });
 
+  it("searchableText()", () => {
+    const stringLabelContainer = new ContainerTreeItem(
+      "string label",
+      TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    assert.strictEqual(stringLabelContainer.searchableText(), "string label (0)");
+
+    // test branch where label is a TreeItemLabel
+    const treeItemLabel = { label: "tree item label" };
+    const treeItemLabelContainer = new ContainerTreeItem(
+      treeItemLabel,
+      TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    assert.strictEqual(treeItemLabelContainer.searchableText(), "tree item label (0)");
+  });
+
   it("ContainerTreeItem constructor throws on duplicate ids", () => {
-    const children = [new MockIdItem("1"), new MockIdItem("1")];
-    assert.throws(() => new MockContainerTreeItem("label", children));
+    const children = [new MockContainerChild("1"), new MockContainerChild("1")];
+    assert.throws(
+      () => new ContainerTreeItem("label", TreeItemCollapsibleState.Collapsed, children),
+    );
   });
 
   it("ContainerTreeItem children setter likes items with distinct ids", () => {
-    const container = new MockContainerTreeItem("label", []);
-    const children = [new MockIdItem("1"), new MockIdItem("2"), new MockIdItem("3")];
-    container.children = children;
+    const container = new ContainerTreeItem<MockContainerChild>(
+      "label",
+      TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    container.children = [
+      new MockContainerChild("1"),
+      new MockContainerChild("2"),
+      new MockContainerChild("3"),
+    ];
     assert.strictEqual(container.children.length, 3);
   });
 
   it("ContainerTreeItem children setter throws on duplicate ids", () => {
-    const container = new MockContainerTreeItem("label", []);
-    const children = [new MockIdItem("1"), new MockIdItem("1")];
+    const container = new ContainerTreeItem<MockContainerChild>(
+      "label",
+      TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+    const children = [new MockContainerChild("1"), new MockContainerChild("1")];
     assert.throws(() => (container.children = children));
   });
 });

@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from "./Action";
 export * from "./ApiKeyAndSecret";
 export * from "./AuthError";
 export * from "./AuthErrors";
@@ -17,6 +18,7 @@ export * from "./ConnectionType";
 export * from "./ConnectionsList";
 export * from "./ExceededFields";
 export * from "./Failure";
+export * from "./HashAlgorithm";
 export * from "./HealthCheck";
 export * from "./HealthResponse";
 export * from "./JsonNode";
@@ -35,9 +37,17 @@ export * from "./PartitionOffset";
 export * from "./Preferences";
 export * from "./PreferencesMetadata";
 export * from "./PreferencesSpec";
+export * from "./ProduceRequest";
+export * from "./ProduceRequestData";
+export * from "./ProduceRequestHeader";
+export * from "./ProduceResponse";
+export * from "./ProduceResponseData";
+export * from "./RBACRequest";
 export * from "./SchemaRegistryConfig";
 export * from "./SchemaRegistryConfigCredentials";
 export * from "./SchemaRegistryStatus";
+export * from "./Scope";
+export * from "./ScramCredentials";
 export * from "./SidecarAccessToken";
 export * from "./SidecarVersionResponse";
 export * from "./SimpleConsumeMultiPartitionRequest";

@@ -4,14 +4,13 @@ import { CCLOUD_CONNECTION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
-import { getCCloudAuthSession, getCCloudConnection } from "../sidecar/connections";
 import { getResourceManager } from "../storage/resourceManager";
-import { IntervalPoller } from "../utils/timing";
+import { getCCloudAuthSession } from "./utils";
 
-const logger = new Logger("authn.ccloudPolling");
+const logger = new Logger("authn.ccloudStateHandling");
 
 /*
- * Module-level constants regarding reauthentication and auth expiration warnings.
+ * Module-level constants regarding ccloud reauthentication and auth expiration warnings.
  */
 /** How long before auth expiration we can show a warning notification to the user */
 export const MINUTES_UNTIL_REAUTH_WARNING = 60;
@@ -28,7 +27,7 @@ export const REMIND_BUTTON_TEXT = "Remind Me Later";
 
 /** Singleton class to track the state of the various auth prompts that can be shown to the user. */
 export class AuthPromptTracker {
-  /** Keeps track of whether or not the user has been prompted to attempt logging in again after an
+  /** Keeps track of whether or not the user has been prompted to attempt signing in again after an
    * auth-related error status (not expiration-related). */
   public authErrorPromptOpen: boolean = false;
   /** Have we already shown a warning notification that the user's auth status is about to expire? */
@@ -47,30 +46,13 @@ export class AuthPromptTracker {
 }
 
 /**
- * Poller to call {@link watchCCloudConnectionStatus} every 10 seconds to check the auth status of
- * the current CCloud connection.
+ * React to the current CCloud connection's authentication state. Passes the connection through for
+ * checking authentication expiration and errors.
  *
- * Starting and stopping is handled by the `ConfluentCloudAuthProvider` based on changes to the
- * authentication session state.
+ * Called whenever sidecar pushes an update to the ccloud connection via websocket event to us.
  */
-export const pollCCloudConnectionAuth = new IntervalPoller(
-  "pollCCloudConnectionAuth",
-  watchCCloudConnectionStatus,
-  10_000,
-  5_000,
-);
-
-/** Checks the current CCloud connection's authentication status passes the connection through for
- * checking authentication expiration and errors. */
-export async function watchCCloudConnectionStatus(): Promise<void> {
-  const connection: Connection | null = await getCCloudConnection();
-  if (!connection) {
-    // warn because the poller shouldn't be active if we don't have a connection
-    logger.warn("no connection found for current auth session");
-    return;
-  }
-
-  logger.debug("checking auth status for CCloud connection", {
+export async function reactToCCloudAuthState(connection: Connection): Promise<void> {
+  logger.debug("received update to CCloud connection", {
     status: connection.status.authentication.status,
     expiration: connection.status.authentication.requires_authentication_at,
     errors: connection.status.authentication.errors,
@@ -81,15 +63,11 @@ export async function watchCCloudConnectionStatus(): Promise<void> {
 
   await getResourceManager().setCCloudAuthStatus(authStatus);
   if (authStatus === "INVALID_TOKEN") {
-    // poll faster to try and get to a non-transient status as quickly as possible since it's going
-    // to affect how our CCloudAuthStatusMiddleware behaves
-    pollCCloudConnectionAuth.useFastFrequency();
-    // ...and don't bother checking for expiration or errors until we get another status back
+    // Don't bother checking for expiration or errors until we get another status back
     return;
   } else {
     // ensure any open progress notifications are closed even if no requests are going through the middleware
     nonInvalidTokenStatus.fire();
-    pollCCloudConnectionAuth.useSlowFrequency();
   }
 
   // if the auth status is still valid, but it's within {MINUTES_UNTIL_REAUTH_WARNING}min of expiring,
@@ -276,7 +254,7 @@ export function checkAuthErrors(connection: Connection) {
     return;
   }
 
-  let authButton: string = "Log in to Confluent Cloud";
+  let authButton: string = "Sign in to Confluent Cloud";
   // show an error message to the user to retry the auth flow
   tracker.authErrorPromptOpen = true;
   vscode.window

@@ -1,20 +1,13 @@
-import { TopicData } from "../clients/kafkaRest/models";
 import { ConnectionType } from "../clients/sidecar";
 import { LOCAL_CONNECTION_ID } from "../constants";
 import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
-import { isLocal } from "../models/resource";
 import { Schema } from "../models/schema";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
-import {
-  correlateTopicsWithSchemas,
-  fetchSchemas,
-  fetchTopics,
-  ResourceLoader,
-} from "./resourceLoader";
+import { fetchSchemas } from "./loaderUtils";
+import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.localResourceLoader");
 
@@ -36,7 +29,10 @@ export class LocalResourceLoader extends ResourceLoader {
   }
 
   // singleton class, get instance via getInstance()
-  private constructor() {
+  constructor() {
+    if (LocalResourceLoader.instance) {
+      throw new Error("Use LocalResourceLoader.getInstance()");
+    }
     super();
   }
 
@@ -52,26 +48,6 @@ export class LocalResourceLoader extends ResourceLoader {
       throw new Error(`Unknown environmentId ${environmentId}`);
     }
     return env.kafkaClusters;
-  }
-
-  /**
-   * Return the topics present in the {@link LocalKafkaCluster}. Will also correlate with schemas
-   * in the schema registry for the cluster, if any.
-   */
-  public async getTopicsForCluster(cluster: LocalKafkaCluster): Promise<KafkaTopic[]> {
-    if (!isLocal(cluster)) {
-      throw new Error(
-        `Cluster ${cluster.id} is not a local cluster, yet is passed to LocalResourceLoader.`,
-      );
-    }
-
-    // Deep fetch the schemas and the topics concurrently.
-    const [schemas, responseTopics]: [Schema[], TopicData[]] = await Promise.all([
-      this.getSchemasForEnvironmentId(),
-      fetchTopics(cluster),
-    ]);
-
-    return correlateTopicsWithSchemas(cluster, responseTopics, schemas);
   }
 
   public async getSchemaRegistries(): Promise<LocalSchemaRegistry[]> {

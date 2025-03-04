@@ -2,8 +2,9 @@ import { Disposable, EventEmitter as VscodeEventEmitter, window } from "vscode";
 // our message callback routing internally using node's EventEmitter for .once() support + per-event-type callbacks, lacking in VSCode's EventEmitter implementation
 import { EventEmitter as NodeEventEmitter } from "node:events";
 import WebSocket from "ws";
+import { logError } from "../errors";
 import { Logger } from "../logging";
-import { Message, MessageType, validateMessageBody } from "../ws/messageTypes";
+import { Message, MessageBodyDecoders, MessageType, validateMessageBody } from "../ws/messageTypes";
 
 const logger = new Logger("websocketManager");
 
@@ -256,8 +257,7 @@ export class WebsocketManager implements Disposable {
     this.disposables = [];
   }
 
-  /** Parse a message recieved from websocket into a Message<T> or die trying *
-   */
+  /** Parse/deserialize a message recieved from websocket into a Message<T> or die trying **/
   static parseMessage(data: WebSocket.Data): Message<MessageType> {
     const strMessage = data.toString();
     const message = JSON.parse(strMessage) as Message<MessageType>;
@@ -291,8 +291,31 @@ export class WebsocketManager implements Disposable {
       throw new Error("Message body must be an object: " + strMessage);
     }
 
+    const messageType = message.headers.message_type;
+
     // Validate the body against the message type
-    validateMessageBody(message.headers.message_type, body);
+    validateMessageBody(messageType, body);
+
+    // If needed for the message type, perform any higher-level body deserialization, say, promoting Dates encoded as
+    // strings up to Date instances.
+    const additionalDeserializer = MessageBodyDecoders[messageType];
+    if (additionalDeserializer) {
+      try {
+        message.body = additionalDeserializer(body);
+      } catch (e) {
+        logError(
+          e,
+          "Websocket message body higher-level body deserialization error",
+          {
+            message: strMessage,
+          },
+          true,
+        );
+
+        // rethrow the error
+        throw e;
+      }
+    }
 
     return message;
   }

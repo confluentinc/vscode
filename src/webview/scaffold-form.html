@@ -10,31 +10,44 @@
     <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
   </head>
   <body>
-    <main class="container">
-      <h1 data-text="'Set up ' + this.displayName()"></h1>
-      <h2 data-text="this.description()"></h2>
-      <p>
-        Take the first steps in creating a fully functional application by providing the options
-        below. You can always change them later in the project file.
-      </p>
-      <hr class="hr" />
-      <form data-on-submit="this.handleSubmit(event)">
-        <template data-if="this.noOptions()">
-          <p class="info">
-            There are no configurable options for this template. Click Generate & Save to continue.
-          </p>
-        </template>
-        <template data-for="field of this.options()">
-          <div class="content-wrapper">
-            <template data-if="this.isEnumField(this.field())">
-              <div class="input-container">
-                <div class="dropdown">
-                  <label data-text="this.field()[1].display_name"> </label>
+    <main class="webview-form">
+      <div class="form-header">
+        <h1 class="heading" data-text="this.displayName()"></h1>
+        <p class="form-description" data-text="this.description()"></p>
+        <p class="form-description">
+          Take the first steps in creating a fully functional application by providing the options
+          below. You can always change them later in the project file.
+        </p>
+      </div>
+      <form class="form-container" data-on-submit="this.handleSubmit(event)">
+        <div class="form-section">
+          <h2 class="form-section-heading">Options</h2>
+          <template data-if="this.noOptions()">
+            <p class="form-description">
+              There are no configurable options for this template. Click Generate & Save to
+              continue.
+            </p>
+          </template>
+          <template data-for="field of this.options()">
+            <div class="content-wrapper">
+              <template data-if="this.getEnumField(this.field())">
+                <div class="input-container dropdown">
+                  <div class="label-wrapper">
+                    <label
+                      data-text="this.field()[1].display_name"
+                      data-attr-for="this.field()[0]"
+                      class="label"
+                    ></label
+                    ><template data-if="this.field()[1].description">
+                      <span class="tooltip-indicator">?</span
+                      ><span class="tooltip" data-text="this.field()[1].description"></span>
+                    </template>
+                  </div>
                   <vscode-dropdown
                     data-attr-name="this.field()[0]"
                     data-prop-value="this.field()[1].initial_value"
                   >
-                    <template data-for="option of this.field()[1]._enum"
+                    <template data-for="option of this.getEnumField(this.field())"
                       ><vscode-option
                         data-attr-value="this.option()"
                         data-text="this.option()"
@@ -43,17 +56,20 @@
                     </template>
                   </vscode-dropdown>
                 </div>
-                <span class="description" data-text="this.field()[1].description"></span>
-              </div>
-            </template>
-            <template data-if="!this.isEnumField(this.field())">
-              <div class="input-container">
-                <div>
-                  <label
-                    data-text="this.field()[1].display_name"
-                    data-attr-for="this.field()[0]"
-                    data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
-                  ></label>
+              </template>
+              <template data-if="!this.getEnumField(this.field())">
+                <div class="input-container" data-attr-id="'input_' + this.field()[0]">
+                  <div class="label-wrapper">
+                    <label
+                      data-text="this.field()[1].display_name"
+                      data-attr-for="this.field()[0]"
+                      data-attr-class="this.field()[1].min_length > 0 ? 'label required' : 'label'"
+                    ></label
+                    ><template data-if="this.field()[1].description">
+                      <span class="tooltip-indicator">?</span
+                      ><span class="tooltip" data-text="this.field()[1].description"></span>
+                    </template>
+                  </div>
                   <input
                     class="input"
                     data-text="this.field()[1].display_name"
@@ -61,88 +77,83 @@
                     data-attr-name="this.field()[0]"
                     data-attr-value="this.getFieldValue(this.field()[0])"
                     data-on-input="this.handleInput(event)"
+                    data-on-blur="this.validateInput(event)"
                     data-attr-type="this.field()[1].format === 'password' ? 'password' : 'text'"
                     data-attr-placeholder="this.field()[1].hint ? this.field()[1].hint : ''"
                     data-attr-required="this.field()[1].min_length > 0"
                   />
+                  <div class="info">
+                    <span
+                      class="pattern field-description"
+                      data-attr-id="this.field()[0]"
+                      data-text="this.field()[1].pattern_description ? 'Must match pattern: ' + this.field()[1].pattern_description : ''"
+                    ></span>
+                  </div>
                 </div>
-                <span class="description" data-text="this.field()[1].description"></span>
+              </template>
+            </div>
+          </template>
+        </div>
+        <div class="form-section">
+          <div class="input-row">
+            <input
+              class="button"
+              type="submit"
+              value="Generate & Save"
+              data-attr-disabled="this.hasValidationErrors() === true ? true : false"
+            />
+            <template data-if="this.message()">
+              <div data-attr-class="this.success() ? 'info' : 'info error'">
+                <span class="status-icon" data-text="this.success() ? '' : 'x'"></span>
+                <span data-text="this.message()"></span>
               </div>
             </template>
           </div>
-        </template>
-        <input class="button" type="submit" value="Generate & Save" />
+        </div>
       </form>
     </main>
 
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('scaffold-form.js')}"></script>
     <style nonce="${nonce}">
-      body {
-        max-width: 1000px;
-        font-size: 14px;
+      .label-wrapper {
+        position: relative;
       }
-      .content-wrapper {
-        display: contents;
-      }
-      .container {
-        padding: 60px 80px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      .container > * {
-        margin: unset;
-      }
-      h1 {
-        font-size: 26px;
-      }
-      h2 {
-        font-size: 16px;
-      }
-      form {
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-        gap: 20px;
-        margin-top: 26px;
-      }
-      .input-container {
-        display: flex;
+      .tooltip-indicator {
+        padding: 2px;
+        border-radius: 50%;
+        border: 1px solid var(--vscode-descriptionForeground);
+        color: var(--vscode-descriptionForeground);
+        height: 0.5rem;
+        width: 0.5rem;
+        font-size: 0.7rem;
+        display: inline-flex;
         align-items: center;
-        gap: 16px;
-        width: 100%;
-        font-weight: 500;
+        justify-content: center;
+        right: -15px;
+        position: absolute;
+        top: 0px;
+        transition: all 0.2s ease-in-out;
       }
-      @media screen and (max-width: 1000px) {
-        .input-container {
-          flex-wrap: wrap;
-          gap: 8px;
-          padding-bottom: 5px;
-        }
+      .label-wrapper:hover .tooltip-indicator {
+        background-color: var(--vscode-badge-background);
       }
-      input:not([type="submit"]),
-      .dropdown > * {
-        width: 250px;
-      }
-      .dropdown {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        align-items: start;
-      }
-      .description {
-        font-weight: 700;
+      .label-wrapper > .tooltip {
+        display: none;
+        border: 1px solid var(--vscode-badge-background); /* slightly lighter I hope? */
+        background: var(--vscode-editor-background);
         color: var(--vscode-descriptionForeground);
-        font-size: 12px;
+        padding: 5px;
+        width: max-content;
+        max-width: 250px;
+        position: absolute;
+        bottom: 1rem;
+        left: 100%;
+        border-radius: 3px;
+        font-weight: normal;
       }
-      .dropdown > label > vscode-dropdown {
-        width: 100%;
-      }
-      .info {
-        color: var(--vscode-descriptionForeground);
-        font-weight: 700;
-        font-style: italic;
+      .label-wrapper:hover > .tooltip {
+        display: block;
       }
     </style>
   </body>

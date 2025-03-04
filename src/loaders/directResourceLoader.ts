@@ -1,18 +1,12 @@
-import { TopicData } from "../clients/kafkaRest";
 import { ConnectionType } from "../clients/sidecar";
 import { getDirectResources } from "../graphql/direct";
+import { fetchSchemas } from "../loaders/loaderUtils";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, isDirect } from "../models/resource";
+import { ConnectionId } from "../models/resource";
 import { Schema } from "../models/schema";
 import { DirectSchemaRegistry } from "../models/schemaRegistry";
-import { KafkaTopic } from "../models/topic";
-import {
-  correlateTopicsWithSchemas,
-  fetchSchemas,
-  fetchTopics,
-  ResourceLoader,
-} from "./resourceLoader";
+import { ResourceLoader } from "./resourceLoader";
 
 /**
  * {@link ResourceLoader} implementation for direct connections.
@@ -43,17 +37,6 @@ export class DirectResourceLoader extends ResourceLoader {
       throw new Error(`Unknown environmentId ${environmentId}`);
     }
     return env.kafkaClusters;
-  }
-
-  async getTopicsForCluster(cluster: DirectKafkaCluster): Promise<KafkaTopic[]> {
-    if (!isDirect(cluster)) {
-      throw new Error(`Expected a direct cluster, got ${cluster.connectionType}`);
-    }
-    const [topics, schemas]: [TopicData[], Schema[]] = await Promise.all([
-      fetchTopics(cluster),
-      this.getSchemasForEnvironmentId(cluster.environmentId),
-    ]);
-    return correlateTopicsWithSchemas(cluster, topics, schemas);
   }
 
   async getSchemaRegistries(): Promise<DirectSchemaRegistry[]> {

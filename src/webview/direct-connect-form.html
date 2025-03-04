@@ -10,59 +10,76 @@
     <link rel="stylesheet" type="text/css" nonce="${nonce}" href="${path('main.css')}" />
   </head>
   <body>
-    <main class="container">
-      <h1 data-text="this.spec() ? 'Edit connection details' : 'Create a new connection'"></h1>
-      <p>
-        Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
-        cancel all changes.
-      </p>
-      <form data-on-submit="this.handleSubmit(event)">
-        <div class="radio-container">
-          <legend class="label">Connection Type</legend>
-          <div>
+    <main class="container webview-form">
+      <div class="form-header">
+        <h1
+          class="heading"
+          data-text="this.editing() ? 'Edit connection details' : this.imported() ? 'Import connection' : 'Create a new connection'"
+        ></h1>
+        <template data-if="this.imported()">
+          <p class="form-description">
+            Connection information imported from file. Confirm the imported values and make any
+            other updates, such as file paths, as needed.
+          </p>
+        </template>
+        <template data-if="!this.imported()">
+          <p class="form-description">
+            Connect directly to a Kafka Cluster, Schema Registry or both. You may close this tab to
+            cancel all changes.
+          </p>
+        </template>
+      </div>
+      <form class="form-container" data-on-submit="this.handleSubmit(event)">
+        <div class="form-section">
+          <h2 class="form-section-heading">General</h2>
+          <div class="input-container">
+            <label for="name" class="label">Connection Name</label>
             <input
-              type="radio"
-              id="apache-kafka"
-              name="platform"
-              value="Apache Kafka"
-              data-attr-checked="this.platformType() === 'Apache Kafka' ? true : false"
+              class="input"
+              id="name"
+              name="name"
+              type="text"
+              placeholder="New Connection"
+              data-attr-value="this.name()"
               data-on-change="this.updateValue(event)"
             />
-            <label for="apache-kafka">Apache Kafka®</label>
+            <span class="field-description"
+              >An easy to remember name to reference this connection in the future</span
+            >
           </div>
-          <div>
-            <input
-              type="radio"
-              id="confluent-cloud"
-              name="platform"
-              value="Confluent Cloud"
-              data-attr-checked="this.platformType() === 'Confluent Cloud' ? true : false"
+          <div class="input-container">
+            <label class="label">Connection Type</label>
+            <select
+              class="input dropdown"
+              id="formconnectiontype"
+              name="formconnectiontype"
               data-on-change="this.updateValue(event)"
-            />
-            <label for="confluent-cloud">Confluent Cloud</label>
-          </div>
-          <div>
-            <input
-              type="radio"
-              id="confluent-platform"
-              name="platform"
-              value="Confluent Platform"
-              data-attr-checked="this.platformType() === 'Confluent Platform' ? true : false"
-              data-on-change="this.updateValue(event)"
-            />
-            <label for="confluent-platform">Confluent Platform</label>
-          </div>
-          <div>
-            <input
-              type="radio"
-              id="other"
-              name="platform"
-              value="Other"
-              required
-              data-on-change="this.updateValue(event)"
-              data-attr-checked="this.platformType() === 'Other' ? true : false"
-            />
-            <label for="other">Other</label>
+            >
+              <option
+                value="Apache Kafka"
+                data-attr-selected="this.platformType() === 'Apache Kafka' ? true : false"
+              >
+                Apache Kafka®
+              </option>
+              <option
+                value="Confluent Cloud"
+                data-attr-selected="this.platformType() === 'Confluent Cloud' ? true : false"
+              >
+                Confluent Cloud
+              </option>
+              <option
+                value="Confluent Platform"
+                data-attr-selected="this.platformType() === 'Confluent Platform' ? true : false"
+              >
+                Confluent Platform
+              </option>
+              <option
+                value="Other"
+                data-attr-selected="this.platformType() === 'Other' ? true : false"
+              >
+                Other
+              </option>
+            </select>
             <!-- <template data-if="this.platformType() === 'Other'"
               >&nbsp;&nbsp;
               <input
@@ -77,316 +94,289 @@
             </template> -->
           </div>
         </div>
-        <div class="input-container">
-          <div>
-            <label for="name" class="label">Connection Name</label>
+        <div class="form-section">
+          <template data-if="this.showKafkaStatus()"
+            ><div
+              data-attr-class="this.kafkaErrorMessage() ? 'msg-banner error' : 'msg-banner success'"
+            >
+              <span class="status-icon" data-text="this.kafkaErrorMessage() ? 'x' : '✓'"></span>
+              <span data-text="this.kafkaStatusMessage()"></span>
+            </div>
+          </template>
+          <h2 class="form-section-heading">Kafka Cluster</h2>
+          <div class="input-container">
+            <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
             <input
               class="input"
-              id="name"
-              name="name"
+              id="kafka_cluster.bootstrap_servers"
+              name="kafka_cluster.bootstrap_servers"
               type="text"
-              placeholder="New Connection"
-              data-attr-value="this.name()"
+              placeholder="host:port, host2:port2"
+              data-attr-value="this.kafkaBootstrapServers()"
               data-on-change="this.updateValue(event)"
             />
-          </div>
-          <span class="description"
-            >An easy to remember name to reference this connection in the future</span
-          >
-        </div>
-        <fieldset>
-          <legend>Kafka</legend>
-          <template data-if="this.kafkaStatusMessage()"
-            ><p
-              data-attr-class="this.kafkaErrorMessage() ? 'info error' : 'info'"
-              data-text="this.kafkaStatusMessage()"
-            ></p
-          ></template>
-          <div class="input-container">
-            <div>
-              <label for="bootstrap_servers" class="label">Bootstrap Server(s)</label>
-              <input
-                class="input"
-                id="bootstrap_servers"
-                name="bootstrap_servers"
-                type="text"
-                placeholder="host:port, host2:port2"
-                data-attr-value="this.kafkaBootstrapServers()"
-                data-on-change="this.updateValue(event)"
-              />
-            </div>
-            <span class="description"
+            <span class="field-description"
               >One or more host:port pairs to use for establishing the initial connection (use a
               comma-separated list for more than one server)</span
             >
           </div>
-          <div class="toggle-container">
-            <label class="label" for="kafka_ssl">SSL enabled?</label>
-            <input
-              type="checkbox"
-              id="kafka_ssl"
-              name="kafka_ssl"
-              data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the cluster?'"
-              data-attr-checked="this.kafkaSslEnabled() ? true : false"
+          <div class="input-container">
+            <label for="kafka_cluster.auth_type" class="label">Authentication Type</label>
+            <select
+              class="input dropdown"
+              id="kafka_cluster.auth_type"
+              name="kafka_cluster.auth_type"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-            />
-          </div>
-          <div class="radio-container">
-            <legend class="label">Authentication Type</legend>
-            <div>
-              <input
-                type="radio"
-                id="kafka-auth-none"
-                name="kafka_auth_type"
-                data-attr-checked="this.kafkaAuthType() === 'None' ? true : false"
-                data-attr-required="this.kafkaBootstrapServers() !== ''"
-                data-on-change="this.updateValue(event)"
-                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-              />
-              <label for="kafka-auth-none">None</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="kafka-auth-basic"
-                name="kafka_auth_type"
+            >
+              <option
+                value="None"
+                data-attr-selected="this.kafkaAuthType() === 'None' ? true : false"
+              >
+                None
+              </option>
+              <option
                 value="Basic"
-                data-attr-checked="this.kafkaAuthType() === 'Basic' ? true : false"
-                data-on-change="this.updateValue(event)"
-                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-              />
-              <label for="kafka-auth-basic">Username & Password</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="kafka-auth-api"
-                name="kafka_auth_type"
+                data-attr-selected="this.kafkaAuthType() === 'Basic' ? true : false"
+              >
+                Username & Password
+              </option>
+              <option
                 value="API"
-                data-attr-checked="this.kafkaAuthType() === 'API' || this.platformType() === 'Confluent Cloud' ? true : false"
-                data-on-change="this.updateValue(event)"
-              />
-              <label for="kafka-auth-api">API Credentials</label>
-            </div>
+                data-attr-selected="this.kafkaAuthType() === 'API' ? true : false"
+              >
+                API Credentials
+              </option>
+            </select>
           </div>
           <template data-if="this.kafkaAuthType() === 'Basic'">
-            <div>
+            <div class="input-row">
               <div class="input-container">
-                <div>
-                  <label for="kafka_username" class="label">Username</label>
-                  <input
-                    class="input"
-                    id="kafka_username"
-                    name="kafka_username"
-                    type="text"
-                    data-attr-value="this.kafkaUsername()"
-                    data-on-change="this.updateValue(event)"
-                    required
-                  />
-                </div>
+                <label for="kafka_cluster.credentials.username" class="label">Username</label>
+                <input
+                  class="input"
+                  id="kafka_cluster.credentials.username"
+                  name="kafka_cluster.credentials.username"
+                  type="text"
+                  data-attr-value="this.kafkaUsername()"
+                  data-on-change="this.updateValue(event)"
+                  required
+                />
               </div>
               <div class="input-container">
-                <div>
-                  <label for="kafka_password" class="label">Password</label>
-                  <input
-                    class="input"
-                    id="kafka_password"
-                    name="kafka_password"
-                    type="password"
-                    data-attr-value="this.kafkaSecret()"
-                    required
-                  />
-                </div>
+                <label for="kafka_cluster.credentials.password" class="label">Password</label>
+                <input
+                  class="input"
+                  id="kafka_cluster.credentials.password"
+                  name="kafka_cluster.credentials.password"
+                  type="password"
+                  data-attr-value="this.kafkaSecret()"
+                  required
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
             </div>
           </template>
           <template data-if="this.kafkaAuthType() === 'API'">
-            <div>
+            <div class="input-row">
               <div class="input-container">
-                <div>
-                  <label for="kafka_api_key" class="label">Key</label>
-                  <input
-                    class="input"
-                    id="api_key"
-                    name="kafka_api_key"
-                    type="text"
-                    data-attr-required="this.kafkaBootstrapServers() !== ''"
-                    data-attr-value="this.kafkaApiKey()"
-                    data-on-change="this.updateValue(event)"
-                  />
-                </div>
+                <label for="kafka_cluster.credentials.api_key" class="label">API Key</label>
+                <input
+                  class="input"
+                  id="kafka_cluster.credentials.api_key"
+                  name="kafka_cluster.credentials.api_key"
+                  type="text"
+                  data-attr-required="this.kafkaBootstrapServers() !== ''"
+                  data-attr-value="this.kafkaApiKey()"
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
               <div class="input-container">
-                <div>
-                  <label for="kafka_api_secret" class="label">Secret</label>
-                  <input
-                    class="input"
-                    id="api_secret"
-                    name="kafka_api_secret"
-                    data-attr-value="this.kafkaSecret()"
-                    type="password"
-                    data-attr-required="this.kafkaBootstrapServers() !== ''"
-                  />
-                </div>
+                <label for="kafka_cluster.credentials.api_secret" class="label">API Secret</label>
+                <input
+                  class="input"
+                  id="kafka_cluster.credentials.api_secret"
+                  name="kafka_cluster.credentials.api_secret"
+                  data-attr-value="this.kafkaSecret()"
+                  type="password"
+                  data-attr-required="this.kafkaBootstrapServers() !== ''"
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
             </div>
           </template>
-        </fieldset>
-        <fieldset>
-          <legend>Schema Registry</legend>
-          <template data-if="this.schemaStatusMessage()"
-            ><p
-              data-attr-class="this.schemaErrorMessage() ? 'info error' : 'info'"
-              data-text="this.schemaStatusMessage()"
-            ></p
-          ></template>
-          <div class="input-container">
-            <div>
-              <label for="uri" class="label">URL</label>
-              <input
-                class="input"
-                id="uri"
-                name="uri"
-                type="url"
-                pattern="https?://.*"
-                title="URL must begin with http or https"
-                placeholder="https://example.com"
-                data-attr-value="this.schemaUri()"
-                data-on-change="this.updateValue(event)"
-              />
-            </div>
-            <span class="description">The URL of the Schema Registry to use for serialization</span>
-          </div>
-          <div class="toggle-container">
-            <label class="label" for="schema_ssl">SSL enabled?</label>
+          <label class="checkbox" for="kafka_cluster.ssl.enabled">
             <input
               type="checkbox"
-              id="schema_ssl"
-              name="schema_ssl"
-              data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the registry?'"
-              data-attr-checked="this.schemaSslEnabled() ? true : false"
+              id="kafka_cluster.ssl.enabled"
+              name="kafka_cluster.ssl.enabled"
+              data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the cluster?'"
+              data-attr-checked="this.kafkaSslEnabled()"
+              data-attr-value="this.kafkaSslEnabled()"
               data-on-change="this.updateValue(event)"
               data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+            /><span>SSL/TLS enabled</span></label
+          >
+          <template data-if="this.kafkaSslEnabled()">
+            <ssl-config
+              data-prop-config="this.kafkaSslConfig()"
+              data-prop-namespace="'kafka_cluster'"
+              data-on-change="this.updateValue(event.detail)"
+              data-on-getfile="this.getFile(event.detail)"
             />
+          </template>
+        </div>
+        <div class="form-section">
+          <template data-if="this.showSchemaStatus()">
+            <div
+              data-attr-class="this.schemaErrorMessage() ? 'msg-banner error' : 'msg-banner success'"
+            >
+              <span class="status-icon" data-text="this.schemaErrorMessage() ? 'x' : '✓'"></span>
+              <span data-text="this.schemaStatusMessage()"></span>
+            </div>
+          </template>
+          <h2 class="form-section-heading">Schema Registry</h2>
+          <div class="input-container">
+            <label for="schema_registry.uri" class="label">URL</label>
+            <input
+              class="input"
+              id="schema_registry.uri"
+              name="schema_registry.uri"
+              type="url"
+              pattern="https?://.*"
+              title="URL must begin with http or https"
+              placeholder="https://example.com"
+              data-attr-value="this.schemaUri()"
+              data-on-change="this.updateValue(event)"
+            />
+            <span class="field-description"
+              >The URL of the Schema Registry to use for serialization</span
+            >
           </div>
-          <div class="radio-container">
-            <legend class="label">Authentication Type</legend>
-            <div>
-              <input
-                type="radio"
-                id="schema-auth-none"
-                name="schema_auth_type"
+          <div class="input-container">
+            <label for="schema_registry.auth_type" class="label">Authentication Type</label>
+            <select
+              class="input dropdown"
+              id="schema_registry.auth_type"
+              name="schema_registry.auth_type"
+              data-on-change="this.updateValue(event)"
+              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+            >
+              <option
                 value="None"
-                data-attr-required="this.schemaUri() !== ''"
-                data-on-change="this.updateValue(event)"
-                data-attr-checked="this.schemaAuthType() === 'None' ? true : false"
-                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-              />
-              <label for="schema-auth-none">None</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="schema-auth-basic"
-                name="schema_auth_type"
+                data-attr-selected="this.schemaAuthType() === 'None' ? true : false"
+              >
+                None
+              </option>
+              <option
                 value="Basic"
-                data-on-change="this.updateValue(event)"
-                data-attr-checked="this.schemaAuthType() === 'Basic' ? true : false"
-                data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
-              />
-              <label for="schema-auth-basic">Username & Password</label>
-            </div>
-            <div>
-              <input
-                type="radio"
-                id="schema-auth-api"
-                name="schema_auth_type"
+                data-attr-selected="this.schemaAuthType() === 'Basic' ? true : false"
+              >
+                Username & Password
+              </option>
+              <option
                 value="API"
-                data-on-change="this.updateValue(event)"
-                data-attr-checked="this.schemaAuthType() === 'API' || this.platformType() === 'Confluent Cloud' ? true : false"
-              />
-              <label for="schema-auth-api">API Credentials</label>
-            </div>
+                data-attr-selected="this.schemaAuthType() === 'API' ? true : false"
+              >
+                API Credentials
+              </option>
+            </select>
           </div>
           <template data-if="this.schemaAuthType() === 'Basic'">
-            <div>
+            <div class="input-row">
               <div class="input-container">
-                <div>
-                  <label for="schema_username" class="label">Username</label>
-                  <input
-                    class="input"
-                    id="schema_username"
-                    name="schema_username"
-                    type="text"
-                    data-attr-value="this.schemaUsername()"
-                    data-attr-required="this.schemaUri() !== ''"
-                    data-on-change="this.updateValue(event)"
-                  />
-                </div>
+                <label for="schema_registry.credentials.username" class="label">Username</label>
+                <input
+                  class="input"
+                  id="schema_registry.credentials.username"
+                  name="schema_registry.credentials.username"
+                  type="text"
+                  data-attr-value="this.schemaUsername()"
+                  data-attr-required="this.schemaUri() !== ''"
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
               <div class="input-container">
-                <div>
-                  <label for="schema_password" class="label">Password</label>
-                  <input
-                    class="input"
-                    id="schema_password"
-                    name="schema_password"
-                    type="password"
-                    data-attr-required="this.schemaUri() !== ''"
-                    data-attr-value="this.schemaSecret()"
-                  />
-                </div>
+                <label for="schema_registry.credentials.password" class="label">Password</label>
+                <input
+                  class="input"
+                  id="schema_registry.credentials.password"
+                  name="schema_registry.credentials.password"
+                  type="password"
+                  data-attr-required="this.schemaUri() !== ''"
+                  data-attr-value="this.schemaSecret()"
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
             </div>
           </template>
           <template data-if="this.schemaAuthType() === 'API'">
-            <div>
+            <div class="input-row">
               <div class="input-container">
-                <div>
-                  <label for="schema_api_key" class="label">Key</label>
-                  <input
-                    class="input"
-                    id="schema_api_key"
-                    name="schema_api_key"
-                    type="text"
-                    data-attr-required="this.schemaUri() !== ''"
-                    data-attr-value="this.schemaApiKey()"
-                    data-on-change="this.updateValue(event)"
-                  />
-                </div>
+                <label for="schema_registry.credentials.api_key" class="label">API Key</label>
+                <input
+                  class="input"
+                  id="schema_registry.credentials.api_key"
+                  name="schema_registry.credentials.api_key"
+                  type="text"
+                  data-attr-required="this.schemaUri() !== ''"
+                  data-attr-value="this.schemaApiKey()"
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
               <div class="input-container">
-                <div>
-                  <label for="schema_api_secret" class="label">Secret</label>
-                  <input
-                    class="input"
-                    id="schema_api_secret"
-                    name="schema_api_secret"
-                    type="password"
-                    data-attr-required="this.schemaUri() !== ''"
-                    data-attr-value="this.schemaSecret()"
-                  />
-                </div>
+                <label for="schema_registry.credentials.api_secret" class="label">API Secret</label>
+                <input
+                  class="input"
+                  id="schema_registry.credentials.api_secret"
+                  name="schema_registry.credentials.api_secret"
+                  type="password"
+                  data-attr-required="this.schemaUri() !== ''"
+                  data-attr-value="this.schemaSecret()"
+                  data-on-change="this.updateValue(event)"
+                />
               </div>
             </div>
           </template>
-        </fieldset>
-        <div
-          data-attr-class="this.success() ? 'info' : 'info error'"
-          data-text="this.message()"
-        ></div>
-        <div class="button-group">
+          <label class="checkbox" for="schema_registry.ssl.enabled">
+            <input
+              type="checkbox"
+              id="schema_registry.ssl.enabled"
+              name="schema_registry.ssl.enabled"
+              data-attr-title="this.platformType() === 'Confluent Cloud' ? 'SSL is required for Confluent Cloud' : 'Enable SSL for the registry?'"
+              data-attr-checked="this.schemaSslEnabled()"
+              data-attr-value="this.schemaSslEnabled()"
+              data-on-change="this.updateValue(event)"
+              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+            />
+            <span>SSL/TLS enabled</span>
+          </label>
+          <template data-if="this.schemaSslEnabled()">
+            <ssl-config
+              data-prop-config="this.schemaSslConfig()"
+              data-prop-namespace="'schema_registry'"
+              data-on-change="this.updateValue(event.detail)"
+              data-on-getfile="this.getFile(event.detail)"
+            />
+          </template>
+        </div>
+        <div class="form-section button-group">
           <input
-            class="button"
+            class="button secondary"
             type="submit"
-            data-attr-value="this.loading() ? 'Testing...' : 'Test Connection'"
+            data-attr-value="this.loading() ? 'Testing...' : 'Test'"
             data-attr-disabled="this.loading()"
           />
+          <template data-if="this.message() !== ''">
+            <div data-attr-class="!this.success() ? 'info error' : 'info'">
+              <span class="status-icon" data-text="!this.success() ? 'x' : '✓'"></span>
+              <span data-text="this.message()"></span>
+            </div>
+          </template>
           <input
             class="button"
             type="submit"
-            data-attr-value="this.spec() ? 'Update Connection' : 'Save Connection'"
+            data-attr-value="this.editing() ? 'Update' : 'Save'"
             data-attr-disabled="this.loading()"
           />
         </div>
@@ -395,128 +385,48 @@
     <script type="module" nonce="${nonce}" src="${path('main.js')}"></script>
     <script type="module" nonce="${nonce}" src="${path('direct-connect-form.js')}"></script>
     <style nonce="${nonce}">
-      body {
-        max-width: 1000px;
-        font-size: 14px;
-      }
-      .container {
-        padding: 60px 80px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      .container > * {
-        margin: unset;
-      }
-      h1 {
-        font-size: 26px;
-      }
-      h2 {
-        font-size: 16px;
-      }
-      form {
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-        gap: 20px;
-        margin-top: 26px;
-      }
-      .label {
-        font-weight: 500;
-      }
-      .input-container {
-        display: flex;
-        align-items: end;
-        gap: 16px;
-        width: 100%;
-      }
-      @media screen and (max-width: 800px) {
-        .input-container {
-          flex-wrap: wrap;
-          gap: 8px;
-          padding-bottom: 5px;
-        }
-      }
-      .input-container > input {
-        min-width: 8rem;
-      }
-      .input-container > * {
-        flex-basis: 50%;
-      }
-      .input-container > * > * {
-        width: 100%;
-      }
-      .toggle-container {
-        display: inline-flex;
-        gap: 10px;
-        align-items: center;
-      }
-      .toggle-container > .label {
-        margin-bottom: 0;
-      }
-      .radio-container {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 5px 10px;
-      }
-      .radio-container > div {
-        display: flex;
-        flex-direction: row;
-        justify-content: stretch;
-        align-items: center;
-      }
-      .radio-container > .label {
-        flex-basis: 100%;
-        margin-bottom: 0;
-      }
-      fieldset {
-        width: 100%;
-        border-width: 1px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      legend {
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-      }
-      fieldset > p {
-        margin: 0;
-        height: min-content;
-      }
-
-      input::placeholder {
-        color: var(--vscode-input-placeholderForeground);
-      }
-      input:disabled {
-        background-color: var(--vscode-disabledForeground);
-        cursor: not-allowed;
-      }
-      input:invalid {
-        border: 1px solid var(--vscode-errorForeground);
-      }
-
-      .button-group {
-        display: flex;
-        gap: 10px;
-      }
-      .description {
-        font-weight: 700;
+      .msg-banner {
         color: var(--vscode-descriptionForeground);
-        font-size: 12px;
+        font-weight: 450;
       }
-
-      .info {
-        color: var(--vscode-editorInfo-foreground);
-        font-weight: 500;
-        white-space: break-spaces;
+      .msg-banner {
+        margin-bottom: -8px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        padding: 0.5em 1em;
+        border-radius: 3px;
+        border: 1px solid var(--vscode-panel-border, #ccc);
       }
-      .error {
-        color: var(--vscode-errorForeground);
+      .msg-banner::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background-color: transparent;
+        opacity: 0.1;
+        z-index: -1;
       }
-      input.error {
-        border: 1px solid var(--vscode-errorForeground);
+      .msg-banner.error {
+        border-color: var(--vscode-testing-iconFailed);
+      }
+      .msg-banner.error::before {
+        background-color: var(--vscode-testing-iconFailed);
+      }
+      .msg-banner.success {
+        border-color: var(--vscode-testing-iconPassed);
+      }
+      .msg-banner.success::before {
+        background-color: var(--vscode-testing-iconPassed);
+      }
+      .info > .button {
+        padding: 2px;
+        font-size: smaller;
+      }
+      .heading.clickable {
+        cursor: pointer;
       }
     </style>
   </body>

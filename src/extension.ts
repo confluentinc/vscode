@@ -42,6 +42,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
+import { getCCloudAuthSession } from "./authn/utils";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -55,7 +56,7 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL } from "./constants";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, SIDECAR_OUTPUT_CHANNEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -64,6 +65,7 @@ import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { constructResourceLoaderSingletons } from "./loaders";
 import { Logger, outputChannel } from "./logging";
 import {
   ENABLE_PRODUCE_MESSAGES,
@@ -73,19 +75,20 @@ import {
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
-import { getSidecarManager, sidecarOutputChannel } from "./sidecar";
-import { ConnectionStateWatcher, getCCloudAuthSession } from "./sidecar/connections";
+import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
+import { getSidecarManager } from "./sidecar";
+import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
-import { constructResourceLoaderSingletons } from "./storage/resourceLoaderInitialization";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
+import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
 
@@ -101,14 +104,17 @@ export async function activate(
   observabilityContext.extensionActivated = false;
 
   logger.info(`Extension ${context.extension.id}" activate() triggered.`);
+  logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
     logger.info("Extension fully activated");
     observabilityContext.extensionActivated = true;
+    logUsage(UserEvent.ExtensionActivation, { status: "completed" });
   } catch (e) {
     logger.error("Error activating extension:", e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
     Sentry.captureException(e);
+    logUsage(UserEvent.ExtensionActivation, { status: "failed" });
     throw e;
   }
 
@@ -126,15 +132,13 @@ export async function activate(
 async function _activateExtension(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext> {
-  logUsage(UserEvent.ExtensionActivated);
-
   // must be done first to allow any other downstream callers to call `getExtensionContext()`
   // (e.g. StorageManager for secrets/states, webviews for extension root path, etc)
   setExtensionContext(context);
 
   // register the log output channels and debugging commands before anything else, in case we need
   // to reset global/workspace state or there's a problem further down with extension activation
-  context.subscriptions.push(outputChannel, sidecarOutputChannel, ...registerDebugCommands());
+  context.subscriptions.push(outputChannel, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
   // automatically display and focus the Confluent extension output channel in development mode
   // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
   // host window during debugging
@@ -231,6 +235,15 @@ async function _activateExtension(
   const directConnectionManager = DirectConnectionManager.getInstance();
   context.subscriptions.push(...directConnectionManager.disposables);
 
+  // ensure our diagnostic collection(s) are cleared when the extension is deactivated
+  context.subscriptions.push(JSON_DIAGNOSTIC_COLLECTION);
+
+  // register the search decoration provider for the tree views so any matches can be highlighted
+  // with a dot to the right of the item label+description area
+  context.subscriptions.push(
+    vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
+  );
+
   // XXX: used for testing; do not remove
   return context;
 }
@@ -282,7 +295,6 @@ async function setupContextValues() {
     "ccloud-schema-registry",
     "local-kafka-cluster",
     "local-schema-registry",
-    "direct-kafka-cluster",
     "direct-schema-registry",
   ]);
   await Promise.all([
@@ -355,7 +367,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // Send an Identify event to Segment with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
-      eventName: UserEvent.ActivatedWithSession,
+      eventName: UserEvent.ExtensionActivation,
       userInfo: undefined,
       session: cloudSession,
     });

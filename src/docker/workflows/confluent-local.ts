@@ -16,6 +16,7 @@ import {
 } from "../../clients/docker";
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
+import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { LOCAL_KAFKA_IMAGE, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { ResourceManager } from "../../storage/resourceManager";
@@ -131,13 +132,14 @@ export class ConfluentLocalWorkflow extends LocalResourceWorkflow {
         containerEnvs,
       );
       if (!container) {
-        this.showErrorNotification(
+        showErrorNotificationWithButtons(
           `Failed to create ${this.resourceKind} container "${brokerConfig.containerName}".`,
         );
         success = false;
         break;
       }
-      this.sendTelemetryEvent(UserEvent.DockerContainerCreated, {
+      this.sendTelemetryEvent(UserEvent.LocalDockerAction, {
+        status: "container created",
         dockerContainerName: container.name,
       });
       // then start the container

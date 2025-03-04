@@ -4,8 +4,101 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
+  keystore and truststore settings
+- Ability to export and import connection details as JSON files, for easier connection creation and
+  sharing
+
+## 0.25.0
+
+### Added
+
+- Progress indicator when producing large batches of messages to Kafka topics to improve visibility
+  of long-running operations.
+- Search functionality (via `ctrl+f`/`cmd+f` or by clicking on the magnifying glass) when one of the
+  main views is in focus:
+  - Resources view: search by any label or description of visible environments, Kafka clusters, and
+    Schema Registries
+  - Topics view: search by topic name or schema subject (if applicable)
+  - Schemas view: search by schema subject
+
 ### Changed
-- React to websocket events pushed from sidecar instead of polling for some connection change monitoring.
+
+- Matching topics to schemas now based on the result of the `GET /subjects` route results. First
+  step of migrating away from use of the `GET /schemas` schema registry route, not implemented by
+  all schema registries.
+- Quickpick for schema registry subject names (i.e. when uploading a new schema) now based off of
+  `GET /subjects` route results.
+- Message Viewer's "Open consumed messages as JSON" feature now opens messages in a read-only
+  document, which can be used to produce messages to other topics.
+- Improved logging in the "Confluent (Sidecar)" output channel by implementing the
+  `LogOutputChannel` API. When using VS Code 1.97 or higher, these logs can now be combined with the
+  "Confluent" output channel for unified log viewing.
+- Updated the URL templates for viewing schemas and schema registries in CCloud (now under
+  "stream-governance/schema-registry/data-contracts")
+
+### Fixed
+
+- Give the sidecar more time to start up, log more sidecar startup errors into sentry.
+- Now message viewer is able to consume messages whose key or value schemas use an AVRO schema which
+  specifies a non-record structure as the toplevel entity, such as an AVRO long, string, or enum.
+- Copying Kafka cluster bootstrap server(s) to clipboard now omits any `<protocol>://` prefixes.
+
+## 0.24.4
+
+### Fixed
+
+- Updated workspace state storage to use stringified data after a breaking change in VS Code 1.97
+  that prevents storing `Map` objects directly.
+
+## 0.24.3
+
+### Fixed
+
+- Sidecar update to address an issue where requests to a Confluent Cloud Schema Registry with SSL
+  were failing.
+
+## 0.24.2
+
+### Added
+
+- Additional logging and error-handling for issues preventing the Topics view from loading topics
+  from a Kafka cluster and/or associated schemas from a Schema Registry.
+
+## 0.24.1
+
+(Fixed issue with CI process. No user-facing changes.)
+
+## 0.24.0
+
+### Added
+
+- Producing (schemaless) messages to a Kafka topic has been expanded to support:
+  - loading message content from an unsaved editor or Message Viewer preview tab
+  - providing basic JSON validation for message content
+  - passing `partition_id` and `timestamp` as optional fields in the message payload
+  - multiple message production to a topic in a single action
+- "Sign Out" action in the Resources view for the current Confluent Cloud connection.
+- Error notifications and additional tooltip information are now shown for direct connections to
+  Kafka and Schema Registry if either (or both) of the connections are not usable.
+- Client-side validation for project scaffolding forms.
+- Basic initial support for non-`vscode` URI callbacks during the Confluent Cloud sign-in flow.
+
+### Changed
+
+- CCloud and direct connection status changes are now handled via websocket events pushed from the
+  sidecar instead of relying on HTTP polling. (Local connection status changes continue to be
+  handled through Docker system events.)
+- Generating projects from templates now uses the Confluent Cloud scaffolding service, which
+  requires an internet connection.
+- Empty states in the Topics and Schemas views now provide links to create direct connections to
+  Kafka and/or Schema Registry.
+
+### Fixed
+
+- Extension/sidecar logs and the support zip can now be saved as expected on Windows.
+- CCloud auth sessions will now show the pre-expiration warning and post-expiration error
+  notifications as expected.
 
 ## 0.23.3
 

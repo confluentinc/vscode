@@ -1,5 +1,6 @@
 import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { CCloudOrganization } from "../models/organization";
 import { getSidecar } from "../sidecar";
@@ -7,7 +8,7 @@ import { getSidecar } from "../sidecar";
 const logger = new Logger("graphql.organizations");
 
 export async function getOrganizations(): Promise<CCloudOrganization[]> {
-  let orgResponse: CCloudOrganization[] = [];
+  let orgs: CCloudOrganization[] = [];
 
   const query = graphql(`
     query connectionById($id: String!) {
@@ -22,23 +23,26 @@ export async function getOrganizations(): Promise<CCloudOrganization[]> {
   `);
 
   const sidecar = await getSidecar();
-
+  let response;
   try {
-    const response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
-    if (response.ccloudConnectionById?.organizations) {
-      response.ccloudConnectionById.organizations.forEach((org: any) => {
-        try {
-          orgResponse.push(CCloudOrganization.create(org));
-        } catch (e) {
-          logger.error("Failed to create organization:", e);
-        }
-      });
-    }
-  } catch (e) {
-    logger.error("Failed to fetch organizations:", e);
+    response = await sidecar.query(query, CCLOUD_CONNECTION_ID, { id: CCLOUD_CONNECTION_ID });
+  } catch (error) {
+    logError(error, "CCloud organizations", { connectionId: CCLOUD_CONNECTION_ID }, true);
+    showErrorNotificationWithButtons(`Failed to fetch CCloud organizations: ${error}`);
+    return orgs;
   }
 
-  return orgResponse;
+  if (response.ccloudConnectionById?.organizations) {
+    response.ccloudConnectionById.organizations.forEach((org: any) => {
+      try {
+        orgs.push(CCloudOrganization.create(org));
+      } catch (e) {
+        logger.error("Failed to create organization:", e);
+      }
+    });
+  }
+
+  return orgs;
 }
 
 export async function getCurrentOrganization(): Promise<CCloudOrganization | undefined> {

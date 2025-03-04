@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 1.0.1
+  version: 0.165.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -25,6 +25,24 @@ paths:
           description: OK
           content:
             application/json: {}
+  /api/metadata/security/v2alpha1/authorize:
+    put:
+      requestBody:
+        description: RBAC request body
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RBACRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /gateway/v1/callback-vscode-docs:
     get:
       tags:
@@ -78,6 +96,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SimpleConsumeMultiPartitionResponse"
+  /gateway/v1/clusters/{cluster_id}/topics/{topic_name}/records:
+    post:
+      tags:
+      - Confluent Cloud Produce Records Resource
+      parameters:
+      - name: cluster_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: topic_name
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dry_run
+        in: query
+        schema:
+          default: false
+          type: boolean
+      - name: x-connection-id
+        in: header
+        description: Connection ID
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProduceRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProduceResponse"
   /gateway/v1/connections:
     get:
       tags:
@@ -157,7 +213,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Failure"
         "401":
-          description: Could not authenticate with updated connection configuration
+          description: Could not authenticate
           content:
             application/json:
               schema:
@@ -180,6 +236,45 @@ paths:
       responses:
         "204":
           description: No Content
+    patch:
+      tags:
+      - Connections Resource
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JsonMergePatch"
+      responses:
+        "200":
+          description: Connection updated with PATCH
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connection"
+        "404":
+          description: Connection not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "401":
+          description: Could not authenticate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Failure"
   /gateway/v1/feature-flags/{id}/value:
     get:
       tags:
@@ -388,6 +483,17 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
 components:
   schemas:
+    Action:
+      type: object
+      properties:
+        resourceType:
+          type: string
+        resourceName:
+          type: string
+        operation:
+          type: string
+        scope:
+          $ref: "#/components/schemas/Scope"
     ApiKeyAndSecret:
       description: API key and secret authentication credentials
       required:
@@ -402,21 +508,19 @@ components:
           type: string
         api_secret:
           description: The API secret to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 1024
           minLength: 1
           type: string
           allOf:
           - $ref: "#/components/schemas/ApiSecret"
     ApiSecret:
       description: A user-provided API secret that is always masked in responses
-      maxLength: 64
+      maxLength: 1024
       minLength: 1
       type: string
     AuthError:
       type: object
       properties:
-        created_at:
-          $ref: "#/components/schemas/Instant"
         message:
           type: string
         is_transient:
@@ -458,15 +562,13 @@ components:
           type: string
         password:
           description: The password to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 1024
           minLength: 1
           type: string
           allOf:
           - $ref: "#/components/schemas/Password"
     CCloudConfig:
       description: Configuration for Confluent Cloud connections
-      required:
-      - organization_id
       type: object
       properties:
         organization_id:
@@ -474,6 +576,12 @@ components:
             default organization is used when absent.
           maxLength: 36
           minLength: 36
+          type: string
+        ide_auth_callback_uri:
+          description: The URI that users will be redirected to after successfully
+            completing the authentication flow with Confluent Cloud.
+          maxLength: 200
+          minLength: 10
           type: string
     CCloudStatus:
       description: The status related to CCloud.
@@ -629,6 +737,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Connection"
+    Date:
+      format: date
+      type: string
+      example: 2022-03-10
     Error:
       description: Describes a particular error encountered while performing an operation.
       type: object
@@ -669,10 +781,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Error"
+    HashAlgorithm:
+      enum:
+      - SCRAM_SHA_256
+      - SCRAM_SHA_512
+      type: string
     Instant:
       format: date-time
       type: string
       example: 2022-03-10T16:15:50Z
+    JsonMergePatch:
+      type: object
     JsonNode:
       type: object
       properties:
@@ -751,6 +870,7 @@ components:
           - $ref: "#/components/schemas/BasicCredentials"
           - $ref: "#/components/schemas/ApiKeyAndSecret"
           - $ref: "#/components/schemas/OAuthCredentials"
+          - $ref: "#/components/schemas/ScramCredentials"
           nullable: true
         ssl:
           description: "The SSL configuration for connecting to the Kafka cluster.\
@@ -858,10 +978,15 @@ components:
             provider.
           minimum: 0
           type: integer
-        identityPool:
+        ccloud_logical_cluster_id:
+          description: "Additional property that can be added in the request header\
+            \ to identify the logical cluster ID to connect to. For example, this\
+            \ may be a Confluent Cloud Kafka or Schema Registry cluster ID."
+          type: string
+        ccloud_identity_pool_id:
           description: "Additional property that can be added in the request header\
             \ to identify the principal ID for authorization. For example, this may\
-            \ bea Confluent Cloud identity pool."
+            \ be a Confluent Cloud identity pool ID."
           type: string
     PartitionConsumeData:
       type: object
@@ -922,7 +1047,7 @@ components:
           type: integer
     Password:
       description: A user-provided password that is always masked in responses
-      maxLength: 64
+      maxLength: 1024
       minLength: 1
       type: string
     Preferences:
@@ -956,6 +1081,104 @@ components:
             type: string
         trust_all_certificates:
           type: boolean
+    ProduceRequest:
+      type: object
+      properties:
+        partition_id:
+          format: int32
+          type: integer
+        headers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProduceRequestHeader"
+        key:
+          $ref: "#/components/schemas/ProduceRequestData"
+        value:
+          $ref: "#/components/schemas/ProduceRequestData"
+        timestamp:
+          $ref: "#/components/schemas/Date"
+    ProduceRequestData:
+      type: object
+      properties:
+        type:
+          type: string
+        subject:
+          type: string
+        subject_name_strategy:
+          type: string
+        schema_id:
+          format: int32
+          type: integer
+        schema_version:
+          format: int32
+          type: integer
+        schema:
+          type: string
+        data: {}
+    ProduceRequestHeader:
+      required:
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          format: binary
+          type: string
+    ProduceResponse:
+      required:
+      - error_code
+      type: object
+      properties:
+        error_code:
+          format: int32
+          type: integer
+        message:
+          type: string
+        cluster_id:
+          type: string
+        topic_name:
+          type: string
+        partition_id:
+          format: int32
+          type: integer
+        offset:
+          format: int64
+          type: integer
+        timestamp:
+          $ref: "#/components/schemas/Date"
+        key:
+          $ref: "#/components/schemas/ProduceResponseData"
+        value:
+          $ref: "#/components/schemas/ProduceResponseData"
+    ProduceResponseData:
+      required:
+      - size
+      - type
+      type: object
+      properties:
+        size:
+          format: int64
+          type: integer
+        type:
+          type: string
+        subject:
+          type: string
+        schema_id:
+          format: int32
+          type: integer
+        schema_version:
+          format: int32
+          type: integer
+    RBACRequest:
+      type: object
+      properties:
+        userPrincipal:
+          type: string
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Action"
     SchemaRegistryConfig:
       description: Schema Registry configuration.
       required:
@@ -1008,6 +1231,42 @@ components:
           type: object
           allOf:
           - $ref: "#/components/schemas/AuthErrors"
+    Scope:
+      type: object
+      properties:
+        clusters:
+          type: object
+          additionalProperties:
+            type: string
+        path:
+          type: array
+          items:
+            type: string
+    ScramCredentials:
+      description: Scram authentication credentials
+      required:
+      - hash_algorithm
+      - scram_username
+      - scram_password
+      type: object
+      properties:
+        hash_algorithm:
+          description: Hash algorithm
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/HashAlgorithm"
+        scram_username:
+          description: The username to use when connecting to the external service.
+          maxLength: 64
+          minLength: 1
+          type: string
+        scram_password:
+          description: The password to use when connecting to the external service.
+          maxLength: 1024
+          minLength: 1
+          type: string
+          allOf:
+          - $ref: "#/components/schemas/Password"
     SidecarAccessToken:
       type: object
       properties:
@@ -1155,11 +1414,11 @@ components:
     HealthCheck:
       type: object
       properties:
-        name:
-          type: string
         data:
           type: object
           nullable: true
+        name:
+          type: string
         status:
           enum:
           - UP

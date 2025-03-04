@@ -118,6 +118,7 @@ export function build(done) {
               "NOTICE-vsix.txt",
               "THIRD_PARTY_NOTICES.txt",
               "THIRD_PARTY_NOTICES_IDE_SIDECAR.txt",
+              ".vscodeignore",
             ],
             dest: DESTINATION,
           },
@@ -142,7 +143,9 @@ export function build(done) {
   const extOutput = {
     dir: DESTINATION,
     format: "cjs",
-    sourcemap: !production,
+    // this must be set to true for the sourcemaps to be uploaded to Sentry
+    // see: https://docs.sentry.io/platforms/javascript/guides/wasm/sourcemaps/uploading/rollup/
+    sourcemap: true,
     sourcemapBaseUrl: `file://${process.cwd()}/${DESTINATION}/`,
     exports: "named",
   };
@@ -249,11 +252,27 @@ function getSentryReleaseVersion() {
     process.env.SENTRY_ENV = "development";
   }
 
-  // If CI, don't use the revision
+  // If CI, don't use the revision since this will either be a real prod release or a manually-
+  // triggered CI build (most likely from a PR that needs more click-testing)
   if (IS_CI) {
-    return "vscode-confluent@" + version;
+    // see https://docs.semaphoreci.com/reference/env-vars#git-branch
+    const upstream = process.env.SEMAPHORE_GIT_BRANCH;
+    const downstream = process.env.SEMAPHORE_GIT_WORKING_BRANCH;
+    console.log(`CI build branches: Upstream: ${upstream}, Downstream: ${downstream}`);
+    // see https://docs.semaphoreci.com/reference/env-vars#pr-number
+    const prNumber = process.env.SEMAPHORE_GIT_PR_NUMBER;
+    console.log(`CI build PR: ${prNumber}`);
+    if (prNumber !== undefined) {
+      // PR build (upstream branch doesn't matter since it isn't a real prod release)
+      return `vscode-confluent@pr${prNumber}-${version}`;
+    } else {
+      // build on main or a release branch
+      return "vscode-confluent@" + version;
+    }
   }
-  return "vscode-confluent@" + version + "-" + revision;
+  // include `dev` prefix to doubly-inform Sentry that this is not a normal prod release version
+  // and doesn't follow the normal X.Y.Z semver format and accidentally match a "latest release" rule
+  return "vscode-confluent@dev" + version + "-" + revision;
 }
 
 /** Get the Sentry token, dsn from Vault and get the appropriate Sentry "release" ID from the getSentryReleaseVersion, and
@@ -275,7 +294,9 @@ function setupSentry() {
     else console.error(sentryToken.stderr.toString());
   } else {
     process.env.SENTRY_AUTH_TOKEN = sentryToken.stdout.toString().trim();
-    process.env.SENTRY_RELEASE = getSentryReleaseVersion();
+    const sentryRelease = getSentryReleaseVersion();
+    console.log(`Setting SENTRY_RELEASE to "${sentryRelease}"`);
+    process.env.SENTRY_RELEASE = sentryRelease;
   }
   const sentryDsn = spawnSync(
     "vault",
@@ -481,8 +502,13 @@ export function check(done) {
   });
   if (precheck.error) throw precheck.error;
 
-  // Entry points are the extension.ts and webview script files
-  const rootNames = ["src/extension.ts", ...globSync("src/webview/*.ts")];
+  // Entry points are the extension.ts and webview script files, but also include test files
+  // so we can catch any type errors in them as well.
+  const rootNames = [
+    "src/extension.ts",
+    ...globSync("src/**/*.test.ts"),
+    ...globSync("src/webview/*.ts"),
+  ];
   const defaults = ["lib.dom.d.ts", "lib.es2022.d.ts", "lib.dom.iterable.d.ts"];
   const customdts = globSync(["src/**/*.d.ts", "bin/*.d.ts"], { absolute: true });
 
@@ -588,6 +614,7 @@ export async function testRun() {
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
   await runTests({
+    version: process.env.VSCODE_VERSION,
     extensionDevelopmentPath: resolve(DESTINATION),
     extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
     extensionTestsEnv: {
@@ -613,6 +640,12 @@ export async function testRun() {
     let report = IS_CI ? reports.create("lcov") : reports.create("text", {});
     let context = libReport.createContext({ coverageMap: data });
     report.execute(context);
+    // create interactive HTML report for local runs
+    let htmlReport = reports.create("html", {
+      dir: "./coverage/html",
+      verbose: true,
+    });
+    htmlReport.execute(context);
     // clean up temp file used for coverage reporting
     await unlink("./coverage.json");
   }
@@ -835,8 +868,8 @@ export function install(done) {
     return done(1);
   }
   // uninstall any existing extension first
-  // (may holler about "Extension 'confluent.vscode-confluent' is not installed.", but that's fine)
-  spawnSync("code", ["--uninstall-extension", "confluent.vscode-confluent"], {
+  // (may holler about "Extension 'confluentinc.vscode-confluent' is not installed.", but that's fine)
+  spawnSync("code", ["--uninstall-extension", "confluentinc.vscode-confluent"], {
     stdio: "inherit",
     shell: IS_WINDOWS,
   });

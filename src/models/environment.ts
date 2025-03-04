@@ -1,4 +1,11 @@
-import { MarkdownString, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import {
+  MarkdownString,
+  ThemeColor,
+  ThemeIcon,
+  TreeItem,
+  TreeItemCollapsibleState,
+  Uri,
+} from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import {
   CCLOUD_CONNECTION_ID,
@@ -14,7 +21,7 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud, isDirect } from "./resource";
+import { ConnectionId, IResourceBase, isCCloud, isDirect, ISearchable } from "./resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -28,7 +35,7 @@ import {
  * - {@link SchemaRegistry}
  * ...more, in the future.
  */
-export abstract class Environment implements IResourceBase {
+export abstract class Environment implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
@@ -51,6 +58,16 @@ export abstract class Environment implements IResourceBase {
 
   get hasClusters(): boolean {
     return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
+  }
+
+  get children(): ISearchable[] {
+    const children: ISearchable[] = [...this.kafkaClusters];
+    if (this.schemaRegistry) children.push(this.schemaRegistry);
+    return children;
+  }
+
+  searchableText(): string {
+    return `${this.name} ${this.id}`;
   }
 }
 
@@ -98,10 +115,14 @@ export class DirectEnvironment extends Environment {
   kafkaClusters: DirectKafkaCluster[] = [];
   /** Was a Kafka cluster configuration provided for this environment (via the `ConnectionSpec`)? */
   kafkaConfigured: boolean = false;
+  /** Error message when the connection to the Kafka cluster resulted in a `FAILED` state. */
+  kafkaConnectionFailed: string | undefined = undefined;
 
   schemaRegistry: DirectSchemaRegistry | undefined = undefined;
   /** Was a Schema Registry configuration provided for this environment (via the `ConnectionSpec`)? */
   schemaRegistryConfigured: boolean = false;
+  /** Error message when the connection to the Schema Registry resulted in a `FAILED` state. */
+  schemaRegistryConnectionFailed: string | undefined = undefined;
 
   /** What did the user choose as the source of this connection/environment? */
   formConnectionType?: FormConnectionType = "Other";
@@ -154,6 +175,11 @@ export class DirectEnvironment extends Environment {
       }
     }
   }
+
+  searchableText(): string {
+    // same as Environment, but `id` isn't used since it isn't visible in the UI
+    return this.name;
+  }
 }
 
 /** A "local" {@link Environment} manageable by the extension via Docker. */
@@ -191,7 +217,7 @@ export class EnvironmentTreeItem extends TreeItem {
     super(resource.name, collapseState);
 
     // internal properties
-    this.id = `${resource.connectionId}-${resource.id}${resource.isLoading ? "-loading" : ""}`;
+    this.id = `${resource.connectionId}-${resource.id}`;
     this.resource = resource;
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
@@ -243,14 +269,43 @@ function createEnvironmentTooltip(resource: Environment): MarkdownString {
         `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudEnv.ccloudUrl})`,
       );
   } else if (isDirectResource) {
+    // check for any resources that the sidecar reported a `FAILED` connection status.
+    // ideally, the ResourceViewProvider would react to events pushed by the ConnectionStateWatcher
+    // and update the environments' `kafkaConnectionFailed` and `schemaRegistryConnectionFailed`
+    // properties, but in the event we didn't get those websocket events (e.g. new workspace),
+    // we can check to see if they're just "missing" based on the expected configuration(s)
+    const directEnv = resource as DirectEnvironment;
     const { missingKafka, missingSR } = checkForMissingResources(resource);
-    if (missingKafka || missingSR) {
-      const missing = [];
-      if (missingKafka) missing.push("Kafka");
-      if (missingSR) missing.push("Schema Registry");
+
+    const failedResources = [];
+    const missingResources = [];
+
+    if (directEnv.kafkaConnectionFailed) {
+      failedResources.push(`**Kafka**: ${directEnv.kafkaConnectionFailed}`);
+    } else if (missingKafka) {
+      missingResources.push("Kafka");
+    }
+
+    if (directEnv.schemaRegistryConnectionFailed) {
+      failedResources.push(`**Schema Registry**: ${directEnv.schemaRegistryConnectionFailed}`);
+    } else if (missingSR) {
+      missingResources.push("Schema Registry");
+    }
+
+    if (failedResources.length) {
+      tooltip.appendMarkdown("\n\n---").appendMarkdown("\n\n$(error) **Unable to connect to**:");
+      failedResources.forEach((error) => {
+        tooltip.appendMarkdown(`\n\n- ${error}`);
+      });
+      // provide a command URI as a markdown link
+      const commandUri = Uri.parse(
+        `command:confluent.connections.direct.edit?${encodeURIComponent(JSON.stringify([resource.connectionId]))}`,
+      );
+      tooltip.appendMarkdown(`\n\n[View Connection Details](${commandUri})`);
+    } else if (missingResources.length) {
       tooltip
         .appendMarkdown("\n\n---")
-        .appendMarkdown(`\n\n$(error) Unable to connect to ${missing.join(" and ")}.`);
+        .appendMarkdown(`\n\n$(error) Unable to connect to ${missingResources.join(" and ")}.`);
     }
   }
 

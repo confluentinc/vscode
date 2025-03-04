@@ -1,15 +1,12 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { CCLOUD_CONNECTION_SPEC } from "../constants";
+import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_SPEC } from "../constants";
 import { ccloudOrganizationChanged } from "../emitters";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { CCloudOrganization } from "../models/organization";
 import { organizationQuickPick } from "../quickpicks/organizations";
-import {
-  clearCurrentCCloudResources,
-  hasCCloudAuthSession,
-  tryToUpdateConnection,
-} from "../sidecar/connections";
+import { tryToUpdateConnection } from "../sidecar/connections";
+import { clearCurrentCCloudResources, hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 
 async function useOrganizationCommand() {
   if (!hasCCloudAuthSession()) {
@@ -36,6 +33,7 @@ async function useOrganizationCommand() {
         ...CCLOUD_CONNECTION_SPEC,
         ccloud_config: {
           organization_id: organization.id,
+          ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
         },
       });
 

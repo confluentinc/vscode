@@ -8,35 +8,36 @@ import {
 } from "../clients/schemaRegistryRest";
 import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
 import { currentSchemaRegistryChanged } from "../emitters";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
-import { uriQuickpick } from "../quickpicks/uris";
+import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
-import { ResourceLoader } from "../storage/resourceLoader";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
 
-/** Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions.
+/**
+ * Module for the "upload schema to schema registry" command ("confluent.schemas.upload") and related functions.
  *
  * uploadNewSchema() command is registered over in ./schemas.ts, but the actual implementation is here.
  * All other exported functions are exported for the tests in schemaUpload.test.ts.
  */
 
 /**
- * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from an inline action on a schema
- * subject container in the Schemas view.
+ * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from:
+ *  1. A Subject from the Schemas view
+ *  2. On one of a topic's subjects in the Topics view
  */
-export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Schema>) {
-  // grab a schema just to get the connectionId to look up the Schema Registry
-  const sampleSchema: Schema = item.children[0];
-  const loader = ResourceLoader.getInstance(sampleSchema.connectionId);
-  const registry = await loader.getSchemaRegistryForEnvironmentId(sampleSchema.connectionId);
-  const subject = item.label as string;
-  await uploadSchemaFromFile(registry, subject);
+export async function uploadSchemaForSubjectFromfile(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    throw new Error("uploadSchemaForSubjectFromfile called with invalid argument type");
+  }
+  const loader = ResourceLoader.getInstance(subject.connectionId);
+  const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
+  await uploadSchemaFromFile(registry, subject.name);
 }
 
 /**
@@ -46,7 +47,7 @@ export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Sch
  * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
  * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
-export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: string) {
+export async function uploadSchemaFromFile(registry?: SchemaRegistry, subjectString?: string) {
   // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
   // editor languages, and file extensions
   const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
@@ -70,27 +71,17 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     return;
   }
 
-  let content: string | undefined;
-  let document: vscode.TextDocument | undefined;
-  let languageId: string | undefined;
-  if (schemaUri.scheme === "file") {
-    // file may not be open/visible, so read it directly
-    const contentArray: Uint8Array = await vscode.workspace.fs.readFile(schemaUri);
-    content = Buffer.from(contentArray).toString("utf-8");
-  } else {
-    // "untitled" and SCHEMA_URI_SCHEME URIs are treated the same way since they aren't saved to
-    // the file system and are always open in an editor if they were chosen through the quickpick
-    document = await vscode.workspace.openTextDocument(schemaUri);
-    content = document.getText();
-    languageId = document.languageId;
-  }
-  if (content === undefined) {
+  const docContent: LoadedDocumentContent = await loadDocumentContent(schemaUri);
+  if (docContent.content === undefined) {
     vscode.window.showErrorMessage("Could not read schema file");
     return;
   }
 
   // What kind of schema is this? We must tell the schema registry.
-  const schemaType: SchemaType | undefined = await determineSchemaType(schemaUri, languageId);
+  const schemaType: SchemaType | undefined = await determineSchemaType(
+    schemaUri,
+    docContent.openDocument?.languageId,
+  );
   if (!schemaType) {
     // the only way we get here is if the user bailed on the schema type quickpick after we failed
     // to figure out what the type was (due to lack of language ID supporting extensions or otherwise)
@@ -108,13 +99,17 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     return;
   }
 
-  subject = subject ? subject : await chooseSubject(registry, schemaType);
-  if (!subject) {
+  subjectString = subjectString ? subjectString : await chooseSubject(registry);
+  if (!subjectString) {
     logger.error("Could not determine schema subject");
     return;
   }
 
-  await uploadSchema(registry, subject, schemaType, content);
+  // TODO after #951: grab the subject group and / or the most recent schema binding
+  // to the subject to ensure is the right type. Error out if not. This error
+  // will be more clear than the one that the schema registry will give us.
+
+  await uploadSchema(registry, subjectString, schemaType, docContent.content);
 }
 
 async function uploadSchema(
@@ -220,14 +215,10 @@ async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
 /**
  * Guide the user through chosing a subject to bind the schema to.
  */
-async function chooseSubject(
-  registry: SchemaRegistry,
-  schemaType: SchemaType,
-  defaultSubject: string | undefined = undefined,
-): Promise<string | undefined> {
+async function chooseSubject(registry: SchemaRegistry): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry, schemaType, defaultSubject);
+  let subject = await schemaSubjectQuickPick(registry);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.

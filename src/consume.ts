@@ -11,7 +11,6 @@ import {
   ViewColumn,
   WebviewPanel,
   window,
-  workspace,
 } from "vscode";
 import {
   canAccessSchemaForTopic,
@@ -28,6 +27,12 @@ import { registerCommandWithLogging } from "./commands";
 import { LOCAL_CONNECTION_ID } from "./constants";
 import { getExtensionContext } from "./context/extension";
 import { MessageDocumentProvider } from "./documentProviders/message";
+import {
+  CCloudResourceLoader,
+  DirectResourceLoader,
+  LocalResourceLoader,
+  ResourceLoader,
+} from "./loaders";
 import { Logger } from "./logging";
 import { ConnectionId } from "./models/resource";
 import { type KafkaTopic } from "./models/topic";
@@ -35,10 +40,6 @@ import { kafkaClusterQuickPick } from "./quickpicks/kafkaClusters";
 import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
-import { CCloudResourceLoader } from "./storage/ccloudResourceLoader";
-import { DirectResourceLoader } from "./storage/directResourceLoader";
-import { LocalResourceLoader } from "./storage/localResourceLoader";
-import { ResourceLoader } from "./storage/resourceLoader";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
@@ -698,14 +699,22 @@ function messageViewerStartPollingCommand(
             records.push("\t" + JSON.stringify(payload));
           }
         }
-        const content = `[\n${records.join(",\n")}\n]`;
-        workspace.openTextDocument({ content, language: "jsonc" }).then((preview) => {
-          return window.showTextDocument(preview, {
-            preview: false,
+        // use a single-instance provider to display a read-only document buffer with the messages
+        // at the given timestamp, so the document isn't reused across multiple previews
+        const filename = `${topic.name}-messages-${new Date().getTime()}.json`;
+        const provider = new MessageDocumentProvider();
+        MessageDocumentProvider.message = `[\n${records.join(",\n")}\n]`;
+        // this is really only used for the filename:
+        const uri: Uri = provider.resourceToUri({ partition: -1, offset: -1 }, filename);
+        window
+          .showTextDocument(uri, {
+            preview: true,
             viewColumn: ViewColumn.Beside,
             preserveFocus: false,
+          })
+          .then((editor) => {
+            languages.setTextDocumentLanguage(editor.document, "json");
           });
-        });
         return null satisfies MessageResponse<"PreviewJSON">;
       }
       case "SearchMessages": {

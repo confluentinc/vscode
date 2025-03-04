@@ -1,9 +1,6 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
-import { Logger } from "../logging";
+import { logError, showErrorNotificationWithButtons } from "../errors";
 import { UserEvent, logUsage } from "../telemetry/events";
-
-const logger = new Logger("commands");
 
 export function registerCommandWithLogging(
   commandName: string,
@@ -14,17 +11,12 @@ export function registerCommandWithLogging(
     try {
       await command(...args);
     } catch (e) {
-      const msg = `Error invoking command "${commandName}":`;
-      logger.error(msg, e);
       if (e instanceof Error) {
-        // capture error with Sentry (only enabled in production builds)
-        Sentry.captureException(e, { tags: { command: commandName } });
-        // also show error notification to the user
-        vscode.window.showErrorMessage(`${msg} ${e.message}`, "Open Logs").then(async (action) => {
-          if (action !== undefined) {
-            await vscode.commands.executeCommand("confluent.showOutputChannel");
-          }
-        });
+        // gather more (possibly-ResponseError) context and send to Sentry (only enabled in
+        // production builds)
+        logError(e, `${commandName}`, { command: commandName }, true);
+        // also show error notification to the user with default buttons
+        showErrorNotificationWithButtons(`Error invoking command "${commandName}": ${e}`);
       }
     }
   };

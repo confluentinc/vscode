@@ -65,10 +65,10 @@ validate-bump:
 .PHONY: bump-microversion
 bump-microversion:
 	export VERSION_OVERRIDE=$(shell cat ./.versions/next.txt) ;\
-    export VERSION_POST=$(MICROVERSION_POST) ;\
-    export BUMP=none ;\
-    export SKIP_TAG_RELEASE=true ;\
-    $(MAKE) release-ci
+		export VERSION_POST=$(MICROVERSION_POST) ;\
+		export BUMP=none ;\
+		export SKIP_TAG_RELEASE=true ;\
+		$(MAKE) release-ci
 
 .PHONY: release-current-version
 release-current-version:
@@ -82,7 +82,7 @@ version_no_v = $(shell echo $(1) | sed 's,^v,,' )
 .PHONY: upload-vsix-files-to-gh-releases
 upload-vsix-files-to-gh-releases:
 ifeq ($(LATEST_VERSION_NO_V), $(CURRENT_VERSION))
-	for target in darwin-x64 darwin-arm64 linux-x64 linux-arm64; do \
+	for target in darwin-x64 darwin-arm64 linux-x64 linux-arm64 win32-x64; do \
 		vsix_file=$$(find packaged-vsix-files -name "*$$target*.vsix"); \
 		gh release upload $(LATEST_VERSION) $$vsix_file --clobber; \
 	done;
@@ -138,3 +138,9 @@ update-third-party-notices-pr:
 .PHONY: collect-notices-vsix
 collect-notices-vsix:
 	@./scripts/notices/collect-notices-vsix.sh
+
+# Captures the output of the version check, strips away any ANSI escape codes, and posts a comment
+# to the PR if the version check fails.
+.PHONY: check-sidecar-versions
+check-sidecar-versions:
+	@./scripts/check-sidecar-versions.sh

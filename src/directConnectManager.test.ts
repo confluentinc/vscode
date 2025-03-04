@@ -9,13 +9,15 @@ import { getTestExtensionContext } from "../tests/unit/testUtils";
 import {
   ConnectionsList,
   ConnectionSpec,
+  ConnectionSpecFromJSON,
   ConnectionsResourceApi,
   ResponseError,
 } from "./clients/sidecar";
-import { DirectConnectionManager } from "./directConnectManager";
+import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
 import { ConnectionId } from "./models/resource";
 import * as sidecar from "./sidecar";
 import * as connections from "./sidecar/connections";
+import * as watcher from "./sidecar/connections/watcher";
 import {
   CustomConnectionSpec,
   DirectConnectionsById,
@@ -37,6 +39,70 @@ const PLAIN_LOCAL_KAFKA_SR_SPEC: ConnectionSpec = {
   },
   schema_registry: {
     uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
+  },
+};
+
+const BASIC_AUTH_SPEC: ConnectionSpec = {
+  ...TEST_DIRECT_CONNECTION.spec,
+  kafka_cluster: {
+    bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+    credentials: {
+      username: "username",
+      password: "actualPassword",
+    },
+  },
+  schema_registry: {
+    uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
+    credentials: {
+      username: "username",
+      password: "actualPassword",
+    },
+  },
+};
+
+const API_AUTH_SPEC: ConnectionSpec = {
+  ...TEST_DIRECT_CONNECTION.spec,
+  kafka_cluster: {
+    bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+    credentials: {
+      api_key: "apiKey",
+      api_secret: "actualApiSecret",
+    },
+  },
+  schema_registry: {
+    uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
+    credentials: {
+      api_key: "apiKey  ",
+      api_secret: "actualApiSecret",
+    },
+  },
+};
+
+const SSL_SPEC: ConnectionSpec = {
+  ...TEST_DIRECT_CONNECTION.spec,
+  kafka_cluster: {
+    bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+    ssl: {
+      enabled: true,
+      truststore: { path: "fake/path/trust", password: "actualpassword" },
+      keystore: {
+        path: "/keystore/path/",
+        password: "actualpassword",
+        key_password: "actualpassword",
+      },
+    },
+  },
+  schema_registry: {
+    uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
+    ssl: {
+      enabled: true,
+      truststore: { path: "fake/path/trust", password: "actualpassword" },
+      keystore: {
+        path: "/keystore/path/",
+        password: "actualpassword",
+        key_password: "actualpassword",
+      },
+    },
   },
 };
 
@@ -71,7 +137,7 @@ describe("DirectConnectionManager behavior", () => {
       .stub(connections, "tryToUpdateConnection")
       .resolves({} as any);
     // assume the connection is immediately usable for most tests
-    sandbox.stub(connections, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
+    sandbox.stub(watcher, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
   });
 
   afterEach(() => {
@@ -246,7 +312,12 @@ describe("DirectConnectionManager behavior", () => {
 
     await DirectConnectionManager.getInstance().rehydrateConnections();
 
-    assert.ok(tryToCreateConnectionStub.calledOnceWith(TEST_DIRECT_CONNECTION_FORM_SPEC));
+    assert.ok(tryToCreateConnectionStub.calledOnce);
+    const args = tryToCreateConnectionStub.getCall(0).args;
+    assert.deepStrictEqual(
+      ConnectionSpecFromJSON(args[0]),
+      ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION_FORM_SPEC),
+    );
   });
 
   it("rehydrateConnections() should not inform the sidecar of existing/tracked connections", async () => {
@@ -262,5 +333,197 @@ describe("DirectConnectionManager behavior", () => {
     await DirectConnectionManager.getInstance().rehydrateConnections();
 
     assert.ok(tryToCreateConnectionStub.notCalled);
+  });
+});
+
+describe("mergeSecrets", () => {
+  it("should replace placeholder basic auth passwords with current password", () => {
+    const newBasicAuthSpec: CustomConnectionSpec = {
+      id: BASIC_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          username: "newusername",
+          password: "fakeplaceholdersecrethere",
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+        credentials: {
+          username: "newusername",
+          password: "fakeplaceholdersecrethere",
+        },
+      },
+    };
+    const result = mergeSecrets(BASIC_AUTH_SPEC, newBasicAuthSpec);
+    const finalKafkaPassword = (result.kafka_cluster?.credentials as any)?.password;
+    assert.equal(finalKafkaPassword, "actualPassword");
+    const finalSchemaPassword = (result.schema_registry?.credentials as any)?.password;
+    assert.equal(finalSchemaPassword, "actualPassword");
+  });
+  it("should replace placeholder SSL passwords with current password", () => {
+    const newSSLSpec: CustomConnectionSpec = {
+      id: SSL_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        ssl: {
+          enabled: true,
+          truststore: { path: "fake/path/trust", password: "fakeplaceholdersecrethere" },
+          keystore: {
+            path: "/keystore/path/",
+            password: "fakeplaceholdersecrethere",
+            key_password: "fakeplaceholdersecrethere",
+          },
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+        ssl: {
+          enabled: true,
+          truststore: { path: "fake/path/trust", password: "fakeplaceholdersecrethere" },
+          keystore: {
+            path: "/keystore/path/",
+            password: "fakeplaceholdersecrethere",
+            key_password: "fakeplaceholdersecrethere",
+          },
+        },
+      },
+    };
+    const result = mergeSecrets(SSL_SPEC, newSSLSpec);
+    const finalTruststorePassword = result.kafka_cluster?.ssl?.truststore?.password;
+    assert.equal(finalTruststorePassword, "actualpassword");
+    const finalKeystorePassword = result.kafka_cluster?.ssl?.keystore?.password;
+    assert.equal(finalKeystorePassword, "actualpassword");
+    const finalKeystoreKeyPassword = result.kafka_cluster?.ssl?.keystore?.key_password;
+    assert.equal(finalKeystoreKeyPassword, "actualpassword");
+    const finalSchemaTruststorePassword = result.schema_registry?.ssl?.truststore?.password;
+    assert.equal(finalSchemaTruststorePassword, "actualpassword");
+    const finalSchemaKeystorePassword = result.schema_registry?.ssl?.keystore?.password;
+    assert.equal(finalSchemaKeystorePassword, "actualpassword");
+    const finalSchemaKeystoreKeyPassword = result.schema_registry?.ssl?.keystore?.key_password;
+    assert.equal(finalSchemaKeystoreKeyPassword, "actualpassword");
+  });
+
+  it("should not replace ssl passwords if they are not a placeholder", () => {
+    const updatePasswordSSLSpec: CustomConnectionSpec = {
+      id: SSL_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        ssl: {
+          enabled: true,
+          truststore: { path: "fake/path/trust", password: "newPassword" },
+          keystore: {
+            path: "/keystore/path/",
+            password: "newPassword",
+            key_password: "newPassword",
+          },
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+        ssl: {
+          enabled: true,
+          truststore: { path: "fake/path/trust", password: "newPassword" },
+          keystore: {
+            path: "/keystore/path/",
+            password: "newPassword",
+            key_password: "newPassword",
+          },
+        },
+      },
+    };
+    const result = mergeSecrets(SSL_SPEC, updatePasswordSSLSpec);
+    const finalTruststorePassword = result.kafka_cluster?.ssl?.truststore?.password;
+    assert.equal(finalTruststorePassword, "newPassword");
+    const finalKeystorePassword = result.kafka_cluster?.ssl?.keystore?.password;
+    assert.equal(finalKeystorePassword, "newPassword");
+    const finalKeystoreKeyPassword = result.kafka_cluster?.ssl?.keystore?.key_password;
+    assert.equal(finalKeystoreKeyPassword, "newPassword");
+    const finalSchemaTruststorePassword = result.schema_registry?.ssl?.truststore?.password;
+    assert.equal(finalSchemaTruststorePassword, "newPassword");
+    const finalSchemaKeystorePassword = result.schema_registry?.ssl?.keystore?.password;
+    assert.equal(finalSchemaKeystorePassword, "newPassword");
+    const finalSchemaKeystoreKeyPassword = result.schema_registry?.ssl?.keystore?.key_password;
+    assert.equal(finalSchemaKeystoreKeyPassword, "newPassword");
+  });
+  it("should replace api_secret placeholders with current api_secrets", () => {
+    const newApiAuthSpec: CustomConnectionSpec = {
+      id: API_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          api_key: "newKey",
+          api_secret: "fakeplaceholdersecrethere",
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+        credentials: {
+          api_key: "newKey",
+          api_secret: "fakeplaceholdersecrethere",
+        },
+      },
+    };
+    const result = mergeSecrets(API_AUTH_SPEC, newApiAuthSpec);
+    const finalKafkaSecret = (result.kafka_cluster?.credentials as any)?.api_secret;
+    assert.equal(finalKafkaSecret, "actualApiSecret");
+    const finalSchemaSecret = (result.schema_registry?.credentials as any)?.api_secret;
+    assert.equal(finalSchemaSecret, "actualApiSecret");
+  });
+
+  it("should not replace basic auth passwords if they are not a placeholder", () => {
+    const updatePasswordBasicSpec: CustomConnectionSpec = {
+      id: BASIC_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          username: "username",
+          password: "newPassword",
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+        credentials: {
+          username: "username",
+          password: "newPassword",
+        },
+      },
+    };
+    const result = mergeSecrets(BASIC_AUTH_SPEC, updatePasswordBasicSpec);
+    const finalKafkaPassword = (result.kafka_cluster?.credentials as any)?.password;
+    assert.equal(finalKafkaPassword, "newPassword");
+    const finalSchemaPassword = (result.schema_registry?.credentials as any)?.password;
+    assert.equal(finalSchemaPassword, "newPassword");
+  });
+
+  it("should not replace api_secrets if they are not a placeholder", () => {
+    const updateSecretApiSpec: CustomConnectionSpec = {
+      id: API_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          api_key: "apiKey",
+          api_secret: "newApiSecret",
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+        credentials: {
+          api_key: "apiKey",
+          api_secret: "newApiSecret",
+        },
+      },
+    };
+    const result = mergeSecrets(API_AUTH_SPEC, updateSecretApiSpec);
+    const finalKafkaSecret = (result.kafka_cluster?.credentials as any)?.api_secret;
+    assert.equal(finalKafkaSecret, "newApiSecret");
+    const finalSchemaSecret = (result.schema_registry?.credentials as any)?.api_secret;
+    assert.equal(finalSchemaSecret, "newApiSecret");
   });
 });

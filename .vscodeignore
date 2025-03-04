@@ -19,7 +19,4 @@ service.yml
 sonar-project.properties
 *openapi.json
 *openapi.yaml
-bin/create_release.sh
-bin/download_deploy.sh
-releases/**
 openapitools.json

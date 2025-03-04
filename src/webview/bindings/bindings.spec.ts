@@ -198,6 +198,38 @@ test("data-attr-*", async ({ execute, page }) => {
   await expect(button).toBeDisabled();
 });
 
+test("data-attr-* removal", async ({ execute, page }) => {
+  let vm = await execute(async () => {
+    let { ObservableScope } = await import("inertial");
+    let os = ObservableScope();
+    return {
+      os,
+      pattern: os.signal<string | null>("\\w{3,5}"),
+    };
+  });
+
+  await execute(async (vm) => {
+    let { applyBindings } = await import("./bindings");
+    let root = document.createElement("main");
+    root.innerHTML = /* html */ `
+      <form>
+        <input type="text" data-attr-pattern="this.pattern()" />
+      </form>
+    `;
+    document.body.append(root);
+    return applyBindings(root, vm.os, vm);
+  }, vm);
+
+  await page.locator("input").fill("a");
+  await expect(page.locator("input:invalid")).toBeVisible();
+  await page.locator("input").fill("abc");
+  await expect(page.locator("input:valid")).toBeVisible();
+  await page.locator("input").fill("abcdef");
+  await expect(page.locator("input:invalid")).toBeVisible();
+  await execute((vm) => vm.pattern(null), vm);
+  await expect(page.locator("input:valid")).toBeVisible();
+});
+
 test("data-if", async ({ execute, page }) => {
   let vm = await execute(async () => {
     let { ObservableScope } = await import("inertial");

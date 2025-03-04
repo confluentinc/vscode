@@ -11,7 +11,7 @@ import {
 import { ContextValues, setContextValue } from "../context/values";
 import { localKafkaConnected, localSchemaRegistryConnected } from "../emitters";
 import { Logger } from "../logging";
-import { updateLocalConnection } from "../sidecar/connections";
+import { updateLocalConnection } from "../sidecar/connections/local";
 import { IntervalPoller } from "../utils/timing";
 import {
   defaultRequestInit,

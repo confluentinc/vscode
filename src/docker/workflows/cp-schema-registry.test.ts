@@ -12,12 +12,13 @@ import {
   ContainerCreateResponse,
   ContainerInspectResponse,
 } from "../../clients/docker";
+import * as errors from "../../errors";
 import {
   LOCAL_DOCKER_SOCKET_PATH,
   LOCAL_KAFKA_IMAGE,
   LOCAL_KAFKA_IMAGE_TAG,
 } from "../../preferences/constants";
-import * as connections from "../../sidecar/connections";
+import * as local from "../../sidecar/connections/local";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import {
   DEFAULT_DOCKER_NETWORK,
@@ -54,13 +55,13 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   // base class stubs
   let checkForImageStub: sinon.SinonStub;
   let handleExistingContainersStub: sinon.SinonStub;
-  let workflowShowErrorNotificationStub: sinon.SinonStub;
   let fetchAndFilterKafkaContainersStub: sinon.SinonStub;
   let startContainerStub: sinon.SinonStub;
   let stopContainerStub: sinon.SinonStub;
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
   let updateLocalConnectionStub: sinon.SinonStub;
+  let showErrorNotificationStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
@@ -93,7 +94,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     checkForImageStub = sandbox.stub(workflow, "checkForImage").resolves();
     handleExistingContainersStub = sandbox.stub(workflow, "handleExistingContainers").resolves();
-    workflowShowErrorNotificationStub = sandbox.stub(workflow, "showErrorNotification").resolves();
+    showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons").resolves();
     // assume we have Kafka containers to work off of for most tests
     fetchAndFilterKafkaContainersStub = sandbox
       .stub(workflow, "fetchAndFilterKafkaContainers")
@@ -113,7 +114,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
       .stub(workflow, "waitForLocalResourceEventChange")
       .resolves();
 
-    updateLocalConnectionStub = sandbox.stub(connections, "updateLocalConnection");
+    updateLocalConnectionStub = sandbox.stub(local, "updateLocalConnection");
   });
 
   afterEach(() => {
@@ -141,7 +142,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
 
     assert.ok(createContainerStub.calledOnce);
     assert.ok(startContainerStub.calledOnce);
-    assert.ok(workflowShowErrorNotificationStub.notCalled);
+    assert.ok(showErrorNotificationStub.notCalled);
 
     assert.ok(updateLocalConnectionStub.calledOnce);
 
@@ -269,7 +270,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     assert.ok(showErrorMessageStub.notCalled);
 
     assert.ok(createContainerStub.calledOnce);
-    assert.ok(workflowShowErrorNotificationStub.calledOnce);
+    assert.ok(showErrorNotificationStub.calledOnce);
     // bailing here
     assert.ok(startContainerStub.notCalled);
 

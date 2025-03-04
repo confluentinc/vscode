@@ -3,20 +3,24 @@ import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "v
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud } from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
 /** Base class for all KafkaClusters */
-export abstract class KafkaCluster extends Data implements IResourceBase {
+export abstract class KafkaCluster extends Data implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.KAFKA_CLUSTER;
 
   abstract name: string;
-  abstract environmentId: string | undefined;
+  abstract environmentId: EnvironmentId | undefined;
 
   id!: Enforced<string>;
   bootstrapServers!: Enforced<string>;
   uri?: string;
+
+  searchableText(): string {
+    return `${this.name} ${this.id}`;
+  }
 }
 
 /** A Confluent Cloud {@link KafkaCluster} with additional properties. */
@@ -29,7 +33,7 @@ export class CCloudKafkaCluster extends KafkaCluster {
   region!: Enforced<string>;
 
   // added separately from sidecar responses
-  environmentId!: Enforced<string>;
+  environmentId!: Enforced<EnvironmentId>;
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.id}`;
@@ -45,8 +49,8 @@ export class DirectKafkaCluster extends KafkaCluster {
 
   // we only support one Kafka cluster and one Schema Registry per connection, so we can treat the
   // connection ID as the environment ID
-  get environmentId(): string {
-    return this.connectionId;
+  get environmentId(): EnvironmentId {
+    return this.connectionId as unknown as EnvironmentId;
   }
 }
 
@@ -57,8 +61,8 @@ export class LocalKafkaCluster extends KafkaCluster {
 
   name!: Enforced<string>;
 
-  get environmentId(): string {
-    return this.connectionId;
+  get environmentId(): EnvironmentId {
+    return this.connectionId as unknown as EnvironmentId;
   }
 }
 
@@ -89,7 +93,7 @@ export class KafkaClusterTreeItem extends TreeItem {
 }
 
 // todo make this a method of KafkaCluster family.
-function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
+export function createKafkaClusterTooltip(resource: KafkaCluster): MarkdownString {
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${resource.iconName}) Kafka Cluster`)
     .appendMarkdown("\n\n---");

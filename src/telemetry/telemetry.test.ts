@@ -1,12 +1,15 @@
-import { sendTelemetryIdentifyEvent } from "./telemetry";
-import * as vscode from "vscode";
-import * as telemetry from "./telemetryLogger";
 import Sinon from "sinon";
+import * as vscode from "vscode";
+import { UserEvent } from "./events";
+import { sendTelemetryIdentifyEvent } from "./telemetry";
+import * as telemetry from "./telemetryLogger";
 
 describe("sendTelemetryIdentifyEvent", () => {
   let mockTelemetryLogger: any;
   let logUsageStub: Sinon.SinonStub;
   let sdbx: sinon.SinonSandbox;
+
+  const testEvent = "testEvent" as UserEvent;
 
   beforeEach(() => {
     sdbx = Sinon.createSandbox();
@@ -30,14 +33,15 @@ describe("sendTelemetryIdentifyEvent", () => {
     const session = undefined;
 
     sendTelemetryIdentifyEvent({
-      eventName: "testEvent",
+      eventName: testEvent,
       userInfo,
       session,
     });
 
     Sinon.assert.called(logUsageStub);
-    Sinon.assert.calledWith(logUsageStub, "testEvent", {
+    Sinon.assert.calledWith(logUsageStub, testEvent, {
       identify: true,
+      status: "identify",
       user: {
         id: "user123",
         domain: "mycooldomain.com",
@@ -55,14 +59,15 @@ describe("sendTelemetryIdentifyEvent", () => {
     } as vscode.AuthenticationSession;
 
     sendTelemetryIdentifyEvent({
-      eventName: "testEvent",
+      eventName: testEvent,
       userInfo,
       session,
     });
 
     Sinon.assert.called(logUsageStub);
-    Sinon.assert.calledWith(logUsageStub, "testEvent", {
+    Sinon.assert.calledWith(logUsageStub, testEvent, {
       identify: true,
+      status: "identify",
       user: {
         id: "session123",
         domain: "example.com",
@@ -79,7 +84,7 @@ describe("sendTelemetryIdentifyEvent", () => {
     const session = undefined;
 
     sendTelemetryIdentifyEvent({
-      eventName: "testEvent",
+      eventName: testEvent,
       userInfo,
       session,
     });
@@ -95,13 +100,14 @@ describe("sendTelemetryIdentifyEvent", () => {
     const session = undefined;
 
     sendTelemetryIdentifyEvent({
-      eventName: "testEvent",
+      eventName: testEvent,
       userInfo,
       session,
     });
 
-    Sinon.assert.calledWith(logUsageStub, "testEvent", {
+    Sinon.assert.calledWith(logUsageStub, testEvent, {
       identify: true,
+      status: "identify",
       user: {
         id: "user1",
         domain: undefined,
