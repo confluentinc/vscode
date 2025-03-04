@@ -15,6 +15,7 @@ import { Environment } from "../models/environment";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -55,8 +56,12 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
+  /** Count of how many times the user has set a search string */
+  searchStringSetCount: number = 0;
   /** Items directly matching the {@linkcode itemSearchString}, if provided. */
   searchMatches: Set<SchemasViewProviderData> = new Set();
+  /** Count of all items returned from `getChildren()`. */
+  totalItemCount: number = 0;
 
   private static instance: SchemasViewProvider | null = null;
   private constructor() {
@@ -168,6 +173,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       children = [];
     }
 
+    this.totalItemCount += children.length;
     if (this.itemSearchString) {
       // if the parent item matches the search string, return all children so the user can expand
       // and see them all, even if just the parent item matched and shows the highlight(s)
@@ -188,13 +194,21 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       // update the tree view message to show how many results were found to match the search string
       // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
       // will never be called and the message won't update
-      const plural = this.searchMatches.size > 1 ? "s" : "";
+      const plural = this.totalItemCount > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
       } else {
         // let empty state take over
         this.treeView.message = undefined;
       }
+      logUsage(UserEvent.ViewSearchAction, {
+        status: "view results filtered",
+        view: "Schemas",
+        fromItemExpansion: element !== undefined,
+        searchStringSetCount: this.searchStringSetCount,
+        filteredItemCount: this.searchMatches.size,
+        totalItemCount: this.totalItemCount,
+      });
     } else {
       this.treeView.message = undefined;
     }
@@ -263,6 +277,20 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     const schemaSearchSetSub: vscode.Disposable = schemaSearchSet.event(
       (searchString: string | null) => {
         logger.debug("schemaSearchSet event fired, refreshing", { searchString });
+        // mainly captures the last state of the search internals to see if search was adjusted after
+        // a previous search was used, or if this is the first time search is being used
+        if (searchString !== null) {
+          // used to group search events without sending the search string itself
+          this.searchStringSetCount++;
+        }
+        logUsage(UserEvent.ViewSearchAction, {
+          status: `search string ${searchString ? "set" : "cleared"}`,
+          view: "Schemas",
+          searchStringSetCount: this.searchStringSetCount,
+          hadExistingSearchString: this.itemSearchString !== null,
+          lastFilteredItemCount: this.searchMatches.size,
+          lastTotalItemCount: this.totalItemCount,
+        });
         this.setSearch(searchString);
         this.refresh();
       },
@@ -311,6 +339,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     setContextValue(ContextValues.schemaSearchApplied, searchString !== null);
     // clear from any previous search filter
     this.searchMatches = new Set();
+    this.totalItemCount = 0;
   }
 }
 
