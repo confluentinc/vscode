@@ -169,7 +169,7 @@ class DirectConnectFormViewModel extends ViewModel {
     if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
       await post("UpdateSpecValue", { inputName: input.name, inputValue: value });
     }
-
+    // The switch statement performs local side effects for certain inputs
     switch (input.name) {
       case "formconnectiontype":
         this.platformType(input.value as FormConnectionType);
@@ -180,15 +180,6 @@ class DirectConnectFormViewModel extends ViewModel {
           this.schemaSslEnabled(true);
         }
         break;
-      // case "other-platform":
-      //   this.otherPlatformType(input.value);
-      //   break;
-      // case "name":
-      //   this.name(input.value);
-      //   break;
-      // case "kafka_cluster.bootstrap_servers":
-      //   this.kafkaBootstrapServers(input.value);
-      //   break;
       case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
         this.clearKafkaCreds();
@@ -197,21 +188,6 @@ class DirectConnectFormViewModel extends ViewModel {
         this.schemaAuthType(input.value as SupportedAuthTypes);
         this.clearSchemaCreds();
         break;
-      // case "schema_registry.uri":
-      //   this.schemaUri(input.value);
-      //   break;
-      // case "kafka_cluster.credentials.username":
-      //   this.kafkaUsername(input.value);
-      //   break;
-      // case "kafka_api_key":
-      //   this.kafkaApiKey(input.value);
-      //   break;
-      // case "schema_username":
-      //   this.schemaUsername(input.value);
-      //   break;
-      // case "schema_api_key":
-      //   this.schemaApiKey(input.value);
-      //   break;
       case "kafka_cluster.ssl.enabled":
         this.kafkaSslEnabled(input.checked);
         break;
@@ -219,7 +195,7 @@ class DirectConnectFormViewModel extends ViewModel {
         this.schemaSslEnabled(input.checked);
         break;
       default:
-        console.log(`Unhandled input update: ${input.name}`);
+        console.info(`No side effects for input update: ${input.name}`);
     }
   }
 
