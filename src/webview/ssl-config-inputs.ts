@@ -62,19 +62,11 @@ export class SslConfig extends HTMLElement {
   }
 
   handleFileSelection(inputId: string) {
-    const fileGot: boolean = this.dispatchEvent(
+    this.dispatchEvent(
       new CustomEvent("getfile", {
         detail: { inputId },
       }),
     );
-
-    if (fileGot) {
-      // this makes sure we get the latest file path,
-      // it also collapses then expands the section in background
-      const config = { ...this.configObj() };
-      // @ts-expect-error typescript is complaining because some values can be undefined
-      this.configObj(config); // Update the source signal
-    }
   }
   /** Update the host form data so it contains all the changed values on submit
    * and dispatch a change event to the host for other actions
@@ -161,7 +153,7 @@ export class SslConfig extends HTMLElement {
                 class="input dropdown"
                 data-attr-id="this.getInputId('keystore.type')"
                 data-attr-name="this.getInputId('keystore.type')"
-                data-attr-value="this.keystoreType()"
+                data-value="this.keystoreType()"
                 data-on-change="this.updateValue(event)"
               >
                 <option value="JKS" data-attr-selected="this.keystoreType() === 'JKS'">JKS</option>
@@ -188,7 +180,7 @@ export class SslConfig extends HTMLElement {
                 data-attr-name="this.getInputId('keystore.path')"
                 type="text"
                 placeholder="/path/to/keystore"
-                data-attr-value="this.keystorePath()"
+                data-value="this.keystorePath()"
                 data-on-change="this.updateValue(event)"
               />
             </div>
@@ -203,7 +195,7 @@ export class SslConfig extends HTMLElement {
                 data-attr-id="this.getInputId('keystore.password')"
                 data-attr-name="this.getInputId('keystore.password')"
                 type="password"
-                data-attr-value="this.keystorePassword()"
+                data-value="this.keystorePassword()"
                 data-on-change="this.updateValue(event)"
               />
             </div>
@@ -216,7 +208,7 @@ export class SslConfig extends HTMLElement {
                 data-attr-id="this.getInputId('keystore.key_password')"
                 data-attr-name="this.getInputId('keystore.key_password')"
                 type="password"
-                data-attr-value="this.keystoreKeyPassword()"
+                data-value="this.keystoreKeyPassword()"
                 data-on-change="this.updateValue(event)"
               />
             </div>
@@ -231,7 +223,7 @@ export class SslConfig extends HTMLElement {
                 class="input dropdown"
                 data-attr-id="this.getInputId('truststore.type')"
                 data-attr-name="this.getInputId('truststore.type')"
-                data-attr-value="this.truststoreType()"
+                data-value="this.truststoreType()"
                 data-on-change="this.updateValue(event)"
               >
                 <option value="JKS" data-attr-selected="this.truststoreType() === 'JKS'">
@@ -262,7 +254,7 @@ export class SslConfig extends HTMLElement {
                 data-attr-name="this.getInputId('truststore.path')"
                 type="text"
                 placeholder="/path/to/truststore"
-                data-attr-value="this.truststorePath()"
+                data-value="this.truststorePath()"
                 data-on-change="this.updateValue(event)"
               />
             </div>
@@ -275,7 +267,7 @@ export class SslConfig extends HTMLElement {
                 data-attr-id="this.getInputId('truststore.password')"
                 data-attr-name="this.getInputId('truststore.password')"
                 type="password"
-                data-attr-value="this.truststorePassword()"
+                data-value="this.truststorePassword()"
                 data-on-change="this.updateValue(event)"
               />
             </div>
