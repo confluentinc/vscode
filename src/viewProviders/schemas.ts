@@ -56,6 +56,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
+  /** Count of how many times the user has set a search string */
+  searchStringSetCount: number = 0;
   /** Items directly matching the {@linkcode itemSearchString}, if provided. */
   searchMatches: Set<SchemasViewProviderData> = new Set();
   /** Count of all items returned from `getChildren()`. */
@@ -202,6 +204,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       logUsage(UserEvent.ViewSearchAction, {
         status: "view results filtered",
         view: "Schemas",
+        fromItemExpansion: element !== undefined,
+        searchStringSetCount: this.searchStringSetCount,
         filteredItemCount: this.searchMatches.size,
         totalItemCount: this.totalItemCount,
       });
@@ -275,9 +279,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         logger.debug("schemaSearchSet event fired, refreshing", { searchString });
         // mainly captures the last state of the search internals to see if search was adjusted after
         // a previous search was used, or if this is the first time search is being used
+        if (searchString !== null) {
+          // used to group search events without sending the search string itself
+          this.searchStringSetCount++;
+        }
         logUsage(UserEvent.ViewSearchAction, {
           status: `search string ${searchString ? "set" : "cleared"}`,
           view: "Schemas",
+          searchStringSetCount: this.searchStringSetCount,
           hadExistingSearchString: this.itemSearchString !== null,
           lastFilteredItemCount: this.searchMatches.size,
           lastTotalItemCount: this.totalItemCount,
