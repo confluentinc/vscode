@@ -1,5 +1,4 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
-import { posix } from "path";
 import { registerCommandWithLogging } from ".";
 import { getCCloudAuthSession } from "../authn/utils";
 import { openDirectConnectionForm } from "../directConnect";
@@ -282,16 +281,17 @@ export async function exportDirectConnection(item: DirectEnvironment) {
         const destination = folderUri[0];
         const name = spec.name ? spec.name : "connection";
         const fileName = name.trim().replace(/\s+/g, "_") + ".json";
-        const filePath = posix.join(destination.fsPath, fileName);
-        await workspace.fs.writeFile(Uri.file(filePath), new TextEncoder().encode(specJson));
-        const selection = await window.showInformationMessage(
-          `Connection file saved at ${filePath}`,
-          { title: "Open" },
-        );
-        if (selection !== undefined && selection.title !== "Dismiss") {
-          // TODO log it??
-          await workspace.openTextDocument(Uri.file(filePath));
-        }
+        const fileUri = Uri.joinPath(destination, fileName);
+        await workspace.fs.writeFile(fileUri, new TextEncoder().encode(specJson));
+        // Show success, allow user to open file in current workspace
+        const openFileButton = "Open File";
+        window
+          .showInformationMessage(`Connection file saved at ${fileUri.path}`, openFileButton)
+          .then(async (selection) => {
+            if (selection === openFileButton) {
+              window.showTextDocument(fileUri);
+            }
+          });
       } catch (err) {
         logger.error(`Failed to save file: ${err}`);
         window.showErrorMessage("Unable to save connection spec file.");
