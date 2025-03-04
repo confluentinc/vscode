@@ -30,26 +30,25 @@ export class SslConfig extends HTMLElement {
     else return true;
   });
   truststorePath = this.os.derive(() => {
-    return this.configObj()?.truststore?.path || null;
+    return this.configObj()?.truststore?.path ?? null;
   });
   truststorePassword = this.os.derive(() => {
-    return this.configObj()?.truststore?.password || null;
+    return this.configObj()?.truststore?.password ?? null;
   });
   truststoreType = this.os.derive(() => {
     return this.configObj()?.truststore?.type;
   });
   keystorePath = this.os.derive(() => {
-    console.log("keystorePath", this.configObj()?.keystore?.path);
-    return this.configObj()?.keystore?.path || null;
+    return this.configObj()?.keystore?.path ?? null;
   });
   keystorePassword = this.os.derive(() => {
-    return this.configObj()?.keystore?.password || null;
+    return this.configObj()?.keystore?.password ?? null;
   });
   keystoreType = this.os.derive(() => {
     return this.configObj()?.keystore?.type;
   });
   keystoreKeyPassword = this.os.derive(() => {
-    return this.configObj()?.keystore?.key_password || null;
+    return this.configObj()?.keystore?.key_password ?? null;
   });
   getInputId(name: string) {
     return this.identifier() + ".ssl." + name;
