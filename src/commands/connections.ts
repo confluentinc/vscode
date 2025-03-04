@@ -16,6 +16,7 @@ import {
 } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
 import { EXTENSION_VERSION } from "../constants";
+import { showErrorNotificationWithButtons } from "../errors";
 
 const logger = new Logger("commands.connections");
 
@@ -144,7 +145,7 @@ export async function createNewDirectConnection() {
         // use it to open the Direct Connection form (form will populate the fields with spec values)
         openDirectConnectionForm(newSpec);
       } catch (error) {
-        window.showErrorMessage("Error parsing spec file. See logs for details.");
+        showErrorNotificationWithButtons("Error parsing spec file. See logs for details.");
         logger.error(`Error parsing spec file: ${error}`);
         return;
       }
@@ -294,7 +295,7 @@ export async function exportDirectConnection(item: DirectEnvironment) {
           });
       } catch (err) {
         logger.error(`Failed to save file: ${err}`);
-        window.showErrorMessage("Unable to save connection spec file.");
+        showErrorNotificationWithButtons("Unable to save connection spec file.");
       }
     }
   }
