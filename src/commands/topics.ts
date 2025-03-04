@@ -15,7 +15,6 @@ import {
   ProduceRequest as CCloudProduceRequest,
   ConfluentCloudProduceRecordsResourceApi,
 } from "../clients/sidecar";
-import { IconNames } from "../constants";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import { showErrorNotificationWithButtons } from "../errors";
@@ -26,10 +25,19 @@ import { isCCloud } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { schemaSubjectQuickPick, schemaVersionQuickPick } from "../quickpicks/schemas";
+import {
+  schemaSubjectQuickPick,
+  schemaVersionQuickPick,
+  subjectKindMultiSelect,
+  subjectNameStrategyQuickPick,
+} from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
-import { PRODUCE_MESSAGE_SCHEMA, SchemaInfo } from "../schemas/produceMessageSchema";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  SchemaInfo,
+  SubjectNameStrategy,
+} from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
@@ -270,13 +278,13 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   });
 
   // ask the user if they want to specify a schema for the key and/or value
-  const { includeKeySchema, includeValueSchema } = await promptForSchemaKinds(topic);
+  const { keySchemaSelected, valueSchemaSelected } = await subjectKindMultiSelect(topic);
 
   // check if the topic is associated with any schemas, and if so, prompt for subject+version
-  const keySchema: Schema | undefined = includeKeySchema
+  const keySchema: Schema | undefined = keySchemaSelected
     ? await promptForSchema(topic, "key")
     : undefined;
-  const valueSchema: Schema | undefined = includeValueSchema
+  const valueSchema: Schema | undefined = valueSchemaSelected
     ? await promptForSchema(topic, "value")
     : undefined;
 
@@ -555,53 +563,6 @@ export function registerTopicCommands(): vscode.Disposable[] {
 }
 
 /**
- * Prompt the user to select which schema kind (key and/or value) to include when producing
- * messages to a topic. If the topic is already associated with a schema based on the
- * `TopicNameStrategy`, pre-select that kind.
- */
-export async function promptForSchemaKinds(topic: KafkaTopic): Promise<{
-  includeKeySchema: boolean;
-  includeValueSchema: boolean;
-}> {
-  // TODO(shoup): update this when we migrate from ContainerTreeItem<Schema> to Subject modeling
-
-  // pre-pick any schema kinds that are already associated with this topic
-  const topicKeySubjects: Subject[] = topic.children.filter((subject: Subject) =>
-    subject.name.endsWith("-key"),
-  );
-  const topicHasValueSchemas: Subject[] = topic.children.filter((subject: Subject) =>
-    subject.name.endsWith("-value"),
-  );
-
-  const items: vscode.QuickPickItem[] = [
-    {
-      label: "Key Schema",
-      description: topicKeySubjects.length > 0 ? topicKeySubjects.join(", ") : undefined,
-      picked: topicKeySubjects.length > 0,
-      iconPath: new vscode.ThemeIcon(IconNames.KEY_SUBJECT),
-    },
-    {
-      label: "Value Schema",
-      description: topicHasValueSchemas.length > 0 ? topicHasValueSchemas.join(", ") : undefined,
-      picked: topicHasValueSchemas.length > 0,
-      iconPath: new vscode.ThemeIcon(IconNames.VALUE_SUBJECT),
-    },
-  ];
-
-  const selectedItems = await vscode.window.showQuickPick(items, {
-    canPickMany: true,
-    title: `Producing to ${topic.name}: Select Schema Kind(s)`,
-    placeHolder: "Select which schema kinds to include (none for schemaless JSON)",
-    ignoreFocusOut: true,
-  });
-
-  return {
-    includeKeySchema: selectedItems?.some((item) => item.label === "Key Schema") ?? false,
-    includeValueSchema: selectedItems?.some((item) => item.label === "Value Schema") ?? false,
-  };
-}
-
-/**
  * Prompt the user to select a schema subject+version to use when producing messages to a topic.
  * @param topic The Kafka topic to produce messages to
  * @param kind Whether this is for a 'key' or 'value' schema
@@ -622,12 +583,38 @@ export async function promptForSchema(
     return;
   }
 
-  const schemaSubject: string | undefined = await schemaSubjectQuickPick(
-    registry,
-    `Producing to ${topic.name}: ${kind} schema`,
-  );
+  // prompt for the naming strategy first, which will help narrow down subjects to pick from
+  const strategy: SubjectNameStrategy | undefined = await subjectNameStrategyQuickPick(topic, kind);
+  if (!strategy) {
+    return;
+  }
+
+  let schemaSubject: string | undefined;
+  if (strategy === SubjectNameStrategy.TOPIC_NAME) {
+    // we have the topic name and the kind, so we just need to make sure the subject exists and
+    // fast-track to the version picking
+    const subject = `${topic.name}-${kind}`;
+    const schemaSubjects: Subject[] = await loader.getSubjects(registry);
+    const subjectExists = schemaSubjects.some((s) => s.name === subject);
+    if (!subjectExists) {
+      showErrorNotificationWithButtons(
+        `No "${kind}" schema subject found for topic "${topic.name}".`,
+      );
+      return;
+    }
+    return await schemaVersionQuickPick(registry, subject);
+  } else {
+    // TODO: split logic between TOPIC_RECORD_NAME and RECORD_NAME
+    schemaSubject = await schemaSubjectQuickPick(
+      registry,
+      false,
+      `Producing to ${topic.name}: ${kind} schema`,
+    );
+  }
+
   if (!schemaSubject) {
     return;
   }
+
   return await schemaVersionQuickPick(registry, schemaSubject);
 }
