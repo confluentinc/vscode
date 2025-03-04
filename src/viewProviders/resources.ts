@@ -52,6 +52,7 @@ import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import { updateLocalConnection } from "../sidecar/connections/local";
 import { ConnectionStateWatcher } from "../sidecar/connections/watcher";
 import { DirectConnectionsById, getResourceManager } from "../storage/resourceManager";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -103,6 +104,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   itemSearchString: string | null = null;
   /** Items directly matching the {@linkcode itemSearchString}, if provided. */
   searchMatches: Set<ResourceViewProviderData> = new Set();
+  /** Count of all items returned from `getChildren()`. */
+  totalItemCount: number = 0;
 
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
@@ -241,6 +244,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       }
     }
 
+    this.totalItemCount += children.length;
     if (this.itemSearchString) {
       // if the parent item matches the search string, return all children so the user can expand
       // and see them all, even if just the parent item matched and shows the highlight(s)
@@ -261,13 +265,19 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       // update the tree view message to show how many results were found to match the search string
       // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
       // will never be called and the message won't update
-      const plural = this.searchMatches.size > 1 ? "s" : "";
+      const plural = this.totalItemCount > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
       } else {
         // let empty state take over
         this.treeView.message = undefined;
       }
+      logUsage(UserEvent.ViewSearchAction, {
+        status: "view results filtered",
+        view: "Resources",
+        filteredItemCount: this.searchMatches.size,
+        totalItemCount: this.totalItemCount,
+      });
     } else {
       this.treeView.message = undefined;
     }
@@ -321,10 +331,16 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     const resourceSearchSetSub: vscode.Disposable = resourceSearchSet.event(
       (searchString: string | null) => {
         logger.debug("resourceSearchSet event fired, refreshing", { searchString });
-        // set/unset the filter and call into getChildren() to update the tree view
-        this.itemSearchString = searchString;
-        // clear from any previous search filter
-        this.searchMatches = new Set();
+        // mainly captures the last state of the search internals to see if search was adjusted after
+        // a previous search was used, or if this is the first time search is being used
+        logUsage(UserEvent.ViewSearchAction, {
+          status: `search string ${searchString ? "set" : "cleared"}`,
+          view: "Resources",
+          hadExistingSearchString: this.itemSearchString !== null,
+          lastFilteredItemCount: this.searchMatches.size,
+          lastTotalItemCount: this.totalItemCount,
+        });
+        this.setSearch(searchString);
         this.refresh();
       },
     );
@@ -438,6 +454,17 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
         this.environmentsMap.delete(id);
       }
     });
+  }
+
+  /** Update internal state when the search string is set or unset. */
+  setSearch(searchString: string | null): void {
+    // set/unset the filter so any calls to getChildren() will filter appropriately
+    this.itemSearchString = searchString;
+    // set context value to toggle between "search" and "clear search" actions
+    setContextValue(ContextValues.resourceSearchApplied, searchString !== null);
+    // clear from any previous search filter
+    this.searchMatches = new Set();
+    this.totalItemCount = 0;
   }
 }
 
