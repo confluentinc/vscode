@@ -37,14 +37,23 @@ global_job_config:
         - make store-test-results-to-semaphore
 
 blocks:
-  - name: "Build & Test (VS Code)"
+  # --- Build & Test (multi-platform/-arch) ---
+  - name: "Build & Test (linux x64)"
     dependencies: []
     # Skip when:
     # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
     # - change in the .versions/next.txt file, signaling a release PR merge commit.
-    skip:
+    skip: &build-test-skip
       when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-amd64-1
+      jobs: &build-test-jobs
+        - name: "Build & Test"
+          commands:
+            - make test
+      epilogue: &build-test-epilogue
       jobs:
         - name: "Build & Test (VS Code)"
           commands:
@@ -71,8 +80,51 @@ blocks:
           commands:
             - make remove-test-env
 
+  - name: "Build & Test (linux arm64)"
+    dependencies: []
+    skip: *build-test-skip
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-arm64-1
+      jobs: *build-test-jobs
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (darwin x64)"
+    dependencies: []
+    skip: *build-test-skip
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-amd64
+      jobs: *build-test-jobs
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (darwin arm64)"
+    dependencies: []
+    skip: *build-test-skip
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-arm64
+      jobs: *build-test-jobs
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (win32 x64)"
+    dependencies: []
+    skip: *build-test-skip
+    task:
+      agent:
+        machine:
+          type: s1-prod-windows
+      jobs: *build-test-jobs
+      epilogue: *build-test-epilogue
+
+  # --- End Build & Test (multi-platform/-arch) ---
+
   - name: "Bump microversion"
-    dependencies: ["Build & Test (VS Code)"]
+    dependencies:
+      - "Build & Test (linux x64)"
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -90,7 +142,8 @@ blocks:
             - make bump-microversion
 
   - name: "Set next version under development"
-    dependencies: ["Build & Test (VS Code)"]
+    dependencies:
+      - "Build & Test (linux x64)"
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
