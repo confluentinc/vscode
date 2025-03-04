@@ -164,6 +164,7 @@ export class SubjectTreeItem extends vscode.TreeItem {
     super(subject.name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.id = subject.name;
+    //this.id = `${subject.name} - ${subject.schemas?.length ?? 0}`;
 
     // If we have schema bindings, then err on the side of showing the value icon
     const errOnValueSubject: boolean = subject.schemas != null;
