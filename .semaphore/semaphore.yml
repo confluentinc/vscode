@@ -50,16 +50,11 @@ blocks:
         machine:
           type: s1-prod-ubuntu20-04-amd64-1
       jobs: &build-test-jobs
-        - name: "Build & Test"
-          commands:
-            - make test
-      epilogue: &build-test-epilogue
-      jobs:
         - name: "Build & Test (VS Code)"
           commands:
             - make test
           # Not setting VSCODE_VERSION env var will default using the latest stable release version
-      epilogue:
+      epilogue: &build-test-epilogue
         always:
           commands:
             - make remove-test-env
