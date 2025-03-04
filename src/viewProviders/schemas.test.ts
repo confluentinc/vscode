@@ -1,19 +1,23 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { TreeItemCollapsibleState } from "vscode";
-import { TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
+import {
+  TEST_CCLOUD_SCHEMA,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+} from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
-import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
 describe("SchemasViewProvider methods", () => {
   let provider: SchemasViewProvider;
 
-  before(() => {
+  before(async () => {
+    await getTestExtensionContext();
     provider = SchemasViewProvider.getInstance();
   });
 
@@ -22,12 +26,14 @@ describe("SchemasViewProvider methods", () => {
     assert.ok(treeItem instanceof SchemaTreeItem);
   });
 
-  it("getTreeItem() should pass ContainerTreeItems through directly", () => {
-    const container = new ContainerTreeItem<Schema>("test", TreeItemCollapsibleState.Collapsed, [
-      TEST_CCLOUD_SCHEMA,
-    ]);
-    const treeItem = provider.getTreeItem(container);
-    assert.deepStrictEqual(treeItem, container);
+  it("getTreeItem() should return a SubjectTreeItem for a Subject instance w/o schemas", () => {
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
+    assert.ok(treeItem instanceof SubjectTreeItem);
+  });
+
+  it("getTreeItem() should return a SubjectTreeItem for a Subject instance with schemas", () => {
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.ok(treeItem instanceof SubjectTreeItem);
   });
 });
 
@@ -37,16 +43,17 @@ describe("SchemasViewProvider search behavior", () => {
 
   let sandbox: sinon.SinonSandbox;
 
-  const TEST_CCLOUD_SCHEMA2 = Schema.create({
+  const TEST_CCLOUD_SUBJECT2 = Schema.create({
     ...TEST_CCLOUD_SCHEMA,
     subject: "foo-value",
     id: "100123",
-  });
-  const TEST_CCLOUD_SCHEMA3 = Schema.create({
+  }).subjectObject();
+
+  const TEST_CCLOUD_SUBJECT3 = Schema.create({
     ...TEST_CCLOUD_SCHEMA,
     subject: "bar-key",
     id: "100456",
-  });
+  }).subjectObject();
 
   before(async () => {
     await getTestExtensionContext();
@@ -58,9 +65,9 @@ describe("SchemasViewProvider search behavior", () => {
     // stub loader method for fetching schemas
     ccloudLoader = CCloudResourceLoader.getInstance();
     sandbox
-      .stub(ccloudLoader, "getSchemasForRegistry")
+      .stub(ccloudLoader, "getSubjects")
       // three sample schema versions across three subjects
-      .resolves([TEST_CCLOUD_SCHEMA, TEST_CCLOUD_SCHEMA2, TEST_CCLOUD_SCHEMA3]);
+      .resolves([TEST_CCLOUD_SUBJECT, TEST_CCLOUD_SUBJECT2, TEST_CCLOUD_SUBJECT3]);
 
     provider = SchemasViewProvider.getInstance();
     provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
@@ -78,32 +85,15 @@ describe("SchemasViewProvider search behavior", () => {
     const rootElements = await provider.getChildren();
 
     assert.strictEqual(rootElements.length, 1);
-    assert.ok(rootElements[0] instanceof ContainerTreeItem);
+    assert.ok(rootElements[0] instanceof Subject);
+    assert.strictEqual((rootElements[0] as Subject).name, TEST_CCLOUD_SCHEMA.subject);
+
+    assert.strictEqual(provider.totalItemCount, 3);
+    assert.strictEqual(provider.searchMatches.size, 1);
     assert.strictEqual(
-      (rootElements[0] as ContainerTreeItem<Schema>).label,
-      TEST_CCLOUD_SCHEMA.subject,
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${TEST_CCLOUD_SCHEMA.subject}"`,
     );
-  });
-
-  it("getChildren() should return all schemas if parent subject matches search", async () => {
-    // Parent subject matches search
-    schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
-
-    const rootElements = await provider.getChildren();
-
-    assert.strictEqual(rootElements.length, 1);
-    assert.ok(rootElements[0] instanceof ContainerTreeItem);
-    assert.strictEqual(
-      (rootElements[0] as ContainerTreeItem<Schema>).label,
-      TEST_CCLOUD_SCHEMA.subject,
-    );
-
-    // expand subject container to get child schemas
-    const children = await provider.getChildren(rootElements[0]);
-
-    assert.strictEqual(children.length, 1);
-    assert.ok(children[0] instanceof Schema);
-    assert.strictEqual(children[0].subject, TEST_CCLOUD_SCHEMA.subject);
   });
 
   it("getChildren() should show correct count in tree view message when items match search", async () => {
@@ -113,7 +103,13 @@ describe("SchemasViewProvider search behavior", () => {
 
     await provider.getChildren();
 
-    assert.strictEqual(provider["treeView"].message, `Showing 2 results for "${searchStr}"`);
+    // three original subjects returned
+    assert.strictEqual(provider.totalItemCount, 3);
+    assert.strictEqual(provider.searchMatches.size, 2);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${searchStr}"`,
+    );
   });
 
   it("getChildren() should clear tree view message when search is cleared", async () => {
@@ -122,6 +118,8 @@ describe("SchemasViewProvider search behavior", () => {
 
     await provider.getChildren();
 
+    assert.strictEqual(provider.totalItemCount, 3);
+    assert.strictEqual(provider.searchMatches.size, 0);
     assert.strictEqual(provider["treeView"].message, undefined);
   });
 
@@ -129,28 +127,9 @@ describe("SchemasViewProvider search behavior", () => {
     // First schema subject matches search
     schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 
-    const container = new ContainerTreeItem<Schema>(
-      TEST_CCLOUD_SCHEMA.subject,
-      TreeItemCollapsibleState.Collapsed,
-      [TEST_CCLOUD_SCHEMA],
-    );
-    const treeItem = provider.getTreeItem(container);
+    const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
 
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
-  });
-
-  it("getTreeItem() should collapse items when children exist but don't match search", async () => {
-    // Search for non-matching string
-    schemaSearchSet.fire("non-matching-search");
-
-    const container = new ContainerTreeItem<Schema>(
-      TEST_CCLOUD_SCHEMA.subject,
-      TreeItemCollapsibleState.Expanded,
-      [TEST_CCLOUD_SCHEMA],
-    );
-    const treeItem = provider.getTreeItem(container);
-
-    assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
   });
 });

@@ -1,22 +1,25 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import * as vscode from "vscode";
 import { commands } from "vscode";
 import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_CCLOUD_SCHEMA_REVISED,
+  TEST_CCLOUD_SUBJECT,
+  TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_KAFKA_TOPIC,
   TEST_LOCAL_SCHEMA,
   TEST_LOCAL_SCHEMA_REGISTRY,
+  TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
 import { CCloudResourceLoader, LocalResourceLoader, ResourceLoader } from "../loaders";
-import { ContainerTreeItem } from "../models/main";
-import { Schema } from "../models/schema";
+import { Schema, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   CannotLoadSchemasError,
+  determineLatestSchema,
   diffLatestSchemasCommand,
   getLatestSchemasForTopic,
 } from "./schemas";
@@ -35,47 +38,31 @@ describe("commands/schemas.ts diffLatestSchemasCommand tests", function () {
   });
 
   it("diffLatestSchemasCommand should execute the correct commands when invoked on a proper schema group", async () => {
-    // Make a 3-version schema group ...
-    const oldestSchemaVersion = Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: "my-topic-value",
-      version: 0,
-      id: "1",
-    });
-
-    const olderSchemaVersion = Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: "my-topic-value",
-      version: 1,
-      id: "2",
-    });
-    const latestSchemaVersion = Schema.create({
-      ...TEST_CCLOUD_SCHEMA,
-      subject: "my-topic-value",
-      version: 2,
-      id: "3",
-    });
-    const schemaGroup = new ContainerTreeItem<Schema>(
-      "my-topic-value",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [latestSchemaVersion, olderSchemaVersion, oldestSchemaVersion],
-    );
-
     // directly call what command "confluent.schemas.diffMostRecentVersions" would call (made harder to invoke
     // because it's a command, and we've stubbed out vscode command execution)
-    await diffLatestSchemasCommand(schemaGroup);
-    assert.ok(executeCommandStub.calledWith("confluent.diff.selectForCompare", olderSchemaVersion));
+    await diffLatestSchemasCommand(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.ok(
-      executeCommandStub.calledWith("confluent.diff.compareWithSelected", latestSchemaVersion),
+      executeCommandStub.calledWith(
+        "confluent.diff.selectForCompare",
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![1],
+      ),
+    );
+    assert.ok(
+      executeCommandStub.calledWith(
+        "confluent.diff.compareWithSelected",
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0],
+      ),
     );
   });
 
   it("diffLatestSchemasCommand should not execute commands if there are fewer than two schemas in the group", async () => {
     // (this should not happen if the schema group was generated correctly, but diffLatestSchemasCommand guards against it)
-    const schemaGroup = new ContainerTreeItem<Schema>(
-      "my-topic-value",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [Schema.create({ ...TEST_CCLOUD_SCHEMA, subject: "my-topic-value", version: 1 })],
+    const schemaGroup = new Subject(
+      TEST_CCLOUD_SUBJECT.name,
+      TEST_CCLOUD_SUBJECT.connectionId,
+      TEST_CCLOUD_SUBJECT.environmentId,
+      TEST_CCLOUD_SUBJECT.schemaRegistryId,
+      [TEST_CCLOUD_SCHEMA_REVISED],
     );
 
     await diffLatestSchemasCommand(schemaGroup);
@@ -145,68 +132,84 @@ function generateGetLatestSchemasForTopicTests<
       );
     });
 
-    it("hates topics without schema registry", async function () {
-      // mock resourceLoader.getCCloudSchemaRegistry() to return undefined, no schema registry
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(undefined);
+    it("hates topics without subject groups", async function () {
+      resourceLoader.getTopicSubjectGroups.resolves([]);
       await assert.rejects(
         async () => {
           await getLatestSchemasForTopic(testTopic);
         },
         raisedCannotLoadSchemasErrorMatcher(
-          /Could not determine schema registry for topic "test-topic" believed to have related schemas/,
+          /Topic "test-topic" has no related schemas in registry/,
         ),
-      );
-    });
-
-    it("hates empty schema registry", async function () {
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
-      resourceLoader.getSchemasForRegistry.resolves([]);
-      await assert.rejects(
-        async () => {
-          await getLatestSchemasForTopic(testTopic);
-        },
-        raisedCannotLoadSchemasErrorMatcher(
-          /Schema registry .* had no schemas, but we expected it to have some for topic "test-topic"/,
-        ),
-      );
-    });
-
-    it("hates when no schemas match topic", async function () {
-      resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
-      resourceLoader.getSchemasForRegistry.resolves([
-        Schema.create({ ...testSchema, subject: "some-other-topic-value" }),
-      ]);
-      await assert.rejects(
-        async () => {
-          await getLatestSchemasForTopic(testTopic);
-        },
-        raisedCannotLoadSchemasErrorMatcher(/No schemas found for topic "test-topic"/),
       );
     });
 
     it("loves and returns highest versioned schemas for topic with key and value topics", async function () {
       resourceLoader.getSchemaRegistryForEnvironmentId.resolves(baseSchemaRegistry);
-      resourceLoader.getSchemasForRegistry.resolves([
-        Schema.create({ ...testSchema, subject: "test-topic-value", version: 1 }),
-        Schema.create({ ...testSchema, subject: "test-topic-value", version: 2 }),
-        Schema.create({ ...testSchema, subject: "test-topic-key", version: 1 }),
+
+      // Doesn't really matter that we're mixing local and CCloud here, just wanting to test returning
+      // multiple subjects with multiple schemas each.
+      resourceLoader.getTopicSubjectGroups.resolves([
+        TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
+        TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
       ]);
 
       const fetchedLatestSchemas = await getLatestSchemasForTopic(testTopic);
       assert.strictEqual(fetchedLatestSchemas.length, 2);
 
-      const expectedSubjectToVersion = new Map([
-        ["test-topic-value", 2],
-        ["test-topic-key", 1],
+      const expectedSubjectToVersion: Map<string, number> = new Map([
+        [TEST_LOCAL_SUBJECT_WITH_SCHEMAS.name, 2],
+        [TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name, 2],
       ]);
 
       for (const schema of fetchedLatestSchemas) {
         assert.strictEqual(schema.version, expectedSubjectToVersion.get(schema.subject));
         expectedSubjectToVersion.delete(schema.subject);
       }
+
+      // should have been all.
+      assert.strictEqual(expectedSubjectToVersion.size, 0);
     });
   };
 }
+
+describe("commands::schema determineLatestSchema() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let loaderStub: sinon.SinonStubbedInstance<ResourceLoader>;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderStub = sandbox.createStubInstance(ResourceLoader);
+    sandbox.stub(ResourceLoader, "getInstance").returns(loaderStub);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return first Schema from a Subject carrying Schemas", async () => {
+    const result = await determineLatestSchema("test", TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
+    assert.strictEqual(result, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas![0]);
+  });
+
+  it("should fetch and return latest Schema when given Subject", async () => {
+    const expectedSchema = TEST_CCLOUD_SCHEMA;
+    const subject = TEST_CCLOUD_SUBJECT;
+
+    loaderStub.getSchemaSubjectGroup.resolves([expectedSchema]);
+
+    const result = await determineLatestSchema("test", subject);
+
+    assert.strictEqual(result, expectedSchema);
+  });
+
+  it("should throw error for invalid argument type", async () => {
+    await assert.rejects(
+      async () => await determineLatestSchema("test", {} as Subject),
+      /called with invalid argument type/,
+    );
+  });
+});
 
 /**
  * Generic interface for types with a constructor function (i.e. a real class)

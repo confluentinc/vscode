@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
+  keystore and truststore settings
+- Ability to export and import connection details as JSON files, for easier connection creation and
+  sharing
+
+## 0.25.0
+
 ### Added
 
 - Progress indicator when producing large batches of messages to Kafka topics to improve visibility
@@ -27,6 +34,8 @@ All notable changes to this extension will be documented in this file.
 - Improved logging in the "Confluent (Sidecar)" output channel by implementing the
   `LogOutputChannel` API. When using VS Code 1.97 or higher, these logs can now be combined with the
   "Confluent" output channel for unified log viewing.
+- Updated the URL templates for viewing schemas and schema registries in CCloud (now under
+  "stream-governance/schema-registry/data-contracts")
 
 ### Fixed
 

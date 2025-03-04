@@ -85,6 +85,7 @@ export function getTelemetryLogger(): vscode.TelemetryLogger {
       });
     },
     sendErrorData: (exception, data) => {
+      // We don't send error data to Segment. We use Sentry for that.
       logger.error("Error", { ...exception, ...data });
     },
     flush: () => {

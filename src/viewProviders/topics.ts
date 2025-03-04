@@ -14,10 +14,10 @@ import { TopicFetchError } from "../loaders/loaderUtils";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { ContainerTreeItem } from "../models/main";
 import { isCCloud, ISearchable, isLocal } from "../models/resource";
-import { generateSchemaSubjectGroups, Schema, SchemaTreeItem } from "../models/schema";
+import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
+import { logUsage, UserEvent } from "../telemetry/events";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
@@ -27,7 +27,7 @@ const logger = new Logger("viewProviders.topics");
  * The types managed by the {@link TopicViewProvider}, which are converted to their appropriate tree item
  * type via the `getTreeItem()` method.
  */
-type TopicViewProviderData = KafkaTopic | ContainerTreeItem<Schema> | Schema;
+type TopicViewProviderData = KafkaTopic | Subject | Schema;
 
 export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -64,8 +64,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
+  /** Count of how many times the user has set a search string */
+  searchStringSetCount: number = 0;
   /** Items directly matching the {@linkcode itemSearchString}, if provided. */
   searchMatches: Set<TopicViewProviderData> = new Set();
+  /** Count of all items returned from `getChildren()`. */
+  totalItemCount: number = 0;
 
   private static instance: TopicViewProvider | null = null;
   private constructor() {
@@ -98,15 +102,15 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     this.refresh();
   }
 
-  getTreeItem(element: TopicViewProviderData): vscode.TreeItem | Thenable<vscode.TreeItem> {
+  getTreeItem(element: TopicViewProviderData): vscode.TreeItem {
     let treeItem: vscode.TreeItem;
     if (element instanceof KafkaTopic) {
       treeItem = new KafkaTopicTreeItem(element);
-    } else if (element instanceof Schema) {
-      treeItem = new SchemaTreeItem(element);
+    } else if (element instanceof Subject) {
+      treeItem = new SubjectTreeItem(element);
     } else {
-      // should only be left with ContainerTreeItems
-      treeItem = element;
+      // must be individual Schema.
+      treeItem = new SchemaTreeItem(element);
     }
 
     if (this.itemSearchString) {
@@ -130,11 +134,12 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // --- CHILDREN OF TREE BRANCHES ---
       // NOTE: we end up here when expanding a (collapsed) treeItem
       if (element instanceof KafkaTopic) {
-        // return schema-subject containers
-        children = await loadTopicSchemas(element);
-      } else if (element instanceof ContainerTreeItem) {
-        // schema-subject container, return schema versions for the topic
-        children = element.children;
+        // return schema-subject containers in form of Subject[] each carrying Schema[]s.
+        const loader = ResourceLoader.getInstance(element.connectionId);
+        children = await loader.getTopicSubjectGroups(element);
+      } else if (element instanceof Subject) {
+        // Subject carrying schemas as from loadTopicSchemas, return schema versions for the topic
+        children = element.schemas!;
       }
     } else {
       // --- ROOT-LEVEL ITEMS ---
@@ -147,6 +152,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       }
     }
 
+    this.totalItemCount += children.length;
     // filter the children based on the search string, if provided
     if (this.itemSearchString) {
       // if the parent item matches the search string, return all children so the user can expand
@@ -168,13 +174,21 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       // update the tree view message to show how many results were found to match the search string
       // NOTE: this can't be done in `getTreeItem()` because if we don't return children here, it
       // will never be called and the message won't update
-      const plural = this.searchMatches.size > 1 ? "s" : "";
+      const plural = this.totalItemCount > 1 ? "s" : "";
       if (this.searchMatches.size > 0) {
-        this.treeView.message = `Showing ${this.searchMatches.size} result${plural} for "${this.itemSearchString}"`;
+        this.treeView.message = `Showing ${this.searchMatches.size} of ${this.totalItemCount} result${plural} for "${this.itemSearchString}"`;
       } else {
         // let empty state take over
         this.treeView.message = undefined;
       }
+      logUsage(UserEvent.ViewSearchAction, {
+        status: "view results filtered",
+        view: "Topics",
+        fromItemExpansion: element !== undefined,
+        searchStringSetCount: this.searchStringSetCount,
+        filteredItemCount: this.searchMatches.size,
+        totalItemCount: this.totalItemCount,
+      });
     } else {
       this.treeView.message = undefined;
     }
@@ -246,6 +260,20 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     const topicSearchSetSub: vscode.Disposable = topicSearchSet.event(
       (searchString: string | null) => {
         logger.debug("topicSearchSet event fired, refreshing", { searchString });
+        // mainly captures the last state of the search internals to see if search was adjusted after
+        // a previous search was used, or if this is the first time search is being used
+        if (searchString !== null) {
+          // used to group search events without sending the search string itself
+          this.searchStringSetCount++;
+        }
+        logUsage(UserEvent.ViewSearchAction, {
+          status: `search string ${searchString ? "set" : "cleared"}`,
+          view: "Topics",
+          searchStringSetCount: this.searchStringSetCount,
+          hadExistingSearchString: this.itemSearchString !== null,
+          lastFilteredItemCount: this.searchMatches.size,
+          lastTotalItemCount: this.totalItemCount,
+        });
         this.setSearch(searchString);
         this.refresh();
       },
@@ -289,6 +317,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     setContextValue(ContextValues.topicSearchApplied, searchString !== null);
     // clear from any previous search filter
     this.searchMatches = new Set();
+    this.totalItemCount = 0;
   }
 }
 
@@ -297,7 +326,8 @@ export function getTopicViewProvider() {
   return TopicViewProvider.getInstance();
 }
 
-/** Determine the topics offered from this cluster. If topics are already known
+/**
+ * Determine the topics offered from this cluster. If topics are already known
  * from a prior sidecar fetch, return those, otherwise deep fetch from sidecar.
  */
 export async function getTopicsForCluster(
@@ -317,20 +347,4 @@ export async function getTopicsForCluster(
     }
     return [];
   }
-}
-
-/**
- * Load the schemas related to the given topic from extension state by using either `TopicNameStrategy`
- * or `TopicRecordNameStrategy` to match schema subjects with the topic's name.
- * @param topic The Kafka topic to load schemas for.
- * @returns An array of {@link ContainerTreeItem} objects representing the topic's schemas, grouped
- * by subject as {@link ContainerTreeItem}s, with the {@link Schema}s in version-descending order.
- * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
- */
-export async function loadTopicSchemas(topic: KafkaTopic): Promise<ContainerTreeItem<Schema>[]> {
-  const loader = ResourceLoader.getInstance(topic.connectionId);
-
-  const schemas = await loader.getSchemasForEnvironmentId(topic.environmentId);
-
-  return generateSchemaSubjectGroups(schemas, topic.name);
 }

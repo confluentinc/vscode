@@ -10,8 +10,7 @@ import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
 import { currentSchemaRegistryChanged } from "../emitters";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
-import { ContainerTreeItem } from "../models/main";
-import { Schema, SchemaType } from "../models/schema";
+import { Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
@@ -20,23 +19,25 @@ import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/sc
 
 const logger = new Logger("commands.schemaUpload");
 
-/** Module for the "upload schema to schema registry" command (""confluent.schemas.upload") and related functions.
+/**
+ * Module for the "upload schema to schema registry" command ("confluent.schemas.upload") and related functions.
  *
  * uploadNewSchema() command is registered over in ./schemas.ts, but the actual implementation is here.
  * All other exported functions are exported for the tests in schemaUpload.test.ts.
  */
 
 /**
- * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from an inline action on a schema
- * subject container in the Schemas view.
+ * Wrapper around {@linkcode uploadSchemaFromFile}, triggered from:
+ *  1. A Subject from the Schemas view
+ *  2. On one of a topic's subjects in the Topics view
  */
-export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Schema>) {
-  // grab a schema just to get the connectionId to look up the Schema Registry
-  const sampleSchema: Schema = item.children[0];
-  const loader = ResourceLoader.getInstance(sampleSchema.connectionId);
-  const registry = await loader.getSchemaRegistryForEnvironmentId(sampleSchema.connectionId);
-  const subject = item.label as string;
-  await uploadSchemaFromFile(registry, subject);
+export async function uploadSchemaForSubjectFromfile(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    throw new Error("uploadSchemaForSubjectFromfile called with invalid argument type");
+  }
+  const loader = ResourceLoader.getInstance(subject.connectionId);
+  const registry = await loader.getSchemaRegistryForEnvironmentId(subject.environmentId);
+  await uploadSchemaFromFile(registry, subject.name);
 }
 
 /**
@@ -46,7 +47,7 @@ export async function uploadSchemaForSubjectFromfile(item: ContainerTreeItem<Sch
  * Instead of starting from a file/editor and trying to attach the SR+subject info, we start from the
  * Schema Registry and then ask for the file/editor (and schema subject if not provided).
  */
-export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: string) {
+export async function uploadSchemaFromFile(registry?: SchemaRegistry, subjectString?: string) {
   // prompt for the editor/file first via the URI quickpick, only allowing a subset of URI schemes,
   // editor languages, and file extensions
   const uriSchemes = ["file", "untitled", SCHEMA_URI_SCHEME];
@@ -98,8 +99,8 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
     return;
   }
 
-  subject = subject ? subject : await chooseSubject(registry);
-  if (!subject) {
+  subjectString = subjectString ? subjectString : await chooseSubject(registry);
+  if (!subjectString) {
     logger.error("Could not determine schema subject");
     return;
   }
@@ -108,7 +109,7 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subject?: 
   // to the subject to ensure is the right type. Error out if not. This error
   // will be more clear than the one that the schema registry will give us.
 
-  await uploadSchema(registry, subject, schemaType, docContent.content);
+  await uploadSchema(registry, subjectString, schemaType, docContent.content);
 }
 
 async function uploadSchema(
