@@ -106,8 +106,12 @@ class DirectConnectFormViewModel extends ViewModel {
   message = this.signal("");
   success = this.signal(false);
   loading = this.signal(false);
+  imported = this.derive(() => {
+    return this.spec()?.id === "FILE_UPLOAD" ? true : false;
+  });
   editing = this.derive(() => {
-    return this.spec()?.id ? true : false;
+    if (this.spec()?.id && !this.imported()) return true;
+    else return false;
   });
   /** Connection state & errors (displayed in UI after Test) */
   kafkaState = this.signal<ConnectedState | undefined>(undefined);
@@ -155,7 +159,7 @@ class DirectConnectFormViewModel extends ViewModel {
 
   async getFile(detail: { inputId: string }) {
     const newPath = await post("GetFilePath", detail);
-    this.spec(await post("GetConnectionSpec", {}));
+    if (newPath) this.spec(await post("GetConnectionSpec", {}));
   }
   async updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -248,7 +252,7 @@ class DirectConnectFormViewModel extends ViewModel {
       this.loading(false);
       return;
     }
-    if (data["platform"] === "Confluent Cloud") {
+    if (data["formconnectiontype"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.auth_type"] = "API";
       data["schema_registry.auth_type"] = "API";
