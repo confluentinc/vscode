@@ -102,14 +102,22 @@ describe("TopicViewProvider search behavior", () => {
   });
 
   it("getChildren() should show correct count in tree view message when items match search", async () => {
-    getTopicsForClusterStub.resolves([TEST_CCLOUD_KAFKA_TOPIC]);
-    // Topic name matches the search string
+    getTopicsForClusterStub.resolves([
+      TEST_CCLOUD_KAFKA_TOPIC,
+      KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "other-topic" }),
+    ]);
+    // Topic name matches the search string of one topic
     const searchStr = TEST_CCLOUD_KAFKA_TOPIC.name;
     topicSearchSet.fire(searchStr);
 
     await provider.getChildren();
 
-    assert.strictEqual(provider["treeView"].message, `Showing 1 result for "${searchStr}"`);
+    assert.strictEqual(provider.searchMatches.size, 1);
+    assert.strictEqual(provider.totalItemCount, 2);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${searchStr}"`,
+    );
   });
 
   it("getChildren() should clear tree view message when search is cleared", async () => {
