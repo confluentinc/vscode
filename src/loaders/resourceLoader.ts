@@ -5,7 +5,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
-import { Schema, Subject } from "../models/schema";
+import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
@@ -157,6 +157,79 @@ export abstract class ResourceLoader implements IResourceBase {
   ): Promise<Schema[]> {
     const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
     return fetchSchemaSubjectGroup(schemaRegistry, subject);
+  }
+
+  /**
+   * Get the subjects with corresponding schemas for a single Kafka topic.
+   *
+   * The subjects will have their `.schemas` property populated, and will be in alphabetical order.
+   * If the topic has no corresponding subjects, an empty array is returned.
+   * Implemented atop {@link getSubjects}, {@link getSchemaSubjectGroup}.
+   *
+   * @param topic The Kafka topic to load schemas for. If not from the same connection as this loader, an error is thrown.
+   * @returns An array of {@link Subject} objects representing the topic's schemas, grouped
+   * by subject as {@link Schema}s, with the {@link Schema}s in version-descending order.
+   *
+   * @see https://developer.confluent.io/courses/schema-registry/schema-subjects/#subject-name-strategies
+   */
+  public async getTopicSubjectGroups(topic: KafkaTopic): Promise<Subject[]> {
+    if (topic.connectionId !== this.connectionId) {
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for topic ${topic.name} (${topic.connectionId})`,
+      );
+    }
+
+    /*
+      1. Get all the subjects from the topic's cluster's environment's schema registry.
+      2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
+      3. For each of those subjects, get the corresponding array of schema versions.
+      4. Assemble each subject + schemas array into an array of Subject holding its own schemas.
+      5. Return said array.
+    */
+
+    // 1. Get all the subjects from the topic's cluster's environment's schema registry.
+
+    // (Because this gets called many times in the lifetime of a connection, it is imperative that the subject
+    //  list is cached in the loader regardless of loader implemenation, issue #1051)
+    const subjects = await this.getSubjects(topic.environmentId);
+
+    // 2. Filter by those corresponding to the topic in question. Will usually get one or two subjects.
+    const schemaSubjects = subjects.filter((subject) =>
+      subjectMatchesTopicName(subject.name, topic.name),
+    );
+
+    if (!schemaSubjects.length) {
+      return [];
+    }
+
+    // 3. For each of those subjects, get the corresponding schema version array.
+    // Load all the schema versions for each subject in the matching subjects
+    // concurrently.
+    const subjectGroupRequests = schemaSubjects.map((subject) =>
+      this.getSchemaSubjectGroup(topic.environmentId, subject.name),
+    );
+    const subjectGroups = await Promise.all(subjectGroupRequests);
+
+    // 4. Group by each subject: a Subject carrying the schemas, collect into an array thereof.
+    const schemaContainers: Subject[] = subjectGroups.map((group: Schema[]) => {
+      const firstSchema = group[0];
+
+      // Roll this Schema[] into a Subject object with a Schema[] payload.
+      // (This is the only place in the codebase where a Subject is created with a Schema[] payload.)
+      return new Subject(
+        firstSchema.subject,
+        topic.connectionId,
+        topic.environmentId,
+        firstSchema.schemaRegistryId,
+        group,
+      );
+    });
+
+    // Sort by subject name.
+    schemaContainers.sort((a, b) => a.name.localeCompare(b.name));
+
+    // 5. Return said array.
+    return schemaContainers;
   }
 
   /**
