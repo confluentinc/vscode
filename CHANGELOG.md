@@ -6,6 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 - Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
   keystore and truststore settings
+- Ability to export and import connection details as JSON files, for easier connection creation and
+  sharing
 
 ## 0.25.0
 
