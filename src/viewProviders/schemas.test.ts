@@ -87,6 +87,13 @@ describe("SchemasViewProvider search behavior", () => {
     assert.strictEqual(rootElements.length, 1);
     assert.ok(rootElements[0] instanceof Subject);
     assert.strictEqual((rootElements[0] as Subject).name, TEST_CCLOUD_SCHEMA.subject);
+
+    assert.strictEqual(provider.totalItemCount, 3);
+    assert.strictEqual(provider.searchMatches.size, 1);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${TEST_CCLOUD_SCHEMA.subject}"`,
+    );
   });
 
   it("getChildren() should show correct count in tree view message when items match search", async () => {
@@ -96,7 +103,13 @@ describe("SchemasViewProvider search behavior", () => {
 
     await provider.getChildren();
 
-    assert.strictEqual(provider["treeView"].message, `Showing 2 results for "${searchStr}"`);
+    // three original subjects returned
+    assert.strictEqual(provider.totalItemCount, 3);
+    assert.strictEqual(provider.searchMatches.size, 2);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing ${provider.searchMatches.size} of ${provider.totalItemCount} results for "${searchStr}"`,
+    );
   });
 
   it("getChildren() should clear tree view message when search is cleared", async () => {
@@ -105,6 +118,8 @@ describe("SchemasViewProvider search behavior", () => {
 
     await provider.getChildren();
 
+    assert.strictEqual(provider.totalItemCount, 3);
+    assert.strictEqual(provider.searchMatches.size, 0);
     assert.strictEqual(provider["treeView"].message, undefined);
   });
 
