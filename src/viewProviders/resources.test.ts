@@ -515,7 +515,13 @@ describe("ResourceViewProvider search behavior", () => {
 
     await provider.getChildren(container);
 
-    assert.strictEqual(provider["treeView"].message, `Showing 1 result for "${searchStr}"`);
+    // fresh provider for this test, only tracked 1 item returned for its totalItemCount
+    assert.strictEqual(provider.searchMatches.size, 1);
+    assert.strictEqual(provider.totalItemCount, 1);
+    assert.strictEqual(
+      provider["treeView"].message,
+      `Showing 1 of ${provider.totalItemCount} result for "${searchStr}"`,
+    );
   });
 
   it("getChildren() should clear tree view message when search is cleared", async () => {
