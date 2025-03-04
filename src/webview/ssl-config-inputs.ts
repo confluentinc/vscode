@@ -146,10 +146,10 @@ export class SslConfig extends HTMLElement {
         class="heading clickable"
       >
         <span data-text="this.showTLS() ? '-' : '+'"></span>
-        Advanced SSL Configuration
+        Advanced SSL/TLS Configuration
       </p>
       <template data-if="this.showTLS()">
-        <p class="info">Optional settings for advanced SSL configuration</p>
+        <p class="info">Optional settings for advanced SSL/TLS configuration</p>
         <div class="input-container">
           <label class="label">TrustStore Configuration</label>
           <div class="input-row">
