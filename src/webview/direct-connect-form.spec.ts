@@ -125,50 +125,45 @@ test("renders form with existing connection spec values for edit", async ({ exec
   const specCallHandle = await sendWebviewMessage.evaluateHandle((stub) => stub.getCall(0).args);
   const specCall = await specCallHandle.jsonValue();
   expect(specCall[0]).toBe("GetConnectionSpec");
+
   const form = page.locator("form");
   await expect(form).toBeVisible();
 
   // Check that the form fields are populated with the connection spec values
   const nameInput = page.locator("input[name='name']");
-  await expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
+  await expect(nameInput).toHaveValue(SPEC_SAMPLE.name);
 
   const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
-  await expect(await bootstrapServersInput?.getAttribute("value")).toBe(
-    SPEC_SAMPLE.kafka_cluster.bootstrap_servers,
-  );
+  await expect(bootstrapServersInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.bootstrap_servers);
 
   const uriInput = page.locator("input[name='schema_registry.uri']");
-  await expect(await uriInput?.getAttribute("value")).toBe(SPEC_SAMPLE.schema_registry.uri);
+  await expect(uriInput).toHaveValue(SPEC_SAMPLE.schema_registry.uri);
 
   const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
   await expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
 
   const keystorePathInput = page.locator("input[name='kafka_cluster.ssl.keystore.path']");
-  await expect(await keystorePathInput?.getAttribute("value")).toBe(
-    SPEC_SAMPLE.kafka_cluster.ssl.keystore.path,
-  );
+  await expect(keystorePathInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.ssl.keystore.path);
 
   const keystorePasswordInput = page.locator("input[name='kafka_cluster.ssl.keystore.password']");
-  await expect(await keystorePasswordInput?.getAttribute("value")).toBe(
-    SPEC_SAMPLE.kafka_cluster.ssl.keystore.password,
-  );
+  await expect(keystorePasswordInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.ssl.keystore.password);
 
   const keystoreKeyPasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.keystore.key_password']",
   );
-  await expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
+  await expect(keystoreKeyPasswordInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
   );
 
   const truststorePathInput = page.locator("input[name='kafka_cluster.ssl.truststore.path']");
-  await expect(await truststorePathInput?.getAttribute("value")).toBe(
+  await expect(await truststorePathInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
   );
 
   const truststorePasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.truststore.password']",
   );
-  await expect(await truststorePasswordInput?.getAttribute("value")).toBe(
+  await expect(await truststorePasswordInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
   );
 });
@@ -352,10 +347,10 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
 
   // Check that the form fields are populated with the connection spec values
   const nameInput = page.locator("input[name='name']");
-  await expect(await nameInput?.getAttribute("value")).toBe(SPEC_SAMPLE.name);
+  await expect(await nameInput).toHaveValue(SPEC_SAMPLE.name);
 
   const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
-  await expect(await bootstrapServersInput?.getAttribute("value")).toBe(
+  await expect(await bootstrapServersInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.bootstrap_servers,
   );
 
@@ -363,31 +358,29 @@ test("adds only edited ssl fields to form data", async ({ execute, page }) => {
   await expect(await kafkaSslCheckbox?.isChecked()).toBe(true);
 
   const keystorePathInput = page.locator("input[name='kafka_cluster.ssl.keystore.path']");
-  await expect(await keystorePathInput?.getAttribute("value")).toBe(
-    SPEC_SAMPLE.kafka_cluster.ssl.keystore.path,
-  );
+  await expect(await keystorePathInput).toHaveValue(SPEC_SAMPLE.kafka_cluster.ssl.keystore.path);
 
   const keystorePasswordInput = page.locator("input[name='kafka_cluster.ssl.keystore.password']");
-  await expect(await keystorePasswordInput?.getAttribute("value")).toBe(
+  await expect(await keystorePasswordInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.password,
   );
 
   const keystoreKeyPasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.keystore.key_password']",
   );
-  await expect(await keystoreKeyPasswordInput?.getAttribute("value")).toBe(
+  await expect(await keystoreKeyPasswordInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.keystore.key_password,
   );
 
   const truststorePathInput = page.locator("input[name='kafka_cluster.ssl.truststore.path']");
-  await expect(await truststorePathInput?.getAttribute("value")).toBe(
+  await expect(await truststorePathInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.path,
   );
 
   const truststorePasswordInput = page.locator(
     "input[name='kafka_cluster.ssl.truststore.password']",
   );
-  await expect(await truststorePasswordInput?.getAttribute("value")).toBe(
+  await expect(await truststorePasswordInput).toHaveValue(
     SPEC_SAMPLE.kafka_cluster.ssl.truststore.password,
   );
 
