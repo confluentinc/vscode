@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import * as sinon from "sinon";
+import sinon from "sinon";
 import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
@@ -8,7 +8,6 @@ import {
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
-import { CCloudResourceLoader } from "../loaders";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -39,9 +38,6 @@ describe("SchemasViewProvider methods", () => {
 
 describe("SchemasViewProvider search behavior", () => {
   let provider: SchemasViewProvider;
-  let ccloudLoader: CCloudResourceLoader;
-
-  let sandbox: sinon.SinonSandbox;
 
   const TEST_CCLOUD_SUBJECT2 = Schema.create({
     ...TEST_CCLOUD_SCHEMA,
@@ -60,31 +56,31 @@ describe("SchemasViewProvider search behavior", () => {
   });
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
-
-    // stub loader method for fetching schemas
-    ccloudLoader = CCloudResourceLoader.getInstance();
-    sandbox
-      .stub(ccloudLoader, "getSubjects")
-      // three sample schema versions across three subjects
-      .resolves([TEST_CCLOUD_SUBJECT, TEST_CCLOUD_SUBJECT2, TEST_CCLOUD_SUBJECT3]);
-
     provider = SchemasViewProvider.getInstance();
+
+    // wire up the initial test data subjects.
+    const fakeSubjectMap: Map<string, Subject> = new Map();
+    fakeSubjectMap.set(TEST_CCLOUD_SUBJECT.name, TEST_CCLOUD_SUBJECT);
+    fakeSubjectMap.set(TEST_CCLOUD_SUBJECT2.name, TEST_CCLOUD_SUBJECT2);
+    fakeSubjectMap.set(TEST_CCLOUD_SUBJECT3.name, TEST_CCLOUD_SUBJECT3);
+
+    // rewrite private map with fixed value
+    provider["subjectsInTreeView"] = fakeSubjectMap;
+
     provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
   });
 
   afterEach(() => {
     SchemasViewProvider["instance"] = null;
-    sandbox.restore();
   });
 
   it("getChildren() should filter root-level subjects based on search string", async () => {
     // First schema subject matches search
-    schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
+    provider.setSearch(TEST_CCLOUD_SCHEMA.subject);
 
     const rootElements = await provider.getChildren();
 
-    assert.strictEqual(rootElements.length, 1);
+    assert.strictEqual(rootElements.length, 1, "should only return one subject");
     assert.ok(rootElements[0] instanceof Subject);
     assert.strictEqual((rootElements[0] as Subject).name, TEST_CCLOUD_SCHEMA.subject);
 
@@ -99,7 +95,7 @@ describe("SchemasViewProvider search behavior", () => {
   it("getChildren() should show correct count in tree view message when items match search", async () => {
     // Search matching two subjects
     const searchStr = "-value";
-    schemaSearchSet.fire("-value");
+    provider.setSearch("-value");
 
     await provider.getChildren();
 
@@ -114,7 +110,7 @@ describe("SchemasViewProvider search behavior", () => {
 
   it("getChildren() should clear tree view message when search is cleared", async () => {
     // Search cleared
-    schemaSearchSet.fire(null);
+    provider.setSearch(null);
 
     await provider.getChildren();
 
@@ -125,11 +121,23 @@ describe("SchemasViewProvider search behavior", () => {
 
   it("getTreeItem() should set the resourceUri of subject containers that match the search string", async () => {
     // First schema subject matches search
-    schemaSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
+    provider.setSearch(TEST_CCLOUD_SCHEMA.subject);
 
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
 
     assert.ok(treeItem.resourceUri);
     assert.strictEqual(treeItem.resourceUri?.scheme, SEARCH_DECORATION_URI_SCHEME);
+  });
+
+  it("Prove that schemaSearchSet.fire() calls setSearch() and then refresh()", () => {
+    const setSearchSpy = sinon.spy(provider, "setSearch");
+    const refreshSpy = sinon.spy(provider, "refresh");
+
+    schemaSearchSet.fire("foo");
+
+    assert.ok(setSearchSpy.calledOnce);
+    assert.ok(setSearchSpy.calledWith("foo"));
+
+    assert.ok(refreshSpy.calledOnce);
   });
 });
