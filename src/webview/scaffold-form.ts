@@ -38,7 +38,11 @@ class ScaffoldFormViewModel extends ViewModel {
   });
 
   options = this.derive(() => {
-    return Object.entries(this.spec()?.options ?? {});
+    const allOptions = Object.entries(this.spec()?.options ?? {});
+    const orderedOptions = allOptions.filter(([_, details]) => details.order !== undefined);
+    const unorderedOptions = allOptions.filter(([_, details]) => details.order === undefined);
+    orderedOptions.sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0));
+    return [...orderedOptions, ...unorderedOptions];
   });
 
   optionValues = this.resolve(async () => {
