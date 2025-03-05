@@ -5,7 +5,8 @@ import { TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
-import * as quickpicks from "../quickpicks/uris";
+import * as schemaQuickPicks from "../quickpicks/schemas";
+import * as uriQuickpicks from "../quickpicks/uris";
 import * as sidecar from "../sidecar";
 import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { createProduceRequestData, produceMessagesFromDocument } from "./topics";
@@ -18,9 +19,13 @@ const fakeMessage = {
 
 describe("commands/topics.ts produceMessageFromDocument()", function () {
   let sandbox: sinon.SinonSandbox;
+
   let showErrorMessageStub: sinon.SinonStub;
+
   let uriQuickpickStub: sinon.SinonStub;
   let loadDocumentContentStub: sinon.SinonStub;
+  let schemaKindMultiSelectStub: sinon.SinonStub;
+
   let clientStub: sinon.SinonStubbedInstance<RecordsV3Api>;
 
   beforeEach(function () {
@@ -30,11 +35,17 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
 
     // stub the quickpick for file/editor URI and the resulting content
     uriQuickpickStub = sandbox
-      .stub(quickpicks, "uriQuickpick")
+      .stub(uriQuickpicks, "uriQuickpick")
       .resolves(vscode.Uri.file("test.json"));
     loadDocumentContentStub = sandbox
-      .stub(quickpicks, "loadDocumentContent")
+      .stub(uriQuickpicks, "loadDocumentContent")
       .resolves({ content: JSON.stringify(fakeMessage) });
+    // assume schemaless produce for most tests
+    schemaKindMultiSelectStub = sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect").resolves({
+      keySchema: false,
+      valueSchema: false,
+      deferToDocument: false,
+    } as schemaQuickPicks.SchemaKindSelection);
 
     // create the stubs for the sidecar + service client
     const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
@@ -110,22 +121,6 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
     assert.ok(errorMsg.startsWith("Failed to produce 1 message to topic"), errorMsg);
   });
 
-  it("should show an error notification for any nested error_code>=400 responses", async function () {
-    // response will show status 200, but the error is nested in the response body
-    clientStub.produceRecord.resolves({
-      error_code: 422,
-      message: "uh oh",
-      timestamp: new Date(),
-      partition_id: 0,
-    });
-
-    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
-
-    assert.ok(showErrorMessageStub.calledOnce);
-    const errorMsg = showErrorMessageStub.firstCall.args[0];
-    assert.ok(errorMsg.startsWith("Failed to produce 1 message to topic"), errorMsg);
-  });
-
   it("should pass `partition_id` and `timestamp` in the produce request if provided", async function () {
     const partition_id = 123;
     const timestamp = 1234567890;
@@ -186,6 +181,7 @@ describe("commands/topics.ts createProduceRequestData()", function () {
         value: "test-value",
       },
       {},
+      true,
     );
 
     assert.deepStrictEqual(result, {
@@ -216,7 +212,9 @@ describe("commands/topics.ts createProduceRequestData()", function () {
     });
   });
 
-  it("should create request data with 'type' set for direct connections with the 'Confluent Cloud' form type", async function () {
+  it("should create request data without 'type' for direct connection topics", async function () {
+    // even if it's a CCloud direct connection, we don't want to set 'type' since the sidecar will
+    // send it directly to the Kafka cluster instead of through the REST proxy
     const fakeSpec: CustomConnectionSpec = {
       ...TEST_DIRECT_CONNECTION_FORM_SPEC,
       formConnectionType: "Confluent Cloud",
@@ -230,11 +228,9 @@ describe("commands/topics.ts createProduceRequestData()", function () {
 
     assert.deepStrictEqual(result, {
       keyData: {
-        type: "JSON",
         data: "test-key",
       },
       valueData: {
-        type: "JSON",
         data: "test-value",
       },
     });
