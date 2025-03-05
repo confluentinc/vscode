@@ -343,12 +343,11 @@ export class SystemApi extends runtime.BaseAPI {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SystemDataUsageTypeEnum = {
-  Container: "container",
-  Image: "image",
-  Volume: "volume",
-  BuildCache: "build-cache",
-} as const;
-export type SystemDataUsageTypeEnum =
-  (typeof SystemDataUsageTypeEnum)[keyof typeof SystemDataUsageTypeEnum];
+export enum SystemDataUsageTypeEnum {
+  Container = "container",
+  Image = "image",
+  Volume = "volume",
+  BuildCache = "build-cache",
+}

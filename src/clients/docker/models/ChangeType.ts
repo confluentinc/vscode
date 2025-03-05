@@ -22,13 +22,13 @@
  * - `2`: Deleted ("D")
  *
  * @export
+ * @enum {string}
  */
-export const ChangeType = {
-  NUMBER_0: 0,
-  NUMBER_1: 1,
-  NUMBER_2: 2,
-} as const;
-export type ChangeType = (typeof ChangeType)[keyof typeof ChangeType];
+export enum ChangeType {
+  NUMBER_0 = 0,
+  NUMBER_1 = 1,
+  NUMBER_2 = 2,
+}
 
 export function instanceOfChangeType(value: any): boolean {
   for (const key in ChangeType) {

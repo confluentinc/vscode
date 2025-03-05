@@ -1061,18 +1061,16 @@ export class ImageApi extends runtime.BaseAPI {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ImageBuildContentTypeEnum = {
-  ApplicationXTar: "application/x-tar",
-} as const;
-export type ImageBuildContentTypeEnum =
-  (typeof ImageBuildContentTypeEnum)[keyof typeof ImageBuildContentTypeEnum];
+export enum ImageBuildContentTypeEnum {
+  ApplicationXTar = "application/x-tar",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ImageBuildVersionEnum = {
-  _1: "1",
-  _2: "2",
-} as const;
-export type ImageBuildVersionEnum =
-  (typeof ImageBuildVersionEnum)[keyof typeof ImageBuildVersionEnum];
+export enum ImageBuildVersionEnum {
+  _1 = "1",
+  _2 = "2",
+}

@@ -55,12 +55,11 @@ export interface SwarmSpecCAConfigExternalCAsInner {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SwarmSpecCAConfigExternalCAsInnerProtocolEnum = {
-  Cfssl: "cfssl",
-} as const;
-export type SwarmSpecCAConfigExternalCAsInnerProtocolEnum =
-  (typeof SwarmSpecCAConfigExternalCAsInnerProtocolEnum)[keyof typeof SwarmSpecCAConfigExternalCAsInnerProtocolEnum];
+export enum SwarmSpecCAConfigExternalCAsInnerProtocolEnum {
+  Cfssl = "cfssl",
+}
 
 /**
  * Check if a given object implements the SwarmSpecCAConfigExternalCAsInner interface.

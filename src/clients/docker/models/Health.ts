@@ -57,14 +57,14 @@ export interface Health {
 
 /**
  * @export
+ * @enum {string}
  */
-export const HealthStatusEnum = {
-  None: "none",
-  Starting: "starting",
-  Healthy: "healthy",
-  Unhealthy: "unhealthy",
-} as const;
-export type HealthStatusEnum = (typeof HealthStatusEnum)[keyof typeof HealthStatusEnum];
+export enum HealthStatusEnum {
+  None = "none",
+  Starting = "starting",
+  Healthy = "healthy",
+  Unhealthy = "unhealthy",
+}
 
 /**
  * Check if a given object implements the Health interface.
