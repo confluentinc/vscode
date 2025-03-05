@@ -34,3 +34,19 @@ describe("createKafkaClusterTooltip()", () => {
     assert.ok(!tooltipString.includes("URI:"));
   });
 });
+
+describe("Test KafkaCluster properties", () => {
+  it("ccloudUrl should return the correct URL for ccloud kafka cluster", () => {
+    assert.strictEqual(
+      `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}`,
+      TEST_CCLOUD_KAFKA_CLUSTER.ccloudUrl,
+    );
+  });
+
+  it("ccloudApiKeysUrl should return the correct URL for ccloud kafka cluster", () => {
+    assert.strictEqual(
+      `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}/api-keys`,
+      TEST_CCLOUD_KAFKA_CLUSTER.ccloudApiKeysUrl,
+    );
+  });
+});
