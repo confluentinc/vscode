@@ -8,6 +8,7 @@ import {
   ConnectionType,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfScramCredentials,
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
@@ -342,6 +343,11 @@ export function mergeSecrets(
       if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
         if (currentKafkaCreds && instanceOfApiKeyAndSecret(currentKafkaCreds))
           incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
+      }
+    } else if (instanceOfScramCredentials(incomingKafkaCreds)) {
+      if (incomingKafkaCreds.scram_password === "fakeplaceholdersecrethere") {
+        if (currentKafkaCreds && instanceOfScramCredentials(currentKafkaCreds))
+          incomingKafkaCreds.scram_password = currentKafkaCreds.scram_password;
       }
     }
   }
