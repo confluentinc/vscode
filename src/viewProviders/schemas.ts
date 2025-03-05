@@ -202,7 +202,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     if (element == null) {
       // Get children as the subjects in our map
       children = [...this.subjectsInTreeView.values()];
-      logger.info(`getChildren(): no element, assigned ${children.length} subjects`);
+      logger.debug(`getChildren(): no element, assigned ${children.length} subjects`);
     } else if (element instanceof Subject) {
       // be sure to be using subject as found in subjectsInTreeView.
       element = this.subjectsInTreeView.get(element.name);
