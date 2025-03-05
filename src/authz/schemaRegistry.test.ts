@@ -151,14 +151,14 @@ describe("authz.schemaRegistry", function () {
 });
 
 describe("Test CCloudSchemaRegistry properties", () => {
-  it("ccloudUrl should return the correct URL for ccloud kafka cluster", () => {
+  it("ccloudUrl should return the correct URL for ccloud schema registry cluster", () => {
     assert.strictEqual(
       `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/stream-governance/schema-registry/data-contracts`,
       TEST_CCLOUD_SCHEMA_REGISTRY.ccloudUrl,
     );
   });
 
-  it("ccloudApiKeysUrl should return the correct URL for ccloud kafka cluster", () => {
+  it("ccloudApiKeysUrl should return the correct URL for ccloud schema registry cluster", () => {
     assert.strictEqual(
       `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/schema-registry/api-keys`,
       TEST_CCLOUD_SCHEMA_REGISTRY.ccloudApiKeysUrl,
