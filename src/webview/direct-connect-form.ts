@@ -60,6 +60,10 @@ class DirectConnectFormViewModel extends ViewModel {
     // @ts-expect-error the types don't know which credentials are present
     return this.kafkaCreds()?.api_key || "";
   });
+  kafkaScramUsername = this.derive(() => {
+    // @ts-expect-error the types don't know which credentials are present
+    return this.kafkaCreds()?.scram_username ?? null;
+  });
   kafkaSecret = this.derive(() => {
     // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
     return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
@@ -73,7 +77,7 @@ class DirectConnectFormViewModel extends ViewModel {
   });
   kafkaHash = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
-    return this.spec()?.kafka_cluster?.credentials?.hash_algorithm ?? "SCRAM_SHA_256";
+    return this.kafkaCreds()?.hash_algorithm ?? "SCRAM_SHA_256";
   });
 
   /** Schema Registry */

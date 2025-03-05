@@ -170,20 +170,46 @@
               >
                 <option
                   value="SCRAM_SHA_256"
-                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_256'"
+                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_256' ? true : false"
                 >
-                  SCRAM-SHA-256
+                  SCRAM_SHA_256
                 </option>
                 <option
                   value="SCRAM_SHA_512"
-                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_512'"
+                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_512' ? true : false"
                 >
-                  SCRAM-SHA-512
+                  SCRAM_SHA_512
                 </option>
               </select>
             </div>
+            <div class="input-row">
+              <div class="input-container">
+                <label for="kafka_cluster.credentials.scram_username" class="label">Username</label>
+                <input
+                  class="input"
+                  id="kafka_cluster.credentials.scram_username"
+                  name="kafka_cluster.credentials.scram_username"
+                  type="text"
+                  data-value="this.kafkaScramUsername()"
+                  data-on-change="this.updateValue(event)"
+                  required
+                />
+              </div>
+              <div class="input-container">
+                <label for="kafka_cluster.credentials.scram_password" class="label">Password</label>
+                <input
+                  class="input"
+                  id="kafka_cluster.credentials.scram_password"
+                  name="kafka_cluster.credentials.scram_password"
+                  type="password"
+                  data-value="this.kafkaSecret()"
+                  required
+                  data-on-change="this.updateValue(event)"
+                />
+              </div>
+            </div>
           </template>
-          <template data-if="this.kafkaAuthType() === 'Basic' || this.kafkaAuthType() === 'SCRAM'">
+          <template data-if="this.kafkaAuthType() === 'Basic'">
             <div class="input-row">
               <div class="input-container">
                 <label for="kafka_cluster.credentials.username" class="label">Username</label>
