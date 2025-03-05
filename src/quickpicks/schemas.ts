@@ -156,7 +156,7 @@ export type SchemaKindSelection = {
  * Deselecting any pre-selected kind(s) will show a confirmation warning modal to confirm the user
  * wants to produce without schema(s).
  */
-export async function subjectKindMultiSelect(
+export async function schemaKindMultiSelect(
   topic: KafkaTopic,
 ): Promise<SchemaKindSelection | undefined> {
   const topicKeySubjects: Subject[] = topic.children.filter((subject: Subject) =>
