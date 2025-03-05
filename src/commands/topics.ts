@@ -17,7 +17,7 @@ import {
 } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { showErrorNotificationWithButtons } from "../errors";
+import { DEFAULT_ERROR_NOTIFICATION_BUTTONS, showErrorNotificationWithButtons } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -298,7 +298,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     keySchema = keySchemaSelected ? await promptForSchema(topic, "key") : undefined;
     valueSchema = valueSchemaSelected ? await promptForSchema(topic, "value") : undefined;
   } catch (err) {
-    logger.error("exiting produce-message flow early due to promptForSchema error:", err);
+    logger.debug("exiting produce-message flow early due to promptForSchema error:", err);
     return;
   }
 
@@ -620,8 +620,16 @@ export async function promptForSchema(topic: KafkaTopic, kind: "key" | "value"):
     const schemaSubjects: Subject[] = await loader.getSubjects(registry);
     const subjectExists = schemaSubjects.some((s) => s.name === schemaSubject);
     if (!subjectExists) {
-      const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}".`;
-      showErrorNotificationWithButtons(noSubjectMsg);
+      const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}" using the ${strategy} strategy.`;
+      showErrorNotificationWithButtons(noSubjectMsg, {
+        "Open Settings": () => {
+          vscode.commands.executeCommand(
+            "workbench.action.openSettings",
+            `@id:confluent.topic.produceMessages.schemas.useTopicNameStrategy`,
+          );
+        },
+        ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+      });
       throw new Error(noSubjectMsg);
     }
   } else {
