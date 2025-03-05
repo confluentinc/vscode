@@ -21,6 +21,7 @@ import {
 } from "../clients/schemaRegistryRest";
 import {
   ConfigurationParameters,
+  ConfluentCloudProduceRecordsResourceApi,
   ConnectionsResourceApi,
   KafkaConsumeResourceApi,
   MicroProfileHealthApi,
@@ -278,6 +279,26 @@ export class SidecarHandle {
       },
     });
     return new RecordsV3Api(config);
+  }
+
+  /**
+   * Creates and returns a (Sidecar REST OpenAPI spec) {@link ConfluentCloudProduceRecordsResourceApi} client instance
+   * with a preconfigured {@link SidecarRestConfiguration}.
+   *
+   * NOTE: this is only used for producing to CCloud topics. For non-CCloud topics, use
+   * {@link getRecordsV3Api}.
+   */
+  public getConfluentCloudProduceRecordsResourceApi(
+    connectionId: string,
+  ): ConfluentCloudProduceRecordsResourceApi {
+    const configuration = new SidecarRestConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        ...this.defaultClientConfigParams.headers,
+        [SIDECAR_CONNECTION_ID_HEADER]: connectionId,
+      },
+    });
+    return new ConfluentCloudProduceRecordsResourceApi(configuration);
   }
 
   // --- SCHEMA REGISTRY REST OPENAPI CLIENT METHODS ---
