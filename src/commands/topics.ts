@@ -612,34 +612,13 @@ export async function promptForSchema(topic: KafkaTopic, kind: "key" | "value"):
     throw new Error("User cancelled subject name strategy quickpick");
   }
 
-  let schemaSubject: string | undefined;
-  if (strategy === SubjectNameStrategy.TOPIC_NAME) {
-    // we have the topic name and the kind, so we just need to make sure the subject exists and
-    // fast-track to getting the schema version
-    schemaSubject = `${topic.name}-${kind}`;
-    const schemaSubjects: Subject[] = await loader.getSubjects(registry);
-    const subjectExists = schemaSubjects.some((s) => s.name === schemaSubject);
-    if (!subjectExists) {
-      const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}" using the ${strategy} strategy.`;
-      showErrorNotificationWithButtons(noSubjectMsg, {
-        "Open Settings": () => {
-          vscode.commands.executeCommand(
-            "workbench.action.openSettings",
-            `@id:confluent.topic.produceMessages.schemas.useTopicNameStrategy`,
-          );
-        },
-        ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
-      });
-      throw new Error(noSubjectMsg);
-    }
-  } else {
-    // TODO: split logic between TOPIC_RECORD_NAME and RECORD_NAME
-    schemaSubject = await schemaSubjectQuickPick(
-      registry,
-      false,
-      `Producing to ${topic.name}: ${kind} schema`,
-    );
-  }
+  let schemaSubject: string | undefined = await getSubjectForStrategy(
+    strategy,
+    topic,
+    kind,
+    registry,
+    loader,
+  );
   if (!schemaSubject) {
     throw new Error(`"${kind}" schema subject not found/set for topic "${topic.name}".`);
   }
@@ -665,4 +644,57 @@ export async function promptForSchema(topic: KafkaTopic, kind: "key" | "value"):
     throw new Error(noVersionsMsg);
   }
   return latestSchema;
+}
+
+async function getSubjectForStrategy(
+  strategy: SubjectNameStrategy,
+  topic: KafkaTopic,
+  kind: string,
+  registry: SchemaRegistry,
+  loader: ResourceLoader,
+) {
+  let schemaSubject: string | undefined;
+
+  switch (strategy) {
+    case SubjectNameStrategy.TOPIC_NAME:
+      {
+        // we have the topic name and the kind, so we just need to make sure the subject exists and
+        // fast-track to getting the schema version
+        schemaSubject = `${topic.name}-${kind}`;
+        const schemaSubjects: Subject[] = await loader.getSubjects(registry);
+        const subjectExists = schemaSubjects.some((s) => s.name === schemaSubject);
+        if (!subjectExists) {
+          const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}" using the ${strategy} strategy.`;
+          showErrorNotificationWithButtons(noSubjectMsg, {
+            "Open Settings": () => {
+              vscode.commands.executeCommand(
+                "workbench.action.openSettings",
+                `@id:confluent.topic.produceMessages.schemas.useTopicNameStrategy`,
+              );
+            },
+            ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+          });
+          throw new Error(noSubjectMsg);
+        }
+      }
+      break;
+    case SubjectNameStrategy.TOPIC_RECORD_NAME:
+      // filter the subject quickpick based on the topic name
+      schemaSubject = await schemaSubjectQuickPick(
+        registry,
+        false,
+        `Producing to ${topic.name}: ${kind} schema`,
+        (s) => s.name.startsWith(topic.name),
+      );
+      break;
+    case SubjectNameStrategy.RECORD_NAME:
+      schemaSubject = await schemaSubjectQuickPick(
+        registry,
+        false,
+        `Producing to ${topic.name}: ${kind} schema`,
+      );
+      break;
+  }
+
+  return schemaSubject;
 }
