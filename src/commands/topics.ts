@@ -27,6 +27,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { ALLOW_OLDER_SCHEMA_VERSIONS, USE_TOPIC_NAME_STRATEGY } from "../preferences/constants";
 import {
+  SchemaKindSelection,
   schemaSubjectQuickPick,
   schemaVersionQuickPick,
   subjectKindMultiSelect,
@@ -278,8 +279,16 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     uriScheme: messageUri.scheme,
   });
 
-  // ask the user if they want to specify a schema for the key and/or value
-  const { keySchemaSelected, valueSchemaSelected } = await subjectKindMultiSelect(topic);
+  // ask the user if they want to use a schema for the key and/or value
+  const selectResult: SchemaKindSelection | undefined = await subjectKindMultiSelect(topic);
+  if (!selectResult) {
+    // topic was associated with a schema, user deselected key+value and did not confirm that they
+    // wanted to produce without schema(s)
+    return;
+  }
+
+  const keySchemaSelected: boolean = selectResult.keySchema;
+  const valueSchemaSelected: boolean = selectResult.valueSchema;
 
   // check if the topic is associated with any schemas, and if so, prompt for subject+version
   const keySchema: Schema | undefined = keySchemaSelected
