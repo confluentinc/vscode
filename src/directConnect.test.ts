@@ -1,7 +1,7 @@
 import assert from "assert";
 import { parseTestResult, getConnectionSpecFromFormData, cleanSpec } from "./directConnect";
 import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
-import { ConnectedState, Status } from "./clients/sidecar";
+import { ConnectedState, HashAlgorithm, Status } from "./clients/sidecar";
 import { ConnectionId } from "./models/resource";
 import { FormConnectionType } from "./webview/direct-connect-form";
 
@@ -290,6 +290,23 @@ describe("directConnect.ts", () => {
     });
   });
   describe("cleanSpec", () => {
+    it("should not modify the spec if no credentials are present", () => {
+      const spec = {
+        id: "123" as ConnectionId,
+        formConnectionType: "Apache Kafka" as FormConnectionType,
+        name: "Test Connection",
+        kafka_cluster: {
+          bootstrap_servers: "localhost:9092",
+        },
+        schema_registry: {
+          uri: "http://localhost:8081",
+        },
+      };
+      const result = cleanSpec(spec);
+      assert.strictEqual(result.name, "Test Connection");
+      assert.strictEqual(result.kafka_cluster?.bootstrap_servers, "localhost:9092");
+      assert.strictEqual(result.schema_registry?.uri, "http://localhost:8081");
+    });
     it("should replace password fields in Basic credentials with `fakeplaceholdersecrethere` text", () => {
       const spec = {
         id: "123" as ConnectionId,
@@ -401,6 +418,31 @@ describe("directConnect.ts", () => {
       );
       assert.strictEqual(
         result.kafka_cluster?.ssl?.keystore?.key_password,
+        "fakeplaceholdersecrethere",
+      );
+    });
+    it("should replace password fields in SCRAM credentials with `fakeplaceholdersecrethere` text", () => {
+      const spec = {
+        id: "123" as ConnectionId,
+        formConnectionType: "Apache Kafka" as FormConnectionType,
+        name: "Test Scram Connection",
+        kafka_cluster: {
+          bootstrap_servers: "localhost:9092",
+          credentials: {
+            hash_algorithm: "SCRAM_SHA_512" as HashAlgorithm,
+            scram_username: "user",
+            scram_password: "password",
+          },
+        },
+        schema_registry: {
+          uri: "http://localhost:8081",
+        },
+      };
+      const result = cleanSpec(spec);
+      assert.strictEqual(result.name, "Test Scram Connection");
+      assert.strictEqual(
+        // @ts-expect-error - could be api but we're using password here
+        result.kafka_cluster?.credentials?.scram_password,
         "fakeplaceholdersecrethere",
       );
     });

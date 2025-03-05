@@ -7,6 +7,7 @@ import {
   ConnectionType,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfScramCredentials,
 } from "./clients/sidecar";
 import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
@@ -324,6 +325,9 @@ export function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpe
     }
     if (instanceOfApiKeyAndSecret(clean.kafka_cluster.credentials)) {
       clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
+    }
+    if (instanceOfScramCredentials(clean.kafka_cluster.credentials)) {
+      clean.kafka_cluster.credentials.scram_password = "fakeplaceholdersecrethere";
     }
   }
   if (clean.kafka_cluster?.ssl?.truststore?.password) {
