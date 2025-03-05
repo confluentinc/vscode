@@ -105,6 +105,20 @@ const SSL_SPEC: ConnectionSpec = {
     },
   },
 };
+const SCRAM_AUTH_SPEC: ConnectionSpec = {
+  ...TEST_DIRECT_CONNECTION.spec,
+  kafka_cluster: {
+    bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+    credentials: {
+      scram_username: "username",
+      scram_password: "actualPassword",
+      hash_algorithm: "SCRAM_SHA_256",
+    },
+  },
+  schema_registry: {
+    uri: TEST_LOCAL_SCHEMA_REGISTRY.uri,
+  },
+};
 
 describe("DirectConnectionManager behavior", () => {
   let sandbox: sinon.SinonSandbox;
@@ -525,5 +539,47 @@ describe("mergeSecrets", () => {
     assert.equal(finalKafkaSecret, "newApiSecret");
     const finalSchemaSecret = (result.schema_registry?.credentials as any)?.api_secret;
     assert.equal(finalSchemaSecret, "newApiSecret");
+  });
+
+  it("should replace placeholder SCRAM auth passwords with current password", () => {
+    const newScramAuthSpec: CustomConnectionSpec = {
+      id: SCRAM_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          scram_username: "newusername",
+          scram_password: "fakeplaceholdersecrethere",
+          hash_algorithm: "SCRAM_SHA_256",
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+      },
+    };
+    const result = mergeSecrets(SCRAM_AUTH_SPEC, newScramAuthSpec);
+    const finalKafkaPassword = (result.kafka_cluster?.credentials as any)?.scram_password;
+    assert.equal(finalKafkaPassword, "actualPassword");
+  });
+
+  it("should not replace SCRAM auth passwords if they are not a placeholder", () => {
+    const updatePasswordScramSpec: CustomConnectionSpec = {
+      id: SCRAM_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          scram_username: "username",
+          scram_password: "newPassword",
+          hash_algorithm: "SCRAM_SHA_256",
+        },
+      },
+      schema_registry: {
+        uri: "srUri",
+      },
+    };
+    const result = mergeSecrets(SCRAM_AUTH_SPEC, updatePasswordScramSpec);
+    const finalKafkaPassword = (result.kafka_cluster?.credentials as any)?.scram_password;
+    assert.equal(finalKafkaPassword, "newPassword");
   });
 });
