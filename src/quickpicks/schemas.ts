@@ -13,6 +13,12 @@ import { QuickPickItemWithValue } from "./constants";
 const logger = new Logger("quickpicks.schemas");
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
+ *
+ * @param schemaRegistry The schema registry to query for existing subjects.
+ * @param includeCreateNew Whether to include the option to create a new subject. (default: `true`)
+ * @param title Optional title of the quickpick.
+ * @param filterPredicate Optional predicate to filter the subjects shown.
+ *
  * @returns nonempty string if user chose an existing subject name.
  * @returns empty string if user gestures to create a new subject.
  * @returns undefined if user cancelled the quickpick.
@@ -22,6 +28,7 @@ export async function schemaSubjectQuickPick(
   schemaRegistry: SchemaRegistry,
   includeCreateNew: boolean = true,
   title?: string,
+  filterPredicate?: (subject: Subject) => boolean,
 ): Promise<string | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
 
@@ -47,6 +54,9 @@ export async function schemaSubjectQuickPick(
   // Wire up all of the exsting schema registry subjects as items
   // with the description as the subject name for easy return value.
   for (const subject of schemaSubjects) {
+    if (filterPredicate && !filterPredicate(subject)) {
+      continue;
+    }
     subjectItems.push({
       label: subject.name,
       iconPath: getSubjectIcon(subject.name),
