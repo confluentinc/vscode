@@ -168,7 +168,7 @@ async function uploadSchema(
   const schemaViewProvider = getSchemasViewProvider();
 
   // Refresh the schema registry cache while offering the user the option to view
-  // the schema in the schema registry view.
+  // the schema in the Schemas view.
   const [viewchoice, newSchema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
