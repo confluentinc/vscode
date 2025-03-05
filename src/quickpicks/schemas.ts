@@ -8,6 +8,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SubjectNameStrategy } from "../schemas/produceMessageSchema";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { QuickPickItemWithValue } from "./constants";
 
 const logger = new Logger("quickpicks.schemas");
 
@@ -111,7 +112,8 @@ export async function schemaVersionQuickPick(
     description: schema.isHighestVersion ? `${schema.id} (latest)` : schema.id,
   }));
   const chosenVersionItem: vscode.QuickPickItem | undefined = await vscode.window.showQuickPick(
-    versionItems,
+    // sort by version in descending order (latest at the top)
+    versionItems.sort((a, b) => b.label.localeCompare(a.label)),
     {
       title: `Schema versions for ${subject}`,
       placeHolder: "Select a schema version",
@@ -132,6 +134,7 @@ export async function schemaVersionQuickPick(
 export type SchemaKindSelection = {
   keySchema: boolean;
   valueSchema: boolean;
+  deferToDocument: boolean;
 };
 
 /**
@@ -156,18 +159,32 @@ export async function subjectKindMultiSelect(
   const topicValueSubjectNames: string[] = topicValueSubjects.map((subject) => subject.name);
 
   // pre-pick any schema kinds that are already associated with this topic
+  const keySchemaLabel = "Key Schema";
+  const valueSchemaLabel = "Value Schema";
+  const useDocumentLabel = "Advanced: Use File/Editor Contents";
+
   const items: vscode.QuickPickItem[] = [
     {
-      label: "Key Schema",
+      label: keySchemaLabel,
       description: topicKeySubjects.length > 0 ? topicKeySubjectNames.join(", ") : undefined,
       picked: topicKeySubjects.length > 0,
       iconPath: new vscode.ThemeIcon(IconNames.KEY_SUBJECT),
     },
     {
-      label: "Value Schema",
+      label: valueSchemaLabel,
       description: topicValueSubjects.length > 0 ? topicValueSubjectNames.join(", ") : undefined,
       picked: topicValueSubjects.length > 0,
       iconPath: new vscode.ThemeIcon(IconNames.VALUE_SUBJECT),
+    },
+    {
+      label: "",
+      kind: vscode.QuickPickItemKind.Separator,
+    },
+    {
+      label: useDocumentLabel,
+      description: "File contents must specify subject, schema version, and subject name strategy",
+      iconPath: new vscode.ThemeIcon("warning"),
+      picked: false,
     },
   ];
 
@@ -176,7 +193,7 @@ export async function subjectKindMultiSelect(
     {
       canPickMany: true,
       title: `Producing to ${topic.name}: Select Schema Kind(s)`,
-      placeHolder: "Select which schema kinds to include (none for schemaless JSON)",
+      placeHolder: "Select which schema kind(s) to use",
       ignoreFocusOut: true,
     },
   );
@@ -185,16 +202,20 @@ export async function subjectKindMultiSelect(
     return;
   }
 
-  const keySchemaSelected: boolean =
-    selectedItems?.some((item) => item.label === "Key Schema") ?? false;
-  const valueSchemaSelected: boolean =
-    selectedItems?.some((item) => item.label === "Value Schema") ?? false;
+  let keySchemaSelected: boolean = false;
+  let valueSchemaSelected: boolean = false;
+  const useDocumentSelected: boolean =
+    selectedItems?.some((item) => item.label === useDocumentLabel) ?? false;
+  if (!useDocumentSelected) {
+    keySchemaSelected = selectedItems?.some((item) => item.label === keySchemaLabel) ?? false;
+    valueSchemaSelected = selectedItems?.some((item) => item.label === valueSchemaLabel) ?? false;
+  }
 
   // if the user didn't select key/value but a topic subject exists matching the TopicNameStrategy,
   // warn them that they are producing to a topic with an existing schema
   const ignoringKeySchema: boolean = !keySchemaSelected && topicKeySubjects.length > 0;
   const ignoringValueSchema: boolean = !valueSchemaSelected && topicValueSubjects.length > 0;
-  if (ignoringKeySchema || ignoringValueSchema) {
+  if (!useDocumentSelected && (ignoringKeySchema || ignoringValueSchema)) {
     const ignoredSchemas: string[] = [];
     const ignoredKinds: string[] = [];
     if (ignoringKeySchema) {
@@ -211,7 +232,7 @@ export async function subjectKindMultiSelect(
     const ignoredKindsString: string =
       ignoredKinds.length > 1 ? "key or value schemas" : `a ${ignoredKinds[0]} schema`;
 
-    const yesButton = "Produce without schema(s)";
+    const yesButton = `Yes, produce without schema${plural}`;
     const confirmation = await vscode.window.showWarningMessage(
       `Are you sure you want to produce to "${topic.name}" without ${ignoredKindsString}?`,
       {
@@ -226,6 +247,7 @@ export async function subjectKindMultiSelect(
         status: "exited from key/value schema warning",
         keySchemaSelected,
         valueSchemaSelected,
+        useDocumentSelected,
         topicHasKeySchema: topicKeySubjects.length > 0,
         topicHasValueSchema: topicValueSubjects.length > 0,
       });
@@ -238,6 +260,7 @@ export async function subjectKindMultiSelect(
       status: "selected produce without associated schema(s)",
       keySchemaSelected,
       valueSchemaSelected,
+      useDocumentSelected,
       topicHasKeySchema: topicKeySubjects.length > 0,
       topicHasValueSchema: topicValueSubjects.length > 0,
     });
@@ -246,18 +269,18 @@ export async function subjectKindMultiSelect(
       status: "selected produce with schema(s)",
       keySchemaSelected,
       valueSchemaSelected,
+      useDocumentSelected,
       topicHasKeySchema: topicKeySubjects.length > 0,
       topicHasValueSchema: topicValueSubjects.length > 0,
     });
   }
 
-  return { keySchema: keySchemaSelected, valueSchema: valueSchemaSelected };
+  return {
+    keySchema: keySchemaSelected,
+    valueSchema: valueSchemaSelected,
+    deferToDocument: useDocumentSelected,
+  };
 }
-
-/** Extension of {@link vscode.QuickPickItem} to include the {@link SubjectNameStrategy} as `strategy`. */
-type StrategyQuickPickItem = vscode.QuickPickItem & {
-  strategy: SubjectNameStrategy;
-};
 
 /**
  * Quickpick to select which subject name strategy to use.
@@ -273,20 +296,20 @@ export async function subjectNameStrategyQuickPick(
   const docsLink =
     "https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview";
 
-  const items: (vscode.QuickPickItem | StrategyQuickPickItem)[] = [
+  const items: QuickPickItemWithValue<SubjectNameStrategy>[] = [
     {
       label: "TopicNameStrategy",
-      strategy: SubjectNameStrategy.TOPIC_NAME,
+      value: SubjectNameStrategy.TOPIC_NAME,
       description: `${topic.name}-${kind} (default)`,
     },
     {
       label: "TopicRecordNameStrategy",
-      strategy: SubjectNameStrategy.TOPIC_RECORD_NAME,
+      value: SubjectNameStrategy.TOPIC_RECORD_NAME,
       description: `${topic.name}-<fully-qualified record name>`,
     },
     {
       label: "RecordNameStrategy",
-      strategy: SubjectNameStrategy.RECORD_NAME,
+      value: SubjectNameStrategy.RECORD_NAME,
       description: `<fully-qualified record name>`,
     },
     {
@@ -299,11 +322,12 @@ export async function subjectNameStrategyQuickPick(
     },
   ];
 
-  const selectedItem = await vscode.window.showQuickPick(items, {
-    title: `Producing to ${topic.name}: ${kind} Subject Name Strategy`,
-    placeHolder: "Select which subject naming strategy to use",
-    ignoreFocusOut: true,
-  });
+  const selectedItem: QuickPickItemWithValue<SubjectNameStrategy> | undefined =
+    await vscode.window.showQuickPick(items, {
+      title: `Producing to ${topic.name}: ${kind} Subject Name Strategy`,
+      placeHolder: "Select which subject naming strategy to use",
+      ignoreFocusOut: true,
+    });
   if (!selectedItem) {
     return;
   }
@@ -314,5 +338,5 @@ export async function subjectNameStrategyQuickPick(
     return;
   }
 
-  return (selectedItem as StrategyQuickPickItem).strategy;
+  return selectedItem.value;
 }
