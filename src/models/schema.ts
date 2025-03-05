@@ -164,6 +164,7 @@ export class SubjectTreeItem extends vscode.TreeItem {
     super(subject.name, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.id = subject.name;
+    //this.id = `${subject.name} - ${subject.schemas?.length ?? 0}`;
 
     // If we have schema bindings, then err on the side of showing the value icon
     const errOnValueSubject: boolean = subject.schemas != null;
@@ -189,7 +190,8 @@ export class SchemaTreeItem extends vscode.TreeItem {
     const label = `v${resource.version}`;
     super(label, vscode.TreeItemCollapsibleState.None);
 
-    this.id = `${resource.id}-${resource.subject}-${resource.version}`;
+    this.id = `${resource.id}-${resource.subject}-${resource.version}`; // randomUUID();
+
     // internal properties
     this.resource = resource;
     // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the
