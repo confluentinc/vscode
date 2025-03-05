@@ -8,6 +8,8 @@ All notable changes to this extension will be documented in this file.
   keystore and truststore settings
 - Ability to export and import connection details as JSON files, for easier connection creation and
   sharing
+- SASL/SCRAM authentication type is now supported for Kafka Cluster connections that are added via
+  the connections form
 
 ## 0.25.0
 
