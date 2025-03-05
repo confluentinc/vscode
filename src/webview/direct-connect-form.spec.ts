@@ -491,14 +491,17 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
-  await page.selectOption("select[name='kafka_cluster.credentials.hash_algorithm']", {
-    value: "SCRAM_SHA_512",
-  });
+  await page.selectOption(
+    "select[name='kafka_cluster.credentials.hash_algorithm']",
+    "SCRAM_SHA_256",
+  );
   await page.fill("input[name='kafka_cluster.credentials.scram_username']", "user");
   await page.fill("input[name='kafka_cluster.credentials.scram_password']", "password");
 
   // Submit the form
   await page.click("input[type=submit][value='Save']");
+  await page.waitForTimeout(100); // Wait briefly to ensure the submission completes
+
   const submitCallHandle = await sendWebviewMessage.evaluateHandle(
     (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
   );
@@ -514,13 +517,13 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
     "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.credentials.scram_username": "user",
     "kafka_cluster.credentials.scram_password": "password",
-    "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512", //FIXME this value is flaky in test!?
+    "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_256",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "",
   });
 });
-//TODO NC maybe a fixture that is the form default values
+
 test("populates values for SASL/SCRAM auth type when they're in the spec", async ({
   execute,
   page,
