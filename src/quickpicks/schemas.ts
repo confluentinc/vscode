@@ -194,7 +194,7 @@ export async function subjectKindMultiSelect(
     const ignoredSchemasString: string = ignoredSchemas.join(", ");
     const yesButton = "Produce without schema(s)";
     const confirmation = await vscode.window.showWarningMessage(
-      `Are you sure you want to produce to ${topic.name} without a schema?`,
+      `Are you sure you want to produce to "${topic.name}" without a schema?`,
       {
         modal: true,
         detail: `The following schema${plural} already exist${plural ? "" : "s"} for this topic: ${ignoredSchemasString}`,
