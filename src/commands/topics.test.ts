@@ -1,11 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-import {
-  TEST_CCLOUD_KAFKA_TOPIC,
-  TEST_DIRECT_KAFKA_TOPIC,
-  TEST_LOCAL_KAFKA_TOPIC,
-} from "../../tests/unit/testResources";
+import { TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
@@ -185,10 +181,11 @@ describe("commands/topics.ts createProduceRequestData()", function () {
 
   it("should create request data with 'type' set for CCloud topics", async function () {
     const result = await createProduceRequestData(
-      TEST_CCLOUD_KAFKA_TOPIC,
-      "test-key",
-      "test-value",
-      false,
+      {
+        key: "test-key",
+        value: "test-value",
+      },
+      {},
     );
 
     assert.deepStrictEqual(result, {
@@ -204,12 +201,10 @@ describe("commands/topics.ts createProduceRequestData()", function () {
   });
 
   it("should create request data without 'type' for local topics", async function () {
-    const result = await createProduceRequestData(
-      TEST_LOCAL_KAFKA_TOPIC,
-      "test-key",
-      "test-value",
-      false,
-    );
+    const result = await createProduceRequestData({
+      key: "test-key",
+      value: "test-value",
+    });
 
     assert.deepStrictEqual(result, {
       keyData: {
@@ -228,12 +223,10 @@ describe("commands/topics.ts createProduceRequestData()", function () {
     };
     getDirectConnectionStub.resolves(fakeSpec);
 
-    const result = await createProduceRequestData(
-      TEST_DIRECT_KAFKA_TOPIC,
-      "test-key",
-      "test-value",
-      false,
-    );
+    const result = await createProduceRequestData({
+      key: "test-key",
+      value: "test-value",
+    });
 
     assert.deepStrictEqual(result, {
       keyData: {
