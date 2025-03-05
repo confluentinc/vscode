@@ -31,6 +31,10 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts`;
   }
+
+  get ccloudApiKeysUrl(): string {
+    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/api-keys`;
+  }
 }
 
 export class DirectSchemaRegistry extends SchemaRegistry {

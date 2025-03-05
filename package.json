@@ -1000,7 +1000,7 @@
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
-          "when": "view in confluent.viewsWithResources && viewItem == ccloud-kafka-cluster",
+          "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
         }
       ]

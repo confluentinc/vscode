@@ -35,7 +35,7 @@ describe("createKafkaClusterTooltip()", () => {
   });
 });
 
-describe("Test KafkaCluster properties", () => {
+describe("Test CCloudKafkaCluster properties", () => {
   it("ccloudUrl should return the correct URL for ccloud kafka cluster", () => {
     assert.strictEqual(
       `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_CLUSTER.environmentId}/clusters/${TEST_CCLOUD_KAFKA_CLUSTER.id}`,
