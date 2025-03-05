@@ -8,7 +8,7 @@ import {
   localSchemaRegistryConnected,
   schemaSearchSet,
 } from "../emitters";
-import { ExtensionContextNotSetError } from "../errors";
+import { ExtensionContextNotSetError, logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
@@ -394,7 +394,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     try {
       await this.treeView.reveal(schema, { focus: true, select: true });
     } catch (e) {
-      logger.error(`Error revealing schema in tree view: ${e instanceof Error ? e.message : e}`);
+      logError(e, "Error revealing schema in tree view", undefined, true);
     }
   }
 
