@@ -1146,7 +1146,7 @@
           {
             "id": "give-feedback",
             "title": "Provide Feedback",
-            "description": "Confluent for VS Code is available for Early Access, and your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
+            "description": "Your feedback has a direct impact on the evolution of the product.\n[Give Feedback](https://forms.gle/V4aWAa1PWJRBtGgGA)",
             "media": {
               "markdown": "resources/walkthrough/feedback.md"
             },
