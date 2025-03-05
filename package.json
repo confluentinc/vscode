@@ -414,6 +414,12 @@
         "icon": "$(confluent-logo)",
         "title": "View in Confluent Cloud",
         "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.openCCloudApiKeysUrl",
+        "icon": "$(confluent-logo)",
+        "title": "Manage API Keys in Confluent Cloud",
+        "category": "Confluent: Resources"
       }
     ],
     "configuration": {
@@ -703,6 +709,14 @@
         {
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "false"
+        },
+        {
+          "command": "confluent.openCCloudLink",
+          "when": "false"
+        },
+        {
+          "command": "confluent.openCCloudApiKeysUrl",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -990,6 +1004,11 @@
         {
           "command": "confluent.openCCloudLink",
           "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/ || viewItem =~ /.*ccloud.*schema$/)",
+          "group": "z_openInCloud"
+        },
+        {
+          "command": "confluent.openCCloudApiKeysUrl",
+          "when": "view in confluent.viewsWithResources && (viewItem == ccloud-kafka-cluster || viewItem == ccloud-schema-registry)",
           "group": "z_openInCloud"
         }
       ]
