@@ -225,7 +225,7 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
   Searching by other fields, such as `id` and `version`, is not supported due to cost and
   performance considerations.
 - The Message Viewer does not support consuming records that were compressed with `snappy`
-  except for Confluent Cloud connections.
+  except for Confluent Cloud connections ([confluentinc/ide-sidecar#304](https://github.com/confluentinc/ide-sidecar/issues/304)).
 
 ## Support
 
