@@ -53,8 +53,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** Refresh just this single subject by its string. Caller provides  */
   refreshSubject(subjectString: string, newSchemas: Schema[]): void {
-    const element = this.subjectsInTreeView.get(subjectString);
-    if (!element) {
+    const subjectInMap = this.subjectsInTreeView.get(subjectString);
+    if (!subjectInMap) {
       logger.error("Strange, couldn't find subject in tree view", { subjectString });
       return;
     }
@@ -63,8 +63,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       newSchemas,
     });
 
-    element.schemas = newSchemas;
-    this._onDidChangeTreeData.fire(element);
+    subjectInMap.schemas = newSchemas;
+    this._onDidChangeTreeData.fire(subjectInMap);
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
@@ -143,10 +143,17 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     logger.debug("getParent called", { element });
     if (element instanceof Schema) {
-      // if we're a schema, our parent is our Subject as found in our map
-      return this.subjectsInTreeView.get(element.subject)!;
+      // if we're a schema, our parent is the schema's Subject as found in our map
+      const subject = this.subjectsInTreeView.get(element.subject);
+      if (!subject) {
+        logger.error("Strange, couldn't find subject in tree view", { element });
+        return null;
+      }
+      logger.debug("getParent returning a known subject");
+      return subject;
     }
     // Otherwise the parent of a container tree item is the root.
+    logger.debug("getParent returning null");
     return null;
   }
 
@@ -369,22 +376,41 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   /** Try to reveal+expand schema under a subject, if present */
-  revealSchemas(subjectString: string): void {
-    logger.debug("revealSchemas called", { subjectString });
-    const subject = this.subjectsInTreeView.get(subjectString);
+  async revealSchema(schemaToShow: Schema): Promise<void> {
+    // Find the subject in the tree view's model.
+    const subject = this.subjectsInTreeView.get(schemaToShow.subject);
     if (!subject) {
-      logger.error("Strange, couldn't find subject in tree view", { subjectString });
-      return;
-    }
-    const schema = subject.schemas?.[0];
-    if (!schema) {
-      logger.error("Strange, found subject but it had no contained schemas at this time", {
-        subjectString,
+      logger.error("Strange, couldn't find subject for schema in tree view", {
+        schemaToShow,
       });
       return;
     }
 
-    this.treeView.reveal(schema, { focus: true, select: true, expand: true });
+    // The subject may be brand new and have no schemas yet. Expand the subject
+    // to force a fetch of the schemas.
+    if (!subject.schemas) {
+      logger.debug("Subject has no schemas yet, expanding to force fetch");
+      await this.treeView.reveal(subject, { focus: true, expand: true });
+      // Will now have loaded the schemas for the subject, so now clear to find the schema.
+      // `subject` will be updated with a schemas array.
+    }
+
+    // Find the equivalent schema-within-the-subject by ID. It should have been loaded already, otherwise
+    // something is coded wrong before here.
+    const schema = subject.schemas!.find((schema) => schema.id === schemaToShow.id);
+    if (!schema) {
+      logger.error(
+        `Strange, found subject ${subject.name} but it did not contain the expected schema by id: ${schemaToShow.id}`,
+      );
+      return;
+    }
+
+    logger.debug("Revealing schema", { schema });
+    try {
+      await this.treeView.reveal(schema, { focus: true, select: true });
+    } catch (e) {
+      logger.error(`Error revealing schema in tree view: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   /** Update internal state when the search string is set or unset. */

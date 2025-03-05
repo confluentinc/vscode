@@ -167,9 +167,9 @@ async function uploadSchema(
 
   const schemaViewProvider = getSchemasViewProvider();
 
-  // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [viewchoice, _]: [string | undefined, Schema] = await Promise.all([
+  // Refresh the schema registry cache while offering the user the option to view
+  // the schema in the schema registry view.
+  const [viewchoice, newSchema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
   ]);
@@ -184,9 +184,8 @@ async function uploadSchema(
       currentSchemaRegistryChanged.fire(registry);
     }
 
-    // get the new schema to pop in the view by getting the treeitem to reveal
-    // the schema's item.
-    schemaViewProvider.revealSchemas(subject);
+    // Unfurl the latest schema for the subject in the treeview.
+    await schemaViewProvider.revealSchema(newSchema);
   }
 }
 
@@ -594,7 +593,7 @@ async function updateRegistryCacheAndFindNewSchema(
     // If was the only schema in the subject, refresh the whole view so that the new subject
     // will be visible.
     if (subjectSchemas.length === 1) {
-      logger.debug("Refreshing whole schema view");
+      logger.debug("Refreshing whole schema view to load new subject");
       // erring on deep refresh for time being.
       schemaViewProvider.refresh(true);
     } else {
