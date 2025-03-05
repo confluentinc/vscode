@@ -709,6 +709,14 @@
         {
           "command": "confluent.schemas.diffMostRecentVersions",
           "when": "false"
+        },
+        {
+          "command": "confluent.openCCloudLink",
+          "when": "false"
+        },
+        {
+          "command": "confluent.openCCloudApiKeysUrl",
+          "when": "false"
         }
       ],
       "editor/title": [
