@@ -1,11 +1,15 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
 import { ResourceLoader } from "../loaders/";
+import { Logger } from "../logging";
 import { getConnectionLabel } from "../models/resource";
 import { getSubjectIcon, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SubjectNameStrategy } from "../schemas/produceMessageSchema";
+import { logUsage, UserEvent } from "../telemetry/events";
+
+const logger = new Logger("quickpicks.schemas");
 
 /** Quickpick returning a string for what to use as a schema subject out of the preexisting options.
  * @returns nonempty string if user chose an existing subject name.
@@ -121,56 +125,114 @@ export async function schemaVersionQuickPick(
   );
 }
 
+export type SchemaKindSelection = {
+  keySchema: boolean;
+  valueSchema: boolean;
+};
+
 /**
  * Quickpick to (multi-)select which schema kind (key and/or value).
  *
  * If the provided `topic` is already associated with a schema based on the `TopicNameStrategy`,
  * pre-select that kind.
+ *
+ * Deselecting any pre-selected kind(s) will show a confirmation warning modal to confirm the user
+ * wants to produce without schema(s).
  */
-export async function subjectKindMultiSelect(topic: KafkaTopic): Promise<{
-  keySchemaSelected: boolean;
-  valueSchemaSelected: boolean;
-}> {
-  // pre-pick any schema kinds that are already associated with this topic
+export async function subjectKindMultiSelect(
+  topic: KafkaTopic,
+): Promise<SchemaKindSelection | undefined> {
   const topicKeySubjects: Subject[] = topic.children.filter((subject: Subject) =>
     subject.name.endsWith("-key"),
   );
+  const topicKeySubjectNames: string[] = topicKeySubjects.map((subject) => subject.name);
   const topicValueSubjects: Subject[] = topic.children.filter((subject: Subject) =>
     subject.name.endsWith("-value"),
   );
+  const topicValueSubjectNames: string[] = topicValueSubjects.map((subject) => subject.name);
 
+  // pre-pick any schema kinds that are already associated with this topic
   const items: vscode.QuickPickItem[] = [
     {
       label: "Key Schema",
-      description:
-        topicKeySubjects.length > 0
-          ? topicKeySubjects.map((subject) => subject.name).join(", ")
-          : undefined,
+      description: topicKeySubjects.length > 0 ? topicKeySubjectNames.join(", ") : undefined,
       picked: topicKeySubjects.length > 0,
       iconPath: new vscode.ThemeIcon(IconNames.KEY_SUBJECT),
     },
     {
       label: "Value Schema",
-      description:
-        topicValueSubjects.length > 0
-          ? topicValueSubjects.map((subject) => subject.name).join(", ")
-          : undefined,
+      description: topicValueSubjects.length > 0 ? topicValueSubjectNames.join(", ") : undefined,
       picked: topicValueSubjects.length > 0,
       iconPath: new vscode.ThemeIcon(IconNames.VALUE_SUBJECT),
     },
   ];
 
-  const selectedItems = await vscode.window.showQuickPick(items, {
-    canPickMany: true,
-    title: `Producing to ${topic.name}: Select Schema Kind(s)`,
-    placeHolder: "Select which schema kinds to include (none for schemaless JSON)",
-    ignoreFocusOut: true,
-  });
+  const selectedItems: vscode.QuickPickItem[] | undefined = await vscode.window.showQuickPick(
+    items,
+    {
+      canPickMany: true,
+      title: `Producing to ${topic.name}: Select Schema Kind(s)`,
+      placeHolder: "Select which schema kinds to include (none for schemaless JSON)",
+      ignoreFocusOut: true,
+    },
+  );
 
-  return {
-    keySchemaSelected: selectedItems?.some((item) => item.label === "Key Schema") ?? false,
-    valueSchemaSelected: selectedItems?.some((item) => item.label === "Value Schema") ?? false,
-  };
+  const keySchemaSelected: boolean =
+    selectedItems?.some((item) => item.label === "Key Schema") ?? false;
+  const valueSchemaSelected: boolean =
+    selectedItems?.some((item) => item.label === "Value Schema") ?? false;
+
+  // if the user didn't select key/value but a topic subject exists matching the TopicNameStrategy,
+  // warn them that they are producing to a topic with an existing schema
+  const ignoringKeySchema: boolean = !keySchemaSelected && topicKeySubjects.length > 0;
+  const ignoringValueSchema: boolean = !valueSchemaSelected && topicValueSubjects.length > 0;
+  if (ignoringKeySchema || ignoringValueSchema) {
+    const ignoredSchemas: string[] = [];
+    if (ignoringKeySchema) ignoredSchemas.push(...topicKeySubjectNames);
+    if (ignoringValueSchema) ignoredSchemas.push(...topicValueSubjectNames);
+    const plural: string = ignoredSchemas.length > 1 ? "s" : "";
+    const ignoredSchemasString: string = ignoredSchemas.join(", ");
+    const yesButton = "Produce without schema(s)";
+    const confirmation = await vscode.window.showWarningMessage(
+      `Are you sure you want to produce to ${topic.name} without a schema?`,
+      {
+        modal: true,
+        detail: `The following schema${plural} already exist${plural ? "" : "s"} for this topic: ${ignoredSchemasString}`,
+      },
+      yesButton,
+      // "Cancel" is added by default
+    );
+    if (confirmation !== yesButton) {
+      logUsage(UserEvent.MessageProduceAction, {
+        status: "exited from key/value schema warning",
+        keySchemaSelected,
+        valueSchemaSelected,
+        topicHasKeySchema: topicKeySubjects.length > 0,
+        topicHasValueSchema: topicValueSubjects.length > 0,
+      });
+      return;
+    }
+    logger.warn(
+      `producing to ${topic.name} without schema(s) despite associated schema subject${plural}: ${ignoredSchemasString}`,
+    );
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "selected produce without associated schema(s)",
+      keySchemaSelected,
+      valueSchemaSelected,
+      topicHasKeySchema: topicKeySubjects.length > 0,
+      topicHasValueSchema: topicValueSubjects.length > 0,
+    });
+  } else {
+    logUsage(UserEvent.MessageProduceAction, {
+      status: "selected produce with schema(s)",
+      keySchemaSelected,
+      valueSchemaSelected,
+      topicHasKeySchema: topicKeySubjects.length > 0,
+      topicHasValueSchema: topicValueSubjects.length > 0,
+    });
+  }
+
+  return { keySchema: keySchemaSelected, valueSchema: valueSchemaSelected };
 }
 
 /** Extension of {@link vscode.QuickPickItem} to include the {@link SubjectNameStrategy} as `strategy`. */
