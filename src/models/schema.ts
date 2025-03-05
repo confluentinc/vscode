@@ -190,6 +190,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
     super(label, vscode.TreeItemCollapsibleState.None);
 
     this.id = `${resource.id}-${resource.subject}-${resource.version}`;
+
     // internal properties
     this.resource = resource;
     // the only real purpose of the connectionType prefix is to allow CCloud schemas to get the

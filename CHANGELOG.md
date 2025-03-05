@@ -4,10 +4,16 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
 - Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
   keystore and truststore settings
 - Ability to export and import connection details as JSON files, for easier connection creation and
   sharing
+
+### Changed
+- No longer calls the semi-documented Schema Registry route `GET /schemas`. Subject and schema fetching done through `GET /subjects`, `GET /subjects/<subject>/versions`, and `GET /subjects/{subject}/versions/{version}` routes. Should now be compatible with WarpStream schema registry.
+
 
 ## 0.25.0
 
