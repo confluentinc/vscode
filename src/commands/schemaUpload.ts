@@ -167,8 +167,9 @@ async function uploadSchema(
 
   const schemaViewProvider = getSchemasViewProvider();
 
-  // Refresh the schema registry cache while offering the user the option to view the schema in the schema registry.
-  const [viewchoice, newschema]: [string | undefined, Schema] = await Promise.all([
+  // Refresh the schema registry cache while offering the user the option to view
+  // the schema in the Schemas view.
+  const [viewchoice, newSchema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
     updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
   ]);
@@ -179,11 +180,12 @@ async function uploadSchema(
     // Get the schemas view provider to refresh the view on the right registry.
     // (The resource manager data for that registry will be updated with the new schema
     //  via updateRegistryCacheAndFindNewSchema() which has already resolved.)
-    currentSchemaRegistryChanged.fire(registry);
+    if (schemaViewProvider.schemaRegistry?.id !== registry.id) {
+      currentSchemaRegistryChanged.fire(registry);
+    }
 
-    // get the new schema to pop in the view by getting the treeitem to reveal
-    // the schema's item.
-    schemaViewProvider.revealSchema(newschema);
+    // Unfurl the subject and highlight the new schema.
+    await schemaViewProvider.revealSchema(newSchema);
   }
 }
 
@@ -574,24 +576,38 @@ async function updateRegistryCacheAndFindNewSchema(
 ): Promise<Schema> {
   const loader = ResourceLoader.getInstance(registry.connectionId);
 
-  const allSchemas = await loader.getSchemasForRegistry(registry, true);
+  const subjectSchemas = await loader.getSchemaSubjectGroup(registry, boundSubject, true);
 
   // Find the schema in the list of schemas for this registry. We know that
   // it should be present in the cache because we have just refreshed the cache.
-  const schema = allSchemas!.find((s) => s.id === `${newSchemaID}` && s.subject === boundSubject);
+  const schema = subjectSchemas.find((s) => s.id === `${newSchemaID}`);
 
-  // While here, if the schema view controller is focused on this registry, do a shallow refresh
-  //  (shallow is fine because we just updated any possible cache at the loader level).
+  if (!schema) {
+    throw new Error(`Could not find schema with id ${newSchemaID} in registry ${registry.id}`);
+  }
+
+  // While here, if the schema view controller is focused on this registry, inform it
+  // that this subject has changed.
 
   // This ensures that even if the user doesn't chose to highlight the new schema in the schema registry view,
   // they will still see the new schema in the view if they currently have its schema registry open
   // w/o having to hit the 'refresh' button.
 
-  if (schemaViewProvider.schemaRegistry?.id === registry.id) {
-    schemaViewProvider.refresh();
+  if (schemaViewProvider.schemaRegistry?.id === registry.id && schema !== undefined) {
+    // If was the only schema in the subject, refresh the whole view so that the new subject
+    // will be visible.
+    if (subjectSchemas.length === 1) {
+      logger.debug("Refreshing whole schema view to load new subject");
+      // erring on deep refresh for time being.
+      schemaViewProvider.refresh(true);
+    } else {
+      // Otherwise, just refresh this single subject.
+      logger.debug(`Refreshing just subject ${boundSubject}`);
+      await schemaViewProvider.updateSubjectSchemas(boundSubject, subjectSchemas);
+    }
   }
 
-  return schema!;
+  return schema;
 }
 
 /**
