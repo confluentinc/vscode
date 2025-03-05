@@ -479,15 +479,15 @@
             "preview"
           ]
         },
-        "confluent.topic.producingMessages.schemas.useTopicNameStrategy": {
+        "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
         },
-        "confluent.topic.producingMessages.schemas.allowOlderVersions": {
+        "confluent.topic.produceMessages.schemas.allowOlderVersions": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the latest schema version.\n\n---\n\n⚠️ **WARNING**: Enabling this and using older schema versions may cause issues with topic consumers based on schema compatibility settings."
+          "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
         }
       }
     },
