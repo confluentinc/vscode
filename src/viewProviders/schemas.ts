@@ -40,12 +40,27 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   // Did the user use the 'refresh' button / command to force a deep refresh of the tree?
   private forceDeepRefresh: boolean = false;
 
+  // Map of subject string -> subject object currently in the tree view.
+  private subjectsInTreeView: Map<string, Subject> = new Map();
+
   /** (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
    * in the schema registry.
    */
   refresh(forceDeepRefresh: boolean = false): void {
     this.forceDeepRefresh = forceDeepRefresh;
     this._onDidChangeTreeData.fire();
+  }
+
+  /** Refresh just this single subject by its string. Caller provides  */
+  refreshSubject(subjectString: string, newSchemas: Schema[]): void {
+    const subjectInMap = this.subjectsInTreeView.get(subjectString);
+    if (!subjectInMap) {
+      logger.error("Strange, couldn't find subject in tree view", { subjectString });
+      return;
+    }
+
+    subjectInMap.schemas = newSchemas;
+    this._onDidChangeTreeData.fire(subjectInMap);
   }
 
   private treeView: vscode.TreeView<SchemasViewProviderData>;
@@ -119,8 +134,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   getParent(element: SchemasViewProviderData): SchemasViewProviderData | null {
     if (element instanceof Schema) {
-      // if we're a schema, our parent is our Subject.
-      return element.subjectObject();
+      // if we're a schema, our parent is the schema's Subject as found in our map
+      const subject = this.subjectsInTreeView.get(element.subject);
+      if (!subject) {
+        logger.error("Strange, couldn't find subject in tree view", { element });
+        return null;
+      }
+      return subject;
     }
     // Otherwise the parent of a container tree item is the root.
     return null;
@@ -150,7 +170,19 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     if (element == null) {
       // Toplevel: return the subjects as Subject[].
       children = await loader.getSubjects(this.schemaRegistry, this.forceDeepRefresh);
+
+      // Cache the subjects in the map for later refresh by object identity.
+      // clear the map first to avoid stale entries if we switched SRs or deep refreshed
+      this.subjectsInTreeView.clear();
+      (children as Subject[]).forEach((subject: Subject) =>
+        this.subjectsInTreeView.set(subject.name, subject),
+      );
     } else if (element instanceof Subject) {
+      // be sure to be using subject as found in subjectsInTreeView.
+      element = this.subjectsInTreeView.get(element.name);
+      if (!element) {
+        return [];
+      }
       if (element.schemas) {
         // Already fetched the schemas for this subject.
         return element.schemas;
@@ -160,13 +192,13 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         // While here, also update the subject with knowledge of the schemas
         // so that 1) we don't fetch them again, and
         // 2) we can update the TreeItem with additional information based on the schemas.
-        element.schemas = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
+        children = await loader.getSchemaSubjectGroup(this.schemaRegistry, element.name);
 
-        // Refresh the element since now is revised and will produce a
-        // new tree item with updated description, etc.
+        // Update the in-subjectsInTreeView subject with the now-known schemas.
+        element.schemas = children as Schema[];
+
+        // Update the tree item for the subject to reflect the new schemas.
         this._onDidChangeTreeData.fire(element);
-
-        children = element.schemas;
       }
     } else {
       // Selected a schema, no children there.
@@ -326,9 +358,40 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     }
   }
 
-  /** Try to reveal this particular schema, if present */
-  revealSchema(schema: Schema): void {
-    this.treeView.reveal(schema, { focus: true, select: true, expand: true });
+  /** Try to reveal+expand schema under a subject, if present */
+  async revealSchema(schemaToShow: Schema): Promise<void> {
+    // Find the subject in the tree view's model.
+    const subject = this.subjectsInTreeView.get(schemaToShow.subject);
+    if (!subject) {
+      logger.error("Strange, couldn't find subject for schema in tree view", {
+        schemaToShow,
+      });
+      return;
+    }
+
+    // The subject may be brand new and have no schemas yet. Expand the subject
+    // to force a fetch of the schemas.
+    if (!subject.schemas) {
+      await this.treeView.reveal(subject, { focus: true, expand: true });
+      // Will now have loaded the schemas for the subject, so now clear to find the schema.
+      // `subject` will be updated with a schemas array.
+    }
+
+    // Find the equivalent schema-within-the-subject by ID. It should have been loaded already, otherwise
+    // something is coded wrong before here.
+    const schema = subject.schemas!.find((schema) => schema.id === schemaToShow.id);
+    if (!schema) {
+      logger.error(
+        `Strange, found subject ${subject.name} but it did not contain the expected schema by id: ${schemaToShow.id}`,
+      );
+      return;
+    }
+
+    try {
+      await this.treeView.reveal(schema, { focus: true, select: true });
+    } catch (e) {
+      logger.error(`Error revealing schema in tree view: ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   /** Update internal state when the search string is set or unset. */
