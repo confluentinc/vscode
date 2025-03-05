@@ -180,6 +180,10 @@ export async function subjectKindMultiSelect(
       ignoreFocusOut: true,
     },
   );
+  if (selectedItems === undefined) {
+    // user cancelled
+    return;
+  }
 
   const keySchemaSelected: boolean =
     selectedItems?.some((item) => item.label === "Key Schema") ?? false;
