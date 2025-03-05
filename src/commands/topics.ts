@@ -282,8 +282,8 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   // ask the user if they want to use a schema for the key and/or value
   const selectResult: SchemaKindSelection | undefined = await subjectKindMultiSelect(topic);
   if (!selectResult) {
-    // topic was associated with a schema, user deselected key+value and did not confirm that they
-    // wanted to produce without schema(s)
+    // user exited the quickpick, or the topic was associated with a schema and user deselected
+    // key+value and did not confirm that they wanted to produce without schema(s)
     return;
   }
 
