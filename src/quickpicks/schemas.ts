@@ -101,6 +101,10 @@ export async function schemaVersionQuickPick(
   const schemasMatchingSubject: Schema[] = schemaVersions.filter(
     (schema) => schema.subject === subject,
   );
+  if (schemasMatchingSubject.length === 1) {
+    // skip the quickpick if there's only one version
+    return schemasMatchingSubject[0];
+  }
 
   const versionItems: vscode.QuickPickItem[] = schemasMatchingSubject.map((schema) => ({
     label: `v${schema.version.toString()}`,
@@ -188,16 +192,27 @@ export async function subjectKindMultiSelect(
   const ignoringValueSchema: boolean = !valueSchemaSelected && topicValueSubjects.length > 0;
   if (ignoringKeySchema || ignoringValueSchema) {
     const ignoredSchemas: string[] = [];
-    if (ignoringKeySchema) ignoredSchemas.push(...topicKeySubjectNames);
-    if (ignoringValueSchema) ignoredSchemas.push(...topicValueSubjectNames);
+    const ignoredKinds: string[] = [];
+    if (ignoringKeySchema) {
+      ignoredSchemas.push(...topicKeySubjectNames);
+      ignoredKinds.push("key");
+    }
+    if (ignoringValueSchema) {
+      ignoredSchemas.push(...topicValueSubjectNames);
+      ignoredKinds.push("value");
+    }
+
     const plural: string = ignoredSchemas.length > 1 ? "s" : "";
     const ignoredSchemasString: string = ignoredSchemas.join(", ");
+    const ignoredKindsString: string =
+      ignoredKinds.length > 1 ? "key or value schemas" : `a ${ignoredKinds[0]} schema`;
+
     const yesButton = "Produce without schema(s)";
     const confirmation = await vscode.window.showWarningMessage(
-      `Are you sure you want to produce to "${topic.name}" without a schema?`,
+      `Are you sure you want to produce to "${topic.name}" without ${ignoredKindsString}?`,
       {
         modal: true,
-        detail: `The following schema${plural} already exist${plural ? "" : "s"} for this topic: ${ignoredSchemasString}`,
+        detail: `The following schema subject${plural} already exist${plural ? "" : "s"} for this topic: ${ignoredSchemasString}`,
       },
       yesButton,
       // "Cancel" is added by default
