@@ -290,13 +290,17 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
   const keySchemaSelected: boolean = selectResult.keySchema;
   const valueSchemaSelected: boolean = selectResult.valueSchema;
 
-  // check if the topic is associated with any schemas, and if so, prompt for subject+version
-  const keySchema: Schema | undefined = keySchemaSelected
-    ? await promptForSchema(topic, "key")
-    : undefined;
-  const valueSchema: Schema | undefined = valueSchemaSelected
-    ? await promptForSchema(topic, "value")
-    : undefined;
+  // check if the topic is associated with any schemas, and if so, prompt for subject+version based
+  // on user settings
+  let keySchema: Schema | undefined;
+  let valueSchema: Schema | undefined;
+  try {
+    keySchema = keySchemaSelected ? await promptForSchema(topic, "key") : undefined;
+    valueSchema = valueSchemaSelected ? await promptForSchema(topic, "value") : undefined;
+  } catch (err) {
+    logger.error("exiting produce-message flow early due to promptForSchema error:", err);
+    return;
+  }
 
   // always treat producing as a "bulk" action, even if there's only one message
   const contents: any[] = [];
@@ -578,10 +582,7 @@ export function registerTopicCommands(): vscode.Disposable[] {
  * @param kind Whether this is for a 'key' or 'value' schema
  * @returns The selected {@link Schema}, or `undefined` if user cancelled
  */
-export async function promptForSchema(
-  topic: KafkaTopic,
-  kind: "key" | "value",
-): Promise<Schema | undefined> {
+export async function promptForSchema(topic: KafkaTopic, kind: "key" | "value"): Promise<Schema> {
   // look up the associated SR instance for this topic
   const loader = ResourceLoader.getInstance(topic.connectionId);
   const schemaRegistries: SchemaRegistry[] = await loader.getSchemaRegistries();
@@ -589,8 +590,9 @@ export async function promptForSchema(
     (registry) => registry.environmentId === topic.environmentId,
   );
   if (!registry) {
-    showErrorNotificationWithButtons(`No Schema Registry available for topic "${topic.name}".`);
-    return;
+    const noRegistryMsg = `No Schema Registry available for topic "${topic.name}".`;
+    showErrorNotificationWithButtons(noRegistryMsg);
+    throw new Error(noRegistryMsg);
   }
 
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
@@ -605,8 +607,9 @@ export async function promptForSchema(
     strategy = SubjectNameStrategy.TOPIC_NAME;
   }
   if (!strategy) {
-    // setting is enabled but the user left the quickpick
-    return;
+    // setting is enabled but the user left the quickpick; throw an error so we don't assume
+    // the user wants to produce without a schema
+    throw new Error("User cancelled subject name strategy quickpick");
   }
 
   let schemaSubject: string | undefined;
@@ -617,10 +620,9 @@ export async function promptForSchema(
     const schemaSubjects: Subject[] = await loader.getSubjects(registry);
     const subjectExists = schemaSubjects.some((s) => s.name === schemaSubject);
     if (!subjectExists) {
-      showErrorNotificationWithButtons(
-        `No "${kind}" schema subject found for topic "${topic.name}".`,
-      );
-      return;
+      const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}".`;
+      showErrorNotificationWithButtons(noSubjectMsg);
+      throw new Error(noSubjectMsg);
     }
   } else {
     // TODO: split logic between TOPIC_RECORD_NAME and RECORD_NAME
@@ -630,24 +632,29 @@ export async function promptForSchema(
       `Producing to ${topic.name}: ${kind} schema`,
     );
   }
-
   if (!schemaSubject) {
-    return;
+    throw new Error(`"${kind}" schema subject not found/set for topic "${topic.name}".`);
   }
 
   const allowOlderSchemaVersions: boolean = config.get(ALLOW_OLDER_SCHEMA_VERSIONS, false);
   if (allowOlderSchemaVersions) {
-    // allow the user to select a specific schema version
-    return await schemaVersionQuickPick(registry, schemaSubject);
+    // allow the user to select a specific schema version if they enabled the setting
+    const schemaVersion: Schema | undefined = await schemaVersionQuickPick(registry, schemaSubject);
+    if (!schemaVersion) {
+      throw new Error("Schema version not chosen.");
+    }
+    return schemaVersion;
   }
+
   // look up the latest schema version for the given subject
   const schemaVersions: Schema[] = await loader.getSchemasForEnvironmentId(registry.environmentId);
   const latestSchema: Schema | undefined = schemaVersions
     .filter((schema) => schema.subject === schemaSubject)
     .sort((a, b) => b.version - a.version)[0];
   if (!latestSchema) {
-    showErrorNotificationWithButtons(`No schema versions found for subject "${schemaSubject}".`);
-    return;
+    const noVersionsMsg = `No schema versions found for subject "${schemaSubject}".`;
+    showErrorNotificationWithButtons(noVersionsMsg);
+    throw new Error(noVersionsMsg);
   }
   return latestSchema;
 }
