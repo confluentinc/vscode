@@ -44,24 +44,22 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
    * in the schema registry.
    */
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    // clear our map
-    this.subjectsInTreeView.clear();
-
     if (this.schemaRegistry === null) {
       return;
     }
+
+    // Out with any existing subjects.
+    this.subjectsInTreeView.clear();
 
     const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
     // Fetch subjects using the loader, pushing down need to do deep refresh.
     const subjects: Subject[] = await loader.getSubjects(this.schemaRegistry, forceDeepRefresh);
 
-    this.subjectsInTreeView.clear();
-
-    // Repopulate this.subjectsInTreeView from
+    // Repopulate this.subjectsInTreeView from getSubjects() result.
     subjects.forEach((subject: Subject) => this.subjectsInTreeView.set(subject.name, subject));
 
-    // indicate to view that toplevel items have changed.
+    // Indicate to view that toplevel items have changed.
     this._onDidChangeTreeData.fire();
   }
 
