@@ -224,6 +224,8 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 - Searching for schemas in the Topics and Schemas views is limited to the `subject` field only.
   Searching by other fields, such as `id` and `version`, is not supported due to cost and
   performance considerations.
+- The Message Viewer can't consume records that were compressed with `snappy` except for Confluent
+  Cloud connections.
 
 ## Support
 
