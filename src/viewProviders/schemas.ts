@@ -70,9 +70,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
    * @param subjectString - The string identifier of the subject to refresh.
    * @param newSchemas - The new array of schemas to update the subject with.
    */
-  async refreshSubject(subjectString: string, newSchemas: Schema[] | null): Promise<void> {
+  async updateSubjectSchemas(subjectString: string, newSchemas: Schema[] | null): Promise<void> {
+    logger.debug("updateSubjectSchemas(): Refreshing single subject in tree view", {
+      subject: subjectString,
+      newSchemaCount: newSchemas?.length,
+    });
+
     if (newSchemas === null) {
-      // go get the schemas for this subject
+      // Go get the schemas for this subject
       if (!this.schemaRegistry) {
         throw new Error("No schema registry");
       }
@@ -87,10 +92,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     }
 
     subjectInMap.schemas = newSchemas;
-    logger.debug("refreshSubject: Refreshing single subject in tree view", {
-      subject: subjectString,
-      newSchemaCount: newSchemas.length,
-    });
+
     this._onDidChangeTreeData.fire(subjectInMap);
   }
 
@@ -208,19 +210,14 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       }
       if (element.schemas) {
         // Already fetched the schemas for this subject.
-        logger.debug("Not wacky: Returning cached schemas for subject", {
-          subject: element.name,
-        });
         children = element.schemas;
       } else {
-        logger.debug("suspect getChildren of subject with null schemas", {
-          subject: element.name,
-        });
         // Need to fetch schemas for the subject. Kick off in background. In
-        // the meantime, return an empty array to indicate no children.
+        // the meantime, return an empty array to indicate no children (at this time).
         children = [];
-        // is async, will update the tree view when done.
-        this.refreshSubject(element.name, null);
+        // updateSubjectSchemas() is async and won't begin until this call to getChildren() completes.
+        // When it is done, it will update the tree view.
+        this.updateSubjectSchemas(element.name, null);
       }
     } else {
       // Selected a schema, no children there.

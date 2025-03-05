@@ -603,7 +603,7 @@ async function updateRegistryCacheAndFindNewSchema(
     } else {
       // Otherwise, just refresh this single subject.
       logger.debug(`Refreshing just subject ${boundSubject}`);
-      await schemaViewProvider.refreshSubject(boundSubject, subjectSchemas);
+      await schemaViewProvider.updateSubjectSchemas(boundSubject, subjectSchemas);
     }
   }
 
