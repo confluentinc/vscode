@@ -184,7 +184,7 @@ async function uploadSchema(
       currentSchemaRegistryChanged.fire(registry);
     }
 
-    // Unfurl the latest schema for the subject in the treeview.
+    // Unfurl the subject and highlight the new schema.
     await schemaViewProvider.revealSchema(newSchema);
   }
 }
