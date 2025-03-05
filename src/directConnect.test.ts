@@ -107,6 +107,34 @@ describe("directConnect.ts", () => {
       // @ts-expect-error - incomplete types from OpenAPI
       assert.strictEqual(spec.schema_registry?.credentials?.api_secret, "secret");
     });
+    it("should return a valid CustomConnectionSpec with SCRAM credentials", () => {
+      const formData = {
+        name: "Test Connection",
+        formconnectiontype: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "SCRAM",
+        "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512",
+        "kafka_cluster.credentials.scram_username": "user",
+        "kafka_cluster.credentials.scram_password": "pass",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
+      };
+      const spec = getConnectionSpecFromFormData(formData);
+      assert.strictEqual(spec.name, "Test Connection");
+      assert.ok(spec.kafka_cluster);
+      assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
+      assert.ok(spec.kafka_cluster.credentials);
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.hash_algorithm, "SCRAM_SHA_512");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.scram_username, "user");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.scram_password, "pass");
+      assert.ok(spec.schema_registry);
+      assert.ok(spec.schema_registry.uri);
+      assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
+      assert.strictEqual(spec.schema_registry.credentials, undefined);
+    });
     it("should not include credentials if the auth type is None", () => {
       const formData = {
         name: "Test Connection",

@@ -220,6 +220,12 @@ export function getConnectionSpecFromFormData(
         api_key: formData["kafka_cluster.credentials.api_key"],
         api_secret: formData["kafka_cluster.credentials.api_secret"],
       };
+    } else if (formData["kafka_cluster.auth_type"] === "SCRAM") {
+      spec.kafka_cluster.credentials = {
+        hash_algorithm: formData["kafka_cluster.credentials.hash_algorithm"],
+        scram_username: formData["kafka_cluster.credentials.scram_username"],
+        scram_password: formData["kafka_cluster.credentials.scram_password"],
+      };
     }
   }
 
