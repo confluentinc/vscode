@@ -352,7 +352,7 @@
       },
       {
         "command": "confluent.topic.produce.fromDocument",
-        "title": "Produce Message to Kafka Topic from schemaless JSON file",
+        "title": "Send Message(s) to Topic",
         "icon": "$(send)",
         "category": "Confluent: Topic"
       },
