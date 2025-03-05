@@ -15,6 +15,15 @@ async function openCCloudLink(item: any) {
   await env.openExternal(Uri.parse(item.ccloudUrl));
 }
 
+async function openCCloudApiKeysUrl(item: any) {
+  logger.debug("Opening Confluent Cloud API Keys url", item);
+  // make sure the item has the "ccloudApiKeysUrl" property
+  if (!item?.ccloudApiKeysUrl) {
+    return;
+  }
+  await env.openExternal(Uri.parse(item.ccloudApiKeysUrl));
+}
+
 async function copyResourceId(item: any) {
   logger.debug("Copying resource ID", item);
   // make sure the item has the "id" property
@@ -105,6 +114,7 @@ async function clearSchemaSearch() {
 export function registerExtraCommands(): Disposable[] {
   return [
     registerCommandWithLogging("confluent.openCCloudLink", openCCloudLink),
+    registerCommandWithLogging("confluent.openCCloudApiKeysUrl", openCCloudApiKeysUrl),
     registerCommandWithLogging("confluent.copyResourceId", copyResourceId),
     registerCommandWithLogging("confluent.copyResourceName", copyResourceName),
     registerCommandWithLogging("confluent.copyResourceUri", copyResourceUri),
