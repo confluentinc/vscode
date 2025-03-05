@@ -582,6 +582,10 @@ async function updateRegistryCacheAndFindNewSchema(
   // it should be present in the cache because we have just refreshed the cache.
   const schema = subjectSchemas.find((s) => s.id === `${newSchemaID}`);
 
+  if (!schema) {
+    throw new Error(`Could not find schema with id ${newSchemaID} in registry ${registry.id}`);
+  }
+
   // While here, if the schema view controller is focused on this registry, inform it
   // that this subject has changed.
 
@@ -603,7 +607,7 @@ async function updateRegistryCacheAndFindNewSchema(
     }
   }
 
-  return schema!;
+  return schema;
 }
 
 /**

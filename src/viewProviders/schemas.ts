@@ -51,7 +51,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this._onDidChangeTreeData.fire();
   }
 
-  /** Refresh just this single subject by its string. Caller provides  */
+  /**
+   * Refresh just this single subject by its string.
+   * @param subjectString - The string identifier of the subject to refresh.
+   * @param newSchemas - The new array of schemas to update the subject with.
+   */
   refreshSubject(subjectString: string, newSchemas: Schema[]): void {
     const subjectInMap = this.subjectsInTreeView.get(subjectString);
     if (!subjectInMap) {
