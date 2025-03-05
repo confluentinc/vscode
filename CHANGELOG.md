@@ -10,6 +10,8 @@ All notable changes to this extension will be documented in this file.
   keystore and truststore settings
 - Ability to export and import connection details as JSON files, for easier connection creation and
   sharing
+- SASL/SCRAM authentication type is now supported for Kafka Cluster connections that are added via
+  the connections form
 
 ### Changed
 - No longer calls the semi-documented Schema Registry route `GET /schemas`. Subject and schema fetching done through `GET /subjects`, `GET /subjects/<subject>/versions`, and `GET /subjects/{subject}/versions/{version}` routes. Should now be compatible with WarpStream schema registry.
