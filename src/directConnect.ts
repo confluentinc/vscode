@@ -7,6 +7,7 @@ import {
   ConnectionType,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfScramCredentials,
 } from "./clients/sidecar";
 import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
 import { WebviewPanelCache } from "./webview-cache";
@@ -219,6 +220,12 @@ export function getConnectionSpecFromFormData(
         api_key: formData["kafka_cluster.credentials.api_key"],
         api_secret: formData["kafka_cluster.credentials.api_secret"],
       };
+    } else if (formData["kafka_cluster.auth_type"] === "SCRAM") {
+      spec.kafka_cluster.credentials = {
+        hash_algorithm: formData["kafka_cluster.credentials.hash_algorithm"],
+        scram_username: formData["kafka_cluster.credentials.scram_username"],
+        scram_password: formData["kafka_cluster.credentials.scram_password"],
+      };
     }
   }
 
@@ -324,6 +331,9 @@ export function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpe
     }
     if (instanceOfApiKeyAndSecret(clean.kafka_cluster.credentials)) {
       clean.kafka_cluster.credentials.api_secret = "fakeplaceholdersecrethere";
+    }
+    if (instanceOfScramCredentials(clean.kafka_cluster.credentials)) {
+      clean.kafka_cluster.credentials.scram_password = "fakeplaceholdersecrethere";
     }
   }
   if (clean.kafka_cluster?.ssl?.truststore?.password) {

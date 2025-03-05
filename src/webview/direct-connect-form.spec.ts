@@ -8,6 +8,7 @@ import { SinonStub } from "sinon";
 import sanitize from "sanitize-html";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
+import { ConnectionSpec, ScramCredentials } from "../clients/sidecar";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {
@@ -84,7 +85,7 @@ test("renders form html correctly", async ({ page }) => {
   const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
   await expect(authKafka).not.toBe(null);
   const authKafkaOptions = await authKafka.locator("option").all();
-  await expect(authKafkaOptions.length).toBe(3);
+  await expect(authKafkaOptions.length).toBe(4);
 
   const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
   await expect(schemaUrlInput).toBeVisible();
@@ -470,6 +471,110 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
   });
 });
 
+test("submits values for SASL/SCRAM auth type when filled in", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with SASL/SCRAM auth type
+  await page.fill("input[name=name]", "Test Connection");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
+  await page.selectOption("select[name='kafka_cluster.credentials.hash_algorithm']", {
+    value: "SCRAM_SHA_512",
+  });
+  await page.fill("input[name='kafka_cluster.credentials.scram_username']", "user");
+  await page.fill("input[name='kafka_cluster.credentials.scram_password']", "password");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+  // Verify correct form data
+  expect(submitCall?.[1]).toEqual({
+    name: "Test Connection",
+    formconnectiontype: "Apache Kafka",
+    "kafka_cluster.bootstrap_servers": "localhost:9092",
+    "kafka_cluster.auth_type": "SCRAM",
+    "kafka_cluster.ssl.enabled": "true",
+    "kafka_cluster.credentials.scram_username": "user",
+    "kafka_cluster.credentials.scram_password": "password",
+    "kafka_cluster.credentials.hash_algorithm": "SCRAM_SHA_512", //FIXME this value is flaky in test!?
+    "schema_registry.auth_type": "None",
+    "schema_registry.ssl.enabled": "true",
+    "schema_registry.uri": "",
+  });
+});
+//TODO NC maybe a fixture that is the form default values
+test("populates values for SASL/SCRAM auth type when they're in the spec", async ({
+  execute,
+  page,
+}) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(
+    async (stub, sample) => {
+      stub.withArgs("Submit").resolves(null);
+      stub.withArgs("GetConnectionSpec").resolves(sample);
+    },
+    sendWebviewMessage,
+    SPEC_SAMPLE_SCRAM,
+  );
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  const form = page.locator("form");
+  await expect(form).toBeVisible();
+
+  // Check that the form fields are populated with the connection spec values
+  const nameInput = page.locator("input[name='name']");
+  await expect(nameInput).toHaveValue(SPEC_SAMPLE_SCRAM.name!);
+
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  await expect(bootstrapServersInput).toHaveValue(
+    SPEC_SAMPLE_SCRAM.kafka_cluster!.bootstrap_servers,
+  );
+
+  const kafkaSslCheckbox = page.locator("input[type='checkbox'][name='kafka_cluster.ssl.enabled']");
+  await expect(kafkaSslCheckbox).toBeChecked();
+
+  const scramHashAlgoSelect = page.locator(
+    "select[name='kafka_cluster.credentials.hash_algorithm']",
+  );
+  await expect(scramHashAlgoSelect).toHaveValue(SCRAM.hash_algorithm);
+
+  const scramUsernameInput = page.locator("input[name='kafka_cluster.credentials.scram_username']");
+  await expect(scramUsernameInput).toHaveValue(
+    // @ts-expect-error another example of the type not knowing which creds are present
+    SPEC_SAMPLE_SCRAM.kafka_cluster!.credentials!.scram_username,
+  );
+
+  const scramPasswordInput = page.locator("input[name='kafka_cluster.credentials.scram_password']");
+  await expect(scramPasswordInput).toHaveValue("fakeplaceholdersecrethere"); // passwords are replaced in form
+});
+
 const SPEC_SAMPLE = {
   id: "123",
   name: "Sample",
@@ -495,6 +600,34 @@ const SPEC_SAMPLE = {
     uri: "http://localhost:8081",
     ssl: {
       enabled: true,
+    },
+  },
+};
+const MINIMAL_KAFKA_SAMPLE = {
+  id: "123",
+  name: "Sample",
+  type: "DIRECT",
+  kafka_cluster: {
+    bootstrap_servers: "localhost:9092",
+    ssl: {
+      enabled: true,
+    },
+  },
+};
+
+const SCRAM: ScramCredentials = {
+  hash_algorithm: "SCRAM_SHA_512",
+  scram_username: "user",
+  scram_password: "password",
+};
+
+const SPEC_SAMPLE_SCRAM: ConnectionSpec = {
+  ...MINIMAL_KAFKA_SAMPLE,
+  // @ts-expect-error for reals
+  kafka_cluster: {
+    ...SPEC_SAMPLE.kafka_cluster,
+    credentials: {
+      ...SCRAM,
     },
   },
 };
