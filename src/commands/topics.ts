@@ -7,22 +7,42 @@ import {
   ProduceRequestData,
   ProduceRequestHeader,
   ProduceResponse,
+  RecordsV3Api,
   ResponseError,
   type UpdateKafkaTopicConfigBatchRequest,
 } from "../clients/kafkaRest";
+import {
+  ProduceRequest as CCloudProduceRequest,
+  ConfluentCloudProduceRecordsResourceApi,
+} from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { showErrorNotificationWithButtons } from "../errors";
+import { DEFAULT_ERROR_NOTIFICATION_BUTTONS, showErrorNotificationWithButtons } from "../errors";
+import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
-import { isCCloud, isDirect } from "../models/resource";
+import { isCCloud } from "../models/resource";
+import { Schema, Subject } from "../models/schema";
+import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { ALLOW_OLDER_SCHEMA_VERSIONS, USE_TOPIC_NAME_STRATEGY } from "../preferences/constants";
+import {
+  schemaKindMultiSelect,
+  SchemaKindSelection,
+  schemaSubjectQuickPick,
+  schemaVersionQuickPick,
+  subjectNameStrategyQuickPick,
+} from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
-import { PRODUCE_MESSAGE_SCHEMA } from "../schemas/produceMessageSchema";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  ProduceMessage,
+  SchemaInfo,
+  SubjectNameStrategy,
+} from "../schemas/produceMessageSchema";
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
-import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
 import { logUsage, UserEvent } from "../telemetry/events";
 import {
   executeInWorkerPool,
@@ -260,6 +280,46 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     uriScheme: messageUri.scheme,
   });
 
+  // ask the user if they want to use a schema for the key and/or value
+  const selectResult: SchemaKindSelection | undefined = await schemaKindMultiSelect(topic);
+  if (!selectResult) {
+    // user exited the quickpick, or the topic was associated with a schema and user deselected
+    // key+value and did not confirm that they wanted to produce without schema(s)
+    return;
+  }
+
+  // if key and/or value schemas are selected, we need to determine the subject name strategy
+  // to use before trying to look up the subject
+  const keySubjectNameStrategy: SubjectNameStrategy | undefined = selectResult.keySchema
+    ? await getSubjectNameStrategy(topic, "key")
+    : undefined;
+  const valueSubjectNameStrategy: SubjectNameStrategy | undefined = selectResult.valueSchema
+    ? await getSubjectNameStrategy(topic, "value")
+    : undefined;
+
+  // check if the topic is associated with any schemas, and if so, prompt for subject+version based
+  // on user settings
+  let keySchema: Schema | undefined;
+  let valueSchema: Schema | undefined;
+  try {
+    keySchema = keySubjectNameStrategy
+      ? await promptForSchema(topic, "key", keySubjectNameStrategy)
+      : undefined;
+    valueSchema = valueSubjectNameStrategy
+      ? await promptForSchema(topic, "value", valueSubjectNameStrategy)
+      : undefined;
+  } catch (err) {
+    logger.debug("exiting produce-message flow early due to promptForSchema error:", err);
+    return;
+  }
+
+  const schemaOptions: ProduceMessageSchemaOptions = {
+    keySchema,
+    valueSchema,
+    keySubjectNameStrategy,
+    valueSubjectNameStrategy: valueSubjectNameStrategy,
+  };
+
   // always treat producing as a "bulk" action, even if there's only one message
   const contents: any[] = [];
   const msgContent: any = JSON.parse(content);
@@ -271,7 +331,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
 
   // TODO: bump this number up?
   if (contents.length === 1) {
-    await produceMessages(contents, topic, messageUri);
+    await produceMessages(contents, topic, messageUri, schemaOptions);
   } else {
     // show progress notification for batch produce
     vscode.window.withProgress(
@@ -288,10 +348,17 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
         token: vscode.CancellationToken,
       ) => {
         progress.report({ increment: 0 });
-        await produceMessages(contents, topic, messageUri, progress, token);
+        await produceMessages(contents, topic, messageUri, schemaOptions, progress, token);
       },
     );
   }
+}
+
+export interface ProduceMessageSchemaOptions {
+  keySchema?: Schema;
+  valueSchema?: Schema;
+  keySubjectNameStrategy?: SubjectNameStrategy;
+  valueSubjectNameStrategy?: SubjectNameStrategy;
 }
 
 /**
@@ -299,9 +366,10 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
  * notifications depending on the {@link ExecutionResult}s.
  */
 async function produceMessages(
-  contents: any[],
+  contents: ProduceMessage[],
   topic: KafkaTopic,
   messageUri: vscode.Uri,
+  schemaOptions: ProduceMessageSchemaOptions,
   progress?: vscode.Progress<{
     message?: string;
     increment?: number;
@@ -310,7 +378,7 @@ async function produceMessages(
 ) {
   // TODO: make maxWorkers a user setting?
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
-    (content) => produceMessage(content, topic),
+    (content) => produceMessage(content, topic, schemaOptions),
     contents,
     { maxWorkers: 20, taskName: "produceMessage" },
     progress,
@@ -400,10 +468,12 @@ interface ProduceResult {
 }
 
 /** Produce a single message to a Kafka topic. */
-export async function produceMessage(content: any, topic: KafkaTopic): Promise<ProduceResult> {
-  const sidecar = await getSidecar();
-  const recordsApi = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
-
+export async function produceMessage(
+  content: ProduceMessage,
+  topic: KafkaTopic,
+  schemaOptions: ProduceMessageSchemaOptions,
+): Promise<ProduceResult> {
+  const forCCloudTopic = isCCloud(topic);
   // convert any provided headers to the correct format, ensuring the `value` is base64-encoded
   const headers: ProduceRequestHeader[] = (content.headers ?? []).map(
     (header: any): ProduceRequestHeader => ({
@@ -412,7 +482,11 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
     }),
   );
   // dig up any schema-related information we may need in the request body
-  const { keyData, valueData } = await createProduceRequestData(topic, content.key, content.value);
+  const { keyData, valueData } = await createProduceRequestData(
+    content,
+    schemaOptions,
+    forCCloudTopic,
+  );
 
   const produceRequest: ProduceRequest = {
     headers,
@@ -425,65 +499,96 @@ export async function produceMessage(content: any, topic: KafkaTopic): Promise<P
   const request: ProduceRecordRequest = {
     topic_name: topic.name,
     cluster_id: topic.clusterId,
-    ProduceRequest: produceRequest,
   };
 
   let response: ProduceResponse | undefined;
   let timestamp = new Date();
 
-  response = await recordsApi.produceRecord(request);
-  // we may get a misleading `status: 200` with a nested `error_code` in the response body
-  // ...but we may also get `error_code: 200` with a successful message
-  if (response.error_code >= 400) {
-    throw new ResponseError(
-      new Response("", {
-        status: response.error_code,
-        statusText: response.message,
-      }),
-    );
+  const sidecar = await getSidecar();
+
+  if (forCCloudTopic) {
+    const ccloudClient: ConfluentCloudProduceRecordsResourceApi =
+      sidecar.getConfluentCloudProduceRecordsResourceApi(topic.connectionId);
+    const ccloudResponse = await ccloudClient.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost({
+      ...request,
+      x_connection_id: topic.connectionId,
+      dry_run: false,
+      ProduceRequest: produceRequest as CCloudProduceRequest,
+    });
+    response = ccloudResponse as ProduceResponse;
+  } else {
+    // non-CCloud topic route:
+    const client: RecordsV3Api = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
+    response = await client.produceRecord({ ...request, ProduceRequest: produceRequest });
   }
+
   timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
 
   return { timestamp, response };
 }
 
+/** Create the {@link ProduceRequestData} objects for the `key` and `value` of a produce request based on the provided `message` content and any schema options. */
 export async function createProduceRequestData(
-  topic: KafkaTopic,
-  key: any,
-  value: any,
+  message: ProduceMessage,
+  schemaOptions: ProduceMessageSchemaOptions = {},
+  forCCloudTopic: boolean = false,
 ): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
-  // TODO: add schema information here for key and/or value once we have it
+  // snake case since this is coming from a JSON document:
+  const { key, value, key_schema, value_schema } = message;
+  // user-selected schema information via settings and quickpicks
+  const { keySchema, keySubjectNameStrategy, valueSchema, valueSubjectNameStrategy } =
+    schemaOptions;
 
-  const schemaless = "JSON";
   // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
+  const schemaless = "JSON";
   const schemaType: { type?: string } = {};
-  if (isCCloud(topic)) {
+  if (forCCloudTopic && !(keySchema || key_schema || valueSchema || value_schema)) {
     schemaType.type = schemaless;
-  } else if (isDirect(topic)) {
-    // look up the formConnectionType for this topic's connection
-    const spec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-      topic.connectionId,
-    );
-    if (spec?.formConnectionType === "Confluent Cloud") {
-      schemaType.type = schemaless;
-    }
   }
 
+  // message-provided schema information takes precedence over quickpicked schema
+  const keySchemaData: SchemaInfo | undefined = extractSchemaInfo(
+    key_schema,
+    keySchema,
+    keySubjectNameStrategy,
+  );
   const keyData: ProduceRequestData = {
     ...schemaType,
+    ...(keySchemaData ?? {}),
     data: key,
-    // schema_version: null,
-    // subject: null,
-    // subject_name_strategy: null,
   };
+  const valueSchemaData: SchemaInfo | undefined = extractSchemaInfo(
+    value_schema,
+    valueSchema,
+    valueSubjectNameStrategy,
+  );
   const valueData: ProduceRequestData = {
     ...schemaType,
+    ...(valueSchemaData ?? {}),
     data: value,
-    // schema_version: null,
-    // subject: null,
-    // subject_name_strategy: null,
   };
   return { keyData, valueData };
+}
+
+/**
+ * Extract schema information from provided produce-message content, or a {@link Schema}. Returns
+ * the necessary {@link SchemaInfo} object for the produce request.
+ */
+export function extractSchemaInfo(
+  schemaInfo: any,
+  schema: Schema | undefined,
+  subjectNameStrategy: SubjectNameStrategy | undefined,
+): SchemaInfo | undefined {
+  if (!(schemaInfo || schema)) {
+    return;
+  }
+  const schema_version = schemaInfo?.schema_version ?? schema?.version;
+  const subject = schemaInfo?.subject ?? schema?.subject;
+  const subject_name_strategy =
+    schemaInfo?.subject_name_strategy ?? subjectNameStrategy ?? "TOPIC_NAME";
+
+  // drop type since the sidecar rejects this with a 400
+  return { schema_version, subject, subject_name_strategy, type: undefined };
 }
 
 export function registerTopicCommands(): vscode.Disposable[] {
@@ -497,4 +602,133 @@ export function registerTopicCommands(): vscode.Disposable[] {
     registerCommandWithLogging("confluent.topics.edit", editTopicConfig),
     registerCommandWithLogging("confluent.topic.produce.fromDocument", produceMessagesFromDocument),
   ];
+}
+
+/**
+ * Return {@linkcode SubjectNameStrategy.TOPIC_NAME} if enabled in user settings, otherwise prompt for
+ * the user to select a subject name strategy via quickpick.
+ */
+export async function getSubjectNameStrategy(
+  topic: KafkaTopic,
+  kind: "key" | "value",
+): Promise<SubjectNameStrategy | undefined> {
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  const useTopicNameStrategy: boolean = config.get(USE_TOPIC_NAME_STRATEGY) ?? true;
+  if (useTopicNameStrategy) {
+    return SubjectNameStrategy.TOPIC_NAME;
+  }
+  // if the user has disabled the topic name strategy, we need to prompt for the subject name
+  // strategy first, which will help narrow down subjects later
+  return await subjectNameStrategyQuickPick(topic, kind);
+}
+
+/**
+ * Prompt the user to select a schema subject+version to use when producing messages to a topic.
+ * @param topic The Kafka topic to produce messages to
+ * @param kind Whether this is for a 'key' or 'value' schema
+ * @returns The selected {@link Schema}, or `undefined` if user cancelled
+ */
+export async function promptForSchema(
+  topic: KafkaTopic,
+  kind: "key" | "value",
+  strategy: SubjectNameStrategy,
+): Promise<Schema> {
+  // look up the associated SR instance for this topic
+  const loader = ResourceLoader.getInstance(topic.connectionId);
+  const schemaRegistries: SchemaRegistry[] = await loader.getSchemaRegistries();
+  const registry: SchemaRegistry | undefined = schemaRegistries.find(
+    (registry) => registry.environmentId === topic.environmentId,
+  );
+  if (!registry) {
+    const noRegistryMsg = `No Schema Registry available for topic "${topic.name}".`;
+    showErrorNotificationWithButtons(noRegistryMsg);
+    throw new Error(noRegistryMsg);
+  }
+
+  let schemaSubject: string | undefined = await getSubjectNameForStrategy(
+    strategy,
+    topic,
+    kind,
+    registry,
+    loader,
+  );
+  if (!schemaSubject) {
+    throw new Error(`"${kind}" schema subject not found/set for topic "${topic.name}".`);
+  }
+
+  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+  const allowOlderSchemaVersions: boolean = config.get(ALLOW_OLDER_SCHEMA_VERSIONS, false);
+  if (allowOlderSchemaVersions) {
+    // allow the user to select a specific schema version if they enabled the setting
+    const schemaVersion: Schema | undefined = await schemaVersionQuickPick(registry, schemaSubject);
+    if (!schemaVersion) {
+      throw new Error("Schema version not chosen.");
+    }
+    return schemaVersion;
+  }
+
+  // look up the latest schema version for the given subject
+  const schemaVersions: Schema[] = await loader.getSchemasForEnvironmentId(registry.environmentId);
+  const latestSchema: Schema | undefined = schemaVersions
+    .filter((schema) => schema.subject === schemaSubject)
+    .sort((a, b) => b.version - a.version)[0];
+  if (!latestSchema) {
+    const noVersionsMsg = `No schema versions found for subject "${schemaSubject}".`;
+    showErrorNotificationWithButtons(noVersionsMsg);
+    throw new Error(noVersionsMsg);
+  }
+  return latestSchema;
+}
+
+async function getSubjectNameForStrategy(
+  strategy: SubjectNameStrategy,
+  topic: KafkaTopic,
+  kind: string,
+  registry: SchemaRegistry,
+  loader: ResourceLoader,
+): Promise<string | undefined> {
+  let schemaSubjectName: string | undefined;
+
+  switch (strategy) {
+    case SubjectNameStrategy.TOPIC_NAME:
+      {
+        // we have the topic name and the kind, so we just need to make sure the subject exists and
+        // fast-track to getting the schema version
+        schemaSubjectName = `${topic.name}-${kind}`;
+        const schemaSubjects: Subject[] = await loader.getSubjects(registry);
+        const subjectExists = schemaSubjects.some((s) => s.name === schemaSubjectName);
+        if (!subjectExists) {
+          const noSubjectMsg = `No "${kind}" schema subject found for topic "${topic.name}" using the ${strategy} strategy.`;
+          showErrorNotificationWithButtons(noSubjectMsg, {
+            "Open Settings": () => {
+              vscode.commands.executeCommand(
+                "workbench.action.openSettings",
+                `@id:confluent.topic.produceMessages.schemas.useTopicNameStrategy`,
+              );
+            },
+            ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+          });
+          throw new Error(noSubjectMsg);
+        }
+      }
+      break;
+    case SubjectNameStrategy.TOPIC_RECORD_NAME:
+      // filter the subject quickpick based on the topic name
+      schemaSubjectName = await schemaSubjectQuickPick(
+        registry,
+        false,
+        `Producing to ${topic.name}: ${kind} schema`,
+        (s) => s.name.startsWith(topic.name),
+      );
+      break;
+    case SubjectNameStrategy.RECORD_NAME:
+      schemaSubjectName = await schemaSubjectQuickPick(
+        registry,
+        false,
+        `Producing to ${topic.name}: ${kind} schema`,
+      );
+      break;
+  }
+
+  return schemaSubjectName;
 }
