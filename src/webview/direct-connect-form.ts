@@ -6,12 +6,15 @@ import {
   ConnectedState,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfOAuthCredentials,
   instanceOfScramCredentials,
 } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
 import { SslConfig } from "./ssl-config-inputs";
+import { AuthCredentials } from "./auth-credentials";
 // Register the custom element
 customElements.define("ssl-config", SslConfig);
+customElements.define("auth-credentials", AuthCredentials);
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
 addEventListener("DOMContentLoaded", () => {
@@ -48,9 +51,7 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.kafka_cluster?.credentials;
   });
   kafkaAuthType = this.derive(() => {
-    if (this.platformType() === "Confluent Cloud")
-      return "API"; // CCloud only supports API
-    else return this.getCredentialsType(this.kafkaCreds());
+    return this.getCredentialsType(this.kafkaCreds());
   });
   kafkaUsername = this.derive(() => {
     // @ts-expect-error the types don't know which credentials are present
@@ -156,6 +157,7 @@ class DirectConnectFormViewModel extends ViewModel {
     if (instanceOfBasicCredentials(creds)) return "Basic";
     if (instanceOfApiKeyAndSecret(creds)) return "API";
     if (instanceOfScramCredentials(creds)) return "SCRAM";
+    if (instanceOfOAuthCredentials(creds)) return "OAuth";
     return "None";
   }
   resetTestResults() {
@@ -184,7 +186,6 @@ class DirectConnectFormViewModel extends ViewModel {
       case "formconnectiontype":
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
-          this.kafkaAuthType("API");
           this.schemaAuthType("API");
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
@@ -297,5 +298,5 @@ export type FormConnectionType =
   | "Confluent Cloud"
   | "Confluent Platform"
   | "Other";
-
-type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM";
+// TODO NC rename and/or align with support types in auth-credentials.ts
+type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth";
