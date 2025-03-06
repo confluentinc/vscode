@@ -8,6 +8,7 @@ import {
   ConnectionType,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfOAuthCredentials,
   instanceOfScramCredentials,
   ResponseError,
 } from "./clients/sidecar";
@@ -348,6 +349,11 @@ export function mergeSecrets(
       if (incomingKafkaCreds.scram_password === "fakeplaceholdersecrethere") {
         if (currentKafkaCreds && instanceOfScramCredentials(currentKafkaCreds))
           incomingKafkaCreds.scram_password = currentKafkaCreds.scram_password;
+      }
+    } else if (instanceOfOAuthCredentials(incomingKafkaCreds)) {
+      if (incomingKafkaCreds.client_secret === "fakeplaceholdersecrethere") {
+        if (currentKafkaCreds && instanceOfOAuthCredentials(currentKafkaCreds))
+          incomingKafkaCreds.client_secret = currentKafkaCreds.client_secret;
       }
     }
   }
