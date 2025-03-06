@@ -64,7 +64,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   /**
-   * Refresh just this single subject by its string.
+   * Refresh just this single subject by its string. Will ensure
+   * that the corresponding Subject as found in this.subjectsInTreeView will have
+   * its schemas array updated with the new schemas, either those provided
+   * or those fetched from the schema registry / loader.
+   *
    * @param subjectString - The string identifier of the subject to refresh.
    * @param newSchemas - The new array of schemas to update the subject with.
    */
@@ -139,6 +143,33 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this.subjectsInTreeView.clear();
     this.setSearch(null);
     this.refresh();
+  }
+
+  /** Change what SR is being viewed (if any) */
+  async setSchemaRegistry(schemaRegistry: SchemaRegistry | null): Promise<void> {
+    if (schemaRegistry === this.schemaRegistry) {
+      logger.debug("setSchemaRegistry() called with same SR as being viewed already, ignoring.");
+      return;
+    }
+
+    logger.debug(
+      `setSchemaRegistry called, ${schemaRegistry ? "changing to new registry" : "resetting to empty"}.`,
+      {
+        id: schemaRegistry?.id,
+      },
+    );
+
+    this.schemaRegistry = schemaRegistry;
+
+    if (schemaRegistry) {
+      setContextValue(ContextValues.schemaRegistrySelected, true);
+      await this.updateTreeViewDescription();
+    } else {
+      setContextValue(ContextValues.schemaRegistrySelected, false);
+    }
+
+    this.setSearch(null);
+    await this.refresh();
   }
 
   // we're not handling just `Schema` here since we may be expanding a container tree item
@@ -305,28 +336,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       async (schemaRegistry: SchemaRegistry | null) => {
         // User has either selected a (probably different) SR to view, or has closed
         // a connection to a SR (null). React accordingly.
-
-        if (schemaRegistry === this.schemaRegistry) {
-          logger.debug(
-            "currentSchemaRegistryChanged event fired with same SR as being viewed already, ignoring.",
-          );
-          return;
-        }
-
-        logger.debug(
-          `currentSchemaRegistryChanged event fired, ${schemaRegistry ? "refreshing" : "resetting"}.`,
-          { schemaRegistry },
-        );
-
-        this.schemaRegistry = schemaRegistry;
-
-        if (schemaRegistry) {
-          setContextValue(ContextValues.schemaRegistrySelected, true);
-          await this.updateTreeViewDescription();
-        }
-
-        this.setSearch(null); // Always reset search when SR changes
-        await this.refresh();
+        logger.debug("currentSchemaRegistryChanged event fired");
+        await this.setSchemaRegistry(schemaRegistry);
       },
     );
 
@@ -384,6 +395,33 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** Try to reveal+expand schema under a subject, if present */
   async revealSchema(schemaToShow: Schema): Promise<void> {
+    if (!this.schemaRegistry || this.schemaRegistry.id !== schemaToShow.schemaRegistryId) {
+      // Reset what SR is being viewed.
+      logger.debug(
+        `revealSchema(): changing the view to look at schema registry ${schemaToShow.schemaRegistryId}`,
+      );
+
+      const loader = ResourceLoader.getInstance(schemaToShow.connectionId);
+      const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(
+        schemaToShow.environmentId,
+      );
+
+      if (!schemaRegistry) {
+        logger.error("Strange, couldn't find schema registry for schema", {
+          schemaToShow,
+        });
+        return;
+      }
+
+      // Update the view to show the new SR synchronously so we can guarantee
+      // that this.subjectsInTreeView is populated with the subjects from the new SR.
+      // and that `.schemas` of the subject soon-to-be-found within
+      // `this.subjectsInTreeView` will be populated with the schemas, especially
+      // the one we want to reveal by the time we get to the `.find()` and `.reveal()`
+      // lines lower down.
+      await this.setSchemaRegistry(schemaRegistry);
+    }
+
     // Find the subject in the tree view's model.
     const subject = this.subjectsInTreeView.get(schemaToShow.subject);
     if (!subject) {
@@ -393,13 +431,17 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       return;
     }
 
-    // The subject may be brand new and have no schemas yet. Expand the subject
-    // to force a fetch of the schemas.
-    if (!subject.schemas) {
-      await this.treeView.reveal(subject, { focus: true, expand: true });
-      // Will now have loaded the schemas for the subject, so now clear to find the schema.
-      // `subject` will be updated with a schemas array.
-    }
+    logger.debug(
+      `revealSchema(): found subject ${subject.name} for schema ${schemaToShow.id}, ${subject.schemas?.length} schemas, revealing...`,
+    );
+
+    // Ensure we have the schemas loaded for the subject and stitched in.
+    // Should update `subject` in place.
+    await this.updateSubjectSchemas(subject.name, null);
+
+    logger.debug(
+      `revealSchema(): After updateSubjectSchemas(), ${subject.schemas?.length} schemas.`,
+    );
 
     // Find the equivalent schema-within-the-subject by ID. It should have been loaded already, otherwise
     // something is coded wrong before here.
