@@ -89,7 +89,7 @@
       },
       {
         "command": "confluent.connections.direct.export",
-        "icon": "$(desktop-download)",
+        "icon": "$(confluent-export-connection)",
         "title": "Export as JSON",
         "category": "Confluent: Connections"
       },
@@ -353,7 +353,7 @@
       {
         "command": "confluent.topic.produce.fromDocument",
         "title": "Produce Message to Kafka Topic from schemaless JSON file",
-        "icon": "$(send)",
+        "icon": "$(confluent-send-message)",
         "category": "Confluent: Topic"
       },
       {
@@ -1036,46 +1036,67 @@
           "fontCharacter": "\\f103"
         }
       },
+      "confluent-export-connection": {
+        "description": "confluent-export-connection icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f104"
+        }
+      },
       "confluent-flink-compute-pool": {
         "description": "confluent-flink-compute-pool icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f104"
+          "fontCharacter": "\\f105"
         }
       },
       "confluent-kafka-cluster": {
         "description": "confluent-kafka-cluster icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f105"
+          "fontCharacter": "\\f106"
         }
       },
       "confluent-logo": {
         "description": "confluent-logo icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f106"
+          "fontCharacter": "\\f107"
+        }
+      },
+      "confluent-new-message": {
+        "description": "confluent-new-message icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f108"
         }
       },
       "confluent-schema-registry": {
         "description": "confluent-schema-registry icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f107"
+          "fontCharacter": "\\f109"
+        }
+      },
+      "confluent-send-message": {
+        "description": "confluent-send-message icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10a"
         }
       },
       "confluent-topic-without-schema": {
         "description": "confluent-topic-without-schema icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f108"
+          "fontCharacter": "\\f10b"
         }
       },
       "confluent-topic": {
         "description": "confluent-topic icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f109"
+          "fontCharacter": "\\f10c"
         }
       }
     },
