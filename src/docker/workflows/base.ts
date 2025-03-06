@@ -143,7 +143,7 @@ export abstract class LocalResourceWorkflow {
     return await getContainer(container.id);
   }
 
-  /** Stop and remove the local resource(s) associated with this workflow. */
+  /** Stop the local resource(s) associated with this workflow. */
   abstract stop(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,
