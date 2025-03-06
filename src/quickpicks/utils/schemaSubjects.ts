@@ -59,7 +59,7 @@ export async function getSubjectNameForStrategy(
             "Open Settings": () => {
               commands.executeCommand(
                 "workbench.action.openSettings",
-                `@id:confluent.topic.produceMessages.schemas.useTopicNameStrategy`,
+                `@id:${USE_TOPIC_NAME_STRATEGY}`,
               );
             },
             ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
