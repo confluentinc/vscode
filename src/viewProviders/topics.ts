@@ -319,6 +319,11 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
     this.searchMatches = new Set();
     this.totalItemCount = 0;
   }
+
+  /** Are we currently viewing a CCloud-based Kafka cluster? */
+  isFocusedOnCCloud(): boolean {
+    return this.kafkaCluster !== null && isCCloud(this.kafkaCluster);
+  }
 }
 
 /** Get the singleton instance of the {@link TopicViewProvider} */
