@@ -26,6 +26,8 @@ All notable changes to this extension will be documented in this file.
   fetching done through `GET /subjects`, `GET /subjects/<subject>/versions`, and
   `GET /subjects/{subject}/versions/{version}` routes. Should now be compatible with WarpStream
   schema registry.
+- Producing messages to a topic now offers options to include schema information through a series of
+  quickpicks based on user settings.
 
 ## 0.25.0
 
