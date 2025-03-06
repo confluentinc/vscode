@@ -15,11 +15,6 @@ Confluent, and read the docs at the [Confluent documentation](https://docs.confl
 Confluent for VS Code provides a number of features for working with your Kafka clusters, topics and
 schemas.
 
-> Confluent for VS Code is available for Early Access, and some Confluent features may not be
-> available. Consider installing the
-> [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) to access all
-> features of Confluent Cloud.
-
 ### Command Palette
 
 Most of the Confluent extension features are available in the VS Code Command Palette. Press
