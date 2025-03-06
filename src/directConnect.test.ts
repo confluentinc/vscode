@@ -135,6 +135,52 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
       assert.strictEqual(spec.schema_registry.credentials, undefined);
     });
+    it("should return a valid CustomConnectionSpec with OAuth credentials", () => {
+      const formData = {
+        name: "Test Connection",
+        formconnectiontype: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "OAuth",
+        "kafka_cluster.credentials.tokens_url": "http://localhost:8080/token",
+        "kafka_cluster.credentials.client_id": "clientid",
+        "kafka_cluster.credentials.client_secret": "clientsecret",
+        "kafka_cluster.credentials.scope": "read write",
+        "kafka_cluster.credentials.connect_timeout_millis": "5000",
+        "kafka_cluster.credentials.ccloud_logical_cluster_id": "lkc-123456",
+        "kafka_cluster.credentials.ccloud_identity_pool_id": "pool-12345",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
+      };
+
+      const spec = getConnectionSpecFromFormData(formData);
+      assert.strictEqual(spec.name, "Test Connection");
+      assert.ok(spec.kafka_cluster);
+      assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
+      assert.ok(spec.kafka_cluster.credentials);
+
+      assert.strictEqual(
+        // @ts-expect-error - incomplete types from OpenAPI
+        spec.kafka_cluster?.credentials?.tokens_url,
+        "http://localhost:8080/token",
+      );
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.client_id, "clientid");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.client_secret, "clientsecret");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.scope, "read write");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.connect_timeout_millis, "5000");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.ccloud_logical_cluster_id, "lkc-123456");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.ccloud_identity_pool_id, "pool-12345");
+
+      assert.ok(spec.schema_registry);
+      assert.ok(spec.schema_registry.uri);
+      assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
+      assert.strictEqual(spec.schema_registry.credentials, undefined);
+    });
     it("should not include credentials if the auth type is None", () => {
       const formData = {
         name: "Test Connection",
@@ -471,6 +517,35 @@ describe("directConnect.ts", () => {
       assert.strictEqual(
         // @ts-expect-error - could be api but we're using password here
         result.kafka_cluster?.credentials?.scram_password,
+        "fakeplaceholdersecrethere",
+      );
+    });
+    it("should replace password fields in OAuth credentials with `fakeplaceholdersecrethere` text", () => {
+      const spec = {
+        id: "123" as ConnectionId,
+        formConnectionType: "Apache Kafka" as FormConnectionType,
+        name: "Test OAuth Connection",
+        kafka_cluster: {
+          bootstrap_servers: "localhost:9092",
+          credentials: {
+            tokens_url: "http://localhost:8080/token",
+            client_id: "clientid",
+            client_secret: "clientsecret",
+            scope: "read write",
+            connect_timeout_millis: 5000,
+            ccloud_logical_cluster_id: "lkc-123456",
+            ccloud_identity_pool_id: "pool-12345",
+          },
+        },
+        schema_registry: {
+          uri: "http://localhost:8081",
+        },
+      };
+      const result = cleanSpec(spec);
+      assert.strictEqual(result.name, "Test OAuth Connection");
+      assert.strictEqual(
+        // @ts-expect-error - could be api but we're using password here
+        result.kafka_cluster?.credentials?.client_secret,
         "fakeplaceholdersecrethere",
       );
     });

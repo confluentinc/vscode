@@ -7,6 +7,7 @@ import {
   ConnectionType,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfOAuthCredentials,
   instanceOfScramCredentials,
 } from "./clients/sidecar";
 import { DirectConnectionManager, mergeSecrets } from "./directConnectManager";
@@ -226,6 +227,16 @@ export function getConnectionSpecFromFormData(
         scram_username: formData["kafka_cluster.credentials.scram_username"],
         scram_password: formData["kafka_cluster.credentials.scram_password"],
       };
+    } else if (formData["kafka_cluster.auth_type"] === "OAuth") {
+      spec.kafka_cluster.credentials = {
+        tokens_url: formData["kafka_cluster.credentials.tokens_url"],
+        client_id: formData["kafka_cluster.credentials.client_id"],
+        client_secret: formData["kafka_cluster.credentials.client_secret"],
+        scope: formData["kafka_cluster.credentials.scope"],
+        connect_timeout_millis: formData["kafka_cluster.credentials.connect_timeout_millis"],
+        ccloud_logical_cluster_id: formData["kafka_cluster.credentials.ccloud_logical_cluster_id"],
+        ccloud_identity_pool_id: formData["kafka_cluster.credentials.ccloud_identity_pool_id"],
+      };
     }
   }
 
@@ -334,6 +345,9 @@ export function cleanSpec(connection: CustomConnectionSpec): CustomConnectionSpe
     }
     if (instanceOfScramCredentials(clean.kafka_cluster.credentials)) {
       clean.kafka_cluster.credentials.scram_password = "fakeplaceholdersecrethere";
+    }
+    if (instanceOfOAuthCredentials(clean.kafka_cluster.credentials)) {
+      clean.kafka_cluster.credentials.client_secret = "fakeplaceholdersecrethere";
     }
   }
   if (clean.kafka_cluster?.ssl?.truststore?.password) {
