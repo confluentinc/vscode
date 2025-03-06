@@ -3,7 +3,7 @@ import * as sinon from "sinon";
 import { Uri, window, workspace } from "vscode";
 import * as dockerConfigs from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import * as dockerWorkflows from "../docker/workflows";
+import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { ConfluentLocalWorkflow } from "../docker/workflows/confluent-local";
 import { ConfluentPlatformSchemaRegistryWorkflow } from "../docker/workflows/cp-schema-registry";
 import * as errors from "../errors";
@@ -41,14 +41,14 @@ describe("commands/docker.ts runWorkflowWithProgress()", () => {
 
     stubKafkaWorkflow = sandbox.createStubInstance(ConfluentLocalWorkflow);
     getKafkaWorkflowStub = sandbox
-      .stub(dockerWorkflows, "getKafkaWorkflow")
+      .stub(LocalResourceWorkflow, "getKafkaWorkflow")
       .returns(stubKafkaWorkflow);
 
     stubSchemaRegistryWorkflow = sandbox.createStubInstance(
       ConfluentPlatformSchemaRegistryWorkflow,
     );
     getSchemaRegistryWorkflowStub = sandbox
-      .stub(dockerWorkflows, "getSchemaRegistryWorkflow")
+      .stub(LocalResourceWorkflow, "getSchemaRegistryWorkflow")
       .returns(stubSchemaRegistryWorkflow);
   });
 

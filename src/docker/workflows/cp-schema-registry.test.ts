@@ -37,6 +37,7 @@ import {
   IMAGE_SETTINGS_BUTTON,
   START_KAFKA_BUTTON,
 } from "./cp-schema-registry";
+import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
 describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistryWorkflow", () => {
   let sandbox: sinon.SinonSandbox;
@@ -64,6 +65,7 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   let showErrorNotificationStub: sinon.SinonStub;
 
   before(async () => {
+    registerLocalResourceWorkflows();
     await getTestExtensionContext();
   });
 
@@ -124,6 +126,18 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
   it(".imageRepo should return the correct image repository for this workflow", () => {
     // making sure the getter method is working as expected against the static property
     assert.equal(workflow.imageRepo, ConfluentPlatformSchemaRegistryWorkflow.imageRepo);
+  });
+
+  it("start() should get the imageTag from workspace configuration", async () => {
+    const customTag = "7.0.0";
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
+    });
+
+    await workflow.start(TEST_CANCELLATION_TOKEN);
+
+    // just check imageTag; other tests check the rest
+    assert.strictEqual(workflow.imageTag, customTag);
   });
 
   it("start() should create and start Schema Registry container", async () => {
@@ -294,6 +308,18 @@ describe("docker/workflows/cp-schema-registry.ts ConfluentPlatformSchemaRegistry
     // notification tested in base.test.ts as part of .startContainer() tests
 
     assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+  });
+
+  it("stop() should get the imageTag from workspace configuration", async () => {
+    const customTag = "7.0.0";
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
+    });
+
+    await workflow.stop(TEST_CANCELLATION_TOKEN);
+
+    // just check imageTag; other tests check the rest
+    assert.strictEqual(workflow.imageTag, customTag);
   });
 
   it("stop() should stop Schema Registry container", async () => {
