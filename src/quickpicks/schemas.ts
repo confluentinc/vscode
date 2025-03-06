@@ -8,7 +8,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SubjectNameStrategy } from "../schemas/produceMessageSchema";
 import { logUsage, UserEvent } from "../telemetry/events";
-import { QuickPickItemWithValue } from "./constants";
+import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.schemas");
 
