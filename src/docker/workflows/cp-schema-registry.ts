@@ -1,5 +1,4 @@
 import { CancellationToken, commands, Progress, window } from "vscode";
-import { getKafkaWorkflow } from ".";
 import {
   ContainerCreateRequest,
   ContainerCreateResponse,
@@ -91,7 +90,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     this.logAndUpdateProgress(`Checking for Kafka containers...`);
     const kafkaContainers = await this.fetchAndFilterKafkaContainers();
     if (kafkaContainers.length === 0) {
-      const kafkaWorkflow = getKafkaWorkflow();
+      const kafkaWorkflow = LocalResourceWorkflow.getKafkaWorkflow();
       this.logger.error("no Kafka containers found, skipping creation");
       window
         .showErrorMessage(
@@ -164,6 +163,7 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
     progress?: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     this.progress = progress;
+    this.imageTag = getLocalSchemaRegistryImageTag();
 
     const repoTag = `${ConfluentPlatformSchemaRegistryWorkflow.imageRepo}:${this.imageTag}`;
     const containerListRequest: ContainerListRequest = {
@@ -219,7 +219,8 @@ export class ConfluentPlatformSchemaRegistryWorkflow extends LocalResourceWorkfl
   /** List existing Kafka broker containers by user-configurable image repo+tag, then
    * return the container-inspect responses. */
   async fetchAndFilterKafkaContainers(): Promise<ContainerInspectResponse[]> {
-    const kafkaWorkflow: LocalResourceWorkflow | undefined = getKafkaWorkflow();
+    const kafkaWorkflow: LocalResourceWorkflow | undefined =
+      LocalResourceWorkflow.getKafkaWorkflow();
     if (!kafkaWorkflow) {
       this.logger.error("Unable to look up Kafka image from workflow.");
       return [];
