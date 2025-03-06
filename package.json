@@ -352,7 +352,7 @@
       },
       {
         "command": "confluent.topic.produce.fromDocument",
-        "title": "Produce Message to Kafka Topic from schemaless JSON file",
+        "title": "Send Message(s) to Topic",
         "icon": "$(send)",
         "category": "Confluent: Topic"
       },
@@ -474,10 +474,20 @@
         "confluent.preview.enableProduceMessages": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable message production for Kafka topics.\n\n---\n\n⚠️ **WARNING**: This setting may allow you to produce messages without schemas to topics that expect them, which can lead to data loss or corruption.",
+          "markdownDescription": "Enable message production for Kafka topics.",
           "tags": [
             "preview"
           ]
+        },
+        "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
+        },
+        "confluent.topic.produceMessages.schemas.allowOlderVersions": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
         }
       }
     },

@@ -121,6 +121,14 @@ export async function logError(
   }
 }
 
+export const DEFAULT_ERROR_NOTIFICATION_BUTTONS: Record<
+  string,
+  (() => void) | (() => Promise<void>)
+> = {
+  "Open Logs": () => commands.executeCommand("confluent.showOutputChannel"),
+  "File Issue": () => commands.executeCommand("confluent.support.issue"),
+};
+
 /** Shows the error notification with `message` and custom action buttons.
  * @param message Error message to display
  * @param buttons Optional map of button labels to callback functions; defaults to showing
@@ -130,11 +138,7 @@ export async function showErrorNotificationWithButtons(
   message: string,
   buttons?: Record<string, (() => void) | (() => Promise<void>)>,
 ) {
-  const defaultButtons: Record<string, (() => void) | (() => Promise<void>)> = {
-    "Open Logs": () => commands.executeCommand("confluent.showOutputChannel"),
-    "File Issue": () => commands.executeCommand("confluent.support.issue"),
-  };
-  const buttonMap = buttons || defaultButtons;
+  const buttonMap = buttons || DEFAULT_ERROR_NOTIFICATION_BUTTONS;
   // we're awaiting the user's selection to more easily test the callback behavior, rather than
   // chaining with .then()
   const selection = await window.showErrorMessage(message, ...Object.keys(buttonMap));
