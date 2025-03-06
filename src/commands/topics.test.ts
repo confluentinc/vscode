@@ -1,15 +1,21 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-import { TEST_LOCAL_KAFKA_TOPIC } from "../../tests/unit/testResources";
-import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
+import {
+  TEST_CCLOUD_KAFKA_TOPIC,
+  TEST_LOCAL_KAFKA_TOPIC,
+  TEST_LOCAL_KEY_SCHEMA,
+  TEST_LOCAL_SCHEMA,
+} from "../../tests/unit/testResources";
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
+import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
+import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
+import * as schemaUtils from "../quickpicks/utils/schemas";
+import { ProduceMessage, SubjectNameStrategy } from "../schemas/produceMessageSchema";
 import * as sidecar from "../sidecar";
-import { CustomConnectionSpec, getResourceManager } from "../storage/resourceManager";
-import { createProduceRequestData, produceMessagesFromDocument } from "./topics";
+import { produceMessagesFromDocument } from "./topics";
 
 const fakeMessage = {
   key: "test-key",
@@ -17,14 +23,13 @@ const fakeMessage = {
   headers: [{ key: "test-header", value: "test-header-value" }],
 };
 
-describe("commands/topics.ts produceMessageFromDocument()", function () {
+describe("commands/topics.ts produceMessageFromDocument() without schemas", function () {
   let sandbox: sinon.SinonSandbox;
 
   let showErrorMessageStub: sinon.SinonStub;
 
   let uriQuickpickStub: sinon.SinonStub;
   let loadDocumentContentStub: sinon.SinonStub;
-  let schemaKindMultiSelectStub: sinon.SinonStub;
 
   let clientStub: sinon.SinonStubbedInstance<RecordsV3Api>;
 
@@ -41,11 +46,12 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
       .stub(uriQuickpicks, "loadDocumentContent")
       .resolves({ content: JSON.stringify(fakeMessage) });
     // assume schemaless produce for most tests
-    schemaKindMultiSelectStub = sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect").resolves({
+    const schemaLess: schemaQuickPicks.SchemaKindSelection = {
       keySchema: false,
       valueSchema: false,
       deferToDocument: false,
-    } as schemaQuickPicks.SchemaKindSelection);
+    };
+    sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect").resolves(schemaLess);
 
     // create the stubs for the sidecar + service client
     const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
@@ -156,83 +162,221 @@ describe("commands/topics.ts produceMessageFromDocument()", function () {
   });
 });
 
-describe("commands/topics.ts createProduceRequestData()", function () {
+describe("commands/topics.ts produceMessageFromDocument() with schema(s)", function () {
   let sandbox: sinon.SinonSandbox;
-  let getDirectConnectionStub: sinon.SinonStub;
 
-  before(async function () {
-    await getTestExtensionContext();
-  });
+  let loadDocumentContentStub: sinon.SinonStub;
+  let schemaKindMultiSelectStub: sinon.SinonStub;
+  let getSubjectNameStrategyStub: sinon.SinonStub;
+  let promptForSchemaStub: sinon.SinonStub;
+
+  let recordsV3ApiStub: sinon.SinonStubbedInstance<RecordsV3Api>;
+  let ccloudProduceApiStub: sinon.SinonStubbedInstance<ConfluentCloudProduceRecordsResourceApi>;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    getDirectConnectionStub = sandbox.stub(getResourceManager(), "getDirectConnection");
+    sandbox.stub(vscode.window, "showErrorMessage");
+    sandbox.stub(vscode.window, "showInformationMessage").resolves();
+
+    // stub the quickpick for file/editor URI and the resulting content
+    sandbox.stub(uriQuickpicks, "uriQuickpick").resolves(vscode.Uri.file("test.json"));
+    loadDocumentContentStub = sandbox
+      .stub(uriQuickpicks, "loadDocumentContent")
+      .resolves({ content: JSON.stringify(fakeMessage) });
+
+    schemaKindMultiSelectStub = sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect");
+    getSubjectNameStrategyStub = sandbox.stub(schemaSubjectUtils, "getSubjectNameStrategy");
+    promptForSchemaStub = sandbox.stub(schemaUtils, "promptForSchema");
+
+    // create the stubs for the sidecar + service clients
+    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+      sandbox.createStubInstance(sidecar.SidecarHandle);
+    // non-CCloud:
+    recordsV3ApiStub = sandbox.createStubInstance(RecordsV3Api);
+    mockSidecarHandle.getRecordsV3Api.returns(recordsV3ApiStub);
+    // CCloud:
+    ccloudProduceApiStub = sandbox.createStubInstance(ConfluentCloudProduceRecordsResourceApi);
+    mockSidecarHandle.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
+
+    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
   });
 
   afterEach(function () {
     sandbox.restore();
   });
 
-  it("should create request data with 'type' set for CCloud topics", async function () {
-    const result = await createProduceRequestData(
-      {
-        key: "test-key",
-        value: "test-value",
-      },
-      {},
-      true,
+  it("should exit early if schema kind selection is cancelled", async function () {
+    schemaKindMultiSelectStub.resolves(undefined);
+
+    // non-CCloud:
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    // CCloud:
+    await produceMessagesFromDocument(TEST_CCLOUD_KAFKA_TOPIC);
+
+    sinon.assert.notCalled(getSubjectNameStrategyStub);
+    sinon.assert.notCalled(promptForSchemaStub);
+    sinon.assert.notCalled(
+      ccloudProduceApiStub.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost,
     );
-
-    assert.deepStrictEqual(result, {
-      keyData: {
-        type: "JSON",
-        data: "test-key",
-      },
-      valueData: {
-        type: "JSON",
-        data: "test-value",
-      },
-    });
   });
 
-  it("should create request data without 'type' for local topics", async function () {
-    const result = await createProduceRequestData({
-      key: "test-key",
-      value: "test-value",
+  it("should handle key schema only selection", async function () {
+    // user only selected "Key Schema" in the multi-select quickpick
+    schemaKindMultiSelectStub.resolves({
+      keySchema: true,
+      valueSchema: false,
+      deferToDocument: false,
+    });
+    getSubjectNameStrategyStub.resolves(SubjectNameStrategy.TOPIC_NAME);
+    promptForSchemaStub.resolves(TEST_LOCAL_KEY_SCHEMA);
+    recordsV3ApiStub.produceRecord.resolves({
+      error_code: 200,
+      timestamp: new Date(),
+      partition_id: 0,
     });
 
-    assert.deepStrictEqual(result, {
-      keyData: {
-        data: "test-key",
-      },
-      valueData: {
-        data: "test-value",
-      },
-    });
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    sinon.assert.calledOnceWithExactly(getSubjectNameStrategyStub, TEST_LOCAL_KAFKA_TOPIC, "key");
+    sinon.assert.calledOnceWithExactly(
+      promptForSchemaStub,
+      TEST_LOCAL_KAFKA_TOPIC,
+      "key",
+      SubjectNameStrategy.TOPIC_NAME,
+    );
+    sinon.assert.calledOnce(recordsV3ApiStub.produceRecord);
   });
 
-  it("should create request data without 'type' for direct connection topics", async function () {
-    // even if it's a CCloud direct connection, we don't want to set 'type' since the sidecar will
-    // send it directly to the Kafka cluster instead of through the REST proxy
-    const fakeSpec: CustomConnectionSpec = {
-      ...TEST_DIRECT_CONNECTION_FORM_SPEC,
-      formConnectionType: "Confluent Cloud",
+  it("should handle value schema only selection", async function () {
+    // user only selected "Value Schema" in the multi-select quickpick
+    schemaKindMultiSelectStub.resolves({
+      keySchema: false,
+      valueSchema: true,
+      deferToDocument: false,
+    });
+    getSubjectNameStrategyStub.resolves(SubjectNameStrategy.TOPIC_NAME);
+    promptForSchemaStub.resolves(TEST_LOCAL_SCHEMA);
+    recordsV3ApiStub.produceRecord.resolves({
+      error_code: 200,
+      timestamp: new Date(),
+      partition_id: 0,
+    });
+
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.ok(getSubjectNameStrategyStub.calledOnceWith(TEST_LOCAL_KAFKA_TOPIC, "value"));
+    assert.ok(
+      promptForSchemaStub.calledOnceWith(
+        TEST_LOCAL_KAFKA_TOPIC,
+        "value",
+        SubjectNameStrategy.TOPIC_NAME,
+      ),
+    );
+    assert.ok(recordsV3ApiStub.produceRecord.calledOnce);
+  });
+
+  it("should handle both key and value schema selection", async function () {
+    // user selected both "key" and "value" in the multi-select quickpick
+    schemaKindMultiSelectStub.resolves({
+      keySchema: true,
+      valueSchema: true,
+      deferToDocument: false,
+    });
+
+    // setup stubs to return different values for different calls
+    getSubjectNameStrategyStub
+      .withArgs(TEST_LOCAL_KAFKA_TOPIC, "key")
+      .resolves(SubjectNameStrategy.TOPIC_NAME);
+    getSubjectNameStrategyStub
+      .withArgs(TEST_LOCAL_KAFKA_TOPIC, "value")
+      .resolves(SubjectNameStrategy.RECORD_NAME);
+
+    promptForSchemaStub
+      .withArgs(TEST_LOCAL_KAFKA_TOPIC, "key", SubjectNameStrategy.TOPIC_NAME)
+      .resolves(TEST_LOCAL_KEY_SCHEMA);
+    promptForSchemaStub
+      .withArgs(TEST_LOCAL_KAFKA_TOPIC, "value", SubjectNameStrategy.RECORD_NAME)
+      .resolves(TEST_LOCAL_SCHEMA);
+
+    recordsV3ApiStub.produceRecord.resolves({
+      error_code: 200,
+      timestamp: new Date(),
+      partition_id: 0,
+    });
+
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    assert.ok(getSubjectNameStrategyStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "key"));
+    assert.ok(getSubjectNameStrategyStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "value"));
+    assert.ok(
+      promptForSchemaStub.calledWith(TEST_LOCAL_KAFKA_TOPIC, "key", SubjectNameStrategy.TOPIC_NAME),
+    );
+    assert.ok(
+      promptForSchemaStub.calledWith(
+        TEST_LOCAL_KAFKA_TOPIC,
+        "value",
+        SubjectNameStrategy.RECORD_NAME,
+      ),
+    );
+    assert.ok(recordsV3ApiStub.produceRecord.calledOnce);
+  });
+
+  it("should handle the deferToDocument option", async function () {
+    // user clicked "Advanced: Use File/Editor Contents"
+    schemaKindMultiSelectStub.resolves({
+      keySchema: false,
+      valueSchema: false,
+      deferToDocument: true,
+    });
+
+    const fakeMessageWithSchema: ProduceMessage = {
+      ...fakeMessage,
+      key_schema: {
+        subject: "manual-key-subject",
+        schema_version: 1,
+        subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
+      },
+      value_schema: {
+        subject: "manual-value-subject",
+        schema_version: 2,
+        subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
+      },
     };
-    getDirectConnectionStub.resolves(fakeSpec);
-
-    const result = await createProduceRequestData({
-      key: "test-key",
-      value: "test-value",
+    loadDocumentContentStub.resolves({ content: JSON.stringify(fakeMessageWithSchema) });
+    recordsV3ApiStub.produceRecord.resolves({
+      error_code: 200,
+      timestamp: new Date(),
+      partition_id: 0,
     });
 
-    assert.deepStrictEqual(result, {
-      keyData: {
-        data: "test-key",
-      },
-      valueData: {
-        data: "test-value",
-      },
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+    // should not show schema quickpicks to user
+    assert.ok(getSubjectNameStrategyStub.notCalled);
+    assert.ok(promptForSchemaStub.notCalled);
+    assert.ok(recordsV3ApiStub.produceRecord.calledOnce);
+  });
+
+  it("should handle errors in promptForSchema", async function () {
+    schemaKindMultiSelectStub.resolves({
+      keySchema: true,
+      valueSchema: false,
+      deferToDocument: false,
     });
+    getSubjectNameStrategyStub.resolves(SubjectNameStrategy.TOPIC_NAME);
+    // failure to find a schema
+    promptForSchemaStub.rejects(new Error("No schema found"));
+
+    // non-CCloud:
+    await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+    // CCloud:
+    await produceMessagesFromDocument(TEST_CCLOUD_KAFKA_TOPIC);
+
+    // should exit early and not send the produce request
+    sinon.assert.notCalled(recordsV3ApiStub.produceRecord);
+    sinon.assert.notCalled(
+      ccloudProduceApiStub.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost,
+    );
   });
 });
