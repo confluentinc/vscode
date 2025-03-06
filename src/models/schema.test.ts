@@ -211,18 +211,22 @@ describe("SubjectTreeItem", () => {
     assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
   });
 
-  it("Test subject icon determination", () => {
-    for (const [name, expected] of [
-      ["test-key", IconNames.KEY_SUBJECT],
-      ["test-value", IconNames.VALUE_SUBJECT],
-      // Should default to value subject even if doesn't smell like it.
-      ["test-other", IconNames.VALUE_SUBJECT],
-    ]) {
-      const subject = new Subject(name, CCLOUD_CONNECTION_ID, "envId" as EnvironmentId, "srId", [
-        TEST_CCLOUD_SCHEMA,
-      ]);
+  for (const [subjectName, iconName, strategy] of [
+    ["test-key", IconNames.KEY_SUBJECT, "TopicNameStrategy"],
+    ["test-value", IconNames.VALUE_SUBJECT, "TopicNameStrategy"],
+    ["test-other", IconNames.OTHER_SUBJECT, "**NOT** TopicNameStrategy"],
+  ]) {
+    it(`subject "${subjectName}" should use the "${iconName}" icon (${strategy})`, () => {
+      const subject = new Subject(
+        subjectName,
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        [TEST_CCLOUD_SCHEMA],
+      );
       const subjectTreeItem = new SubjectTreeItem(subject);
-      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, expected);
-    }
-  });
+
+      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, iconName);
+    });
+  }
 });
