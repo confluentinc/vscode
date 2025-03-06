@@ -85,9 +85,7 @@ export class Subject implements IResourceBase, ISearchable {
   }
 }
 
-/**
- *
- */
+/** Base class representing a single version of a schema. */
 export class Schema extends Data implements IResourceBase {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
@@ -165,9 +163,7 @@ export class SubjectTreeItem extends vscode.TreeItem {
 
     this.id = subject.name;
 
-    // If we have schema bindings, then err on the side of showing the value icon
-    const errOnValueSubject: boolean = subject.schemas != null;
-    this.iconPath = getSubjectIcon(subject.name, errOnValueSubject);
+    this.iconPath = getSubjectIcon(subject.name);
 
     const propertyParts: string[] = new Array<string>();
     if (subject.schemas) {
