@@ -41,17 +41,17 @@ describe("TopicViewProvider methods", () => {
     assert.ok(treeItem instanceof SubjectTreeItem);
   });
 
-  it("Test isFocusedOnCCloud() returns true when the cluster is a CCloud one", () => {
+  it("isFocusedOnCCloud() should return true when the cluster is a CCloud one", () => {
     provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
     assert.strictEqual(provider.isFocusedOnCCloud(), true);
   });
 
-  it("Test isFocusedOnCCloud() returns false when the cluster is not a CCloud one", () => {
+  it("isFocusedOnCCloud() should return false when the cluster is not a CCloud one", () => {
     provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
     assert.strictEqual(provider.isFocusedOnCCloud(), false);
   });
 
-  it("Test isFocusedOnCCloud() returns false when the cluster is null", () => {
+  it("isFocusedOnCCloud() should return false when the cluster is null", () => {
     provider.kafkaCluster = null;
     assert.strictEqual(provider.isFocusedOnCCloud(), false);
   });

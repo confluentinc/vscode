@@ -142,18 +142,18 @@ describe("SchemasViewProvider search behavior", () => {
     assert.ok(refreshSpy.calledOnce);
   });
 
-  it("Test isFocusedOnCCloud() returns true when the current schema registry is a CCloud one", () => {
+  it("isFocusedOnCCloud() should return true when the current schema registry is a CCloud one", () => {
     const isFocused = provider.isFocusedOnCCloud();
     assert.strictEqual(isFocused, true);
   });
 
-  it("Test isFocusedOnCCloud() returns false when the current schema registry is not ccloud", () => {
+  it("isFocusedOnCCloud() should return false when the current schema registry is not ccloud", () => {
     provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
     const isFocused = provider.isFocusedOnCCloud();
     assert.strictEqual(isFocused, false);
   });
 
-  it("Test isFocusedOnCCloud() returns false when the current schema registry is null", () => {
+  it("isFocusedOnCCloud() should return false when the current schema registry is null", () => {
     provider.schemaRegistry = null;
     const isFocused = provider.isFocusedOnCCloud();
     assert.strictEqual(isFocused, false);
