@@ -5,6 +5,7 @@ import {
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { schemaSearchSet } from "../emitters";
@@ -139,5 +140,22 @@ describe("SchemasViewProvider search behavior", () => {
     assert.ok(setSearchSpy.calledWith("foo"));
 
     assert.ok(refreshSpy.calledOnce);
+  });
+
+  it("Test isFocusedOnCCloud() returns true when the current schema registry is a CCloud one", () => {
+    const isFocused = provider.isFocusedOnCCloud();
+    assert.strictEqual(isFocused, true);
+  });
+
+  it("Test isFocusedOnCCloud() returns false when the current schema registry is not ccloud", () => {
+    provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+    const isFocused = provider.isFocusedOnCCloud();
+    assert.strictEqual(isFocused, false);
+  });
+
+  it("Test isFocusedOnCCloud() returns false when the current schema registry is null", () => {
+    provider.schemaRegistry = null;
+    const isFocused = provider.isFocusedOnCCloud();
+    assert.strictEqual(isFocused, false);
   });
 });
