@@ -40,24 +40,24 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   // Map of subject string -> subject object currently in the tree view.
   private subjectsInTreeView: Map<string, Subject> = new Map();
 
-  /** (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
+  /**
+   * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the schemas
    * in the schema registry.
    */
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    if (this.schemaRegistry === null) {
-      return;
-    }
-
     // Out with any existing subjects.
     this.subjectsInTreeView.clear();
 
-    const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+    if (this.schemaRegistry !== null) {
+      // Fetch subjects from the SR.
+      const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
-    // Fetch subjects using the loader, pushing down need to do deep refresh.
-    const subjects: Subject[] = await loader.getSubjects(this.schemaRegistry, forceDeepRefresh);
+      // Fetch subjects using the loader, pushing down need to do deep refresh.
+      const subjects: Subject[] = await loader.getSubjects(this.schemaRegistry, forceDeepRefresh);
 
-    // Repopulate this.subjectsInTreeView from getSubjects() result.
-    subjects.forEach((subject: Subject) => this.subjectsInTreeView.set(subject.name, subject));
+      // Repopulate this.subjectsInTreeView from getSubjects() result.
+      subjects.forEach((subject: Subject) => this.subjectsInTreeView.set(subject.name, subject));
+    }
 
     // Indicate to view that toplevel items have changed.
     this._onDidChangeTreeData.fire();
@@ -303,16 +303,29 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     const currentSchemaRegistryChangedSub: vscode.Disposable = currentSchemaRegistryChanged.event(
       async (schemaRegistry: SchemaRegistry | null) => {
+        // User has either selected a (probably different) SR to view, or has closed
+        // a connection to a SR (null). React accordingly.
+
+        if (schemaRegistry === this.schemaRegistry) {
+          logger.debug(
+            "currentSchemaRegistryChanged event fired with same SR as being viewed already, ignoring.",
+          );
+          return;
+        }
+
         logger.debug(
           `currentSchemaRegistryChanged event fired, ${schemaRegistry ? "refreshing" : "resetting"}.`,
           { schemaRegistry },
         );
-        this.setSearch(null); // reset search when SR changes
+
+        this.schemaRegistry = schemaRegistry;
+
         if (schemaRegistry) {
           setContextValue(ContextValues.schemaRegistrySelected, true);
-          this.schemaRegistry = schemaRegistry;
           await this.updateTreeViewDescription();
         }
+
+        this.setSearch(null); // Always reset search when SR changes
         await this.refresh();
       },
     );
@@ -414,6 +427,11 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     // clear from any previous search filter
     this.searchMatches = new Set();
     this.totalItemCount = 0;
+  }
+
+  /** Are we currently viewing a CCloud-based schema registry? */
+  isFocusedOnCCloud(): boolean {
+    return this.schemaRegistry !== null && isCCloud(this.schemaRegistry);
   }
 }
 

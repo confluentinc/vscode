@@ -5,6 +5,8 @@ import { ContextValues, getContextValue } from "../../context/values";
 import { currentKafkaClusterChanged, currentSchemaRegistryChanged } from "../../emitters";
 import { Logger } from "../../logging";
 import { getResourceManager } from "../../storage/resourceManager";
+import { SchemasViewProvider } from "../../viewProviders/schemas";
+import { TopicViewProvider } from "../../viewProviders/topics";
 
 const logger = new Logger("sidecar.connections.ccloud");
 
@@ -30,8 +32,18 @@ export async function clearCurrentCCloudResources() {
   // - fire events to update things like the Topics view, Schemas view, etc.
   logger.warn("clearing current CCloud resources from extension state");
   await getResourceManager().deleteCCloudResources();
-  currentKafkaClusterChanged.fire(null);
-  currentSchemaRegistryChanged.fire(null);
+
+  // If we are looking at a CCloud cluster in the Topics view, we need to clear the current cluster.
+  const topicViewProvider = TopicViewProvider.getInstance();
+  if (topicViewProvider.isFocusedOnCCloud()) {
+    currentKafkaClusterChanged.fire(null);
+  }
+
+  // Likewise for the Schema Registry view.
+  const schemasViewProvider = SchemasViewProvider.getInstance();
+  if (schemasViewProvider.isFocusedOnCCloud()) {
+    currentSchemaRegistryChanged.fire(null);
+  }
 }
 
 /** Do we currently have a ccloud connection? */
