@@ -325,14 +325,14 @@
       },
       {
         "command": "confluent.topic.consume",
-        "icon": "$(play-circle)",
-        "title": "Browse Messages",
+        "icon": "$(confluent-view-messages)",
+        "title": "View Messages",
         "category": "Confluent: Topic"
       },
       {
         "command": "confluent.topic.consume.duplicate",
         "icon": "$(explorer-view-icon)",
-        "title": "Duplicate Message Browser",
+        "title": "Duplicate Message Viewer",
         "category": "Confluent: Topic",
         "enablement": "activeWebviewPanelId == message-viewer"
       },
@@ -352,7 +352,7 @@
       },
       {
         "command": "confluent.topic.produce.fromDocument",
-        "title": "Produce Message to Kafka Topic from schemaless JSON file",
+        "title": "Send Message(s) to Topic",
         "icon": "$(confluent-send-message)",
         "category": "Confluent: Topic"
       },
@@ -962,6 +962,11 @@
           "group": "inline@1"
         },
         {
+          "command": "confluent.topic.produce.fromDocument",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
+          "group": "inline@2"
+        },
+        {
           "command": "confluent.topics.delete",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDELETE.*/",
           "group": "topics"
@@ -995,11 +1000,6 @@
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
           "group": "4_copy@3"
-        },
-        {
-          "command": "confluent.topic.produce.fromDocument",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
-          "group": "inline@1"
         },
         {
           "command": "confluent.openCCloudLink",
@@ -1097,6 +1097,13 @@
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
           "fontCharacter": "\\f10c"
+        }
+      },
+      "confluent-view-messages": {
+        "description": "confluent-view-messages icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10d"
         }
       }
     },
