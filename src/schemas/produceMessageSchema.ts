@@ -107,7 +107,7 @@ export interface SchemaInfo {
   // TODO: add Schema Registry URI?
   schema_version: number;
   subject: string;
-  subject_name_strategy: SubjectNameStrategy | undefined;
+  subject_name_strategy: SubjectNameStrategy;
   type?: "BINARY" | "JSON" | "STRING" | undefined;
 }
 
