@@ -111,7 +111,9 @@ export async function runWorkflowWithProgress(
           });
           // early returns handled within each workflow depending on how far it got
         });
-
+        progress.report({
+          message: `${start ? "Starting" : "Stopping"} ${workflow.resourceKind}...`,
+        });
         logger.debug(`running ${workflow.resourceKind} workflow`, { start });
         workflow.sendTelemetryEvent(UserEvent.LocalDockerAction, {
           status: "workflow initialized",
