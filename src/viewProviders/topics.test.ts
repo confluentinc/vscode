@@ -7,6 +7,7 @@ import {
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
@@ -38,6 +39,21 @@ describe("TopicViewProvider methods", () => {
   it("getTreeItem() should return a SubjectTreeItem when given a Subject", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.ok(treeItem instanceof SubjectTreeItem);
+  });
+
+  it("Test isFocusedOnCCloud() returns true when the cluster is a CCloud one", () => {
+    provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
+    assert.strictEqual(provider.isFocusedOnCCloud(), true);
+  });
+
+  it("Test isFocusedOnCCloud() returns false when the cluster is not a CCloud one", () => {
+    provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+    assert.strictEqual(provider.isFocusedOnCCloud(), false);
+  });
+
+  it("Test isFocusedOnCCloud() returns false when the cluster is null", () => {
+    provider.kafkaCluster = null;
+    assert.strictEqual(provider.isFocusedOnCCloud(), false);
   });
 });
 
