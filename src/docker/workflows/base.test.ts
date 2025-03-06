@@ -1,11 +1,14 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { window } from "vscode";
+import { window, workspace } from "vscode";
 import { ContainerInspectResponse, ContainerSummary, ResponseError } from "../../clients/docker";
 import { Logger } from "../../logging";
+import { LOCAL_KAFKA_IMAGE } from "../../preferences/constants";
 import * as dockerContainers from "../containers";
 import * as dockerImages from "../images";
 import { LocalResourceContainer, LocalResourceWorkflow } from "./base";
+import { ConfluentLocalWorkflow } from "./confluent-local";
+import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
 class TestWorkflow extends LocalResourceWorkflow {
   protected logger = new Logger("test");
@@ -181,5 +184,74 @@ describe("docker/workflows/base.ts LocalResourceWorkflow base methods/properties
     assert.ok(
       showErrorMessageStub.calledOnceWith('Failed to start test container "test-container": uh oh'),
     );
+  });
+});
+
+describe("docker/workflows/index.ts LocalResourceWorkflow registry", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  // vscode stubs
+  let showErrorMessageStub: sinon.SinonStub;
+  let getConfigurationStub: sinon.SinonStub;
+
+  before(() => {
+    registerLocalResourceWorkflows();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
+    getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it(`getKafkaWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_KAFKA_IMAGE}" config`, async () => {
+    const unsupportedImageRepo = "unsupported/image-name";
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(unsupportedImageRepo),
+    });
+
+    assert.throws(
+      LocalResourceWorkflow.getKafkaWorkflow,
+      new Error(`Unsupported Kafka image repo: ${unsupportedImageRepo}`),
+    );
+    assert.ok(showErrorMessageStub.calledOnce);
+  });
+
+  it(`getKafkaWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE}" config`, async () => {
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(ConfluentLocalWorkflow.imageRepo),
+    });
+
+    const workflow = LocalResourceWorkflow.getKafkaWorkflow();
+
+    assert.ok(workflow instanceof ConfluentLocalWorkflow);
+  });
+
+  it(`getSchemaRegistryWorkflow() should show an error notification and throw an error if no workflow matches the "${LOCAL_KAFKA_IMAGE}" config`, async () => {
+    const unsupportedImageRepo = "unsupported/image-name";
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(unsupportedImageRepo),
+    });
+
+    assert.throws(
+      LocalResourceWorkflow.getSchemaRegistryWorkflow,
+      new Error(`Unsupported Schema Registry image repo: ${unsupportedImageRepo}`),
+    );
+    assert.ok(showErrorMessageStub.calledOnce);
+  });
+
+  it(`getSchemaRegistryWorkflow() should return a ConfluentLocalWorkflow instance for the correct "${LOCAL_KAFKA_IMAGE}" config`, async () => {
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE).returns(ConfluentLocalWorkflow.imageRepo),
+    });
+
+    const workflow = LocalResourceWorkflow.getSchemaRegistryWorkflow();
+
+    assert.ok(workflow instanceof ConfluentLocalWorkflow);
   });
 });

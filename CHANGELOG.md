@@ -14,11 +14,18 @@ All notable changes to this extension will be documented in this file.
   the connections form
 
 ### Fixed
-- Logging out of CCloud resets the Topics and/or Schema Registry views if and only if they were focused on CCloud-based broker or schema registry.
+
+- Logging out of CCloud resets the Topics and/or Schema Registry views if and only if they were
+  focused on CCloud-based broker or schema registry.
+- Stopping a local Schema Registry container with a custom image tag will now use the correct tag
+  instead of "latest".
 
 ### Changed
-- No longer calls the semi-documented Schema Registry route `GET /schemas`. Subject and schema fetching done through `GET /subjects`, `GET /subjects/<subject>/versions`, and `GET /subjects/{subject}/versions/{version}` routes. Should now be compatible with WarpStream schema registry.
 
+- No longer calls the semi-documented Schema Registry route `GET /schemas`. Subject and schema
+  fetching done through `GET /subjects`, `GET /subjects/<subject>/versions`, and
+  `GET /subjects/{subject}/versions/{version}` routes. Should now be compatible with WarpStream
+  schema registry.
 
 ## 0.25.0
 
