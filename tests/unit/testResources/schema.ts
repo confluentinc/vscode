@@ -61,6 +61,7 @@ export const TEST_CCLOUD_SUBJECT_WITH_SCHEMAS = new Subject(
   ],
 );
 
+/** Test schema for local Kafka+SR following the `TopicNameStrategy` with a `-value` subject suffix. */
 export const TEST_LOCAL_SCHEMA = Schema.create({
   id: "1",
   subject: `${TEST_LOCAL_KAFKA_TOPIC.name}-value`,
@@ -77,6 +78,14 @@ export const TEST_LOCAL_SCHEMA_REVISED = Schema.create({
   ...TEST_LOCAL_SCHEMA,
   id: "2",
   version: 2,
+  isHighestVersion: true,
+});
+
+/** Test schema for local Kafka+SR following the `TopicNameStrategy` with a `-key` subject suffix. */
+export const TEST_LOCAL_KEY_SCHEMA = Schema.create({
+  ...TEST_LOCAL_SCHEMA,
+  id: "3",
+  subject: `${TEST_LOCAL_KAFKA_TOPIC.name}-key`,
   isHighestVersion: true,
 });
 
