@@ -2,10 +2,13 @@
     "apache-kafka": 61697,
     "confluent-environment": 61698,
     "confluent-evolve-schema": 61699,
-    "confluent-flink-compute-pool": 61700,
-    "confluent-kafka-cluster": 61701,
-    "confluent-logo": 61702,
-    "confluent-schema-registry": 61703,
-    "confluent-topic-without-schema": 61704,
-    "confluent-topic": 61705
+    "confluent-export-connection": 61700,
+    "confluent-flink-compute-pool": 61701,
+    "confluent-kafka-cluster": 61702,
+    "confluent-logo": 61703,
+    "confluent-new-message": 61704,
+    "confluent-schema-registry": 61705,
+    "confluent-send-message": 61706,
+    "confluent-topic-without-schema": 61707,
+    "confluent-topic": 61708
 }
