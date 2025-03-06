@@ -14,7 +14,7 @@ import {
 import { LOCAL_KAFKA_REST_PORT } from "../../constants";
 import { localKafkaConnected } from "../../emitters";
 import * as errors from "../../errors";
-import { LOCAL_DOCKER_SOCKET_PATH } from "../../preferences/constants";
+import { LOCAL_DOCKER_SOCKET_PATH, LOCAL_KAFKA_IMAGE_TAG } from "../../preferences/constants";
 import { DEFAULT_UNIX_SOCKET_PATH } from "../configs";
 import * as dockerContainers from "../containers";
 import * as dockerNetworks from "../networks";
@@ -26,6 +26,7 @@ import {
   CONTAINER_NAME_PREFIX,
   validateBrokerInput,
 } from "./confluent-local";
+import { registerLocalResourceWorkflows } from "./workflowInitialization";
 
 describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let sandbox: sinon.SinonSandbox;
@@ -50,6 +51,7 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   let waitForLocalResourceEventChangeStub: sinon.SinonStub;
 
   before(async () => {
+    registerLocalResourceWorkflows();
     await getTestExtensionContext();
   });
 
@@ -98,6 +100,18 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
   it(".imageRepo should return the correct image repository for this workflow", () => {
     // making sure the getter method is working as expected against the static property
     assert.equal(workflow.imageRepo, ConfluentLocalWorkflow.imageRepo);
+  });
+
+  it("start() should get the imageTag from workspace configuration", async () => {
+    const customTag = "7.0.0";
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
+    });
+
+    await workflow.start(TEST_CANCELLATION_TOKEN);
+
+    // just check imageTag; other tests check the rest
+    assert.strictEqual(workflow.imageTag, customTag);
   });
 
   it("start() should create and start Kafka containers", async () => {
@@ -198,6 +212,18 @@ describe("docker/workflows/confluent-local.ts ConfluentLocalWorkflow", () => {
     // notification tested in base.test.ts as part of .startContainer() tests
 
     assert.ok(waitForLocalResourceEventChangeStub.notCalled);
+  });
+
+  it("stop() should get the imageTag from workspace configuration", async () => {
+    const customTag = "7.0.0";
+    getConfigurationStub.returns({
+      get: sandbox.stub().withArgs(LOCAL_KAFKA_IMAGE_TAG).returns(customTag),
+    });
+
+    await workflow.stop(TEST_CANCELLATION_TOKEN);
+
+    // just check imageTag; other tests check the rest
+    assert.strictEqual(workflow.imageTag, customTag);
   });
 
   it("stop() should stop a Kafka container", async () => {

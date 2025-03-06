@@ -12,7 +12,6 @@ import { registerCommandWithLogging } from ".";
 import { ResponseError } from "../clients/docker";
 import { isDockerAvailable } from "../docker/configs";
 import { LocalResourceKind } from "../docker/constants";
-import { getKafkaWorkflow, getSchemaRegistryWorkflow } from "../docker/workflows";
 import { LocalResourceWorkflow } from "../docker/workflows/base";
 import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
@@ -67,7 +66,7 @@ export async function runWorkflowWithProgress(
   const subworkflows: LocalResourceWorkflow[] = [];
   if (resources.includes(LocalResourceKind.Kafka)) {
     try {
-      subworkflows.push(getKafkaWorkflow());
+      subworkflows.push(LocalResourceWorkflow.getKafkaWorkflow());
     } catch (error) {
       logger.error("error getting Kafka workflow:", error);
       return;
@@ -75,7 +74,7 @@ export async function runWorkflowWithProgress(
   }
   if (resources.includes(LocalResourceKind.SchemaRegistry)) {
     try {
-      subworkflows.push(getSchemaRegistryWorkflow());
+      subworkflows.push(LocalResourceWorkflow.getSchemaRegistryWorkflow());
     } catch (error) {
       logger.error("error getting Schema Registry workflow:", error);
       return;
