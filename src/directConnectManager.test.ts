@@ -582,4 +582,65 @@ describe("mergeSecrets", () => {
     const finalKafkaPassword = (result.kafka_cluster?.credentials as any)?.scram_password;
     assert.equal(finalKafkaPassword, "newPassword");
   });
+  it("should replace placeholder OAuth client_secret with current client_secret", () => {
+    const OAUTH_AUTH_SPEC: ConnectionSpec = {
+      ...TEST_DIRECT_CONNECTION.spec,
+      kafka_cluster: {
+        bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+        credentials: {
+          client_id: "clientId",
+          client_secret: "actualClientSecret",
+          tokens_url: "https://oauth.example.com/token",
+        },
+      },
+    };
+
+    const newOAuthAuthSpec: CustomConnectionSpec = {
+      id: OAUTH_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          client_id: "newClientId",
+          client_secret: "fakeplaceholdersecrethere",
+          tokens_url: "https://oauth.example.com/token",
+        },
+      },
+    };
+
+    const result = mergeSecrets(OAUTH_AUTH_SPEC, newOAuthAuthSpec);
+    const finalClientSecret = (result.kafka_cluster?.credentials as any)?.client_secret;
+    assert.equal(finalClientSecret, "actualClientSecret");
+  });
+
+  it("should not replace OAuth client_secret if it's not a placeholder", () => {
+    const OAUTH_AUTH_SPEC: ConnectionSpec = {
+      ...TEST_DIRECT_CONNECTION.spec,
+      kafka_cluster: {
+        bootstrap_servers: TEST_LOCAL_KAFKA_CLUSTER.bootstrapServers,
+        credentials: {
+          client_id: "clientId",
+          client_secret: "actualClientSecret",
+          tokens_url: "https://oauth.example.com/token",
+        },
+      },
+    };
+
+    const updateSecretOAuthSpec: CustomConnectionSpec = {
+      id: OAUTH_AUTH_SPEC.id as ConnectionId,
+      formConnectionType: "Apache Kafka",
+      kafka_cluster: {
+        bootstrap_servers: "bootstrapServers",
+        credentials: {
+          client_id: "clientId",
+          client_secret: "newClientSecret",
+          tokens_url: "https://oauth.example.com/token",
+        },
+      },
+    };
+
+    const result = mergeSecrets(OAUTH_AUTH_SPEC, updateSecretOAuthSpec);
+    const finalClientSecret = (result.kafka_cluster?.credentials as any)?.client_secret;
+    assert.equal(finalClientSecret, "newClientSecret");
+  });
 });
