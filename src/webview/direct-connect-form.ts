@@ -239,6 +239,13 @@ class DirectConnectFormViewModel extends ViewModel {
       this.loading(false);
       return;
     }
+    // Check form validity before proceeding
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      this.message("Please fill in all required fields correctly");
+      this.loading(false);
+      return;
+    }
     if (data["formconnectiontype"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.auth_type"] = "API";

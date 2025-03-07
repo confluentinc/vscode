@@ -84,6 +84,7 @@ export class AuthCredentials extends HTMLElement {
             <label for="this.getInputId('username')" class="label">Username</label>
             <input
               class="input"
+              required
               data-attr-id="this.getInputId('username')"
               data-attr-name="this.getInputId('username')"
               type="text"
@@ -96,6 +97,7 @@ export class AuthCredentials extends HTMLElement {
             <label for="this.getInputId('password')" class="label">Password</label>
             <input
               class="input"
+              required
               data-attr-id="this.getInputId('password')"
               data-attr-name="this.getInputId('password')"
               type="password"
@@ -113,6 +115,7 @@ export class AuthCredentials extends HTMLElement {
             <label for="this.getInputId('api_key')" class="label">API Key</label>
             <input
               class="input"
+              required
               data-attr-id="this.getInputId('api_key')"
               data-attr-name="this.getInputId('api_key')"
               type="text"
@@ -124,6 +127,7 @@ export class AuthCredentials extends HTMLElement {
             <label for="this.getInputId('api_secret')" class="label">API Secret</label>
             <input
               class="input"
+              required
               data-attr-id="this.getInputId('api_secret')"
               data-attr-name="this.getInputId('api_secret')"
               data-attr-value="this.creds()?.api_secret ?? null"
@@ -139,6 +143,7 @@ export class AuthCredentials extends HTMLElement {
           <label for="this.getInputId('hash_algorithm')" class="label">Hash Algorithm</label>
           <select
             class="input dropdown"
+            required
             data-attr-id="this.getInputId('hash_algorithm')"
             data-attr-name="this.getInputId('hash_algorithm')"
             data-value="this.creds()?.hash_algorithm ?? null"
@@ -163,6 +168,7 @@ export class AuthCredentials extends HTMLElement {
             <label for="this.getInputId('scram_username')" class="label">Username</label>
             <input
               class="input"
+              required
               data-attr-id="this.getInputId('scram_username')"
               data-attr-name="this.getInputId('scram_username')"
               type="text"
@@ -175,6 +181,7 @@ export class AuthCredentials extends HTMLElement {
             <label for="this.getInputId('scram_password')" class="label">Password</label>
             <input
               class="input"
+              required
               data-attr-id="this.getInputId('scram_password')"
               data-attr-name="this.getInputId('scram_password')"
               type="password"
@@ -193,13 +200,14 @@ export class AuthCredentials extends HTMLElement {
               <label class="label" for="this.getInputId('tokens_url')">Tokens URL</label>
               <input
                 class="input"
+                required
                 type="url"
                 data-attr-id="this.getInputId('tokens_url')"
                 data-attr-name="this.getInputId('tokens_url')"
                 required
                 data-value="this.creds()?.tokens_url ?? null"
                 data-on-change="this.updateValue(event)"
-                title="The URL of the OAuth 2.0 identity provider's token endpoint."
+                title="The URL of the OAuth 2.0 identity provider's token endpoint. Must be a valid URL."
               />
             </div>
             <div class="input-container">
