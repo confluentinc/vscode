@@ -27,6 +27,8 @@ All notable changes to this extension will be documented in this file.
   `GET /subjects/{subject}/versions/{version}` routes. Should now be compatible with WarpStream
   schema registry.
 - Updated icons for opening Message Viewer and producing messages to a topic.
+- Producing messages to a topic now offers options to include schema information through a series of
+  quickpicks based on user settings.
 
 ## 0.25.0
 
