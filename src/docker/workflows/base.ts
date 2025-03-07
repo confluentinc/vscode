@@ -4,7 +4,8 @@ import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionLabel } from "../../models/resource";
 import { logUsage, UserEvent } from "../../telemetry/events";
-import { DEFAULT_DOCKER_NETWORK } from "../constants";
+import { getLocalKafkaImageName, getLocalSchemaRegistryImageName } from "../configs";
+import { DEFAULT_DOCKER_NETWORK, LocalResourceKind } from "../constants";
 import { getContainer, restartContainer, startContainer, stopContainer } from "../containers";
 import { imageExists, pullImage } from "../images";
 
@@ -44,6 +45,53 @@ export abstract class LocalResourceWorkflow {
   static imageRepo: string;
   /** Tag for the Docker image to use for this workflow. Should be configurable by the user in extension settings. */
   imageTag: string = "latest";
+
+  // Registry to store workflow instances by image repo
+  private static workflowRegistry: Map<string, LocalResourceWorkflow> = new Map();
+
+  /** Register a {@link LocalResourceWorkflow} implementation based on its image repo. */
+  static registerWorkflow(workflow: LocalResourceWorkflow): void {
+    const imageRepo: string = workflow.imageRepo;
+    LocalResourceWorkflow.workflowRegistry.set(imageRepo, workflow);
+  }
+
+  /** Get the workflow for a specific {@link LocalResourceKind}. */
+  static getWorkflowForKind(kind: LocalResourceKind): LocalResourceWorkflow {
+    switch (kind) {
+      case LocalResourceKind.Kafka:
+        return LocalResourceWorkflow.getKafkaWorkflow();
+      case LocalResourceKind.SchemaRegistry:
+        return LocalResourceWorkflow.getSchemaRegistryWorkflow();
+      default:
+        throw new Error(`No workflow available for resource kind: ${kind}`);
+    }
+  }
+
+  /** Get the Kafka workflow based on the user-configured image repo setting. */
+  static getKafkaWorkflow(): LocalResourceWorkflow {
+    const imageRepo: string = getLocalKafkaImageName();
+    const workflow: LocalResourceWorkflow | undefined =
+      LocalResourceWorkflow.workflowRegistry.get(imageRepo);
+    if (!workflow) {
+      const errorMsg = `Unsupported Kafka image repo: ${imageRepo}`;
+      window.showErrorMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+    return workflow;
+  }
+
+  /** Get the Schema Registry workflow based on the user-configured image repo setting. */
+  public static getSchemaRegistryWorkflow(): LocalResourceWorkflow {
+    const imageRepo: string = getLocalSchemaRegistryImageName();
+    const workflow: LocalResourceWorkflow | undefined =
+      LocalResourceWorkflow.workflowRegistry.get(imageRepo);
+    if (!workflow) {
+      const errorMsg = `Unsupported Schema Registry image repo: ${imageRepo}`;
+      window.showErrorMessage(errorMsg);
+      throw new Error(errorMsg);
+    }
+    return workflow;
+  }
 
   /** Start the workflow to launch the local resource(s). */
   abstract start(
@@ -95,7 +143,7 @@ export abstract class LocalResourceWorkflow {
     return await getContainer(container.id);
   }
 
-  /** Stop and remove the local resource(s) associated with this workflow. */
+  /** Stop the local resource(s) associated with this workflow. */
   abstract stop(
     token: CancellationToken,
     progress?: Progress<{ message?: string; increment?: number }>,

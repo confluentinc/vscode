@@ -63,6 +63,7 @@ import { observabilityContext } from "./context/observability";
 import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
+import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { constructResourceLoaderSingletons } from "./loaders";
@@ -223,6 +224,8 @@ async function _activateExtension(
   context.subscriptions.push(...constructResourceLoaderSingletons());
   context.subscriptions.push(getSidecarManager());
 
+  // register the local resource workflows so they can be used by the resource loaders
+  registerLocalResourceWorkflows();
   // set up the local Docker event listener singleton and start watching for system events
   EventListener.getInstance().start();
   // reset the Docker credentials secret so `src/docker/configs.ts` can pull it fresh
