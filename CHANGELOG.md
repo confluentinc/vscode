@@ -29,6 +29,8 @@ All notable changes to this extension will be documented in this file.
 - Updated icons for opening Message Viewer and producing messages to a topic.
 - Producing messages to a topic now offers options to include schema information through a series of
   quickpicks based on user settings.
+- The `confluent.preview.enableProduceMessages` setting has been removed, making message-produce
+  functionality on Kafka topics available by default.
 
 ## 0.25.0
 
