@@ -55,7 +55,7 @@ describe("SchemasViewProvider setSchemaRegistry()", () => {
     sandbox.restore();
   });
 
-  it("Should do nothing if already set to the same registry", () => {
+  it("Should do nothing if already set to the same registry", async () => {
     const setSearchSpy = sandbox.spy(provider, "setSearch");
     const refreshSpy = sandbox.spy(provider, "refresh");
     const updateTreeViewDescriptionSpy = sandbox.spy(provider, "updateTreeViewDescription");
@@ -63,7 +63,7 @@ describe("SchemasViewProvider setSchemaRegistry()", () => {
     for (const registry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
       provider.schemaRegistry = registry;
 
-      provider.setSchemaRegistry(registry);
+      await provider.setSchemaRegistry(registry);
       assert.strictEqual(provider.schemaRegistry, registry);
 
       // Should have short circuited and not called .setSearch() or .refresh()
