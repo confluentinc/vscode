@@ -12,7 +12,7 @@ import {
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext, pause } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { environmentChanged, topicSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -198,6 +198,7 @@ describe("TopicViewProvider search behavior", () => {
 describe("TopicViewProvider environmentChanged handler", () => {
   let provider: TopicViewProvider;
   let sandbox: sinon.SinonSandbox;
+  let clock: sinon.SinonFakeTimers;
 
   before(async () => {
     await getTestExtensionContext();
@@ -206,6 +207,7 @@ describe("TopicViewProvider environmentChanged handler", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers(Date.now());
   });
 
   afterEach(() => {
@@ -240,7 +242,7 @@ describe("TopicViewProvider environmentChanged handler", () => {
     environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
 
     // Need to pause an iota to get the refresh to be called, is after first await in the block.
-    await pause(100);
+    await clock.tickAsync(100);
 
     assert.ok(resetFake.notCalled);
     assert.ok(updateTreeViewDescriptionFake.calledOnce);
