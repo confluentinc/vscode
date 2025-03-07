@@ -25,4 +25,12 @@ export const LOCAL_KAFKA_IMAGE_TAG = prefix + "localDocker.kafkaImageTag";
 export const LOCAL_SCHEMA_REGISTRY_IMAGE = prefix + "localDocker.schemaRegistryImageRepo";
 export const LOCAL_SCHEMA_REGISTRY_IMAGE_TAG = prefix + "localDocker.schemaRegistryImageTag";
 
+/** Whether to use `TopicNameStrategy` by default for producing messages to a topic.
+ * When disabled, will prompt the user to select a subject name strategy. */
+export const USE_TOPIC_NAME_STRATEGY =
+  prefix + "topic.produceMessages.schemas.useTopicNameStrategy";
+/** Whether to allow selecting older (than latest) schema versions when producing messages to a topic. */
+export const ALLOW_OLDER_SCHEMA_VERSIONS =
+  prefix + "topic.produceMessages.schemas.allowOlderVersions";
+
 export const ENABLE_PRODUCE_MESSAGES = prefix + "preview.enableProduceMessages";
