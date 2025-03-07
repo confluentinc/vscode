@@ -6,10 +6,6 @@ import {
   ConnectionSpec,
   ConnectionsResourceApi,
   ConnectionType,
-  instanceOfApiKeyAndSecret,
-  instanceOfBasicCredentials,
-  instanceOfOAuthCredentials,
-  instanceOfScramCredentials,
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
@@ -135,7 +131,6 @@ export class DirectConnectionManager {
       spec.id,
     );
     if (dryRun && currentSpec) {
-      incomingSpec = mergeSecrets(currentSpec, spec);
       incomingSpec.id = randomUUID() as ConnectionId; // dryRun must have unique ID
     }
     const { connection, errorMessage } = await this.createOrUpdateConnection(
@@ -183,9 +178,8 @@ export class DirectConnectionManager {
       logger.error("Direct connection not found in resources, can't update");
       return;
     }
-    const updatedSpec: ConnectionSpec = mergeSecrets(currentSpec, incomingSpec);
     // tell the sidecar about the updated spec
-    const { connection, errorMessage } = await this.createOrUpdateConnection(updatedSpec, true);
+    const { connection, errorMessage } = await this.createOrUpdateConnection(incomingSpec, true);
     if (errorMessage || !connection) {
       window.showErrorMessage(
         `Error: Failed to update connection. ${errorMessage ?? "No connection object returned"}`,
@@ -196,14 +190,14 @@ export class DirectConnectionManager {
     logUsage(UserEvent.DirectConnectionAction, {
       type: currentSpec.formConnectionType,
       action: "updated",
-      withKafka: !!updatedSpec.kafka_cluster,
-      withSchemaRegistry: !!updatedSpec.schema_registry,
+      withKafka: !!incomingSpec.kafka_cluster,
+      withSchemaRegistry: !!incomingSpec.schema_registry,
     });
 
     // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
     // (spec comes first because the ConnectionSpec will try to override `id` as a string)
     const mergedSpec: CustomConnectionSpec = {
-      ...updatedSpec,
+      ...connection.spec,
       id: incomingSpec.id,
       formConnectionType: incomingSpec.formConnectionType,
     };
@@ -324,119 +318,4 @@ export class DirectConnectionManager {
       watcher.cacheConnectionIfNeeded(conn);
     });
   }
-}
-
-export function mergeSecrets(
-  currentSpec: ConnectionSpec,
-  incomingSpec: CustomConnectionSpec,
-): ConnectionSpec {
-  const incomingKafkaCreds = incomingSpec.kafka_cluster?.credentials;
-  const currentKafkaCreds = currentSpec.kafka_cluster?.credentials;
-  // if there are kafka credentials we need to check/replace the secrets
-  if (incomingKafkaCreds) {
-    if (instanceOfBasicCredentials(incomingKafkaCreds)) {
-      if (incomingKafkaCreds.password === "fakeplaceholdersecrethere") {
-        if (currentKafkaCreds && instanceOfBasicCredentials(currentKafkaCreds)) {
-          incomingKafkaCreds.password = currentKafkaCreds.password;
-        }
-      }
-    } else if (instanceOfApiKeyAndSecret(incomingKafkaCreds)) {
-      if (incomingKafkaCreds.api_secret === "fakeplaceholdersecrethere") {
-        if (currentKafkaCreds && instanceOfApiKeyAndSecret(currentKafkaCreds))
-          incomingKafkaCreds.api_secret = currentKafkaCreds.api_secret;
-      }
-    } else if (instanceOfScramCredentials(incomingKafkaCreds)) {
-      if (incomingKafkaCreds.scram_password === "fakeplaceholdersecrethere") {
-        if (currentKafkaCreds && instanceOfScramCredentials(currentKafkaCreds))
-          incomingKafkaCreds.scram_password = currentKafkaCreds.scram_password;
-      }
-    } else if (instanceOfOAuthCredentials(incomingKafkaCreds)) {
-      if (incomingKafkaCreds.client_secret === "fakeplaceholdersecrethere") {
-        if (currentKafkaCreds && instanceOfOAuthCredentials(currentKafkaCreds))
-          incomingKafkaCreds.client_secret = currentKafkaCreds.client_secret;
-      }
-    }
-  }
-  // if there are schema registry credentials we need to check/replace the secrets
-  const incomingSchemaCreds = incomingSpec.schema_registry?.credentials;
-  const currentSchemaCreds = currentSpec.schema_registry?.credentials;
-  if (incomingSchemaCreds) {
-    if (instanceOfBasicCredentials(incomingSchemaCreds)) {
-      if (incomingSchemaCreds.password === "fakeplaceholdersecrethere") {
-        if (currentSchemaCreds && instanceOfBasicCredentials(currentSchemaCreds))
-          incomingSchemaCreds.password = currentSchemaCreds.password;
-      }
-    } else if (instanceOfApiKeyAndSecret(incomingSchemaCreds)) {
-      if (incomingSchemaCreds.api_secret === "fakeplaceholdersecrethere") {
-        if (currentSchemaCreds && instanceOfApiKeyAndSecret(currentSchemaCreds))
-          incomingSchemaCreds.api_secret = currentSchemaCreds.api_secret;
-      }
-    }
-  }
-
-  // need to replace ssl.truststore.password, ssl.keystore.password, ssl.keystore.key_password (if they have a placeholder & we have a secret stored)
-  const incomingKafkaTLS = incomingSpec.kafka_cluster?.ssl;
-  const currentKafkaTLS = currentSpec.kafka_cluster?.ssl;
-  if (incomingKafkaTLS) {
-    if (
-      incomingKafkaTLS.truststore?.password === "fakeplaceholdersecrethere" &&
-      currentKafkaTLS?.truststore?.password
-    ) {
-      incomingKafkaTLS.truststore.password = currentKafkaTLS.truststore.password;
-    }
-    if (
-      incomingKafkaTLS.keystore?.password === "fakeplaceholdersecrethere" &&
-      currentKafkaTLS?.keystore?.password
-    ) {
-      incomingKafkaTLS.keystore.password = currentKafkaTLS.keystore.password;
-    }
-    if (
-      incomingKafkaTLS.keystore?.key_password === "fakeplaceholdersecrethere" &&
-      currentKafkaTLS?.keystore?.key_password
-    ) {
-      incomingKafkaTLS.keystore.key_password = currentKafkaTLS.keystore.key_password;
-    }
-  }
-
-  const incomingSchemaTLS = incomingSpec.schema_registry?.ssl;
-  const currentSchemaTLS = currentSpec.schema_registry?.ssl;
-  if (incomingSchemaTLS) {
-    if (
-      incomingSchemaTLS.truststore?.password === "fakeplaceholdersecrethere" &&
-      currentSchemaTLS?.truststore?.password
-    ) {
-      incomingSchemaTLS.truststore.password = currentSchemaTLS.truststore.password;
-    }
-    if (
-      incomingSchemaTLS.keystore?.password === "fakeplaceholdersecrethere" &&
-      currentSchemaTLS?.keystore?.password
-    ) {
-      incomingSchemaTLS.keystore.password = currentSchemaTLS.keystore.password;
-    }
-    if (
-      incomingSchemaTLS.keystore?.key_password === "fakeplaceholdersecrethere" &&
-      currentSchemaTLS?.keystore?.key_password
-    ) {
-      incomingSchemaTLS.keystore.key_password = currentSchemaTLS.keystore.key_password;
-    }
-  }
-  const kafkaSslEnabled =
-    incomingSpec.kafka_cluster?.ssl?.enabled ?? currentSpec.kafka_cluster?.ssl?.enabled ?? true;
-
-  const schemaSslEnabled =
-    incomingSpec.schema_registry?.ssl?.enabled ?? currentSpec.schema_registry?.ssl?.enabled ?? true;
-  const mergedSpec: ConnectionSpec = {
-    ...incomingSpec,
-    kafka_cluster: incomingSpec.kafka_cluster && {
-      ...incomingSpec.kafka_cluster,
-      credentials: incomingKafkaCreds,
-      ssl: { enabled: kafkaSslEnabled, ...currentKafkaTLS, ...incomingKafkaTLS },
-    },
-    schema_registry: incomingSpec.schema_registry && {
-      ...incomingSpec.schema_registry,
-      credentials: incomingSchemaCreds,
-      ssl: { enabled: schemaSslEnabled, ...currentSchemaTLS, ...incomingSchemaTLS },
-    },
-  };
-  return mergedSpec;
 }
