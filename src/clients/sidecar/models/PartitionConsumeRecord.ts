@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from "../runtime";
+import type { RecordMetadata } from "./RecordMetadata";
+import {
+  RecordMetadataFromJSON,
+  RecordMetadataFromJSONTyped,
+  RecordMetadataToJSON,
+  RecordMetadataToJSONTyped,
+} from "./RecordMetadata";
 import type { ExceededFields } from "./ExceededFields";
 import {
   ExceededFieldsFromJSON,
@@ -92,6 +99,12 @@ export interface PartitionConsumeRecord {
   value?: JsonNode;
   /**
    *
+   * @type {RecordMetadata}
+   * @memberof PartitionConsumeRecord
+   */
+  metadata?: RecordMetadata;
+  /**
+   *
    * @type {string}
    * @memberof PartitionConsumeRecord
    */
@@ -140,6 +153,7 @@ export function PartitionConsumeRecordFromJSONTyped(
         : (json["headers"] as Array<any>).map(PartitionConsumeRecordHeaderFromJSON),
     key: json["key"] == null ? undefined : JsonNodeFromJSON(json["key"]),
     value: json["value"] == null ? undefined : JsonNodeFromJSON(json["value"]),
+    metadata: json["metadata"] == null ? undefined : RecordMetadataFromJSON(json["metadata"]),
     key_decoding_error: json["key_decoding_error"] == null ? undefined : json["key_decoding_error"],
     value_decoding_error:
       json["value_decoding_error"] == null ? undefined : json["value_decoding_error"],
@@ -171,6 +185,7 @@ export function PartitionConsumeRecordToJSONTyped(
         : (value["headers"] as Array<any>).map(PartitionConsumeRecordHeaderToJSON),
     key: JsonNodeToJSON(value["key"]),
     value: JsonNodeToJSON(value["value"]),
+    metadata: RecordMetadataToJSON(value["metadata"]),
     key_decoding_error: value["key_decoding_error"],
     value_decoding_error: value["value_decoding_error"],
     exceeded_fields: ExceededFieldsToJSON(value["exceeded_fields"]),

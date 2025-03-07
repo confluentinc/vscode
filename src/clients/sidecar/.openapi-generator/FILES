@@ -27,6 +27,7 @@ models/ConnectionSpec.ts
 models/ConnectionStatus.ts
 models/ConnectionType.ts
 models/ConnectionsList.ts
+models/DataFormat.ts
 models/ExceededFields.ts
 models/Failure.ts
 models/HashAlgorithm.ts
@@ -37,6 +38,7 @@ models/JsonNodeType.ts
 models/KafkaClusterConfig.ts
 models/KafkaClusterConfigCredentials.ts
 models/KafkaClusterStatus.ts
+models/KeyOrValueMetadata.ts
 models/KeyStore.ts
 models/LocalConfig.ts
 models/ModelError.ts
@@ -54,6 +56,7 @@ models/ProduceRequestHeader.ts
 models/ProduceResponse.ts
 models/ProduceResponseData.ts
 models/RBACRequest.ts
+models/RecordMetadata.ts
 models/SchemaRegistryConfig.ts
 models/SchemaRegistryConfigCredentials.ts
 models/SchemaRegistryStatus.ts
