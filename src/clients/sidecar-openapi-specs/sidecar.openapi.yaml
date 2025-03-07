@@ -1446,15 +1446,15 @@ components:
     HealthResponse:
       type: object
       properties:
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
           - UP
           - DOWN
           type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheck"
     HealthCheck:
       type: object
       properties:

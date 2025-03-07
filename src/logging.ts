@@ -34,7 +34,7 @@ export class Logger {
   public withCallpoint(callpoint: string): Logger {
     const count = callpointCounter.get(callpoint) || 0;
     callpointCounter.set(callpoint, count + 1);
-    return new Logger(`${this.name} ${callpoint} ${count}`);
+    return new Logger(`${this.name}[${callpoint}.${count}]`);
   }
 
   /** More verbose form of "debug" according to the LogOutputChannel */
