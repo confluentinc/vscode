@@ -46,7 +46,7 @@ export async function waitForConnectionToBeStable(
     connectionStable.fire(id);
     // and trigger any kind of Topics/Schemas refresh to reenforce the error state / clear out any
     // old data
-    environmentChanged.fire(id as unknown as EnvironmentId);
+    environmentChanged.fire({ id: id as unknown as EnvironmentId, wasDeleted: false });
     const lastConnectionEvent = connectionStateWatcher.getLatestConnectionEvent(id);
     if (lastConnectionEvent) {
       showErrorNotificationWithButtons(
