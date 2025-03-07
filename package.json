@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "0.26.0-32",
+  "version": "0.26.0-34",
   "homepage": "https://github.com/confluentinc/vscode",
   "preview": true,
   "publisher": "confluentinc",
@@ -89,7 +89,7 @@
       },
       {
         "command": "confluent.connections.direct.export",
-        "icon": "$(desktop-download)",
+        "icon": "$(confluent-export-connection)",
         "title": "Export as JSON",
         "category": "Confluent: Connections"
       },
@@ -325,14 +325,14 @@
       },
       {
         "command": "confluent.topic.consume",
-        "icon": "$(play-circle)",
-        "title": "Browse Messages",
+        "icon": "$(confluent-view-messages)",
+        "title": "View Messages",
         "category": "Confluent: Topic"
       },
       {
         "command": "confluent.topic.consume.duplicate",
         "icon": "$(explorer-view-icon)",
-        "title": "Duplicate Message Browser",
+        "title": "Duplicate Message Viewer",
         "category": "Confluent: Topic",
         "enablement": "activeWebviewPanelId == message-viewer"
       },
@@ -352,8 +352,8 @@
       },
       {
         "command": "confluent.topic.produce.fromDocument",
-        "title": "Produce Message to Kafka Topic from schemaless JSON file",
-        "icon": "$(send)",
+        "title": "Send Message(s) to Topic",
+        "icon": "$(confluent-send-message)",
         "category": "Confluent: Topic"
       },
       {
@@ -474,10 +474,20 @@
         "confluent.preview.enableProduceMessages": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Enable message production for Kafka topics.\n\n---\n\n⚠️ **WARNING**: This setting may allow you to produce messages without schemas to topics that expect them, which can lead to data loss or corruption.",
+          "markdownDescription": "Enable message production for Kafka topics.",
           "tags": [
             "preview"
           ]
+        },
+        "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) for schema subject name when producing messages to Kafka topics. Disabling this will require selecting the subject name strategy to use."
+        },
+        "confluent.topic.produceMessages.schemas.allowOlderVersions": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
         }
       }
     },
@@ -962,6 +972,11 @@
           "group": "inline@1"
         },
         {
+          "command": "confluent.topic.produce.fromDocument",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
+          "group": "inline@2"
+        },
+        {
           "command": "confluent.topics.delete",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzDELETE.*/",
           "group": "topics"
@@ -995,11 +1010,6 @@
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "view == confluent-topics && viewItem =~ /.*-topic.*/",
           "group": "4_copy@3"
-        },
-        {
-          "command": "confluent.topic.produce.fromDocument",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
-          "group": "inline@1"
         },
         {
           "command": "confluent.openCCloudLink",
@@ -1036,46 +1046,74 @@
           "fontCharacter": "\\f103"
         }
       },
+      "confluent-export-connection": {
+        "description": "confluent-export-connection icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f104"
+        }
+      },
       "confluent-flink-compute-pool": {
         "description": "confluent-flink-compute-pool icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f104"
+          "fontCharacter": "\\f105"
         }
       },
       "confluent-kafka-cluster": {
         "description": "confluent-kafka-cluster icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f105"
+          "fontCharacter": "\\f106"
         }
       },
       "confluent-logo": {
         "description": "confluent-logo icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f106"
+          "fontCharacter": "\\f107"
+        }
+      },
+      "confluent-new-message": {
+        "description": "confluent-new-message icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f108"
         }
       },
       "confluent-schema-registry": {
         "description": "confluent-schema-registry icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f107"
+          "fontCharacter": "\\f109"
+        }
+      },
+      "confluent-send-message": {
+        "description": "confluent-send-message icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10a"
         }
       },
       "confluent-topic-without-schema": {
         "description": "confluent-topic-without-schema icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f108"
+          "fontCharacter": "\\f10b"
         }
       },
       "confluent-topic": {
         "description": "confluent-topic icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f109"
+          "fontCharacter": "\\f10c"
+        }
+      },
+      "confluent-view-messages": {
+        "description": "confluent-view-messages icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10d"
         }
       }
     },
