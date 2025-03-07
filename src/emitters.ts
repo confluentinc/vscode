@@ -21,9 +21,19 @@ export const directConnectionsChanged = new vscode.EventEmitter<void>();
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
 
-/** Fired whenever a property of an {@link Environment} has changed. (Mainly to affect watchers in
- * the Topics/Schemas views, or similar.) */
-export const environmentChanged = new vscode.EventEmitter<EnvironmentId>();
+/** Event type used by {@link environmentChanged} */
+export type EnvironmentChangeEvent = {
+  /** The environment that changed. */
+  id: EnvironmentId;
+  /** Was it that the env has been deleted? */
+  wasDeleted: boolean;
+};
+
+/**
+ * Fired whenever a property of an {@link Environment} has changed. (Mainly to affect watchers in
+ * the Topics/Schemas views, or similar.)
+ **/
+export const environmentChanged = new vscode.EventEmitter<EnvironmentChangeEvent>();
 
 /**
  * Fired whenever a Kafka cluster is selected from the Resources view, chosen from the "Select Kafka
