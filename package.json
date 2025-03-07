@@ -471,14 +471,6 @@
           "default": "latest",
           "markdownDescription": "Docker image tag to use when starting a local Schema Registry container. (By default, this will use the [`confluentinc/cp-schema-registry`](https://hub.docker.com/r/confluentinc/cp-schema-registry/tags) image.)"
         },
-        "confluent.preview.enableProduceMessages": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Enable message production for Kafka topics.",
-          "tags": [
-            "preview"
-          ]
-        },
         "confluent.topic.produceMessages.schemas.useTopicNameStrategy": {
           "type": "boolean",
           "default": true,
@@ -973,7 +965,7 @@
         },
         {
           "command": "confluent.topic.produce.fromDocument",
-          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/ && confluent.produceMessagesEnabled",
+          "when": "view == confluent-topics && viewItem =~ /.*-topic.*-authzWRITE.*/",
           "group": "inline@2"
         },
         {

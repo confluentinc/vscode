@@ -68,11 +68,7 @@ import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { Logger, outputChannel } from "./logging";
-import {
-  ENABLE_PRODUCE_MESSAGES,
-  SSL_PEM_PATHS,
-  SSL_VERIFY_SERVER_CERT_DISABLED,
-} from "./preferences/constants";
+import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
@@ -253,12 +249,6 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // PREVIEW: set default values for enabling the direct connection and message-produce features
-  const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-  const produceMessagesEnabled = setContextValue(
-    ContextValues.produceMessagesEnabled,
-    config.get(ENABLE_PRODUCE_MESSAGES, false),
-  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
@@ -301,7 +291,6 @@ async function setupContextValues() {
     "direct-schema-registry",
   ]);
   await Promise.all([
-    produceMessagesEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
     openInCCloudResources,
