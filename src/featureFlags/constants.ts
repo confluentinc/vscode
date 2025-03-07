@@ -1,3 +1,5 @@
+import { LDFlagSet } from "launchdarkly-electron-client-sdk";
+
 export enum FeatureFlag {
   /** Is this extension version enabled at all? */
   GLOBAL_ENABLED = "ide.global.enabled",
@@ -8,3 +10,15 @@ export enum FeatureFlag {
   /** Is CCloud usage enabled? */
   CCLOUD_ENABLE = "ide.ccloud.enable",
 }
+
+/** Default values for feature flags, to be used at startup and/or if the LaunchDarkly API is not
+ * reachable. */
+export const FEATURE_FLAG_DEFAULTS: LDFlagSet = {
+  [FeatureFlag.GLOBAL_ENABLED]: true,
+  [FeatureFlag.GLOBAL_NOTICES]: [],
+  [FeatureFlag.SEGMENT_ENABLE]: true,
+  [FeatureFlag.CCLOUD_ENABLE]: true,
+};
+
+/** Feature flags and their values, subject to change based on the responses from LaunchDarkly. */
+export const FeatureFlags: LDFlagSet = {};
