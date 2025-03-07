@@ -3,12 +3,23 @@ import * as sinon from "sinon";
 import { Diagnostic, DiagnosticSeverity, Uri } from "vscode";
 import * as uris from "../quickpicks/uris";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnosticCollection";
-import { PRODUCE_MESSAGE_SCHEMA } from "./produceMessageSchema";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  ProduceMessage,
+  SchemaInfo,
+  SubjectNameStrategy,
+} from "./produceMessageSchema";
 import { validateDocument } from "./validateDocument";
 
-const BASIC_MESSAGE = {
+const BASIC_MESSAGE: ProduceMessage = {
   key: "foo",
   value: "bar",
+};
+
+const BASIC_SCHEMA_INFO: SchemaInfo = {
+  schema_version: 1,
+  subject: "test-key",
+  subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
 };
 
 describe("schemas/produceMessageSchema validation", function () {
@@ -159,4 +170,78 @@ describe("schemas/produceMessageSchema validation", function () {
       assert.strictEqual(diagnostics[0].severity, DiagnosticSeverity.Error);
     });
   }
+
+  it("should not set any diagnostics for valid schema properties", async function () {
+    const messageWithSchemas = {
+      ...BASIC_MESSAGE,
+      key_schema: BASIC_SCHEMA_INFO,
+      value_schema: {
+        ...BASIC_SCHEMA_INFO,
+        subject: "test-value",
+      },
+    };
+    loadDocumentContentStub.resolves({ content: JSON.stringify(messageWithSchemas) });
+
+    await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
+
+    const diagnostics: readonly Diagnostic[] = JSON_DIAGNOSTIC_COLLECTION.get(fakeUri)!;
+    assert.strictEqual(diagnostics.length, 0);
+  });
+
+  it("should set an error diagnostic for missing required fields in `*_schema` property", async function () {
+    const invalidMessage = {
+      ...BASIC_MESSAGE,
+      key_schema: {
+        ...BASIC_SCHEMA_INFO,
+        schema_version: undefined, // missing required field
+      },
+    };
+    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+
+    await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
+
+    const diagnostics: readonly Diagnostic[] = JSON_DIAGNOSTIC_COLLECTION.get(fakeUri)!;
+    assert.strictEqual(diagnostics.length, 1);
+    assert.strictEqual(diagnostics[0].message, `Missing property "schema_version".`);
+    assert.strictEqual(diagnostics[0].severity, DiagnosticSeverity.Error);
+  });
+
+  it("should set an error diagnostic for invalid `subject_name_strategy` value", async function () {
+    const invalidMessage = {
+      ...BASIC_MESSAGE,
+      key_schema: {
+        ...BASIC_SCHEMA_INFO,
+        subject_name_strategy: "INVALID_STRATEGY", // invalid enum value
+      },
+    };
+    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+
+    await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
+
+    const diagnostics: readonly Diagnostic[] = JSON_DIAGNOSTIC_COLLECTION.get(fakeUri)!;
+    assert.strictEqual(diagnostics.length, 1);
+    assert.ok(diagnostics[0].message.includes("Value is not accepted. Valid values:"));
+    assert.ok(diagnostics[0].message.includes(SubjectNameStrategy.TOPIC_NAME));
+    assert.ok(diagnostics[0].message.includes(SubjectNameStrategy.TOPIC_RECORD_NAME));
+    assert.ok(diagnostics[0].message.includes(SubjectNameStrategy.RECORD_NAME));
+    assert.strictEqual(diagnostics[0].severity, DiagnosticSeverity.Error);
+  });
+
+  it("should set an error diagnostic for invalid `schema_version` value type", async function () {
+    const invalidMessage = {
+      ...BASIC_MESSAGE,
+      key_schema: {
+        ...BASIC_SCHEMA_INFO,
+        schema_version: "1", // string instead of integer
+      },
+    };
+    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+
+    await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
+
+    const diagnostics: readonly Diagnostic[] = JSON_DIAGNOSTIC_COLLECTION.get(fakeUri)!;
+    assert.strictEqual(diagnostics.length, 1);
+    assert.strictEqual(diagnostics[0].message, `Incorrect type. Expected "integer".`);
+    assert.strictEqual(diagnostics[0].severity, DiagnosticSeverity.Error);
+  });
 });
