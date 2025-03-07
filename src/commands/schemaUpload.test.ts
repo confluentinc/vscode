@@ -4,13 +4,16 @@ import * as vscode from "vscode";
 import { SchemaType } from "../models/schema";
 import * as quickPicksSchemas from "../quickpicks/schemas";
 import {
+  chooseSubject,
   determineSchemaType,
   extractDetail,
   parseConflictMessage,
   schemaFromString,
   schemaRegistrationMessage,
+  validateNewSubject,
 } from "./schemaUpload";
 
+import { TEST_LOCAL_SCHEMA_REGISTRY } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_SCHEMA } from "../../tests/unit/testResources/schema";
 
 describe("commands/schemaUpload.ts determineSchemaType tests", function () {
@@ -233,5 +236,94 @@ describe("schemaFromString tests", () => {
     const badSchemaString = '{"foo": "bar"}';
     const schema = schemaFromString(badSchemaString);
     assert.strictEqual(schema, undefined);
+  });
+});
+
+describe("commands/schemaUpload.ts chooseSubject()", () => {
+  let sandbox: sinon.SinonSandbox;
+  let schemaSubjectQuickPickStub: sinon.SinonStub;
+  let showInputBoxStub: sinon.SinonStub;
+
+  // doesn't matter which SR; we just need one for chooseSubject() to pass to schemaSubjectQuickPick()
+  const registry = TEST_LOCAL_SCHEMA_REGISTRY;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    schemaSubjectQuickPickStub = sandbox.stub(quickPicksSchemas, "schemaSubjectQuickPick");
+    showInputBoxStub = sandbox.stub(vscode.window, "showInputBox");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should return the selected subject when an existing subject is chosen", async () => {
+    const existingSubject = "test-subject-value";
+    schemaSubjectQuickPickStub.resolves(existingSubject);
+
+    const result: string | undefined = await chooseSubject(registry);
+
+    assert.strictEqual(result, existingSubject);
+    sinon.assert.calledOnce(schemaSubjectQuickPickStub);
+    sinon.assert.notCalled(showInputBoxStub);
+  });
+
+  it("should prompt for a new subject name when creating a new subject", async () => {
+    // user selects "Create new subject"
+    schemaSubjectQuickPickStub.resolves("");
+    // user enters a new subject name
+    const newSubject = "new-subject-value";
+    showInputBoxStub.resolves(newSubject);
+
+    const result: string | undefined = await chooseSubject(registry);
+
+    assert.strictEqual(result, newSubject);
+    sinon.assert.calledOnce(schemaSubjectQuickPickStub);
+    sinon.assert.calledOnce(showInputBoxStub);
+  });
+
+  it("should return undefined when the subject quickpick is canceled", async () => {
+    schemaSubjectQuickPickStub.resolves(undefined); // User cancels selection
+
+    const result: string | undefined = await chooseSubject(registry);
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.calledOnce(schemaSubjectQuickPickStub);
+    sinon.assert.notCalled(showInputBoxStub);
+  });
+
+  it("should return undefined when new-subject input is canceled", async () => {
+    // user selects "Create new subject"
+    schemaSubjectQuickPickStub.resolves("");
+    // ...but cancels the input box
+    showInputBoxStub.resolves(undefined);
+
+    const result: string | undefined = await chooseSubject(registry);
+
+    assert.strictEqual(result, undefined);
+    sinon.assert.calledOnce(schemaSubjectQuickPickStub);
+    sinon.assert.calledOnce(showInputBoxStub);
+  });
+});
+
+describe("commands/schemaUpload.ts validateNewSubject", () => {
+  it("should return undefined for a subject name ending with '-key'", () => {
+    const result: vscode.InputBoxValidationMessage | undefined =
+      validateNewSubject("test-topic-key");
+    assert.strictEqual(result, undefined);
+  });
+
+  it("should return undefined for a subject name ending with '-value'", () => {
+    const result: vscode.InputBoxValidationMessage | undefined =
+      validateNewSubject("test-topic-value");
+    assert.strictEqual(result, undefined);
+  });
+
+  it("should return a warning for subject names not ending with '-key' or '-value'", () => {
+    const result: vscode.InputBoxValidationMessage | undefined = validateNewSubject("test-topic");
+
+    assert.ok(result);
+    assert.strictEqual(result?.severity, vscode.InputBoxValidationSeverity.Warning);
+    assert.ok(result?.message.includes("will not match the [TopicNameStrategy]"));
   });
 });
