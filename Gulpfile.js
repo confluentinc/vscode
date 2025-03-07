@@ -138,7 +138,7 @@ export function build(done) {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode"],
+    external: ["vscode", "electron"],
     context: "globalThis",
   };
   /** @type {import("rollup").OutputOptions} */
