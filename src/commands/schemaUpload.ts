@@ -241,7 +241,7 @@ export function validateNewSubject(
 ): vscode.InputBoxValidationMessage | undefined {
   if (!userInput.endsWith("-key") && !userInput.endsWith("-value")) {
     return {
-      message: `Subjects not ending in "-key" or "-value" will not match the [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) and will not automatically associate with Kafka topics. ('Enter' to continue, 'Esc' to cancel)`,
+      message: `Subjects not ending in "-key" or "-value" will not match the [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) and will not automatically associate with Kafka topics. (Press 'Enter' to confirm 'Escape' to cancel)`,
       severity: vscode.InputBoxValidationSeverity.Warning,
     };
   }
