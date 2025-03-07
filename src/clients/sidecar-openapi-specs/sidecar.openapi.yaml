@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.166.0
+  version: 0.167.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -748,6 +748,8 @@ components:
             Bytes parsed as JSON.
             The bytes did not contain a magic byte specifying a schema id, and the raw bytes
             were successfully parsed into a JSON value.
+        * UTF8_STRING:
+            Bytes parsed as a UTF-8 string (meaning the bytes were not parsed as valid JSON).
         * RAW_BYTES:
             Raw bytes. These are the scenarios where it would be used:
             - Arbitrary bytes that are NOT written/read using an implementation of Kafka serializer/deserializer.
@@ -759,6 +761,7 @@ components:
       - JSONSCHEMA
       - PROTOBUF
       - JSON
+      - UTF8_STRING
       - RAW_BYTES
       type: string
     Date:
