@@ -64,9 +64,4 @@ export enum ContextValues {
   topicSearchApplied = "confluent.topicSearchApplied",
   /** The user applied a search string to the Schemas view. */
   schemaSearchApplied = "confluent.schemaSearchApplied",
-  /**
-   * PREVIEW: Is the "produce message" functionality enabled at all?
-   * (This should go away once the `confluent.preview.enableProduceMessages` setting is removed.)
-   */
-  produceMessagesEnabled = "confluent.produceMessagesEnabled",
 }
