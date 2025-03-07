@@ -133,6 +133,13 @@ blocks:
           - export GIT_BRANCH=$SEMAPHORE_GIT_BRANCH
           - make validate-bump
 
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results to Semaphore
+        commands:
+          - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
+
 promotions:
   - name: Multi-Arch VSIX Packaging and Upload
     pipeline_file: multi-arch-packaging.yml
