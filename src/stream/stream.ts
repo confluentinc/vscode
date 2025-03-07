@@ -6,7 +6,7 @@ export class Stream {
   serialized: { key: BitSet; value: BitSet };
   timestamp: SkipList<number | undefined>;
   partition: SkipList<number | undefined>;
-  order: SkipList<PartitionConsumeRecord> | null;
+  order: SkipList<PartitionConsumeRecord>;
 
   constructor(capacity = 2 ** 24) {
     this.capacity = capacity;
@@ -35,7 +35,19 @@ export class Stream {
     let partitionOf = (point: number) => values[point].partition_id;
     this.partition = new SkipList(capacity, 1 / 2, partitionOf, ascending);
 
-    this.order = null;
+    /* Messages are ordered by timestamp, partition, offset in descending order. */
+    this.order = new SkipList(
+      capacity,
+      1 / 4,
+      (point: number) => values[point],
+      (a, b) => {
+        return (
+          descending(a.timestamp, b.timestamp) ||
+          descending(a.partition_id, b.partition_id) ||
+          descending(a.offset, b.offset)
+        );
+      },
+    );
   }
 
   insert(message: PartitionConsumeRecord) {
@@ -46,9 +58,11 @@ export class Stream {
     if (isCircular) {
       this.timestamp.remove(index);
       this.partition.remove(index);
+      this.order.remove(index);
     }
     this.timestamp.insert(index);
     this.partition.insert(index);
+    this.order.insert(index);
 
     /* TEMP the API can provide key/value as objects which we don't really
     utilize as such right now. For faster search and table's rendering time
@@ -62,8 +76,6 @@ export class Stream {
       this.serialized.value.set(index);
     } else this.serialized.value.unset(index);
 
-    // TEMP (July 12th) disabling this since we don't have sorting feature yet
-    // this.order?.insert(index);
     return index;
   }
 
