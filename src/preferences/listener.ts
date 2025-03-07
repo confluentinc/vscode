@@ -1,11 +1,6 @@
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
-import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
-import {
-  ENABLE_PRODUCE_MESSAGES,
-  SSL_PEM_PATHS,
-  SSL_VERIFY_SERVER_CERT_DISABLED,
-} from "./constants";
+import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
 import { updatePreferences } from "./updates";
 
 const logger = new Logger("preferences.listener");
@@ -40,15 +35,6 @@ export function createConfigChangeListener(): Disposable {
       // --- PREVIEW SETTINGS --
       // Remove the sections below once the behavior is enabled by default and a setting is no
       // longer needed to opt-in to the feature.
-
-      if (event.affectsConfiguration(ENABLE_PRODUCE_MESSAGES)) {
-        // user toggled the "Enable Produce Messages" preview setting
-        const enabled = configs.get(ENABLE_PRODUCE_MESSAGES, false);
-        logger.debug(`"${ENABLE_PRODUCE_MESSAGES}" config changed`, { enabled });
-        setContextValue(ContextValues.produceMessagesEnabled, enabled);
-        // no need to refresh the Topics view here since no items are being changed; VS Code will
-        // handle updating the UI to toggle any actions' visibility/enablement
-      }
     },
   );
 
