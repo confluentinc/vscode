@@ -361,7 +361,7 @@ describe("SchemasViewProvider environmentChanged handler", () => {
   });
 
   for (const currentRegistry of [TEST_LOCAL_SCHEMA_REGISTRY, null]) {
-    it("Firing environmentChanged when SR not germane should do nothing", () => {
+    it(`Firing environmentChanged when SR set a ${currentRegistry?.environmentId} environment SR and event is for other env should do nothing`, () => {
       const resetFake = sandbox.fake();
       const updateTreeViewDescriptionFake = sandbox.fake();
       const refreshFake = sandbox.fake();
