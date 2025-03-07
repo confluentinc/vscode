@@ -109,7 +109,7 @@ export class DirectConnectionManager {
           const schemasView = getSchemasViewProvider();
           if (schemasView.schemaRegistry && isDirect(schemasView.schemaRegistry)) {
             if (!connections.has(schemasView.schemaRegistry.connectionId)) {
-              schemasView.reset();
+              await schemasView.reset();
             }
           }
         }

@@ -134,9 +134,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   }
 
   /** Convenience method to revert this view to its original state. */
-  reset(): void {
+  async reset(): Promise<void> {
     logger.debug("reset() called, clearing tree view");
-    this.setSchemaRegistry(null);
+    await this.setSchemaRegistry(null);
   }
 
   /** Change what SR is being viewed (if any) */
@@ -316,20 +316,28 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       },
     );
 
-    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
-      if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
-        logger.debug("ccloudConnected event fired, resetting", { connected });
-        // any transition of CCloud connection state should reset the tree view
-        this.reset();
-      }
-    });
+    const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event(
+      async (connected: boolean) => {
+        if (this.schemaRegistry && isCCloud(this.schemaRegistry)) {
+          // any transition of CCloud connection state should reset the tree view
+          // if we were previously looking at a ccloud-based SR.
+          logger.debug("ccloudConnected event fired while set to a CC-based SR, resetting", {
+            connected,
+          });
+          await this.reset();
+        }
+      },
+    );
 
     const localSchemaRegistryConnectedSub: vscode.Disposable = localSchemaRegistryConnected.event(
-      (connected: boolean) => {
+      async (connected: boolean) => {
         if (this.schemaRegistry && isLocal(this.schemaRegistry)) {
-          logger.debug("localSchemaRegistryConnected event fired, resetting", { connected });
+          logger.debug(
+            "localSchemaRegistryConnected event fired while set to local SR, resetting",
+            { connected },
+          );
           // any transition of local schema registry connection state should reset the tree view
-          this.reset();
+          await this.reset();
         }
       },
     );
