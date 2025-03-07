@@ -9,7 +9,7 @@ import {
   TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext, pause } from "../../tests/unit/testUtils";
+import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ContextValues, getContextValue } from "../context/values";
 import { currentSchemaRegistryChanged, environmentChanged, schemaSearchSet } from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -122,67 +122,6 @@ describe("SchemasViewProvider setSchemaRegistry()", () => {
       assert.ok(setSchemaRegistryFake.calledWith(newRegistry));
     }
   });
-
-  it("Firing environmentChanged + deleted should call reset()", async () => {
-    const resetFake = sandbox.fake();
-    sandbox.replace(provider, "reset", resetFake);
-
-    // Be set to a SR within the environment being deleted
-    provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
-    // fire the event
-    environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
-
-    // Should have called .reset()
-    assert.ok(resetFake.calledOnce);
-  });
-
-  it("Firing environmentChanged + misc change should not call reset(), should call updateTreeViewDescription + refresh", async () => {
-    const resetFake = sandbox.fake();
-    const updateTreeViewDescriptionFake = sandbox.fake();
-    const refreshFake = sandbox.fake();
-
-    sandbox.replace(provider, "reset", resetFake);
-    sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
-    sandbox.replace(provider, "refresh", refreshFake);
-
-    // Be set to a SR within the environment being deleted
-    provider.schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
-    // fire the event
-    environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
-
-    // Need to pause an iota to get the refresh to be called, is after first await in the block.
-    await pause(100);
-
-    assert.ok(resetFake.notCalled);
-    assert.ok(updateTreeViewDescriptionFake.calledOnce);
-    assert.ok(refreshFake.calledOnce);
-  });
-
-  for (const currentRegistry of [TEST_LOCAL_SCHEMA_REGISTRY, null]) {
-    it("Firing environmentChanged when SR not germane should do nothing", () => {
-      const resetFake = sandbox.fake();
-      const updateTreeViewDescriptionFake = sandbox.fake();
-      const refreshFake = sandbox.fake();
-
-      sandbox.replace(provider, "reset", resetFake);
-      sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
-      sandbox.replace(provider, "refresh", refreshFake);
-
-      // Be set to a SR NOT within the environment being updated, or null.
-      provider.schemaRegistry = currentRegistry;
-
-      // fire the event against some other environment.
-      environmentChanged.fire({
-        id: TEST_CCLOUD_ENVIRONMENT_ID,
-        wasDeleted: false,
-      });
-
-      // Should not have called any of these
-      assert.ok(resetFake.notCalled);
-      assert.ok(updateTreeViewDescriptionFake.notCalled);
-      assert.ok(refreshFake.notCalled);
-    });
-  }
 });
 
 describe("SchemasViewProvider search behavior", () => {
@@ -311,6 +250,7 @@ describe("SchemasViewProvider search behavior", () => {
 describe("SchemasViewProvider environmentChanged handler", () => {
   let provider: SchemasViewProvider;
   let sandbox: sinon.SinonSandbox;
+  let clock: sinon.SinonFakeTimers;
 
   before(async () => {
     await getTestExtensionContext();
@@ -319,6 +259,7 @@ describe("SchemasViewProvider environmentChanged handler", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
+    clock = sandbox.useFakeTimers(Date.now());
   });
 
   afterEach(() => {
@@ -353,7 +294,7 @@ describe("SchemasViewProvider environmentChanged handler", () => {
     environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
 
     // Need to pause an iota to get the refresh to be called, is after first await in the block.
-    await pause(100);
+    await clock.tickAsync(100);
 
     assert.ok(resetFake.notCalled);
     assert.ok(updateTreeViewDescriptionFake.calledOnce);
