@@ -370,12 +370,16 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // attempt to get a session to trigger the initial auth badge for signing in
   const cloudSession = await getCCloudAuthSession();
 
-  // Send an Identify event to Segment with the session info if available
+  // Send an Identify event to Segment and LaunchDarkly with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
       eventName: UserEvent.ExtensionActivation,
       userInfo: undefined,
       session: cloudSession,
+    });
+    getLaunchDarklyClient()?.identify({
+      key: cloudSession.account.id,
+      email: cloudSession.account.label,
     });
   }
 
