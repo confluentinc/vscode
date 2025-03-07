@@ -1,9 +1,11 @@
 import { Disposable, Uri, window, workspace, WorkspaceConfiguration } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { getCCloudAuthSession } from "../authn/utils";
+import { EXTENSION_VERSION } from "../constants";
 import { openDirectConnectionForm } from "../directConnect";
 import { DirectConnectionManager } from "../directConnectManager";
 import { ccloudAuthSessionInvalidated } from "../emitters";
+import { showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { DirectEnvironment } from "../models/environment";
 import { ConnectionId } from "../models/resource";
@@ -15,8 +17,6 @@ import {
   getResourceManager,
 } from "../storage/resourceManager";
 import { ResourceViewProvider } from "../viewProviders/resources";
-import { EXTENSION_VERSION } from "../constants";
-import { showErrorNotificationWithButtons } from "../errors";
 
 const logger = new Logger("commands.connections");
 
@@ -27,11 +27,13 @@ async function ccloudSignIn() {
   } catch (error) {
     if (error instanceof Error) {
       // we don't need to do anything if:
-      // - the user clicks "Cancel" on the modal before the sign-in process
+      // - the user clicks "Cancel" on the modal before the sign-in process, or on the progress
+      //  notification after the sign-in process has started
       // - the auth provider handles a callback failure (which shows its own error notification)
       if (
         error.message === "User did not consent to login." ||
-        error.message.includes("Authentication failed, see browser for details")
+        error.message === "User cancelled the authentication flow." ||
+        error.message.includes("Authentication failed")
       ) {
         return;
       }
