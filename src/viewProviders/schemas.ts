@@ -5,6 +5,7 @@ import {
   ccloudConnected,
   currentSchemaRegistryChanged,
   environmentChanged,
+  EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
 } from "../emitters";
@@ -302,16 +303,27 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const environmentChangedSub: vscode.Disposable = environmentChanged.event(
-      async (envId: string) => {
-        if (this.schemaRegistry && this.schemaRegistry.environmentId === envId) {
-          logger.debug(
-            "environmentChanged event fired with matching SR env ID, updating view description",
-            {
-              envId,
-            },
-          );
-          await this.updateTreeViewDescription();
-          this.refresh();
+      async (envEvent: EnvironmentChangeEvent) => {
+        if (this.schemaRegistry && this.schemaRegistry.environmentId === envEvent.id) {
+          if (!envEvent.wasDeleted) {
+            logger.debug(
+              "environmentChanged event fired with matching SR env ID, updating view description",
+              {
+                envEvent,
+              },
+            );
+            await this.updateTreeViewDescription();
+            this.refresh();
+          } else {
+            logger.debug(
+              "environmentChanged deletion event fired with matching SR env ID, resetting view",
+              {
+                envEvent,
+              },
+            );
+            // environment was deleted, reset the view
+            await this.reset();
+          }
         }
       },
     );
