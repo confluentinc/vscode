@@ -79,33 +79,38 @@ describe("ConfluentCloudAuthProvider", () => {
     getCCloudConnectionStub.onFirstCall().resolves(null);
     createCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     getCCloudConnectionStub.onSecondCall().resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // authentication completes successfully
+    browserAuthFlowStub.resolves(true);
 
     await authProvider.createSession();
 
-    assert.ok(createCCloudConnectionStub.called);
-    assert.ok(browserAuthFlowStub.called);
+    sinon.assert.calledOnce(createCCloudConnectionStub);
+    sinon.assert.calledOnce(browserAuthFlowStub);
   });
 
   it("createSession() should reuse an existing CCloud connection", async () => {
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // authentication completes successfully
+    browserAuthFlowStub.resolves(true);
 
     await authProvider.createSession();
 
-    assert.ok(createCCloudConnectionStub.notCalled);
-    assert.ok(browserAuthFlowStub.called);
+    sinon.assert.notCalled(createCCloudConnectionStub);
+    sinon.assert.calledOnce(browserAuthFlowStub);
   });
 
   it("createSession() should update the auth status secret on successful authentication", async () => {
     const setSecretStub = sandbox.stub(getStorageManager(), "setSecret").resolves();
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // authentication completes successfully
+    browserAuthFlowStub.resolves(true);
 
     await authProvider.createSession();
 
-    assert.ok(
-      setSecretStub.calledWith(
-        SecretStorageKeys.CCLOUD_AUTH_STATUS,
-        TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
-      ),
+    sinon.assert.calledWith(
+      setSecretStub,
+      SecretStorageKeys.CCLOUD_AUTH_STATUS,
+      TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
     );
   });
 
@@ -237,27 +242,17 @@ describe("ConfluentCloudAuthProvider", () => {
     assert.ok(handleSessionRemovedStub.called);
   });
 
-  it("should reject the waitForUriHandling promise when the URI query contains 'success=false'", async () => {
-    const promise = authProvider.waitForUriHandling();
+  for (const success of [true, false] as const) {
+    it(`should return '${success}' from waitForUriHandling when the URI query contains 'success=${success}'`, async () => {
+      const promise: Promise<boolean> = authProvider.waitForUriHandling();
 
-    const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: "success=false" });
-    uriHandler.handleUri(uri);
+      const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: `success=${success}` });
+      uriHandler.handleUri(uri);
 
-    await promise.catch((err) => {
-      assert.equal(err.message, "Authentication failed, see browser for details");
+      const result: boolean = await promise;
+      assert.strictEqual(result, success);
     });
-  });
-
-  it("should resolve the waitForUriHandling promise when the URI query contains 'success=true'", async () => {
-    const promise = authProvider.waitForUriHandling();
-
-    const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: "success=true" });
-    uriHandler.handleUri(uri);
-
-    await promise.then((result) => {
-      assert.equal(result, undefined);
-    });
-  });
+  }
 });
 
 describe("CCloud auth flow", () => {

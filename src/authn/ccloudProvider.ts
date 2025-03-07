@@ -5,7 +5,7 @@ import { getExtensionContext } from "../context/extension";
 import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
-import { ExtensionContextNotSetError, logError } from "../errors";
+import { ExtensionContextNotSetError } from "../errors";
 import { Logger } from "../logging";
 import { fetchPreferences } from "../preferences/updates";
 import {
@@ -129,27 +129,17 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("Failed to create new connection. Please try again.");
     }
 
-    try {
-      // this will block until we handle the URI event or the user cancels
-      await this.browserAuthFlow(signInUri);
-    } catch (e) {
-      if (e instanceof Error) {
-        vscode.window.showErrorMessage(
-          `Error during Confluent Cloud sign-in process: ${e.message}`,
-        );
-        logError(
-          e,
-          "browser sign-in flow",
-          {
-            authStatus: connection.status.authentication.status,
-            connectionId: connection.id,
-          },
-          true,
-        );
-      }
-      // this won't re-notify the user of the error, so no issue with re-throwing while showing the
-      // error notification above (if it exists)
-      throw e;
+    // this will block until we handle the URI event or the user cancels
+    const success: boolean | undefined = await this.browserAuthFlow(signInUri);
+    if (success === undefined) {
+      // user cancelled the operation
+      logger.debug("createSession() user cancelled the operation");
+      return Promise.reject(new Error("User cancelled the authentication flow."));
+    }
+    if (!success) {
+      const authFailedMsg = `Confluent Cloud authentication failed. See browser for details.`;
+      vscode.window.showErrorMessage(authFailedMsg);
+      return Promise.reject(new Error(authFailedMsg));
     }
 
     logUsage(UserEvent.CCloudAuthentication, {
@@ -399,8 +389,17 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     return [secretsOnDidChangeSub, uriHandlerSub, ccloudAuthSessionInvalidatedSub];
   }
 
-  async browserAuthFlow(uri: string) {
-    await vscode.window.withProgress(
+  /**
+   * Start the browser-based authentication flow. This will open the sign-in URI in the user's
+   * default browser for the user to complete authentication.
+   *
+   * @param uri The URI to open in the browser.
+   *
+   * @returns A promise that resolves to a `boolean` indicating whether the authentication flow was
+   * successful, or `undefined` if the user cancelled the operation.
+   */
+  async browserAuthFlow(uri: string): Promise<boolean | undefined> {
+    return await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: `Signing in to [Confluent Cloud](${uri})...`,
@@ -409,9 +408,16 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       async (_, token) => {
         await openExternal(vscode.Uri.parse(uri));
         // keep progress notification open until one of two things happens:
-        // - we handle the auth completion event and resolve/reject based on success value
+        // - we handle the auth completion event and resolve with the `success` value
         // - user clicks the "Cancel" button from the notification
-        await Promise.race([this.waitForUriHandling(), this.waitForCancellationRequest(token)]);
+        const [success, cancelled] = await Promise.race([
+          this.waitForUriHandling().then((success) => [success, false]),
+          this.waitForCancellationRequest(token).then(() => [false, true]),
+        ]);
+        if (cancelled) return;
+        // user completed the auth flow, so we need to resolve the promise with the success value
+        logger.debug("browserAuthFlow() user completed the auth flow", { success });
+        return success;
       },
     );
   }
@@ -420,27 +426,23 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * Wait for the user to complete the authentication flow in the browser and resolve the promise,
    * whether triggered from this workspace or another.
    */
-  waitForUriHandling(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+  waitForUriHandling(): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
       // this will only fire if the auth flow didn't initially start from the Accounts action, or
       // if it was done in another window entirely -- see
       const sub = this._onAuthFlowCompletedSuccessfully.event((success: boolean) => {
         logger.debug("handling _onAuthFlowCompletedSuccessfully event", { success });
         sub.dispose();
-        if (success) {
-          resolve();
-        } else {
-          reject(new Error("Authentication failed, see browser for details"));
-        }
+        resolve(success);
       });
     });
   }
 
   /** Only used for when the user clicks "Cancel" during the "Signing in..." progress notification. */
   private waitForCancellationRequest(token: vscode.CancellationToken): Promise<void> {
-    return new Promise<void>((_, reject) =>
+    return new Promise<void>((resolve) =>
       token.onCancellationRequested(async () => {
-        reject();
+        resolve();
       }),
     );
   }
