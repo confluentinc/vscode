@@ -217,10 +217,10 @@ async function documentHasErrors(uri: vscode.Uri): Promise<boolean> {
 /**
  * Guide the user through chosing a subject to bind the schema to.
  */
-async function chooseSubject(registry: SchemaRegistry): Promise<string | undefined> {
+export async function chooseSubject(registry: SchemaRegistry): Promise<string | undefined> {
   // Ask the user to choose a subject to bind the schema to. Shows subjects with schemas
   // using the given schema type. Will return "" if they want to create a new subject.
-  let subject = await schemaSubjectQuickPick(registry);
+  let subject: string | undefined = await schemaSubjectQuickPick(registry);
 
   if (subject === "") {
     // User chose the 'create a new subject' quickpick item. Prompt for the new name.
@@ -228,33 +228,24 @@ async function chooseSubject(registry: SchemaRegistry): Promise<string | undefin
       title: "Schema Subject",
       prompt: "Enter subject name",
       value: "newSubject-value",
+      validateInput: validateNewSubject,
     });
-
-    // Warn if subject doesn't match TopicNamingStrategy, but allow if they really want.
-    if (subject && !subject.endsWith("-key") && !subject.endsWith("-value")) {
-      const choice = await vscode.window.showInputBox({
-        title: "Subject Name Warning",
-        prompt: `Subject name "${subject}" does not end with "-key" or "-value". Continue ("yes", "no", or enter new subject name ending with either "-key" or "-value")?`,
-      });
-
-      if (choice) {
-        if (choice.endsWith("-key") || choice.endsWith("-value")) {
-          subject = choice;
-        } else if (choice.toLowerCase() === "yes") {
-          // they confirmed they want to continue with the subject as is.
-          // Fallthrough with subject as is.
-        } else {
-          // "no"-ish response, so abort.
-          subject = undefined;
-        }
-      } else {
-        // escape aborted from the input box
-        subject = undefined;
-      }
-    }
   }
 
   return subject;
+}
+
+/** Validate the user's input for the new subject. */
+export function validateNewSubject(
+  userInput: string,
+): vscode.InputBoxValidationMessage | undefined {
+  if (!userInput.endsWith("-key") && !userInput.endsWith("-value")) {
+    return {
+      message: `Subjects not ending in "-key" or "-value" will not match the [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) and will not automatically associate with Kafka topics. ('Enter' to continue, 'Esc' to cancel)`,
+      severity: vscode.InputBoxValidationSeverity.Warning,
+    };
+  }
+  return;
 }
 
 /** Given the error message from a 409 conflict when trying to upload a new schema, extract
