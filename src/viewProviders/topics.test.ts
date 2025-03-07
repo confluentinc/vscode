@@ -2,16 +2,18 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { TreeItemCollapsibleState } from "vscode";
 import {
+  TEST_CCLOUD_ENVIRONMENT_ID,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SUBJECT,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+  TEST_LOCAL_ENVIRONMENT_ID,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_SCHEMA,
 } from "../../tests/unit/testResources";
-import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { topicSearchSet } from "../emitters";
+import { getTestExtensionContext, pause } from "../../tests/unit/testUtils";
+import { environmentChanged, topicSearchSet } from "../emitters";
 import { CCloudResourceLoader } from "../loaders";
 import { SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { KafkaTopic, KafkaTopicTreeItem } from "../models/topic";
@@ -191,4 +193,83 @@ describe("TopicViewProvider search behavior", () => {
 
     assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
   });
+});
+
+describe("TopicViewProvider environmentChanged handler", () => {
+  let provider: TopicViewProvider;
+  let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    await getTestExtensionContext();
+    provider = TopicViewProvider.getInstance();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Firing environmentChanged + deleted should call reset()", async () => {
+    const resetFake = sandbox.fake();
+    sandbox.replace(provider, "reset", resetFake);
+
+    // Be set to a SR within the environment being deleted
+    provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+    // fire the event
+    environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: true });
+
+    // Should have called .reset()
+    assert.ok(resetFake.calledOnce);
+  });
+
+  it("Firing environmentChanged + misc change should not call reset(), should call updateTreeViewDescription + refresh", async () => {
+    const resetFake = sandbox.fake();
+    const updateTreeViewDescriptionFake = sandbox.fake();
+    const refreshFake = sandbox.fake();
+
+    sandbox.replace(provider, "reset", resetFake);
+    sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
+    sandbox.replace(provider, "refresh", refreshFake);
+
+    // Be set to a cluster within the environment being deleted
+    provider.kafkaCluster = TEST_LOCAL_KAFKA_CLUSTER;
+    // fire the event
+    environmentChanged.fire({ id: TEST_LOCAL_ENVIRONMENT_ID, wasDeleted: false });
+
+    // Need to pause an iota to get the refresh to be called, is after first await in the block.
+    await pause(100);
+
+    assert.ok(resetFake.notCalled);
+    assert.ok(updateTreeViewDescriptionFake.calledOnce);
+    assert.ok(refreshFake.calledOnce);
+  });
+
+  for (const currentCluster of [TEST_LOCAL_KAFKA_CLUSTER, null]) {
+    it(`Firing environmentChanged when SR set a ${currentCluster?.environmentId} environment cluster and event is for other env should do nothing`, () => {
+      const resetFake = sandbox.fake();
+      const updateTreeViewDescriptionFake = sandbox.fake();
+      const refreshFake = sandbox.fake();
+
+      sandbox.replace(provider, "reset", resetFake);
+      sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
+      sandbox.replace(provider, "refresh", refreshFake);
+
+      // Be set to a cluster NOT within the environment being updated, or null.
+      provider.kafkaCluster = currentCluster;
+
+      // fire the event against some other environment.
+      environmentChanged.fire({
+        id: TEST_CCLOUD_ENVIRONMENT_ID,
+        wasDeleted: false,
+      });
+
+      // Should not have called any of these
+      assert.ok(resetFake.notCalled);
+      assert.ok(updateTreeViewDescriptionFake.notCalled);
+      assert.ok(refreshFake.notCalled);
+    });
+  }
 });

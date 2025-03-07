@@ -105,13 +105,26 @@ describe("connectionEventHandler", () => {
       connectionEventHandler(testConnectionEvent);
 
       // Assert
-      assert.strictEqual(connectionStableFireStub.calledOnce, true);
+      assert.strictEqual(connectionStableFireStub.calledOnce, true, "one");
       // called with the connection id
-      assert.strictEqual(connectionStableFireStub.calledWith(TEST_DIRECT_CONNECTION.id), true);
+      assert.strictEqual(
+        connectionStableFireStub.calledWith(TEST_DIRECT_CONNECTION.id),
+        true,
+        "two",
+      );
 
-      assert.strictEqual(environmentChangedFireStub.calledOnce, true);
-      // called with the connection id cast as environment id
-      assert.strictEqual(environmentChangedFireStub.calledWith(TEST_DIRECT_CONNECTION.id), true);
+      assert.strictEqual(environmentChangedFireStub.calledOnce, true, "three");
+
+      assert.strictEqual(
+        environmentChangedFireStub.calledWith({
+          id: TEST_DIRECT_CONNECTION.id,
+          wasDeleted:
+            action === ConnectionEventAction.DELETED ||
+            action === ConnectionEventAction.DISCONNECTED,
+        }),
+        true,
+        "four",
+      );
     });
   }
 
