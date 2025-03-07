@@ -28,6 +28,7 @@ export type EnvironmentChangeEvent = {
   /** Was it that the env has been deleted? */
   wasDeleted: boolean;
 };
+
 /**
  * Fired whenever a property of an {@link Environment} has changed. (Mainly to affect watchers in
  * the Topics/Schemas views, or similar.)
