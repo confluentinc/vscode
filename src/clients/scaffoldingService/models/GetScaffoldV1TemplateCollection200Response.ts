@@ -55,21 +55,18 @@ export interface GetScaffoldV1TemplateCollection200Response {
 
 /**
  * @export
+ * @enum {string}
  */
-export const GetScaffoldV1TemplateCollection200ResponseApiVersionEnum = {
-  ScaffoldV1: "scaffold/v1",
-} as const;
-export type GetScaffoldV1TemplateCollection200ResponseApiVersionEnum =
-  (typeof GetScaffoldV1TemplateCollection200ResponseApiVersionEnum)[keyof typeof GetScaffoldV1TemplateCollection200ResponseApiVersionEnum];
-
+export enum GetScaffoldV1TemplateCollection200ResponseApiVersionEnum {
+  ScaffoldV1 = "scaffold/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetScaffoldV1TemplateCollection200ResponseKindEnum = {
-  TemplateCollection: "TemplateCollection",
-} as const;
-export type GetScaffoldV1TemplateCollection200ResponseKindEnum =
-  (typeof GetScaffoldV1TemplateCollection200ResponseKindEnum)[keyof typeof GetScaffoldV1TemplateCollection200ResponseKindEnum];
+export enum GetScaffoldV1TemplateCollection200ResponseKindEnum {
+  TemplateCollection = "TemplateCollection",
+}
 
 /**
  * Check if a given object implements the GetScaffoldV1TemplateCollection200Response interface.

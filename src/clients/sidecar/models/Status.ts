@@ -15,14 +15,14 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const Status = {
-  NoToken: "NO_TOKEN",
-  ValidToken: "VALID_TOKEN",
-  InvalidToken: "INVALID_TOKEN",
-  Failed: "FAILED",
-} as const;
-export type Status = (typeof Status)[keyof typeof Status];
+export enum Status {
+  NoToken = "NO_TOKEN",
+  ValidToken = "VALID_TOKEN",
+  InvalidToken = "INVALID_TOKEN",
+  Failed = "FAILED",
+}
 
 export function instanceOfStatus(value: any): boolean {
   for (const key in Status) {

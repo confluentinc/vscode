@@ -46,16 +46,15 @@ export interface RestartPolicy {
 
 /**
  * @export
+ * @enum {string}
  */
-export const RestartPolicyNameEnum = {
-  Empty: "",
-  No: "no",
-  Always: "always",
-  UnlessStopped: "unless-stopped",
-  OnFailure: "on-failure",
-} as const;
-export type RestartPolicyNameEnum =
-  (typeof RestartPolicyNameEnum)[keyof typeof RestartPolicyNameEnum];
+export enum RestartPolicyNameEnum {
+  Empty = "",
+  No = "no",
+  Always = "always",
+  UnlessStopped = "unless-stopped",
+  OnFailure = "on-failure",
+}
 
 /**
  * Check if a given object implements the RestartPolicy interface.

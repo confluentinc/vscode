@@ -124,36 +124,31 @@ export interface ClusterVolumeSpecAccessMode {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ClusterVolumeSpecAccessModeScopeEnum = {
-  Single: "single",
-  Multi: "multi",
-} as const;
-export type ClusterVolumeSpecAccessModeScopeEnum =
-  (typeof ClusterVolumeSpecAccessModeScopeEnum)[keyof typeof ClusterVolumeSpecAccessModeScopeEnum];
-
+export enum ClusterVolumeSpecAccessModeScopeEnum {
+  Single = "single",
+  Multi = "multi",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ClusterVolumeSpecAccessModeSharingEnum = {
-  None: "none",
-  Readonly: "readonly",
-  Onewriter: "onewriter",
-  All: "all",
-} as const;
-export type ClusterVolumeSpecAccessModeSharingEnum =
-  (typeof ClusterVolumeSpecAccessModeSharingEnum)[keyof typeof ClusterVolumeSpecAccessModeSharingEnum];
-
+export enum ClusterVolumeSpecAccessModeSharingEnum {
+  None = "none",
+  Readonly = "readonly",
+  Onewriter = "onewriter",
+  All = "all",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ClusterVolumeSpecAccessModeAvailabilityEnum = {
-  Active: "active",
-  Pause: "pause",
-  Drain: "drain",
-} as const;
-export type ClusterVolumeSpecAccessModeAvailabilityEnum =
-  (typeof ClusterVolumeSpecAccessModeAvailabilityEnum)[keyof typeof ClusterVolumeSpecAccessModeAvailabilityEnum];
+export enum ClusterVolumeSpecAccessModeAvailabilityEnum {
+  Active = "active",
+  Pause = "pause",
+  Drain = "drain",
+}
 
 /**
  * Check if a given object implements the ClusterVolumeSpecAccessMode interface.

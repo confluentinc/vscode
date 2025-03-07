@@ -72,23 +72,20 @@ export interface ServiceSpecRollbackConfig {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ServiceSpecRollbackConfigFailureActionEnum = {
-  Continue: "continue",
-  Pause: "pause",
-} as const;
-export type ServiceSpecRollbackConfigFailureActionEnum =
-  (typeof ServiceSpecRollbackConfigFailureActionEnum)[keyof typeof ServiceSpecRollbackConfigFailureActionEnum];
-
+export enum ServiceSpecRollbackConfigFailureActionEnum {
+  Continue = "continue",
+  Pause = "pause",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ServiceSpecRollbackConfigOrderEnum = {
-  StopFirst: "stop-first",
-  StartFirst: "start-first",
-} as const;
-export type ServiceSpecRollbackConfigOrderEnum =
-  (typeof ServiceSpecRollbackConfigOrderEnum)[keyof typeof ServiceSpecRollbackConfigOrderEnum];
+export enum ServiceSpecRollbackConfigOrderEnum {
+  StopFirst = "stop-first",
+  StartFirst = "start-first",
+}
 
 /**
  * Check if a given object implements the ServiceSpecRollbackConfig interface.
