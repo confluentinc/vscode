@@ -137,7 +137,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       return Promise.reject(new Error("User cancelled the authentication flow."));
     }
     if (!success) {
-      const authFailedMsg = `Authentication failed. See browser for details.`;
+      const authFailedMsg = `Confluent Cloud authentication failed. See browser for details.`;
       vscode.window.showErrorMessage(authFailedMsg);
       return Promise.reject(new Error(authFailedMsg));
     }
