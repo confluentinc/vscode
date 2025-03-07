@@ -313,7 +313,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
               },
             );
             await this.updateTreeViewDescription();
-            this.refresh();
+            await this.refresh();
           } else {
             logger.debug(
               "environmentChanged deletion event fired with matching SR env ID, resetting view",
