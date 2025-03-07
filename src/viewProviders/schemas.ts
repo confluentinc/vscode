@@ -49,7 +49,6 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     this.subjectsInTreeView.clear();
 
     if (this.schemaRegistry !== null) {
-      // Fetch subjects from the SR.
       const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
       // Fetch subjects using the loader, pushing down need to do deep refresh.
@@ -136,18 +135,18 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
   /** Convenience method to revert this view to its original state. */
   reset(): void {
-    setContextValue(ContextValues.schemaRegistrySelected, false);
-    this.environment = null;
-    this.schemaRegistry = null;
-    this.treeView.description = "";
-    this.subjectsInTreeView.clear();
-    this.setSearch(null);
-    this.refresh();
+    logger.debug("reset() called, clearing tree view");
+    this.setSchemaRegistry(null);
   }
 
   /** Change what SR is being viewed (if any) */
   async setSchemaRegistry(schemaRegistry: SchemaRegistry | null): Promise<void> {
-    if (schemaRegistry === this.schemaRegistry) {
+    if (
+      // handles exact object reference or both nulls.
+      schemaRegistry === this.schemaRegistry ||
+      // handles same ID but different object reference
+      (schemaRegistry && this.schemaRegistry?.id === schemaRegistry.id)
+    ) {
       logger.debug("setSchemaRegistry() called with same SR as being viewed already, ignoring.");
       return;
     }
@@ -161,14 +160,17 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
     this.schemaRegistry = schemaRegistry;
 
-    if (schemaRegistry) {
-      setContextValue(ContextValues.schemaRegistrySelected, true);
-      await this.updateTreeViewDescription();
-    } else {
-      setContextValue(ContextValues.schemaRegistrySelected, false);
-    }
+    // Internally handles updating this.treeview.description and this.environment
+    // (schema registries are always different envs -- only one SR per env)
+    await this.updateTreeViewDescription();
 
+    // Set the context value to indicate whether a schema registry is selected.
+    await setContextValue(ContextValues.schemaRegistrySelected, schemaRegistry !== null);
+
+    // Always clear any existing search string.
     this.setSearch(null);
+
+    // Clear or refresh the tree view subjects.
     await this.refresh();
   }
 
@@ -372,11 +374,17 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     ];
   }
 
-  /** Update the tree view description to show the currently-focused Schema Registry's parent env
-   * name and the Schema Registry ID. */
+  /**
+   * Update the tree view description to show the currently-focused Schema Registry's parent env
+   * name and the Schema Registry ID.
+   *
+   * Reassigns this.environment to the parent environment of the Schema Registry.
+   * */
   async updateTreeViewDescription(): Promise<void> {
     const schemaRegistry = this.schemaRegistry;
     if (!schemaRegistry) {
+      this.treeView.description = "";
+      this.environment = null;
       return;
     }
     const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
