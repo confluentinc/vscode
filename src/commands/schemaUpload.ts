@@ -7,7 +7,6 @@ import {
   SubjectVersion,
 } from "../clients/schemaRegistryRest";
 import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
-import { currentSchemaRegistryChanged } from "../emitters";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Schema, SchemaType, Subject } from "../models/schema";
@@ -177,14 +176,8 @@ async function uploadSchema(
   if (viewchoice) {
     // User chose to view the schema in the schema registry.
 
-    // Get the schemas view provider to refresh the view on the right registry.
-    // (The resource manager data for that registry will be updated with the new schema
-    //  via updateRegistryCacheAndFindNewSchema() which has already resolved.)
-    if (schemaViewProvider.schemaRegistry?.id !== registry.id) {
-      currentSchemaRegistryChanged.fire(registry);
-    }
-
     // Unfurl the subject and highlight the new schema.
+    // (Will reset the SR being viewed if necessary)
     await schemaViewProvider.revealSchema(newSchema);
   }
 }

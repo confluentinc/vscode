@@ -8,12 +8,13 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { schemaSearchSet } from "../emitters";
+import { ContextValues, getContextValue } from "../context/values";
+import { currentSchemaRegistryChanged, schemaSearchSet } from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
 
-describe("SchemasViewProvider methods", () => {
+describe("SchemasViewProvider getTreeItem()", () => {
   let provider: SchemasViewProvider;
 
   before(async () => {
@@ -21,19 +22,103 @@ describe("SchemasViewProvider methods", () => {
     provider = SchemasViewProvider.getInstance();
   });
 
-  it("getTreeItem() should return a SchemaTreeItem for a Schema instance", () => {
+  it("Should return a SchemaTreeItem for a Schema instance", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SCHEMA);
     assert.ok(treeItem instanceof SchemaTreeItem);
   });
 
-  it("getTreeItem() should return a SubjectTreeItem for a Subject instance w/o schemas", () => {
+  it("Should return a SubjectTreeItem for a Subject instance w/o schemas", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT);
     assert.ok(treeItem instanceof SubjectTreeItem);
   });
 
-  it("getTreeItem() should return a SubjectTreeItem for a Subject instance with schemas", () => {
+  it("Should return a SubjectTreeItem for a Subject instance with schemas", () => {
     const treeItem = provider.getTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
     assert.ok(treeItem instanceof SubjectTreeItem);
+  });
+});
+
+describe("SchemasViewProvider setSchemaRegistry()", () => {
+  let provider: SchemasViewProvider;
+  let sandbox: sinon.SinonSandbox;
+
+  before(async () => {
+    await getTestExtensionContext();
+    provider = SchemasViewProvider.getInstance();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Should do nothing if already set to the same registry", async () => {
+    const setSearchSpy = sandbox.spy(provider, "setSearch");
+    const refreshSpy = sandbox.spy(provider, "refresh");
+    const updateTreeViewDescriptionSpy = sandbox.spy(provider, "updateTreeViewDescription");
+
+    for (const registry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
+      provider.schemaRegistry = registry;
+
+      await provider.setSchemaRegistry(registry);
+      assert.strictEqual(provider.schemaRegistry, registry);
+
+      // Should have short circuited and not called .setSearch() or .refresh()
+      assert.ok(setSearchSpy.notCalled);
+      assert.ok(refreshSpy.notCalled);
+      assert.ok(updateTreeViewDescriptionSpy.notCalled);
+    }
+  });
+
+  it("Should set the schema registry and other effects when setting to new SR or null", async () => {
+    const setSearchFake = sandbox.fake();
+    const refreshFake = sandbox.fake();
+    const updateTreeViewDescriptionFake = sandbox.fake();
+
+    sandbox.replace(provider, "setSearch", setSearchFake);
+    sandbox.replace(provider, "refresh", refreshFake);
+    sandbox.replace(provider, "updateTreeViewDescription", updateTreeViewDescriptionFake);
+
+    for (const newRegistry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
+      console.log("setSchemaRegistry subtest start");
+      // initially have a different registry / different env.
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      await provider.setSchemaRegistry(newRegistry);
+
+      assert.strictEqual(provider.schemaRegistry, newRegistry);
+
+      assert.ok(setSearchFake.calledWith(null));
+      assert.ok(refreshFake.calledOnce);
+      assert.ok(updateTreeViewDescriptionFake.calledOnce);
+      assert.equal(
+        await getContextValue(ContextValues.schemaRegistrySelected),
+        newRegistry !== null,
+      );
+
+      // reset fakes for next iteration (if any)
+      setSearchFake.resetHistory();
+      refreshFake.resetHistory();
+      updateTreeViewDescriptionFake.resetHistory();
+    }
+  });
+
+  it("Firing currentSchemaRegistryChanged should call setSchemaRegistry()", () => {
+    const setSchemaRegistryFake = sandbox.fake();
+    sandbox.replace(provider, "setSchemaRegistry", setSchemaRegistryFake);
+    for (const newRegistry of [null, TEST_LOCAL_SCHEMA_REGISTRY]) {
+      setSchemaRegistryFake.resetHistory();
+
+      // fire the event
+      currentSchemaRegistryChanged.fire(newRegistry);
+
+      // Should have called .setSchemaRegistry() with the new registry
+      assert.ok(setSchemaRegistryFake.calledOnce);
+      assert.ok(setSchemaRegistryFake.calledWith(newRegistry));
+    }
   });
 });
 
