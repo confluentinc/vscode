@@ -44,6 +44,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(includeObservabilityContext);
 }
 
+import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { registerCommandWithLogging } from "./commands";
@@ -70,6 +71,8 @@ import { registerLocalResourceWorkflows } from "./docker/workflows/workflowIniti
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
+import { getLaunchDarklyClient, setFlagDefaults } from "./featureFlags/client";
+import { FeatureFlag, FeatureFlags } from "./featureFlags/constants";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
@@ -145,6 +148,17 @@ async function _activateExtension(
   // host window during debugging
   if (process.env.LOGGING_MODE === "development") {
     vscode.commands.executeCommand("confluent.showOutputChannel");
+  }
+
+  // set up initial feature flags and the LD client
+  setFlagDefaults();
+  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
+  await ldClient?.waitForInitialization();
+  // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
+  // the local defaults
+  const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
+  if (!globalEnabled) {
+    throw new Error(`Extension is disabled by the feature flag "${FeatureFlag.GLOBAL_ENABLED}".`);
   }
 
   // configure the StorageManager for extension access to secrets and global/workspace states, and
@@ -404,6 +418,11 @@ export function deactivate() {
   const logStream = getLogFileStream();
   if (logStream) {
     logStream.end();
+
+  try {
+    getLaunchDarklyClient()?.close();
+  } catch (error) {
+    logger.error("Error closing LD client during extension deactivation:", error);
   }
 
   logger.info("Extension deactivated");
