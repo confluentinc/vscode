@@ -130,6 +130,27 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   function updateSpecValue(inputName: string, value: string) {
     setValueAtPath(specUpdatedValues, inputName, value);
   }
+  function getCredentialsType(creds: any): SupportedAuthTypes {
+    if (!creds || typeof creds !== "object") return "None";
+    if (instanceOfBasicCredentials(creds)) return "Basic";
+    if (instanceOfApiKeyAndSecret(creds)) return "API";
+    if (instanceOfScramCredentials(creds)) return "SCRAM";
+    if (instanceOfOAuthCredentials(creds)) return "OAuth";
+    return "None";
+  }
+  // Initialize auth type to whatever matches incoming connection
+  let kafkaClusterAuthType = getCredentialsType(connection?.kafka_cluster?.credentials);
+  let schemaRegistryAuthType = getCredentialsType(connection?.schema_registry?.credentials);
+  // Update auth types when the user changes it in the form
+  function updateAuthType(inputName: string, value: SupportedAuthTypes) {
+    const namespace = inputName.split(".")[0];
+    if (namespace === "kafka_cluster") {
+      kafkaClusterAuthType = value;
+    } else if (namespace === "schema_registry") {
+      schemaRegistryAuthType = value;
+    }
+  }
+
   function getSpec() {
     if (connection) {
       if (action === "import") {
@@ -152,11 +173,19 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       case "GetConnectionSpec": {
         return getSpec() satisfies MessageResponse<"GetConnectionSpec">;
       }
+      case "GetAuthTypes":
+        return {
+          kafka: kafkaClusterAuthType,
+          schema: schemaRegistryAuthType,
+        } satisfies MessageResponse<"GetAuthTypes">;
       case "GetFilePath":
         return (await getAbsoluteFilePath(body)) satisfies MessageResponse<"GetFilePath">;
       case "UpdateSpecValue":
         updateSpecValue(body.inputName, body.inputValue.toString());
         return null satisfies MessageResponse<"UpdateSpecValue">;
+      case "SaveFormAuthType":
+        updateAuthType(body.inputName, body.inputValue);
+        return null satisfies MessageResponse<"SaveFormAuthType">;
     }
   };
   const disposable = handleWebviewMessage(directConnectForm.webview, processMessage);
