@@ -388,25 +388,39 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
    *
    * Reassigns this.environment to the parent environment of the Schema Registry.
    * */
+
   async updateTreeViewDescription(): Promise<void> {
     const schemaRegistry = this.schemaRegistry;
+
+    const subLogger = logger.withCallpoint("updateTreeViewDescription");
+
     if (!schemaRegistry) {
+      subLogger.debug("called with no schema registry, simple short-circuit");
       this.treeView.description = "";
       this.environment = null;
       return;
+    } else {
+      subLogger.debug("called with schema registry");
     }
+
+    subLogger.debug("scanning for environments ...");
+
     const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
     const envs = await loader.getEnvironments();
     const parentEnv = envs.find((env) => env.id === schemaRegistry.environmentId);
     this.environment = parentEnv ?? null;
     if (parentEnv) {
+      subLogger.debug("found environment.");
+
       this.treeView.description = `${parentEnv.name} | ${schemaRegistry.id}`;
     } else {
-      logger.warn("couldn't find parent environment for Schema Registry", {
-        schemaRegistry,
-      });
-      this.treeView.description = schemaRegistry.id;
+      subLogger.debug("couldn't find parent environment for Schema Registry");
+
+      // Probably because the environment was deleted.
+      this.treeView.description = "";
     }
+
+    subLogger.debug("done.");
   }
 
   /** Try to reveal+expand schema under a subject, if present */
