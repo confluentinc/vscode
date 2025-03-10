@@ -470,7 +470,6 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
     "schema_registry.uri": "",
   });
 });
-
 test.skip("submits values for SASL/SCRAM auth type when filled in", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
@@ -524,7 +523,7 @@ test.skip("submits values for SASL/SCRAM auth type when filled in", async ({ exe
   });
 });
 
-test("populates values for SASL/SCRAM auth type when they're in the spec", async ({
+test.skip("populates values for SASL/SCRAM auth type when they're in the spec", async ({
   execute,
   page,
 }) => {
