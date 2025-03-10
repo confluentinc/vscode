@@ -12,6 +12,8 @@ All notable changes to this extension will be documented in this file.
   sharing
 - SASL/SCRAM authentication type is now supported for Kafka Cluster connections that are added via
   the connections form
+- Previewed message contents from Message Viewer now include additional metadata about the key
+  and/or value schema that may have been used for deserialization.
 
 ### Fixed
 
