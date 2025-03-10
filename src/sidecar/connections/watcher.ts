@@ -76,16 +76,16 @@ export async function waitForConnectionToBeStable(
  * and provide buttons to open the logs or file an issue.
  */
 export function notifyIfFailedState(connection: Connection) {
-  let failedStatuses: string[] = [];
+  let failedConfigTypes: string[] = [];
   let notificationButtons: Record<string, () => void> | undefined;
 
   const type: ConnectionType = connection.spec.type!;
   switch (type) {
     case ConnectionType.Direct:
       {
-        if (connection.status.kafka_cluster?.state === "FAILED") failedStatuses.push("Kafka");
+        if (connection.status.kafka_cluster?.state === "FAILED") failedConfigTypes.push("Kafka");
         if (connection.status.schema_registry?.state === "FAILED")
-          failedStatuses.push("Schema Registry");
+          failedConfigTypes.push("Schema Registry");
         notificationButtons = {
           "View Connection Details": () =>
             commands.executeCommand("confluent.connections.direct.edit", connection.id),
@@ -93,16 +93,16 @@ export function notifyIfFailedState(connection: Connection) {
       }
       break;
     case ConnectionType.Ccloud: {
-      if (connection.status.ccloud?.state === "FAILED") failedStatuses.push("Confluent Cloud");
+      if (connection.status.ccloud?.state === "FAILED") failedConfigTypes.push("Confluent Cloud");
       // don't assign any buttons and allow the "Open Logs" + "File Issue" buttons to show by default
     }
   }
 
   // the notifications don't allow rich formatting here, so we'll just list out the failed resources
   // and then try to show the errors themselves in the item tooltips if possible
-  if (failedStatuses.length > 0) {
+  if (failedConfigTypes.length > 0) {
     showErrorNotificationWithButtons(
-      `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
+      `Failed to establish connection to ${failedConfigTypes.join(" and ")} for "${connection.spec.name}".`,
       notificationButtons,
     );
     // send an event for failed connections to help understand how often this happens, for which
@@ -119,13 +119,13 @@ export function notifyIfFailedState(connection: Connection) {
     const schemaRegistryConfigSslEnabled: boolean | undefined =
       connection.spec.schema_registry?.ssl?.enabled;
     logUsage(UserEvent.DirectConnectionAction, {
-      action: "failed",
+      action: "failed to connect",
       connectionType: type,
       kafkaConfigAuthFields,
       kafkaConfigSslEnabled,
       schemaRegistryConfigAuthFields,
       schemaRegistryConfigSslEnabled,
-      failedConfigTypes: failedStatuses.join(", "),
+      failedConfigTypes,
     });
   }
 }
