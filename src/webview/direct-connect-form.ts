@@ -69,26 +69,6 @@ class DirectConnectFormViewModel extends ViewModel {
   schemaAuthType = this.derive(() => {
     return this.getAuthTypes()?.schema || "None";
   });
-  schemaUsername = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.schemaCreds()?.username || "";
-  });
-  schemaApiKey = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.schemaCreds()?.api_key || "";
-  });
-  schemaSecret = this.derive(() => {
-    if (this.schemaCreds()) {
-      if (this.schemaAuthType() === "Basic") {
-        // @ts-expect-error the types don't know which credentials are present
-        return this.schemaCreds()?.password || "";
-      } else if (this.schemaAuthType() === "API") {
-        // @ts-expect-error the types don't know which credentials are present
-        return this.schemaCreds()?.api_secret || "";
-      }
-    }
-    return null; // TODO NC - we need to update schema auth options w/Oauth
-  });
   schemaSslEnabled = this.derive(() => {
     if (this.spec()?.schema_registry?.ssl?.enabled === false) return false;
     else return true;
@@ -177,7 +157,6 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "schema_registry.auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
-        this.clearSchemaCreds();
         break;
       case "kafka_cluster.ssl.enabled":
         this.kafkaSslEnabled(input.checked);
@@ -188,12 +167,6 @@ class DirectConnectFormViewModel extends ViewModel {
       default:
         console.info(`No side effects for input update: ${input.name}`);
     }
-  }
-
-  clearSchemaCreds() {
-    this.schemaUsername("");
-    this.schemaApiKey("");
-    this.schemaSecret("");
   }
 
   /** Submit all form data to the extension host */

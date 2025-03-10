@@ -202,82 +202,21 @@
               data-on-input="this.updateValue(event)"
               data-value="this.schemaAuthType()"
             >
-              <option
-                value="None"
-                data-attr-selected="this.schemaAuthType() === 'None' ? true : false"
-              >
-                None
-              </option>
-              <option
-                value="Basic"
-                data-attr-selected="this.schemaAuthType() === 'Basic' ? true : false"
-              >
-                Username & Password
-              </option>
-              <option
-                value="API"
-                data-attr-selected="this.schemaAuthType() === 'API' ? true : false"
-              >
-                API Credentials
-              </option>
+              <option value="None" selected>None</option>
+              <option value="Basic">Username & Password (SASL/PLAIN)</option>
+              <option value="API">API Credentials (SASL/PLAIN)</option>
+              <option value="OAuth">SASL/OAUTHBEARER</option>
             </select>
           </div>
-          <template data-if="this.schemaAuthType() === 'Basic'">
-            <div class="input-row">
-              <div class="input-container">
-                <label for="schema_registry.credentials.username" class="label">Username</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.username"
-                  name="schema_registry.credentials.username"
-                  type="text"
-                  data-attr-value="this.schemaUsername()"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-              <div class="input-container">
-                <label for="schema_registry.credentials.password" class="label">Password</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.password"
-                  name="schema_registry.credentials.password"
-                  type="password"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-attr-value="this.schemaSecret()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
-          <template data-if="this.schemaAuthType() === 'API'">
-            <div class="input-row">
-              <div class="input-container">
-                <label for="schema_registry.credentials.api_key" class="label">API Key</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.api_key"
-                  name="schema_registry.credentials.api_key"
-                  type="text"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-attr-value="this.schemaApiKey()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-              <div class="input-container">
-                <label for="schema_registry.credentials.api_secret" class="label">API Secret</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.api_secret"
-                  name="schema_registry.credentials.api_secret"
-                  type="password"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-attr-value="this.schemaSecret()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
+          <div class="content-wrapper">
+            <auth-credentials
+              data-prop-namespace="'schema_registry'"
+              data-on-change="this.updateValue(event.detail)"
+              data-prop-platform="this.platformType()"
+              data-prop-type="this.schemaAuthType()"
+              data-prop-credentials="this.schemaCreds()"
+            />
+          </div>
           <label class="checkbox" for="schema_registry.ssl.enabled">
             <input
               type="checkbox"
