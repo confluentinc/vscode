@@ -38,7 +38,6 @@ export function getSocketPath(): string {
   } else {
     path = path ? path : DEFAULT_UNIX_SOCKET_PATH;
   }
-  logger.trace("using docker socket path:", { socketPath: path });
 
   return path;
 }
