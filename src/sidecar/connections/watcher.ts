@@ -110,6 +110,8 @@ export function notifyIfFailedState(connection: Connection) {
     logUsage(UserEvent.DirectConnectionAction, {
       action: "failed",
       connectionType: type,
+      // only send the keys/fields used to indicate which auth type(s) are used so we can tell if this
+      // was for basic auth, oauth, SCRAM, etc. not sending any actual credentials
       kafkaConfigAuthType: connection.spec.kafka_cluster?.credentials
         ? Object.keys(connection.spec.kafka_cluster.credentials)
         : undefined,
