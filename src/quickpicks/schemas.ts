@@ -106,12 +106,11 @@ export async function schemaVersionQuickPick(
   subject: string,
 ): Promise<Schema | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-  const schemaVersions: Schema[] = await loader.getSchemasForEnvironmentId(
+  const schemasMatchingSubject: Schema[] = await loader.getSchemaSubjectGroup(
     schemaRegistry.environmentId,
+    subject,
   );
-  const schemasMatchingSubject: Schema[] = schemaVersions.filter(
-    (schema) => schema.subject === subject,
-  );
+
   if (schemasMatchingSubject.length === 1) {
     // skip the quickpick if there's only one version
     return schemasMatchingSubject[0];
@@ -134,7 +133,7 @@ export async function schemaVersionQuickPick(
   if (!chosenVersionItem) {
     return;
   }
-  return schemaVersions.find(
+  return schemasMatchingSubject.find(
     (schema) =>
       schema.id === chosenVersionItem.description?.split(" ")[0] &&
       schema.version === parseInt(chosenVersionItem.label.replace("v", ""), 10),
