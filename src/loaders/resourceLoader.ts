@@ -257,13 +257,4 @@ export abstract class ResourceLoader implements IResourceBase {
 
     return schemaRegistry;
   }
-
-  /**
-   * Indicate to purge this schema registry's cache of schemas, if the
-   * loader implementation caches.
-   * This is useful when a schema is known to has been added or removed, but the
-   * registry isn't currently being displayed in the view.
-   * (So that when it does get displayed, it will fetch the schemas anew).
-   */
-  public abstract purgeSchemas(schemaRegistryId: string): void;
 }

@@ -17,9 +17,6 @@ export enum WorkspaceStorageKeys {
   /** CCloud schema registries */
   CCLOUD_SCHEMA_REGISTRIES = "ccloudSchemaRegistries",
 
-  /** CCLoud schema bindings (not the schema documents themselves) */
-  CCLOUD_SCHEMAS = "ccloudSchemas",
-
   /** What (Schema) URI was chosen first to diff against? */
   DIFF_BASE_URI = "diffs.selectedResource",
 

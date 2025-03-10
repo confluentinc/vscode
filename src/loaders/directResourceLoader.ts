@@ -54,8 +54,4 @@ export class DirectResourceLoader extends ResourceLoader {
     const schemaRegistries: DirectSchemaRegistry[] = await this.getSchemaRegistries();
     return schemaRegistries.find((sr) => sr.environmentId === environmentId);
   }
-
-  purgeSchemas(): void {
-    // no-op
-  }
 }

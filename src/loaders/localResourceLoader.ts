@@ -74,11 +74,4 @@ export class LocalResourceLoader extends ResourceLoader {
       return allRegistries[0];
     }
   }
-
-  /** Purge schemas from this registry from cache.
-   * Simple, we don't cache anything in this loader!
-   */
-  public purgeSchemas(): void {
-    // no-op
-  }
 }
