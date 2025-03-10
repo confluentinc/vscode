@@ -147,7 +147,6 @@ class DirectConnectFormViewModel extends ViewModel {
       case "formconnectiontype":
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
-          this.schemaAuthType("API");
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
         }
@@ -195,8 +194,6 @@ class DirectConnectFormViewModel extends ViewModel {
     }
     if (data["formconnectiontype"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
-      data["kafka_cluster.auth_type"] = "API";
-      data["schema_registry.auth_type"] = "API";
       data["kafka_cluster.ssl.enabled"] = "true";
       data["schema_registry.ssl.enabled"] = "true";
     }
