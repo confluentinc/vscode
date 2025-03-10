@@ -61,7 +61,7 @@ Click the **play** icon next to the topic name to open the **Message Viewer**, w
 searching and exploring messages in a topic. Within Message Viewer, you can:
 
 - page through and search for specific values within the list of all the messages
-- double-click a single message to explore its entire payload encoded into JSON
+- double-click a single message to explore the message headers, key and value encoded into JSON, along with additional metadata about the key and/or value schema that may have been used for deserialization
 - pause and resume consuming at any time
 - see aggregate counts of messages over time from the histogram view and brush to filter messages by
   timestamp
