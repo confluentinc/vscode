@@ -4,6 +4,7 @@ import { connectionStable, environmentChanged } from "../../emitters";
 import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
+import { logUsage, UserEvent } from "../../telemetry/events";
 import {
   ConnectionEventAction,
   ConnectionEventBody,
@@ -104,6 +105,19 @@ export function notifyIfFailedState(connection: Connection) {
       `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
       notificationButtons,
     );
+    // not an "action" but we're sending telemetry for failed connections to help understand how
+    // often this happens, for which configs, etc.
+    logUsage(UserEvent.DirectConnectionAction, {
+      action: "failed",
+      connectionType: type,
+      kafkaConfigAuthType: connection.spec.kafka_cluster?.credentials
+        ? Object.keys(connection.spec.kafka_cluster.credentials)
+        : undefined,
+      schemaRegistryConfigAuthType: connection.spec.schema_registry?.credentials
+        ? Object.keys(connection.spec.schema_registry.credentials)
+        : undefined,
+      configs: failedStatuses.join(", "),
+    });
   }
 }
 
