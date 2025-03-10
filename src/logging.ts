@@ -152,7 +152,7 @@ export const ROTATED_LOGFILE_NAMES: string[] = [];
 
 /** Max size of any log file written to disk.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#size */
-const MAX_LOGFILE_SIZE = "10K"; // 10MB max file size
+const MAX_LOGFILE_SIZE = "10M"; // 10MB max file size
 
 /** Number of log files to keep.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#maxfiles */
