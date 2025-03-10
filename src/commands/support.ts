@@ -6,7 +6,7 @@ import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { CURRENT_LOGFILE_NAME, LOGFILE_DIR, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
-import { SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
+import { SIDECAR_LOGFILE_NAME, SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
 import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
 
 const logger = new Logger("commands.support");
@@ -198,7 +198,7 @@ async function saveSupportZip() {
   }));
   fileEntries.push({
     sourceUri: sidecarLogFileUri(),
-    zipPath: `${sidecarLogFileUri().path.split("/").pop() || "vscode-confluent-sidecar.log"}`,
+    zipPath: SIDECAR_LOGFILE_NAME,
   });
 
   // add the observability context as JSON content
