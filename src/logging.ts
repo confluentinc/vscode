@@ -156,7 +156,7 @@ const MAX_LOGFILE_SIZE = "10M"; // 10MB max file size
 
 /** Number of log files to keep.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#maxfiles */
-const MAX_LOGFILES = 3; // only keep 3 **rotated** log files at a time for this extension instance
+export const MAX_LOGFILES = 3; // only keep 3 **rotated** log files at a time for this extension instance
 
 /** How often log files should rotate if they don't exceed {@link MAX_LOGFILE_SIZE}.
  * @see https://github.com/iccicci/rotating-file-stream?tab=readme-ov-file#interval */
@@ -203,8 +203,9 @@ export function getLogFileStream(): RotatingFileStream {
  * - `vscode-confluent-1234.3.log`
  * - `vscode-confluent-1234.4.log` (new log file)
  */
-function rotatingFilenameGenerator(time: number | Date, index?: number): string {
-  const maybefileIndex = index !== undefined ? `.${index}` : "";
+export function rotatingFilenameGenerator(time: number | Date, index?: number): string {
+  // 0, undefined, null will drop any index suffix
+  const maybefileIndex = index ? `.${index}` : "";
   // use process.pid to keep the log file names unique across multiple extension instances
   const newFileName = `vscode-confluent-${process.pid}${maybefileIndex}.log`;
 
