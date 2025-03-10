@@ -19,6 +19,8 @@ All notable changes to this extension will be documented in this file.
   focused on CCloud-based broker or schema registry.
 - Stopping a local Schema Registry container with a custom image tag will now use the correct tag
   instead of "latest".
+- Extension log file rotation is now implemented, with a cleanup process to remove older log files
+  that haven't been modified in 3+ days.
 
 ### Changed
 
