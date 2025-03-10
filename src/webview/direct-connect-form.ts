@@ -48,7 +48,7 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.kafka_cluster?.credentials;
   });
   kafkaAuthType = this.derive(() => {
-    return this.getAuthTypes()?.kafka || "None";
+    return this.getAuthTypes()?.kafka ?? "None";
   });
 
   kafkaSslEnabled = this.derive(() => {
@@ -159,7 +159,7 @@ class DirectConnectFormViewModel extends ViewModel {
     } else {
       await post("SaveFormAuthType", {
         inputName: input.name,
-        inputValue: value.toString() as SupportedAuthTypes,
+        inputValue: value as SupportedAuthTypes,
       });
     }
     // The switch statement performs local side effects for certain inputs

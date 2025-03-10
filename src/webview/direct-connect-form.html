@@ -129,36 +129,11 @@
               data-on-change="this.updateValue(event)"
               data-value="this.kafkaAuthType()"
             >
-              <option
-                value="None"
-                data-attr-selected="this.kafkaAuthType() === 'None' ? true : false"
-              >
-                None
-              </option>
-              <option
-                value="Basic"
-                data-attr-selected="this.kafkaAuthType() === 'Basic' ? true : false"
-              >
-                Username & Password (SASL/PLAIN)
-              </option>
-              <option
-                value="API"
-                data-attr-selected="this.kafkaAuthType() === 'API' ? true : false"
-              >
-                API Credentials (SASL/PLAIN)
-              </option>
-              <option
-                value="SCRAM"
-                data-attr-selected="this.kafkaAuthType() === 'SCRAM' ? true : false"
-              >
-                SASL/SCRAM
-              </option>
-              <option
-                value="OAuth"
-                data-attr-selected="this.kafkaAuthType() === 'OAuth' ? true : false"
-              >
-                SASL/OAUTHBEARER
-              </option>
+              <option value="None" selected>None</option>
+              <option value="Basic">Username & Password (SASL/PLAIN)</option>
+              <option value="API">API Credentials (SASL/PLAIN)</option>
+              <option value="SCRAM">SASL/SCRAM</option>
+              <option value="OAuth">SASL/OAUTHBEARER</option>
             </select>
           </div>
           <div class="content-wrapper">

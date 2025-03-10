@@ -161,6 +161,9 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
       schemaRegistryAuthType = value;
     }
   }
+  function getAuthTypes() {
+    return { kafka: kafkaClusterAuthType, schema: schemaRegistryAuthType };
+  }
 
   function getSpec() {
     if (connection) {
@@ -183,10 +186,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
         return getSpec() satisfies MessageResponse<"GetConnectionSpec">;
       }
       case "GetAuthTypes":
-        return {
-          kafka: kafkaClusterAuthType,
-          schema: schemaRegistryAuthType,
-        } satisfies MessageResponse<"GetAuthTypes">;
+        return getAuthTypes() satisfies MessageResponse<"GetAuthTypes">;
       case "GetFilePath":
         return (await getAbsoluteFilePath(body)) satisfies MessageResponse<"GetFilePath">;
       case "UpdateSpecValue":

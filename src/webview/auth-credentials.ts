@@ -53,7 +53,6 @@ export class AuthCredentials extends HTMLElement {
     return this.identifier() + ".credentials." + name;
   }
 
-  // Method to update the authentication type
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
