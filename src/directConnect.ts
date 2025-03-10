@@ -88,7 +88,6 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
 
   async function testConnection(body: any): Promise<TestResponse> {
     let connectionId = undefined;
-    // TODO NC check if we still need this
     // for a Test on "Edit" form; sending the id so we can look up secrets
     if (action === "update") connectionId = connection?.id as ConnectionId;
     let testSpec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
