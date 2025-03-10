@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.167.0
+  version: 0.168.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -737,6 +737,33 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Connection"
+    DataFormat:
+      description: |
+        The data format that represents the bytes of a Kafka message.
+
+        * AVRO: Apache Avro schema format.
+        * JSONSCHEMA: JSON schema format.
+        * PROTOBUF: Google Protocol Buffers schema format.
+        * JSON:
+            Bytes parsed as JSON.
+            The bytes did not contain a magic byte specifying a schema id, and the raw bytes
+            were successfully parsed into a JSON value.
+        * UTF8_STRING:
+            Bytes parsed as a UTF-8 string (meaning the bytes were not parsed as valid JSON).
+        * RAW_BYTES:
+            Raw bytes. These are the scenarios where it would be used:
+            - Arbitrary bytes that are NOT written/read using an implementation of Kafka serializer/deserializer.
+            And further, we tried to but could not interpret these bytes as a JSON value.
+            - The Kafka serializer/deserializer known to sidecar failed to parse the schematized bytes
+            (meaning the schema id was present in the magic bytes, but our classes could not interpret the rest of the bytes.)
+      enum:
+      - AVRO
+      - JSONSCHEMA
+      - PROTOBUF
+      - JSON
+      - UTF8_STRING
+      - RAW_BYTES
+      type: string
     Date:
       format: date
       type: string
@@ -902,6 +929,14 @@ components:
           type: object
           allOf:
           - $ref: "#/components/schemas/AuthErrors"
+    KeyOrValueMetadata:
+      type: object
+      properties:
+        schema_id:
+          format: int32
+          type: integer
+        data_format:
+          $ref: "#/components/schemas/DataFormat"
     KeyStore:
       required:
       - path
@@ -1023,6 +1058,8 @@ components:
           $ref: "#/components/schemas/JsonNode"
         value:
           $ref: "#/components/schemas/JsonNode"
+        metadata:
+          $ref: "#/components/schemas/RecordMetadata"
         key_decoding_error:
           type: string
         value_decoding_error:
@@ -1179,6 +1216,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Action"
+    RecordMetadata:
+      type: object
+      properties:
+        key_metadata:
+          $ref: "#/components/schemas/KeyOrValueMetadata"
+        value_metadata:
+          $ref: "#/components/schemas/KeyOrValueMetadata"
     SchemaRegistryConfig:
       description: Schema Registry configuration.
       required:
@@ -1402,20 +1446,18 @@ components:
     HealthResponse:
       type: object
       properties:
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
           - UP
           - DOWN
           type: string
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/HealthCheck"
     HealthCheck:
       type: object
       properties:
-        name:
-          type: string
         data:
           type: object
           nullable: true
@@ -1423,4 +1465,6 @@ components:
           enum:
           - UP
           - DOWN
+          type: string
+        name:
           type: string
