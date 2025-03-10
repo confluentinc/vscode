@@ -4,9 +4,7 @@ import { getLocalResources } from "../graphql/local";
 import { Logger } from "../logging";
 import { LocalEnvironment } from "../models/environment";
 import { LocalKafkaCluster } from "../models/kafkaCluster";
-import { Schema } from "../models/schema";
 import { LocalSchemaRegistry } from "../models/schemaRegistry";
-import { fetchSchemas } from "./loaderUtils";
 import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.localResourceLoader");
@@ -75,23 +73,6 @@ export class LocalResourceLoader extends ResourceLoader {
       }
       return allRegistries[0];
     }
-  }
-
-  public async getSchemasForEnvironmentId(): Promise<Schema[]> {
-    const schemaRegistries = await this.getSchemaRegistries();
-    if (schemaRegistries.length === 0) {
-      return [];
-    }
-
-    return this.getSchemasForRegistry(schemaRegistries[0]);
-  }
-
-  /**
-   * Fetch schemas from local schema registry.
-   * Simple, pass through to deep fetch every time.
-   */
-  public async getSchemasForRegistry(schemaRegistry: LocalSchemaRegistry): Promise<Schema[]> {
-    return fetchSchemas(schemaRegistry);
   }
 
   /** Purge schemas from this registry from cache.

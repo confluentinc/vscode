@@ -259,36 +259,6 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   /**
-   * Get the possible schemas for an environment's schema registry.
-   *
-   * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry's
-   * schemas from. Will return empty array if there is no schema registry for the environment,
-   * or if said schema registry has no schemas.
-   */
-  public async getSchemasForEnvironmentId(
-    environmentId: string | undefined,
-    forceDeepRefresh: boolean = false,
-  ): Promise<Schema[]> {
-    const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(environmentId);
-    if (!schemaRegistry) {
-      return [];
-    }
-
-    return await this.getSchemasForRegistry(schemaRegistry, forceDeepRefresh);
-  }
-
-  /**
-   * Fetch the schemas from the given schema registry.
-   * @param schemaRegistry The schema registry to fetch schemas from.
-   * @param forceDeepRefresh If true, will ignore any cached schemas and fetch anew.
-   * @returns An array of schemas in the schema registry. Throws an error if the schemas could not be fetched.
-   * */
-  public abstract getSchemasForRegistry(
-    schemaRegistry: SchemaRegistry,
-    forceDeepRefresh?: boolean,
-  ): Promise<Schema[]>;
-
-  /**
    * Indicate to purge this schema registry's cache of schemas, if the
    * loader implementation caches.
    * This is useful when a schema is known to has been added or removed, but the

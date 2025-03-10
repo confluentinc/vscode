@@ -306,49 +306,6 @@ export class CCloudResourceLoader extends ResourceLoader {
     );
   }
 
-  public async getSchemasForEnvironmentId(
-    environmentId: string,
-    forceDeepRefresh?: boolean,
-  ): Promise<Schema[]> {
-    // Guard against programming error. Only resources from ccloud should get this far.
-    if (environmentId === undefined) {
-      throw new Error(`Cannot fetch schemas w/o an environmentId.`);
-    }
-
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-
-    const schemaRegistries = await this.getSchemaRegistries();
-    const registry = schemaRegistries.find(
-      (schemaRegistry) => schemaRegistry.environmentId === environmentId,
-    );
-
-    if (!registry) {
-      // No schema registry for this topic's environment, so no schemas.
-      return [];
-    }
-
-    return this.getSchemasForRegistry(registry, forceDeepRefresh);
-  }
-
-  public async getSchemasForRegistry(
-    schemaRegistry: CCloudSchemaRegistry,
-    forceDeepRefresh?: boolean,
-  ): Promise<Schema[]> {
-    // Ensure coarse resources (envs, clusters, schema registries) are cached.
-    // We need to be aware of the schema registry ids before next step will work.
-    await this.ensureCoarseResourcesLoaded(forceDeepRefresh);
-
-    // Ensure this schema registry's schemas are cached.
-    await this.ensureSchemasLoaded(schemaRegistry, forceDeepRefresh);
-
-    const schemas = await getResourceManager().getSchemasForRegistry(schemaRegistry.id);
-    if (!schemas) {
-      throw new Error(`Schemas for schema registry ${schemaRegistry.id} are not loaded.`);
-    }
-
-    return schemas;
-  }
-
   /**
    * Mark this schema registry cache as stale, such as when known that a schema has been added or removed,
    * but the registry isn't currently being displayed
