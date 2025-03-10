@@ -58,7 +58,7 @@ function openSettings() {
 
 /** Return the file URIs for the extension's currently-active log file and any rotated log files for
  * this extension instance, normalized for the user's OS. */
-function extensionLogFileUris(): Uri[] {
+export function extensionLogFileUris(): Uri[] {
   const uris: Uri[] = [];
   // early on, CURRENT_LOGFILE_NAME will be included in ROTATED_LOGFILE_NAMES, but after a few
   // rotations, it will be removed from the array so we need to make sure we include it here
@@ -73,7 +73,7 @@ function extensionLogFileUris(): Uri[] {
 }
 
 /** Return the file URI for the sidecar's log file, normalized for the user's OS. */
-function sidecarLogFileUri(): Uri {
+export function sidecarLogFileUri(): Uri {
   return Uri.file(normalize(SIDECAR_LOGFILE_PATH));
 }
 
