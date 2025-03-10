@@ -1,4 +1,3 @@
-// filepath: /kafka-credentials-component/kafka-credentials-component/src/components/auth-credentials.ts
 import { ObservableScope } from "inertial";
 import { applyBindings, html } from "./bindings/bindings";
 import {
