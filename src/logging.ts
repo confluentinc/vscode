@@ -96,12 +96,11 @@ export class Logger {
       }
       // don't write trace logs to the log file
       if (level !== "trace") {
-        // TODO(shoup): move this.writeToLogFile() here after initial rotating file testing
+        this.writeToLogFile(prefix, message, ...args).catch(() => {
+          // already logged, no need for additional handling. we still need this here so we don't
+          // get unhandled promise rejections bubbling up.
+        });
       }
-      this.writeToLogFile(prefix, message, ...args).catch(() => {
-        // already logged, no need for additional handling. we still need this here so we don't
-        // get unhandled promise rejections bubbling up.
-      });
     } catch {
       // ignore if the channel is disposed or the log file write fails
     }
