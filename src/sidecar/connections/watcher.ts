@@ -105,20 +105,27 @@ export function notifyIfFailedState(connection: Connection) {
       `Failed to establish connection to ${failedStatuses.join(" and ")} for "${connection.spec.name}".`,
       notificationButtons,
     );
-    // not an "action" but we're sending telemetry for failed connections to help understand how
-    // often this happens, for which configs, etc.
+    // send an event for failed connections to help understand how often this happens, for which
+    // configs, etc. since we don't have a field to indicate which auth type(s) are used, we're
+    // sending **only the keys/fields** used and whether or not SSL was enabled in each config
+    const kafkaConfigAuthFields: string[] | undefined = connection.spec.kafka_cluster?.credentials
+      ? Object.keys(connection.spec.kafka_cluster.credentials)
+      : undefined;
+    const kafkaConfigSslEnabled: boolean | undefined = connection.spec.kafka_cluster?.ssl?.enabled;
+    const schemaRegistryConfigAuthFields: string[] | undefined = connection.spec.schema_registry
+      ?.credentials
+      ? Object.keys(connection.spec.schema_registry.credentials)
+      : undefined;
+    const schemaRegistryConfigSslEnabled: boolean | undefined =
+      connection.spec.schema_registry?.ssl?.enabled;
     logUsage(UserEvent.DirectConnectionAction, {
       action: "failed",
       connectionType: type,
-      // only send the keys/fields used to indicate which auth type(s) are used so we can tell if this
-      // was for basic auth, oauth, SCRAM, etc. not sending any actual credentials
-      kafkaConfigAuthType: connection.spec.kafka_cluster?.credentials
-        ? Object.keys(connection.spec.kafka_cluster.credentials)
-        : undefined,
-      schemaRegistryConfigAuthType: connection.spec.schema_registry?.credentials
-        ? Object.keys(connection.spec.schema_registry.credentials)
-        : undefined,
-      configs: failedStatuses.join(", "),
+      kafkaConfigAuthFields,
+      kafkaConfigSslEnabled,
+      schemaRegistryConfigAuthFields,
+      schemaRegistryConfigSslEnabled,
+      failedConfigTypes: failedStatuses.join(", "),
     });
   }
 }
