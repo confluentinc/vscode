@@ -202,7 +202,7 @@ export async function schemaKindMultiSelect(
     items,
     {
       canPickMany: true,
-      title: `Producing to ${topic.name}: Select Schema Kind(s)`,
+      title: `Producing to ${topic.name}: Select Schema Kind(s), or none to produce without schema`,
       placeHolder: "Select which schema kind(s) to use",
       ignoreFocusOut: true,
     },
