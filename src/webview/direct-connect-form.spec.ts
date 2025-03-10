@@ -8,7 +8,12 @@ import { SinonStub } from "sinon";
 import sanitize from "sanitize-html";
 import { createFilter } from "@rollup/pluginutils";
 import { Plugin } from "rollup";
-import { ConnectionSpec, ScramCredentials } from "../clients/sidecar";
+import {
+  ConnectionSpec,
+  ConnectionType,
+  OAuthCredentials,
+  ScramCredentials,
+} from "../clients/sidecar";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
 function render(template: string, variables: Record<string, any>) {
@@ -101,7 +106,10 @@ test("renders form html correctly", async ({ page }) => {
   const authSchemaOptions = await authSchema.locator("option").all();
   await expect(authSchemaOptions.length).toBe(4); // None, Basic, API, OAuth
 });
-test("renders form with existing connection spec values for edit", async ({ execute, page }) => {
+test("renders form with existing connection spec values (for edit/import)", async ({
+  execute,
+  page,
+}) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -524,7 +532,6 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
     "schema_registry.uri": "",
   });
 });
-
 test("populates values for SASL/SCRAM auth type when they're in the spec", async ({
   execute,
   page,
@@ -579,7 +586,190 @@ test("populates values for SASL/SCRAM auth type when they're in the spec", async
   const scramPasswordInput = page.locator("input[name='kafka_cluster.credentials.scram_password']");
   await expect(scramPasswordInput).toHaveValue("password");
 });
+test("submits values for OAUTH/BEARER auth type when filled in", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
 
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+    stub.withArgs("GetAuthTypes").resolves({ kafka: "None", schema: "None" });
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with OAUTH/BEARER auth type
+  await page.fill("input[name=name]", "Test Connection");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud");
+  await page.selectOption("select[name='kafka_cluster.auth_type']", "OAuth");
+  await page.fill(
+    "input[name='kafka_cluster.credentials.tokens_url']",
+    "https://auth-provider.example/oauth2/token",
+  );
+  await page.fill("input[name='kafka_cluster.credentials.client_id']", "client123");
+  await page.fill("input[name='kafka_cluster.credentials.client_secret']", "secret456");
+  await page.fill("input[name='kafka_cluster.credentials.scope']", "kafka-cluster");
+  await page.fill("input[name='kafka_cluster.credentials.connect_timeout_millis']", "5000");
+  await page.fill(
+    "input[name='kafka_cluster.credentials.ccloud_logical_cluster_id']",
+    "lkc-abc123",
+  );
+  await page.fill("input[name='kafka_cluster.credentials.ccloud_identity_pool_id']", "pool-xyz789");
+  await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
+  await page.check("input[type=checkbox][name='schema_registry.ssl.enabled']");
+  await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
+  await page.selectOption("select[name='schema_registry.auth_type']", "OAuth");
+  await page.fill(
+    "input[name='schema_registry.credentials.tokens_url']",
+    "https://auth-provider.example/oauth2/token",
+  );
+  await page.fill("input[name='schema_registry.credentials.client_id']", "client123");
+  await page.fill("input[name='schema_registry.credentials.client_secret']", "secret456");
+  await page.fill("input[name='schema_registry.credentials.scope']", "kafka-cluster");
+  await page.fill("input[name='schema_registry.credentials.connect_timeout_millis']", "5000");
+  await page.fill(
+    "input[name='schema_registry.credentials.ccloud_logical_cluster_id']",
+    "lkc-abc123",
+  );
+  await page.fill(
+    "input[name='schema_registry.credentials.ccloud_identity_pool_id']",
+    "pool-xyz789",
+  );
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+  // Verify correct form data
+  expect(submitCall?.[1]).toEqual({
+    name: "Test Connection",
+    formconnectiontype: "Confluent Cloud",
+    "kafka_cluster.bootstrap_servers": "localhost:9092",
+    "kafka_cluster.auth_type": "OAuth",
+    "kafka_cluster.credentials.ccloud_identity_pool_id": "pool-xyz789",
+    "kafka_cluster.credentials.ccloud_logical_cluster_id": "lkc-abc123",
+    "kafka_cluster.credentials.client_id": "client123",
+    "kafka_cluster.credentials.client_secret": "secret456",
+    "kafka_cluster.credentials.connect_timeout_millis": "5000",
+    "kafka_cluster.credentials.scope": "kafka-cluster",
+    "kafka_cluster.credentials.tokens_url": "https://auth-provider.example/oauth2/token",
+    "kafka_cluster.ssl.enabled": "true",
+    "schema_registry.uri": "http://localhost:8081",
+    "schema_registry.auth_type": "OAuth",
+    "schema_registry.ssl.enabled": "true",
+    "schema_registry.credentials.scope": "kafka-cluster",
+    "schema_registry.credentials.tokens_url": "https://auth-provider.example/oauth2/token",
+    "schema_registry.credentials.ccloud_identity_pool_id": "pool-xyz789",
+    "schema_registry.credentials.ccloud_logical_cluster_id": "lkc-abc123",
+    "schema_registry.credentials.client_id": "client123",
+    "schema_registry.credentials.client_secret": "secret456",
+    "schema_registry.credentials.connect_timeout_millis": "5000",
+  });
+});
+test("populates values for OAUTH/BEARER auth type when they exist in the spec (edit/import)", async ({
+  execute,
+  page,
+}) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+  await execute(
+    async (stub, sample) => {
+      stub.withArgs("GetConnectionSpec").resolves(sample);
+      stub.withArgs("GetAuthTypes").resolves({ kafka: "OAuth", schema: "OAuth" });
+    },
+    sendWebviewMessage,
+    SPEC_SAMPLE_OAUTH,
+  );
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  const form = page.locator("form");
+  await expect(form).toBeVisible();
+  await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud"); // TODO NC are we saving this and repopulating?
+
+  // Check that the form fields are populated with OAuth connection spec values
+  const nameInput = page.locator("input[name='name']");
+  await expect(nameInput).toHaveValue(SPEC_SAMPLE_OAUTH.name!);
+
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  await expect(bootstrapServersInput).toHaveValue(
+    SPEC_SAMPLE_OAUTH.kafka_cluster!.bootstrap_servers,
+  );
+
+  // Check Kafka OAuth credentials
+  const kafkaAuthTypeSelect = page.locator("select[name='kafka_cluster.auth_type']");
+  await expect(kafkaAuthTypeSelect).toHaveValue("OAuth");
+
+  const kafkaTokensUrlInput = page.locator("input[name='kafka_cluster.credentials.tokens_url']");
+  await expect(kafkaTokensUrlInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.tokens_url,
+  );
+
+  const kafkaClientIdInput = page.locator("input[name='kafka_cluster.credentials.client_id']");
+  await expect(kafkaClientIdInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.client_id,
+  );
+
+  const kafkaClientSecretInput = page.locator(
+    "input[name='kafka_cluster.credentials.client_secret']",
+  );
+  await expect(kafkaClientSecretInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.client_secret,
+  );
+
+  const kafkaClusterIdInput = page.locator(
+    "input[name='kafka_cluster.credentials.ccloud_logical_cluster_id']",
+  );
+  await expect(kafkaClusterIdInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.kafka_cluster.credentials.ccloud_logical_cluster_id,
+  );
+
+  // Check Schema Registry OAuth credentials
+  const schemaAuthTypeSelect = page.locator("select[name='schema_registry.auth_type']");
+  await expect(schemaAuthTypeSelect).toHaveValue("OAuth");
+
+  const schemaTokensUrlInput = page.locator("input[name='schema_registry.credentials.tokens_url']");
+  await expect(schemaTokensUrlInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.schema_registry.credentials.tokens_url,
+  );
+
+  const schemaClientIdInput = page.locator("input[name='schema_registry.credentials.client_id']");
+  await expect(schemaClientIdInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.schema_registry.credentials.client_id,
+  );
+
+  const schemaClientSecretInput = page.locator(
+    "input[name='schema_registry.credentials.client_secret']",
+  );
+  await expect(schemaClientSecretInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_OAUTH.schema_registry.credentials.client_secret,
+  );
+});
+
+// Test Fixtures
 const SPEC_SAMPLE = {
   id: "123",
   name: "Sample",
@@ -611,7 +801,7 @@ const SPEC_SAMPLE = {
 const MINIMAL_KAFKA_SAMPLE = {
   id: "123",
   name: "Sample",
-  type: "DIRECT",
+  type: "DIRECT" as ConnectionType,
   kafka_cluster: {
     bootstrap_servers: "localhost:9092",
     ssl: {
@@ -619,20 +809,44 @@ const MINIMAL_KAFKA_SAMPLE = {
     },
   },
 };
-
 const SCRAM: ScramCredentials = {
   hash_algorithm: "SCRAM_SHA_512",
   scram_username: "user",
   scram_password: "password",
 };
-
 const SPEC_SAMPLE_SCRAM: ConnectionSpec = {
   ...MINIMAL_KAFKA_SAMPLE,
-  // @ts-expect-error for reals
   kafka_cluster: {
-    ...SPEC_SAMPLE.kafka_cluster,
+    ...MINIMAL_KAFKA_SAMPLE.kafka_cluster,
     credentials: {
       ...SCRAM,
+    },
+  },
+};
+const OAUTH: OAuthCredentials = {
+  tokens_url: "https://auth-provider.example/oauth2/token",
+  client_id: "client123",
+  client_secret: "secret456",
+  scope: "kafka-cluster",
+  connect_timeout_millis: 5000,
+  ccloud_logical_cluster_id: "lkc-abc123",
+  ccloud_identity_pool_id: "pool-xyz789",
+};
+const SPEC_SAMPLE_OAUTH: ConnectionSpec = {
+  ...MINIMAL_KAFKA_SAMPLE,
+  kafka_cluster: {
+    ...MINIMAL_KAFKA_SAMPLE.kafka_cluster,
+    credentials: {
+      ...OAUTH,
+    },
+  },
+  schema_registry: {
+    ...SPEC_SAMPLE.schema_registry,
+    ssl: {
+      enabled: true,
+    },
+    credentials: {
+      ...OAUTH,
     },
   },
 };
