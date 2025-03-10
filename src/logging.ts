@@ -207,12 +207,20 @@ function rotatingFilenameGenerator(time: number | Date, index?: number): string 
   const maybefileIndex = index !== undefined ? `.${index}` : "";
   // use process.pid to keep the log file names unique across multiple extension instances
   const newFileName = `vscode-confluent-${process.pid}${maybefileIndex}.log`;
-  ROTATED_LOGFILE_NAMES.push(newFileName);
+
+  // this function will be called multiple times by RotatingFileStream as it handles rotations, so
+  // we need to guard against adding the same file name multiple times
+  // (we could use a Set, but we would end up calling Array.from() on it over and over)
+  if (!ROTATED_LOGFILE_NAMES.includes(newFileName)) {
+    ROTATED_LOGFILE_NAMES.push(newFileName);
+  }
+
   if (ROTATED_LOGFILE_NAMES.length > MAX_LOGFILES) {
     // remove the oldest log file from the array
     // (RotatingFileStream will handle the actual file deletion)
     ROTATED_LOGFILE_NAMES.shift();
   }
+
   CURRENT_LOGFILE_NAME = newFileName;
   return newFileName;
 }
