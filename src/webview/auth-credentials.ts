@@ -136,8 +136,8 @@ export class AuthCredentials extends HTMLElement {
           </div>
         </div>
       </template>
-
-      <template data-if="this.authType() === 'SCRAM'">
+      <!-- No SCRAM for SR -->
+      <template data-if="this.identifier() !== 'schema_registry' && this.authType() === 'SCRAM'">
         <div class="input-container">
           <label for="this.getInputId('hash_algorithm')" class="label">Hash Algorithm</label>
           <select
