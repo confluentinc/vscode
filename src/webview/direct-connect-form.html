@@ -126,7 +126,7 @@
               class="input dropdown"
               id="kafka_cluster.auth_type"
               name="kafka_cluster.auth_type"
-              data-on-change="this.updateValue(event)"
+              data-on-input="this.updateValue(event)"
               data-value="this.kafkaAuthType()"
             >
               <option value="None" selected>None</option>
@@ -199,8 +199,8 @@
               class="input dropdown"
               id="schema_registry.auth_type"
               name="schema_registry.auth_type"
-              data-on-change="this.updateValue(event)"
-              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+              data-on-input="this.updateValue(event)"
+              data-value="this.schemaAuthType()"
             >
               <option
                 value="None"
