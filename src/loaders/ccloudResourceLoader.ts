@@ -24,11 +24,7 @@ const logger = new Logger("storage.ccloudResourceLoader");
  * Handles loading the following "coarse" resources via ${link ensureCoarseResourcesLoaded}:
  *  - CCloud Environments (ResourceManager.getCCloudEnvironments())
  *  - CCloud Kafka Clusters (ResourceManager.getCCloudKafkaClusters())
- *  - CCloud Schema Registries (ResourceManager.getCCloudSchemaRegistries())
  *
- * Also handles loading the schemas for a single Schema Registry via {@link ensureSchemasLoaded}, but
- * only after when the coarse resources have been loaded. Because there may be "many" schemas in a schema registry,
- * this is considered a 'fine grained resource' and is not loaded until requested.
  */
 export class CCloudResourceLoader extends ResourceLoader {
   connectionId = CCLOUD_CONNECTION_ID;
