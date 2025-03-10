@@ -257,5 +257,4 @@ export type FormConnectionType =
   | "Confluent Cloud"
   | "Confluent Platform"
   | "Other";
-// TODO NC rename and/or align with support types in auth-credentials.ts
 export type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth";

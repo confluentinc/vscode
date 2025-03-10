@@ -1,17 +1,18 @@
 // filepath: /kafka-credentials-component/kafka-credentials-component/src/components/auth-credentials.ts
 import { ObservableScope } from "inertial";
 import { applyBindings, html } from "./bindings/bindings";
-import type { BasicCredentials } from "../clients/sidecar/models/BasicCredentials";
-import { ApiKeyAndSecret, OAuthCredentials, ScramCredentials } from "../clients/sidecar";
-
-// TODO NC rename and align with support types in parent
-type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth";
+import {
+  type ApiKeyAndSecret,
+  type BasicCredentials,
+  type OAuthCredentials,
+  type ScramCredentials,
+} from "../clients/sidecar";
+import { type SupportedAuthTypes, type FormConnectionType } from "./direct-connect-form";
 type SupportedCredentialTypes =
   | BasicCredentials
   | ApiKeyAndSecret
   | ScramCredentials
   | OAuthCredentials;
-type FormConnectionType = "Apache Kafka" | "Confluent Cloud" | "Confluent Platform" | "Other";
 
 /** Reusable Custom HTML Element (Web Component) for Authentication Credentials
  * This component manages Schema Registry or Kafka cluster configuration for credentials

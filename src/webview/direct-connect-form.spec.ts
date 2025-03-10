@@ -701,7 +701,7 @@ test("populates values for OAUTH/BEARER auth type when they exist in the spec (e
 
   const form = page.locator("form");
   await expect(form).toBeVisible();
-  await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud"); // TODO NC are we saving this and repopulating?
+  await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud");
 
   // Check that the form fields are populated with OAuth connection spec values
   const nameInput = page.locator("input[name='name']");
