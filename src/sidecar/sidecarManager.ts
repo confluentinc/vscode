@@ -7,7 +7,7 @@ import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sid
 import * as vscode from "vscode";
 
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
-import { Logger, outputChannel } from "../logging";
+import { Logger, OUTPUT_CHANNEL } from "../logging";
 import { getStorageManager } from "../storage";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 import {
@@ -518,7 +518,7 @@ export class SidecarManager {
     });
 
     this.logTailer.on("error", (data: any) => {
-      outputChannel.error(`Error tailing sidecar log: ${data.toString()}`);
+      OUTPUT_CHANNEL.error(`Error tailing sidecar log: ${data.toString()}`);
     });
   }
 
@@ -680,7 +680,7 @@ export function appendSidecarLogToOutputChannel(line: string) {
     log = JSON.parse(line) as SidecarLogFormat;
   } catch (e) {
     if (e instanceof Error) {
-      outputChannel.error(`Failed to parse sidecar log line: ${e.message}\n\t${line}`);
+      OUTPUT_CHANNEL.error(`Failed to parse sidecar log line: ${e.message}\n\t${line}`);
     }
     return;
   }

@@ -66,8 +66,9 @@ import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { logError } from "./errors";
 import { constructResourceLoaderSingletons } from "./loaders";
-import { Logger, outputChannel } from "./logging";
+import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
@@ -135,7 +136,7 @@ async function _activateExtension(
 
   // register the log output channels and debugging commands before anything else, in case we need
   // to reset global/workspace state or there's a problem further down with extension activation
-  context.subscriptions.push(outputChannel, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
+  context.subscriptions.push(OUTPUT_CHANNEL, SIDECAR_OUTPUT_CHANNEL, ...registerDebugCommands());
   // automatically display and focus the Confluent extension output channel in development mode
   // to avoid needing to keep the main window & Debug Console tab open alongside the extension dev
   // host window during debugging
@@ -242,6 +243,9 @@ async function _activateExtension(
   context.subscriptions.push(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
   );
+
+  // one-time cleanup of old log files from before the rotating log file stream was implemented
+  cleanupOldLogFiles();
 
   // XXX: used for testing; do not remove
   return context;
@@ -384,9 +388,20 @@ function setupDocumentProviders(): vscode.Disposable[] {
   return disposables;
 }
 
-// This method is called when your extension is deactivated or when VSCode is shutting down
 export function deactivate() {
-  getTelemetryLogger().dispose();
+  // dispose of the telemetry logger
+  try {
+    getTelemetryLogger().dispose();
+  } catch (e) {
+    const msg = "Error disposing telemetry logger during extension deactivation";
+    logError(new Error(msg, { cause: e }), msg, {}, true);
+  }
+
+  // close the file stream used with OUTPUT_CHANNEL
+  const logStream = getLogFileStream();
+  if (logStream) {
+    logStream.end();
+  }
 
   logger.info("Extension deactivated");
 }
