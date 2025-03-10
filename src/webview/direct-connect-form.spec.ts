@@ -27,6 +27,7 @@ function render(template: string, variables: Record<string, any>) {
       "vscode-dropdown",
       "vscode-option",
       "ssl-config",
+      "auth-credentials",
     ]),
   }).replace(/\$\{([^}]+)\}/g, (_, v) => variables[v]);
 }
@@ -85,7 +86,7 @@ test("renders form html correctly", async ({ page }) => {
   const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
   await expect(authKafka).not.toBe(null);
   const authKafkaOptions = await authKafka.locator("option").all();
-  await expect(authKafkaOptions.length).toBe(4);
+  await expect(authKafkaOptions.length).toBe(5);
 
   const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
   await expect(schemaUrlInput).toBeVisible();
@@ -98,7 +99,7 @@ test("renders form html correctly", async ({ page }) => {
   const authSchema = page.locator("select[name='schema_registry.auth_type']");
   await expect(authSchema).not.toBe(null);
   const authSchemaOptions = await authSchema.locator("option").all();
-  await expect(authSchemaOptions.length).toBe(3);
+  await expect(authSchemaOptions.length).toBe(4); // None, Basic, API, OAuth
 });
 test("renders form with existing connection spec values for edit", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
@@ -470,8 +471,7 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
     "schema_registry.uri": "",
   });
 });
-
-test.skip("submits values for SASL/SCRAM auth type when filled in", async ({ execute, page }) => {
+test("submits values for SASL/SCRAM auth type when filled in", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -479,6 +479,7 @@ test.skip("submits values for SASL/SCRAM auth type when filled in", async ({ exe
 
   await execute(async (stub) => {
     stub.withArgs("Submit").resolves(null);
+    stub.withArgs("GetAuthTypes").resolves({ kafka: "None", schema: "None" });
   }, sendWebviewMessage);
 
   await execute(async () => {
@@ -537,6 +538,7 @@ test("populates values for SASL/SCRAM auth type when they're in the spec", async
     async (stub, sample) => {
       stub.withArgs("Submit").resolves(null);
       stub.withArgs("GetConnectionSpec").resolves(sample);
+      stub.withArgs("GetAuthTypes").resolves({ kafka: "SCRAM", schema: "None" });
     },
     sendWebviewMessage,
     SPEC_SAMPLE_SCRAM,
@@ -575,7 +577,7 @@ test("populates values for SASL/SCRAM auth type when they're in the spec", async
   );
 
   const scramPasswordInput = page.locator("input[name='kafka_cluster.credentials.scram_password']");
-  await expect(scramPasswordInput).toHaveValue("fakeplaceholdersecrethere"); // passwords are replaced in form
+  await expect(scramPasswordInput).toHaveValue("password");
 });
 
 const SPEC_SAMPLE = {
