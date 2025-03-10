@@ -115,6 +115,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     const connectionId = connection?.id as ConnectionId;
     let newSpec: CustomConnectionSpec = getConnectionSpecFromFormData(body, connectionId);
     const manager = DirectConnectionManager.getInstance();
+    newSpec = deepMerge(connection, newSpec);
     try {
       await manager.updateConnection(newSpec);
       return { success: true, message: "Connection updated successfully." };
@@ -316,15 +317,16 @@ export function getConnectionSpecFromFormData(
           setValueAtPath(spec, field, formData[field]);
         }
       }
-      // Process credential fields
+
+      // Create credentials object if auth type is not "None"
       const authType = formData[`${namespace}.auth_type`];
-      if (authType) {
+      if (authType && authType !== "None") {
         // Use the auth type submitted with form to filter out invalid credential paths
-        const credentialPaths = resources[namespace].filter(
+        const credentialFields = resources[namespace].filter(
           (path) => path.includes(".credentials.") && isValidCredentialForAuthType(path, authType),
         );
-        for (const path of credentialPaths) {
-          setValueAtPath(spec, path, formData[path]);
+        for (const field of credentialFields) {
+          setValueAtPath(spec, field, formData[field]);
         }
       }
     }
