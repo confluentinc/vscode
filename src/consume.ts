@@ -584,11 +584,13 @@ function messageViewerStartPollingCommand(
         const limit = body.pageSize;
         const includes = bitset()?.predicate() ?? (() => true);
         const { results, indices } = stream().slice(offset, limit, includes);
-        const messages = results.map(({ partition_id, offset, timestamp, key, value }) => {
-          key = truncate(key);
-          value = truncate(value);
-          return { partition_id, offset, timestamp, key, value };
-        });
+        const messages = results.map(
+          ({ partition_id, offset, timestamp, key, value, metadata }) => {
+            key = truncate(key);
+            value = truncate(value);
+            return { partition_id, offset, timestamp, key, value, metadata };
+          },
+        );
         return { indices, messages } satisfies MessageResponse<"GetMessages">;
       }
       case "GetMessagesCount": {
@@ -906,9 +908,9 @@ function prepare(
   } catch {
     value = message.value;
   }
-  const { partition_id, offset, timestamp, headers } = message;
+  const { partition_id, offset, timestamp, headers, metadata } = message;
 
-  return { partition_id, offset, timestamp, headers, key, value };
+  return { partition_id, offset, timestamp, headers, key, value, metadata };
 }
 
 /**
