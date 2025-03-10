@@ -1,6 +1,10 @@
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
 import { Logger } from "../logging";
-import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
+import {
+  LOCAL_DOCKER_SOCKET_PATH,
+  SSL_PEM_PATHS,
+  SSL_VERIFY_SERVER_CERT_DISABLED,
+} from "./constants";
 import { updatePreferences } from "./updates";
 
 const logger = new Logger("preferences.listener");
@@ -29,6 +33,15 @@ export function createConfigChangeListener(): Disposable {
         // if the user disables server cert verification, trust all certs
         const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
         await updatePreferences({ trust_all_certificates: trustAllCerts });
+        return;
+      }
+
+      if (event.affectsConfiguration(LOCAL_DOCKER_SOCKET_PATH)) {
+        // just log it so we don't have to log every time we use it
+        logger.debug(
+          `"${LOCAL_DOCKER_SOCKET_PATH}" changed:`,
+          configs.get(LOCAL_DOCKER_SOCKET_PATH),
+        );
         return;
       }
 

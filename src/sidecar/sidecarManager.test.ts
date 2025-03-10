@@ -2,7 +2,7 @@ import * as assert from "assert";
 import "mocha";
 import * as sinon from "sinon";
 import { SIDECAR_OUTPUT_CHANNEL } from "../constants";
-import { outputChannel } from "../logging";
+import { OUTPUT_CHANNEL } from "../logging";
 import { SIDECAR_LOGFILE_PATH } from "./constants";
 import {
   appendSidecarLogToOutputChannel,
@@ -130,7 +130,7 @@ describe("appendSidecarLogToOutputChannel() tests", () => {
     errorStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "error");
     appendLineStub = sandbox.stub(SIDECAR_OUTPUT_CHANNEL, "appendLine");
 
-    mainOutputErrorStub = sandbox.stub(outputChannel, "error");
+    mainOutputErrorStub = sandbox.stub(OUTPUT_CHANNEL, "error");
   });
 
   afterEach(() => {
