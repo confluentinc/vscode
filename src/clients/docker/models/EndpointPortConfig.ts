@@ -62,24 +62,21 @@ export interface EndpointPortConfig {
 
 /**
  * @export
+ * @enum {string}
  */
-export const EndpointPortConfigProtocolEnum = {
-  Tcp: "tcp",
-  Udp: "udp",
-  Sctp: "sctp",
-} as const;
-export type EndpointPortConfigProtocolEnum =
-  (typeof EndpointPortConfigProtocolEnum)[keyof typeof EndpointPortConfigProtocolEnum];
-
+export enum EndpointPortConfigProtocolEnum {
+  Tcp = "tcp",
+  Udp = "udp",
+  Sctp = "sctp",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const EndpointPortConfigPublishModeEnum = {
-  Ingress: "ingress",
-  Host: "host",
-} as const;
-export type EndpointPortConfigPublishModeEnum =
-  (typeof EndpointPortConfigPublishModeEnum)[keyof typeof EndpointPortConfigPublishModeEnum];
+export enum EndpointPortConfigPublishModeEnum {
+  Ingress = "ingress",
+  Host = "host",
+}
 
 /**
  * Check if a given object implements the EndpointPortConfig interface.

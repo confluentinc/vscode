@@ -591,35 +591,30 @@ export interface SystemInfo {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SystemInfoCgroupDriverEnum = {
-  Cgroupfs: "cgroupfs",
-  Systemd: "systemd",
-  None: "none",
-} as const;
-export type SystemInfoCgroupDriverEnum =
-  (typeof SystemInfoCgroupDriverEnum)[keyof typeof SystemInfoCgroupDriverEnum];
-
+export enum SystemInfoCgroupDriverEnum {
+  Cgroupfs = "cgroupfs",
+  Systemd = "systemd",
+  None = "none",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const SystemInfoCgroupVersionEnum = {
-  _1: "1",
-  _2: "2",
-} as const;
-export type SystemInfoCgroupVersionEnum =
-  (typeof SystemInfoCgroupVersionEnum)[keyof typeof SystemInfoCgroupVersionEnum];
-
+export enum SystemInfoCgroupVersionEnum {
+  _1 = "1",
+  _2 = "2",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const SystemInfoIsolationEnum = {
-  Default: "default",
-  Hyperv: "hyperv",
-  Process: "process",
-} as const;
-export type SystemInfoIsolationEnum =
-  (typeof SystemInfoIsolationEnum)[keyof typeof SystemInfoIsolationEnum];
+export enum SystemInfoIsolationEnum {
+  Default = "default",
+  Hyperv = "hyperv",
+  Process = "process",
+}
 
 /**
  * Check if a given object implements the SystemInfo interface.

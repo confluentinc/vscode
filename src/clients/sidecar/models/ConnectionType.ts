@@ -15,14 +15,14 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const ConnectionType = {
-  Local: "LOCAL",
-  Platform: "PLATFORM",
-  Ccloud: "CCLOUD",
-  Direct: "DIRECT",
-} as const;
-export type ConnectionType = (typeof ConnectionType)[keyof typeof ConnectionType];
+export enum ConnectionType {
+  Local = "LOCAL",
+  Platform = "PLATFORM",
+  Ccloud = "CCLOUD",
+  Direct = "DIRECT",
+}
 
 export function instanceOfConnectionType(value: any): boolean {
   for (const key in ConnectionType) {
