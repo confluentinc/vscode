@@ -5,6 +5,7 @@ import {
   ccloudConnected,
   currentKafkaClusterChanged,
   environmentChanged,
+  EnvironmentChangeEvent,
   localKafkaConnected,
   topicSearchSet,
 } from "../emitters";
@@ -199,16 +200,26 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
     const environmentChangedSub: vscode.Disposable = environmentChanged.event(
-      async (envId: string) => {
-        if (this.kafkaCluster && this.kafkaCluster.environmentId === envId) {
-          logger.debug(
-            "environmentChanged event fired with matching Kafka cluster env ID, updating view description",
-            {
-              envId,
-            },
-          );
-          await this.updateTreeViewDescription();
-          this.refresh();
+      async (envEvent: EnvironmentChangeEvent) => {
+        if (this.kafkaCluster && this.kafkaCluster.environmentId === envEvent.id) {
+          if (!envEvent.wasDeleted) {
+            logger.debug(
+              "environmentChanged event fired with matching Kafka cluster env ID, updating view description",
+              {
+                envEvent,
+              },
+            );
+            await this.updateTreeViewDescription();
+            this.refresh();
+          } else {
+            logger.debug(
+              "environmentChanged deletion event fired with matching Kafka cluster env ID, resetting view",
+              {
+                envEvent,
+              },
+            );
+            this.reset();
+          }
         }
       },
     );

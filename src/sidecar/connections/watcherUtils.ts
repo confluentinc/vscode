@@ -37,7 +37,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
             connectionStable.fire(id);
             // notify subscribers that the "environment" has changed since direct connections are treated
             // as environment-specific resources
-            environmentChanged.fire(environmentId);
+            environmentChanged.fire({ id: environmentId, wasDeleted: false });
           } else {
             logger.info(
               `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing side-effects.`,
@@ -53,7 +53,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
           // Stop any loading spinny...
           connectionStable.fire(id);
           // ???
-          environmentChanged.fire(environmentId);
+          environmentChanged.fire({ id: environmentId, wasDeleted: true });
           break;
         default:
           logger.warn(`connectionEventHandler: unhandled ccloud connection action ${event.action}`);
