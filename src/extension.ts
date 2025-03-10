@@ -68,7 +68,7 @@ import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import { constructResourceLoaderSingletons } from "./loaders";
-import { getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
+import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
@@ -243,6 +243,9 @@ async function _activateExtension(
   context.subscriptions.push(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
   );
+
+  // one-time cleanup of old log files from before the rotating log file stream was implemented
+  cleanupOldLogFiles();
 
   // XXX: used for testing; do not remove
   return context;

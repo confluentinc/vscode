@@ -1,3 +1,4 @@
+import { readdirSync, statSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { LogOutputChannel, window } from "vscode";
@@ -214,4 +215,41 @@ function rotatingFilenameGenerator(time: number | Date, index?: number): string 
   }
   CURRENT_LOGFILE_NAME = newFileName;
   return newFileName;
+}
+
+/** Helper function to clean up older log files that weren't picked up by the rotating file stream. */
+export function cleanupOldLogFiles() {
+  const now = new Date();
+  const cutoffDate = new Date(now);
+  cutoffDate.setDate(now.getDate() - 3);
+
+  const logFiles: string[] = readdirSync(LOGFILE_DIR).filter((file) => {
+    // any `vscode-confluent*.log` files, excluding the sidecar log file
+    return (
+      file.startsWith("vscode-confluent-") &&
+      file.endsWith(".log") &&
+      file !== "vscode-confluent-sidecar.log"
+    );
+  });
+  if (!logFiles.length) {
+    return;
+  }
+
+  // filter out any log files that were last modified before the cutoff date
+  const oldLogFiles = logFiles.filter((file) => {
+    const filePath = `${LOGFILE_DIR}/${file}`;
+    const stats = statSync(filePath);
+    return stats.mtime < cutoffDate;
+  });
+
+  // delete the old log files
+  for (const file of oldLogFiles) {
+    const filePath = `${LOGFILE_DIR}/${file}`;
+    try {
+      console.log(`Deleting old log file: ${filePath}`);
+      unlinkSync(filePath);
+    } catch (error) {
+      console.error(`Error deleting old log file: ${filePath}`, error);
+    }
+  }
 }
