@@ -1,5 +1,5 @@
 import { tmpdir } from "os";
-import { createStream, Generator, RotatingFileStream } from "rotating-file-stream";
+import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { LogOutputChannel, window } from "vscode";
 
 /**
@@ -194,7 +194,7 @@ const LOGFILE_NAME = `vscode-confluent-${process.pid}.log`;
  * @param index - An optional index to append to the filename.
  * @returns The generated filename.
  */
-const rotatingFilenameGenerator: Generator = (time: number | Date, index?: number): string => {
+function rotatingFilenameGenerator(time: number | Date, index?: number): string {
   const currentTime = new Date();
   const year = currentTime.getFullYear();
   const month = pad(currentTime.getMonth() + 1);
@@ -205,4 +205,4 @@ const rotatingFilenameGenerator: Generator = (time: number | Date, index?: numbe
   ROTATED_LOGFILE_NAMES.add(newFileName);
   CURRENT_LOGFILE_NAME = newFileName;
   return newFileName;
-};
+}
