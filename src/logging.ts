@@ -2,6 +2,7 @@ import { readdirSync, statSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { LogOutputChannel, window } from "vscode";
+import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
 
 /**
  * Main "Confluent" output channel.
@@ -227,6 +228,8 @@ export function rotatingFilenameGenerator(time: number | Date, index?: number): 
 
 /** Helper function to clean up older log files that weren't picked up by the rotating file stream. */
 export function cleanupOldLogFiles() {
+  const logger = new Logger("logging.cleanup");
+
   const now = new Date();
   const cutoffDate = new Date(now);
   cutoffDate.setDate(now.getDate() - 3);
@@ -234,11 +237,13 @@ export function cleanupOldLogFiles() {
   const logFiles: string[] = readdirSync(LOGFILE_DIR).filter((file) => {
     // any `vscode-confluent*.log` files, excluding the sidecar log file
     return (
-      file.startsWith("vscode-confluent-") &&
-      file.endsWith(".log") &&
-      file !== "vscode-confluent-sidecar.log"
+      file.startsWith("vscode-confluent-") && file.endsWith(".log") && file !== SIDECAR_LOGFILE_NAME
     );
   });
+  logger.debug(
+    `found ${logFiles.length} extension log file(s) in "${LOGFILE_DIR}":`,
+    logFiles.slice(0, 5),
+  );
   if (!logFiles.length) {
     return;
   }
@@ -249,15 +254,19 @@ export function cleanupOldLogFiles() {
     const stats = statSync(filePath);
     return stats.mtime < cutoffDate;
   });
+  logger.debug(
+    `extension log files modified before ${cutoffDate.toISOString()} to delete:`,
+    oldLogFiles,
+  );
 
   // delete the old log files
   for (const file of oldLogFiles) {
     const filePath = `${LOGFILE_DIR}/${file}`;
     try {
-      console.log(`Deleting old log file: ${filePath}`);
+      logger.debug(`Deleting old log file: ${filePath}`);
       unlinkSync(filePath);
     } catch (error) {
-      console.error(`Error deleting old log file: ${filePath}`, error);
+      logger.error(`Error deleting old log file: ${filePath}`, error);
     }
   }
 }
