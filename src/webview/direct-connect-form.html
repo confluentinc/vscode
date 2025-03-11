@@ -203,8 +203,8 @@
               data-value="this.schemaAuthType()"
             >
               <option value="None" selected>None</option>
-              <option value="Basic">Username & Password (SASL/PLAIN)</option>
-              <option value="API">API Credentials (SASL/PLAIN)</option>
+              <option value="Basic">Username & Password</option>
+              <option value="API">API Credentials</option>
               <option value="OAuth">SASL/OAUTHBEARER</option>
             </select>
           </div>
@@ -304,8 +304,29 @@
         padding: 2px;
         font-size: smaller;
       }
-      .heading.clickable {
+      /* These styles are specific to the form SSL section */
+      .clickable-header {
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .input-sub-group {
+        background: var(--vscode-sideBar-background);
+        color: var(--vscode-sideBar-foreground);
+        padding: 0 16px;
+        border-radius: 5px;
+        border: 1px solid var(--vscode-sideBar-border);
+      }
+      .input-sub-group .heading {
+        font-size: 13px;
+        margin: 8px 0;
+      }
+      .input-sub-group p {
+        margin: 8px 0;
+      }
+      .input-sub-group > .input-container {
+        margin-bottom: 12px;
       }
     </style>
   </body>
