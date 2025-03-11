@@ -60,8 +60,6 @@ function openSettings() {
  * this extension instance, normalized for the user's OS. */
 export function extensionLogFileUris(): Uri[] {
   const uris: Uri[] = [];
-  // early on, CURRENT_LOGFILE_NAME will be included in ROTATED_LOGFILE_NAMES, but after a few
-  // rotations, it will be removed from the array so we need to make sure we include it here
   const filenames: string[] = [CURRENT_LOGFILE_NAME, ...ROTATED_LOGFILE_NAMES];
   for (const filename of filenames) {
     const uri = Uri.file(normalize(join(LOGFILE_DIR, filename)));

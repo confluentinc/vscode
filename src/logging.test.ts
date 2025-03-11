@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import {
+  CURRENT_LOGFILE_NAME,
   Logger,
   MAX_LOGFILES,
   OUTPUT_CHANNEL,
@@ -91,23 +92,33 @@ describe("logging.ts Logger methods", function () {
 });
 
 describe("logging.ts rotatingFilenameGenerator", function () {
-  it("should generate a new filename with a different index", function () {
+  it("should leave ROTATED_LOGFILE_NAMES empty before any rotations", function () {
     const fileName: string = rotatingFilenameGenerator(new Date(), 0);
 
     assert.strictEqual(fileName, `vscode-confluent-${process.pid}.log`);
+    // no rotations yet
+    assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 0);
+    assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
   });
 
   it("should generate a new filename with a higher index", function () {
     const fileName: string = rotatingFilenameGenerator(new Date(), 1);
 
     assert.strictEqual(fileName, `vscode-confluent-${process.pid}.1.log`);
+    // one rotated file, current left alone
+    assert.strictEqual(ROTATED_LOGFILE_NAMES.length, 1);
+    assert.strictEqual(ROTATED_LOGFILE_NAMES[0], `vscode-confluent-${process.pid}.1.log`);
+    assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
   });
 
   it(`should only keep the last ${MAX_LOGFILES} log files in ROTATED_LOGFILE_NAMES`, function () {
-    for (let i = 0; i < MAX_LOGFILES + 1; i++) {
-      rotatingFilenameGenerator(new Date(), i);
+    // start at 1 since 0 is the current log file index
+    for (let i = 1; i <= MAX_LOGFILES; i++) {
+      const fileName = rotatingFilenameGenerator(new Date(), i);
+      assert.strictEqual(fileName, `vscode-confluent-${process.pid}.${i}.log`);
     }
 
     assert.strictEqual(ROTATED_LOGFILE_NAMES.length, MAX_LOGFILES);
+    assert.strictEqual(CURRENT_LOGFILE_NAME, `vscode-confluent-${process.pid}.log`);
   });
 });

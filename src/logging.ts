@@ -145,7 +145,7 @@ export class Logger {
 export const LOGFILE_DIR = tmpdir();
 
 /** The name of the currently active log file, including time/index prefixing. */
-export let CURRENT_LOGFILE_NAME: string;
+export const CURRENT_LOGFILE_NAME: string = `vscode-confluent-${process.pid}.log`;
 
 /** Set of log file names that have already been created for this extension instance. */
 export const ROTATED_LOGFILE_NAMES: string[] = [];
@@ -191,13 +191,13 @@ export function getLogFileStream(): RotatingFileStream {
  *
  * Example for a max of 3 log files:
  * First set of rotations:
- * - `vscode-confluent-1234.0.log` (current log file)
+ * - `vscode-confluent-1234.log` (current log file)
  * - `vscode-confluent-1234.1.log` (oldest log file)
  * - `vscode-confluent-1234.2.log`
  * - `vscode-confluent-1234.3.log` (new log file)
  *
  * The next rotation will remove the oldest file and create a new one:
- * - `vscode-confluent-1234.0.log` (current log file)
+ * - `vscode-confluent-1234.log` (current log file)
  * - (`vscode-confluent-1234.1.log` is deleted)
  * - `vscode-confluent-1234.2.log`
  * - `vscode-confluent-1234.3.log`
@@ -212,7 +212,7 @@ export function rotatingFilenameGenerator(time: number | Date, index?: number): 
   // this function will be called multiple times by RotatingFileStream as it handles rotations, so
   // we need to guard against adding the same file name multiple times
   // (we could use a Set, but we would end up calling Array.from() on it over and over)
-  if (!ROTATED_LOGFILE_NAMES.includes(newFileName)) {
+  if (newFileName !== CURRENT_LOGFILE_NAME && !ROTATED_LOGFILE_NAMES.includes(newFileName)) {
     ROTATED_LOGFILE_NAMES.push(newFileName);
   }
 
@@ -222,7 +222,6 @@ export function rotatingFilenameGenerator(time: number | Date, index?: number): 
     ROTATED_LOGFILE_NAMES.shift();
   }
 
-  CURRENT_LOGFILE_NAME = newFileName;
   return newFileName;
 }
 
