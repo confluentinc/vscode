@@ -41,6 +41,7 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(includeObservabilityContext);
 }
 
+import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { registerCommandWithLogging } from "./commands";
@@ -66,6 +67,8 @@ import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { getLaunchDarklyClient, setFlagDefaults } from "./featureFlags/client";
+import { FeatureFlag, FeatureFlags } from "./featureFlags/constants";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { Logger, outputChannel } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
@@ -141,6 +144,17 @@ async function _activateExtension(
   // host window during debugging
   if (process.env.LOGGING_MODE === "development") {
     vscode.commands.executeCommand("confluent.showOutputChannel");
+  }
+
+  // set up initial feature flags and the LD client
+  setFlagDefaults();
+  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
+  await ldClient?.waitForInitialization();
+  // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
+  // the local defaults
+  const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
+  if (!globalEnabled) {
+    throw new Error(`Extension is disabled by the feature flag "${FeatureFlag.GLOBAL_ENABLED}".`);
   }
 
   // configure the StorageManager for extension access to secrets and global/workspace states, and
@@ -356,12 +370,16 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // attempt to get a session to trigger the initial auth badge for signing in
   const cloudSession = await getCCloudAuthSession();
 
-  // Send an Identify event to Segment with the session info if available
+  // Send an Identify event to Segment and LaunchDarkly with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
       eventName: UserEvent.ExtensionActivation,
       userInfo: undefined,
       session: cloudSession,
+    });
+    getLaunchDarklyClient()?.identify({
+      key: cloudSession.account.id,
+      email: cloudSession.account.label,
     });
   }
 
@@ -386,7 +404,12 @@ function setupDocumentProviders(): vscode.Disposable[] {
 
 // This method is called when your extension is deactivated or when VSCode is shutting down
 export function deactivate() {
-  getTelemetryLogger().dispose();
+  try {
+    getTelemetryLogger().dispose();
+    getLaunchDarklyClient()?.close();
+  } catch (error) {
+    logger.error("Error during deactivation:", error);
+  }
 
   logger.info("Extension deactivated");
 }

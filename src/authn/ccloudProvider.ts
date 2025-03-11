@@ -6,6 +6,7 @@ import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { getLaunchDarklyClient } from "../featureFlags/client";
 import { Logger } from "../logging";
 import { fetchPreferences } from "../preferences/updates";
 import {
@@ -155,12 +156,16 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
-    // User signed in successfully so we send an identify event to Segment
+    // User signed in successfully so we send an identify event to Segment and LaunchDarkly
     if (authenticatedConnection.status.authentication.user) {
       sendTelemetryIdentifyEvent({
         eventName: UserEvent.CCloudAuthentication,
         userInfo: authenticatedConnection.status.authentication.user,
         session: undefined,
+      });
+      getLaunchDarklyClient()?.identify({
+        key: authenticatedConnection.status.authentication.user.id,
+        email: authenticatedConnection.status.authentication.user.username,
       });
     }
     // we want to continue regardless of whether or not the user dismisses the notification,
