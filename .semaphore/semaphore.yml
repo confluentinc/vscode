@@ -37,42 +37,87 @@ global_job_config:
         - make store-test-results-to-semaphore
 
 blocks:
-  - name: "Build & Test (VS Code)"
+  # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
+  - name: "Build & Test (VS Code: linux x64)"
     dependencies: []
     # Skip when:
     # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
     # - change in the .versions/next.txt file, signaling a release PR merge commit.
-    skip:
+    skip: &build-test-skip-stable
       when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
-      jobs:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-amd64-1
+      jobs: &build-test-jobs-stable
         - name: "Build & Test (VS Code)"
           commands:
             - make test
           # Not setting VSCODE_VERSION env var will default using the latest stable release version
-      epilogue:
+      epilogue: &build-test-epilogue
         always:
           commands:
             - make remove-test-env
-  - name: "Build & Test (VS Code Insiders)"
+
+  - name: "Build & Test (VS Code: linux arm64)"
     dependencies: []
-    skip:
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu20-04-arm64-1
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (VS Code: darwin x64)"
+    dependencies: []
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-amd64
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (VS Code: darwin arm64)"
+    dependencies: []
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-arm64
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (VS Code: win32 x64)"
+    dependencies: []
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-windows
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
+
+  - name: "Build & Test (VS Code Insiders: linux x64)"
+    dependencies: []
+    skip: &build-test-skip-insiders
       when: "branch != 'main' AND change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
-      jobs:
+      jobs: &build-test-jobs-insiders
         - name: "Build & Test (VS Code Insiders)"
           commands:
             - make test
           env_vars:
             - name: VSCODE_VERSION
               value: insiders
-      epilogue:
-        always:
-          commands:
-            - make remove-test-env
+      epilogue: *build-test-epilogue
 
   - name: "Bump microversion"
-    dependencies: ["Build & Test (VS Code)"]
+    dependencies:
+      - "Build & Test (linux x64)"
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -90,7 +135,8 @@ blocks:
             - make bump-microversion
 
   - name: "Set next version under development"
-    dependencies: ["Build & Test (VS Code)"]
+    dependencies:
+      - "Build & Test (linux x64)"
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
