@@ -5,8 +5,10 @@ import {
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_CCLOUD_SCHEMA_REGISTRY,
+  TEST_DIRECT_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
+  TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
 import {
   TEST_DIRECT_CONNECTION_FORM_SPEC,
@@ -21,7 +23,8 @@ import {
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { Subject } from "../models/schema";
+import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { WorkspaceStorageKeys } from "./constants";
 import {
@@ -770,6 +773,137 @@ describe("ResourceManager direct connection methods", function () {
     // make sure they're gone
     storedSpecs = await rm.getDirectConnections();
     assert.deepStrictEqual(storedSpecs, new Map());
+  });
+});
+
+describe("ResourceManager SR subject methods", function () {
+  let storageManager: StorageManager;
+  let resourceManager: ResourceManager;
+
+  before(async () => {
+    // extension needs to be activated before storage manager can be used
+    storageManager = await getTestStorageManager();
+    resourceManager = getResourceManager();
+  });
+
+  this.beforeEach(async () => {
+    // fresh slate for each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  this.afterEach(async () => {
+    // clean up after each test
+    await storageManager.clearWorkspaceState();
+  });
+
+  function createTestSubjects(schemaRegistry: SchemaRegistry, count: number): Subject[] {
+    const subjects: Subject[] = [];
+    for (let i = 0; i < count; i++) {
+      const subjectName = `test-subject-${i + 1}`;
+      const subject = new Subject(
+        subjectName,
+        schemaRegistry.connectionId,
+        schemaRegistry.environmentId,
+        schemaRegistry.id,
+        null,
+      );
+      // Add the subject to the list of subjects
+      subjects.push(subject);
+    }
+    return subjects;
+  }
+
+  for (const [srCluster, expectedKey] of [
+    [TEST_CCLOUD_SCHEMA_REGISTRY, WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS],
+    [TEST_LOCAL_SCHEMA_REGISTRY, WorkspaceStorageKeys.LOCAL_SR_SUBJECTS],
+    [TEST_DIRECT_SCHEMA_REGISTRY, WorkspaceStorageKeys.DIRECT_SR_SUBJECTS],
+  ] as [SchemaRegistry, WorkspaceStorageKeys][]) {
+    it(`subjectKeyForSchemaRegistry() should return the correct key for ${srCluster.id}`, () => {
+      const key = resourceManager.subjectKeyForSchemaRegistry(srCluster);
+      assert.equal(key, expectedKey, `Expected ${srCluster.id} to map to ${expectedKey}`);
+    });
+  }
+
+  it("getSubjects() should return undefined if no cached subjects for this schema registry", async () => {
+    for (const sr of [TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY]) {
+      const subjects = await resourceManager.getSubjects(sr);
+      assert.deepStrictEqual(subjects, undefined);
+    }
+  });
+
+  it("getSubjects() should return undefined if one ccloud SR is set but not the other", async () => {
+    // Set up the cloud topics, local topics.
+
+    const otherCCloudSR = CCloudSchemaRegistry.create({
+      ...TEST_CCLOUD_SCHEMA_REGISTRY,
+      id: "other-cluster-id",
+    });
+
+    // Set some subjects for the other cloud SR
+    await resourceManager.setSubjects(otherCCloudSR, createTestSubjects(otherCCloudSR, 2));
+
+    // But our main cloud SR should not have any.
+    const subjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(subjects, undefined);
+  });
+
+  it("getSubjects() should return empty array of subjects if empty array is set", async () => {
+    for (const sr of [TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY]) {
+      await resourceManager.setSubjects(sr, []);
+      const subjects = await resourceManager.getSubjects(sr);
+      assert.deepStrictEqual(subjects, []);
+    }
+  });
+
+  it("getSubjects() should return the correct subjects for the schema registry", async () => {
+    const testSubjects = createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2);
+    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, testSubjects);
+    let retrievedSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(retrievedSubjects, testSubjects, "first comparison");
+
+    // and rewriting to new subjects should work
+    const newTestSubjects = createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 3);
+    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, newTestSubjects);
+    retrievedSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(retrievedSubjects, newTestSubjects, "second comparison");
+  });
+
+  it("deleteCCloudResources() + deleteCCloudSubjects() should correctly delete only ccloud SR subjects", async () => {
+    // set the subjects in the StorageManager before deleting them
+    await resourceManager.setSubjects(
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
+    );
+    const localSubjects = createTestSubjects(TEST_LOCAL_SCHEMA_REGISTRY, 2);
+    await resourceManager.setSubjects(TEST_LOCAL_SCHEMA_REGISTRY, localSubjects);
+
+    // clear all ccloud resources
+    await resourceManager.deleteCCloudResources();
+    // verify the ccloud topics were deleted correctly.
+    const missingSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(missingSubjects, undefined);
+    // verify the local topics were not deleted.
+    const fetchedLocalSubjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(fetchedLocalSubjects, localSubjects);
+  });
+
+  it("deleteLocalSubjects() should correctly delete only local SR subjects", async () => {
+    // set the subjects in the StorageManager before deleting them
+    await resourceManager.setSubjects(
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
+    );
+    const localSubjects = createTestSubjects(TEST_LOCAL_SCHEMA_REGISTRY, 2);
+    await resourceManager.setSubjects(TEST_LOCAL_SCHEMA_REGISTRY, localSubjects);
+
+    // clear all local resources
+    await resourceManager.deleteLocalSubjects();
+    // verify the local topics were deleted correctly.
+    const missingLocalSubjects = await resourceManager.getSubjects(TEST_LOCAL_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(missingLocalSubjects, undefined);
+    // verify the ccloud topics were not deleted.
+    const fetchedCCloudSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.ok(fetchedCCloudSubjects);
   });
 });
 
