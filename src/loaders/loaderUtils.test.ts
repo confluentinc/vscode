@@ -50,7 +50,7 @@ describe("loaderUtils correlateTopicsWithSchemaSubjects() test", () => {
   });
 });
 
-describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () => {
+describe("loaderUtils fetchSubjects() and fetchSchemasForSubject() tests", () => {
   // Common suite and setup for loaderUtils functions that interact with SubjectsV1Api.
 
   let sandbox: sinon.SinonSandbox;
@@ -87,10 +87,10 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     assert.deepStrictEqual(subjectStrings, ["subject1", "Subject2", "subject3"]);
   });
 
-  it("fetchSchemaSubjectGroup() should fetch versions of schemas for a given subject", async () => {
+  it("fetchSchemasForSubject() should fetch versions of schemas for a given subject", async () => {
     const subject: string = "topic1-value";
 
-    // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
+    // When fetchSchemasForSubject() starts out and determines the versions of the subject, will
     // learn that there are 3 versions. And as if version 1 was soft deleted.
     const versions = [2, 3, 4];
     stubbedSubjectsV1Api.listVersions.resolves(versions);
@@ -132,10 +132,10 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     }
   });
 
-  it("fetchSchemaSubjectGroup() throws if any single version fetch fails", async () => {
+  it("fetchSchemasForSubject() throws if any single version fetch fails", async () => {
     const subject: string = "topic1-value";
 
-    // When fetchSchemaSubjectGroup() starts out and determines the versions of the subject, will
+    // When fetchSchemasForSubject() starts out and determines the versions of the subject, will
     // learn that there are 3 versions. And as if version 1 was soft deleted.
     const versions = [2, 3, 4];
     stubbedSubjectsV1Api.listVersions.resolves(versions);

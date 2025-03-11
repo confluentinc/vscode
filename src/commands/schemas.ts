@@ -87,12 +87,12 @@ async function createSchemaCommand() {
 /** Diff the most recent two versions of schemas bound to a subject. */
 export async function diffLatestSchemasCommand(subjectWithSchemas: Subject) {
   if (!subjectWithSchemas.schemas || subjectWithSchemas.schemas.length < 2) {
-    // Should not happen if the context value was set correctly over in generateSchemaSubjectGroups().
+    // Should not happen if the context value was set correctly over in getSchemasForSubject().
     logger.warn("diffLatestSchemasCommand called with less than two schemas", subjectWithSchemas);
     return;
   }
 
-  // generateSchemaSubjectGroups() will have set up `children` in reverse order ([0] is highest version).
+  // getSchemasForSubject() will have set up `children` in reverse order ([0] is highest version).
   const latestSchema = subjectWithSchemas.schemas[0];
   const priorVersionSchema = subjectWithSchemas.schemas[1];
 
