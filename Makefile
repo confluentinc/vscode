@@ -115,7 +115,13 @@ else
 	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
 		curl --fail -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
 		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)";
+		if [ $$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) -lt 1048576 ]; then \
+				echo "Error: Downloaded sidecar executable is too small (< 1MB), likely corrupted or failed download" >&2; \
+				cat $(EXECUTABLE_DOWNLOAD_PATH) | head -20 >&2; \
+				rm -f $(EXECUTABLE_DOWNLOAD_PATH); \
+				exit 1; \
+		fi && \
+		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH) ($$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) bytes)";
 endif
 
 # Downloads the THIRD_PARTY_NOTICES.txt file from the latest release of ide-sidecar as THIRD_PARTY_NOTICES_IDE_SIDECAR.txt
