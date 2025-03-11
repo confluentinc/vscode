@@ -28,11 +28,7 @@ blocks:
       prologue:
         commands:
           - checkout
-    jobs:
-      - name: "Update third party notices PR"
-        dependencies: []
-        task:
-          jobs:
-            - name: "Update Third Party Notices PR"
-              commands:
-                - make update-third-party-notices-pr
+      jobs:
+        - name: "Update third party notices PR"
+          commands:
+            - make update-third-party-notices-pr
