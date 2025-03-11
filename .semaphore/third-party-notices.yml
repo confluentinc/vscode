@@ -28,7 +28,7 @@ blocks:
       prologue:
         commands:
           - checkout
-      jobs:
+    jobs:
       - name: "Update third party notices PR"
         dependencies: []
         task:
