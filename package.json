@@ -89,7 +89,7 @@
       {
         "command": "confluent.connections.direct.export",
         "icon": "$(confluent-export-connection)",
-        "title": "Export as JSON",
+        "title": "Export connection details",
         "category": "Confluent: Connections"
       },
       {
