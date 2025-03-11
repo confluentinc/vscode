@@ -1,6 +1,6 @@
 // sidecar manager module
 
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import fs from "fs";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
@@ -379,16 +379,66 @@ export class SidecarManager {
         // Set up the environment for the sidecar process.
         const sidecar_env = constructSidecarEnv(process.env);
 
+        const stderrPath = `${SIDECAR_LOGFILE_PATH}.stderr`;
         try {
+          fs.writeFileSync(stderrPath, "");
+          const stderrFd = fs.openSync(stderrPath, "w");
+
           const sidecarProcess = spawn(executablePath, [], {
             detached: true,
-            stdio: "ignore",
+            stdio: ["ignore", "ignore", stderrFd],
             env: sidecar_env,
           });
           logger.info(
             `${logPrefix}: started sidecar process with pid ${sidecarProcess.pid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
           );
           sidecarProcess.unref();
+
+          // check to see if the process is running and/or if any errors were logged
+          setTimeout(() => {
+            try {
+              const isRunning =
+                spawnSync("ps", ["-p", sidecarProcess.pid!.toString()]).status === 0;
+              logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
+
+              // try to read sidecar logs
+              let logs: string[] = [];
+              try {
+                logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").split("\n").slice(-20);
+              } catch (e) {
+                logger.error(`${logPrefix}: Failed to read sidecar log file: ${e}`);
+              }
+
+              // check stderr file for startup errors
+              let stderrContent = "";
+              try {
+                stderrContent = fs.readFileSync(stderrPath, "utf8");
+                if (stderrContent.trim()) {
+                  logger.error(`${logPrefix}: Sidecar stderr output: ${stderrContent}`);
+                }
+              } catch (e) {
+                logger.error(`${logPrefix}: Failed to read sidecar stderr file: ${e}`);
+              }
+              logger.info(
+                `${logPrefix}: Last few sidecar log lines:\n${logs
+                  .map((jsonLine) => {
+                    try {
+                      const line = JSON.parse(jsonLine.trim()) as SidecarLogFormat;
+                      return `\t> ${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`;
+                    } catch {
+                      return `\t> ${jsonLine}`;
+                    }
+                  })
+                  .join("\n")}`,
+              );
+
+              if (!isRunning) {
+                logger.error(`${logPrefix}: Sidecar process died immediately after startup`);
+              }
+            } catch (e) {
+              logger.error(`${logPrefix}: Failed to check sidecar process status: ${e}`);
+            }
+          }, 2000);
 
           // May think about a  sidecarProcess.on("exit", (code: number) => { ... }) here to catch early exits,
           // but the sidecar file architecture check above should catch most of those cases.
