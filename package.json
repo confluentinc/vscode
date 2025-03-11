@@ -446,7 +446,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent/Kafka resources. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)"
+          "markdownDescription": "Path(s) to `.pem` file(s) to use for SSL/TLS connections when making requests to Confluent Cloud. (You can also use the [\"Add SSL/TLS PEM Path\" command](command:confluent.connections.addSSLPemPath).)\n\n_NOTE: This is only used for the main Confluent Cloud connection, and does not apply to custom/'direct' connections._"
         },
         "confluent.localDocker.socketPath": {
           "type": "string",
