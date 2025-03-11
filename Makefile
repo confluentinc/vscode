@@ -21,13 +21,11 @@ install-test-dependencies:
 			echo "Checking XQuartz installation..."; \
 			xquartz_installed=$$(ls -la /Applications/Utilities/XQuartz.app 2>/dev/null || echo "xquartz not found"); \
 			echo "XQuartz status: $$xquartz_installed"; \
-
 			sudo mkdir -p /usr/local/var/lib /usr/local/var/run/dbus /usr/local/Caskroom/xquartz; \
 			sudo chown -R $$(whoami) /usr/local/var /usr/local/Caskroom; \
 			sudo chmod -R 775 /usr/local/var /usr/local/Caskroom; \
 			HOMEBREW_NO_AUTO_UPDATE=1 brew install gtk+3; \
 			HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask xquartz; \
-
 			echo "Verifying XQuartz installation..."; \
 			ls -la /Applications/Utilities/XQuartz.app; \
 			ps aux | grep XQuartz; \
