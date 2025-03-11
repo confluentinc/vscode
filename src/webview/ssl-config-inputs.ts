@@ -121,16 +121,16 @@ export class SslConfig extends HTMLElement {
   // Template for the component
   template = html`
     <div class="input-sub-group">
-      <p
+      <div
         data-on-click="this.showTLS(!this.showTLS())"
         data-attr-aria-expanded="this.showTLS()"
-        class="heading clickable"
+        class="clickable-header"
       >
         <span data-text="this.showTLS() ? '-' : '+'"></span>
-        Advanced SSL/TLS Configuration
-      </p>
+        <p class="heading">TLS Configuration</p>
+        <p class="info">Configure certificates for TLS and mTLS</p>
+      </div>
       <template data-if="this.showTLS()">
-        <p class="info">Optional settings for advanced SSL/TLS configuration</p>
         <div class="input-container">
           <label class="checkbox" data-attr-for="this.getInputId('verify_hostname')">
             <input
