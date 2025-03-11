@@ -117,7 +117,7 @@ blocks:
 
   - name: "Bump microversion"
     dependencies:
-      - "Build & Test (linux x64)"
+      - "Build & Test (VS Code: linux x64)"
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -136,7 +136,7 @@ blocks:
 
   - name: "Set next version under development"
     dependencies:
-      - "Build & Test (linux x64)"
+      - "Build & Test (VS Code: linux x64)"
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
