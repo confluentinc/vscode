@@ -12,6 +12,7 @@ import { SCHEMA_RBAC_WARNINGS_ENABLED } from "../preferences/constants";
 import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import * as schemaRegistry from "./schemaRegistry";
+import { UTM_SOURCE_VSCODE } from "../constants";
 
 describe("authz.schemaRegistry", function () {
   let sandbox: sinon.SinonSandbox;
@@ -153,14 +154,14 @@ describe("authz.schemaRegistry", function () {
 describe("Test CCloudSchemaRegistry properties", () => {
   it("ccloudUrl should return the correct URL for ccloud schema registry cluster", () => {
     assert.strictEqual(
-      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/stream-governance/schema-registry/data-contracts`,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/stream-governance/schema-registry/data-contracts?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_SCHEMA_REGISTRY.ccloudUrl,
     );
   });
 
   it("ccloudApiKeysUrl should return the correct URL for ccloud schema registry cluster", () => {
     assert.strictEqual(
-      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/schema-registry/api-keys`,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_SCHEMA_REGISTRY.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_SCHEMA_REGISTRY.ccloudApiKeysUrl,
     );
   });
