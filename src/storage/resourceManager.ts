@@ -4,14 +4,15 @@ import {
   ConnectionSpec,
   ConnectionSpecFromJSON,
   ConnectionSpecToJSON,
+  ConnectionType,
   Status,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, isCCloud, isLocal } from "../models/resource";
-import { Schema } from "../models/schema";
-import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { Schema, Subject } from "../models/schema";
+import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { FormConnectionType } from "../webview/direct-connect-form";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
@@ -91,15 +92,18 @@ export class ResourceManager {
       this.deleteCCloudKafkaClusters(),
       this.deleteCCloudSchemaRegistries(),
       this.deleteCCloudTopics(),
+      this.deleteCCloudSubjects(),
     ]);
   }
 
   /**
-   * Run an async callback which will both read and later mutate workspace storage with exclusive access to a workspace storage key.
+   * Run an async callback which will both read and later mutate workspace
+   * or secret storage with exclusive access to the elements guarded by that
+   * workspace or secret storage key.
    *
-   * This strategy prevents concurrent writes to the same workspace storage key, which can lead to data corruption, when multiple
-   * asynchronous operations are calling methods which both read and write to the same workspace storage key, namely mutating
-   * actions to keys that hold arrays or maps.
+   * This strategy prevents concurrent writes to the same workspace/secret storage key, which can
+   * lead to data corruption, when multiple asynchronous operations are calling methods which both
+   * read and write to the same workspace storage key, namely mutating actions to keys that hold arrays or maps.
    */
   private async runWithMutex<T>(
     key: WorkspaceStorageKeys | SecretStorageKeys,
@@ -379,6 +383,115 @@ export class ResourceManager {
     });
   }
 
+  // Subjects (from schema registries)
+  async setSubjects(schemaRegistry: SchemaRegistry, subjects: Subject[]): Promise<void> {
+    const key = this.subjectKeyForSchemaRegistry(schemaRegistry);
+
+    logger.debug(
+      `Setting ${subjects.length} subjects for schema registry ${schemaRegistry.name} (${key})`,
+    );
+
+    await this.runWithMutex(key, async () => {
+      // Get the JSON-stringified map from storage
+      const subjectsByRegistryString: string | undefined =
+        await this.storage.getWorkspaceState<string>(key);
+
+      const subjectsStringsByRegistryID: Map<string, string[]> = subjectsByRegistryString
+        ? stringToMap(subjectsByRegistryString)
+        : new Map<string, string[]>();
+
+      // Reduce the subjects to a list of strings
+      const subjectsAsStrings: string[] = subjects.map((subject) => subject.name);
+
+      // Set the new subjects for the schema registry
+      subjectsStringsByRegistryID.set(schemaRegistry.id, subjectsAsStrings);
+
+      // Now save the updated schema registry subjects into the proper key'd storage.
+      await this.storage.setWorkspaceState(key, mapToString(subjectsStringsByRegistryID));
+    });
+  }
+
+  async getSubjects(schemaRegistry: SchemaRegistry): Promise<Subject[] | undefined> {
+    const key = this.subjectKeyForSchemaRegistry(schemaRegistry);
+
+    let subjectsByRegistryIDString: string | undefined;
+
+    // Access the corresponding workspace storage section only with mutex guarding, assigning
+    // into subjectsByRegistryIDString.
+    await this.runWithMutex(key, async () => {
+      // Get the JSON-stringified map from storage
+      subjectsByRegistryIDString = await this.storage.getWorkspaceState<string>(key);
+    });
+
+    const subjectStringsByRegistryID: Map<string, string[]> = subjectsByRegistryIDString
+      ? stringToMap(subjectsByRegistryIDString)
+      : new Map<string, object[]>();
+
+    // Will either be undefined or an array of plain strings since
+    // just deserialized from storage.
+    const vanillaJSONSubjects: string[] | undefined = subjectStringsByRegistryID.get(
+      schemaRegistry.id,
+    );
+
+    if (vanillaJSONSubjects === undefined) {
+      return;
+    }
+
+    logger.debug(
+      `Found ${vanillaJSONSubjects.length} subjects for schema registry ${schemaRegistry.name}`,
+    );
+
+    // Promote each string member to be an instance of Subject, return.
+
+    // (Empty list will be returned as is, indicating that we know there are
+    //  no subjects in this schema registry.)
+    return vanillaJSONSubjects.map(
+      (subject: string) =>
+        new Subject(
+          subject,
+          schemaRegistry.connectionId,
+          schemaRegistry.environmentId,
+          schemaRegistry.id,
+          null, // no contained schemas cached here.
+        ),
+    );
+  }
+
+  /**
+   * Delete all ccloud schema registry subjects.
+   */
+  async deleteCCloudSubjects(): Promise<void> {
+    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS);
+  }
+
+  /**
+   * Delete all local schema registry subjects.
+   */
+  async deleteLocalSubjects(): Promise<void> {
+    // XXX Shoup where should this be wired up to?
+    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS);
+  }
+
+  // XXX shoup any equivalent for direct connection clearing?
+
+  /**
+   * Determine what workspace storage key should be used for subject storage for this schema registry
+   * based on its connection type.
+   */
+  subjectKeyForSchemaRegistry(schemaRegistry: SchemaRegistry): WorkspaceStorageKeys {
+    switch (schemaRegistry.connectionType) {
+      case ConnectionType.Ccloud:
+        return WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS;
+      case ConnectionType.Local:
+        return WorkspaceStorageKeys.LOCAL_SR_SUBJECTS;
+      case ConnectionType.Direct:
+        return WorkspaceStorageKeys.DIRECT_SR_SUBJECTS;
+      default:
+        logger.warn("Unknown schema registry connection type", schemaRegistry);
+        throw new Error("Unknown schema registry connection type");
+    }
+  }
+
   // TOPICS
 
   /**
@@ -456,7 +569,8 @@ export class ResourceManager {
     return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS);
   }
 
-  /** Return the use-with-storage StateKafkaTopics key for this type of cluster.
+  /**
+   * Return the use-with-storage StateKafkaTopics key for this type of cluster.
    *
    * (not private only for testing)
    */
