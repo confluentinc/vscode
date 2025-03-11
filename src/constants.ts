@@ -34,7 +34,8 @@ export enum IconNames {
   LOADING = "loading~spin",
 }
 
-export const UTM_SOURCE_VSCODE = "vscode-ext"
+/** Attribution to use for CCloud URLs, e.g. `?utm_source=${UTM_SOURCE_VSCODE}` */
+export const UTM_SOURCE_VSCODE = "vscode-ext";
 
 export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
 

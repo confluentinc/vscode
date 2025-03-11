@@ -1,7 +1,12 @@
 import { Data, type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID, UTM_SOURCE_VSCODE } from "../constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  IconNames,
+  LOCAL_CONNECTION_ID,
+  UTM_SOURCE_VSCODE,
+} from "../constants";
 import { CustomMarkdownString } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
