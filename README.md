@@ -61,7 +61,9 @@ Click the **play** icon next to the topic name to open the **Message Viewer**, w
 searching and exploring messages in a topic. Within Message Viewer, you can:
 
 - page through and search for specific values within the list of all the messages
-- double-click a single message to explore the message headers, key and value encoded into JSON, along with additional metadata about the key and/or value schema that may have been used for deserialization
+- double-click a single message to explore the message headers, key and value encoded into JSON,
+  along with additional metadata about the key and/or value schema that may have been used for
+  deserialization
 - pause and resume consuming at any time
 - see aggregate counts of messages over time from the histogram view and brush to filter messages by
   timestamp
@@ -157,7 +159,9 @@ code --install-extension /path/to/vscode-confluent-vX.X.X.vsix
 
 ### `.vsix` file installation via offvsix
 
-If you have been struggling with pre-downloading extension payloads (and assuming you have [python](https://www.python.org/), [pip](https://pypi.org/project/pip/), and [offvsix](https://github.com/gni/offvsix), you can follow these steps:
+If you have been struggling with pre-downloading extension payloads (and assuming you have
+[python](https://www.python.org/), [pip](https://pypi.org/project/pip/), and
+[offvsix](https://github.com/gni/offvsix), you can follow these steps:
 
 ```
 mkdir offvsix
@@ -219,8 +223,15 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 - Searching for schemas in the Topics and Schemas views is limited to the `subject` field only.
   Searching by other fields, such as `id` and `version`, is not supported due to cost and
   performance considerations.
-- The Message Viewer does not support consuming records that were compressed with `snappy`
-  except for Confluent Cloud connections ([confluentinc/ide-sidecar#304](https://github.com/confluentinc/ide-sidecar/issues/304)).
+- The Message Viewer does not support consuming records that were compressed with `snappy` except
+  for Confluent Cloud connections
+  ([confluentinc/ide-sidecar#304](https://github.com/confluentinc/ide-sidecar/issues/304)).
+- Starting the extension in one IDE (e.g., VS Code) and then starting it in another IDE (e.g. VS
+  Code Insiders or Cursor) will cause conflicts with the sidecar process. The first IDE establishes
+  a handshake with the sidecar and stores an access token, while the second IDE attempts to kill the
+  existing sidecar process and obtain a new token, resulting in the two different IDEs fighting for
+  control. Only one type of IDE can run the extension at a time, though you can still use multiple
+  windows/workspaces of the same IDE type.
 
 ## Support
 
