@@ -138,62 +138,64 @@ export class AuthCredentials extends HTMLElement {
       </template>
       <!-- No SCRAM for SR -->
       <template data-if="this.identifier() !== 'schema_registry' && this.authType() === 'SCRAM'">
-        <div class="input-container">
-          <label for="this.getInputId('hash_algorithm')" class="label">Hash Algorithm</label>
-          <select
-            class="input dropdown"
-            required
-            data-attr-id="this.getInputId('hash_algorithm')"
-            data-attr-name="this.getInputId('hash_algorithm')"
-            data-value="this.creds()?.hash_algorithm ?? null"
-            data-on-input="this.updateValue(event)"
-          >
-            <option
-              value="SCRAM_SHA_256"
-              data-attr-selected="this.creds()?.hash_algorithm === 'SCRAM_SHA_256' ? true : false"
-            >
-              SCRAM_SHA_256
-            </option>
-            <option
-              value="SCRAM_SHA_512"
-              data-attr-selected="this.creds()?.hash_algorithm === 'SCRAM_SHA_512' ? true : false"
-            >
-              SCRAM_SHA_512
-            </option>
-          </select>
-        </div>
-        <div class="input-row">
+        <div class="flex-column">
           <div class="input-container">
-            <label for="this.getInputId('scram_username')" class="label">Username</label>
-            <input
-              class="input"
+            <label for="this.getInputId('hash_algorithm')" class="label">Hash Algorithm</label>
+            <select
+              class="input dropdown"
               required
-              data-attr-id="this.getInputId('scram_username')"
-              data-attr-name="this.getInputId('scram_username')"
-              type="text"
-              data-value="this.creds()?.scram_username ?? null"
+              data-attr-id="this.getInputId('hash_algorithm')"
+              data-attr-name="this.getInputId('hash_algorithm')"
+              data-value="this.creds()?.hash_algorithm ?? null"
               data-on-input="this.updateValue(event)"
-              required
-            />
+            >
+              <option
+                value="SCRAM_SHA_256"
+                data-attr-selected="this.creds()?.hash_algorithm === 'SCRAM_SHA_256' ? true : false"
+              >
+                SCRAM_SHA_256
+              </option>
+              <option
+                value="SCRAM_SHA_512"
+                data-attr-selected="this.creds()?.hash_algorithm === 'SCRAM_SHA_512' ? true : false"
+              >
+                SCRAM_SHA_512
+              </option>
+            </select>
           </div>
-          <div class="input-container">
-            <label for="this.getInputId('scram_password')" class="label">Password</label>
-            <input
-              class="input"
-              required
-              data-attr-id="this.getInputId('scram_password')"
-              data-attr-name="this.getInputId('scram_password')"
-              type="password"
-              data-value="this.creds()?.scram_password ?? null"
-              required
-              data-on-input="this.updateValue(event)"
-            />
+          <div class="input-row">
+            <div class="input-container">
+              <label for="this.getInputId('scram_username')" class="label">Username</label>
+              <input
+                class="input"
+                required
+                data-attr-id="this.getInputId('scram_username')"
+                data-attr-name="this.getInputId('scram_username')"
+                type="text"
+                data-value="this.creds()?.scram_username ?? null"
+                data-on-input="this.updateValue(event)"
+                required
+              />
+            </div>
+            <div class="input-container">
+              <label for="this.getInputId('scram_password')" class="label">Password</label>
+              <input
+                class="input"
+                required
+                data-attr-id="this.getInputId('scram_password')"
+                data-attr-name="this.getInputId('scram_password')"
+                type="password"
+                data-value="this.creds()?.scram_password ?? null"
+                required
+                data-on-input="this.updateValue(event)"
+              />
+            </div>
           </div>
         </div>
       </template>
 
       <template data-if="this.authType() === 'OAuth'">
-        <div class="content-wrapper">
+        <div class="flex-column">
           <div class="input-row">
             <div class="input-container">
               <label class="label" for="this.getInputId('tokens_url')">Tokens URL</label>
@@ -313,6 +315,7 @@ export class AuthCredentials extends HTMLElement {
       }
     }
     sheet.insertRule(`:host { display: flex; flex-direction: column; gap: 12px; width: 100%; }`);
+    sheet.insertRule(`.flex-column { display: flex; flex-direction: column; gap: 5px; }`);
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
