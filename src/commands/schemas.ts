@@ -168,7 +168,7 @@ export async function determineLatestSchema(callpoint: string, subject: Subject)
   } else {
     // Must promote the subject to its subject group, then get the first (latest) schema.
     const loader = ResourceLoader.getInstance(subject.connectionId);
-    const schemaGroup = await loader.getSchemaSubjectGroup(subject.environmentId, subject.name);
+    const schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
     return schemaGroup[0];
   }
 }

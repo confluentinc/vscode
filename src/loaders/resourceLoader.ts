@@ -10,7 +10,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import {
   correlateTopicsWithSchemaSubjects,
-  fetchSchemaSubjectGroup,
+  fetchSchemasForSubject,
   fetchSubjects,
   fetchTopics,
 } from "./loaderUtils";
@@ -147,16 +147,16 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   /**
-   * Get the list of schema (metadata) for a single subject group from a schema registry.
+   * Get the list of schema (metadata) for a single subject from a schema registry.
    */
-  public async getSchemaSubjectGroup(
+  public async getSchemasForSubject(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
     subject: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
   ): Promise<Schema[]> {
     const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
-    return fetchSchemaSubjectGroup(schemaRegistry, subject);
+    return fetchSchemasForSubject(schemaRegistry, subject);
   }
 
   /**
@@ -164,7 +164,7 @@ export abstract class ResourceLoader implements IResourceBase {
    *
    * The subjects will have their `.schemas` property populated, and will be in alphabetical order.
    * If the topic has no corresponding subjects, an empty array is returned.
-   * Implemented atop {@link getSubjects}, {@link getSchemaSubjectGroup}.
+   * Implemented atop {@link getSubjects}, {@link getSchemasForSubject}.
    *
    * @param topic The Kafka topic to load schemas for. If not from the same connection as this loader, an error is thrown.
    * @returns An array of {@link Subject} objects representing the topic's schemas, grouped
@@ -206,7 +206,7 @@ export abstract class ResourceLoader implements IResourceBase {
     // Load all the schema versions for each subject in the matching subjects
     // concurrently.
     const subjectGroupRequests = schemaSubjects.map((subject) =>
-      this.getSchemaSubjectGroup(topic.environmentId, subject.name),
+      this.getSchemasForSubject(topic.environmentId, subject.name),
     );
     const subjectGroups = await Promise.all(subjectGroupRequests);
 
@@ -257,43 +257,4 @@ export abstract class ResourceLoader implements IResourceBase {
 
     return schemaRegistry;
   }
-
-  /**
-   * Get the possible schemas for an environment's schema registry.
-   *
-   * @param environmentable The {@link EnvironmentResource} to get the corresponding schema registry's
-   * schemas from. Will return empty array if there is no schema registry for the environment,
-   * or if said schema registry has no schemas.
-   */
-  public async getSchemasForEnvironmentId(
-    environmentId: string | undefined,
-    forceDeepRefresh: boolean = false,
-  ): Promise<Schema[]> {
-    const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(environmentId);
-    if (!schemaRegistry) {
-      return [];
-    }
-
-    return await this.getSchemasForRegistry(schemaRegistry, forceDeepRefresh);
-  }
-
-  /**
-   * Fetch the schemas from the given schema registry.
-   * @param schemaRegistry The schema registry to fetch schemas from.
-   * @param forceDeepRefresh If true, will ignore any cached schemas and fetch anew.
-   * @returns An array of schemas in the schema registry. Throws an error if the schemas could not be fetched.
-   * */
-  public abstract getSchemasForRegistry(
-    schemaRegistry: SchemaRegistry,
-    forceDeepRefresh?: boolean,
-  ): Promise<Schema[]>;
-
-  /**
-   * Indicate to purge this schema registry's cache of schemas, if the
-   * loader implementation caches.
-   * This is useful when a schema is known to has been added or removed, but the
-   * registry isn't currently being displayed in the view.
-   * (So that when it does get displayed, it will fetch the schemas anew).
-   */
-  public abstract purgeSchemas(schemaRegistryId: string): void;
 }
