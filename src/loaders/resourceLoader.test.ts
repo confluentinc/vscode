@@ -11,9 +11,14 @@ import {
   TEST_LOCAL_SCHEMA_REGISTRY,
   TEST_LOCAL_SUBJECT_WITH_SCHEMAS,
 } from "../../tests/unit/testResources";
-import { createTestSubject, createTestTopicData } from "../../tests/unit/testUtils";
+import {
+  createTestSubject,
+  createTestTopicData,
+  getTestStorageManager,
+} from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
 import { Schema, Subject } from "../models/schema";
+import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
 import { ResourceLoader } from "./resourceLoader";
@@ -23,11 +28,20 @@ import { ResourceLoader } from "./resourceLoader";
 // The LocalKafkaClusterLoader is concrete and doesn't override these base class methods.
 
 describe("ResourceLoader::getSubjects()", () => {
+  let resourceManager: ResourceManager;
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
 
   let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
   let fetchSubjectsStub: sinon.SinonStub;
+
+  let rmGetSubjectsStub: sinon.SinonStub;
+  let rmSetSubjectsStub: sinon.SinonStub;
+
+  before(async () => {
+    await getTestStorageManager();
+    resourceManager = getResourceManager();
+  });
 
   beforeEach(async () => {
     sandbox = sinon.createSandbox();
@@ -41,6 +55,10 @@ describe("ResourceLoader::getSubjects()", () => {
     getSchemaRegistryForEnvironmentIdStub = sandbox
       .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
       .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
+
+    // Stub these out for test to then provide the return values.
+    rmGetSubjectsStub = sandbox.stub(resourceManager, "getSubjects");
+    rmSetSubjectsStub = sandbox.stub(resourceManager, "setSubjects");
   });
 
   afterEach(() => {
@@ -55,9 +73,10 @@ describe("ResourceLoader::getSubjects()", () => {
     );
   });
 
-  it("Returns subjects when called with right schema registry or env id", async () => {
+  it("Returns subjects when called with right schema registry or env id: resource manager deep fetch", async () => {
     const fetchSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
     fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
+    rmGetSubjectsStub.resolves(undefined);
 
     for (const inputParam of [
       TEST_LOCAL_SCHEMA_REGISTRY,
@@ -66,6 +85,88 @@ describe("ResourceLoader::getSubjects()", () => {
       const subjects = await loaderInstance.getSubjects(inputParam);
 
       assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
+      // will have asked for the subjects from the resource manager, but none returned, so deep fetched.
+      assert.ok(rmGetSubjectsStub.calledOnce);
+      /// will have stored the deep fetched subjects in the resource manager.
+      assert.ok(
+        rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+      );
+
+      // reset the resource manager stubs for next iteration.
+      rmGetSubjectsStub.resetHistory();
+      rmSetSubjectsStub.resetHistory();
+    }
+  });
+
+  it("Returns subjects when called with right schema registry or env id: resource manager cache hit", async () => {
+    const rmGetSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
+    rmGetSubjectsStub.resolves(rmGetSubjectsStubReturns);
+
+    for (const inputParam of [
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+    ]) {
+      const subjects = await loaderInstance.getSubjects(inputParam);
+
+      assert.deepStrictEqual(subjects, rmGetSubjectsStubReturns);
+
+      // will have asked for the subjects from the resource manager, and found them.
+      assert.ok(rmGetSubjectsStub.calledOnce);
+      // Not deep fetched 'cause of resource manager cache hit.
+      assert.ok(fetchSubjectsStub.notCalled);
+      // will not call setSubjects() because of cache hit.
+      assert.ok(rmSetSubjectsStub.notCalled);
+
+      // reset the resource manager stub for next iteration.
+      rmGetSubjectsStub.resetHistory();
+    }
+  });
+
+  it("Performs deep fetch when forceRefresh=true", async () => {
+    const fetchSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
+    fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
+
+    for (const inputParam of [
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+    ]) {
+      const subjects = await loaderInstance.getSubjects(inputParam, true);
+
+      assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
+      // will not have asked resource manager for subjects, since deep fetch is forced.
+      assert.ok(rmGetSubjectsStub.notCalled);
+      /// will have stored the deep fetched subjects in the resource manager.
+      assert.ok(
+        rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+      );
+
+      // reset the resource manager stubs for next iteration.
+      rmGetSubjectsStub.resetHistory();
+      rmSetSubjectsStub.resetHistory();
+    }
+  });
+
+  it("Returns empty array when empty array is ResourceManager cache contents", async () => {
+    // Set up the resource manager to return an empty array.
+    rmGetSubjectsStub.resolves([]);
+
+    for (const inputParam of [
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+    ]) {
+      const subjects = await loaderInstance.getSubjects(inputParam);
+
+      assert.deepStrictEqual(subjects, []);
+
+      // will have asked for the subjects from the resource manager, and found them.
+      assert.ok(rmGetSubjectsStub.calledOnce);
+      // Not deep fetched 'cause of resource manager cache hit.
+      assert.ok(fetchSubjectsStub.notCalled);
+      // will not call setSubjects() because of cache hit.
+      assert.ok(rmSetSubjectsStub.notCalled);
+
+      // reset the resource manager stub for next iteration.
+      rmGetSubjectsStub.resetHistory();
     }
   });
 
