@@ -12,7 +12,8 @@ import { Logger } from "../logging";
 import { Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
-import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
+import { LoadedDocumentContent } from "../quickpicks/types";
+import { loadDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
 
