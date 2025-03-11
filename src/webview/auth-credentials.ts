@@ -146,21 +146,11 @@ export class AuthCredentials extends HTMLElement {
               required
               data-attr-id="this.getInputId('hash_algorithm')"
               data-attr-name="this.getInputId('hash_algorithm')"
-              data-value="this.creds()?.hash_algorithm ?? null"
+              data-value="this.creds()?.hash_algorithm ?? 'SCRAM_SHA_256'"
               data-on-input="this.updateValue(event)"
             >
-              <option
-                value="SCRAM_SHA_256"
-                data-attr-selected="this.creds()?.hash_algorithm === 'SCRAM_SHA_256' ? true : false"
-              >
-                SCRAM_SHA_256
-              </option>
-              <option
-                value="SCRAM_SHA_512"
-                data-attr-selected="this.creds()?.hash_algorithm === 'SCRAM_SHA_512' ? true : false"
-              >
-                SCRAM_SHA_512
-              </option>
+              <option value="SCRAM_SHA_256">SCRAM_SHA_256</option>
+              <option value="SCRAM_SHA_512">SCRAM_SHA_512</option>
             </select>
           </div>
           <div class="input-row">
