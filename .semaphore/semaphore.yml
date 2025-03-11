@@ -48,7 +48,7 @@ blocks:
     task:
       agent:
         machine:
-          type: s1-prod-ubuntu20-04-amd64-1
+          type: s1-prod-ubuntu24-04-amd64-1
       jobs: &build-test-jobs-stable
         - name: "Build & Test (VS Code)"
           commands:
@@ -65,7 +65,7 @@ blocks:
     task:
       agent:
         machine:
-          type: s1-prod-ubuntu20-04-arm64-1
+          type: s1-prod-ubuntu24-04-arm64-1
       jobs: *build-test-jobs-stable
       epilogue: *build-test-epilogue
 
