@@ -24,7 +24,7 @@ export enum WorkspaceStorageKeys {
   LOCAL_SR_SUBJECTS = "localSRSubjects",
 
   /** Direct connection Schema Registry Subjects */
-  DIRECT_CONNECTION_SR_SUBJECTS = "directConnectionSRSubjects",
+  DIRECT_SR_SUBJECTS = "directConnectionSRSubjects",
 
   /** What (Schema) URI was chosen first to diff against? */
   DIFF_BASE_URI = "diffs.selectedResource",

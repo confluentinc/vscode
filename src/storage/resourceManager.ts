@@ -468,8 +468,11 @@ export class ResourceManager {
    * Delete all local schema registry subjects.
    */
   async deleteLocalSubjects(): Promise<void> {
+    // XXX Shoup where should this be wired up to?
     return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS);
   }
+
+  // XXX shoup any equivalent for direct connection clearing?
 
   /**
    * Determine what workspace storage key should be used for subject storage for this schema registry
@@ -482,10 +485,10 @@ export class ResourceManager {
       case ConnectionType.Local:
         return WorkspaceStorageKeys.LOCAL_SR_SUBJECTS;
       case ConnectionType.Direct:
-        return WorkspaceStorageKeys.DIRECT_CONNECTION_SR_SUBJECTS;
+        return WorkspaceStorageKeys.DIRECT_SR_SUBJECTS;
       default:
-        logger.error("Unknown schema registry type", schemaRegistry);
-        throw new Error("Unknown schema registry type");
+        logger.warn("Unknown schema registry connection type", schemaRegistry);
+        throw new Error("Unknown schema registry connection type");
     }
   }
 
