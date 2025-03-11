@@ -84,7 +84,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         throw new Error("No schema registry");
       }
       const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
-      newSchemas = await loader.getSchemaSubjectGroup(this.schemaRegistry, subjectString);
+      newSchemas = await loader.getSchemasForSubject(this.schemaRegistry, subjectString);
     }
 
     const subjectInMap = this.subjectsInTreeView.get(subjectString);
