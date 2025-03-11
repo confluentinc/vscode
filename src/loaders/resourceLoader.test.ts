@@ -122,6 +122,30 @@ describe("ResourceLoader::getSubjects()", () => {
     }
   });
 
+  it("Returns empty array when empty array is ResourceManager cache contents", async () => {
+    // Set up the resource manager to return an empty array.
+    rmGetSubjectsStub.resolves([]);
+
+    for (const inputParam of [
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+    ]) {
+      const subjects = await loaderInstance.getSubjects(inputParam);
+
+      assert.deepStrictEqual(subjects, []);
+
+      // will have asked for the subjects from the resource manager, and found them.
+      assert.ok(rmGetSubjectsStub.calledOnce);
+      // Not deep fetched 'cause of resource manager cache hit.
+      assert.ok(fetchSubjectsStub.notCalled);
+      // will not call setSubjects() because of cache hit.
+      assert.ok(rmSetSubjectsStub.notCalled);
+
+      // reset the resource manager stub for next iteration.
+      rmGetSubjectsStub.resetHistory();
+    }
+  });
+
   it("Returns empty array when resolveSchemaRegistry() cannot find a schema registry", async () => {
     // Set up for no schema registry within the environment,
     // so that resolveSchemaRegistry() will throw "No schema registry found for environment".
