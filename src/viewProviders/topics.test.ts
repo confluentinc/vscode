@@ -66,7 +66,7 @@ describe("TopicViewProvider search behavior", () => {
   let sandbox: sinon.SinonSandbox;
   let getTopicsForClusterStub: sinon.SinonStub;
   let getSubjectsStub: sinon.SinonStub;
-  let getSchemaSubjectGroupStub: sinon.SinonStub;
+  let getSchemasForSubjectStub: sinon.SinonStub;
 
   before(async () => {
     await getTestExtensionContext();
@@ -79,7 +79,7 @@ describe("TopicViewProvider search behavior", () => {
     ccloudLoader = CCloudResourceLoader.getInstance();
     getTopicsForClusterStub = sandbox.stub(ccloudLoader, "getTopicsForCluster").resolves([]);
     getSubjectsStub = sandbox.stub(ccloudLoader, "getSubjects").resolves([]);
-    getSchemaSubjectGroupStub = sandbox.stub(ccloudLoader, "getSchemaSubjectGroup").resolves([]);
+    getSchemasForSubjectStub = sandbox.stub(ccloudLoader, "getSchemasForSubject").resolves([]);
 
     provider = TopicViewProvider.getInstance();
     provider.kafkaCluster = TEST_CCLOUD_KAFKA_CLUSTER;
@@ -106,7 +106,7 @@ describe("TopicViewProvider search behavior", () => {
       TEST_CCLOUD_SCHEMA.subjectObject(),
       TEST_LOCAL_SCHEMA.subjectObject(), // has different subject name at least. Should be skipped 'cause won't match search.
     ]);
-    getSchemaSubjectGroupStub.resolves([TEST_CCLOUD_SCHEMA]);
+    getSchemasForSubjectStub.resolves([TEST_CCLOUD_SCHEMA]);
     // Schema subject matches the search string
     topicSearchSet.fire(TEST_CCLOUD_SCHEMA.subject);
 

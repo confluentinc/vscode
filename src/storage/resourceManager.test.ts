@@ -4,7 +4,6 @@ import {
   TEST_CCLOUD_ENVIRONMENT,
   TEST_CCLOUD_KAFKA_CLUSTER,
   TEST_CCLOUD_KAFKA_TOPIC,
-  TEST_CCLOUD_SCHEMA,
   TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_LOCAL_KAFKA_CLUSTER,
   TEST_LOCAL_KAFKA_TOPIC,
@@ -22,7 +21,6 @@ import {
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "../models/resource";
-import { Schema } from "../models/schema";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { WorkspaceStorageKeys } from "./constants";
@@ -675,70 +673,6 @@ describe("ResourceManager Kafka topic methods", function () {
   });
 });
 
-describe("ResourceManager schema tests", function () {
-  let storageManager: StorageManager;
-  let ccloudSchemas: Schema[];
-
-  before(async () => {
-    // extension needs to be activated before storage manager can be used
-    storageManager = await getTestStorageManager();
-    ccloudSchemas = [
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        id: "100001",
-        subject: "test-ccloud-topic-xyz-value",
-        version: 1,
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        id: "100055",
-        subject: "test-ccloud-topic-xyz-value",
-        version: 2,
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        id: "100056",
-        subject: "test-ccloud-topic-abc-value",
-        version: 1,
-      }),
-    ];
-  });
-
-  beforeEach(async () => {
-    // fresh slate for each test
-    await storageManager.clearWorkspaceState();
-  });
-
-  afterEach(async () => {
-    // clean up after each test
-    await storageManager.clearWorkspaceState();
-  });
-
-  it("CCLOUD: setSchemasForRegistry() should correctly store schemas", async () => {
-    const rm = getResourceManager();
-    await rm.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, ccloudSchemas);
-
-    // fetch back from resource manager
-    const storedSchemas = await rm.getSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    assert.ok(storedSchemas);
-    assert.deepStrictEqual(storedSchemas, ccloudSchemas);
-  });
-
-  it("CCLOUD: setSchemasForRegistry() should complain if not all schemas share expected registry id", async () => {
-    const rm = getResourceManager();
-    await assert.rejects(async () => {
-      await rm.setSchemasForRegistry("wrong-registry-id", ccloudSchemas);
-    }, /Schema registry ID mismatch in schemas/);
-  });
-
-  it("CCLOUD: setSchemasForRegistry() can store empty array of schemas", async () => {
-    const rm = getResourceManager();
-    await rm.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, []);
-    const storedSchemas = await rm.getSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id);
-    assert.deepStrictEqual(storedSchemas, []);
-  });
-});
-
 describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;
 
@@ -845,8 +779,6 @@ describe("ResourceManager general utility methods", function () {
   let ccloudTopics: KafkaTopic[];
   let localTopics: KafkaTopic[];
 
-  let ccloudSchemas: Schema[];
-
   before(async () => {
     // extension needs to be activated before storage manager can be used
     storageManager = await getTestStorageManager();
@@ -856,27 +788,6 @@ describe("ResourceManager general utility methods", function () {
       KafkaTopic.create({ ...TEST_CCLOUD_KAFKA_TOPIC, name: "test-ccloud-topic-2" }),
     ];
     localTopics = [KafkaTopic.create({ ...TEST_LOCAL_KAFKA_TOPIC, name: "test-local-topic-1" })];
-
-    ccloudSchemas = [
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        id: "100001",
-        subject: "test-ccloud-topic-xyz-value",
-        version: 1,
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        id: "100055",
-        subject: "test-ccloud-topic-xyz-value",
-        version: 2,
-      }),
-      Schema.create({
-        ...TEST_CCLOUD_SCHEMA,
-        id: "100056",
-        subject: "test-ccloud-topic-abc-value",
-        version: 1,
-      }),
-    ];
   });
 
   beforeEach(async () => {
@@ -895,7 +806,6 @@ describe("ResourceManager general utility methods", function () {
     await resourceManager.setCCloudKafkaClusters([TEST_CCLOUD_KAFKA_CLUSTER]);
     await resourceManager.setCCloudSchemaRegistries([TEST_CCLOUD_SCHEMA_REGISTRY]);
     await resourceManager.setTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER, ccloudTopics);
-    await resourceManager.setSchemasForRegistry(TEST_CCLOUD_SCHEMA_REGISTRY.id, ccloudSchemas);
     // also set some local resources to make sure they aren't deleted
     await resourceManager.setLocalKafkaClusters([TEST_LOCAL_KAFKA_CLUSTER]);
     await resourceManager.setTopicsForCluster(TEST_LOCAL_KAFKA_CLUSTER, localTopics);
@@ -909,10 +819,6 @@ describe("ResourceManager general utility methods", function () {
     assert.deepStrictEqual(missingSchemaRegistries, new Map());
     const missingTopics = await resourceManager.getTopicsForCluster(TEST_CCLOUD_KAFKA_CLUSTER);
     assert.deepStrictEqual(missingTopics, undefined);
-    const missingSchemas = await resourceManager.getSchemasForRegistry(
-      TEST_CCLOUD_SCHEMA_REGISTRY.id,
-    );
-    assert.deepStrictEqual(missingSchemas, undefined);
 
     // local resources should still be there
     const existinglocalClusters: LocalKafkaCluster[] =

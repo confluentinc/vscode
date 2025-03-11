@@ -87,12 +87,12 @@ async function createSchemaCommand() {
 /** Diff the most recent two versions of schemas bound to a subject. */
 export async function diffLatestSchemasCommand(subjectWithSchemas: Subject) {
   if (!subjectWithSchemas.schemas || subjectWithSchemas.schemas.length < 2) {
-    // Should not happen if the context value was set correctly over in generateSchemaSubjectGroups().
+    // Should not happen if the context value was set correctly over in getSchemasForSubject().
     logger.warn("diffLatestSchemasCommand called with less than two schemas", subjectWithSchemas);
     return;
   }
 
-  // generateSchemaSubjectGroups() will have set up `children` in reverse order ([0] is highest version).
+  // getSchemasForSubject() will have set up `children` in reverse order ([0] is highest version).
   const latestSchema = subjectWithSchemas.schemas[0];
   const priorVersionSchema = subjectWithSchemas.schemas[1];
 
@@ -168,7 +168,7 @@ export async function determineLatestSchema(callpoint: string, subject: Subject)
   } else {
     // Must promote the subject to its subject group, then get the first (latest) schema.
     const loader = ResourceLoader.getInstance(subject.connectionId);
-    const schemaGroup = await loader.getSchemaSubjectGroup(subject.environmentId, subject.name);
+    const schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
     return schemaGroup[0];
   }
 }

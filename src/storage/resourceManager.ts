@@ -90,7 +90,6 @@ export class ResourceManager {
       this.deleteCCloudEnvironments(),
       this.deleteCCloudKafkaClusters(),
       this.deleteCCloudSchemaRegistries(),
-      this.deleteCCloudSchemas(),
       this.deleteCCloudTopics(),
     ]);
   }
@@ -470,77 +469,6 @@ export class ResourceManager {
       logger.warn("Unknown cluster type", cluster);
       throw new Error("Unknown cluster type");
     }
-  }
-
-  // SCHEMAS
-
-  /**
-   * (Re)assign the list of schemas associated with a Schema Registry.
-   */
-  async setSchemasForRegistry(schemaRegistryId: string, schemas: Schema[]): Promise<void> {
-    // Ensure that all schemas have the expected schema registry ID.
-    if (schemas.some((schema) => schema.schemaRegistryId !== schemaRegistryId)) {
-      logger.warn("Schema registry ID mismatch in schemas", schemaRegistryId, schemas);
-      throw new Error("Schema registry ID mismatch in schemas");
-    }
-
-    const workspaceKey = WorkspaceStorageKeys.CCLOUD_SCHEMAS;
-    await this.runWithMutex(workspaceKey, async () => {
-      const existingSchemasBySchemaRegistry: CCloudSchemaBySchemaRegistry =
-        await this.getSchemaMap();
-
-      // wholly reassign the list of schemas for this Schema Registry.
-      existingSchemasBySchemaRegistry.set(schemaRegistryId, schemas);
-
-      // And repersist.
-      await this.storage.setWorkspaceState(
-        workspaceKey,
-        mapToString(existingSchemasBySchemaRegistry),
-      );
-    });
-  }
-
-  /**
-   * Get the available {@link Schema}s for a specific {@link CCloudSchemaRegistry} from extension state.
-   * @param schemaRegistryId The ID of the Schema Registry for which to get schemas
-   * @returns The list of {@link Schema}s for the specified Schema Registry, or undefined if we do not have this Schema Registry currently cached.
-   */
-  async getSchemasForRegistry(schemaRegistryId: string): Promise<Schema[] | undefined> {
-    // Will have already promoted the from-JSON objects to instances of Schema.
-    const schemasBySchemaRegistry = await this.getSchemaMap();
-    const schemasFromStorage = schemasBySchemaRegistry.get(schemaRegistryId);
-    if (schemasFromStorage === undefined) {
-      return undefined;
-    }
-    // Promote each plain-json member to be an instance of Schema, return.
-    return schemasFromStorage.map((schema) => Schema.create(schema));
-  }
-
-  /**
-   * Get the available {@link Schema}s from extension state, in the form of a map of <clusterId, Schema[]>
-   * The Schema[] values will be the plain from-json spelling of the schemas.
-   * @returns The map of <clusterId (string), {@link Schema}[]>
-   */
-  private async getSchemaMap(): Promise<CCloudSchemaBySchemaRegistry> {
-    // Get the JSON-stringified map from storage
-    const schemasBySchemaRegistryString: string | undefined = await this.storage.getWorkspaceState(
-      WorkspaceStorageKeys.CCLOUD_SCHEMAS,
-    );
-    const schemasBySchemaRegistry: Map<string, object[]> = schemasBySchemaRegistryString
-      ? stringToMap(schemasBySchemaRegistryString)
-      : new Map<string, object[]>();
-    // cast any values back to Schema instances
-    return new Map(
-      Array.from(schemasBySchemaRegistry).map(([schemaRegistryId, schemas]) => [
-        schemaRegistryId,
-        schemas.map((schema) => Schema.create(schema as Schema)),
-      ]),
-    );
-  }
-
-  /** Forget about all of the CCLoud schemas. */
-  private async deleteCCloudSchemas(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.CCLOUD_SCHEMAS);
   }
 
   // AUTH PROVIDER

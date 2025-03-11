@@ -196,7 +196,7 @@ describe("commands::schema determineLatestSchema() tests", () => {
     const expectedSchema = TEST_CCLOUD_SCHEMA;
     const subject = TEST_CCLOUD_SUBJECT;
 
-    loaderStub.getSchemaSubjectGroup.resolves([expectedSchema]);
+    loaderStub.getSchemasForSubject.resolves([expectedSchema]);
 
     const result = await determineLatestSchema("test", subject);
 

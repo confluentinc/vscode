@@ -61,10 +61,12 @@ export async function promptForSchema(
   }
 
   // look up the latest schema version for the given subject
-  const schemaVersions: Schema[] = await loader.getSchemasForEnvironmentId(registry.environmentId);
-  const latestSchema: Schema | undefined = schemaVersions
-    .filter((schema) => schema.subject === schemaSubject)
-    .sort((a, b) => b.version - a.version)[0];
+  const schemaVersions: Schema[] = await loader.getSchemasForSubject(
+    registry.environmentId,
+    schemaSubject,
+  );
+  const latestSchema: Schema | undefined =
+    (schemaVersions && schemaVersions.length > 0 && schemaVersions[0]) || undefined;
   if (!latestSchema) {
     const noVersionsMsg = `No schema versions found for subject "${schemaSubject}".`;
     showErrorNotificationWithButtons(noVersionsMsg);
