@@ -1,7 +1,7 @@
 import { Data, type Require as Enforced } from "dataclass";
 import * as vscode from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
+import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
@@ -132,7 +132,7 @@ export class Schema extends Data implements IResourceBase {
 
   get ccloudUrl(): string {
     if (isCCloud(this)) {
-      return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.subject}`;
+      return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.subject}?utm_source=${UTM_SOURCE_VSCODE}`;
     }
     return "";
   }
