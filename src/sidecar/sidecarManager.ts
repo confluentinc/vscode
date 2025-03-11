@@ -380,11 +380,13 @@ export class SidecarManager {
         const sidecar_env = constructSidecarEnv(process.env);
 
         const stderrPath = `${SIDECAR_LOGFILE_PATH}.stderr`;
-        const stderrStream = fs.createWriteStream(stderrPath);
         try {
+          fs.writeFileSync(stderrPath, "");
+          const stderrFd = fs.openSync(stderrPath, "w");
+
           const sidecarProcess = spawn(executablePath, [], {
             detached: true,
-            stdio: ["ignore", "ignore", stderrStream],
+            stdio: ["ignore", "ignore", stderrFd],
             env: sidecar_env,
           });
           logger.info(
@@ -417,7 +419,18 @@ export class SidecarManager {
               } catch (e) {
                 logger.error(`${logPrefix}: Failed to read sidecar stderr file: ${e}`);
               }
-              logger.info(`${logPrefix}: Last few sidecar log lines: ${JSON.stringify(logs)}`);
+              logger.info(
+                `${logPrefix}: Last few sidecar log lines:\n${logs
+                  .map((jsonLine) => {
+                    try {
+                      const line = JSON.parse(jsonLine.trim()) as SidecarLogFormat;
+                      return `\t> ${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`;
+                    } catch {
+                      return `\t> ${jsonLine}`;
+                    }
+                  })
+                  .join("\n")}`,
+              );
 
               if (!isRunning) {
                 logger.error(`${logPrefix}: Sidecar process died immediately after startup`);
