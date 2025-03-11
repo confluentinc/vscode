@@ -379,10 +379,12 @@ export class SidecarManager {
         // Set up the environment for the sidecar process.
         const sidecar_env = constructSidecarEnv(process.env);
 
+        const stderrPath = `${SIDECAR_LOGFILE_PATH}.stderr`;
+        const stderrStream = fs.createWriteStream(stderrPath);
         try {
           const sidecarProcess = spawn(executablePath, [], {
             detached: true,
-            stdio: "ignore",
+            stdio: ["ignore", "ignore", stderrStream],
             env: sidecar_env,
           });
           logger.info(
@@ -396,8 +398,30 @@ export class SidecarManager {
               const isRunning =
                 spawnSync("ps", ["-p", sidecarProcess.pid!.toString()]).status === 0;
               logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
-              const logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").split("\n").slice(-20);
+
+              // try to read sidecar logs
+              let logs: string[] = [];
+              try {
+                logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").split("\n").slice(-20);
+              } catch (e) {
+                logger.error(`${logPrefix}: Failed to read sidecar log file: ${e}`);
+              }
+
+              // check stderr file for startup errors
+              let stderrContent = "";
+              try {
+                stderrContent = fs.readFileSync(stderrPath, "utf8");
+                if (stderrContent.trim()) {
+                  logger.error(`${logPrefix}: Sidecar stderr output: ${stderrContent}`);
+                }
+              } catch (e) {
+                logger.error(`${logPrefix}: Failed to read sidecar stderr file: ${e}`);
+              }
               logger.info(`${logPrefix}: Last few sidecar log lines: ${JSON.stringify(logs)}`);
+
+              if (!isRunning) {
+                logger.error(`${logPrefix}: Sidecar process died immediately after startup`);
+              }
             } catch (e) {
               logger.error(`${logPrefix}: Failed to check sidecar process status: ${e}`);
             }
