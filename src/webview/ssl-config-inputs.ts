@@ -36,7 +36,7 @@ export class SslConfig extends HTMLElement {
     return this.configObj()?.truststore?.password ?? null;
   });
   truststoreType = this.os.derive(() => {
-    return this.configObj()?.truststore?.type;
+    return this.configObj()?.truststore?.type ?? "JKS";
   });
   keystorePath = this.os.derive(() => {
     return this.configObj()?.keystore?.path ?? null;
@@ -45,7 +45,7 @@ export class SslConfig extends HTMLElement {
     return this.configObj()?.keystore?.password ?? null;
   });
   keystoreType = this.os.derive(() => {
-    return this.configObj()?.keystore?.type;
+    return this.configObj()?.keystore?.type ?? "JKS";
   });
   keystoreKeyPassword = this.os.derive(() => {
     return this.configObj()?.keystore?.key_password ?? null;
@@ -154,13 +154,11 @@ export class SslConfig extends HTMLElement {
                 data-attr-id="this.getInputId('keystore.type')"
                 data-attr-name="this.getInputId('keystore.type')"
                 data-value="this.keystoreType()"
-                data-on-change="this.updateValue(event)"
+                data-on-input="this.updateValue(event)"
               >
-                <option value="JKS" data-attr-selected="this.keystoreType() === 'JKS'">JKS</option>
-                <option value="PKCS12" data-attr-selected="this.keystoreType() === 'PKCS12'">
-                  PKCS12
-                </option>
-                <option value="PEM" data-attr-selected="this.keystoreType() === 'PEM'">PEM</option>
+                <option value="JKS">JKS</option>
+                <option value="PKCS12">PKCS12</option>
+                <option value="PEM">PEM</option>
               </select>
             </div>
             <div class="input-container">
@@ -224,17 +222,11 @@ export class SslConfig extends HTMLElement {
                 data-attr-id="this.getInputId('truststore.type')"
                 data-attr-name="this.getInputId('truststore.type')"
                 data-value="this.truststoreType()"
-                data-on-change="this.updateValue(event)"
+                data-on-input="this.updateValue(event)"
               >
-                <option value="JKS" data-attr-selected="this.truststoreType() === 'JKS'">
-                  JKS
-                </option>
-                <option value="PKCS12" data-attr-selected="this.truststoreType() === 'PKCS12'">
-                  PKCS12
-                </option>
-                <option value="PEM" data-attr-selected="this.truststoreType() === 'PEM'">
-                  PEM
-                </option>
+                <option value="JKS">JKS</option>
+                <option value="PKCS12">PKCS12</option>
+                <option value="PEM">PEM</option>
               </select>
             </div>
             <div class="input-container">
