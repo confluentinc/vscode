@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.26.0
+
 ### Added
 
 - Users can configure advanced SSL settings in the connections form, enabling mTLS or custom
