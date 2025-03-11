@@ -404,7 +404,7 @@ export class SidecarManager {
               // try to read sidecar logs
               let logs: string[] = [];
               try {
-                logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").split("\n").slice(-20);
+                logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").trim().split("\n").slice(-20);
               } catch (e) {
                 logger.error(`${logPrefix}: Failed to read sidecar log file: ${e}`);
               }
