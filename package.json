@@ -5,7 +5,6 @@
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
   "version": "1.0.0-1",
   "homepage": "https://github.com/confluentinc/vscode",
-  "preview": true,
   "publisher": "confluentinc",
   "author": {
     "name": "Confluent, Inc."
