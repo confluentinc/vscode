@@ -1142,10 +1142,10 @@
           {
             "id": "view-topics",
             "title": "View Messages",
-            "description": "Click the $(play) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
+            "description": "Click the $(confluent-view-messages) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
             "media": {
               "image": "resources/walkthrough/message-viewer.png",
-              "altText": "Click the Play button next to a topic to see the Message viewer."
+              "altText": "Click the View button next to a topic to see the Message viewer."
             },
             "completionEvents": [
               "onCommand:confluent.topic.consume"
