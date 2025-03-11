@@ -1,5 +1,3 @@
-import archiver from "archiver";
-import { createWriteStream } from "fs";
 import { homedir } from "os";
 import { join, normalize } from "path";
 
@@ -7,8 +5,9 @@ import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { LOGFILE_NAME, LOGFILE_PATH, Logger } from "../logging";
-import { SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
+import { CURRENT_LOGFILE_NAME, LOGFILE_DIR, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
+import { SIDECAR_LOGFILE_NAME, SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
+import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
 
 const logger = new Logger("commands.support");
 
@@ -57,33 +56,62 @@ function openSettings() {
   commands.executeCommand("workbench.action.openSettings", "@ext:confluentinc.vscode-confluent");
 }
 
-/** Return the file URI for the extension's log file, normalized for the user's OS. */
-function extensionLogFileUri(): Uri {
-  return Uri.file(normalize(LOGFILE_PATH));
+/** Return the file URIs for the extension's currently-active log file and any rotated log files for
+ * this extension instance, normalized for the user's OS. */
+export function extensionLogFileUris(): Uri[] {
+  const uris: Uri[] = [];
+  const filenames: string[] = [CURRENT_LOGFILE_NAME, ...ROTATED_LOGFILE_NAMES];
+  for (const filename of filenames) {
+    const uri = Uri.file(normalize(join(LOGFILE_DIR, filename)));
+    if (!uris.some((existingUri) => existingUri.fsPath === uri.fsPath)) {
+      uris.push(uri);
+    }
+  }
+  return uris;
 }
 
 /** Return the file URI for the sidecar's log file, normalized for the user's OS. */
-function sidecarLogFileUri(): Uri {
+export function sidecarLogFileUri(): Uri {
   return Uri.file(normalize(SIDECAR_LOGFILE_PATH));
 }
 
 /**
- * Save the extension log file to the user's local file system, prompting for a save location.
- * The default parent directory is the user's home directory.
+ * Save extension log files to the user's local file system.
+ * If multiple files exist, they'll be saved as a zip.
  */
 async function saveExtensionLogFile() {
-  // prompt where to save the file, using the home directory as the default
-  const defaultPath = join(homedir(), LOGFILE_NAME);
-  const saveUri = await window.showSaveDialog({
-    defaultUri: Uri.file(defaultPath),
-    filters: {
-      "Log files": ["log"],
-    },
-    title: "Save Confluent Extension Log",
-  });
-  if (saveUri) {
-    await handleLogFileSave(extensionLogFileUri(), saveUri, true);
+  const logUris: Uri[] = extensionLogFileUris();
+
+  // one file: save it directly
+  if (logUris.length === 1) {
+    const defaultPath: string = join(homedir(), CURRENT_LOGFILE_NAME);
+    const saveUri: Uri | undefined = await window.showSaveDialog({
+      defaultUri: Uri.file(defaultPath),
+      filters: { "Log files": ["log"] },
+      title: "Save Confluent Extension Log",
+    });
+    if (!saveUri) return;
+
+    await handleLogFileSave(logUris[0], saveUri);
+    return;
   }
+
+  // multiple files: save as a zip
+  const dateTimeString: string = new Date().toISOString().replace(/[-:T]/g, "").slice(0, -5);
+  const defaultPath: string = join(homedir(), `vscode-confluent-logs-${dateTimeString}.zip`);
+  const saveUri: Uri | undefined = await window.showSaveDialog({
+    defaultUri: Uri.file(defaultPath),
+    filters: { "ZIP files": ["zip"] },
+    title: "Save Confluent Extension Logs",
+  });
+  if (!saveUri) return;
+
+  const fileEntries: ZipFileEntry[] = logUris.map((uri) => ({
+    sourceUri: uri,
+    zipPath: uri.path.split("/").pop() || "vscode-confluent.log",
+  }));
+
+  await createZipFile(saveUri, fileEntries, [], "Confluent extension logs saved successfully.");
 }
 
 /**
@@ -160,45 +188,31 @@ async function saveSupportZip() {
     return;
   }
 
-  const output = createWriteStream(writeUri.fsPath);
-  const archive = archiver("zip", {
-    zlib: { level: 9 },
-  });
-
-  // set up event listeners for write errors & close/finalize
-  const closeListener = output.on("close", () => {
-    const openButton = "Open";
-    window
-      .showInformationMessage("Confluent extension support .zip saved successfully.", openButton)
-      .then((value) => {
-        if (value === openButton) {
-          // show in OS file explorer, don't try to open it in VS Code
-          commands.executeCommand("revealFileInOS", writeUri);
-        }
-      });
-    closeListener.destroy();
-  });
-  const errorListener = archive.on("error", (err) => {
-    window.showErrorMessage(`Error creating zip: ${err.message}`);
-    errorListener.destroy();
-  });
-
-  archive.pipe(output);
-
   // add extension+sidecar log files
   // NOTE: this will not include other workspaces' logs, only the current workspace
-  const extensionLog = await workspace.fs.readFile(extensionLogFileUri());
-  archive.append(Buffer.from(extensionLog), { name: "vscode-confluent.log" });
-  const sidecarLog = await workspace.fs.readFile(sidecarLogFileUri());
-  archive.append(Buffer.from(sidecarLog), { name: "vscode-confluent-sidecar.log" });
-
-  // add observability context
-  archive.append(Buffer.from(JSON.stringify(observabilityContext.toRecord())), {
-    name: "observability-context.json",
+  const fileEntries: ZipFileEntry[] = extensionLogFileUris().map((uri) => ({
+    sourceUri: uri,
+    zipPath: `${uri.path.split("/").pop() || "vscode-confluent.log"}`,
+  }));
+  fileEntries.push({
+    sourceUri: sidecarLogFileUri(),
+    zipPath: SIDECAR_LOGFILE_NAME,
   });
 
-  // create the .zip and trigger the onClose event
-  await archive.finalize();
+  // add the observability context as JSON content
+  const contentEntries: ZipContentEntry[] = [
+    {
+      content: JSON.stringify(observabilityContext.toRecord(), null, 2),
+      zipPath: "observability-context.json",
+    },
+  ];
+
+  await createZipFile(
+    writeUri,
+    fileEntries,
+    contentEntries,
+    "Confluent extension support .zip saved successfully.",
+  );
 }
 
 export function registerSupportCommands(): Disposable[] {

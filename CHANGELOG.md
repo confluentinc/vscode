@@ -12,6 +12,8 @@ All notable changes to this extension will be documented in this file.
   sharing
 - SASL/SCRAM authentication type is now supported for Kafka Cluster connections that are added via
   the connections form
+- Previewed message contents from Message Viewer now include additional metadata about the key
+  and/or value schema that may have been used for deserialization.
 
 ### Fixed
 
@@ -19,6 +21,8 @@ All notable changes to this extension will be documented in this file.
   focused on CCloud-based broker or schema registry.
 - Stopping a local Schema Registry container with a custom image tag will now use the correct tag
   instead of "latest".
+- Extension log file rotation is now implemented, with a cleanup process to remove older log files
+  that haven't been modified in 3+ days.
 
 ### Changed
 
