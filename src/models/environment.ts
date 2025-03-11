@@ -12,6 +12,7 @@ import {
   IconNames,
   LOCAL_CONNECTION_ID,
   LOCAL_ENVIRONMENT_NAME,
+  UTM_SOURCE_VSCODE,
 } from "../constants";
 import { FormConnectionType } from "../webview/direct-connect-form";
 import {
@@ -98,7 +99,7 @@ export class CCloudEnvironment extends Environment {
   }
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.id}/clusters`;
+    return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 }
 
