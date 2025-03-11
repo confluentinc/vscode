@@ -147,18 +147,19 @@ describe("ResourceLoader::getTopicsForCluster()", () => {
   });
 });
 
-describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
-  let sandbox: sinon.SinonSandbox;
+describe("ResourceLoader::getSchemasForSubject() tests", () => {
   let loaderInstance: ResourceLoader;
+
+  let sandbox: sinon.SinonSandbox;
   let getSubjectsStub: sinon.SinonStub;
-  let getSchemaSubjectGroupStub: sinon.SinonStub;
+  let getSchemasForSubjectStub: sinon.SinonStub;
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
-
     loaderInstance = LocalResourceLoader.getInstance();
+
+    sandbox = sinon.createSandbox();
     getSubjectsStub = sandbox.stub(loaderInstance, "getSubjects");
-    getSchemaSubjectGroupStub = sandbox.stub(loaderInstance, "getSchemaSubjectGroup");
+    getSchemasForSubjectStub = sandbox.stub(loaderInstance, "getSchemasForSubject");
   });
 
   afterEach(() => {
@@ -181,7 +182,7 @@ describe("ResourceLoader::getTopicSubjectGroups() tests", () => {
 
   it("Returns related subjects+schemas for a topic", async () => {
     populateSubjects(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas!);
-    getSchemaSubjectGroupStub.resolves(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
+    getSchemasForSubjectStub.resolves(TEST_LOCAL_SUBJECT_WITH_SCHEMAS.schemas);
 
     // Should return single subject group with schemas.
     const subjects = await loaderInstance.getTopicSubjectGroups(TEST_LOCAL_KAFKA_TOPIC);

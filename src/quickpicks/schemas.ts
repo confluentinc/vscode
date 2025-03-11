@@ -106,7 +106,7 @@ export async function schemaVersionQuickPick(
   subject: string,
 ): Promise<Schema | undefined> {
   const loader = ResourceLoader.getInstance(schemaRegistry.connectionId);
-  const schemasMatchingSubject: Schema[] = await loader.getSchemaSubjectGroup(
+  const schemasMatchingSubject: Schema[] = await loader.getSchemasForSubject(
     schemaRegistry.environmentId,
     subject,
   );

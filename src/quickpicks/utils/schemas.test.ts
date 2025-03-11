@@ -23,7 +23,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
   let getSchemaRegistriesStub: sinon.SinonStub;
   let getSubjectNameForStrategyStub: sinon.SinonStub;
   let schemaVersionQuickPickStub: sinon.SinonStub;
-  let getSchemaSubjectGroupStub: sinon.SinonStub;
+  let getSchemasForSubjectStub: sinon.SinonStub;
   let getConfigurationStub: sinon.SinonStub;
 
   let resourceLoaderStub: sinon.SinonStub;
@@ -48,7 +48,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
     getSchemaRegistriesStub = resourceLoader.getSchemaRegistries.resolves([
       TEST_LOCAL_SCHEMA_REGISTRY,
     ]);
-    getSchemaSubjectGroupStub = resourceLoader.getSchemaSubjectGroup.resolves(testSchemas);
+    getSchemasForSubjectStub = resourceLoader.getSchemasForSubject.resolves(testSchemas);
 
     // quickpick+util stubs
     schemaVersionQuickPickStub = sandbox.stub(schemaQuickPicks, "schemaVersionQuickPick");
@@ -77,7 +77,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
     );
     sinon.assert.calledOnce(showErrorNotificationStub);
     sinon.assert.notCalled(schemaVersionQuickPickStub);
-    sinon.assert.notCalled(getSchemaSubjectGroupStub);
+    sinon.assert.notCalled(getSchemasForSubjectStub);
     sinon.assert.notCalled(getSubjectNameForStrategyStub);
   });
 
@@ -92,7 +92,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
     // don't check for error notification here since it depends on the settings and quickpick path
     // and will only be shown for TopicNameStrategy
     sinon.assert.notCalled(schemaVersionQuickPickStub);
-    sinon.assert.notCalled(getSchemaSubjectGroupStub);
+    sinon.assert.notCalled(getSchemasForSubjectStub);
   });
 
   it("should use schemaVersionQuickPick when `allowOlderVersions` is true", async () => {
@@ -130,12 +130,12 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
       { message: "Schema version not chosen." },
     );
     sinon.assert.calledOnce(schemaVersionQuickPickStub);
-    sinon.assert.notCalled(getSchemaSubjectGroupStub);
+    sinon.assert.notCalled(getSchemasForSubjectStub);
     sinon.assert.notCalled(showErrorNotificationStub);
   });
 
   it("should return the latest schema version when `allowOlderVersions` is false", async () => {
-    getSchemaSubjectGroupStub.resolves(testSchemas);
+    getSchemasForSubjectStub.resolves(testSchemas);
 
     const result = await promptForSchema(
       TEST_LOCAL_KAFKA_TOPIC,
@@ -148,7 +148,7 @@ describe("quickpicks/utils/schemas.ts promptForSchema()", () => {
   });
 
   it("should throw an error when no schema versions are found for the subject", async () => {
-    getSchemaSubjectGroupStub.resolves([]);
+    getSchemasForSubjectStub.resolves([]);
 
     await assert.rejects(
       async () => promptForSchema(TEST_LOCAL_KAFKA_TOPIC, "value", SubjectNameStrategy.TOPIC_NAME),

@@ -111,7 +111,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
 
     // Make the function call. Should drive the above stubs using executeInWorkerPool()
     // and demultiplex its results properly.
-    const schemas: Schema[] = await loaderUtils.fetchSchemaSubjectGroup(
+    const schemas: Schema[] = await loaderUtils.fetchSchemasForSubject(
       TEST_LOCAL_SCHEMA_REGISTRY,
       subject,
     );
@@ -161,7 +161,7 @@ describe("loaderUtils fetchSubjects() and fetchSchemaSubjectGroup() tests", () =
     // and demultiplex its results properly, which in this case means noticing the
     // error and re-throwing it.
     await assert.rejects(
-      loaderUtils.fetchSchemaSubjectGroup(TEST_LOCAL_SCHEMA_REGISTRY, subject),
+      loaderUtils.fetchSchemasForSubject(TEST_LOCAL_SCHEMA_REGISTRY, subject),
       new Error("Failed to fetch schema"),
     );
   });

@@ -61,7 +61,7 @@ export async function promptForSchema(
   }
 
   // look up the latest schema version for the given subject
-  const schemaVersions: Schema[] = await loader.getSchemaSubjectGroup(
+  const schemaVersions: Schema[] = await loader.getSchemasForSubject(
     registry.environmentId,
     schemaSubject,
   );

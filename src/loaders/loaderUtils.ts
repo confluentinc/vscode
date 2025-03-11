@@ -130,7 +130,7 @@ export async function fetchSubjects(schemaRegistry: SchemaRegistry): Promise<Sub
  *
  * @returns An array of all the schemas for the subject in the schema registry, sorted descending by version.
  */
-export async function fetchSchemaSubjectGroup(
+export async function fetchSchemasForSubject(
   schemaRegistry: SchemaRegistry,
   subject: string,
 ): Promise<Schema[]> {

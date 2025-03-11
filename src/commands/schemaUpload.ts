@@ -560,7 +560,7 @@ async function updateRegistryCacheAndFindNewSchema(
 ): Promise<Schema> {
   const loader = ResourceLoader.getInstance(registry.connectionId);
 
-  const subjectSchemas = await loader.getSchemaSubjectGroup(registry, boundSubject, true);
+  const subjectSchemas = await loader.getSchemasForSubject(registry, boundSubject, true);
 
   // Find the schema in the list of schemas for this registry. We know that
   // it should be present in the cache because we have just refreshed the cache.
