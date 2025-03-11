@@ -19,5 +19,7 @@ export const ENABLE_REQUEST_RESPONSE_LOGGING: boolean =
 /** Header name for the sidecar's PID in the response headers. */
 export const SIDECAR_PROCESS_ID_HEADER = "x-sidecar-pid";
 
+export const SIDECAR_LOGFILE_NAME = "vscode-confluent-sidecar.log";
+
 /** OS-independent path to the log file for the sidecar process. */
-export const SIDECAR_LOGFILE_PATH = join(tmpdir(), "vscode-confluent-sidecar.log");
+export const SIDECAR_LOGFILE_PATH = join(tmpdir(), SIDECAR_LOGFILE_NAME);
