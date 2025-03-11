@@ -1,18 +1,18 @@
 import assert from "assert";
-import { parseTestResult, getConnectionSpecFromFormData, cleanSpec } from "./directConnect";
+import { parseTestResult, getConnectionSpecFromFormData } from "./directConnect";
 import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
-import { ConnectedState, HashAlgorithm, Status } from "./clients/sidecar";
-import { ConnectionId } from "./models/resource";
-import { FormConnectionType } from "./webview/direct-connect-form";
+import { ConnectedState, Status } from "./clients/sidecar";
 
 describe("directConnect.ts", () => {
   describe("getConnectionSpecFromFormData", () => {
-    it("should not include `schema_registry` if not provided", async () => {
+    it("should not include `schema_registry` if uri not provided", async () => {
       const formData = {
         name: "Test Connection",
         formconnectiontype: "Apache Kafka",
         "kafka_cluster.bootstrap_servers": "localhost:9092",
         "kafka_cluster.auth_type": "None",
+        "schema_registry.auth_type": "None",
+        "schema_registry.ssl.enabled": "true",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
@@ -22,12 +22,14 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
       assert.strictEqual(spec.schema_registry, undefined);
     });
-    it("should not include `kafka_cluster` if not provided", async () => {
+    it("should not include `kafka_cluster` if bootstrap server not provided", async () => {
       const formData = {
         name: "Test Connection",
         formconnectiontype: "Apache Kafka",
         "schema_registry.uri": "http://localhost:8081",
         "schema_registry.auth_type": "None",
+        "kafka_cluster.ssl.enabled": "true",
+        "kafka_cluster.ssl.truststore.path": "fakepath!",
       };
 
       const spec = getConnectionSpecFromFormData(formData);
@@ -135,6 +137,52 @@ describe("directConnect.ts", () => {
       assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
       assert.strictEqual(spec.schema_registry.credentials, undefined);
     });
+    it("should return a valid CustomConnectionSpec with OAuth credentials", () => {
+      const formData = {
+        name: "Test Connection",
+        formconnectiontype: "Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "OAuth",
+        "kafka_cluster.credentials.tokens_url": "http://localhost:8080/token",
+        "kafka_cluster.credentials.client_id": "clientid",
+        "kafka_cluster.credentials.client_secret": "clientsecret",
+        "kafka_cluster.credentials.scope": "read write",
+        "kafka_cluster.credentials.connect_timeout_millis": "5000",
+        "kafka_cluster.credentials.ccloud_logical_cluster_id": "lkc-123456",
+        "kafka_cluster.credentials.ccloud_identity_pool_id": "pool-12345",
+        "schema_registry.uri": "http://localhost:8081",
+        "schema_registry.auth_type": "None",
+      };
+
+      const spec = getConnectionSpecFromFormData(formData);
+      assert.strictEqual(spec.name, "Test Connection");
+      assert.ok(spec.kafka_cluster);
+      assert.strictEqual(spec.kafka_cluster.bootstrap_servers, "localhost:9092");
+      assert.ok(spec.kafka_cluster.credentials);
+
+      assert.strictEqual(
+        // @ts-expect-error - incomplete types from OpenAPI
+        spec.kafka_cluster?.credentials?.tokens_url,
+        "http://localhost:8080/token",
+      );
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.client_id, "clientid");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.client_secret, "clientsecret");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.scope, "read write");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.connect_timeout_millis, "5000");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.ccloud_logical_cluster_id, "lkc-123456");
+      // @ts-expect-error - incomplete types from OpenAPI
+      assert.strictEqual(spec.kafka_cluster?.credentials?.ccloud_identity_pool_id, "pool-12345");
+
+      assert.ok(spec.schema_registry);
+      assert.ok(spec.schema_registry.uri);
+      assert.strictEqual(spec.schema_registry.uri, "http://localhost:8081");
+      assert.strictEqual(spec.schema_registry.credentials, undefined);
+    });
     it("should not include credentials if the auth type is None", () => {
       const formData = {
         name: "Test Connection",
@@ -207,6 +255,27 @@ describe("directConnect.ts", () => {
       assert.ok(spec.schema_registry.ssl);
       assert.ok(!spec.schema_registry.ssl.truststore);
       assert.ok(!spec.schema_registry.ssl.keystore);
+    });
+    it("filters out credentials that dont match the auth type submitted", () => {
+      const formData = {
+        name: "Mixed Auth Fields",
+        formconnectiontype: "kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "Basic",
+        "kafka_cluster.credentials.username": "testuser",
+        "kafka_cluster.credentials.password": "testpass",
+        // These should be filtered out since auth type is Basic
+        "kafka_cluster.credentials.api_key": "should-not-appear",
+        "kafka_cluster.credentials.tokens_url": "should-not-appear",
+        "kafka_cluster.credentials.scram_username": "should-not-appear",
+      };
+
+      const result = getConnectionSpecFromFormData(formData);
+
+      assert.deepStrictEqual(result.kafka_cluster?.credentials, {
+        username: "testuser",
+        password: "testpass",
+      });
     });
   });
 
@@ -315,164 +384,6 @@ describe("directConnect.ts", () => {
       assert.strictEqual(result.message, "One or more connections failed.");
       assert.strictEqual(result.testResults.schemaErrorMessage, "Unable to reach server");
       assert.strictEqual(result.testResults.kafkaErrorMessage, "Invalid username");
-    });
-  });
-  describe("cleanSpec", () => {
-    it("should not modify the spec if no credentials are present", () => {
-      const spec = {
-        id: "123" as ConnectionId,
-        formConnectionType: "Apache Kafka" as FormConnectionType,
-        name: "Test Connection",
-        kafka_cluster: {
-          bootstrap_servers: "localhost:9092",
-        },
-        schema_registry: {
-          uri: "http://localhost:8081",
-        },
-      };
-      const result = cleanSpec(spec);
-      assert.strictEqual(result.name, "Test Connection");
-      assert.strictEqual(result.kafka_cluster?.bootstrap_servers, "localhost:9092");
-      assert.strictEqual(result.schema_registry?.uri, "http://localhost:8081");
-    });
-    it("should replace password fields in Basic credentials with `fakeplaceholdersecrethere` text", () => {
-      const spec = {
-        id: "123" as ConnectionId,
-        formConnectionType: "Apache Kafka" as FormConnectionType,
-        name: "Test Connection",
-        kafka_cluster: {
-          bootstrap_servers: "localhost:9092",
-          credentials: {
-            username: "user",
-            password: "password",
-          },
-        },
-        schema_registry: {
-          uri: "http://localhost:8081",
-          credentials: {
-            username: "user",
-            password: "password",
-          },
-        },
-      };
-      const result = cleanSpec(spec);
-      assert.strictEqual(result.name, "Test Connection");
-      // @ts-expect-error - could be api but we're using password here
-      assert.strictEqual(result.kafka_cluster?.credentials?.password, "fakeplaceholdersecrethere");
-      assert.strictEqual(
-        // @ts-expect-error - could be api but we're using password here
-        result.schema_registry?.credentials?.password,
-        "fakeplaceholdersecrethere",
-      );
-    });
-    it("should replace password fields in API credentials with `fakeplaceholdersecrethere` text", () => {
-      const spec = {
-        id: "123" as ConnectionId,
-        formConnectionType: "Apache Kafka" as FormConnectionType,
-        name: "Test Connection",
-        kafka_cluster: {
-          bootstrap_servers: "localhost:9092",
-          credentials: {
-            api_key: "key",
-            api_secret: "secret",
-          },
-        },
-        schema_registry: {
-          uri: "http://localhost:8081",
-          credentials: {
-            api_key: "key",
-            api_secret: "secret",
-          },
-        },
-      };
-      const result = cleanSpec(spec);
-      assert.strictEqual(result.name, "Test Connection");
-      assert.strictEqual(
-        // @ts-expect-error - could be password but we're using api here
-        result.kafka_cluster?.credentials?.api_secret,
-        "fakeplaceholdersecrethere",
-      );
-      assert.strictEqual(
-        // @ts-expect-error - could be password but we're using api here
-        result.schema_registry?.credentials?.api_secret,
-        "fakeplaceholdersecrethere",
-      );
-    });
-    it("should replace password fields in SSL with `fakeplaceholdersecrethere` text", () => {
-      const spec = {
-        id: "123" as ConnectionId,
-        formConnectionType: "Apache Kafka" as FormConnectionType,
-        name: "Test Connection",
-        kafka_cluster: {
-          bootstrap_servers: "localhost:9092",
-          ssl: {
-            enabled: true,
-            truststore: {
-              path: "/path/to/truststore",
-              password: "password",
-            },
-            keystore: {
-              path: "/path/to/keystore",
-              password: "password",
-              key_password: "keypassword",
-            },
-          },
-        },
-        schema_registry: {
-          uri: "http://localhost:8081",
-          ssl: {
-            enabled: true,
-            truststore: {
-              path: "/path/to/truststore",
-              password: "password",
-            },
-            keystore: {
-              path: "/path/to/keystore",
-              password: "password",
-              key_password: "keypassword",
-            },
-          },
-        },
-      };
-      const result = cleanSpec(spec);
-      assert.strictEqual(result.name, "Test Connection");
-      assert.strictEqual(
-        result.kafka_cluster?.ssl?.truststore?.password,
-        "fakeplaceholdersecrethere",
-      );
-      assert.strictEqual(
-        result.kafka_cluster?.ssl?.keystore?.password,
-        "fakeplaceholdersecrethere",
-      );
-      assert.strictEqual(
-        result.kafka_cluster?.ssl?.keystore?.key_password,
-        "fakeplaceholdersecrethere",
-      );
-    });
-    it("should replace password fields in SCRAM credentials with `fakeplaceholdersecrethere` text", () => {
-      const spec = {
-        id: "123" as ConnectionId,
-        formConnectionType: "Apache Kafka" as FormConnectionType,
-        name: "Test Scram Connection",
-        kafka_cluster: {
-          bootstrap_servers: "localhost:9092",
-          credentials: {
-            hash_algorithm: "SCRAM_SHA_512" as HashAlgorithm,
-            scram_username: "user",
-            scram_password: "password",
-          },
-        },
-        schema_registry: {
-          uri: "http://localhost:8081",
-        },
-      };
-      const result = cleanSpec(spec);
-      assert.strictEqual(result.name, "Test Scram Connection");
-      assert.strictEqual(
-        // @ts-expect-error - could be api but we're using password here
-        result.kafka_cluster?.credentials?.scram_password,
-        "fakeplaceholdersecrethere",
-      );
     });
   });
 });

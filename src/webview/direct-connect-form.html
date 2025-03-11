@@ -126,145 +126,25 @@
               class="input dropdown"
               id="kafka_cluster.auth_type"
               name="kafka_cluster.auth_type"
-              data-on-change="this.updateValue(event)"
+              data-on-input="this.updateValue(event)"
               data-value="this.kafkaAuthType()"
-              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
             >
-              <option
-                value="None"
-                data-attr-selected="this.kafkaAuthType() === 'None' ? true : false"
-              >
-                None
-              </option>
-              <option
-                value="Basic"
-                data-attr-selected="this.kafkaAuthType() === 'Basic' ? true : false"
-              >
-                Username & Password (SASL/PLAIN)
-              </option>
-              <option
-                value="API"
-                data-attr-selected="this.kafkaAuthType() === 'API' ? true : false"
-              >
-                API Credentials (SASL/PLAIN)
-              </option>
-              <option
-                value="SCRAM"
-                data-attr-selected="this.kafkaAuthType() === 'SCRAM' ? true : false"
-              >
-                SASL/SCRAM
-              </option>
+              <option value="None" selected>None</option>
+              <option value="Basic">Username & Password (SASL/PLAIN)</option>
+              <option value="API">API Credentials (SASL/PLAIN)</option>
+              <option value="SCRAM">SASL/SCRAM</option>
+              <option value="OAuth">SASL/OAUTHBEARER</option>
             </select>
           </div>
-          <template data-if="this.kafkaAuthType() === 'SCRAM'">
-            <div class="input-container">
-              <label for="kafka_cluster.credentials.hash_algorithm" class="label"
-                >Hash Algorithm</label
-              >
-              <select
-                class="input dropdown"
-                id="kafka_cluster.credentials.hash_algorithm"
-                name="kafka_cluster.credentials.hash_algorithm"
-                data-value="this.kafkaHash()"
-                data-on-change="this.updateValue(event)"
-              >
-                <option
-                  value="SCRAM_SHA_256"
-                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_256' ? true : false"
-                >
-                  SCRAM_SHA_256
-                </option>
-                <option
-                  value="SCRAM_SHA_512"
-                  data-attr-selected="this.kafkaHash() === 'SCRAM_SHA_512' ? true : false"
-                >
-                  SCRAM_SHA_512
-                </option>
-              </select>
-            </div>
-            <div class="input-row">
-              <div class="input-container">
-                <label for="kafka_cluster.credentials.scram_username" class="label">Username</label>
-                <input
-                  class="input"
-                  id="kafka_cluster.credentials.scram_username"
-                  name="kafka_cluster.credentials.scram_username"
-                  type="text"
-                  data-value="this.kafkaScramUsername()"
-                  data-on-change="this.updateValue(event)"
-                  required
-                />
-              </div>
-              <div class="input-container">
-                <label for="kafka_cluster.credentials.scram_password" class="label">Password</label>
-                <input
-                  class="input"
-                  id="kafka_cluster.credentials.scram_password"
-                  name="kafka_cluster.credentials.scram_password"
-                  type="password"
-                  data-value="this.kafkaSecret()"
-                  required
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
-          <template data-if="this.kafkaAuthType() === 'Basic'">
-            <div class="input-row">
-              <div class="input-container">
-                <label for="kafka_cluster.credentials.username" class="label">Username</label>
-                <input
-                  class="input"
-                  id="kafka_cluster.credentials.username"
-                  name="kafka_cluster.credentials.username"
-                  type="text"
-                  data-attr-value="this.kafkaUsername()"
-                  data-on-change="this.updateValue(event)"
-                  required
-                />
-              </div>
-              <div class="input-container">
-                <label for="kafka_cluster.credentials.password" class="label">Password</label>
-                <input
-                  class="input"
-                  id="kafka_cluster.credentials.password"
-                  name="kafka_cluster.credentials.password"
-                  type="password"
-                  data-attr-value="this.kafkaSecret()"
-                  required
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
-          <template data-if="this.kafkaAuthType() === 'API'">
-            <div class="input-row">
-              <div class="input-container">
-                <label for="kafka_cluster.credentials.api_key" class="label">API Key</label>
-                <input
-                  class="input"
-                  id="kafka_cluster.credentials.api_key"
-                  name="kafka_cluster.credentials.api_key"
-                  type="text"
-                  data-attr-required="this.kafkaBootstrapServers() !== ''"
-                  data-attr-value="this.kafkaApiKey()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-              <div class="input-container">
-                <label for="kafka_cluster.credentials.api_secret" class="label">API Secret</label>
-                <input
-                  class="input"
-                  id="kafka_cluster.credentials.api_secret"
-                  name="kafka_cluster.credentials.api_secret"
-                  data-attr-value="this.kafkaSecret()"
-                  type="password"
-                  data-attr-required="this.kafkaBootstrapServers() !== ''"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
+          <div class="content-wrapper">
+            <auth-credentials
+              data-prop-namespace="'kafka_cluster'"
+              data-on-change="this.updateValue(event.detail)"
+              data-prop-platform="this.platformType()"
+              data-prop-type="this.kafkaAuthType()"
+              data-prop-credentials="this.kafkaCreds()"
+            />
+          </div>
           <label class="checkbox" for="kafka_cluster.ssl.enabled">
             <input
               type="checkbox"
@@ -319,85 +199,24 @@
               class="input dropdown"
               id="schema_registry.auth_type"
               name="schema_registry.auth_type"
-              data-on-change="this.updateValue(event)"
-              data-attr-disabled="this.platformType() === 'Confluent Cloud' ? true : false"
+              data-on-input="this.updateValue(event)"
+              data-value="this.schemaAuthType()"
             >
-              <option
-                value="None"
-                data-attr-selected="this.schemaAuthType() === 'None' ? true : false"
-              >
-                None
-              </option>
-              <option
-                value="Basic"
-                data-attr-selected="this.schemaAuthType() === 'Basic' ? true : false"
-              >
-                Username & Password
-              </option>
-              <option
-                value="API"
-                data-attr-selected="this.schemaAuthType() === 'API' ? true : false"
-              >
-                API Credentials
-              </option>
+              <option value="None" selected>None</option>
+              <option value="Basic">Username & Password</option>
+              <option value="API">API Credentials</option>
+              <option value="OAuth">SASL/OAUTHBEARER</option>
             </select>
           </div>
-          <template data-if="this.schemaAuthType() === 'Basic'">
-            <div class="input-row">
-              <div class="input-container">
-                <label for="schema_registry.credentials.username" class="label">Username</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.username"
-                  name="schema_registry.credentials.username"
-                  type="text"
-                  data-attr-value="this.schemaUsername()"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-              <div class="input-container">
-                <label for="schema_registry.credentials.password" class="label">Password</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.password"
-                  name="schema_registry.credentials.password"
-                  type="password"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-attr-value="this.schemaSecret()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
-          <template data-if="this.schemaAuthType() === 'API'">
-            <div class="input-row">
-              <div class="input-container">
-                <label for="schema_registry.credentials.api_key" class="label">API Key</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.api_key"
-                  name="schema_registry.credentials.api_key"
-                  type="text"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-attr-value="this.schemaApiKey()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-              <div class="input-container">
-                <label for="schema_registry.credentials.api_secret" class="label">API Secret</label>
-                <input
-                  class="input"
-                  id="schema_registry.credentials.api_secret"
-                  name="schema_registry.credentials.api_secret"
-                  type="password"
-                  data-attr-required="this.schemaUri() !== ''"
-                  data-attr-value="this.schemaSecret()"
-                  data-on-change="this.updateValue(event)"
-                />
-              </div>
-            </div>
-          </template>
+          <div class="content-wrapper">
+            <auth-credentials
+              data-prop-namespace="'schema_registry'"
+              data-on-change="this.updateValue(event.detail)"
+              data-prop-platform="this.platformType()"
+              data-prop-type="this.schemaAuthType()"
+              data-prop-credentials="this.schemaCreds()"
+            />
+          </div>
           <label class="checkbox" for="schema_registry.ssl.enabled">
             <input
               type="checkbox"
@@ -485,8 +304,29 @@
         padding: 2px;
         font-size: smaller;
       }
-      .heading.clickable {
+      /* These styles are specific to the form SSL section */
+      .clickable-header {
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .input-sub-group {
+        background: var(--vscode-sideBar-background);
+        color: var(--vscode-sideBar-foreground);
+        padding: 0 16px;
+        border-radius: 5px;
+        border: 1px solid var(--vscode-sideBar-border);
+      }
+      .input-sub-group .heading {
+        font-size: 13px;
+        margin: 8px 0;
+      }
+      .input-sub-group p {
+        margin: 8px 0;
+      }
+      .input-sub-group > .input-container {
+        margin-bottom: 12px;
       }
     </style>
   </body>
