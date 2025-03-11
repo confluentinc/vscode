@@ -28,7 +28,8 @@ blocks:
       prologue:
         commands:
           - checkout
+          - . vault-setup
       jobs:
-        - name: "Update Third Party Notices PR"
+        - name: "Update third party notices PR"
           commands:
             - make update-third-party-notices-pr
