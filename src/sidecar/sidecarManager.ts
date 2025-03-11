@@ -1,6 +1,6 @@
 // sidecar manager module
 
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import fs from "fs";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
@@ -389,6 +389,19 @@ export class SidecarManager {
             `${logPrefix}: started sidecar process with pid ${sidecarProcess.pid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
           );
           sidecarProcess.unref();
+
+          // check to see if the process is running and/or if any errors were logged
+          setTimeout(() => {
+            try {
+              const isRunning =
+                spawnSync("ps", ["-p", sidecarProcess.pid!.toString()]).status === 0;
+              logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
+              const logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").split("\n").slice(-20);
+              logger.info(`${logPrefix}: Last few sidecar log lines: ${JSON.stringify(logs)}`);
+            } catch (e) {
+              logger.error(`${logPrefix}: Failed to check sidecar process status: ${e}`);
+            }
+          }, 2000);
 
           // May think about a  sidecarProcess.on("exit", (code: number) => { ... }) here to catch early exits,
           // but the sidecar file architecture check above should catch most of those cases.
