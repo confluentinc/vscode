@@ -66,13 +66,6 @@ export class AuthCredentials extends HTMLElement {
         detail: event,
       }),
     );
-    // This updates the local config object for the component
-    // so values are saved even if the section is collapsed
-    // switch (name) {
-    //   default:
-    //     console.info("update input", name, value);
-    //     break;
-    // }
   }
 
   template = html`
@@ -316,5 +309,5 @@ export class AuthCredentials extends HTMLElement {
   }
 }
 
-// Register the custom element
+// Use this line to register the custom element in the ts file for the webview where it will be used (in this case, direct-connect-form.ts)
 // customElements.define("auth-credentials", AuthCredentials);

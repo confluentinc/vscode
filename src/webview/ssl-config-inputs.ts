@@ -287,5 +287,5 @@ export class SslConfig extends HTMLElement {
   }
 }
 
-// Register the custom element in the ts file for the webview where it will be used (in this case, direct-connect-form.ts)
+// Use this line to register the custom element in the ts file for the webview where it will be used (in this case, direct-connect-form.ts)
 // customElements.define("ssl-config", SslConfig);
