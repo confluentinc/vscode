@@ -227,8 +227,8 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
   for Confluent Cloud connections
   ([confluentinc/ide-sidecar#304](https://github.com/confluentinc/ide-sidecar/issues/304)).
 - Starting the extension in one IDE (e.g., VS Code) and then starting it in another IDE (e.g. VS
-  Code Insiders or Cursor) will cause conflicts with the sidecar process. The first IDE establishes
-  a handshake with the sidecar and stores an access token, while the second IDE attempts to kill the
+  Code Insiders) will cause conflicts with the sidecar process. The first IDE establishes a
+  handshake with the sidecar and stores an access token, while the second IDE attempts to kill the
   existing sidecar process and obtain a new token, resulting in the two different IDEs fighting for
   control. Only one type of IDE can run the extension at a time, though you can still use multiple
   windows/workspaces of the same IDE type.
