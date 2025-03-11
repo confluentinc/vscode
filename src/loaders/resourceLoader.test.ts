@@ -122,6 +122,30 @@ describe("ResourceLoader::getSubjects()", () => {
     }
   });
 
+  it("Performs deep fetch when forceRefresh=true", async () => {
+    const fetchSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
+    fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
+
+    for (const inputParam of [
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+    ]) {
+      const subjects = await loaderInstance.getSubjects(inputParam, true);
+
+      assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
+      // will not have asked resource manager for subjects, since deep fetch is forced.
+      assert.ok(rmGetSubjectsStub.notCalled);
+      /// will have stored the deep fetched subjects in the resource manager.
+      assert.ok(
+        rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+      );
+
+      // reset the resource manager stubs for next iteration.
+      rmGetSubjectsStub.resetHistory();
+      rmSetSubjectsStub.resetHistory();
+    }
+  });
+
   it("Returns empty array when empty array is ResourceManager cache contents", async () => {
     // Set up the resource manager to return an empty array.
     rmGetSubjectsStub.resolves([]);
