@@ -126,7 +126,7 @@ export class DirectConnectionManager {
     dryRun: boolean = false,
   ): Promise<{ connection: Connection | null; errorMessage: string | null }> {
     let incomingSpec: ConnectionSpec = spec;
-    // check for an existing ConnectionSpec - if this is a dryRun on the Edit form we need to get the secrets
+    // check for an existing ConnectionSpec
     const currentSpec: ConnectionSpec | null = await getResourceManager().getDirectConnection(
       spec.id,
     );
@@ -170,14 +170,6 @@ export class DirectConnectionManager {
   }
 
   async updateConnection(incomingSpec: CustomConnectionSpec): Promise<void> {
-    // at this point incoming spec has placeholder secrets... look up the associated ConnectionSpec
-    const currentSpec: CustomConnectionSpec | null = await getResourceManager().getDirectConnection(
-      incomingSpec.id,
-    );
-    if (!currentSpec) {
-      logger.error("Direct connection not found in resources, can't update");
-      return;
-    }
     // tell the sidecar about the updated spec
     const { connection, errorMessage } = await this.createOrUpdateConnection(incomingSpec, true);
     if (errorMessage || !connection) {
@@ -188,21 +180,14 @@ export class DirectConnectionManager {
     }
 
     logUsage(UserEvent.DirectConnectionAction, {
-      type: currentSpec.formConnectionType,
+      type: incomingSpec.formConnectionType,
       action: "updated",
       withKafka: !!incomingSpec.kafka_cluster,
       withSchemaRegistry: !!incomingSpec.schema_registry,
     });
 
-    // combine the returned ConnectionSpec with the CustomConnectionSpec before storing
-    // (spec comes first because the ConnectionSpec will try to override `id` as a string)
-    const mergedSpec: CustomConnectionSpec = {
-      ...connection.spec,
-      id: incomingSpec.id,
-      formConnectionType: incomingSpec.formConnectionType,
-    };
     // update the connection in secret storage (via full replace of the connection by its id)
-    await getResourceManager().addDirectConnection(mergedSpec);
+    await getResourceManager().addDirectConnection(incomingSpec);
     return;
   }
 
