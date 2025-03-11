@@ -8,6 +8,7 @@ import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { getResourceManager } from "../storage/resourceManager";
 import {
   correlateTopicsWithSchemaSubjects,
   fetchSchemasForSubject,
@@ -126,12 +127,24 @@ export abstract class ResourceLoader implements IResourceBase {
    * */
   public async getSubjects(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
   ): Promise<Subject[]> {
     try {
       const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
-      return await fetchSubjects(schemaRegistry);
+      const resourceManager = getResourceManager();
+      if (!forceRefresh) {
+        // cache allowed ...
+        const subjects = await resourceManager.getSubjects(schemaRegistry);
+        if (subjects) {
+          // and had contents.
+          return subjects;
+        }
+      }
+
+      // Deep fetch the subjects from the schema registry, cache, return.
+      const subjects = await fetchSubjects(schemaRegistry);
+      await resourceManager.setSubjects(schemaRegistry, subjects);
+      return subjects;
     } catch (error) {
       logger.error("Error fetching subjects", error);
       if (

@@ -17,6 +17,15 @@ export enum WorkspaceStorageKeys {
   /** CCloud schema registries */
   CCLOUD_SCHEMA_REGISTRIES = "ccloudSchemaRegistries",
 
+  /** CCloud Schema Registry subjects */
+  CCLOUD_SR_SUBJECTS = "ccloudSRSubjects",
+
+  /** Local Schema Registry subjects */
+  LOCAL_SR_SUBJECTS = "localSRSubjects",
+
+  /** Direct connection Schema Registry Subjects */
+  DIRECT_CONNECTION_SR_SUBJECTS = "directConnectionSRSubjects",
+
   /** What (Schema) URI was chosen first to diff against? */
   DIFF_BASE_URI = "diffs.selectedResource",
 
