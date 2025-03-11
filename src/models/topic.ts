@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { KAFKA_TOPIC_OPERATIONS } from "../authz/constants";
 import { KafkaTopicOperation } from "../authz/types";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
+import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 import { Subject } from "./schema";
@@ -40,7 +40,7 @@ export class KafkaTopic extends Data implements IResourceBase, ISearchable {
   get ccloudUrl(): string {
     // Only CCloud topics have a ccloud URL.
     if (isCCloud(this)) {
-      return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.clusterId}/topics/${this.name}/overview`;
+      return `https://confluent.cloud/environments/${this.environmentId}/clusters/${this.clusterId}/topics/${this.name}/overview?utm_source=${UTM_SOURCE_VSCODE}`;
     }
     return "";
   }

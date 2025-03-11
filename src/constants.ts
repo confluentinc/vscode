@@ -34,6 +34,8 @@ export enum IconNames {
   LOADING = "loading~spin",
 }
 
+export const UTM_SOURCE_VSCODE = "vscode-ext"
+
 export const DIFFABLE_READONLY_SCHEME = "confluent.resource";
 
 // must match the `contributes.authentication` ID in package.json
