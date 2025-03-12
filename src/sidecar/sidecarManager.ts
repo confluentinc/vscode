@@ -818,17 +818,19 @@ function confirmSidecarProcessIsRunning(
 
   // try to read+parse sidecar logs to watch for any startup errors (occupied port, missing
   // configs, etc.)
-  let logs: string[] = [];
+  const logLines: string[] = [];
   try {
-    logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").trim().split("\n").slice(-20);
-    const logLines: string[] = logs.map((jsonStr) => {
-      try {
-        const line = JSON.parse(jsonStr.trim()) as SidecarLogFormat;
-        return `\t> ${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`;
-      } catch {
-        return `\t> ${jsonStr}`;
-      }
-    });
+    const logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").trim().split("\n").slice(-20);
+    logLines.push(
+      ...logs.map((jsonStr) => {
+        try {
+          const line = JSON.parse(jsonStr.trim()) as SidecarLogFormat;
+          return `\t> ${line.timestamp} ${line.level} [${line.loggerName}] ${line.message}`;
+        } catch {
+          return `\t> ${jsonStr}`;
+        }
+      }),
+    );
     logger.info(`${logPrefix}: Latest sidecar log lines:\n${logLines.join("\n")}`);
   } catch (e) {
     logger.error(`${logPrefix}: Failed to read sidecar log file: ${e}`);
@@ -844,7 +846,7 @@ function confirmSidecarProcessIsRunning(
       `sidecar process failed to start`,
       {
         stderr: stderrContent,
-        logs: logs.join("\n"),
+        logs: logLines.join("\n"),
       },
       true,
     );
