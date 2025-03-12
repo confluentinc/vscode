@@ -89,7 +89,6 @@ export class Subject implements IResourceBase, ISearchable {
 export class Schema extends Data implements IResourceBase {
   connectionId!: Enforced<ConnectionId>;
   connectionType!: Enforced<ConnectionType>;
-  iconName: IconNames.SCHEMA = IconNames.SCHEMA;
 
   id!: Enforced<string>;
   subject!: Enforced<string>;
@@ -198,7 +197,6 @@ export class SchemaTreeItem extends vscode.TreeItem {
 
     // user-facing properties
     this.description = resource.id.toString();
-    this.iconPath = new vscode.ThemeIcon(IconNames.SCHEMA);
     this.tooltip = createSchemaTooltip(this.resource);
 
     this.command = {
@@ -211,7 +209,7 @@ export class SchemaTreeItem extends vscode.TreeItem {
 
 function createSchemaTooltip(resource: Schema): vscode.MarkdownString {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) Schema`)
+    .appendMarkdown("#### Schema")
     .appendMarkdown("\n\n---")
     .appendMarkdown(`\n\nID: \`${resource.id}\``)
     .appendMarkdown(`\n\nSubject: \`${resource.subject}\``)
