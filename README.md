@@ -39,6 +39,9 @@ resources from right within VS Code.
 > If you would like to connect to your Confluent Cloud Kafka cluster and/or Confluent Cloud Schema Registry cluster
 > using [API Key (user account or service account)](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/service-accounts/api-keys/overview.html#api-keys-and-ccloud-accounts), [Mutual TLS](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/overview.html), or [OAuth/OIDC](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html), then head to <anchor tag> for how to do that using the extension.
 
+> [!IMPORTANT]
+> TODO: Note about if the Confluent Cloud cluster uses private networking and uses custom PEM files. Go to "Confluent -> Ssl: Pem Paths" and add it.
+
 ### Generate streaming projects from Confluent-provided templates
 
 <!-- <gif showing clicking button, clicking on a template, fill in values, opening the project, and running it> -->
@@ -159,7 +162,14 @@ Schema Registry compatible server.
 Get started by clicking the "+" icon in the Resources view, and select "Enter manually" in the dropdown.
 This opens a new tab containing a Connection form, configure your connection using the fields present.
 
-<details><summary>Connection form details</summary>
+You may test the connection by clicking the **Test** button at the bottom of the form. If VS Code failed
+to connect, an appropriate error message will be displayed. If the test succeeds, click the **Save**
+button to save the connection as a resource in the Resources view. (Note: You may **Save** the connection details regardless of using the **Test** functionality.)
+
+> [!TIP]
+> You can export the connection details to a local file by clicking the socket-download icon next to the connection. However, note that the file may contain sensitive information like API keys, secrets, and local file paths. **Use caution when saving and sharing connection files.**
+
+Let's go over some of the form fields:
 
 #### General
 
@@ -182,10 +192,9 @@ This opens a new tab containing a Connection form, configure your connection usi
 | Form field | Description |
 | ----- | ----- |
 | Bootstrap Server(s) |  One or more host:port pairs to use for establishing the initial connection (use a comma-separated list for more than one server). |
-| Authentication Type | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>|
+| Authentication Type | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>. |
 | SSL/TLS enabled checkbox | Use SSL/TLS encryption communication for data in transit between VS Code and the Kafka brokers. |
 | [TLS Configuration](#tls-configuration) |  Additional TLS configuration, you may expand the TLS Configuration section and fill out Key Store and Trust Store details. |
-
 
 #### TLS Configuration
 
@@ -195,7 +204,7 @@ This opens a new tab containing a Connection form, configure your connection usi
 | [Key Store Configuration](#key-store-configuration) | Certificate used by Kafka brokers to authenticate the client. This is used to configure mutual TLS (mTLS) authentication. |
 | [Trust Store Configuration](#trust-store-configuration) | Certificates for verifying SSL/TLS connections to the Kafka brokers. This is required if the Kafka brokers use a self-signed or a non-public Certificate Authority (CA). |
 
-##### Key Store Configuration
+#### Key Store Configuration
 
 Certificate used by Kafka brokers to authenticate the client. This is used to configure mutual TLS (mTLS) authentication.
 
@@ -209,7 +218,7 @@ Certificate used by Kafka brokers to authenticate the client. This is used to co
 > [!TIP]
 > Follow these steps to [configure mTLS authentication on Confluent Cloud](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/configure.html#steps-to-configure-mtls-authentication-on-ccloud?utm_source=vscode-ext)
 
-##### Trust Store Configuration
+#### Trust Store Configuration
 
 Certificates for verifying SSL/TLS connections to the Kafka brokers. This is required if the Kafka brokers use a self-signed or a non-public Certificate Authority (CA).
 
@@ -223,7 +232,8 @@ Certificates for verifying SSL/TLS connections to the Kafka brokers. This is req
 > [!NOTE]
 > Confluent Cloud employs TLS certificates from Let’s Encrypt, a trusted Certificate Authority (CA). For more information, see [Manage TLS Certificates](https://docs.confluent.io/cloud/current/cp-component/clients-cloud-config.html#manage-tls-certificates). Confluent Cloud does **not** support self-managed certificates for TLS encryption.
 
-</details>
+#### Authentication Types:
+
 
 #### Support
 
