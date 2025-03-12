@@ -47,13 +47,13 @@ export interface Port {
 
 /**
  * @export
+ * @enum {string}
  */
-export const PortTypeEnum = {
-  Tcp: "tcp",
-  Udp: "udp",
-  Sctp: "sctp",
-} as const;
-export type PortTypeEnum = (typeof PortTypeEnum)[keyof typeof PortTypeEnum];
+export enum PortTypeEnum {
+  Tcp = "tcp",
+  Udp = "udp",
+  Sctp = "sctp",
+}
 
 /**
  * Check if a given object implements the Port interface.

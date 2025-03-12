@@ -100,15 +100,15 @@ export interface Mount {
 
 /**
  * @export
+ * @enum {string}
  */
-export const MountTypeEnum = {
-  Bind: "bind",
-  Volume: "volume",
-  Tmpfs: "tmpfs",
-  Npipe: "npipe",
-  Cluster: "cluster",
-} as const;
-export type MountTypeEnum = (typeof MountTypeEnum)[keyof typeof MountTypeEnum];
+export enum MountTypeEnum {
+  Bind = "bind",
+  Volume = "volume",
+  Tmpfs = "tmpfs",
+  Npipe = "npipe",
+  Cluster = "cluster",
+}
 
 /**
  * Check if a given object implements the Mount interface.

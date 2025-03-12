@@ -53,14 +53,13 @@ export interface CreateDekRequest {
 
 /**
  * @export
+ * @enum {string}
  */
-export const CreateDekRequestAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type CreateDekRequestAlgorithmEnum =
-  (typeof CreateDekRequestAlgorithmEnum)[keyof typeof CreateDekRequestAlgorithmEnum];
+export enum CreateDekRequestAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 
 /**
  * Check if a given object implements the CreateDekRequest interface.

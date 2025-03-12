@@ -107,12 +107,12 @@ export interface Volume {
 
 /**
  * @export
+ * @enum {string}
  */
-export const VolumeScopeEnum = {
-  Local: "local",
-  Global: "global",
-} as const;
-export type VolumeScopeEnum = (typeof VolumeScopeEnum)[keyof typeof VolumeScopeEnum];
+export enum VolumeScopeEnum {
+  Local = "local",
+  Global = "global",
+}
 
 /**
  * Check if a given object implements the Volume interface.

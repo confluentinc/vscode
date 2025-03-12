@@ -104,16 +104,16 @@ export interface BuildCache {
 
 /**
  * @export
+ * @enum {string}
  */
-export const BuildCacheTypeEnum = {
-  Internal: "internal",
-  Frontend: "frontend",
-  SourceLocal: "source.local",
-  SourceGitCheckout: "source.git.checkout",
-  ExecCachemount: "exec.cachemount",
-  Regular: "regular",
-} as const;
-export type BuildCacheTypeEnum = (typeof BuildCacheTypeEnum)[keyof typeof BuildCacheTypeEnum];
+export enum BuildCacheTypeEnum {
+  Internal = "internal",
+  Frontend = "frontend",
+  SourceLocal = "source.local",
+  SourceGitCheckout = "source.git.checkout",
+  ExecCachemount = "exec.cachemount",
+  Regular = "regular",
+}
 
 /**
  * Check if a given object implements the BuildCache interface.

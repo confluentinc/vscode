@@ -89,25 +89,24 @@ export interface Rule {
 
 /**
  * @export
+ * @enum {string}
  */
-export const RuleKindEnum = {
-  Transform: "TRANSFORM",
-  Condition: "CONDITION",
-} as const;
-export type RuleKindEnum = (typeof RuleKindEnum)[keyof typeof RuleKindEnum];
-
+export enum RuleKindEnum {
+  Transform = "TRANSFORM",
+  Condition = "CONDITION",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const RuleModeEnum = {
-  Upgrade: "UPGRADE",
-  Downgrade: "DOWNGRADE",
-  Updown: "UPDOWN",
-  Write: "WRITE",
-  Read: "READ",
-  Writeread: "WRITEREAD",
-} as const;
-export type RuleModeEnum = (typeof RuleModeEnum)[keyof typeof RuleModeEnum];
+export enum RuleModeEnum {
+  Upgrade = "UPGRADE",
+  Downgrade = "DOWNGRADE",
+  Updown = "UPDOWN",
+  Write = "WRITE",
+  Read = "READ",
+  Writeread = "WRITEREAD",
+}
 
 /**
  * Check if a given object implements the Rule interface.
