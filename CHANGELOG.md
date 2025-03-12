@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 0.26.1
+
 ### Added
 
 - Additional logging and telemetry for any issues with the sidecar process starting up to help
