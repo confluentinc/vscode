@@ -54,6 +54,12 @@ export interface CustomConnectionSpec extends ConnectionSpec {
 export type DirectConnectionsById = Map<ConnectionId, CustomConnectionSpec>;
 
 /**
+ * Used within {@link ResourceManager.setSubjects} / {@link ResourceManager.getSubjects}
+ * for the interior cache map of registry id -> {cached subject array} | {nothing cached yet}.
+ */
+type SubjectStringCache = Map<string, string[] | undefined>;
+
+/**
  * Singleton helper for interacting with Confluent-/Kafka-specific global/workspace state items and secrets.
  */
 export class ResourceManager {
@@ -383,12 +389,31 @@ export class ResourceManager {
     });
   }
 
-  // Subjects (from schema registries)
-  async setSubjects(schemaRegistry: SchemaRegistry, subjects: Subject[]): Promise<void> {
+  /**
+   * Cache subjects for a schema registry in workspace state.
+   *
+   * Stored in two tiers:
+   * - Three different toplevel workspace storage keys for based on the connection type:
+   *  - {@link WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS} for ccloud-based schema registries.
+   *  - {@link WorkspaceStorageKeys.LOCAL_SR_SUBJECTS} for local-based schema registries.
+   *  - {@link WorkspaceStorageKeys.DIRECT_SR_SUBJECTS} for direct-based schema registries.
+   *
+   * - Each of these keys contains a JSON-stringified map of <schemaRegistryId, string[]>
+   *   where the string[] is a list of subject names.
+   *
+   *  To clear all subjects for a single schema registry, call with (registry, undefined).
+   *
+   * @param schemaRegistry
+   * @param subjects
+   */
+  async setSubjects(
+    schemaRegistry: SchemaRegistry,
+    subjects: Subject[] | undefined,
+  ): Promise<void> {
     const key = this.subjectKeyForSchemaRegistry(schemaRegistry);
 
     logger.debug(
-      `Setting ${subjects.length} subjects for schema registry ${schemaRegistry.name} (${key})`,
+      `Setting ${subjects?.length !== undefined ? subjects.length : "undefined"} subjects for schema registry ${schemaRegistry.name} (${key})`,
     );
 
     await this.runWithMutex(key, async () => {
@@ -396,17 +421,21 @@ export class ResourceManager {
       const subjectsByRegistryString: string | undefined =
         await this.storage.getWorkspaceState<string>(key);
 
-      const subjectsStringsByRegistryID: Map<string, string[]> = subjectsByRegistryString
+      const subjectsStringsByRegistryID: SubjectStringCache = subjectsByRegistryString
         ? stringToMap(subjectsByRegistryString)
-        : new Map<string, string[]>();
+        : new Map<string, string[] | undefined>();
 
-      // Reduce the subjects to a list of strings
-      const subjectsAsStrings: string[] = subjects.map((subject) => subject.name);
+      // Reduce any provided Subject instances to a list of strings
+      // (or just undefined if clearing the key).
+      const subjectsAsStrings: string[] | undefined = subjects
+        ? subjects.map((subject) => subject.name)
+        : undefined;
 
       // Set the new subjects for the schema registry
       subjectsStringsByRegistryID.set(schemaRegistry.id, subjectsAsStrings);
 
-      // Now save the updated schema registry subjects into the proper key'd storage.
+      // Now save the updated map of registry id -> subject list into workspace storage
+      // (JSON-stringified) according to the connection type's storage key.
       await this.storage.setWorkspaceState(key, mapToString(subjectsStringsByRegistryID));
     });
   }
@@ -419,11 +448,11 @@ export class ResourceManager {
     // Access the corresponding workspace storage section only with mutex guarding, assigning
     // into subjectsByRegistryIDString.
     await this.runWithMutex(key, async () => {
-      // Get the JSON-stringified map from storage
+      // Get the JSON-stringified map of this conn-type's map from storage
       subjectsByRegistryIDString = await this.storage.getWorkspaceState<string>(key);
     });
 
-    const subjectStringsByRegistryID: Map<string, string[]> = subjectsByRegistryIDString
+    const subjectStringsByRegistryID: SubjectStringCache = subjectsByRegistryIDString
       ? stringToMap(subjectsByRegistryIDString)
       : new Map<string, object[]>();
 

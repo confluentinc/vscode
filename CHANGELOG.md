@@ -9,6 +9,11 @@ All notable changes to this extension will be documented in this file.
 - SASL/OAUTHBEARER authentication type is now supported for Kafka Cluster connections that are added
   via the connections form
 
+### Changed
+
+- Schema registry subjects are now cached, reducing round trips to a schema registry. Use the
+'reload' button in the Schemas view to force refresh.
+
 ## 0.26.0
 
 ### Added

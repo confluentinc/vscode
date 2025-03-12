@@ -868,6 +868,45 @@ describe("ResourceManager SR subject methods", function () {
     assert.deepStrictEqual(retrievedSubjects, newTestSubjects, "second comparison");
   });
 
+  it("setSubjects() with undefined should clear out just that single schema registry's subjects", async () => {
+    // setSubjects(..., undefined) is way to clear out a single schema registry's subjects.
+
+    // Set subjects for two different ccloud-based registries
+    await resourceManager.setSubjects(
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      createTestSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, 2),
+    );
+
+    const otherCCloudSR = CCloudSchemaRegistry.create({
+      ...TEST_CCLOUD_SCHEMA_REGISTRY,
+      id: "other-ccloud-env-id-registry",
+      environmentId: "other-ccloud-env-id" as EnvironmentId,
+    });
+
+    const otherCCloudSRSubjects = createTestSubjects(otherCCloudSR, 3);
+    await resourceManager.setSubjects(otherCCloudSR, otherCCloudSRSubjects);
+
+    // Verify that the subjects were set correctly
+    let retrievedSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.ok(retrievedSubjects);
+    assert.equal(retrievedSubjects.length, 2);
+
+    retrievedSubjects = await resourceManager.getSubjects(otherCCloudSR);
+    assert.ok(retrievedSubjects);
+    assert.equal(retrievedSubjects.length, 3);
+
+    // Now clear out the first one
+    await resourceManager.setSubjects(TEST_CCLOUD_SCHEMA_REGISTRY, undefined);
+    // Verify that the first one is gone
+    const missingSubjects = await resourceManager.getSubjects(TEST_CCLOUD_SCHEMA_REGISTRY);
+    assert.deepStrictEqual(missingSubjects, undefined);
+    // Verify that the second one is still there
+    const otherSubjects = await resourceManager.getSubjects(otherCCloudSR);
+    assert.ok(otherSubjects);
+    assert.equal(otherSubjects.length, 3);
+    assert.deepStrictEqual(otherSubjects, otherCCloudSRSubjects);
+  });
+
   it("deleteCCloudResources() + deleteCCloudSubjects() should correctly delete only ccloud SR subjects", async () => {
     // set the subjects in the StorageManager before deleting them
     await resourceManager.setSubjects(
