@@ -1,5 +1,6 @@
 import { Mutex } from "async-mutex";
 import { StorageManager, getStorageManager } from ".";
+import { AuthCallbackEvent } from "../authn/types";
 import {
   ConnectionSpec,
   ConnectionSpecFromJSON,
@@ -629,9 +630,18 @@ export class ResourceManager {
 
   /**
    * Set the secret key to indicate that the CCloud auth flow has completed successfully.
+   *
+   * This also sets the `AUTH_PASSWORD_RESET` key to indicate whether the user has reset their
+   * password recently, since we will know both the success state and the reset state at the same time.
    */
-  async setAuthFlowCompleted(success: boolean): Promise<void> {
-    await this.storage.setSecret(SecretStorageKeys.AUTH_COMPLETED, String(success));
+  async setAuthFlowCompleted(authCallback: AuthCallbackEvent): Promise<void> {
+    await Promise.all([
+      this.storage.setSecret(SecretStorageKeys.AUTH_COMPLETED, String(authCallback.success)),
+      this.storage.setSecret(
+        SecretStorageKeys.AUTH_PASSWORD_RESET,
+        String(authCallback.resetPassword),
+      ),
+    ]);
   }
 
   /**
@@ -643,6 +653,14 @@ export class ResourceManager {
       SecretStorageKeys.AUTH_COMPLETED,
     );
     return success === "true";
+  }
+
+  /** Get the flag indicating whether or not the user has reset their password recently. */
+  async getAuthFlowPasswordReset(): Promise<boolean> {
+    const reset: string | undefined = await this.storage.getSecret(
+      SecretStorageKeys.AUTH_PASSWORD_RESET,
+    );
+    return reset === "true";
   }
 
   /** Store the latest CCloud auth status from the sidecar, controlled by the auth poller. */
