@@ -1,6 +1,6 @@
 // sidecar manager module
 
-import { spawn } from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import fs from "fs";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
@@ -384,22 +384,33 @@ export class SidecarManager {
           // try to create a file to track any stderr output from the sidecar process
           fs.writeFileSync(stderrPath, "");
           const stderrFd = fs.openSync(stderrPath, "w");
-          const sidecarProcess = spawn(executablePath, [], {
-            detached: true,
-            // ignore stdin/stdout, stderr to the file
-            stdio: ["ignore", "ignore", stderrFd],
-            env: sidecar_env,
-          });
-          // close the file descriptor for stderr; child process will inherit it
-          // and write to it
-          fs.closeSync(stderrFd);
 
+          let sidecarProcess: ChildProcess;
+          try {
+            sidecarProcess = spawn(executablePath, [], {
+              detached: true,
+              // ignore stdin/stdout, stderr to the file
+              stdio: ["ignore", "ignore", stderrFd],
+              env: sidecar_env,
+            });
+          } catch (e) {
+            // Failure to spawn the process. Reject and return (we're the main codepath here).
+            logError(e, `${logPrefix}: sidecar component spawn error`, {}, true);
+            reject(e);
+            return;
+          } finally {
+            // close the file descriptor for stderr; child process will inherit it
+            // and write to it
+            fs.closeSync(stderrFd);
+          }
+
+          const sidecarPid: number | undefined = sidecarProcess.pid;
           logger.info(
-            `${logPrefix}: started sidecar process with pid ${sidecarProcess.pid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
+            `${logPrefix}: spawned sidecar process with pid ${sidecarPid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
           );
           sidecarProcess.unref();
 
-          if (sidecarProcess.pid === undefined) {
+          if (sidecarPid === undefined) {
             const err = new SidecarFatalError(
               `${logPrefix}: sidecar process returned undefined PID`,
             );
@@ -412,7 +423,7 @@ export class SidecarManager {
             setTimeout(() => {
               try {
                 const isRunning: boolean = confirmSidecarProcessIsRunning(
-                  sidecarProcess.pid!,
+                  sidecarPid!,
                   logPrefix,
                   stderrPath,
                 );
