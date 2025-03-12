@@ -71,13 +71,13 @@ export interface Dek {
 
 /**
  * @export
+ * @enum {string}
  */
-export const DekAlgorithmEnum = {
-  Aes128Gcm: "AES128_GCM",
-  Aes256Gcm: "AES256_GCM",
-  Aes256Siv: "AES256_SIV",
-} as const;
-export type DekAlgorithmEnum = (typeof DekAlgorithmEnum)[keyof typeof DekAlgorithmEnum];
+export enum DekAlgorithmEnum {
+  Aes128Gcm = "AES128_GCM",
+  Aes256Gcm = "AES256_GCM",
+  Aes256Siv = "AES256_SIV",
+}
 
 /**
  * Check if a given object implements the Dek interface.

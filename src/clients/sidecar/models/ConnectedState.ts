@@ -15,15 +15,15 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const ConnectedState = {
-  None: "NONE",
-  Attempting: "ATTEMPTING",
-  Success: "SUCCESS",
-  Expired: "EXPIRED",
-  Failed: "FAILED",
-} as const;
-export type ConnectedState = (typeof ConnectedState)[keyof typeof ConnectedState];
+export enum ConnectedState {
+  None = "NONE",
+  Attempting = "ATTEMPTING",
+  Success = "SUCCESS",
+  Expired = "EXPIRED",
+  Failed = "FAILED",
+}
 
 export function instanceOfConnectedState(value: any): boolean {
   for (const key in ConnectedState) {

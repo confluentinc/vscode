@@ -694,24 +694,21 @@ export interface HostConfig {
 
 /**
  * @export
+ * @enum {string}
  */
-export const HostConfigCgroupnsModeEnum = {
-  Private: "private",
-  Host: "host",
-} as const;
-export type HostConfigCgroupnsModeEnum =
-  (typeof HostConfigCgroupnsModeEnum)[keyof typeof HostConfigCgroupnsModeEnum];
-
+export enum HostConfigCgroupnsModeEnum {
+  Private = "private",
+  Host = "host",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const HostConfigIsolationEnum = {
-  Default: "default",
-  Process: "process",
-  Hyperv: "hyperv",
-} as const;
-export type HostConfigIsolationEnum =
-  (typeof HostConfigIsolationEnum)[keyof typeof HostConfigIsolationEnum];
+export enum HostConfigIsolationEnum {
+  Default = "default",
+  Process = "process",
+  Hyperv = "hyperv",
+}
 
 /**
  * Check if a given object implements the HostConfig interface.

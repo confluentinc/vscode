@@ -43,13 +43,12 @@ export interface HealthResponse {
 
 /**
  * @export
+ * @enum {string}
  */
-export const HealthResponseStatusEnum = {
-  Up: "UP",
-  Down: "DOWN",
-} as const;
-export type HealthResponseStatusEnum =
-  (typeof HealthResponseStatusEnum)[keyof typeof HealthResponseStatusEnum];
+export enum HealthResponseStatusEnum {
+  Up = "UP",
+  Down = "DOWN",
+}
 
 /**
  * Check if a given object implements the HealthResponse interface.
