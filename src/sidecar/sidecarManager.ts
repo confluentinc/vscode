@@ -9,7 +9,6 @@ import * as vscode from "vscode";
 import { Configuration, HandshakeResourceApi, SidecarVersionResponse } from "../clients/sidecar";
 import { Logger, OUTPUT_CHANNEL } from "../logging";
 import { getStorageManager } from "../storage";
-import { checkSidecarOsAndArch } from "./checkArchitecture";
 import {
   SIDECAR_BASE_URL,
   SIDECAR_LOGFILE_PATH,
@@ -26,6 +25,7 @@ import { EXTENSION_VERSION, SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
+import { checkSidecarOsAndArch } from "./checkArchitecture";
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
@@ -433,6 +433,10 @@ export class SidecarManager {
                   const err = new SidecarFatalError(`${logPrefix}: sidecar process is not running`);
                   logError(err, "sidecar process check", {}, true);
                   reject(err);
+                  // show a notification to the user to Open Logs or File Issue
+                  showErrorNotificationWithButtons(
+                    `Sidecar process ${sidecarPid} failed to start. Please check the logs for more details.`,
+                  );
                   return;
                 }
               } catch (e) {
