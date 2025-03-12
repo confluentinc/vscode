@@ -14,36 +14,41 @@
 
 import * as runtime from "../runtime";
 
-export interface GatewayV1CallbackVscodeDocsGetRequest {
-  code?: string;
-  state?: string;
+export interface RootGetRequest {
+  email?: string;
+  message?: string;
+  success?: boolean;
 }
 
 /**
  *
  */
-export class OAuthCallbackResourceApi extends runtime.BaseAPI {
+export class PasswordResetCallbackResourceApi extends runtime.BaseAPI {
   /**
    */
-  async gatewayV1CallbackVscodeDocsGetRaw(
-    requestParameters: GatewayV1CallbackVscodeDocsGetRequest,
+  async rootGetRaw(
+    requestParameters: RootGetRequest,
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<runtime.ApiResponse<string>> {
     const queryParameters: any = {};
 
-    if (requestParameters["code"] != null) {
-      queryParameters["code"] = requestParameters["code"];
+    if (requestParameters["email"] != null) {
+      queryParameters["email"] = requestParameters["email"];
     }
 
-    if (requestParameters["state"] != null) {
-      queryParameters["state"] = requestParameters["state"];
+    if (requestParameters["message"] != null) {
+      queryParameters["message"] = requestParameters["message"];
+    }
+
+    if (requestParameters["success"] != null) {
+      queryParameters["success"] = requestParameters["success"];
     }
 
     const headerParameters: runtime.HTTPHeaders = {};
 
     const response = await this.request(
       {
-        path: `/gateway/v1/callback-vscode-docs`,
+        path: `/`,
         method: "GET",
         headers: headerParameters,
         query: queryParameters,
@@ -60,11 +65,11 @@ export class OAuthCallbackResourceApi extends runtime.BaseAPI {
 
   /**
    */
-  async gatewayV1CallbackVscodeDocsGet(
-    requestParameters: GatewayV1CallbackVscodeDocsGetRequest = {},
+  async rootGet(
+    requestParameters: RootGetRequest = {},
     initOverrides?: RequestInit | runtime.InitOverrideFunction,
   ): Promise<string> {
-    const response = await this.gatewayV1CallbackVscodeDocsGetRaw(requestParameters, initOverrides);
+    const response = await this.rootGetRaw(requestParameters, initOverrides);
     return await response.value();
   }
 }
