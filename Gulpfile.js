@@ -616,11 +616,19 @@ export async function testRun() {
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
 
-  // adjust the launch arguments depending on the environment
+  // adjust the launch arguments and env vars depending on the environment
+  // (darwin CI needs to run in headless mode)
+  let extensionTestsEnv = {};
   const launchArgs = [];
-  if (IS_CI && IS_MAC) {
-    launchArgs.push("--disable-gpu", "--disable-extensions", "--disable-telemetry");
-  } else {
+  if (!(IS_CI && IS_MAC)) {
+    extensionTestsEnv = {
+      ELECTRON_ENABLE_LOGGING: "true",
+      ELECTRON_ENABLE_STACK_DUMPING: "true",
+      ELECTRON_NO_ATTACH_CONSOLE: "true",
+      ELECTRON_NO_SANDBOX: "1",
+      VSCODE_CLI: "1",
+      ELECTRON_RUN_AS_NODE: "1",
+    };
     launchArgs.push(
       "--no-sandbox",
       "--profile-temp",
@@ -632,26 +640,21 @@ export async function testRun() {
       "--disable-workspace-trust",
       "--disable-extensions",
     );
+  } else {
+    extensionTestsEnv = {
+      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
+      FGREP: testFilter,
+    };
   }
+  console.log(`Running tests for ${process.platform}-${process.arch}`);
+  console.log(`Launch args: ${launchArgs.join(" ")}`);
+  console.log(`Env vars: ${JSON.stringify(extensionTestsEnv)}`);
 
   await runTests({
     version: process.env.VSCODE_VERSION,
     extensionDevelopmentPath: resolve(DESTINATION),
     extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
-    extensionTestsEnv: {
-      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-      FGREP: testFilter,
-      // additional environment variables for macOS in CI for headless mode
-      ...(IS_CI &&
-        IS_MAC && {
-          ELECTRON_ENABLE_LOGGING: "true",
-          ELECTRON_ENABLE_STACK_DUMPING: "true",
-          ELECTRON_NO_ATTACH_CONSOLE: "true",
-          ELECTRON_NO_SANDBOX: "1",
-          VSCODE_CLI: "1",
-          ELECTRON_RUN_AS_NODE: "1",
-        }),
-    },
+    extensionTestsEnv,
     launchArgs,
   });
 
