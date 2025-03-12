@@ -408,7 +408,19 @@ export class SidecarManager {
             // pipe any stderr output to the file
             setTimeout(() => {
               try {
-                confirmSidecarProcessIsRunning(sidecarProcess.pid!, logPrefix, stderrPath);
+                const isRunning: boolean = confirmSidecarProcessIsRunning(
+                  sidecarProcess.pid!,
+                  logPrefix,
+                  stderrPath,
+                );
+                if (!isRunning) {
+                  // reject the promise if the sidecar process is not running so we stop attempting
+                  // to handshake with it
+                  const err = new SidecarFatalError(`${logPrefix}: sidecar process is not running`);
+                  logError(err, "sidecar process check", {}, true);
+                  reject(err);
+                  return;
+                }
               } catch (e) {
                 logError(e, "sidecar process check", {}, true);
               }
@@ -751,8 +763,18 @@ export function appendSidecarLogToOutputChannel(line: string) {
  * @param logPrefix A prefix for logging messages.
  * @param stderrPath The path to the sidecar's stderr file defined at process spawn time.
  */
-function confirmSidecarProcessIsRunning(pid: number, logPrefix: string, stderrPath: string) {
-  const isRunning = spawnSync("ps", ["-p", pid!.toString()]).status === 0;
+function confirmSidecarProcessIsRunning(
+  pid: number,
+  logPrefix: string,
+  stderrPath: string,
+): boolean {
+  // check if the sidecar process is running for windows or unix
+  const isRunning =
+    process.platform === "win32"
+      ? spawnSync("tasklist", ["/FI", `PID eq ${pid}`])
+          .stdout.toString()
+          .includes(pid.toString())
+      : spawnSync("ps", ["-p", pid.toString()]).status === 0;
   logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
 
   // check stderr file for any process start errors
@@ -798,6 +820,6 @@ function confirmSidecarProcessIsRunning(pid: number, logPrefix: string, stderrPa
       },
       true,
     );
-    throw error;
   }
+  return isRunning;
 }
