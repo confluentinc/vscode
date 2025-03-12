@@ -20,12 +20,10 @@ install-test-dependencies:
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			echo "Setting up headless test environment for macOS..."; \
 			HOMEBREW_NO_AUTO_UPDATE=1 brew install gtk+3; \
-			which Xvfb || HOMEBREW_NO_AUTO_UPDATE=1 brew install xvfb; \
-			echo "export ELECTRON_ENABLE_LOGGING=true" >> ~/.bashrc; \
-			echo "export ELECTRON_ENABLE_STACK_DUMPING=true" >> ~/.bashrc; \
-			echo "export ELECTRON_NO_ATTACH_CONSOLE=true" >> ~/.bashrc; \
-			echo "export ELECTRON_NO_SANDBOX=1" >> ~/.bashrc; \
-			source ~/.bashrc; \
+			export ELECTRON_ENABLE_LOGGING=true; \
+			export ELECTRON_ENABLE_STACK_DUMPING=true; \
+			export ELECTRON_NO_ATTACH_CONSOLE=true; \
+			export ELECTRON_NO_SANDBOX=1; \
 	else \
 			echo "Unsupported OS for headless testing"; \
 			exit 1; \
@@ -48,17 +46,13 @@ test: setup-test-env install-test-dependencies install-dependencies
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
-			Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & \
-			XVFB_PID=$$! && \
-			export DISPLAY=:99 && \
-			export ELECTRON_ENABLE_LOGGING=true && \
-			export ELECTRON_ENABLE_STACK_DUMPING=true && \
-			export ELECTRON_NO_ATTACH_CONSOLE=true && \
-			export ELECTRON_NO_SANDBOX=1 && \
-			sleep 3 && \
-			echo "Using Xvfb with DISPLAY=:99" && \
-			npx gulp test || { kill $$XVFB_PID; exit 1; }; \
-			kill $$XVFB_PID || true; \
+			export ELECTRON_ENABLE_LOGGING=true; \
+			export ELECTRON_ENABLE_STACK_DUMPING=true; \
+			export ELECTRON_NO_ATTACH_CONSOLE=true; \
+			export ELECTRON_NO_SANDBOX=1; \
+			export VSCODE_CLI=1; \
+			export ELECTRON_RUN_AS_NODE=1; \
+			npx gulp test; \
 	else \
 			npx gulp test; \
 	fi
