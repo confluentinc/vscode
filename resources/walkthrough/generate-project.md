@@ -1,4 +1,4 @@
-# Generating a New Kafka Project on Confluent Cloud
+# Generating a New Data Streaming Project on Confluent Cloud
 
 1. Open the Command Palette.
 2. Type "generate project" to find the command `Confluent: Project: Generate New Project`
