@@ -298,7 +298,11 @@ export class EventListener {
     }
 
     // if it's an image we care about, check if the container is in a "running" state
-    let started: boolean = await this.waitForContainerState(containerId, "running", eventTime);
+    let started: boolean = await this.waitForContainerState(
+      containerId,
+      ContainerStateStatusEnum.Running,
+      eventTime,
+    );
     if (!started) {
       logger.debug(`container didn't show a 'running' state, bailing and trying again later`);
       return;

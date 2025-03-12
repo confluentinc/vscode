@@ -1,5 +1,6 @@
 /** Sample test suite spellings of complex websocket messages */
 
+import { ConnectedState, ConnectionType, Status } from "../../../src/clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI } from "../../../src/constants";
 import { ConnectionEventAction, Message, MessageType } from "../../../src/ws/messageTypes";
 
@@ -23,7 +24,7 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
       spec: {
         id: "vscode-confluent-cloud-connection",
         name: "Confluent Cloud",
-        type: "CCLOUD",
+        type: ConnectionType.Ccloud,
         ccloud_config: {
           organization_id: undefined,
           ide_auth_callback_uri: CCLOUD_AUTH_CALLBACK_URI,
@@ -34,7 +35,7 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
       },
       status: {
         authentication: {
-          status: "VALID_TOKEN",
+          status: Status.ValidToken,
           user: {
             id: "u-n9dv06",
             username: "foo@bar.com",
@@ -47,7 +48,7 @@ export const GOOD_CCLOUD_CONNECTION_EVENT_MESSAGE: Message<MessageType.CONNECTIO
           errors: undefined,
         },
         ccloud: {
-          state: "SUCCESS",
+          state: ConnectedState.Success,
           user: {
             id: "u-n3234",
             username: "foo@bar.com",
