@@ -231,7 +231,7 @@ export class EnvironmentTreeItem extends TreeItem {
     } else if (isDirect(resource)) {
       const { missingKafka, missingSR } = checkForMissingResources(resource);
       if (missingKafka || missingSR) {
-        this.iconPath = new ThemeIcon("error", new ThemeColor("problemsErrorIcon.foreground"));
+        this.iconPath = new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground"));
       }
     }
     this.tooltip = createEnvironmentTooltip(this.resource);
