@@ -28,8 +28,10 @@ import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
 configDotenv();
 const DESTINATION = "out";
+
 const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
+const IS_MAC = process.platform === "darwin";
 
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
@@ -676,8 +678,30 @@ export async function testRun() {
       "--disable-updates",
       "--disable-workspace-trust",
       "--disable-extensions",
-    ],
+    );
+  }
+
+  await runTests({
+    version: process.env.VSCODE_VERSION,
+    extensionDevelopmentPath: resolve(DESTINATION),
+    extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
+    extensionTestsEnv: {
+      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
+      FGREP: testFilter,
+      // additional environment variables for macOS in CI for headless mode
+      ...(IS_CI &&
+        IS_MAC && {
+          ELECTRON_ENABLE_LOGGING: "true",
+          ELECTRON_ENABLE_STACK_DUMPING: "true",
+          ELECTRON_NO_ATTACH_CONSOLE: "true",
+          ELECTRON_NO_SANDBOX: "1",
+          VSCODE_CLI: "1",
+          ELECTRON_RUN_AS_NODE: "1",
+        }),
+    },
+    launchArgs,
   });
+
   if (reportCoverage) {
     let coverageMap = libCoverage.createCoverageMap();
     let sourceMapStore = libSourceMaps.createSourceMapStore();
