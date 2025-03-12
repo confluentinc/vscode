@@ -1,6 +1,6 @@
 // sidecar manager module
 
-import { spawn, spawnSync } from "child_process";
+import { spawn } from "child_process";
 import fs from "fs";
 
 import sidecarExecutablePath, { version as currentSidecarVersion } from "ide-sidecar";
@@ -756,6 +756,24 @@ export function appendSidecarLogToOutputChannel(line: string) {
 }
 
 /**
+ * Check if a process is running by sending a signal 0 to it. If the process is running, it will not
+ * throw an error.
+ *
+ * @param pid The process ID to check.
+ * @returns True if the process is running, false otherwise.
+ */
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    // ignore EPERM and others until we need to care about more processes than the sidecar, which we
+    // spawned originally
+    return false;
+  }
+}
+
+/**
  * Check the sidecar process status to ensure it has started up, logging any stderr output and the
  * last few lines of the sidecar log file.
  *
@@ -769,12 +787,7 @@ function confirmSidecarProcessIsRunning(
   stderrPath: string,
 ): boolean {
   // check if the sidecar process is running for windows or unix
-  const isRunning =
-    process.platform === "win32"
-      ? spawnSync("tasklist", ["/FI", `PID eq ${pid}`])
-          .stdout.toString()
-          .includes(pid.toString())
-      : spawnSync("ps", ["-p", pid.toString()]).status === 0;
+  const isRunning: boolean = isProcessRunning(pid);
   logger.info(`${logPrefix}: Sidecar process status check - running: ${isRunning}`);
 
   // check stderr file for any process start errors
