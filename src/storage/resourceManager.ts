@@ -394,12 +394,14 @@ export class ResourceManager {
    *
    * Stored in two tiers:
    * - Three different toplevel workspace storage keys for based on the connection type:
-   *  - {@link WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS} for ccloud-based schema registries.
-   *  - {@link WorkspaceStorageKeys.LOCAL_SR_SUBJECTS} for local-based schema registries.
-   *  - {@link WorkspaceStorageKeys.DIRECT_SR_SUBJECTS} for direct-based schema registries.
+   *   - {@link WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS} for ccloud-based schema registries.
+   *   - {@link WorkspaceStorageKeys.LOCAL_SR_SUBJECTS} for local-based schema registries.
+   *   - {@link WorkspaceStorageKeys.DIRECT_SR_SUBJECTS} for direct-based schema registries.
    *
-   * - Each of these keys contains a JSON-stringified map of <schemaRegistryId, string[]>
-   *   where the string[] is a list of subject names.
+   * - Each of the above keys contains a JSON-stringified map of schemaRegistryId, -> (string[] | undefined)
+   *   where the string[] is a list of subject names. If empty array, then the schema registry
+   *   has no subjects. If undefined, then prior cached subjects have been cleared and should be treated as
+   *   a cache miss.
    *
    *  To clear all subjects for a single schema registry, call with (registry, undefined).
    *
@@ -440,6 +442,15 @@ export class ResourceManager {
     });
   }
 
+  /**
+   * Get the cached subjects for a schema registry, if any.
+   * @see {@link setSubjects} for how these are stored.
+   *
+   * @param schemaRegistry - The schema registry for which to get the subjects
+   *
+   * @returns An array of {@link Subject} instances, or undefined if no subjects are cached. The array may be empty if
+   * the schema registry was last seen with zero subjects.
+   */
   async getSubjects(schemaRegistry: SchemaRegistry): Promise<Subject[] | undefined> {
     const key = this.subjectKeyForSchemaRegistry(schemaRegistry);
 
