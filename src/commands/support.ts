@@ -11,7 +11,7 @@ import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
 
 const logger = new Logger("commands.support");
 
-const FEEDBACK_URI = Uri.parse("https://www.surveymonkey.com/r/NYVKQD6");
+const FEEDBACK_URI = Uri.parse("https://www.surveymonkey.com/r/T262TDT");
 
 function openWalkthroughCommand() {
   commands.executeCommand(
