@@ -186,6 +186,44 @@ describe("ResourceLoader::getSubjects()", () => {
   });
 });
 
+describe("ResourceLoader::clearCache()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let rmSetSubjectsStub: sinon.SinonStub;
+
+  before(async () => {
+    await getTestStorageManager();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+    rmSetSubjectsStub = sandbox.stub(getResourceManager(), "setSubjects");
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Called with wrong connection id resource throws error", async () => {
+    const schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+    await assert.rejects(loaderInstance.clearCache(schemaRegistry), (err) => {
+      assert.strictEqual(
+        (err as Error).message,
+        `Mismatched connectionId ${TEST_LOCAL_ENVIRONMENT_ID} for resource ${TEST_CCLOUD_SCHEMA_REGISTRY.id}`,
+      );
+      return true;
+    });
+  });
+
+  it("clearCache(schemaRegistry) side effects", async () => {
+    const schemaRegistry = TEST_LOCAL_SCHEMA_REGISTRY;
+    await loaderInstance.clearCache(schemaRegistry);
+    assert.ok(rmSetSubjectsStub.calledOnce);
+    // calling with undefined will clear out just this single schema registry's subjects.
+    assert.ok(rmSetSubjectsStub.calledWithExactly(schemaRegistry, undefined));
+  });
+});
+
 describe("ResourceLoader::getTopicsForCluster()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
