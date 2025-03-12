@@ -1,5 +1,5 @@
 import assert from "assert";
-import { parseTestResult, getConnectionSpecFromFormData } from "./directConnect";
+import { parseTestResult, getConnectionSpecFromFormData, deepMerge } from "./directConnect";
 import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
 import { ConnectedState, Status } from "./clients/sidecar";
 
@@ -415,6 +415,63 @@ describe("directConnect.ts", () => {
       assert.strictEqual(result.message, "One or more connections failed.");
       assert.strictEqual(result.testResults.schemaErrorMessage, "Unable to reach server");
       assert.strictEqual(result.testResults.kafkaErrorMessage, "Invalid username");
+    });
+  });
+  describe("deepMerge", () => {
+    it("should merge two connection specs & include nested fields", () => {
+      const obj1 = {
+        name: "Connection1",
+        kafka_cluster: {
+          bootstrap_servers: "server1:9092",
+          ssl: {
+            enabled: true,
+            truststore: { path: "/path/to/trust" },
+          },
+        },
+        schema_registry: {
+          uri: "http://localhost:8081",
+        },
+      };
+      const obj2 = {
+        name: "Connection2",
+        kafka_cluster: {
+          bootstrap_servers: "server2:9092",
+          ssl: {
+            enabled: false,
+          },
+        },
+        schema_registry: {
+          credentials: {
+            username: "user",
+            password: "pass",
+          },
+        },
+      };
+      const expected = {
+        name: "Connection2",
+        kafka_cluster: {
+          bootstrap_servers: "server2:9092",
+          ssl: {
+            enabled: false,
+            truststore: { path: "/path/to/trust" },
+          },
+        },
+        schema_registry: {
+          uri: "http://localhost:8081",
+          credentials: {
+            username: "user",
+            password: "pass",
+          },
+        },
+      };
+      const result = deepMerge(obj1, obj2);
+      assert.deepStrictEqual(result, expected);
+    });
+    it("should handle empty objects", () => {
+      const obj1 = { name: "test", ssl: {} };
+      const obj2 = { ssl: { enabled: true } };
+      const result = deepMerge(obj1, obj2);
+      assert.deepStrictEqual(result, { name: "test", ssl: { enabled: true } });
     });
   });
 });
