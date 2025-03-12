@@ -14,6 +14,13 @@ All notable changes to this extension will be documented in this file.
 - Schema registry subjects are now cached, reducing round trips to a schema registry. Use the
 'reload' button in the Schemas view to force refresh.
 
+## 0.26.1
+
+### Added
+
+- Additional logging and telemetry for any issues with the sidecar process starting up to help
+  diagnose issues with the extension.
+
 ## 0.26.0
 
 ### Added
