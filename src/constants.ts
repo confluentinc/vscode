@@ -24,7 +24,6 @@ export enum IconNames {
   KAFKA_CLUSTER = "confluent-kafka-cluster",
   LOCAL_RESOURCE_GROUP = "device-desktop",
   SCHEMA_REGISTRY = "confluent-schema-registry",
-  SCHEMA = "primitive-square",
   KEY_SUBJECT = "key",
   VALUE_SUBJECT = "symbol-object",
   OTHER_SUBJECT = "question",
