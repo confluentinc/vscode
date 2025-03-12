@@ -384,13 +384,16 @@ export class SidecarManager {
           // try to create a file to track any stderr output from the sidecar process
           fs.writeFileSync(stderrPath, "");
           const stderrFd = fs.openSync(stderrPath, "w");
-
           const sidecarProcess = spawn(executablePath, [], {
             detached: true,
-            // ignore stdin/stdout, pipe stderr to the file
+            // ignore stdin/stdout, stderr to the file
             stdio: ["ignore", "ignore", stderrFd],
             env: sidecar_env,
           });
+          // close the file descriptor for stderr; child process will inherit it
+          // and write to it
+          fs.closeSync(stderrFd);
+
           logger.info(
             `${logPrefix}: started sidecar process with pid ${sidecarProcess.pid}, logging to ${sidecar_env["QUARKUS_LOG_FILE_PATH"]}`,
           );
@@ -405,7 +408,7 @@ export class SidecarManager {
             return;
           } else {
             // after a short delay, confirm that the sidecar process didn't immediately exit and/or
-            // pipe any stderr output to the file
+            // write any stderr to the file
             setTimeout(() => {
               try {
                 const isRunning: boolean = confirmSidecarProcessIsRunning(
@@ -758,6 +761,7 @@ export function appendSidecarLogToOutputChannel(line: string) {
 /**
  * Check if a process is running by sending a signal 0 to it. If the process is running, it will not
  * throw an error.
+ * @see https://man7.org/linux/man-pages/man2/kill.2.html#:~:text=%2Dpid.-,If%20sig%20is%200,-%2C%20then%20no%20signal
  *
  * @param pid The process ID to check.
  * @returns True if the process is running, false otherwise.
