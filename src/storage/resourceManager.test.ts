@@ -825,7 +825,11 @@ describe("ResourceManager SR subject methods", function () {
   }
 
   it("getSubjects() should return undefined if no cached subjects for this schema registry", async () => {
-    for (const sr of [TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY]) {
+    for (const sr of [
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_DIRECT_SCHEMA_REGISTRY,
+    ]) {
       const subjects = await resourceManager.getSubjects(sr);
       assert.deepStrictEqual(subjects, undefined);
     }
@@ -848,7 +852,11 @@ describe("ResourceManager SR subject methods", function () {
   });
 
   it("getSubjects() should return empty array of subjects if empty array is set", async () => {
-    for (const sr of [TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY]) {
+    for (const sr of [
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+      TEST_DIRECT_SCHEMA_REGISTRY,
+    ]) {
       await resourceManager.setSubjects(sr, []);
       const subjects = await resourceManager.getSubjects(sr);
       assert.deepStrictEqual(subjects, []);
