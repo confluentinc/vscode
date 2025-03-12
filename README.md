@@ -12,50 +12,55 @@ Confluent, and read the docs at the [Confluent documentation](https://docs.confl
 
 ## Features
 
-Confluent for VS Code provides a number of features for working with your Kafka clusters, topics and
-schemas.
+Confluent for VS Code provides a number of features for working with your Apache Kafka® compatible 
+clusters and Confluent Schema Registry compatible servers.
 
-### Command Palette
+The extension allows you to:
 
-Most of the Confluent extension features are available in the VS Code Command Palette. Press
-`Cmd+Shift+P`/`Ctrl+Shift+P` and type "confluent" to show the Confluent extension commands.
+- [Work with your Confluent Cloud resources](#work-with-your-confluent-cloud-resources)
+- [Generate streaming projects from Confluent-provided templates](#generate-streaming-projects-from-confluent-provided-templates)
+- [Accelerate local development against Apache Kafka® and Confluent Schema Registry using Docker](#accelerate-local-development-against-apache-kafka-and-confluent-schema-registry-using-docker)
+- [Inspect consumed messages in Kafka topics using Message Viewer](#inspect-consumed-messages-in-kafka-topics-using-message-viewer)
+- [Produce messages to Kafka topics](#produce-messages-to-kafka-topics)
+- [Explore, create and evolve schemas in Confluent Schema Registry](#explore-create-and-evolve-schemas-in-confluent-schema-registry)
+- [Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server](#connect-to-any-apache-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
 
-Some commands are associated with view actions, which are the simple buttons (usually icons) next to
-items in the Sidebar. For example, **play** (open Message Viewer and start consuming messages),
-**sync** (refresh), and **ellipsis** (extra actions) are all view actions associated with commands
-available in the command palette.
+<!-- TODO: generate table of contents here under Documentation -->
 
-### Sidebar
+## Documentation
 
-In the Sidebar, click the Confluent logo to open the extension and show the following sections.
+### Work with your Confluent Cloud resources
 
-#### Connect to your streams
+<!-- <gif showing clicking sign in to confluent cloud, entering credentials and then getting redirected back to vscode -->
+<!-- will resources populated, then clicking through an org -> env -> cluster (displays topics), then SR (displays schemsa)> -->
 
-Confluent for VS Code supports accessing your Apache Kafka® clusters locally or on Confluent Cloud.
+Log in to your Confluent Cloud account from Confluent for VS Code by clicking on sign in, and explore your Confluent Cloud
+resources from right within VS Code.
 
-- To start a local Kafka cluster,
-  [install the Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html) and run
-  the
-  [`confluent local kafka start` command](https://docs.confluent.io/confluent-cli/current/command-reference/local/kafka/confluent_local_kafka_start.html).
-- If you're working on Confluent Cloud, open the Confluent extension and click **Connect to
-  Confluent Cloud** or go to the VS Code Accounts menu and click "Sign in with Confluent Cloud to
-  use Confluent".
+> [!NOTE]
+> If you would like to connect to your Confluent Cloud Kafka cluster and/or Confluent Cloud Schema Registry cluster
+> using [API Key (user account or service account)](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/service-accounts/api-keys/overview.html#api-keys-and-ccloud-accounts), [Mutual TLS](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/overview.html), or [OAuth/OIDC](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html), then head to <anchor tag> for how to do that using the extension.
 
-  <img src="resources/walkthrough/connect.png" width="400px" />
+> [!IMPORTANT]
+> TODO: Note about if the Confluent Cloud cluster uses private networking and uses custom PEM files. Go to "Confluent -> Ssl: Pem Paths" and add it.
 
-#### Resources
+### Generate streaming projects from Confluent-provided templates
 
-![](resources/readme-resources-screenshot-light.png)
+<!-- <gif showing clicking button, clicking on a template, fill in values, opening the project, and running it> -->
 
-The **Resources** view lists Confluent Cloud environments and associated Kafka and Schema Registry
-clusters, as well as local Kafka clusters.
+<!-- Some words about this. -->
 
-- Click a Kafka cluster to load the topics created in that cluster in the Topics view.
-- Click a Schema Registry to load the associated schemas for that registry in the Schemas view.
+### Accelerate local development against Apache Kafka® and Confluent Schema Registry using Docker
 
-#### Topics
+<!-- <gif showing clicking the play button to start local resources> -->
 
-![](resources/readme-play-screenshot-light.png)
+<!-- Some words about this. -->
+
+<!-- Brief troubleshooting notes about Docker API version, lingering containers, etc. -->
+
+### Inspect consumed messages in Kafka topics using Message Viewer
+
+<!-- <gif showing messages streaming in, using histogram, clicking pause, scrolling down a bit clicking a message to open it> -->
 
 Click the **play** icon next to the topic name to open the **Message Viewer**, which enables
 searching and exploring messages in a topic. Within Message Viewer, you can:
@@ -69,22 +74,78 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
   timestamp
 - toggle partitions on/off to show/hide messages from specific partitions
 
-#### Schemas
+### Produce messages to Kafka topics
 
-![](resources/readme-schema-screenshot-light.png)
+<!-- <gif showing a file open with message headers, key and value, click produce, choose value schema and produce> -->
 
-##### View
+1. Prepare a JSON file containing message `headers` (optional), `key` and `value` as top-level fields.
+    <details><summary>Example of JSON file for producing message</summary>
+    ```json
+    {
+      "headers": [
+        {
+          "key": "task.generation",
+          "value": "350"
+        },
+        {
+          "key": "task.id",
+          "value": "0"
+        },
+        {
+          "key": "current.iteration",
+          "value": "39067914"
+        }
+      ],
+      "key": 39067914,
+      "value": {
+        "ordertime": 1492152554633,
+        "orderid": 39067914,
+        "itemid": "Item_5",
+        "orderunits": 7.508419592693289,
+        "address": {
+          "city": "City_84",
+          "state": "State_85",
+          "zipcode": 83204
+        }
+      }
+    }
+    ```
+    </details>
+1. Click the produce icon next to the topic name to open the Produce Message quickpick flow.
+1. You will be prompted to choose a JSON file containing message `headers`, `key` and `value`.
+1. Next, you will be prompted to choose whether to produce the message with/without a key/value schema. 
+   Click OK to produce the message.
+1. You will be notified of whether the produce was successful or not. If successful, you can head to
+   the Message Viewer (click the magnifying glass icon against the topic) to 
+   inspect the message you just produced.
 
-The **Schemas** view displays all the schemas available for the current Confluent Cloud
-environment's Schema Registry. Schemas are also shown in the **Topics** view by expanding a topic
-item if they match using either `TopicNameStrategy` or `TopicRecordNameStrategy`
-[schema naming strategies](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview)
-and the user has the appropriate permissions.
+#### Producing messages to topics using `TopicRecordNameStrategy` or `RecordNameStrategy`
 
-Schema definitions can be viewed by expanding the schema subject to see a specific schema version,
-then clicking the **View Schema** icon.
+<!-- <gif showing this> -->
 
-##### Create / Evolve
+If the Kafka topic you wish to produce a message to does not use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview), open the extension settings, look for "Confluent -> Topic -> Produce Messages -> Schemas: Use Topic Name Strategy" and disable this setting.
+
+With it disabled, you will be prompted to select the Subject Name Strategy and the subject name while producing a message.
+
+#### Producing messages to topics using a schema version earlier than latest
+
+<!-- <gif showing this> -->
+
+If you wish to produce a message using a schema version earlier than the latest, open the extension settings and look for "Confluent -> Topic -> Produce Messages -> Schemas: Allow Older Versions" and enable it.
+
+### Explore, create and evolve schemas in Confluent Schema Registry
+
+#### Explore schemas
+
+The **Schemas** view displays all the schemas available for the current Schema Registry cluster selected. 
+Schemas are also shown in the **Topics** view by expanding a topic item if the subject name follows
+either `TopicNameStrategy` or `TopicRecordNameStrategy` [schema naming strategies](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview) and the user has the appropriate permissions.
+
+Schema definitions can be viewed by expanding the schema subject to list all schema versions,
+then clicking the on the specific schema version. You can also easily "View Latest Schema" by 
+clicking the code file icon next to the subject.
+
+#### Create/evolve schemas
 
 You can create new schemas or update schemas and subject-bindings by creating or opening an `.avsc`,
 `.proto`, or `.json` file, then using the **Cloud Upload** icon in the upper-right of the buffer
@@ -94,6 +155,94 @@ version.
 
 Search the marketplace for extensions to validate your Avro, JSON schema, or Protobuf syntax as
 needed.
+
+### Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server
+
+Confluent for VS Code supports connecting to any Apache Kafka® compatible cluster and any Confluent
+Schema Registry compatible server. 
+
+Get started by clicking the "+" icon in the Resources view, and select "Enter manually" in the dropdown.
+This opens a new tab containing a Connection form, configure your connection using the fields present.
+
+You may test the connection by clicking the **Test** button at the bottom of the form. If VS Code failed
+to connect, an appropriate error message will be displayed. If the test succeeds, click the **Save**
+button to save the connection as a resource in the Resources view. (Note: You may **Save** the connection details regardless of using the **Test** functionality.)
+
+
+Let's go over some of the form fields:
+
+#### General
+
+| Form field | Description |
+| ----- | ----- |
+| Connection Name |  An easy to remember name to reference this connection in the Resources view |
+| Connection Type | Choose from Apache Kafka®, Confluent Cloud, Confluent Platform, Warpstream, and Other. <br><br> This is used to narrow down the various fields available under [Kafka cluster](#kafka-cluster) and [Schema Registry](#schema-registry). |
+
+#### Kafka Cluster
+
+| Form field | Description |
+| ----- | ----- |
+| Bootstrap Server(s) |  One or more host:port pairs to use for establishing the initial connection (use a comma-separated list for more than one server). |
+| [Authentication Type](#authenticating-to-a-kafka-cluster) | Choose from: <ul><li>Username & Password (SASL/PLAIN)</li><li>API Credentials (SASL/PLAIN)</li><li>SASL/SCRAM</li><li>SASL/OAUTHBEARER</li></ul>|
+| SSL/TLS enabled checkbox | Use SSL/TLS encryption communication for data in transit between VS Code and the Kafka brokers. |
+| [TLS Configuration](#tls-configuration) |  Additional TLS configuration, you may expand the TLS Configuration section and fill out Key Store and Trust Store details. |
+
+#### Schema Registry
+
+| Form field | Description |
+| ----- | ----- |
+| URI |  TODO |
+| [Authentication Type](#authenticating-to-schema-registry) | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>. |
+| SSL/TLS enabled checkbox | Use SSL/TLS encryption communication for data in transit between VS Code and the Kafka brokers. |
+| [TLS Configuration](#tls-configuration) |  Additional TLS configuration, you may expand the TLS Configuration section and fill out Key Store and Trust Store details. |
+
+#### TLS Configuration
+
+| Form field | Description |
+| ----- | ----- |
+| Verify Server Hostname | Enable verification of the broker host name matching the Distinguished Name (DN) in the broker's certificate. |
+| [Key Store Configuration](#key-store-configuration) | Certificate used by Kafka brokers to authenticate the client. This is used to configure mutual TLS (mTLS) authentication. |
+| [Trust Store Configuration](#trust-store-configuration) | Certificates for verifying SSL/TLS connections to the Kafka brokers. This is required if the Kafka brokers use a self-signed or a non-public Certificate Authority (CA). |
+
+#### Key Store Configuration
+
+Certificate used by Kafka brokers to authenticate the client. This is used to configure mutual TLS (mTLS) authentication.
+
+| Form field | Description |
+| ----- | ----- |
+| Path | The path of the Key Store file. |
+| Password | The store password for the Key Store file. Key Store password is not supported for PEM format. |
+| Key Password | The password of the private key in the Key Store file. |
+| Type | The file format of the Key Store file. Choose from PEM, PKCS12 and JKS. |
+
+> [!TIP]
+> Follow these steps to [configure mTLS authentication on Confluent Cloud](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/configure.html#steps-to-configure-mtls-authentication-on-ccloud?utm_source=vscode-ext)
+
+#### Trust Store Configuration
+
+Certificates for verifying SSL/TLS connections to the Kafka brokers. This is required if the Kafka brokers use a self-signed or a non-public Certificate Authority (CA).
+
+| Form field | Description |
+| ----- | ----- |
+| Path | The path of the Trust Store file. |
+| Password | The password for the Trust Store file. If a password is not set, the configured Trust Store file will still be used, but integrity checking of the Trust Store file is disabled. Trust Store password is not supported for PEM format. |
+| Key Password | The password of the private key in the Key Store file. |
+| Type | TThe file format of the Trust Store file. Choose from PEM, PKCS12 and JKS. |
+
+> [!NOTE]
+> Confluent Cloud employs TLS certificates from Let’s Encrypt, a trusted Certificate Authority (CA). For more information, see [Manage TLS Certificates](https://docs.confluent.io/cloud/current/cp-component/clients-cloud-config.html#manage-tls-certificates). Confluent Cloud does **not** support self-managed certificates for TLS encryption.
+
+#### Authenticating to a Kafka Cluster
+
+<!-- TODO: Details of SASL/PLAIN, SASL/SCRAM, SASL/OAUTHBEARER and their field descriptions. Especially needed for SCRAM and OAUTHBEARER. -->
+
+#### Authenticating to Schema Registry
+
+<!-- TODO: Details of Basic Auth, API Auth and OAuth. Especially needed for OAuth. -->
+
+#### Exporting connection details
+
+You can export the connection details to a local file by clicking the socket-download icon next to the connection. However, note that the file may contain sensitive information like API keys, secrets, and local file paths. **Use caution when saving and sharing connection files.**
 
 #### Support
 
@@ -133,9 +282,6 @@ Confluent provides these VSIX files:
 - Linux on ARM-64 processors: `vscode-confluent-linux-arm64-x.x.x.vsix`
 - Linux on x64 processors: `vscode-confluent-linux-x64-x.x.x.vsix`
 - Windows on x64 processors: `vscode-confluent-windows-x64-x.x.x.vsix`
-
-Additionally, for Windows ARM-64, you may use Windows Subsystem for Linux
-[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with the Linux ARM-64 .vsix file.
 
 You can install the Confluent extension by using the VS Code UI or by using the
 `code --install-extension` command in the terminal.
