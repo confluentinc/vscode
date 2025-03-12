@@ -465,7 +465,7 @@ export class ResourceManager {
 
     const subjectStringsByRegistryID: SubjectStringCache = subjectsByRegistryIDString
       ? stringToMap(subjectsByRegistryIDString)
-      : new Map<string, object[]>();
+      : new Map<string, string[] | undefined>();
 
     // Will either be undefined or an array of plain strings since
     // just deserialized from storage.
