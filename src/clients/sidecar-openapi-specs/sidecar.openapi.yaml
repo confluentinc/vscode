@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.170.0
+  version: 0.173.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -16,6 +16,30 @@ tags:
 - name: Feature Flags
   description: Feature flags
 paths:
+  /:
+    get:
+      tags:
+      - Password Reset Callback Resource
+      parameters:
+      - name: email
+        in: query
+        schema:
+          type: string
+      - name: message
+        in: query
+        schema:
+          type: string
+      - name: success
+        in: query
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            text/html:
+              schema:
+                type: string
   /api/login/realm:
     get:
       tags:
@@ -1446,15 +1470,15 @@ components:
     HealthResponse:
       type: object
       properties:
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthCheck"
         status:
           enum:
           - UP
           - DOWN
           type: string
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/HealthCheck"
     HealthCheck:
       type: object
       properties:
@@ -1463,8 +1487,8 @@ components:
           - UP
           - DOWN
           type: string
+        name:
+          type: string
         data:
           type: object
           nullable: true
-        name:
-          type: string
