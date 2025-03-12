@@ -466,13 +466,13 @@ export class ResourceManager {
 
   /**
    * Delete all local schema registry subjects.
+   *
+   * Currently not called, but should probably be. Likewise for any direct connection assets.
+   * @see {@link deleteCCloudResources}, probably need equivalents for both.
    */
   async deleteLocalSubjects(): Promise<void> {
-    // XXX Shoup where should this be wired up to?
     return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_SR_SUBJECTS);
   }
-
-  // XXX shoup any equivalent for direct connection clearing?
 
   /**
    * Determine what workspace storage key should be used for subject storage for this schema registry

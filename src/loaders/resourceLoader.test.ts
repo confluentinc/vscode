@@ -73,54 +73,58 @@ describe("ResourceLoader::getSubjects()", () => {
     );
   });
 
-  it("Returns subjects when called with right schema registry or env id: resource manager deep fetch", async () => {
-    const fetchSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
-    fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
-    rmGetSubjectsStub.resolves(undefined);
+  // test both nonemtpy and empty array return values from fetchSubjects() stub to ensure both paths
+  // get cached and returned properly.
+  for (const fetchSubjectsStubReturns of [[TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT], []]) {
+    it(`Returns subjects when called with right schema registry or env id: resource manager deep fetch / length ${fetchSubjectsStubReturns.length}`, async () => {
+      fetchSubjectsStub.resolves(fetchSubjectsStubReturns);
+      rmGetSubjectsStub.resolves(undefined);
 
-    for (const inputParam of [
-      TEST_LOCAL_SCHEMA_REGISTRY,
-      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
-    ]) {
-      const subjects = await loaderInstance.getSubjects(inputParam);
+      for (const inputParam of [
+        TEST_LOCAL_SCHEMA_REGISTRY,
+        TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+      ]) {
+        const subjects = await loaderInstance.getSubjects(inputParam);
 
-      assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
-      // will have asked for the subjects from the resource manager, but none returned, so deep fetched.
-      assert.ok(rmGetSubjectsStub.calledOnce);
-      /// will have stored the deep fetched subjects in the resource manager.
-      assert.ok(
-        rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
-      );
+        assert.deepStrictEqual(subjects, fetchSubjectsStubReturns);
+        // will have asked for the subjects from the resource manager, but none returned, so deep fetched.
+        assert.ok(rmGetSubjectsStub.calledOnce);
+        /// will have stored the deep fetched subjects in the resource manager.
+        assert.ok(
+          rmSetSubjectsStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY, fetchSubjectsStubReturns),
+        );
 
-      // reset the resource manager stubs for next iteration.
-      rmGetSubjectsStub.resetHistory();
-      rmSetSubjectsStub.resetHistory();
-    }
-  });
+        // reset the resource manager stubs for next iteration.
+        rmGetSubjectsStub.resetHistory();
+        rmSetSubjectsStub.resetHistory();
+      }
+    });
+  }
 
-  it("Returns subjects when called with right schema registry or env id: resource manager cache hit", async () => {
-    const rmGetSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
-    rmGetSubjectsStub.resolves(rmGetSubjectsStubReturns);
+  for (const rmGetSubjectsStubReturns of [[TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT], []]) {
+    it(`Returns subjects when called with right schema registry or env id: resource manager cache hit / length ${rmGetSubjectsStubReturns.length}`, async () => {
+      rmGetSubjectsStub.resolves(rmGetSubjectsStubReturns);
 
-    for (const inputParam of [
-      TEST_LOCAL_SCHEMA_REGISTRY,
-      TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
-    ]) {
-      const subjects = await loaderInstance.getSubjects(inputParam);
+      for (const inputParam of [
+        TEST_LOCAL_SCHEMA_REGISTRY,
+        TEST_LOCAL_SCHEMA_REGISTRY.environmentId,
+      ]) {
+        const subjects = await loaderInstance.getSubjects(inputParam);
 
-      assert.deepStrictEqual(subjects, rmGetSubjectsStubReturns);
+        assert.deepStrictEqual(subjects, rmGetSubjectsStubReturns);
 
-      // will have asked for the subjects from the resource manager, and found them.
-      assert.ok(rmGetSubjectsStub.calledOnce);
-      // Not deep fetched 'cause of resource manager cache hit.
-      assert.ok(fetchSubjectsStub.notCalled);
-      // will not call setSubjects() because of cache hit.
-      assert.ok(rmSetSubjectsStub.notCalled);
+        // will have asked for the subjects from the resource manager, and found them.
+        assert.ok(rmGetSubjectsStub.calledOnce);
+        // Not deep fetched 'cause of resource manager cache hit.
+        assert.ok(fetchSubjectsStub.notCalled);
+        // will not call setSubjects() because of cache hit.
+        assert.ok(rmSetSubjectsStub.notCalled);
 
-      // reset the resource manager stub for next iteration.
-      rmGetSubjectsStub.resetHistory();
-    }
-  });
+        // reset the resource manager stub for next iteration.
+        rmGetSubjectsStub.resetHistory();
+      }
+    });
+  }
 
   it("Performs deep fetch when forceRefresh=true", async () => {
     const fetchSubjectsStubReturns = [TEST_CCLOUD_SUBJECT, TEST_CCLOUD_KEY_SUBJECT];
