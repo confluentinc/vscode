@@ -1,4 +1,5 @@
 import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { ResourceLoader } from "../loaders";
@@ -63,7 +64,7 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     let login: string = "";
     let local: string = "";
     if (!getContextValue(ContextValues.ccloudConnectionAvailable)) {
-      login = "Sign in to Confluent Cloud";
+      login = CCLOUD_SIGN_IN_BUTTON_LABEL;
     }
     if (!getContextValue(ContextValues.localKafkaClusterAvailable)) {
       local = "Start Local Resources";
