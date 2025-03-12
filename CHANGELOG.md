@@ -11,8 +11,13 @@ All notable changes to this extension will be documented in this file.
 
 ### Changed
 
+- Any "direct" connections with a failing configuration will now show a red "warning" icon (⚠️)
+  instead of the red "error" icon.
+
+### Changed
+
 - Schema registry subjects are now cached, reducing round trips to a schema registry. Use the
-'reload' button in the Schemas view to force refresh.
+  'reload' button in the Schemas view to force refresh.
 
 ## 0.26.1
 
