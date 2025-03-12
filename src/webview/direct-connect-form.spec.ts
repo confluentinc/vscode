@@ -1,16 +1,17 @@
-import { test } from "rollwright";
 import { expect } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import esbuild from "rollup-plugin-esbuild";
-import virtual from "@rollup/plugin-virtual";
 import alias from "@rollup/plugin-alias";
-import { SinonStub } from "sinon";
-import sanitize from "sanitize-html";
+import virtual from "@rollup/plugin-virtual";
 import { createFilter } from "@rollup/pluginutils";
+import { readFileSync } from "node:fs";
 import { Plugin } from "rollup";
+import esbuild from "rollup-plugin-esbuild";
+import { test } from "rollwright";
+import sanitize from "sanitize-html";
+import { SinonStub } from "sinon";
 import {
   ConnectionSpec,
   ConnectionType,
+  HashAlgorithm,
   OAuthCredentials,
   ScramCredentials,
   KerberosCredentials,
@@ -1006,7 +1007,7 @@ const MINIMAL_KAFKA_SAMPLE = {
   },
 };
 const SCRAM: ScramCredentials = {
-  hash_algorithm: "SCRAM_SHA_512",
+  hash_algorithm: HashAlgorithm._256,
   scram_username: "user",
   scram_password: "password",
 };

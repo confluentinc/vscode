@@ -6,6 +6,7 @@ import {
   ContainerApi,
   ContainerStateStatusEnum,
   EventMessage,
+  EventMessageTypeEnum,
   SystemApi,
 } from "../clients/docker";
 import * as contextValues from "../context/values";
@@ -17,7 +18,7 @@ import { EventListener, SystemEventMessage } from "./eventListener";
 
 const TEST_CONTAINER_EVENT: SystemEventMessage = {
   id: "test-id",
-  Type: "container",
+  Type: EventMessageTypeEnum.Container,
   Actor: { Attributes: { image: DEFAULT_KAFKA_IMAGE_REPO } },
 };
 
@@ -402,7 +403,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
 
     const imageEvent: SystemEventMessage = {
       ...TEST_CONTAINER_EVENT,
-      Type: "image",
+      Type: EventMessageTypeEnum.Image,
     };
     await eventListener.handleEvent(imageEvent);
 
@@ -583,7 +584,7 @@ describe("docker/eventListener.ts EventListener methods", function () {
   });
 
   it("matchContainerStatus() should return true if the container status is matched", async function () {
-    const containerStateStatus: ContainerStateStatusEnum = "running";
+    const containerStateStatus: ContainerStateStatusEnum = ContainerStateStatusEnum.Running;
 
     const containerInspectStub = sandbox.stub(ContainerApi.prototype, "containerInspect").resolves({
       State: { Status: containerStateStatus },
@@ -600,14 +601,17 @@ describe("docker/eventListener.ts EventListener methods", function () {
   });
 
   it("matchContainerStatus() should return false if the container status is not matched", async function () {
-    const containerStateStatus: ContainerStateStatusEnum = "created";
+    const containerStateStatus: ContainerStateStatusEnum = ContainerStateStatusEnum.Created;
 
     const containerInspectStub = sandbox.stub(ContainerApi.prototype, "containerInspect").resolves({
       State: { Status: containerStateStatus },
     });
 
     const containerId = TEST_CONTAINER_EVENT.id!;
-    const result: boolean = await eventListener.matchContainerStatus(containerId, "running");
+    const result: boolean = await eventListener.matchContainerStatus(
+      containerId,
+      ContainerStateStatusEnum.Running,
+    );
 
     assert.strictEqual(result, false);
     assert.ok(containerInspectStub.calledOnceWith({ id: containerId }));
