@@ -17,6 +17,8 @@ import { getStorageManager, StorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
+import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
+import { AuthCallbackEvent } from "./types";
 
 const TEST_CCLOUD_AUTH_SESSION: vscode.AuthenticationSession = {
   id: TEST_CCLOUD_CONNECTION.id!,
@@ -43,6 +45,10 @@ describe("ConfluentCloudAuthProvider", () => {
     vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
   >;
 
+  // vscode stubs
+  let showErrorMessageStub: sinon.SinonStub;
+  let showInfoMessageStub: sinon.SinonStub;
+
   before(async () => {
     await getTestExtensionContext();
 
@@ -66,6 +72,9 @@ describe("ConfluentCloudAuthProvider", () => {
     browserAuthFlowStub = sandbox.stub(authProvider, "browserAuthFlow").resolves();
     stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
     authProvider["_onDidChangeSessions"] = stubOnDidChangeSessions;
+
+    showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage").resolves();
+    showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
   });
 
   afterEach(() => {
@@ -80,7 +89,7 @@ describe("ConfluentCloudAuthProvider", () => {
     createCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     getCCloudConnectionStub.onSecondCall().resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication completes successfully
-    browserAuthFlowStub.resolves(true);
+    browserAuthFlowStub.resolves({ success: true, resetPassword: false });
 
     await authProvider.createSession();
 
@@ -91,7 +100,7 @@ describe("ConfluentCloudAuthProvider", () => {
   it("createSession() should reuse an existing CCloud connection", async () => {
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication completes successfully
-    browserAuthFlowStub.resolves(true);
+    browserAuthFlowStub.resolves({ success: true, resetPassword: false });
 
     await authProvider.createSession();
 
@@ -103,7 +112,7 @@ describe("ConfluentCloudAuthProvider", () => {
     const setSecretStub = sandbox.stub(getStorageManager(), "setSecret").resolves();
     getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
     // authentication completes successfully
-    browserAuthFlowStub.resolves(true);
+    browserAuthFlowStub.resolves({ success: true, resetPassword: false });
 
     await authProvider.createSession();
 
@@ -112,6 +121,49 @@ describe("ConfluentCloudAuthProvider", () => {
       SecretStorageKeys.CCLOUD_AUTH_STATUS,
       TEST_AUTHENTICATED_CCLOUD_CONNECTION.status.authentication.status,
     );
+  });
+
+  it("createSession() should handle authentication failure", async () => {
+    getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // authentication fails
+    browserAuthFlowStub.resolves({ success: false, resetPassword: false });
+
+    const authFailedMsg = "Confluent Cloud authentication failed. See browser for details.";
+    await assert.rejects(authProvider.createSession(), {
+      message: authFailedMsg,
+    });
+
+    sinon.assert.calledWith(showErrorMessageStub, authFailedMsg);
+  });
+
+  it("createSession() should handle password reset scenario", async () => {
+    getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // password reset occurred
+    browserAuthFlowStub.resolves({ success: false, resetPassword: true });
+
+    await assert.rejects(authProvider.createSession(), {
+      message: "User reset their password.",
+    });
+
+    sinon.assert.calledWith(
+      showInfoMessageStub,
+      "Your password has been reset. Please sign in again to Confluent Cloud.",
+      sinon.match(CCLOUD_SIGN_IN_BUTTON_LABEL),
+    );
+  });
+
+  it("createSession() should handle user cancellation", async () => {
+    getCCloudConnectionStub.resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+    // user cancels the operation
+    browserAuthFlowStub.resolves(undefined);
+
+    await assert.rejects(authProvider.createSession(), {
+      message: "User cancelled the authentication flow.",
+    });
+
+    sinon.assert.notCalled(deleteConnectionStub);
+    sinon.assert.notCalled(showInfoMessageStub);
+    sinon.assert.notCalled(showErrorMessageStub);
   });
 
   it("getSessions() should treat connections with a NO_TOKEN/FAILED auth status as nonexistent", async () => {
@@ -204,6 +256,7 @@ describe("ConfluentCloudAuthProvider", () => {
     assert.strictEqual(authProvider["_session"], null);
     assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_SESSION_EXISTS));
     assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_COMPLETED));
+    assert.ok(deleteSecretStub.calledWith(SecretStorageKeys.AUTH_PASSWORD_RESET));
     assert.ok(stubOnDidChangeSessions.fire.called);
     assert.ok(
       stubOnDidChangeSessions.fire.calledWith({
@@ -244,13 +297,13 @@ describe("ConfluentCloudAuthProvider", () => {
 
   for (const success of [true, false] as const) {
     it(`should return '${success}' from waitForUriHandling when the URI query contains 'success=${success}'`, async () => {
-      const promise: Promise<boolean> = authProvider.waitForUriHandling();
+      const promise: Promise<AuthCallbackEvent> = authProvider.waitForUriHandling();
 
       const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: `success=${success}` });
       uriHandler.handleUri(uri);
 
-      const result: boolean = await promise;
-      assert.strictEqual(result, success);
+      const result: AuthCallbackEvent = await promise;
+      assert.strictEqual(result.success, success);
     });
   }
 });
