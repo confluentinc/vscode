@@ -25,6 +25,8 @@ The extension allows you to:
 - [Explore, create and evolve schemas in Confluent Schema Registry](#explore-create-and-evolve-schemas-in-confluent-schema-registry)
 - [Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server](#connect-to-any-apache-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
 
+<!-- TODO: generate table of contents here under Documentation -->
+
 ## Documentation
 
 ### Work with your Confluent Cloud resources
@@ -117,7 +119,7 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
    the Message Viewer (click the magnifying glass icon against the topic) to 
    inspect the message you just produced.
 
-#### Producing messages to topics using TopicRecordNameStrategy or RecordNameStrategy
+#### Producing messages to topics using `TopicRecordNameStrategy` or `RecordNameStrategy`
 
 <!-- <gif showing this> -->
 
@@ -125,7 +127,7 @@ If the Kafka topic you wish to produce a message to does not use [TopicNameStrat
 
 With it disabled, you will be prompted to select the Subject Name Strategy and the subject name while producing a message.
 
-#### Producing messages to topics using a schema version earlier than the latest
+#### Producing messages to topics using a schema version earlier than latest
 
 <!-- <gif showing this> -->
 
@@ -166,8 +168,6 @@ You may test the connection by clicking the **Test** button at the bottom of the
 to connect, an appropriate error message will be displayed. If the test succeeds, click the **Save**
 button to save the connection as a resource in the Resources view. (Note: You may **Save** the connection details regardless of using the **Test** functionality.)
 
-> [!TIP]
-> You can export the connection details to a local file by clicking the socket-download icon next to the connection. However, note that the file may contain sensitive information like API keys, secrets, and local file paths. **Use caution when saving and sharing connection files.**
 
 Let's go over some of the form fields:
 
@@ -183,7 +183,7 @@ Let's go over some of the form fields:
 | Form field | Description |
 | ----- | ----- |
 | Bootstrap Server(s) |  One or more host:port pairs to use for establishing the initial connection (use a comma-separated list for more than one server). |
-| Authentication Type | Choose from: <ul><li>Username & Password (SASL/PLAIN)</li><li>API Credentials (SASL/PLAIN)</li><li>SASL/SCRAM</li><li>SASL/OAUTHBEARER</li></ul>|
+| [Authentication Type](#authenticating-to-a-kafka-cluster) | Choose from: <ul><li>Username & Password (SASL/PLAIN)</li><li>API Credentials (SASL/PLAIN)</li><li>SASL/SCRAM</li><li>SASL/OAUTHBEARER</li></ul>|
 | SSL/TLS enabled checkbox | Use SSL/TLS encryption communication for data in transit between VS Code and the Kafka brokers. |
 | [TLS Configuration](#tls-configuration) |  Additional TLS configuration, you may expand the TLS Configuration section and fill out Key Store and Trust Store details. |
 
@@ -191,8 +191,8 @@ Let's go over some of the form fields:
 
 | Form field | Description |
 | ----- | ----- |
-| Bootstrap Server(s) |  One or more host:port pairs to use for establishing the initial connection (use a comma-separated list for more than one server). |
-| Authentication Type | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>. |
+| URI |  TODO |
+| [Authentication Type](#authenticating-to-schema-registry) | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>. |
 | SSL/TLS enabled checkbox | Use SSL/TLS encryption communication for data in transit between VS Code and the Kafka brokers. |
 | [TLS Configuration](#tls-configuration) |  Additional TLS configuration, you may expand the TLS Configuration section and fill out Key Store and Trust Store details. |
 
@@ -232,8 +232,17 @@ Certificates for verifying SSL/TLS connections to the Kafka brokers. This is req
 > [!NOTE]
 > Confluent Cloud employs TLS certificates from Let’s Encrypt, a trusted Certificate Authority (CA). For more information, see [Manage TLS Certificates](https://docs.confluent.io/cloud/current/cp-component/clients-cloud-config.html#manage-tls-certificates). Confluent Cloud does **not** support self-managed certificates for TLS encryption.
 
-#### Authentication Types:
+#### Authenticating to a Kafka Cluster
 
+<!-- TODO: Details of SASL/PLAIN, SASL/SCRAM, SASL/OAUTHBEARER and their field descriptions. Especially needed for SCRAM and OAUTHBEARER. -->
+
+#### Authenticating to Schema Registry
+
+<!-- TODO: Details of Basic Auth, API Auth and OAuth. Especially needed for OAuth. -->
+
+#### Exporting connection details
+
+You can export the connection details to a local file by clicking the socket-download icon next to the connection. However, note that the file may contain sensitive information like API keys, secrets, and local file paths. **Use caution when saving and sharing connection files.**
 
 #### Support
 
