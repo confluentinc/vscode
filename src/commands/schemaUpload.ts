@@ -563,7 +563,7 @@ async function updateRegistryCacheAndFindNewSchema(
   const subjectSchemas = await loader.getSchemasForSubject(registry, boundSubject, true);
 
   // Find the schema in the list of schemas for this registry. We know that
-  // it should be present in the cache because we have just refreshed the cache.
+  // it should be present in the cache because we have just refreshed the cache (if any).
   const schema = subjectSchemas.find((s) => s.id === `${newSchemaID}`);
 
   if (!schema) {
@@ -582,13 +582,18 @@ async function updateRegistryCacheAndFindNewSchema(
     // will be visible.
     if (subjectSchemas.length === 1) {
       logger.debug("Refreshing whole schema view to load new subject");
-      // erring on deep refresh for time being.
+      // erring on deep refresh for time being. Will clear both the view and resource loader/manager subject caches.
       schemaViewProvider.refresh(true);
     } else {
       // Otherwise, just refresh this single subject.
       logger.debug(`Refreshing just subject ${boundSubject}`);
       await schemaViewProvider.updateSubjectSchemas(boundSubject, subjectSchemas);
     }
+  } else if (schemaViewProvider.schemaRegistry?.id !== registry.id) {
+    // If the schema registry view is not focused on this registry, just refresh the
+    // resource loader cache.
+    logger.debug(`Clearing resource loader schema cache for registry ${registry.id}`);
+    await loader.clearCache(registry);
   }
 
   return schema;
