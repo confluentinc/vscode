@@ -2,16 +2,13 @@ import { ObservableScope } from "inertial";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import {
-  ConnectedState,
-  instanceOfApiKeyAndSecret,
-  instanceOfBasicCredentials,
-  instanceOfScramCredentials,
-} from "../clients/sidecar";
+import { ConnectedState } from "../clients/sidecar";
 import { CustomConnectionSpec } from "../storage/resourceManager";
 import { SslConfig } from "./ssl-config-inputs";
+import { AuthCredentials } from "./auth-credentials";
 // Register the custom element
 customElements.define("ssl-config", SslConfig);
+customElements.define("auth-credentials", AuthCredentials);
 /** Instantiate the Inertial scope, document root,
  * and a "view model", an intermediary between the view (UI: .html) and the model (data: directConnect.ts) */
 addEventListener("DOMContentLoaded", () => {
@@ -28,6 +25,9 @@ class DirectConnectFormViewModel extends ViewModel {
     return fromHost;
   }, null);
 
+  getAuthTypes = this.resolve(async () => {
+    return await post("GetAuthTypes", {});
+  }, null);
   /** Form Input Values */
   platformType = this.derive<FormConnectionType>(() => {
     return this.spec()?.formConnectionType || "Apache Kafka";
@@ -48,36 +48,15 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.kafka_cluster?.credentials;
   });
   kafkaAuthType = this.derive(() => {
-    if (this.platformType() === "Confluent Cloud")
-      return "API"; // CCloud only supports API
-    else return this.getCredentialsType(this.kafkaCreds());
+    return this.getAuthTypes()?.kafka ?? "None";
   });
-  kafkaUsername = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.kafkaCreds()?.username || "";
-  });
-  kafkaApiKey = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.kafkaCreds()?.api_key || "";
-  });
-  kafkaScramUsername = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.kafkaCreds()?.scram_username ?? null;
-  });
-  kafkaSecret = this.derive(() => {
-    // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
-    return this.kafkaCreds() ? "fakeplaceholdersecrethere" : "";
-  });
+
   kafkaSslEnabled = this.derive(() => {
     if (this.spec()?.kafka_cluster?.ssl?.enabled === false) return false;
     else return true;
   });
   kafkaSslConfig = this.derive(() => {
     return this.spec()?.kafka_cluster?.ssl || {};
-  });
-  kafkaHash = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.kafkaCreds()?.hash_algorithm ?? "SCRAM_SHA_256";
   });
 
   /** Schema Registry */
@@ -88,21 +67,7 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.spec()?.schema_registry?.credentials;
   });
   schemaAuthType = this.derive(() => {
-    if (this.platformType() === "Confluent Cloud")
-      return "API"; // CCloud only supports API
-    else return this.getCredentialsType(this.schemaCreds());
-  });
-  schemaUsername = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.schemaCreds()?.username || "";
-  });
-  schemaApiKey = this.derive(() => {
-    // @ts-expect-error the types don't know which credentials are present
-    return this.schemaCreds()?.api_key || "";
-  });
-  schemaSecret = this.derive(() => {
-    // if credentials are there it means there is a secret. We handle the secrets in directConnect.ts
-    return this.schemaCreds() ? "fakeplaceholdersecrethere" : "";
+    return this.getAuthTypes()?.schema || "None";
   });
   schemaSslEnabled = this.derive(() => {
     if (this.spec()?.schema_registry?.ssl?.enabled === false) return false;
@@ -151,13 +116,6 @@ class DirectConnectFormViewModel extends ViewModel {
     );
   });
 
-  getCredentialsType(creds: any) {
-    if (!creds || typeof creds !== "object") return "None";
-    if (instanceOfBasicCredentials(creds)) return "Basic";
-    if (instanceOfApiKeyAndSecret(creds)) return "API";
-    if (instanceOfScramCredentials(creds)) return "SCRAM";
-    return "None";
-  }
   resetTestResults() {
     this.kafkaState(undefined);
     this.kafkaErrorMessage(undefined);
@@ -178,25 +136,26 @@ class DirectConnectFormViewModel extends ViewModel {
     // auth_type doesn't exist in spec; used to determine which credentials to include
     if (input.name !== "kafka_cluster.auth_type" && input.name !== "schema_registry.auth_type") {
       await post("UpdateSpecValue", { inputName: input.name, inputValue: value });
+    } else {
+      await post("SaveFormAuthType", {
+        inputName: input.name,
+        inputValue: value as SupportedAuthTypes,
+      });
     }
     // The switch statement performs local side effects for certain inputs
     switch (input.name) {
       case "formconnectiontype":
         this.platformType(input.value as FormConnectionType);
         if (input.value === "Confluent Cloud") {
-          this.kafkaAuthType("API");
-          this.schemaAuthType("API");
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
         }
         break;
       case "kafka_cluster.auth_type":
         this.kafkaAuthType(input.value as SupportedAuthTypes);
-        this.clearKafkaCreds();
         break;
       case "schema_registry.auth_type":
         this.schemaAuthType(input.value as SupportedAuthTypes);
-        this.clearSchemaCreds();
         break;
       case "kafka_cluster.ssl.enabled":
         this.kafkaSslEnabled(input.checked);
@@ -207,18 +166,6 @@ class DirectConnectFormViewModel extends ViewModel {
       default:
         console.info(`No side effects for input update: ${input.name}`);
     }
-  }
-
-  clearKafkaCreds() {
-    this.kafkaUsername("");
-    this.kafkaApiKey("");
-    this.kafkaSecret("");
-  }
-
-  clearSchemaCreds() {
-    this.schemaUsername("");
-    this.schemaApiKey("");
-    this.schemaSecret("");
   }
 
   /** Submit all form data to the extension host */
@@ -238,10 +185,15 @@ class DirectConnectFormViewModel extends ViewModel {
       this.loading(false);
       return;
     }
+    // Check form validity before proceeding
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      this.message("Please fill in all required fields correctly");
+      this.loading(false);
+      return;
+    }
     if (data["formconnectiontype"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
-      data["kafka_cluster.auth_type"] = "API";
-      data["schema_registry.auth_type"] = "API";
       data["kafka_cluster.ssl.enabled"] = "true";
       data["schema_registry.ssl.enabled"] = "true";
     }
@@ -286,7 +238,15 @@ export function post(
   type: "UpdateSpecValue",
   body: { inputName: string; inputValue: string | boolean },
 ): Promise<null>;
+export function post(
+  type: "GetAuthTypes",
+  body: any,
+): Promise<{ kafka: SupportedAuthTypes; schema: SupportedAuthTypes }>;
 export function post(type: "GetFilePath", body: { inputId: string }): Promise<string>;
+export function post(
+  type: "SaveFormAuthType",
+  body: { inputName: string; inputValue: SupportedAuthTypes },
+): Promise<null>;
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
@@ -297,5 +257,4 @@ export type FormConnectionType =
   | "Confluent Cloud"
   | "Confluent Platform"
   | "Other";
-
-type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM";
+export type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth";

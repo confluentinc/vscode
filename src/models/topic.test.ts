@@ -6,7 +6,7 @@ import {
   TEST_CCLOUD_KAFKA_TOPIC,
   TEST_LOCAL_KAFKA_TOPIC,
 } from "../../tests/unit/testResources/topic";
-import { IconNames } from "../constants";
+import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { KafkaTopic, KafkaTopicTreeItem } from "./topic";
 
 describe("Test KafkaTopic properties", () => {
@@ -19,7 +19,7 @@ describe("Test KafkaTopic properties", () => {
 
   it("ccloudUrl should return the correct URL for ccloud-resident topics", () => {
     assert.strictEqual(
-      `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_TOPIC.environmentId}/clusters/${TEST_CCLOUD_KAFKA_TOPIC.clusterId}/topics/${TEST_CCLOUD_KAFKA_TOPIC.name}/overview`,
+      `https://confluent.cloud/environments/${TEST_CCLOUD_KAFKA_TOPIC.environmentId}/clusters/${TEST_CCLOUD_KAFKA_TOPIC.clusterId}/topics/${TEST_CCLOUD_KAFKA_TOPIC.name}/overview?utm_source=${UTM_SOURCE_VSCODE}`,
       TEST_CCLOUD_KAFKA_TOPIC.ccloudUrl,
     );
   });

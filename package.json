@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.0.0-2",
+  "version": "1.0.0-5",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -89,7 +89,7 @@
       {
         "command": "confluent.connections.direct.export",
         "icon": "$(confluent-export-connection)",
-        "title": "Export as JSON",
+        "title": "Export connection details",
         "category": "Confluent: Connections"
       },
       {
@@ -1117,7 +1117,7 @@
           {
             "id": "connect-local-cluster",
             "title": "Connect to Kafka",
-            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
+            "description": "**Confluent Cloud Clusters** \nLog in to your Confluent account to see your Confluent Cloud resources. \n[Log in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)\n**Local Clusters** \nIf you have Kafka running locally, it appears automatically in the Resources view. \n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"

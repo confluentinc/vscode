@@ -1,7 +1,12 @@
 import { Data, type Require as Enforced } from "dataclass";
 import { MarkdownString, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames, LOCAL_CONNECTION_ID } from "../constants";
+import {
+  CCLOUD_CONNECTION_ID,
+  IconNames,
+  LOCAL_CONNECTION_ID,
+  UTM_SOURCE_VSCODE,
+} from "../constants";
 import { CustomMarkdownString } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
@@ -29,11 +34,11 @@ export class CCloudSchemaRegistry extends SchemaRegistry {
   region!: Enforced<string>;
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts`;
+    return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 
   get ccloudApiKeysUrl(): string {
-    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/api-keys`;
+    return `https://confluent.cloud/environments/${this.environmentId}/schema-registry/api-keys?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 }
 
