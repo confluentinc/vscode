@@ -51,6 +51,10 @@ export enum SecretStorageKeys {
    * browser-based authentication flow to complete after handling a URI callback from the sidecar.
    */
   AUTH_COMPLETED = "authCompleted",
+
+  /** The user recently reset their password and needs to reauthenticate. */
+  AUTH_PASSWORD_RESET = "authPasswordReset",
+
   /** Only used as a way to kick off cross-workspace events for the authentication provider. Only
    * ever set to "true" or deleted. */
   AUTH_SESSION_EXISTS = "authSessionExists",
