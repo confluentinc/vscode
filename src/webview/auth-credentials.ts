@@ -1,5 +1,4 @@
 import { ObservableScope } from "inertial";
-import { applyBindings, html } from "./bindings/bindings";
 import {
   type KerberosCredentials,
   type ApiKeyAndSecret,
@@ -7,7 +6,9 @@ import {
   type OAuthCredentials,
   type ScramCredentials,
 } from "../clients/sidecar";
-import { type SupportedAuthTypes, type FormConnectionType } from "./direct-connect-form";
+import { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
+import { applyBindings, html } from "./bindings/bindings";
+
 type SupportedCredentialTypes =
   | BasicCredentials
   | ApiKeyAndSecret
