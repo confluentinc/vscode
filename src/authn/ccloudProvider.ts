@@ -382,26 +382,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // general listener for the URI handling event, which is used to resolve any auth flow promises
     // and will trigger the secrets.onDidChange event described above
-    const uriHandlerSub: vscode.Disposable = getUriHandler().event(async (uri: vscode.Uri) => {
-      if (uri.path === "/authCallback") {
-        const queryParams = new URLSearchParams(uri.query);
-        const callbackEvent: AuthCallbackEvent = {
-          success: queryParams.get("success") === "true",
-          resetPassword: queryParams.get("reset_password") === "true",
-        };
-        logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", callbackEvent);
-        await resourceManager.setAuthFlowCompleted(callbackEvent);
-        if (callbackEvent.resetPassword) {
-          // clear any existing auth session so the user can sign in again with their new password
-          await Promise.all([
-            deleteCCloudConnection(),
-            getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
-          ]);
-          ccloudAuthSessionInvalidated.fire();
-          this.showResetPasswordNotification();
-        }
-      }
-    });
+    const uriHandlerSub: vscode.Disposable = getUriHandler().event(
+      async (uri) => await this.handleUri(uri),
+    );
 
     // if any other part of the extension notices that our current CCloud connection transitions from
     // VALID_TOKEN to FAILED/NO_TOKEN, we need to remove the session and stop polling
@@ -585,6 +568,32 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private updateContextValue(connected: boolean) {
     // async, but we can fire-and-forget since we don't need to wait for this to complete
     setContextValue(ContextValues.ccloudConnectionAvailable, connected);
+  }
+
+  /**
+   * Handle the URI event for the authentication callback.
+   * @param uri The URI that was handled.
+   */
+  async handleUri(uri: vscode.Uri): Promise<void> {
+    if (uri.path === "/authCallback") {
+      const queryParams = new URLSearchParams(uri.query);
+      const callbackEvent: AuthCallbackEvent = {
+        success: queryParams.get("success") === "true",
+        resetPassword: queryParams.get("reset_password") === "true",
+      };
+      logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", callbackEvent);
+      await getResourceManager().setAuthFlowCompleted(callbackEvent);
+
+      if (callbackEvent.resetPassword) {
+        // clear any existing auth session so the user can sign in again with their new password
+        await Promise.all([
+          deleteCCloudConnection(),
+          getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+        ]);
+        ccloudAuthSessionInvalidated.fire();
+        this.showResetPasswordNotification();
+      }
+    }
   }
 
   /** Show a notification to the user that their password has been reset and they need to sign in. */
