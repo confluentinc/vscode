@@ -39,6 +39,7 @@ models/JsonNodeType.ts
 models/KafkaClusterConfig.ts
 models/KafkaClusterConfigCredentials.ts
 models/KafkaClusterStatus.ts
+models/KerberosCredentials.ts
 models/KeyOrValueMetadata.ts
 models/KeyStore.ts
 models/LocalConfig.ts
