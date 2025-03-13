@@ -13,11 +13,13 @@ All notable changes to this extension will be documented in this file.
 
 - Any "direct" connections with a failing configuration will now show a red "warning" icon (⚠️)
   instead of the red "error" icon.
-
-### Changed
-
 - Schema registry subjects are now cached, reducing round trips to a schema registry. Use the
   'reload' button in the Schemas view to force refresh.
+
+### Fixed
+
+- Clicking "View Message(s)" after producing to a topic will no longer attempt to stringify
+  non-primitive values in the message payload.
 
 ## 0.26.1
 
