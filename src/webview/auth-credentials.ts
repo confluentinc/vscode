@@ -302,7 +302,6 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 data-value="this.creds()?.principal ?? null"
                 data-on-input="this.updateValue(event)"
-                required
               />
             </div>
             <div class="input-container">
@@ -313,7 +312,8 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('service_name')"
                 data-attr-name="this.getInputId('service_name')"
                 type="text"
-                data-value="this.creds()?.service_name ?? 'kafka'"
+                placeholder="kafka"
+                data-value="this.creds()?.service_name ?? null"
                 required
                 data-on-input="this.updateValue(event)"
               />
