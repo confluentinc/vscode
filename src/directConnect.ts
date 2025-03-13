@@ -7,6 +7,7 @@ import {
   ConnectionType,
   instanceOfApiKeyAndSecret,
   instanceOfBasicCredentials,
+  instanceOfKerberosCredentials,
   instanceOfOAuthCredentials,
   instanceOfScramCredentials,
 } from "./clients/sidecar";
@@ -147,6 +148,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
     if (instanceOfApiKeyAndSecret(creds)) return "API";
     if (instanceOfScramCredentials(creds)) return "SCRAM";
     if (instanceOfOAuthCredentials(creds)) return "OAuth";
+    if (instanceOfKerberosCredentials(creds)) return "Kerberos";
     return "None";
   }
   // Initialize auth type to whatever matches incoming connection
@@ -354,6 +356,8 @@ function isValidCredentialForAuthType(path: string, authType: string): boolean {
         "ccloud_logical_cluster_id",
         "ccloud_identity_pool_id",
       ].includes(credentialField);
+    case "Kerberos":
+      return ["principal", "keytab_path", "service_name"].includes(credentialField);
     default:
       return false;
   }
