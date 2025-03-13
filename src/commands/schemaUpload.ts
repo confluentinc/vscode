@@ -156,7 +156,7 @@ async function uploadSchema(
   // Telemetry log the schema upload event + overall success or failure.
   logUsage(UserEvent.SchemaAction, {
     action: "upload",
-    status: success ? "success" : "failure",
+    status: success ? "succeeded" : "failed",
 
     connection_id: registry.connectionId,
     connection_type: registry.connectionType,
