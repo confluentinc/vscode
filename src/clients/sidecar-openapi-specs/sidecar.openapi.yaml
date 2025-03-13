@@ -922,6 +922,7 @@ components:
           - $ref: "#/components/schemas/ApiKeyAndSecret"
           - $ref: "#/components/schemas/OAuthCredentials"
           - $ref: "#/components/schemas/ScramCredentials"
+          - $ref: "#/components/schemas/KerberosCredentials"
           nullable: true
         ssl:
           description: "The SSL configuration for connecting to the Kafka cluster.\
@@ -953,6 +954,24 @@ components:
           type: object
           allOf:
           - $ref: "#/components/schemas/AuthErrors"
+    KerberosCredentials:
+      description: Kerberos authentication credentials
+      required:
+      - principal
+      - keytab_path
+      type: object
+      properties:
+        principal:
+          description: The Kerberos principal to use.
+          type: string
+        keytab_path:
+          description: The Kerberos keytab file path.
+          type: string
+        service_name:
+          description: Service name that matches the primary name of the Kafka brokers
+            configured in the Broker JAAS file. Defaults to 'kafka'.
+          default: kafka
+          type: string
     KeyOrValueMetadata:
       type: object
       properties:
@@ -1470,24 +1489,24 @@ components:
     HealthResponse:
       type: object
       properties:
+        status:
+          enum:
+          - UP
+          - DOWN
+          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
     HealthCheck:
       type: object
       properties:
+        name:
+          type: string
         status:
           enum:
           - UP
           - DOWN
-          type: string
-        name:
           type: string
         data:
           type: object
