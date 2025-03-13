@@ -1,28 +1,15 @@
 import { randomUUID } from "crypto";
 import { Uri, ViewColumn, window } from "vscode";
-import {
-  AuthErrors,
-  ConnectedState,
-  Connection,
-  ConnectionType,
-  instanceOfApiKeyAndSecret,
-  instanceOfBasicCredentials,
-  instanceOfKerberosCredentials,
-  instanceOfOAuthCredentials,
-  instanceOfScramCredentials,
-} from "./clients/sidecar";
+import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
+import { getCredentialsType } from "./directConnections/credentials";
+import { SupportedAuthTypes } from "./directConnections/types";
 import { DirectConnectionManager } from "./directConnectManager";
+import { ConnectionId } from "./models/resource";
+import { CustomConnectionSpec } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
-import {
-  post,
-  PostResponse,
-  SupportedAuthTypes,
-  TestResponse,
-} from "./webview/direct-connect-form";
+import { post, PostResponse, TestResponse } from "./webview/direct-connect-form";
 import connectionFormTemplate from "./webview/direct-connect-form.html";
-import { CustomConnectionSpec } from "./storage/resourceManager";
-import { ConnectionId } from "./models/resource";
 
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
@@ -141,15 +128,6 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   let specUpdatedValues: Partial<CustomConnectionSpec> = {};
   function updateSpecValue(inputName: string, value: string) {
     setValueAtPath(specUpdatedValues, inputName, value);
-  }
-  function getCredentialsType(creds: any): SupportedAuthTypes {
-    if (!creds || typeof creds !== "object") return "None";
-    if (instanceOfBasicCredentials(creds)) return "Basic";
-    if (instanceOfApiKeyAndSecret(creds)) return "API";
-    if (instanceOfScramCredentials(creds)) return "SCRAM";
-    if (instanceOfOAuthCredentials(creds)) return "OAuth";
-    if (instanceOfKerberosCredentials(creds)) return "Kerberos";
-    return "None";
   }
   // Initialize auth type to whatever matches incoming connection
   let kafkaClusterAuthType = getCredentialsType(connection?.kafka_cluster?.credentials);
