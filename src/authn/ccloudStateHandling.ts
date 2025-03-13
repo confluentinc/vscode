@@ -5,6 +5,7 @@ import { observabilityContext } from "../context/observability";
 import { ccloudAuthSessionInvalidated, nonInvalidTokenStatus } from "../emitters";
 import { Logger } from "../logging";
 import { getResourceManager } from "../storage/resourceManager";
+import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
 import { getCCloudAuthSession } from "./utils";
 
 const logger = new Logger("authn.ccloudStateHandling");
@@ -254,17 +255,19 @@ export function checkAuthErrors(connection: Connection) {
     return;
   }
 
-  let authButton: string = "Sign in to Confluent Cloud";
   // show an error message to the user to retry the auth flow
   tracker.authErrorPromptOpen = true;
   vscode.window
-    .showErrorMessage("Error authenticating with Confluent Cloud. Please try again.", authButton)
+    .showErrorMessage(
+      "Error authenticating with Confluent Cloud. Please try again.",
+      CCLOUD_SIGN_IN_BUTTON_LABEL,
+    )
     .then(async (response: string | undefined) => {
       // always reset the prompt tracker after the user interacts with the notification in any way,
       // since they will either dismiss it (and we re-prompt at the next iteration) or they re-
       // authenticate and we get a new status back (or another auth error at the next iteration)
       tracker.authErrorPromptOpen = false;
-      if (response === authButton) {
+      if (response === CCLOUD_SIGN_IN_BUTTON_LABEL) {
         // if we got to this point, we likely cleared out the existing connection via the
         // `ccloudAuthSessionInvalidated` emitter, so we need to create a new session to re-auth
         await getCCloudAuthSession(true);
