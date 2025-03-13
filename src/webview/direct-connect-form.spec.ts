@@ -13,6 +13,7 @@ import {
   ConnectionType,
   OAuthCredentials,
   ScramCredentials,
+  KerberosCredentials,
 } from "../clients/sidecar";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
@@ -91,7 +92,7 @@ test("renders form html correctly", async ({ page }) => {
   const authKafka = page.locator("select[name='kafka_cluster.auth_type']");
   await expect(authKafka).not.toBe(null);
   const authKafkaOptions = await authKafka.locator("option").all();
-  await expect(authKafkaOptions.length).toBe(5);
+  await expect(authKafkaOptions.length).toBe(6);
 
   const schemaUrlInput = page.locator("input[name='schema_registry.uri']");
   await expect(schemaUrlInput).toBeVisible();
@@ -586,7 +587,7 @@ test("populates values for SASL/SCRAM auth type when they're in the spec", async
   const scramPasswordInput = page.locator("input[name='kafka_cluster.credentials.scram_password']");
   await expect(scramPasswordInput).toHaveValue("password");
 });
-test("submits values for OAUTH/BEARER auth type when filled in", async ({ execute, page }) => {
+test("submits values for SASL/OAUTHBEARER auth type when filled in", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -603,7 +604,7 @@ test("submits values for OAUTH/BEARER auth type when filled in", async ({ execut
     window.dispatchEvent(new Event("DOMContentLoaded"));
   });
 
-  // Fill in the form with OAUTH/BEARER auth type
+  // Fill in the form with SASL/OAUTHBEARER auth type
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.selectOption("select[name='formconnectiontype']", "Confluent Cloud");
@@ -676,7 +677,7 @@ test("submits values for OAUTH/BEARER auth type when filled in", async ({ execut
     "schema_registry.credentials.connect_timeout_millis": "5000",
   });
 });
-test("populates values for OAUTH/BEARER auth type when they exist in the spec (edit/import)", async ({
+test("populates values for SASL/OAUTHBEARER auth type when they exist in the spec (edit/import)", async ({
   execute,
   page,
 }) => {
@@ -769,6 +770,116 @@ test("populates values for OAUTH/BEARER auth type when they exist in the spec (e
   );
 });
 
+test("submits values for Kerberos auth type when filled in", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+    stub.withArgs("GetAuthTypes").resolves({ kafka: "None", schema: "None" });
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in the form with Kerberos auth type
+  await page.fill("input[name=name]", "Test Connection");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.selectOption("select[name='kafka_cluster.auth_type']", "Kerberos");
+  await page.fill("input[name='kafka_cluster.credentials.principal']", "user@EXAMPLE.COM");
+  await page.fill("input[name='kafka_cluster.credentials.keytab_path']", "/path/to/keytab");
+  await page.fill("input[name='kafka_cluster.credentials.service_name']", "kafka");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+  // Verify correct form data
+  expect(submitCall?.[1]).toEqual({
+    name: "Test Connection",
+    formconnectiontype: "Apache Kafka",
+    "kafka_cluster.bootstrap_servers": "localhost:9092",
+    "kafka_cluster.auth_type": "Kerberos",
+    "kafka_cluster.credentials.principal": "user@EXAMPLE.COM",
+    "kafka_cluster.credentials.keytab_path": "/path/to/keytab",
+    "kafka_cluster.credentials.service_name": "kafka",
+    "schema_registry.auth_type": "None",
+    "kafka_cluster.ssl.enabled": "true",
+    "schema_registry.ssl.enabled": "true",
+    "schema_registry.uri": "",
+  });
+});
+
+test("populates values for Kerberos auth type when they exist in the spec (edit/import)", async ({
+  execute,
+  page,
+}) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(
+    async (stub, sample) => {
+      stub.withArgs("GetConnectionSpec").resolves(sample);
+      stub.withArgs("GetAuthTypes").resolves({ kafka: "Kerberos", schema: "None" });
+    },
+    sendWebviewMessage,
+    SPEC_SAMPLE_KERBEROS,
+  );
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  const form = page.locator("form");
+  await expect(form).toBeVisible();
+
+  // Check that the form fields are populated with Kerberos connection spec values
+  const nameInput = page.locator("input[name='name']");
+  await expect(nameInput).toHaveValue(SPEC_SAMPLE_KERBEROS.name!);
+
+  const bootstrapServersInput = page.locator("input[name='kafka_cluster.bootstrap_servers']");
+  await expect(bootstrapServersInput).toHaveValue(
+    SPEC_SAMPLE_KERBEROS.kafka_cluster!.bootstrap_servers,
+  );
+
+  // Check Kafka Kerberos credentials
+  const kafkaAuthTypeSelect = page.locator("select[name='kafka_cluster.auth_type']");
+  await expect(kafkaAuthTypeSelect).toHaveValue("Kerberos");
+
+  const kafkaPrincipalInput = page.locator("input[name='kafka_cluster.credentials.principal']");
+  await expect(kafkaPrincipalInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.principal,
+  );
+
+  const kafkaKeytabInput = page.locator("input[name='kafka_cluster.credentials.keytab_path']");
+  await expect(kafkaKeytabInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.keytab_path,
+  );
+
+  const kafkaServiceNameInput = page.locator(
+    "input[name='kafka_cluster.credentials.service_name']",
+  );
+  await expect(kafkaServiceNameInput).toHaveValue(
+    // @ts-expect-error credentials could be of different types
+    SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.service_name,
+  );
+});
+
 // Test Fixtures
 const SPEC_SAMPLE = {
   id: "123",
@@ -847,6 +958,22 @@ const SPEC_SAMPLE_OAUTH: ConnectionSpec = {
     },
     credentials: {
       ...OAUTH,
+    },
+  },
+};
+
+const KERBEROS: KerberosCredentials = {
+  principal: "user@EXAMPLE.COM",
+  keytab_path: "/path/to/keytab",
+  service_name: "kafka",
+};
+
+const SPEC_SAMPLE_KERBEROS: ConnectionSpec = {
+  ...MINIMAL_KAFKA_SAMPLE,
+  kafka_cluster: {
+    ...MINIMAL_KAFKA_SAMPLE.kafka_cluster,
+    credentials: {
+      ...KERBEROS,
     },
   },
 };
