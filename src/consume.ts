@@ -861,7 +861,7 @@ function messageViewerStartPollingCommand(
 
   // End of new message viewer setup. Send a telemetry event when the message viewer is opened!
   track({
-    action: "message-viewer-open",
+    action: "opened",
   });
 }
 
