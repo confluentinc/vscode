@@ -86,7 +86,7 @@ export class AuthCredentials extends HTMLElement {
     }
   }
 
-  // Update the updateValue method
+  // updateValue called onInput
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
