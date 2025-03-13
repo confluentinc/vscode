@@ -400,9 +400,10 @@ async function produceMessages(
         uniquePartitions.add(result.response.partition_id);
       }
     });
-    // if there was only one message, we can also filter by key (if it exists)
+    // if there was only one message, we can also filter by key (if it exists) as long as it's a
+    // primitive type and can be easily converted to a string
     let textFilter: string | undefined;
-    if (successResults.length === 1 && contents[0].key) {
+    if (successResults.length === 1 && contents[0].key && typeof contents[0].key !== "object") {
       textFilter = String(contents[0].key);
     }
 
