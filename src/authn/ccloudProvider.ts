@@ -22,6 +22,8 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { sendTelemetryIdentifyEvent } from "../telemetry/telemetry";
 import { getUriHandler } from "../uriHandler";
 import { openExternal } from "./ccloudStateHandling";
+import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
+import { AuthCallbackEvent } from "./types";
 
 const logger = new Logger("authn.ccloudProvider");
 
@@ -71,8 +73,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     return this._onDidChangeSessions.event;
   }
 
-  // used to notify the extension when the user has completed the auth flow and resolve any promises
-  private _onAuthFlowCompletedSuccessfully = new vscode.EventEmitter<boolean>();
+  /** Notify the extension when the user has completed the auth flow and resolve any promises */
+  private _onAuthFlowCompletedSuccessfully = new vscode.EventEmitter<AuthCallbackEvent>();
 
   /** Used to check for changes in auth state between extension instance and sidecar. */
   private _session: vscode.AuthenticationSession | null = null;
@@ -130,13 +132,22 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     }
 
     // this will block until we handle the URI event or the user cancels
-    const success: boolean | undefined = await this.browserAuthFlow(signInUri);
-    if (success === undefined) {
+    const authCallback: AuthCallbackEvent | undefined = await this.browserAuthFlow(signInUri);
+
+    if (authCallback === undefined) {
       // user cancelled the operation
       logger.debug("createSession() user cancelled the operation");
       return Promise.reject(new Error("User cancelled the authentication flow."));
     }
-    if (!success) {
+
+    if (authCallback.resetPassword) {
+      // user reset their password, so we need to notify them to reauthenticate
+      logger.debug("createSession() user reset their password");
+      this.showResetPasswordNotification();
+      return Promise.reject(new Error("User reset their password."));
+    }
+
+    if (!authCallback.success) {
       const authFailedMsg = `Confluent Cloud authentication failed. See browser for details.`;
       vscode.window.showErrorMessage(authFailedMsg);
       logUsage(UserEvent.CCloudAuthentication, {
@@ -230,6 +241,8 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       await Promise.all([
         storageManager.deleteSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
         storageManager.deleteSecret(SecretStorageKeys.AUTH_COMPLETED),
+        // don't check this in the if block above since it changes with AUTH_COMPLETED
+        storageManager.deleteSecret(SecretStorageKeys.AUTH_PASSWORD_RESET),
         // we don't need to check for this up above, just clear it out if we don't have a connection
         storageManager.deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
       ]);
@@ -343,8 +356,11 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
             // (e.g they started the auth flow in one window and another handled the callback URI) --
             // so we need to notify any listeners in this extension instance that the auth flow has
             // completed to resolve any promises that may still be waiting
-            const success: boolean = await resourceManager.getAuthFlowCompleted();
-            this._onAuthFlowCompletedSuccessfully.fire(success);
+            const [success, resetPassword]: [boolean, boolean] = await Promise.all([
+              resourceManager.getAuthFlowCompleted(),
+              resourceManager.getAuthFlowPasswordReset(),
+            ]);
+            this._onAuthFlowCompletedSuccessfully.fire({ success, resetPassword });
 
             if (!success) {
               // fetch+log current sidecar preferences to help debug any auth issues
@@ -366,16 +382,9 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
 
     // general listener for the URI handling event, which is used to resolve any auth flow promises
     // and will trigger the secrets.onDidChange event described above
-    const uriHandlerSub: vscode.Disposable = getUriHandler().event(async (uri: vscode.Uri) => {
-      if (uri.path === "/authCallback") {
-        const queryParams = new URLSearchParams(uri.query);
-        const success: boolean = queryParams.get("success") === "true";
-        logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", {
-          success,
-        });
-        await resourceManager.setAuthFlowCompleted(success);
-      }
-    });
+    const uriHandlerSub: vscode.Disposable = getUriHandler().event(
+      async (uri) => await this.handleUri(uri),
+    );
 
     // if any other part of the extension notices that our current CCloud connection transitions from
     // VALID_TOKEN to FAILED/NO_TOKEN, we need to remove the session and stop polling
@@ -401,26 +410,33 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * @returns A promise that resolves to a `boolean` indicating whether the authentication flow was
    * successful, or `undefined` if the user cancelled the operation.
    */
-  async browserAuthFlow(uri: string): Promise<boolean | undefined> {
+  async browserAuthFlow(uri: string): Promise<AuthCallbackEvent | undefined> {
     return await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: `Signing in to [Confluent Cloud](${uri})...`,
         cancellable: true,
       },
-      async (_, token) => {
+      async (_, token): Promise<AuthCallbackEvent | undefined> => {
         await openExternal(vscode.Uri.parse(uri));
         // keep progress notification open until one of two things happens:
-        // - we handle the auth completion event and resolve with the `success` value
+        // - we handle the auth completion event and resolve with the callback query params
         // - user clicks the "Cancel" button from the notification
-        const [success, cancelled] = await Promise.race([
-          this.waitForUriHandling().then((success) => [success, false]),
-          this.waitForCancellationRequest(token).then(() => [false, true]),
+        const [authCallback, cancelled] = await Promise.race([
+          this.waitForUriHandling().then((authCallback): [AuthCallbackEvent, boolean] => [
+            authCallback,
+            false,
+          ]),
+          this.waitForCancellationRequest(token).then((): [AuthCallbackEvent, boolean] => [
+            { success: false, resetPassword: false } as AuthCallbackEvent,
+            true,
+          ]),
         ]);
         if (cancelled) return;
-        // user completed the auth flow, so we need to resolve the promise with the success value
-        logger.debug("browserAuthFlow() user completed the auth flow", { success });
-        return success;
+        // user completed the auth flow, so we need to resolve the promise with the callback
+        // query params
+        logger.debug("browserAuthFlow() user completed the auth flow", authCallback);
+        return authCallback;
       },
     );
   }
@@ -429,14 +445,14 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * Wait for the user to complete the authentication flow in the browser and resolve the promise,
    * whether triggered from this workspace or another.
    */
-  waitForUriHandling(): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      // this will only fire if the auth flow didn't initially start from the Accounts action, or
-      // if it was done in another window entirely -- see
-      const sub = this._onAuthFlowCompletedSuccessfully.event((success: boolean) => {
-        logger.debug("handling _onAuthFlowCompletedSuccessfully event", { success });
+  waitForUriHandling(): Promise<AuthCallbackEvent> {
+    return new Promise<AuthCallbackEvent>((resolve) => {
+      // this will only fire if the auth flow didn't initially start in another window entirely and
+      // we're just reacting to a change in secret state
+      const sub = this._onAuthFlowCompletedSuccessfully.event((event: AuthCallbackEvent) => {
+        logger.debug("handling _onAuthFlowCompletedSuccessfully event", event);
         sub.dispose();
-        resolve(success);
+        resolve(event);
       });
     });
   }
@@ -508,6 +524,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       await Promise.all([
         storageManager.deleteSecret(SecretStorageKeys.AUTH_SESSION_EXISTS),
         storageManager.deleteSecret(SecretStorageKeys.AUTH_COMPLETED),
+        storageManager.deleteSecret(SecretStorageKeys.AUTH_PASSWORD_RESET),
       ]);
     }
   }
@@ -551,6 +568,47 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private updateContextValue(connected: boolean) {
     // async, but we can fire-and-forget since we don't need to wait for this to complete
     setContextValue(ContextValues.ccloudConnectionAvailable, connected);
+  }
+
+  /**
+   * Handle the URI event for the authentication callback.
+   * @param uri The URI that was handled.
+   */
+  async handleUri(uri: vscode.Uri): Promise<void> {
+    if (uri.path === "/authCallback") {
+      const queryParams = new URLSearchParams(uri.query);
+      const callbackEvent: AuthCallbackEvent = {
+        success: queryParams.get("success") === "true",
+        resetPassword: queryParams.get("reset_password") === "true",
+      };
+      logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", callbackEvent);
+      await getResourceManager().setAuthFlowCompleted(callbackEvent);
+
+      if (callbackEvent.resetPassword) {
+        // clear any existing auth session so the user can sign in again with their new password
+        await Promise.all([
+          deleteCCloudConnection(),
+          getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+        ]);
+        ccloudAuthSessionInvalidated.fire();
+        this.showResetPasswordNotification();
+      }
+    }
+  }
+
+  /** Show a notification to the user that their password has been reset and they need to sign in. */
+  showResetPasswordNotification() {
+    vscode.window
+      .showInformationMessage(
+        "Your password has been reset. Please sign in again to Confluent Cloud.",
+        CCLOUD_SIGN_IN_BUTTON_LABEL,
+      )
+      .then((selection) => {
+        if (selection === CCLOUD_SIGN_IN_BUTTON_LABEL) {
+          // (re)start the auth flow
+          this.createSession();
+        }
+      });
   }
 }
 
