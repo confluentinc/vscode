@@ -6,8 +6,9 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- SASL/OAUTHBEARER authentication type is now supported for Kafka Cluster connections that are added
-  via the connections form
+- Support for the following authentication types were added for Kafka Cluster connections
+  - SASL/OAUTHBEARER
+  - SASL/GSSAPI
 
 ### Changed
 
