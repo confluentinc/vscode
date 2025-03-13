@@ -232,6 +232,12 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
   existing sidecar process and obtain a new token, resulting in the two different IDEs fighting for
   control. Only one type of IDE can run the extension at a time, though you can still use multiple
   windows/workspaces of the same IDE type.
+- The extension has minimum operating system requirements based on the sidecar executable builds:
+  - Windows: Windows 10 and above (built on Windows Server 2019)
+  - Ubuntu: Ubuntu 22 and above (built on Ubuntu 24)
+  - macOS: macOS 13 and above (built on macOS 13.5)
+  - Running the extension on older operating systems may result in the sidecar process failing to
+    start, which prevents the extension from establishing a successful handshake.
 
 ## Support
 
