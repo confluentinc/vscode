@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import { Logger } from "../logging";
 // TEMP keep this import here to make sure the production bundle doesn't split chunks
 import "opentelemetry-instrumentation-fetch-node";
+import { arch, platform } from "os";
 
 const logger = new Logger("telemetry");
 
@@ -113,6 +114,8 @@ export function preparePropertiesForTrack(
     productName: vscode.env.uriScheme, // "vscode", "vscode-insiders", etc.
     productVersion: vscode.version,
     currentSidecarVersion: ideSidecar.version,
+    platform: platform(),
+    arch: arch(),
     ...data, // VSCode Common properties in data includes the extension version
   };
 }
