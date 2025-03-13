@@ -9,6 +9,7 @@ import {
 } from "../../tests/unit/testResources";
 import { ProduceRecordRequest, RecordsV3Api, ResponseError } from "../clients/kafkaRest";
 import { ConfluentCloudProduceRecordsResourceApi } from "../clients/sidecar";
+import { MessageViewerConfig } from "../consume";
 import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
@@ -27,6 +28,8 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   let sandbox: sinon.SinonSandbox;
 
   let showErrorMessageStub: sinon.SinonStub;
+  let showInfoMessageStub: sinon.SinonStub;
+  let executeCommandStub: sinon.SinonStub;
 
   let uriQuickpickStub: sinon.SinonStub;
   let loadDocumentContentStub: sinon.SinonStub;
@@ -37,6 +40,8 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     sandbox = sinon.createSandbox();
 
     showErrorMessageStub = sandbox.stub(vscode.window, "showErrorMessage");
+    showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
+    executeCommandStub = sandbox.stub(vscode.commands, "executeCommand").resolves();
 
     // stub the quickpick for file/editor URI and the resulting content
     uriQuickpickStub = sandbox
@@ -99,13 +104,12 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
       timestamp: new Date(),
       partition_id: 0,
     });
-    const showInfoStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
     assert.ok(clientStub.produceRecord.calledOnce);
-    assert.ok(showInfoStub.calledOnce);
-    const successMsg = showInfoStub.firstCall.args[0];
+    assert.ok(showInfoMessageStub.calledOnce);
+    const successMsg = showInfoMessageStub.firstCall.args[0];
     assert.ok(successMsg.startsWith("Successfully produced 1 message to topic"), successMsg);
     assert.ok(showErrorMessageStub.notCalled);
   });
@@ -160,6 +164,73 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     assert.strictEqual(requestArg.ProduceRequest!.partition_id, partition_id);
     assert.strictEqual(requestArg.ProduceRequest!.timestamp, undefined);
   });
+
+  // `key` is an object that won't serialize to a string cleanly
+  for (const key of [null, [], { foo: "bar" }]) {
+    it(`should open message viewer without a 'textFilter' if the produce-message 'key' is not a primitive type or is null: ${JSON.stringify(key)} (${typeof key})`, async function () {
+      loadDocumentContentStub.resolves({
+        content: JSON.stringify({ ...fakeMessage, key }),
+      });
+      // user clicked the "View Message" button in the info notification
+      showInfoMessageStub.resolves("View Message");
+
+      clientStub.produceRecord.resolves({
+        error_code: 200,
+        timestamp: new Date(),
+        partition_id: 0,
+      });
+
+      await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+      sinon.assert.calledOnce(clientStub.produceRecord);
+      sinon.assert.calledOnce(showInfoMessageStub);
+      sinon.assert.calledOnce(executeCommandStub);
+
+      const commandArgs = executeCommandStub.firstCall.args;
+      assert.strictEqual(commandArgs[0], "confluent.topic.consume");
+      assert.strictEqual(commandArgs[1], TEST_LOCAL_KAFKA_TOPIC);
+      assert.strictEqual(commandArgs[2], true);
+
+      const mvConfig: MessageViewerConfig = commandArgs[3];
+      assert.ok(mvConfig instanceof MessageViewerConfig);
+      assert.strictEqual(mvConfig.textFilter, undefined);
+
+      assert.ok(showErrorMessageStub.notCalled);
+    });
+  }
+
+  for (const key of ["abc123", 456, true]) {
+    it(`should open message viewer with a 'textFilter' if the produce-message 'key' is a primitive type: ${key} (${typeof key})`, async function () {
+      loadDocumentContentStub.resolves({
+        content: JSON.stringify({ ...fakeMessage, key }),
+      });
+      // user clicked the "View Message" button in the info notification
+      showInfoMessageStub.resolves("View Message");
+
+      clientStub.produceRecord.resolves({
+        error_code: 200,
+        timestamp: new Date(),
+        partition_id: 0,
+      });
+
+      await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
+
+      sinon.assert.calledOnce(clientStub.produceRecord);
+      sinon.assert.calledOnce(showInfoMessageStub);
+      sinon.assert.calledOnce(executeCommandStub);
+
+      const commandArgs = executeCommandStub.firstCall.args;
+      assert.strictEqual(commandArgs[0], "confluent.topic.consume");
+      assert.strictEqual(commandArgs[1], TEST_LOCAL_KAFKA_TOPIC);
+      assert.strictEqual(commandArgs[2], true);
+
+      const mvConfig: MessageViewerConfig = commandArgs[3];
+      assert.ok(mvConfig instanceof MessageViewerConfig);
+      assert.strictEqual(mvConfig.textFilter, String(key));
+
+      assert.ok(showErrorMessageStub.notCalled);
+    });
+  }
 });
 
 describe("commands/topics.ts produceMessageFromDocument() with schema(s)", function () {
