@@ -33,7 +33,8 @@ async function ccloudSignIn() {
       if (
         error.message === "User did not consent to login." ||
         error.message === "User cancelled the authentication flow." ||
-        error.message === "Confluent Cloud authentication failed. See browser for details."
+        error.message === "Confluent Cloud authentication failed. See browser for details." ||
+        error.message === "User reset their password."
       ) {
         return;
       }
