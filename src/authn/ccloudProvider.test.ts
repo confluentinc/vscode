@@ -10,11 +10,13 @@ import {
 import { getTestExtensionContext, getTestStorageManager } from "../../tests/unit/testUtils";
 import { Connection } from "../clients/sidecar";
 import { CCLOUD_AUTH_CALLBACK_URI, CCLOUD_CONNECTION_ID } from "../constants";
+import { ccloudAuthSessionInvalidated } from "../emitters";
 import { getSidecar } from "../sidecar";
 import * as ccloud from "../sidecar/connections/ccloud";
 import * as watcher from "../sidecar/connections/watcher";
 import { getStorageManager, StorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
+import { getResourceManager } from "../storage/resourceManager";
 import { getUriHandler, UriEventHandler } from "../uriHandler";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./ccloudProvider";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "./constants";
@@ -30,11 +32,14 @@ const TEST_CCLOUD_AUTH_SESSION: vscode.AuthenticationSession = {
   scopes: [],
 };
 
-describe("ConfluentCloudAuthProvider", () => {
+describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider methods", () => {
   let authProvider: ConfluentCloudAuthProvider;
   let uriHandler: UriEventHandler;
 
   let sandbox: sinon.SinonSandbox;
+  // vscode stubs
+  let showErrorMessageStub: sinon.SinonStub;
+  let showInfoMessageStub: sinon.SinonStub;
   // helper function stubs
   let getCCloudConnectionStub: sinon.SinonStub;
   let createCCloudConnectionStub: sinon.SinonStub;
@@ -45,10 +50,6 @@ describe("ConfluentCloudAuthProvider", () => {
     vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
   >;
 
-  // vscode stubs
-  let showErrorMessageStub: sinon.SinonStub;
-  let showInfoMessageStub: sinon.SinonStub;
-
   before(async () => {
     await getTestExtensionContext();
 
@@ -56,9 +57,8 @@ describe("ConfluentCloudAuthProvider", () => {
   });
 
   beforeEach(() => {
-    authProvider = getAuthProvider();
-
     sandbox = sinon.createSandbox();
+
     getCCloudConnectionStub = sandbox.stub(ccloud, "getCCloudConnection");
     createCCloudConnectionStub = sandbox.stub(ccloud, "createCCloudConnection");
     deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection");
@@ -68,6 +68,7 @@ describe("ConfluentCloudAuthProvider", () => {
       .stub(watcher, "waitForConnectionToBeStable")
       .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
 
+    authProvider = getAuthProvider();
     // don't handle the progress notification, openExternal, etc in this test suite
     browserAuthFlowStub = sandbox.stub(authProvider, "browserAuthFlow").resolves();
     stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
@@ -306,6 +307,125 @@ describe("ConfluentCloudAuthProvider", () => {
       assert.strictEqual(result.success, success);
     });
   }
+});
+
+describe("authn/ccloudProvider.ts ConfluentCloudAuthProvider URI handling", () => {
+  let authProvider: ConfluentCloudAuthProvider;
+
+  let sandbox: sinon.SinonSandbox;
+  // vscode stubs
+  let showInfoMessageStub: sinon.SinonStub;
+  // helper function stubs
+  let deleteConnectionStub: sinon.SinonStub;
+  // auth provider stubs
+  let createSessionStub: sinon.SinonStub;
+  let stubOnDidChangeSessions: sinon.SinonStubbedInstance<
+    vscode.EventEmitter<vscode.AuthenticationProviderAuthenticationSessionsChangeEvent>
+  >;
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    showInfoMessageStub = sandbox.stub(vscode.window, "showInformationMessage").resolves();
+
+    deleteConnectionStub = sandbox.stub(ccloud, "deleteCCloudConnection");
+
+    authProvider = getAuthProvider();
+    createSessionStub = sandbox.stub(authProvider, "createSession").resolves();
+    // don't handle the progress notification, openExternal, etc in this test suite
+    stubOnDidChangeSessions = sandbox.createStubInstance(vscode.EventEmitter);
+    authProvider["_onDidChangeSessions"] = stubOnDidChangeSessions;
+
+    // assume the connection is immediately usable for most tests
+    sandbox
+      .stub(watcher, "waitForConnectionToBeStable")
+      .resolves(TEST_AUTHENTICATED_CCLOUD_CONNECTION);
+  });
+
+  afterEach(() => {
+    // reset the singleton instance between tests
+    ConfluentCloudAuthProvider["instance"] = null;
+    sandbox.restore();
+  });
+
+  it("showResetPasswordNotification() should display a message with sign-in button", async () => {
+    // user dismissed the notification
+    showInfoMessageStub.resolves(undefined);
+
+    authProvider.showResetPasswordNotification();
+
+    sinon.assert.calledWith(
+      showInfoMessageStub,
+      "Your password has been reset. Please sign in again to Confluent Cloud.",
+      CCLOUD_SIGN_IN_BUTTON_LABEL,
+    );
+    sinon.assert.notCalled(createSessionStub);
+  });
+
+  it("showResetPasswordNotification() should call createSession when the sign-in button is clicked", async () => {
+    const clock = sandbox.useFakeTimers(Date.now());
+    // user clicked the sign-in button
+    showInfoMessageStub.resolves(CCLOUD_SIGN_IN_BUTTON_LABEL);
+
+    authProvider.showResetPasswordNotification();
+    // simulate the passage of time to allow the notification to be shown + button clicked
+    await clock.tickAsync(100);
+
+    sinon.assert.calledWith(
+      showInfoMessageStub,
+      "Your password has been reset. Please sign in again to Confluent Cloud.",
+      CCLOUD_SIGN_IN_BUTTON_LABEL,
+    );
+    sinon.assert.calledOnce(createSessionStub);
+  });
+
+  for (const success of [true, false] as const) {
+    it(`handleUri() should not invalidate the current CCloud auth session for non-reset-password URI callbacks (success=${success})`, async () => {
+      const setAuthFlowCompletedStub = sandbox
+        .stub(getResourceManager(), "setAuthFlowCompleted")
+        .resolves();
+      const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
+      const showResetPasswordNotificationStub = sandbox.stub(
+        authProvider,
+        "showResetPasswordNotification",
+      );
+
+      const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({ query: `success=${success}` });
+      await authProvider.handleUri(uri);
+
+      sinon.assert.calledWith(setAuthFlowCompletedStub, { success, resetPassword: false });
+      sinon.assert.notCalled(deleteConnectionStub);
+      sinon.assert.notCalled(deleteSecretStub);
+      sinon.assert.notCalled(showResetPasswordNotificationStub);
+    });
+  }
+
+  it("handleUri() should invalidate the current CCloud auth session for reset-password URI callbacks", async () => {
+    const setAuthFlowCompletedStub = sandbox
+      .stub(getResourceManager(), "setAuthFlowCompleted")
+      .resolves();
+    const ccloudAuthSessionInvalidatedFireStub = sandbox.stub(ccloudAuthSessionInvalidated, "fire");
+    const deleteSecretStub = sandbox.stub(getStorageManager(), "deleteSecret").resolves();
+    const showResetPasswordNotificationStub = sandbox.stub(
+      authProvider,
+      "showResetPasswordNotification",
+    );
+
+    const uri = vscode.Uri.parse(CCLOUD_AUTH_CALLBACK_URI).with({
+      query: "success=false&reset_password=true",
+    });
+    await authProvider.handleUri(uri);
+
+    sinon.assert.calledWith(setAuthFlowCompletedStub, { success: false, resetPassword: true });
+    sinon.assert.calledOnce(deleteConnectionStub);
+    sinon.assert.calledWith(deleteSecretStub, SecretStorageKeys.CCLOUD_AUTH_STATUS);
+    sinon.assert.calledOnce(ccloudAuthSessionInvalidatedFireStub);
+    sinon.assert.calledOnce(showResetPasswordNotificationStub);
+  });
 });
 
 describe("CCloud auth flow", () => {
