@@ -27,9 +27,11 @@ import {
 
 import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as errors from "../../errors";
+import * as telemetryEvents from "../../telemetry/events";
+import { UserEvent } from "../../telemetry/events";
 import {
   ConnectionStateWatcher,
-  notifyIfFailedState,
+  reportUsableState,
   SingleConnectionEntry,
   waitForConnectionToBeStable,
 } from "./watcher";
@@ -330,22 +332,24 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
   });
 });
 
-describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
+describe.only("sidecar/connections/watcher.ts reportUsableState() notifications", () => {
   let sandbox: sinon.SinonSandbox;
   let showErrorNotificationStub: sinon.SinonStub;
+  let logUsageStub: sinon.SinonStub;
 
   const fakeDirectConnectionButtonLabel = "View Connection Details";
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
+    logUsageStub = sandbox.stub(telemetryEvents, "logUsage").returns();
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("should not show a notification if a DIRECT connection does not have any FAILED states", () => {
+  it("should not show a notification if a DIRECT connection does not have any FAILED states", async () => {
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
@@ -355,12 +359,13 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.notCalled);
+    sinon.assert.notCalled(showErrorNotificationStub);
+    sinon.assert.calledWith(logUsageStub, UserEvent.DirectConnectionAction);
   });
 
-  it("should show a notification if a DIRECT connection has a FAILED `kafka_cluster` state", () => {
+  it("should show a notification if a DIRECT connection has a FAILED `kafka_cluster` state", async () => {
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
@@ -370,18 +375,19 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
-    assert.ok(showErrorNotificationStub.calledOnce);
+    sinon.assert.calledOnce(showErrorNotificationStub);
     const callArgs = showErrorNotificationStub.getCall(0).args;
     assert.strictEqual(
       callArgs[0],
       `Failed to establish connection to Kafka for "${connection.spec.name}".`,
     );
+    // a button should be provided
     assert.ok(callArgs[1][fakeDirectConnectionButtonLabel]);
   });
 
-  it("should show a notification if a DIRECT connection has a FAILED `schema_registry` state", () => {
+  it("should show a notification if a DIRECT connection has a FAILED `schema_registry` state", async () => {
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
@@ -391,7 +397,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.calledOnce);
     const callArgs = showErrorNotificationStub.getCall(0).args;
@@ -402,7 +408,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
     assert.ok(callArgs[1][fakeDirectConnectionButtonLabel]);
   });
 
-  it("should show a notification if a DIRECT connection has FAILED `kafka_cluster` and FAILED `schema_registry` states", () => {
+  it("should show a notification if a DIRECT connection has FAILED `kafka_cluster` and FAILED `schema_registry` states", async () => {
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
@@ -412,7 +418,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.calledOnce);
     const callArgs = showErrorNotificationStub.getCall(0).args;
@@ -423,7 +429,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
     assert.ok(callArgs[1][fakeDirectConnectionButtonLabel]);
   });
 
-  it("should not show a notification if a DIRECT connection has a FAILED `ccloud` state", () => {
+  it("should not show a notification if a DIRECT connection has a FAILED `ccloud` state", async () => {
     const connection: Connection = {
       ...TEST_DIRECT_CONNECTION,
       status: {
@@ -433,12 +439,12 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.notCalled);
   });
 
-  it("should not show a notification if a CCLOUD connection does not have a FAILED `ccloud` state", () => {
+  it("should not show a notification if a CCLOUD connection does not have a FAILED `ccloud` state", async () => {
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
@@ -447,12 +453,12 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.notCalled);
   });
 
-  it("should show a notification if a CCLOUD connection has a FAILED `ccloud` state", () => {
+  it("should show a notification if a CCLOUD connection has a FAILED `ccloud` state", async () => {
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
@@ -461,7 +467,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.calledOnce);
     const callArgs = showErrorNotificationStub.getCall(0).args;
@@ -472,7 +478,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
     assert.strictEqual(callArgs[1], undefined);
   });
 
-  it("should not s how a notification if a CCLOUD connection has FAILED `kafka_cluster` and FAILED `schema_registry` states", () => {
+  it("should not show a notification if a CCLOUD connection has FAILED `kafka_cluster` and FAILED `schema_registry` states", async () => {
     const connection: Connection = {
       ...TEST_CCLOUD_CONNECTION,
       status: {
@@ -483,13 +489,13 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.notCalled);
   });
 
   // TODO(shoup): remove this after the LOCAL connection migrates to a DIRECT connection
-  it("should not show a notification for a LOCAL connection, even with FAILED states", () => {
+  it("should not show a notification for a LOCAL connection, even with FAILED states", async () => {
     const connection: Connection = {
       ...TEST_LOCAL_CONNECTION,
       spec: { type: ConnectionType.Local },
@@ -502,7 +508,7 @@ describe("sidecar/connections/watcher.ts notifyIfFailedState()", () => {
       },
     };
 
-    notifyIfFailedState(connection);
+    await reportUsableState(connection);
 
     assert.ok(showErrorNotificationStub.notCalled);
   });
