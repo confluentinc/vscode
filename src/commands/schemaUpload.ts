@@ -14,6 +14,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
+import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
@@ -136,24 +137,46 @@ async function uploadSchema(
   /** ID given to the uploaded schema. May have been a preexisting id if this schema body had been registered previously. */
   let maybeNewId: number | undefined;
 
+  let success: boolean;
   try {
     // todo ask if want to normalize schema? They ... probably do?
     const normalize = true;
 
     maybeNewId = await registerSchema(schemaSubjectsApi, subject, schemaType, content, normalize);
 
+    success = true;
+
     logger.info(
       `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
     );
   } catch {
-    // Error message already shown in registerSchema()
+    success = false;
+  }
+
+  // Telemetry log the schema upload event + overall success or failure.
+  logUsage(UserEvent.SchemaAction, {
+    action: "upload",
+    status: success ? "succeeded" : "failed",
+
+    connection_id: registry.connectionId,
+    connection_type: registry.connectionType,
+    environment_id: registry.environmentId,
+
+    schema_registry_id: registry.id,
+    schema_type: schemaType,
+    subject_hash: hashed(subject),
+    schema_hash: hashed(content),
+  });
+
+  if (!success) {
+    // Error message already shown by registerSchema()
     return;
   }
 
   let registeredVersion: number | undefined;
   try {
     // Try to read back the schema we just registered to get the version number bound to the subject we just bound it to.
-    registeredVersion = await getNewlyRegisteredVersion(schemasApi, subject, maybeNewId);
+    registeredVersion = await getNewlyRegisteredVersion(schemasApi, subject, maybeNewId!);
   } catch {
     // Error message already shown in getNewlyRegisteredVersion()
     return;
@@ -170,7 +193,7 @@ async function uploadSchema(
   // the schema in the Schemas view.
   const [viewchoice, newSchema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
-    updateRegistryCacheAndFindNewSchema(registry, maybeNewId, subject, schemaViewProvider),
+    updateRegistryCacheAndFindNewSchema(registry, maybeNewId!, subject, schemaViewProvider),
   ]);
 
   if (viewchoice) {
