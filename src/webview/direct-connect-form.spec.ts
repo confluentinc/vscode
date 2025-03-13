@@ -13,7 +13,7 @@ import {
   ConnectionType,
   OAuthCredentials,
   ScramCredentials,
-  KerberosCredentials
+  KerberosCredentials,
 } from "../clients/sidecar";
 
 const template = readFileSync(new URL("direct-connect-form.html", import.meta.url), "utf8");
@@ -871,7 +871,9 @@ test("populates values for Kerberos auth type when they exist in the spec (edit/
     SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.keytab_path,
   );
 
-  const kafkaServiceNameInput = page.locator("input[name='kafka_cluster.credentials.service_name']");
+  const kafkaServiceNameInput = page.locator(
+    "input[name='kafka_cluster.credentials.service_name']",
+  );
   await expect(kafkaServiceNameInput).toHaveValue(
     // @ts-expect-error credentials could be of different types
     SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.service_name,
