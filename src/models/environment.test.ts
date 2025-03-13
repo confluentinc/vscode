@@ -62,7 +62,7 @@ describe("EnvironmentTreeItem", () => {
       if (missingKafka || missingSR) {
         assert.deepStrictEqual(
           treeItem.iconPath,
-          new ThemeIcon("error", new ThemeColor("problemsErrorIcon.foreground")),
+          new ThemeIcon("warning", new ThemeColor("problemsErrorIcon.foreground")),
         );
       } else {
         assert.deepStrictEqual(treeItem.iconPath, new ThemeIcon(env.iconName));

@@ -8,6 +8,7 @@ import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { getResourceManager } from "../storage/resourceManager";
 import {
   correlateTopicsWithSchemaSubjects,
   fetchSchemasForSubject,
@@ -126,12 +127,24 @@ export abstract class ResourceLoader implements IResourceBase {
    * */
   public async getSubjects(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     forceRefresh: boolean = false,
   ): Promise<Subject[]> {
     try {
       const schemaRegistry = await this.resolveSchemaRegistry(registryOrEnvironmentId);
-      return await fetchSubjects(schemaRegistry);
+      const resourceManager = getResourceManager();
+      if (!forceRefresh) {
+        // cache allowed ...
+        const subjects = await resourceManager.getSubjects(schemaRegistry);
+        if (subjects) {
+          // and had contents.
+          return subjects;
+        }
+      }
+
+      // Deep fetch the subjects from the schema registry, cache, return.
+      const subjects = await fetchSubjects(schemaRegistry);
+      await resourceManager.setSubjects(schemaRegistry, subjects);
+      return subjects;
     } catch (error) {
       logger.error("Error fetching subjects", error);
       if (
@@ -148,6 +161,9 @@ export abstract class ResourceLoader implements IResourceBase {
 
   /**
    * Get the list of schema (metadata) for a single subject from a schema registry.
+   *
+   * Currently does not cache. Used to, hence the forceRefresh parameter, and may well again one day.
+   * Keeping the parameter for now so won't have to find the right places to add it back in.
    */
   public async getSchemasForSubject(
     registryOrEnvironmentId: SchemaRegistry | EnvironmentId,
@@ -230,6 +246,26 @@ export abstract class ResourceLoader implements IResourceBase {
 
     // 5. Return said array.
     return schemaContainers;
+  }
+
+  /**
+   * General preemptive cache clearing.
+   * Clear whatever data may be cached scoped to the given object. Used when
+   * a subordinate resource is known to be modified in some way.
+   *
+   * Limited type support right now, but expected to grow over time.
+   *
+   * @param resource The resource to clear the storage cache for.
+   **/
+  public async clearCache(resource: SchemaRegistry): Promise<void> {
+    if (resource.connectionId !== this.connectionId) {
+      throw new Error(`Mismatched connectionId ${this.connectionId} for resource ${resource.id}`);
+    }
+
+    // Clear out cached subjects, if any.
+    logger.debug(`Clearing subject cache for schema registry ${resource.id}`);
+    const resourceManager = getResourceManager();
+    await resourceManager.setSubjects(resource, undefined);
   }
 
   /**
