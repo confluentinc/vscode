@@ -15,6 +15,8 @@ All notable changes to this extension will be documented in this file.
   instead of the red "error" icon.
 - Schema registry subjects are now cached, reducing round trips to a schema registry. Use the
   'reload' button in the Schemas view to force refresh.
+- Users who reset their password during the CCloud authentication flow will now be prompted to
+  re-authenticate.
 
 ### Fixed
 
