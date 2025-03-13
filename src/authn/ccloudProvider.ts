@@ -143,18 +143,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
     if (authCallback.resetPassword) {
       // user reset their password, so we need to notify them to reauthenticate
       logger.debug("createSession() user reset their password");
-      vscode.window
-        .showInformationMessage(
-          "Your password has been reset. Please sign in again to Confluent Cloud.",
-          CCLOUD_SIGN_IN_BUTTON_LABEL,
-        )
-        .then((selection) => {
-          if (selection === CCLOUD_SIGN_IN_BUTTON_LABEL) {
-            // this will trigger the `createSession()` method again, which will start the auth flow
-            // and create a new connection
-            this.createSession();
-          }
-        });
+      this.showResetPasswordNotification();
       return Promise.reject(new Error("User reset their password."));
     }
 
@@ -402,6 +391,15 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         };
         logger.debug("handled authCallback URI; calling `setAuthFlowCompleted()`", callbackEvent);
         await resourceManager.setAuthFlowCompleted(callbackEvent);
+        if (callbackEvent.resetPassword) {
+          // clear any existing auth session so the user can sign in again with their new password
+          await Promise.all([
+            deleteCCloudConnection(),
+            getStorageManager().deleteSecret(SecretStorageKeys.CCLOUD_AUTH_STATUS),
+          ]);
+          ccloudAuthSessionInvalidated.fire();
+          this.showResetPasswordNotification();
+        }
       }
     });
 
@@ -587,6 +585,22 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
   private updateContextValue(connected: boolean) {
     // async, but we can fire-and-forget since we don't need to wait for this to complete
     setContextValue(ContextValues.ccloudConnectionAvailable, connected);
+  }
+
+  /** Show a notification to the user that their password has been reset and they need to sign in. */
+  showResetPasswordNotification() {
+    vscode.window
+      .showInformationMessage(
+        "Your password has been reset. Please sign in again to Confluent Cloud.",
+        CCLOUD_SIGN_IN_BUTTON_LABEL,
+      )
+      .then((selection) => {
+        if (selection === CCLOUD_SIGN_IN_BUTTON_LABEL) {
+          logger.info("CALLING CREATESESSION NOW");
+          // (re)start the auth flow
+          this.createSession();
+        }
+      });
   }
 }
 
