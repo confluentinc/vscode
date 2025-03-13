@@ -596,7 +596,6 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       )
       .then((selection) => {
         if (selection === CCLOUD_SIGN_IN_BUTTON_LABEL) {
-          logger.info("CALLING CREATESESSION NOW");
           // (re)start the auth flow
           this.createSession();
         }
