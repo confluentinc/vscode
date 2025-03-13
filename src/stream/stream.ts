@@ -41,11 +41,9 @@ export class Stream {
       1 / 4,
       (point: number) => values[point],
       (a, b) => {
-        return (
-          descending(a.timestamp, b.timestamp) ||
-          descending(a.partition_id, b.partition_id) ||
-          descending(a.offset, b.offset)
-        );
+        return a.partition_id === b.partition_id
+          ? descending(a.offset, b.offset)
+          : descending(a.timestamp, b.timestamp);
       },
     );
   }
