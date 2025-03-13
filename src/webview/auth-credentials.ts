@@ -428,6 +428,7 @@ export class AuthCredentials extends HTMLElement {
       // start with a clean slate when auth type changes
       this._internals.setValidity({});
     });
+
     // Before form submits, invoke validation checks
     if (this._internals.form) {
       this._internals.form.addEventListener(
