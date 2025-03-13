@@ -1489,24 +1489,24 @@ components:
     HealthResponse:
       type: object
       properties:
+        status:
+          enum:
+          - UP
+          - DOWN
+          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
     HealthCheck:
       type: object
       properties:
+        name:
+          type: string
         status:
           enum:
           - UP
           - DOWN
-          type: string
-        name:
           type: string
         data:
           type: object
