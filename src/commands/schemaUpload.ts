@@ -14,6 +14,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
+import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
@@ -141,6 +142,18 @@ async function uploadSchema(
     const normalize = true;
 
     maybeNewId = await registerSchema(schemaSubjectsApi, subject, schemaType, content, normalize);
+
+    logUsage(UserEvent.SchemaAction, {
+      action: "upload",
+      connection_id: registry.connectionId,
+      connection_type: registry.connectionType,
+      environment_id: registry.environmentId,
+
+      schema_registry_id: registry.id,
+      schema_type: schemaType,
+      subject_hash: hashed(subject),
+      schema_hash: hashed(content),
+    });
 
     logger.info(
       `Schema registered successfully as subject "${subject}" in registry "${registry.id}" as schema id ${maybeNewId}`,
