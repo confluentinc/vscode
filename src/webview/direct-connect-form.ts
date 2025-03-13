@@ -257,4 +257,4 @@ export type FormConnectionType =
   | "Confluent Cloud"
   | "Confluent Platform"
   | "Other";
-export type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth";
+export type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth" | "Kerberos";
