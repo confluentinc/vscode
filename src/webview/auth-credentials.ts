@@ -58,7 +58,6 @@ export class AuthCredentials extends HTMLElement {
 
   // Add all initial form values to the form data, including defaults
   initializeFormValues() {
-    console.log("Initializing form values");
     // Get all input/select elements in the shadow DOM
     const formElements = this.shadowRoot?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
       "input, select",
@@ -451,8 +450,7 @@ export class AuthCredentials extends HTMLElement {
     if (this._internals.form) {
       this._internals.form.addEventListener(
         "submit",
-        (event) => {
-          console.log("Form submitted:", event);
+        () => {
           // Validate all inputs on form submission
           if (!this.checkValidity()) {
             // Don't prevent default. Since we send validation checks to _internals,
