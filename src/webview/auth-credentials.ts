@@ -56,6 +56,21 @@ export class AuthCredentials extends HTMLElement {
     return this.identifier() + ".credentials." + name;
   }
 
+  // Add all initial form values to the form data, including defaults
+  initializeFormValues() {
+    // Get all input/select elements in the shadow DOM
+    const formElements = this.shadowRoot?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select",
+    );
+    if (formElements) {
+      formElements.forEach((element) => {
+        if (element.name && element.value) {
+          this.entries.set(element.name, element.value);
+        }
+      });
+    }
+    this._internals.setFormValue(this.entries);
+  }
   // Helper method to validate a single input
   validateInput(input: HTMLInputElement): boolean {
     if (!input.validity.valid) {
@@ -381,8 +396,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('service_name')"
                 data-attr-name="this.getInputId('service_name')"
                 type="text"
-                placeholder="kafka"
-                data-value="this.creds()?.service_name ?? null"
+                data-value="this.creds()?.service_name ?? 'kafka'"
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -425,15 +439,18 @@ export class AuthCredentials extends HTMLElement {
     applyBindings(shadow, this.os, this);
     this.os.watch(() => {
       this.authType();
+      this.creds();
       // start with a clean slate when auth type changes
       this._internals.setValidity({});
+      // Initialize form values after bindings. Small timeout to ensure DOM is ready
+      setTimeout(() => this.initializeFormValues(), 100);
     });
+
     // Before form submits, invoke validation checks
     if (this._internals.form) {
       this._internals.form.addEventListener(
         "submit",
-        (event) => {
-          console.log("Form submitted:", event);
+        () => {
           // Validate all inputs on form submission
           if (!this.checkValidity()) {
             // Don't prevent default. Since we send validation checks to _internals,
