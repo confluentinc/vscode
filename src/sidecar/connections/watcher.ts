@@ -153,7 +153,7 @@ type ConfigType = "Kafka" | "Schema Registry" | "Confluent Cloud";
 
 /** Summary of a {@link Connection}'s {@link ConnectedState} and config, including additional fields
  * that may not be tracked by the sidecar (mainly for `DIRECT` connections). */
-interface ConnectionSummary {
+export interface ConnectionSummary {
   connectionType: ConnectionType;
   configType: ConfigType;
   connectedState: ConnectedState;
