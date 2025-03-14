@@ -105,4 +105,5 @@ export const TEST_DIRECT_CONNECTION_FORM_SPEC: CustomConnectionSpec = {
   ...ConnectionSpecFromJSON(TEST_DIRECT_CONNECTION.spec),
   id: TEST_DIRECT_CONNECTION_ID, // enforced ConnectionId type
   formConnectionType: "Apache Kafka",
+  specifiedConnectionType: undefined,
 };
