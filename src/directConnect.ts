@@ -239,7 +239,7 @@ export function getConnectionSpecFromFormData(
     formConnectionType: formData["formconnectiontype"],
   };
   if (formData["formconnectiontype"] === "Other") {
-    spec.otherType = formData["othertype"];
+    spec.specifiedConnectionType = formData["othertype"];
   }
 
   // Group form data by resource type - either kafka_cluster or schema_registry
