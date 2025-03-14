@@ -55,4 +55,12 @@ describe("preparePropertiesForTrack", () => {
     const result = preparePropertiesForTrack(undefined);
     assert.strictEqual(result.currentSidecarVersion, version);
   });
+  it("should include platform", () => {
+    const result = preparePropertiesForTrack(undefined);
+    assert.strictEqual(result.platform, process.platform);
+  });
+  it("should include arch", () => {
+    const result = preparePropertiesForTrack(undefined);
+    assert.strictEqual(result.arch, process.arch);
+  });
 });
