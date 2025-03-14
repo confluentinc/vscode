@@ -14,6 +14,7 @@ import {
   JSONSchema,
   Diagnostic as JsonDiagnostic,
   TextDocument as JsonTextDocument,
+  LanguageService,
   getLanguageService,
 } from "vscode-json-languageservice";
 import { Logger } from "../logging";
@@ -45,23 +46,8 @@ export async function validateDocument(
   }
 
   // JSON language service setup and initial document parsing
-  const jsonLanguageService = getLanguageService({
-    schemaRequestService: () => {
-      return Promise.resolve(JSON.stringify(schema));
-    },
-  });
-  jsonLanguageService.configure({
-    allowComments: false,
-    schemas: [{ fileMatch: ["*.json"], uri: "schema", schema }],
-  });
-  // vscode-json-languageservice requires DocumentUri (string) type instead of vscode.Uri
-  const textDocument: JsonTextDocument = JsonTextDocument.create(
-    documentUri.toString(),
-    "json",
-    1,
-    content,
-  );
-  const jsonDocument: JSONDocument = jsonLanguageService.parseJSONDocument(textDocument);
+  const jsonLanguageService = initializeJsonSchemaService(schema);
+  const { textDocument, jsonDocument } = initializeJsonDocument(documentUri, content, schema);
 
   // validate the document against the schema
   // (no idea why we need to pass both the document and the parsed document)
@@ -120,4 +106,34 @@ export async function validateDocument(
   });
 
   return [docCloseSub, docChangeSub, docSaveSub];
+}
+
+export function initializeJsonSchemaService(schema: JSONSchema): LanguageService {
+  const jsonLanguageService: LanguageService = getLanguageService({
+    schemaRequestService: () => {
+      return Promise.resolve(JSON.stringify(schema));
+    },
+  });
+  jsonLanguageService.configure({
+    allowComments: false,
+    schemas: [{ fileMatch: ["*.json"], uri: "schema", schema }],
+  });
+  return jsonLanguageService;
+}
+
+export function initializeJsonDocument(
+  documentUri: Uri,
+  content: string,
+  schema: JSONSchema,
+): { textDocument: JsonTextDocument; jsonDocument: JSONDocument } {
+  const jsonLanguageService = initializeJsonSchemaService(schema);
+  // vscode-json-languageservice requires DocumentUri (string) type instead of vscode.Uri
+  const textDocument: JsonTextDocument = JsonTextDocument.create(
+    documentUri.toString(),
+    "json",
+    1,
+    content,
+  );
+  const jsonDocument: JSONDocument = jsonLanguageService.parseJSONDocument(textDocument);
+  return { textDocument, jsonDocument };
 }
