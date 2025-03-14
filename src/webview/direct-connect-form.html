@@ -212,7 +212,7 @@
             />
             <span>SSL/TLS enabled</span>
           </label>
-          <template data-if="this.schemaSslEnabled()">
+          <template data-if="this.schemaSslEnabled() && this.platformType() !== 'Confluent Cloud'">
             <ssl-config
               data-prop-config="this.schemaSslConfig()"
               data-prop-namespace="'schema_registry'"
@@ -282,10 +282,6 @@
       .msg-banner.success::before {
         background-color: var(--vscode-testing-iconPassed);
       }
-      .info > .button {
-        padding: 2px;
-        font-size: smaller;
-      }
       /* These styles are specific to the form SSL section */
       .clickable-header {
         cursor: pointer;
@@ -309,6 +305,24 @@
       }
       .input-sub-group > .input-container {
         margin-bottom: 12px;
+      }
+      /** Align an Input with Button next to it e.g ssl select file
+      * div.button-input
+      *  .input
+      *  .button
+      */
+      .button-input {
+        display: flex;
+        align-items: start;
+        gap: 8px;
+      }
+      .button-input .input {
+        flex: 1 0 60%;
+      }
+      .button-input .button {
+        flex: 0 0 60px;
+        padding: 4px 2px;
+        font-size: smaller;
       }
     </style>
   </body>
