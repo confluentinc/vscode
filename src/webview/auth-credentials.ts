@@ -86,7 +86,7 @@ export class AuthCredentials extends HTMLElement {
     }
   }
 
-  // updateValue called onInput
+  // updateValue called on input
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
@@ -423,7 +423,11 @@ export class AuthCredentials extends HTMLElement {
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
-
+    this.os.watch(() => {
+      this.authType();
+      // start with a clean slate when auth type changes
+      this._internals.setValidity({});
+    });
     // Before form submits, invoke validation checks
     if (this._internals.form) {
       this._internals.form.addEventListener(
