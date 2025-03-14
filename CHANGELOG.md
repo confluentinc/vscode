@@ -18,6 +18,8 @@ All notable changes to this extension will be documented in this file.
   'reload' button in the Schemas view to force refresh.
 - Users who reset their password during the CCloud authentication flow will now be prompted to
   re-authenticate.
+- "View Messages" and "Send Message(s)" icons have been updated for better visibility and
+  accessibility.
 
 ### Fixed
 
