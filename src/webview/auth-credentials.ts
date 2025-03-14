@@ -56,6 +56,22 @@ export class AuthCredentials extends HTMLElement {
     return this.identifier() + ".credentials." + name;
   }
 
+  // Add all initial form values to the form data, including defaults
+  initializeFormValues() {
+    console.log("Initializing form values");
+    // Get all input/select elements in the shadow DOM
+    const formElements = this.shadowRoot?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select",
+    );
+    if (formElements) {
+      formElements.forEach((element) => {
+        if (element.name && element.value) {
+          this.entries.set(element.name, element.value);
+        }
+      });
+    }
+    this._internals.setFormValue(this.entries);
+  }
   // Helper method to validate a single input
   validateInput(input: HTMLInputElement): boolean {
     if (!input.validity.valid) {
@@ -425,8 +441,11 @@ export class AuthCredentials extends HTMLElement {
     applyBindings(shadow, this.os, this);
     this.os.watch(() => {
       this.authType();
+      this.creds();
       // start with a clean slate when auth type changes
       this._internals.setValidity({});
+      // Initialize form values after bindings. Small timeout to ensure DOM is ready
+      setTimeout(() => this.initializeFormValues(), 100);
     });
 
     // Before form submits, invoke validation checks
