@@ -383,7 +383,6 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 placeholder="kafka"
                 data-value="this.creds()?.service_name ?? null"
-                required
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -399,7 +398,6 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 placeholder="/path/to/keytab"
                 data-value="this.creds()?.keytab_path ?? null"
-                required
                 data-on-input="this.updateValue(event)"
               />
             </div>
