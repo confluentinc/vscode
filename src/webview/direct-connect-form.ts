@@ -17,6 +17,7 @@ addEventListener("DOMContentLoaded", () => {
   const ui = document.querySelector("main")!;
   const vm = new DirectConnectFormViewModel(os);
   applyBindings(ui, os, vm);
+  vm.setupEnterKeyHandler();
 });
 
 class DirectConnectFormViewModel extends ViewModel {
@@ -168,7 +169,33 @@ class DirectConnectFormViewModel extends ViewModel {
         console.info(`No side effects for input update: ${input.name}`);
     }
   }
-
+  /** This is a workaround for the default behavior of Enter key in forms
+   * Normally Enter submits the form with the first submit button, which would be "Test"
+   * We want Enter to trigger the "Save" or "Update" button instead
+   */
+  setupEnterKeyHandler() {
+    const form = document.querySelector("form.form-container");
+    if (form) {
+      form.addEventListener("keydown", (e: Event) => {
+        const keyEvent = e as KeyboardEvent;
+        if (
+          keyEvent.key === "Enter" &&
+          keyEvent.target instanceof HTMLElement &&
+          keyEvent.target.tagName !== "TEXTAREA"
+        ) {
+          e.preventDefault();
+          const saveButton = Array.from(form.querySelectorAll('input[type="submit"]')).find(
+            (btn) =>
+              (btn as HTMLInputElement).value === "Save" ||
+              (btn as HTMLInputElement).value === "Update",
+          );
+          if (saveButton) {
+            (saveButton as HTMLInputElement).click();
+          }
+        }
+      });
+    }
+  }
   /** Submit all form data to the extension host */
   async handleSubmit(event: SubmitEvent) {
     event.preventDefault();
