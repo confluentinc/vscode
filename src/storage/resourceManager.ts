@@ -8,6 +8,7 @@ import {
   ConnectionType,
   Status,
 } from "../clients/sidecar";
+import { FormConnectionType } from "../directConnections/types";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
@@ -15,7 +16,6 @@ import { ConnectionId, isCCloud, isLocal } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
 import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { FormConnectionType } from "../webview/direct-connect-form";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 
 const logger = new Logger("storage.resourceManager");
