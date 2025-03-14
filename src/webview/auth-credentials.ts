@@ -397,8 +397,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('service_name')"
                 data-attr-name="this.getInputId('service_name')"
                 type="text"
-                placeholder="kafka"
-                data-value="this.creds()?.service_name ?? null"
+                data-value="this.creds()?.service_name ?? 'kafka'"
                 data-on-input="this.updateValue(event)"
               />
             </div>
