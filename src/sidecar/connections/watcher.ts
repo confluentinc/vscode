@@ -1,9 +1,20 @@
 import { commands, EventEmitter } from "vscode";
-import { Connection, ConnectionType } from "../../clients/sidecar";
+import {
+  CCloudStatus,
+  ConnectedState,
+  Connection,
+  ConnectionSpec,
+  ConnectionType,
+  KafkaClusterConfig,
+  SchemaRegistryConfig,
+} from "../../clients/sidecar";
+import { getCredentialsType } from "../../directConnections/credentials";
+import { FormConnectionType, SupportedAuthTypes } from "../../directConnections/types";
 import { connectionStable, environmentChanged } from "../../emitters";
 import { showErrorNotificationWithButtons } from "../../errors";
 import { Logger } from "../../logging";
 import { ConnectionId, connectionIdToType, EnvironmentId } from "../../models/resource";
+import { CustomConnectionSpec, getResourceManager } from "../../storage/resourceManager";
 import { logUsage, UserEvent } from "../../telemetry/events";
 import {
   ConnectionEventAction,
@@ -61,7 +72,7 @@ export async function waitForConnectionToBeStable(
   logger.debug(
     `waitForConnectionToBeStable(): connection is stable after ${Date.now() - startTime}ms, returning`,
   );
-  notifyIfFailedState(connection);
+  await reportUsableState(connection);
 
   return connection;
 }
@@ -75,59 +86,145 @@ export async function waitForConnectionToBeStable(
  * For `CCLOUD` connections, this will show a notification if the Confluent Cloud status is `FAILED`
  * and provide buttons to open the logs or file an issue.
  */
-export function notifyIfFailedState(connection: Connection) {
-  let failedConfigTypes: string[] = [];
-  let notificationButtons: Record<string, () => void> | undefined;
+export async function reportUsableState(connection: Connection) {
+  const [successfulConnectionSummaries, failedConnectionSummaries]: [
+    ConnectionSummary[],
+    ConnectionSummary[],
+  ] = await Promise.all([
+    getConnectionSummaries(connection, "SUCCESS"),
+    getConnectionSummaries(connection, "FAILED"),
+  ]);
 
-  const type: ConnectionType = connection.spec.type!;
+  if (failedConnectionSummaries.length > 0) {
+    let notificationButtons: Record<string, () => void> | undefined;
+    // only show the "View Connection Details" button if there were failed states for any of the
+    // configs from a direct connection (Kafka or Schema Registry)
+    const failedDirectSummaries = failedConnectionSummaries.some(
+      ({ connectionType }) => connectionType === ConnectionType.Direct,
+    );
+    if (failedDirectSummaries) {
+      notificationButtons = {
+        "View Connection Details": () =>
+          commands.executeCommand("confluent.connections.direct.edit", connection.id),
+      };
+    }
+    const failedTypes: ConfigType[] = failedConnectionSummaries.map((state) => state.configType);
+    // the notifications don't allow rich formatting here, so we'll just list out the failed resources
+    // and then try to show the errors themselves in the item tooltips if possible
+    showErrorNotificationWithButtons(
+      `Failed to establish connection to ${failedTypes.join(" and ")} for "${connection.spec.name}".`,
+      notificationButtons,
+    );
+  }
+
+  // send an event for direct connections to help understand how often SUCCESS/FAILED happens,
+  // for which configs, etc.
+  if (connection.spec.type === ConnectionType.Direct) {
+    failedConnectionSummaries.forEach((state) => {
+      logUsage(UserEvent.DirectConnectionAction, {
+        action: "failed to connect",
+        connectionType: ConnectionType.Direct,
+        type: state.type,
+        configType: state.configType,
+        configAuthType: state.authType,
+        configSslEnabled: state.sslEnabled,
+      });
+    });
+    successfulConnectionSummaries.forEach((state) => {
+      logUsage(UserEvent.DirectConnectionAction, {
+        action: "successfully connected",
+        connectionType: ConnectionType.Direct,
+        type: state.type,
+        configType: state.configType,
+        configAuthType: state.authType,
+        configSslEnabled: state.sslEnabled,
+      });
+    });
+  }
+}
+
+/**
+ * The type of configuration used in the {@link ConnectionSpec}.
+ * - `Kafka` for a {@link KafkaClusterConfig}
+ * - `Schema Registry` for a {@link SchemaRegistryConfig}
+ * - `Confluent Cloud` for a {@link CCloudConfig}
+ */
+type ConfigType = "Kafka" | "Schema Registry" | "Confluent Cloud";
+
+/** Summary of a {@link Connection}'s {@link ConnectedState} and config, including additional fields
+ * that may not be tracked by the sidecar (mainly for `DIRECT` connections). */
+interface ConnectionSummary {
+  connectionType: ConnectionType;
+  configType: ConfigType;
+  connectedState: ConnectedState;
+  type?: FormConnectionType;
+  authType?: SupportedAuthTypes | "Browser";
+  sslEnabled?: boolean;
+}
+
+/**
+ * Return an array of {@link ConnectionSummary} for the given {@link Connection}'s config state(s)
+ * that match the provided {@linkcode ConnectedState state}.
+ */
+export async function getConnectionSummaries(
+  connection: Connection,
+  state: ConnectedState,
+): Promise<ConnectionSummary[]> {
+  const states: ConnectionSummary[] = [];
+
+  const spec: ConnectionSpec = connection.spec;
+  const type: ConnectionType = spec.type!;
   switch (type) {
     case ConnectionType.Direct:
       {
-        if (connection.status.kafka_cluster?.state === "FAILED") failedConfigTypes.push("Kafka");
-        if (connection.status.schema_registry?.state === "FAILED")
-          failedConfigTypes.push("Schema Registry");
-        notificationButtons = {
-          "View Connection Details": () =>
-            commands.executeCommand("confluent.connections.direct.edit", connection.id),
-        };
+        // look up the stored spec to get additional properties not tracked by the sidecar
+        const formSpec: CustomConnectionSpec | null =
+          await getResourceManager().getDirectConnection(connection.id as ConnectionId);
+
+        const kafkaClusterState: ConnectedState | undefined =
+          connection.status.kafka_cluster?.state;
+        if (kafkaClusterState === state) {
+          const kafkaConfig: KafkaClusterConfig | undefined = connection.spec.kafka_cluster;
+          states.push({
+            connectionType: ConnectionType.Direct,
+            type: formSpec?.formConnectionType,
+            configType: "Kafka",
+            authType: getCredentialsType(kafkaConfig?.credentials),
+            sslEnabled: kafkaConfig?.ssl?.enabled ?? false,
+            connectedState: state,
+          });
+        }
+
+        const schemaRegistryState: ConnectedState | undefined =
+          connection.status.schema_registry?.state;
+        if (schemaRegistryState === state) {
+          const schemaRegistryConfig: SchemaRegistryConfig | undefined =
+            connection.spec.schema_registry;
+          states.push({
+            connectionType: ConnectionType.Direct,
+            type: formSpec?.formConnectionType,
+            configType: "Schema Registry",
+            authType: getCredentialsType(schemaRegistryConfig?.credentials),
+            sslEnabled: schemaRegistryConfig?.ssl?.enabled ?? false,
+            connectedState: state,
+          });
+        }
       }
       break;
     case ConnectionType.Ccloud: {
-      if (connection.status.ccloud?.state === "FAILED") failedConfigTypes.push("Confluent Cloud");
-      // don't assign any buttons and allow the "Open Logs" + "File Issue" buttons to show by default
+      const ccloudStatus: CCloudStatus | undefined = connection.status.ccloud;
+      if (ccloudStatus && ccloudStatus.state === state) {
+        states.push({
+          connectionType: ConnectionType.Ccloud,
+          configType: "Confluent Cloud",
+          authType: "Browser",
+          connectedState: state,
+        });
+      }
     }
   }
 
-  // the notifications don't allow rich formatting here, so we'll just list out the failed resources
-  // and then try to show the errors themselves in the item tooltips if possible
-  if (failedConfigTypes.length > 0) {
-    showErrorNotificationWithButtons(
-      `Failed to establish connection to ${failedConfigTypes.join(" and ")} for "${connection.spec.name}".`,
-      notificationButtons,
-    );
-    // send an event for failed connections to help understand how often this happens, for which
-    // configs, etc. since we don't have a field to indicate which auth type(s) are used, we're
-    // sending **only the keys/fields** used and whether or not SSL was enabled in each config
-    const kafkaConfigAuthFields: string[] | undefined = connection.spec.kafka_cluster?.credentials
-      ? Object.keys(connection.spec.kafka_cluster.credentials)
-      : undefined;
-    const kafkaConfigSslEnabled: boolean | undefined = connection.spec.kafka_cluster?.ssl?.enabled;
-    const schemaRegistryConfigAuthFields: string[] | undefined = connection.spec.schema_registry
-      ?.credentials
-      ? Object.keys(connection.spec.schema_registry.credentials)
-      : undefined;
-    const schemaRegistryConfigSslEnabled: boolean | undefined =
-      connection.spec.schema_registry?.ssl?.enabled;
-    logUsage(UserEvent.DirectConnectionAction, {
-      action: "failed to connect",
-      connectionType: type,
-      kafkaConfigAuthFields,
-      kafkaConfigSslEnabled,
-      schemaRegistryConfigAuthFields,
-      schemaRegistryConfigSslEnabled,
-      failedConfigTypes,
-    });
-  }
+  return states;
 }
 
 /**

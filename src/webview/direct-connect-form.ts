@@ -1,11 +1,12 @@
 import { ObservableScope } from "inertial";
+import { ConnectedState } from "../clients/sidecar";
+import { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
+import { CustomConnectionSpec } from "../storage/resourceManager";
+import { AuthCredentials } from "./auth-credentials";
 import { applyBindings } from "./bindings/bindings";
 import { ViewModel } from "./bindings/view-model";
 import { sendWebviewMessage } from "./comms/comms";
-import { ConnectedState } from "../clients/sidecar";
-import { CustomConnectionSpec } from "../storage/resourceManager";
 import { SslConfig } from "./ssl-config-inputs";
-import { AuthCredentials } from "./auth-credentials";
 // Register the custom element
 customElements.define("ssl-config", SslConfig);
 customElements.define("auth-credentials", AuthCredentials);
@@ -250,11 +251,3 @@ export function post(
 export function post(type: any, body: any): Promise<unknown> {
   return sendWebviewMessage(type, body);
 }
-
-/** Similar to {@link ConnectionType}, but only used for telemetry purposes. */
-export type FormConnectionType =
-  | "Apache Kafka"
-  | "Confluent Cloud"
-  | "Confluent Platform"
-  | "Other";
-export type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth" | "Kerberos";
