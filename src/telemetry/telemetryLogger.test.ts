@@ -4,31 +4,6 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { preparePropertiesForTrack } from "./telemetryLogger";
 
-const VALID_PLATFORMS: NodeJS.Platform[] = [
-  "aix",
-  "android",
-  "cygwin",
-  "darwin",
-  "freebsd",
-  "linux",
-  "openbsd",
-  "sunos",
-  "win32",
-];
-
-const VALID_ARCH: string[] = [
-  "arm",
-  "arm64",
-  "ia32",
-  "mips",
-  "mipsel",
-  "ppc",
-  "ppc64",
-  "s390",
-  "s390x",
-  "x64",
-];
-
 describe("preparePropertiesForTrack", () => {
   let sandbox: sinon.SinonSandbox;
 
@@ -82,18 +57,10 @@ describe("preparePropertiesForTrack", () => {
   });
   it("should include platform", () => {
     const result = preparePropertiesForTrack(undefined);
-    let isValisPlatform = false;
-    if (VALID_PLATFORMS.includes(result.platform as NodeJS.Platform)) {
-      isValisPlatform = true;
-    }
-    assert.ok(isValisPlatform, `platform "${result.platform}" should be a valid os.Platform type`);
+    assert.strictEqual(result.platform, process.platform);
   });
   it("should include arch", () => {
     const result = preparePropertiesForTrack(undefined);
-    let isValidArch = false;
-    if (VALID_ARCH.includes(result.arch as NodeJS.Architecture)) {
-      isValidArch = true;
-    }
-    assert.ok(isValidArch, `platform "${result.arch}" should be a valid os.Platform type`);
+    assert.strictEqual(result.arch, process.arch);
   });
 });
