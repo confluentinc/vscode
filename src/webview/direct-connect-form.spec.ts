@@ -297,10 +297,10 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   // Click to show the advanced settings, then fill them in
   await page.click("p:has-text('TLS Configuration')");
-  await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
+  await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PKCS12");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
-  await page.selectOption("select[name='kafka_cluster.ssl.keystore.type']", "PEM");
+  await page.selectOption("select[name='kafka_cluster.ssl.keystore.type']", "PKCS12");
   await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
   await page.fill("input[name='kafka_cluster.ssl.keystore.password']", "keystore-password");
   await page.fill("input[name='kafka_cluster.ssl.keystore.key_password']", "key-password");
@@ -326,10 +326,10 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
     "kafka_cluster.ssl.keystore.key_password": "key-password",
     "kafka_cluster.ssl.keystore.password": "keystore-password",
     "kafka_cluster.ssl.keystore.path": "/path/to/keystore",
-    "kafka_cluster.ssl.keystore.type": "PEM",
+    "kafka_cluster.ssl.keystore.type": "PKCS12",
     "kafka_cluster.ssl.truststore.password": "truststore-password",
     "kafka_cluster.ssl.truststore.path": "/path/to/truststore",
-    "kafka_cluster.ssl.truststore.type": "PEM",
+    "kafka_cluster.ssl.truststore.type": "PKCS12",
   });
 });
 test("adds only edited ssl fields to form data", async ({ execute, page }) => {
@@ -451,7 +451,7 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
   await page.check("input[type=checkbox][name='kafka_cluster.ssl.enabled']");
   // Click to show the advanced settings, then fill them in
   await page.click("p:has-text('TLS Configuration')");
-  await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PEM");
+  await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PKCS12");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
 
@@ -474,7 +474,7 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
     "kafka_cluster.ssl.enabled": "true",
     "kafka_cluster.ssl.truststore.password": "truststore-password",
     "kafka_cluster.ssl.truststore.path": "/path/to/truststore",
-    "kafka_cluster.ssl.truststore.type": "PEM",
+    "kafka_cluster.ssl.truststore.type": "PKCS12",
     "schema_registry.auth_type": "None",
     "schema_registry.ssl.enabled": "true",
     "schema_registry.uri": "",
