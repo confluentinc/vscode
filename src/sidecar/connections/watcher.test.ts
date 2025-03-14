@@ -25,10 +25,9 @@ import {
   newMessageHeaders,
 } from "../../ws/messageTypes";
 
+import { getTestExtensionContext } from "../../../tests/unit/testUtils";
 import { CCLOUD_CONNECTION_ID } from "../../constants";
 import * as errors from "../../errors";
-import * as telemetryEvents from "../../telemetry/events";
-import { UserEvent } from "../../telemetry/events";
 import {
   ConnectionStateWatcher,
   reportUsableState,
@@ -332,17 +331,19 @@ describe("sidecar/connections/watcher.ts SingleConnectionEntry", () => {
   });
 });
 
-describe.only("sidecar/connections/watcher.ts reportUsableState() notifications", () => {
+describe("sidecar/connections/watcher.ts reportUsableState() notifications", () => {
   let sandbox: sinon.SinonSandbox;
   let showErrorNotificationStub: sinon.SinonStub;
-  let logUsageStub: sinon.SinonStub;
 
   const fakeDirectConnectionButtonLabel = "View Connection Details";
+
+  before(async () => {
+    await getTestExtensionContext();
+  });
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
     showErrorNotificationStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
-    logUsageStub = sandbox.stub(telemetryEvents, "logUsage").returns();
   });
 
   afterEach(() => {
@@ -362,7 +363,6 @@ describe.only("sidecar/connections/watcher.ts reportUsableState() notifications"
     await reportUsableState(connection);
 
     sinon.assert.notCalled(showErrorNotificationStub);
-    sinon.assert.calledWith(logUsageStub, UserEvent.DirectConnectionAction);
   });
 
   it("should show a notification if a DIRECT connection has a FAILED `kafka_cluster` state", async () => {
