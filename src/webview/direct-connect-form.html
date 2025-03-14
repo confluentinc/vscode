@@ -214,7 +214,7 @@
             />
             <span>SSL/TLS enabled</span>
           </label>
-          <template data-if="this.schemaSslEnabled()">
+          <template data-if="this.schemaSslEnabled() && this.platformType() !== 'Confluent Cloud'">
             <ssl-config
               data-prop-config="this.schemaSslConfig()"
               data-prop-namespace="'schema_registry'"
