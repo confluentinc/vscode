@@ -26,25 +26,25 @@ Confluent for VS Code offers project templates designed to accelerate your devel
 > [!NOTE]
 > Pre-requisites: You must have Docker Engine (version v24.0 or later) installed on your machine. Please follow the instruction [here](https://docs.docker.com/engine/install/) to install Docker Engine.
 
-Using just a single click, you can easily start a Kafka and Confluent Schema Registry container on your
-local machine (via Docker).
+Using just a single click, you can easily start a Kafka and Confluent Schema Registry container on your local machine (via Docker).
 
-1. Click the green play button to begin the Local resources quickpick flow
-1. Choose whether you want to create just a Kafka cluster or Kafka and Schema Registry, both
+1. Click the green play button next to "Local" to choose whether you want to start Kafka, or Kafka and Schema Registry together
 1. Enter the number of brokers you want in the Kafka cluster (this determines the maximum replication factor for the Kafka topics)
-1. Hit OK and wait for the resources to become available
-1. Now, you can leverage all the features of the extension to work with the Local resources you just started.
+1. Hit OK and once the resources become available, you will be able to leverage all the features of the extension to work with the resources you just started.
 
 Currently, the following Docker images are used:
 - [confluent-local](https://hub.docker.com/r/confluentinc/confluent-local) for starting a Kafka cluster and Kafka REST server.
 - [cp-schema-registry](https://hub.docker.com/r/confluentinc/cp-schema-registry) for Schema Registry
 
+> [!NOTE]
+> We plan to expand support for starting Local Resources using other Kafka Docker images,
+> such as [apache/kafka](https://hub.docker.com/r/apache/kafka), [Warpstream](https://docs.warpstream.com/warpstream/getting-started/install-the-warpstream-agent) and more.
 
 ### Inspect messages in Kafka topics using Message Viewer
 
 <!-- <gif showing messages streaming in, using histogram, clicking pause, scrolling down a bit clicking a message to open it> -->
 
-Click the envelope-with-magnifying-glass icon next to the topic name to open the **Message Viewer**, which enables
+Click the ![envelope-with-magnifying-glass](../resources/icons/confluent-view-messages.svg) icon next to the topic name to open the **Message Viewer**, which enables
 searching and exploring messages in a topic. Within Message Viewer, you can:
 
 - page through and search for specific values within the list of all the messages
@@ -102,9 +102,7 @@ With Confluent for VS Code, you can produce messages to your Kafka topics, with 
 1. You will be prompted to choose a JSON file containing message `headers`, `key` and `value`.
 1. Next, you will be prompted to choose whether to produce the message with/without a key/value schema. 
    Click OK to produce the message.
-1. You will be notified of whether the produce was successful or not. If successful, you can head to
-   the Message Viewer (click the envelope-with-magnifying-glass icon against the topic) to
-   inspect the message you just produced.
+1. You will be notified of whether the produce was successful or not. If successful, you can head to the Message Viewer (click the ![envelope-with-magnifying-glass](../resources/icons/confluent-view-messages.svg) icon against the topic) to inspect the message you just produced.
 
 
 #### Producing messages to topics using `TopicRecordNameStrategy` or `RecordNameStrategy`
@@ -212,7 +210,7 @@ Certificates for verifying SSL/TLS connections to Kafka/Schema Registry. This is
 | Path | The path of the Trust Store file. |
 | Password | The password for the Trust Store file. If a password is not set, the configured Trust Store file will still be used, but integrity checking of the Trust Store file is disabled. Trust Store password is not supported for PEM format. |
 | Key Password | The password of the private key in the Key Store file. |
-| Type | TThe file format of the Trust Store file. Choose from PEM, PKCS12 and JKS. |
+| Type | The file format of the Trust Store file. Choose from PEM, PKCS12 and JKS. |
 
 > [!NOTE]
 > Confluent Cloud employs TLS certificates from Let’s Encrypt, a trusted Certificate Authority (CA). For more information, see [Manage TLS Certificates](https://docs.confluent.io/cloud/current/cp-component/clients-cloud-config.html#manage-tls-certificates). Confluent Cloud does **not** support self-managed certificates for TLS encryption.
