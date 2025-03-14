@@ -501,10 +501,13 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
   await page.fill("input[name=name]", "Test Connection");
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
-  await page.selectOption(
-    "select[name='kafka_cluster.credentials.hash_algorithm']",
-    "SCRAM_SHA_256",
-  );
+  // Don't update hash_algorithm, so we can verify it is sent with default value
+  // Wait a few milliseconds to ensure the default value is set to form (test is much faster than human)
+  await page.waitForTimeout(200);
+  // await page.selectOption(
+  //   "select[name='kafka_cluster.credentials.hash_algorithm']",
+  //   "SCRAM_SHA_256",
+  // );
   await page.fill("input[name='kafka_cluster.credentials.scram_username']", "user");
   await page.fill("input[name='kafka_cluster.credentials.scram_password']", "password");
 
@@ -793,7 +796,10 @@ test("submits values for Kerberos auth type when filled in", async ({ execute, p
   await page.selectOption("select[name='kafka_cluster.auth_type']", "Kerberos");
   await page.fill("input[name='kafka_cluster.credentials.principal']", "user@EXAMPLE.COM");
   await page.fill("input[name='kafka_cluster.credentials.keytab_path']", "/path/to/keytab");
-  await page.fill("input[name='kafka_cluster.credentials.service_name']", "kafka");
+  // Don't fill in service_name, so we can verify it is sent with default value
+  // await page.fill("input[name='kafka_cluster.credentials.service_name']", "kafka");
+  // Wait a few milliseconds to ensure the default value is set to form (test is much faster than human)
+  await page.waitForTimeout(200);
 
   // Submit the form
   await page.click("input[type=submit][value='Save']");

@@ -56,6 +56,22 @@ export class AuthCredentials extends HTMLElement {
     return this.identifier() + ".credentials." + name;
   }
 
+  // Add all initial form values to the form data, including defaults
+  initializeFormValues() {
+    console.log("Initializing form values");
+    // Get all input/select elements in the shadow DOM
+    const formElements = this.shadowRoot?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select",
+    );
+    if (formElements) {
+      formElements.forEach((element) => {
+        if (element.name && element.value) {
+          this.entries.set(element.name, element.value);
+        }
+      });
+    }
+    this._internals.setFormValue(this.entries);
+  }
   // Helper method to validate a single input
   validateInput(input: HTMLInputElement): boolean {
     if (!input.validity.valid) {
@@ -381,8 +397,7 @@ export class AuthCredentials extends HTMLElement {
                 data-attr-id="this.getInputId('service_name')"
                 data-attr-name="this.getInputId('service_name')"
                 type="text"
-                placeholder="kafka"
-                data-value="this.creds()?.service_name ?? null"
+                data-value="this.creds()?.service_name ?? 'kafka'"
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -423,6 +438,16 @@ export class AuthCredentials extends HTMLElement {
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
+    // Initialize form values after bindings. Small timeout to ensure DOM is ready
+    setTimeout(() => this.initializeFormValues(), 100);
+    // Watch authType, creds to re-initialize form data when it changes
+    this.os.watch(() => {
+      // Access them to trigger watching
+      this.authType();
+      this.creds();
+      // Re-initialize form values whenever auth type or credentials change
+      setTimeout(() => this.initializeFormValues(), 100);
+    });
 
     // Before form submits, invoke validation checks
     if (this._internals.form) {
