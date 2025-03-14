@@ -98,7 +98,7 @@ With Confluent for VS Code, you can produce messages to your Kafka topics, with 
 
   </details>
 
-1. Click the produce icon next to the topic name to open the Produce Message quickpick flow.
+1. Click the produce icon ![produce icon](../resources/icons/confluent-send-message.svg) next to the topic name to open the Produce Message quickpick flow.
 1. You will be prompted to choose a JSON file containing message `headers`, `key` and `value`.
 1. Next, you will be prompted to choose whether to produce the message with/without a key/value schema. 
    Click OK to produce the message.
