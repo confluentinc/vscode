@@ -17,13 +17,13 @@ clusters and Confluent Schema Registry compatible servers.
 
 The extension enables you to:
 
-- [Work with your Confluent Cloud resources](./DOCUMENTATION.md#work-with-your-confluent-cloud-resources)
-- [Bootstrap streaming projects from Confluent-provided templates](./DOCUMENTATION.md#bootstrap-streaming-projects-from-confluent-provided-templates)
-- [Accelerate local development against Apache Kafka® and Confluent Schema Registry using Docker](./DOCUMENTATION.md#accelerate-local-development-against-apache-kafka-and-confluent-schema-registry-using-docker)
-- [Inspect messages in Kafka topics using Message Viewer](./DOCUMENTATION.md#inspect-messages-in-kafka-topics-using-message-viewer)
-- [Produce messages to Kafka topics](./DOCUMENTATION.md#produce-messages-to-kafka-topics)
-- [Explore, create and evolve schemas in Confluent Schema Registry](./DOCUMENTATION.md#explore-create-and-evolve-schemas-in-confluent-schema-registry)
-- [Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server](./DOCUMENTATION.md#connect-to-any-apache-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
+- [Work with your Confluent Cloud resources](./docs/USAGE.md#work-with-your-confluent-cloud-resources)
+- [Bootstrap streaming projects from Confluent-provided templates](./docs/USAGE.md#bootstrap-streaming-projects-from-confluent-provided-templates)
+- [Accelerate local development against Apache Kafka® and Confluent Schema Registry using Docker](./docs/USAGE.md#accelerate-local-development-against-kafka-and-confluent-schema-registry-using-docker)
+- [Inspect messages in Kafka topics using Message Viewer](./docs/USAGE.md#inspect-messages-in-kafka-topics-using-message-viewer)
+- [Produce messages to Kafka topics](./docs/USAGE.md#produce-messages-to-kafka-topics)
+- [Explore, create and evolve schemas in Confluent Schema Registry](./docs/USAGE.md#explore-create-and-evolve-schemas-in-confluent-schema-registry)
+- [Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server](./docs/USAGE.md#connect-to-any-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
 
 ## Documentation
 
