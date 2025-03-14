@@ -7,8 +7,8 @@ import {
 } from "../../../tests/unit/testResources";
 import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../../../tests/unit/testUtils";
+import { FormConnectionType } from "../../directConnections/types";
 import { ConnectionId } from "../../models/resource";
-import { FormConnectionType } from "../../webview/direct-connect-form";
 import { CustomConnectionSpec, DirectConnectionsById, mapToString } from "../resourceManager";
 import { MigrationV2 } from "./v2";
 
