@@ -245,7 +245,7 @@ If you have any questions, comments, or you run into any issues, feel free to po
 GitHub [discussion](https://github.com/confluentinc/vscode/discussions) or create an
 [issue](https://github.com/confluentinc/vscode/issues).
 
-For general feedback, fill out and submit the [survey](https://www.surveymonkey.com/r/NYVKQD6).
+For general feedback, fill out and submit the [survey](https://www.surveymonkey.com/r/T262TDT).
 
 ## Contributing
 
