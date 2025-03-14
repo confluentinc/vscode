@@ -14,7 +14,7 @@ import {
   LOCAL_ENVIRONMENT_NAME,
   UTM_SOURCE_VSCODE,
 } from "../constants";
-import { FormConnectionType } from "../webview/direct-connect-form";
+import { FormConnectionType } from "../directConnections/types";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
