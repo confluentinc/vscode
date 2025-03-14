@@ -56,14 +56,50 @@ export class AuthCredentials extends HTMLElement {
     return this.identifier() + ".credentials." + name;
   }
 
+  // Helper method to validate a single input
+  validateInput(input: HTMLInputElement): boolean {
+    if (!input.validity.valid) {
+      input.classList.add("error");
+      // Determine the specific validation error
+      if (input.validity.patternMismatch) {
+        this._internals.setValidity(
+          { patternMismatch: true },
+          "Value does not match expected pattern",
+          input,
+        );
+      } else if (input.validity.valueMissing) {
+        this._internals.setValidity({ valueMissing: true }, "This field is required", input);
+      } else if (input.validity.typeMismatch) {
+        this._internals.setValidity(
+          { typeMismatch: true },
+          `Please enter a valid ${input.type}`,
+          input,
+        );
+      } else {
+        this._internals.setValidity({ customError: true }, "Invalid input", input);
+      }
+      return false;
+    } else {
+      input.classList.remove("error");
+      this._internals.setValidity({});
+      return true;
+    }
+  }
+
+  // updateValue called on input
   updateValue(event: Event) {
     const input = event.target as HTMLInputElement;
     const name = input.name;
     const value = input.value;
-    // This sets the value in the FormData object for the form submission
+
+    // Sets the value in the FormData object for the form submission
     this.entries.set(name, value.toString());
     this._internals.setFormValue(this.entries);
-    // This dispatches a change event to the parent html for other actions
+
+    // Validate the input
+    this.validateInput(input);
+
+    // Dispatch a change event to the parent html for other actions
     this.dispatchEvent(
       new CustomEvent("change", {
         detail: event,
@@ -71,8 +107,45 @@ export class AuthCredentials extends HTMLElement {
     );
   }
 
+  // Check validity of all inputs in this (auth) section
+  // Handles reporting validation to form before submit
+  checkValidity() {
+    const inputs: NodeListOf<HTMLInputElement> | undefined =
+      this.shadowRoot?.querySelectorAll("input");
+
+    // If no inputs are visible (e.g., auth type is "None"), consider it valid
+    if (!inputs || inputs.length === 0) return true;
+
+    let isValid = true;
+    let firstInvalidInput: HTMLElement | null = null;
+
+    inputs.forEach((input) => {
+      // Force check on required fields even if untouched
+      if (input.hasAttribute("required") && !input.value) {
+        input.classList.add("error");
+      }
+
+      if (!this.validateInput(input)) {
+        isValid = false;
+        if (!firstInvalidInput) firstInvalidInput = input;
+      }
+    });
+
+    if (!isValid) {
+      this._internals.setValidity(
+        { customError: true },
+        "Please fill out all required fields correctly",
+        firstInvalidInput || undefined,
+      );
+    } else {
+      this._internals.setValidity({});
+    }
+
+    return isValid;
+  }
+
   template = html`
-    <div class="auth-credentials">
+    <div class="auth-credentials" data-attr-name="this.identifier() + '.credentials'">
       <template data-if="this.authType() === 'Basic'">
         <div class="input-row">
           <div class="input-container">
@@ -85,7 +158,6 @@ export class AuthCredentials extends HTMLElement {
               type="text"
               data-value="this.creds()?.username ?? null"
               data-on-input="this.updateValue(event)"
-              required
             />
           </div>
           <div class="input-container">
@@ -97,7 +169,6 @@ export class AuthCredentials extends HTMLElement {
               data-attr-name="this.getInputId('password')"
               type="password"
               data-value="this.creds()?.password ?? null"
-              required
               data-on-input="this.updateValue(event)"
             />
           </div>
@@ -160,7 +231,6 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 data-value="this.creds()?.scram_username ?? null"
                 data-on-input="this.updateValue(event)"
-                required
               />
             </div>
             <div class="input-container">
@@ -168,11 +238,10 @@ export class AuthCredentials extends HTMLElement {
               <input
                 class="input"
                 required
+                type="password"
                 data-attr-id="this.getInputId('scram_password')"
                 data-attr-name="this.getInputId('scram_password')"
-                type="password"
                 data-value="this.creds()?.scram_password ?? null"
-                required
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -191,7 +260,6 @@ export class AuthCredentials extends HTMLElement {
                 type="url"
                 data-attr-id="this.getInputId('tokens_url')"
                 data-attr-name="this.getInputId('tokens_url')"
-                required
                 data-value="this.creds()?.tokens_url ?? null"
                 data-on-input="this.updateValue(event)"
                 title="The URL of the OAuth 2.0 identity provider's token endpoint. Must be a valid URL."
@@ -315,7 +383,6 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 placeholder="kafka"
                 data-value="this.creds()?.service_name ?? null"
-                required
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -331,7 +398,6 @@ export class AuthCredentials extends HTMLElement {
                 type="text"
                 placeholder="/path/to/keytab"
                 data-value="this.creds()?.keytab_path ?? null"
-                required
                 data-on-input="this.updateValue(event)"
               />
             </div>
@@ -357,6 +423,26 @@ export class AuthCredentials extends HTMLElement {
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
+    this.os.watch(() => {
+      this.authType();
+      // start with a clean slate when auth type changes
+      this._internals.setValidity({});
+    });
+    // Before form submits, invoke validation checks
+    if (this._internals.form) {
+      this._internals.form.addEventListener(
+        "submit",
+        (event) => {
+          console.log("Form submitted:", event);
+          // Validate all inputs on form submission
+          if (!this.checkValidity()) {
+            // Don't prevent default. Since we send validation checks to _internals,
+            // the parent form will see element is invalid and prevent submission
+          }
+        },
+        { capture: true },
+      );
+    }
   }
 }
 

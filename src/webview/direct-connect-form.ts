@@ -43,7 +43,7 @@ class DirectConnectFormViewModel extends ViewModel {
 
   /** Kafka */
   kafkaBootstrapServers = this.derive(() => {
-    return this.spec()?.kafka_cluster?.bootstrap_servers || "";
+    return this.spec()?.kafka_cluster?.bootstrap_servers ?? null;
   });
   kafkaCreds = this.derive(() => {
     return this.spec()?.kafka_cluster?.credentials;
@@ -62,7 +62,7 @@ class DirectConnectFormViewModel extends ViewModel {
 
   /** Schema Registry */
   schemaUri = this.derive(() => {
-    return this.spec()?.schema_registry?.uri || "";
+    return this.spec()?.schema_registry?.uri ?? null;
   });
   schemaCreds = this.derive(() => {
     return this.spec()?.schema_registry?.credentials;
@@ -163,6 +163,12 @@ class DirectConnectFormViewModel extends ViewModel {
         break;
       case "schema_registry.ssl.enabled":
         this.schemaSslEnabled(input.checked);
+        break;
+      case "kafka_cluster.bootstrap_servers":
+        this.kafkaBootstrapServers(input.value);
+        break;
+      case "schema_registry.uri":
+        this.schemaUri(input.value);
         break;
       default:
         console.info(`No side effects for input update: ${input.name}`);
