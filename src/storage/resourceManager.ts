@@ -49,6 +49,8 @@ export interface CustomConnectionSpec extends ConnectionSpec {
   id: ConnectionId;
   /** The option chosen by the user to describe this connection. Similar to {@link ConnectionType} */
   formConnectionType: FormConnectionType;
+  /** If the formConnectionType is "Other" we prompt users to specify the type */
+  otherType?: string;
 }
 
 /** Map of {@link ConnectionId} to {@link CustomConnectionSpec}; only used for `DIRECT` connections. */
