@@ -93,8 +93,9 @@
               name="kafka_cluster.bootstrap_servers"
               type="text"
               placeholder="host:port, host2:port2"
-              data-attr-value="this.kafkaBootstrapServers()"
+              data-value="this.kafkaBootstrapServers()"
               data-on-change="this.updateValue(event)"
+              data-attr-required="!this.schemaUri() ? true : false"
             />
             <span class="field-description"
               >One or more host:port pairs to use for establishing the initial connection (use a
@@ -168,8 +169,9 @@
               pattern="https?://.*"
               title="URL must begin with http or https"
               placeholder="https://example.com"
-              data-attr-value="this.schemaUri()"
+              data-value="this.schemaUri()"
               data-on-change="this.updateValue(event)"
+              data-attr-required="!this.kafkaBootstrapServers() ? true : false"
             />
             <span class="field-description"
               >The URL of the Schema Registry to use for serialization</span

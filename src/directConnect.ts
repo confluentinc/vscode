@@ -341,7 +341,7 @@ function isValidCredentialForAuthType(path: string, authType: string): boolean {
   }
 }
 // Deep merging nested spec object, keeping existing values if they aren't in updated spec
-function deepMerge(current: any, updated: any): any {
+export function deepMerge(current: any, updated: any): any {
   const result = { ...current };
 
   for (const key in updated) {
