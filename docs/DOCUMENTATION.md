@@ -102,7 +102,7 @@ With Confluent for VS Code, you can produce messages to your Kafka topics, with 
 1. Next, you will be prompted to choose whether to produce the message with/without a key/value schema. 
    Click OK to produce the message.
 1. You will be notified of whether the produce was successful or not. If successful, you can head to
-   the Message Viewer (click the envelope-with-magnifyin-gglass icon against the topic) to 
+   the Message Viewer (click the envelope-with-magnifying-glass icon against the topic) to
    inspect the message you just produced.
 
 
@@ -176,7 +176,7 @@ We will now go over the connection form fields and their functionality:
 | Form field | Description |
 | ----- | ----- |
 | URL |  The URL of the Schema Registry to use with the Kafka Cluster |
-| [Authentication Type](#authenticating-to-schema-registry) | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>. |
+| [Authentication Type](#authenticating-to-schema-registry) | Choose from: <ul><li>Username & Password</li><li>API Credentials</li><li>OAuth</li></ul>|
 | SSL/TLS enabled checkbox | Use SSL/TLS encryption communication for data in transit between VS Code and the Kafka brokers. |
 | [TLS Configuration](#tls-configuration) |  Additional TLS configuration, you may expand the TLS Configuration section and fill out Key Store and Trust Store details. |
 
@@ -191,7 +191,7 @@ We will now go over the connection form fields and their functionality:
 | [Key Store Configuration](#key-store-configuration) | Certificate used by Kafka/Schema Registry to authenticate the client. This is used to configure mutual TLS (mTLS) authentication. |
 | [Trust Store Configuration](#trust-store-configuration) | Certificates for verifying SSL/TLS connections to Kafka/Schema Registry. This is required if the Kafka/Schema Registry server use a self-signed or a non-public Certificate Authority (CA). |
 
-#### Key Store Configuration
+#### TLS Configuration -> Key Store Configuration
 
 Certificate used by Kafka/Schema Registry to authenticate the client. This is used to configure mutual TLS (mTLS) authentication.
 
@@ -202,10 +202,7 @@ Certificate used by Kafka/Schema Registry to authenticate the client. This is us
 | Key Password | The password of the private key in the Key Store file. |
 | Type | The file format of the Key Store file. Choose from PEM, PKCS12 and JKS. |
 
-> [!TIP]
-> Follow these steps to [configure mTLS authentication on Confluent Cloud](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/configure.html#steps-to-configure-mtls-authentication-on-ccloud?utm_source=vscode-ext)
-
-#### Trust Store Configuration
+#### TLS Configuration -> Trust Store Configuration
 
 Certificates for verifying SSL/TLS connections to Kafka/Schema Registry. This is required if Kafka/Schema Registry use a self-signed or a non-public Certificate Authority (CA).
 
