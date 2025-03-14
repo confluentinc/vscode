@@ -42,8 +42,8 @@ Channels:
 
 ## Telemetry
 
-Gathering usage and error data helps Confluent develop a more resilient and user friendly
-application. Confluent enables telemetry only in official production releases. Confluent respect
+Gathering usage and error data helps Confluent develop a more resilient and user-friendly
+application. Confluent enables telemetry only in official production releases. Confluent respects
 users' preferences for sending telemetry data -- if you have turned off telemetry in your VS Code
 settings, the extension doesn't send any events or data.
 
@@ -51,7 +51,7 @@ settings, the extension doesn't send any events or data.
 
 The extension uses [Segment](https://segment.com/) to log extension usage. See `telemetry.ts` for
 implementation and how it is used in the codebase. The extension sends events when you perform major
-actions in the extension, such as using any of the registerd commands. This helps Confluent see what
+actions in the extension, such as using any of the registered commands. This helps Confluent see what
 commands are popular and helps to answer other questions about how the extension is used, so
 Confluent can make it even more useful.
 
@@ -69,10 +69,8 @@ errors. The [@sentry/rollup-plugin](#) is used to upload source maps.
 
 ## Known Limitations
 
-- Confluent Cloud connections require reauthenticating after 8 hours, and you will be prompted to
-  reauthenticate.
-  - Signing out of Confluent Cloud through the browser will also sign you out of the Confluent
-    extension.
+- Signing out of Confluent Cloud through the browser will also sign you out of the Confluent
+  extension.
 - Preview links for non-default organizations work only after switching to the non-default
   organization in the Confluent Cloud UI in your browser.
 - When using multiple users on a single machine, only one user can run the extension at a time.
@@ -109,7 +107,7 @@ Follow [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for information on setting up y
 environment, proposing bugfixes and improvements, and building and testing your changes.
 
 See the [Code of Conduct](/CODE_OF_CONDUCT.md) for guidelines on what Confluent expects from
-participants, and what actions will and will not be tolerated.
+contributors, and what actions will and will not be tolerated.
 
 ## License
 
