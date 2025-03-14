@@ -18,6 +18,7 @@ export enum UserEvent {
   ProjectScaffoldingAction = "Project Scaffolding Action",
   CCloudAuthentication = "CCloud Authentication",
   ViewSearchAction = "View Search Action",
+  SchemaAction = "Schema Action",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */
