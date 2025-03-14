@@ -140,17 +140,30 @@ export class SslConfig extends HTMLElement {
               data-attr-checked="this.verifyHostname()"
               data-on-change="this.updateValue(event);"
               data-attr-value="this.verifyHostname()"
+              title="Enable verification of the host name matching the Distinguished Name (DN) in the certificate."
             />
             <span>Verify Server Hostname</span>
           </label>
         </div>
         <div class="input-container">
           <label class="label">Key Store Configuration</label>
+          <label class="info" style="margin-bottom: 5px">
+            Certificate used to authenticate the client. This is used to configure mutual TLS (mTLS)
+            authentication.
+            <a
+              href="https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/configure.html#steps-to-configure-mtls-authentication-on-ccloud"
+            >
+              <span class="link"
+                >Click here for steps to configure mTLS authentication on Confluent Cloud.
+              </span>
+            </a>
+          </label>
           <div class="input-row">
             <div class="input-container" style="flex: 1">
               <label data-attr-for="this.getInputId('keystore.type')" class="info">Type</label>
               <select
                 class="input dropdown"
+                title="File format of the Key Store file."
                 data-attr-id="this.getInputId('keystore.type')"
                 data-attr-name="this.getInputId('keystore.type')"
                 data-value="this.keystoreType()"
@@ -161,26 +174,27 @@ export class SslConfig extends HTMLElement {
                 <option value="PEM">PEM</option>
               </select>
             </div>
-            <div class="input-container">
-              <label data-attr-for="this.getInputId('keystore.path')" class="info"
-                >Path
+            <div class="input-container" style="align-items: stretch">
+              <label data-attr-for="this.getInputId('keystore.path')" class="info">Path </label>
+              <div class="button-input">
+                <input
+                  class="input"
+                  title="The absolute path to the Key Store file."
+                  data-attr-id="this.getInputId('keystore.path')"
+                  data-attr-name="this.getInputId('keystore.path')"
+                  type="text"
+                  placeholder="/path/to/keystore"
+                  data-value="this.keystorePath()"
+                  data-on-change="this.updateValue(event)"
+                />
                 <span
                   class="button secondary"
                   data-attr-id="this.getInputId('keystore.path')"
                   data-attr-name="this.getInputId('keystore.path')"
                   data-on-click="this.handleFileSelection(this.getInputId('keystore.path'))"
-                  >Choose file</span
-                ></label
-              >
-              <input
-                class="input"
-                data-attr-id="this.getInputId('keystore.path')"
-                data-attr-name="this.getInputId('keystore.path')"
-                type="text"
-                placeholder="/path/to/keystore"
-                data-value="this.keystorePath()"
-                data-on-change="this.updateValue(event)"
-              />
+                  >Select file</span
+                >
+              </div>
             </div>
           </div>
           <div class="input-row">
@@ -190,9 +204,11 @@ export class SslConfig extends HTMLElement {
               >
               <input
                 class="input"
+                title="The store password for the Key Store file. Key Store password is not supported for PEM format."
                 data-attr-id="this.getInputId('keystore.password')"
                 data-attr-name="this.getInputId('keystore.password')"
                 type="password"
+                data-attr-disabled="this.keystoreType() === 'PEM'"
                 data-value="this.keystorePassword()"
                 data-on-change="this.updateValue(event)"
               />
@@ -203,6 +219,7 @@ export class SslConfig extends HTMLElement {
               >
               <input
                 class="input"
+                title="Private key password (if any)"
                 data-attr-id="this.getInputId('keystore.key_password')"
                 data-attr-name="this.getInputId('keystore.key_password')"
                 type="password"
@@ -214,11 +231,16 @@ export class SslConfig extends HTMLElement {
         </div>
         <div class="input-container">
           <label class="label">Trust Store Configuration</label>
+          <label class="info" style="margin-bottom: 5px">
+            Certificates for verifying SSL/TLS connections. This is required if a self-signed or a
+            non-public Certificate Authority (CA) is used.
+          </label>
           <div class="input-row">
             <div class="input-container" style="flex: 1">
               <label data-attr-for="this.getInputId('truststore.type')" class="info">Type</label>
               <select
                 class="input dropdown"
+                title="The file format of the Trust Store file."
                 data-attr-id="this.getInputId('truststore.type')"
                 data-attr-name="this.getInputId('truststore.type')"
                 data-value="this.truststoreType()"
@@ -229,40 +251,43 @@ export class SslConfig extends HTMLElement {
                 <option value="PEM">PEM</option>
               </select>
             </div>
-            <div class="input-container">
-              <label data-attr-for="this.getInputId('truststore.path')" class="info"
-                >Path
+            <div class="input-container" style="align-items: stretch">
+              <label data-attr-for="this.getInputId('truststore.path')" class="info">Path </label>
+              <div class="button-input">
+                <input
+                  class="input"
+                  title="The absolute path to the Trust Store file."
+                  data-attr-id="this.getInputId('truststore.path')"
+                  data-attr-name="this.getInputId('truststore.path')"
+                  type="text"
+                  placeholder="/path/to/truststore"
+                  data-value="this.truststorePath()"
+                  data-on-change="this.updateValue(event)"
+                />
                 <span
                   class="button secondary"
                   data-attr-id="this.getInputId('truststore.path')"
                   data-attr-name="this.getInputId('truststore.path')"
                   data-on-click="this.handleFileSelection(this.getInputId('truststore.path'))"
-                  >Choose file</span
-                ></label
-              >
-              <input
-                class="input"
-                data-attr-id="this.getInputId('truststore.path')"
-                data-attr-name="this.getInputId('truststore.path')"
-                type="text"
-                placeholder="/path/to/truststore"
-                data-value="this.truststorePath()"
-                data-on-change="this.updateValue(event)"
-              />
+                  >Select file</span
+                >
+              </div>
             </div>
-            <div class="input-container">
-              <label data-attr-for="this.getInputId('truststore.password')" class="info"
-                >Password</label
-              >
-              <input
-                class="input"
-                data-attr-id="this.getInputId('truststore.password')"
-                data-attr-name="this.getInputId('truststore.password')"
-                type="password"
-                data-value="this.truststorePassword()"
-                data-on-change="this.updateValue(event)"
-              />
-            </div>
+          </div>
+          <div class="input-container">
+            <label data-attr-for="this.getInputId('truststore.password')" class="info"
+              >Password</label
+            >
+            <input
+              class="input"
+              title="The password for the Trust Store file. If a password is not set, the configured Trust Store file will still be used, but integrity checking of the Trust Store file is disabled. Trust Store password is not supported for PEM format."
+              data-attr-disabled="this.truststoreType() === 'PEM'"
+              data-attr-id="this.getInputId('truststore.password')"
+              data-attr-name="this.getInputId('truststore.password')"
+              type="password"
+              data-value="this.truststorePassword()"
+              data-on-change="this.updateValue(event)"
+            />
           </div>
         </div>
       </template>
