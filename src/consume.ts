@@ -41,11 +41,13 @@ import { topicQuickPick } from "./quickpicks/topics";
 import { scheduler } from "./scheduler";
 import { getSidecar, type SidecarHandle } from "./sidecar";
 import { BitSet, includesSubstring, Stream } from "./stream/stream";
-import { logUsage, UserEvent } from "./telemetry/events";
+import { hashed, logUsage, UserEvent } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
+
+const logger = new Logger("consume");
 
 export function activateMessageViewer(context: ExtensionContext) {
   /* All active message viewer instances share the same scheduler to perform API
@@ -830,9 +832,38 @@ function messageViewerStartPollingCommand(
     handler.dispose();
     os.dispose();
   });
-}
 
-const logger = new Logger("consume");
+  type TrackAction = {
+    action: string;
+  };
+
+  /** Send a telemetry event. Will implicily include information about the topic/cluster. */
+  function track(details: TrackAction) {
+    const augmentedDetails = {
+      action: details.action,
+      connection_type: topic.connectionType,
+      connection_id: topic.connectionId,
+      environment_id: topic.environmentId,
+      cluster_id: topic.clusterId,
+      topic_hash: hashed(topic.name),
+    };
+
+    logUsage(UserEvent.MessageViewerAction, augmentedDetails);
+  }
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+
+  /** 200ms debounced sending a telemetry event. */
+  function debouncedTrack(details: TrackAction) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(track, 200, details);
+  }
+
+  // End of new message viewer setup. Send a telemetry event when the message viewer is opened!
+  track({
+    action: "opened",
+  });
+}
 
 /** Define basic consume params based on desired consume mode. */
 function getParams(
@@ -1026,14 +1057,4 @@ class Timer extends Data {
   reset(this: Timer) {
     return this.copy({ start: Date.now(), offset: 0 });
   }
-}
-
-function track(details: object) {
-  logUsage(UserEvent.MessageViewerAction, details);
-}
-
-let timer: ReturnType<typeof setTimeout>;
-function debouncedTrack(details: object) {
-  clearTimeout(timer);
-  timer = setTimeout(track, 200, details);
 }

@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.0.0-5",
+  "version": "1.0.0-21",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -1142,10 +1142,10 @@
           {
             "id": "view-topics",
             "title": "View Messages",
-            "description": "Click the $(play) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
+            "description": "Click the $(confluent-view-messages) icon next to a topic to open the Message Viewer and explore the messages produced to the topic",
             "media": {
               "image": "resources/walkthrough/message-viewer.png",
-              "altText": "Click the Play button next to a topic to see the Message viewer."
+              "altText": "Click the View button next to a topic to see the Message viewer."
             },
             "completionEvents": [
               "onCommand:confluent.topic.consume"
@@ -1188,7 +1188,7 @@
   "devDependencies": {
     "@0no-co/graphqlsp": "^1.12.8",
     "@eslint/js": "^9.4.0",
-    "@openapitools/openapi-generator-cli": "^2.13.5",
+    "@openapitools/openapi-generator-cli": "^2.18.2",
     "@playwright/test": "^1.45.0",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^26.0.1",
@@ -1212,7 +1212,7 @@
     "@vscode/test-electron": "^2.3.9",
     "@vscode/vsce": "^3.1.0",
     "dotenv": "^16.4.5",
-    "esbuild": "^0.21.4",
+    "esbuild": "^0.25.0",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",

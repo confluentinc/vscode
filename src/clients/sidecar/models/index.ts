@@ -27,6 +27,7 @@ export * from "./JsonNodeType";
 export * from "./KafkaClusterConfig";
 export * from "./KafkaClusterConfigCredentials";
 export * from "./KafkaClusterStatus";
+export * from "./KerberosCredentials";
 export * from "./KeyOrValueMetadata";
 export * from "./KeyStore";
 export * from "./LocalConfig";

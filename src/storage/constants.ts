@@ -17,6 +17,15 @@ export enum WorkspaceStorageKeys {
   /** CCloud schema registries */
   CCLOUD_SCHEMA_REGISTRIES = "ccloudSchemaRegistries",
 
+  /** CCloud Schema Registry subjects */
+  CCLOUD_SR_SUBJECTS = "ccloudSRSubjects",
+
+  /** Local Schema Registry subjects */
+  LOCAL_SR_SUBJECTS = "localSRSubjects",
+
+  /** Direct connection Schema Registry Subjects */
+  DIRECT_SR_SUBJECTS = "directSRSubjects",
+
   /** What (Schema) URI was chosen first to diff against? */
   DIFF_BASE_URI = "diffs.selectedResource",
 
@@ -42,6 +51,10 @@ export enum SecretStorageKeys {
    * browser-based authentication flow to complete after handling a URI callback from the sidecar.
    */
   AUTH_COMPLETED = "authCompleted",
+
+  /** The user recently reset their password and needs to reauthenticate. */
+  AUTH_PASSWORD_RESET = "authPasswordReset",
+
   /** Only used as a way to kick off cross-workspace events for the authentication provider. Only
    * ever set to "true" or deleted. */
   AUTH_SESSION_EXISTS = "authSessionExists",

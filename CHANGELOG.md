@@ -6,8 +6,32 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- SASL/OAUTHBEARER authentication type is now supported for Kafka Cluster connections that are added
-  via the connections form
+- Support for the following authentication types were added for Kafka Cluster connections
+  - SASL/OAUTHBEARER
+  - SASL/GSSAPI
+
+### Changed
+
+- Any "direct" connections with a failing configuration will now show a red "warning" icon (⚠️)
+  instead of the red "error" icon.
+- Schema registry subjects are now cached, reducing round trips to a schema registry. Use the
+  'reload' button in the Schemas view to force refresh.
+- Users who reset their password during the CCloud authentication flow will now be prompted to
+  re-authenticate.
+- "View Messages" and "Send Message(s)" icons have been updated for better visibility and
+  accessibility.
+
+### Fixed
+
+- Clicking "View Message(s)" after producing to a topic will no longer attempt to stringify
+  non-primitive values in the message payload.
+
+## 0.26.1
+
+### Added
+
+- Additional logging and telemetry for any issues with the sidecar process starting up to help
+  diagnose issues with the extension.
 
 ## 0.26.0
 

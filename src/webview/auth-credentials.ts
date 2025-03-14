@@ -1,17 +1,20 @@
 import { ObservableScope } from "inertial";
-import { applyBindings, html } from "./bindings/bindings";
 import {
+  type KerberosCredentials,
   type ApiKeyAndSecret,
   type BasicCredentials,
   type OAuthCredentials,
   type ScramCredentials,
 } from "../clients/sidecar";
-import { type SupportedAuthTypes, type FormConnectionType } from "./direct-connect-form";
+import { FormConnectionType, SupportedAuthTypes } from "../directConnections/types";
+import { applyBindings, html } from "./bindings/bindings";
+
 type SupportedCredentialTypes =
   | BasicCredentials
   | ApiKeyAndSecret
   | ScramCredentials
-  | OAuthCredentials;
+  | OAuthCredentials
+  | KerberosCredentials;
 
 /** Reusable Custom HTML Element (Web Component) for Authentication Credentials
  * This component manages Schema Registry or Kafka cluster configuration for credentials
@@ -285,6 +288,54 @@ export class AuthCredentials extends HTMLElement {
               </div>
             </div>
           </template>
+        </div>
+      </template>
+      <template data-if="this.authType() === 'Kerberos'">
+        <div class="flex-column">
+          <div class="input-row">
+            <div class="input-container">
+              <label for="this.getInputId('principal')" class="label">Principal</label>
+              <input
+                class="input"
+                required
+                data-attr-id="this.getInputId('principal')"
+                data-attr-name="this.getInputId('principal')"
+                type="text"
+                data-value="this.creds()?.principal ?? null"
+                data-on-input="this.updateValue(event)"
+              />
+            </div>
+            <div class="input-container">
+              <label for="this.getInputId('service_name')" class="label">Service Name</label>
+              <input
+                class="input"
+                required
+                data-attr-id="this.getInputId('service_name')"
+                data-attr-name="this.getInputId('service_name')"
+                type="text"
+                placeholder="kafka"
+                data-value="this.creds()?.service_name ?? null"
+                required
+                data-on-input="this.updateValue(event)"
+              />
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="input-container">
+              <label for="this.getInputId('keytab_path')" class="label">Keytab Path</label>
+              <input
+                class="input"
+                required
+                data-attr-id="this.getInputId('keytab_path')"
+                data-attr-name="this.getInputId('keytab_path')"
+                type="text"
+                placeholder="/path/to/keytab"
+                data-value="this.creds()?.keytab_path ?? null"
+                required
+                data-on-input="this.updateValue(event)"
+              />
+            </div>
+          </div>
         </div>
       </template>
     </div>

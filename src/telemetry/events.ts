@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { TelemetryTrustedValue } from "vscode";
 import { Logger } from "../logging";
 import { getTelemetryLogger } from "./telemetryLogger";
@@ -17,6 +18,7 @@ export enum UserEvent {
   ProjectScaffoldingAction = "Project Scaffolding Action",
   CCloudAuthentication = "CCloud Authentication",
   ViewSearchAction = "View Search Action",
+  SchemaAction = "Schema Action",
 }
 
 /** Log a {@link UserEvent} with optional extra data. */
@@ -25,4 +27,9 @@ export function logUsage(event: UserEvent, data?: Record<string, any | Telemetry
 
   // May or may send to Segment based on user settings. See checkTelemetrySettings().
   getTelemetryLogger().logUsage(event, data);
+}
+
+/** Compute a hex-encoded SHA-256 hash of a client-side string to accompany telemetry data. */
+export function hashed(input: string): string {
+  return createHash("sha256").update(input).digest("hex");
 }
