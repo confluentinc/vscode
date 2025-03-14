@@ -1,5 +1,5 @@
 
-# Installation
+# Installing Confluent for VS Code
 
 ### From the Visual Studio Code Extension Marketplace
 

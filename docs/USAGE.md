@@ -1,4 +1,4 @@
-# Confluent for VS Code - Documentation
+# Using Confluent for VS Code
 
 ### Work with your Confluent Cloud resources
 
@@ -8,7 +8,7 @@
 Log in to your Confluent Cloud account from the Confluent for VS Code extension by clicking on "Sign in to Confluent Cloud", and explore your Confluent Cloud resources from right within VS Code.
 
 > [!NOTE]
-> If you would like to connect to your Confluent Cloud Kafka cluster and/or Confluent Cloud Schema Registry cluster
+> If you would like to connect to your Apache Kafka® cluster on Confluent Cloud and/or Confluent Cloud Schema Registry cluster
 > using [API Key (user account or service account)](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/service-accounts/api-keys/overview.html#api-keys-and-ccloud-accounts), [Mutual TLS](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/overview.html), or [OAuth/OIDC](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html), then head to <anchor tag> for how to do that using the extension.
 
 
@@ -21,7 +21,7 @@ Confluent for VS Code offers project templates designed to accelerate your devel
 > [!NOTE]
 > We will continue to add new templates as well as improving existing ones, however, please [file an issue]() or [start a discussion]() if you find bugs/issues in existing templates or have proposals for new templates that could benefit the broader community.
 
-### Accelerate local development against Apache Kafka® and Confluent Schema Registry using Docker
+### Accelerate local development against Kafka and Confluent Schema Registry using Docker
 
 > [!NOTE]
 > Pre-requisites: You must have Docker Engine (version v24.0 or later) installed on your machine. Please follow the instruction [here](https://docs.docker.com/engine/install/) to install Docker Engine.
@@ -63,40 +63,41 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 With Confluent for VS Code, you can produce messages to your Kafka topics, with or without a key/value schema. 
 
 1. Prepare a JSON file containing message `headers` (optional), `key` and `value` as top-level fields.
-    <details><summary>Example of JSON file for producing message</summary>
+  <details><summary>Example of JSON file for producing message</summary>
 
-    ```json
-    {
-      "headers": [
-        {
-          "key": "task.generation",
-          "value": "350"
-        },
-        {
-          "key": "task.id",
-          "value": "0"
-        },
-        {
-          "key": "current.iteration",
-          "value": "39067914"
-        }
-      ],
-      "key": 39067914,
-      "value": {
-        "ordertime": 1492152554633,
-        "orderid": 39067914,
-        "itemid": "Item_5",
-        "orderunits": 7.508419592693289,
-        "address": {
-          "city": "City_84",
-          "state": "State_85",
-          "zipcode": 83204
-        }
+  ```json
+  {
+    "headers": [
+      {
+        "key": "task.generation",
+        "value": "350"
+      },
+      {
+        "key": "task.id",
+        "value": "0"
+      },
+      {
+        "key": "current.iteration",
+        "value": "39067914"
+      }
+    ],
+    "key": 39067914,
+    "value": {
+      "ordertime": 1492152554633,
+      "orderid": 39067914,
+      "itemid": "Item_5",
+      "orderunits": 7.508419592693289,
+      "address": {
+        "city": "City_84",
+        "state": "State_85",
+        "zipcode": 83204
       }
     }
-    ```
+  }
+  ```
 
-    </details>
+  </details>
+
 1. Click the produce icon next to the topic name to open the Produce Message quickpick flow.
 1. You will be prompted to choose a JSON file containing message `headers`, `key` and `value`.
 1. Next, you will be prompted to choose whether to produce the message with/without a key/value schema. 
@@ -141,9 +142,9 @@ version.
 Search the marketplace for extensions to validate your Avro, JSON schema, or Protobuf syntax as
 needed.
 
-### Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server
+### Connect to any Kafka compatible cluster and any Confluent Schema Registry compatible server
 
-Confluent for VS Code supports connecting to _any_ Apache Kafka® compatible cluster and any Confluent
+Confluent for VS Code supports connecting to _any_ Kafka compatible cluster and any Confluent
 Schema Registry compatible server. 
 
 Get started by clicking the "+" icon in the Resources panel, and select "Enter manually" in the dropdown.
@@ -188,8 +189,8 @@ We will now go over the connection form fields and their functionality:
 | Form field | Description |
 | ----- | ----- |
 | Verify Server Hostname | Enable verification of the Kafka/Schema Registry host name matching the Distinguished Name (DN) in the broker's certificate. |
-| [Key Store Configuration](#key-store-configuration) | Certificate used by Kafka/Schema Registry to authenticate the client. This is used to configure mutual TLS (mTLS) authentication. |
-| [Trust Store Configuration](#trust-store-configuration) | Certificates for verifying SSL/TLS connections to Kafka/Schema Registry. This is required if the Kafka/Schema Registry server use a self-signed or a non-public Certificate Authority (CA). |
+| [Key Store Configuration](#tls-configuration---key-store-configuration) | Certificate used by Kafka/Schema Registry to authenticate the client. This is used to configure mutual TLS (mTLS) authentication. |
+| [Trust Store Configuration](#tls-configuration---trust-store-configuration) | Certificates for verifying SSL/TLS connections to Kafka/Schema Registry. This is required if the Kafka/Schema Registry server use a self-signed or a non-public Certificate Authority (CA). |
 
 #### TLS Configuration -> Key Store Configuration
 
@@ -229,7 +230,7 @@ Confluent for VS Code supports authenticating to Kafka using a majority of commo
 - **mTLS (Mutual TLS)**
 
 > [!NOTE]
-> To use mTLS (Mutual TLS) authentication, expand the [TLS Configuration](#tls-configuration) section and fill out the [Key Store Configuration](#key-store-configuration) options.
+> To use mTLS (Mutual TLS) authentication, expand the [TLS Configuration](#tls-configuration) section and fill out the [Key Store Configuration](#tls-configuration---key-store-configuration) options.
 
 #### Authenticating to Schema Registry
 
@@ -241,7 +242,7 @@ Confluent for VS Code supports connecting to Schema Registry using a majority of
 - **mTLS (Mutual TLS)**
 
 > [!NOTE]
-> To use mTLS (Mutual TLS) authentication, expand the [TLS Configuration](#tls-configuration) section and fill out the [Key Store Configuration](#key-store-configuration) options.
+> To use mTLS (Mutual TLS) authentication, expand the [TLS Configuration](#tls-configuration) section and fill out the [Key Store Configuration](#tls-configuration---key-store-configuration) options.
 
 #### Exporting and importing connection details
 
