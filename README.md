@@ -27,7 +27,7 @@ The extension enables you to:
 
 ## Documentation
 
-- For detailed documentation on all the available features for the extension, head to [docs/DOCUMENTATION.md](./docs/DOCUMENTATION.md).
+- For detailed documentation on using the features in the extension, head to [docs/USAGE.md](./docs/USAGE.md).
 - For instructions on how to install the extension, including how to install from a VSIX file, head to [docs/INSTALL.md](./docs/INSTALL.md).
 <!-- - For troubleshooting, head to [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) -->
 
