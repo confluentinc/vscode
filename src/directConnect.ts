@@ -238,6 +238,9 @@ export function getConnectionSpecFromFormData(
     type: ConnectionType.Direct,
     formConnectionType: formData["formconnectiontype"],
   };
+  if (formData["formconnectiontype"] === "Other") {
+    spec.specifiedConnectionType = formData["othertype"];
+  }
 
   // Group form data by resource type - either kafka_cluster or schema_registry
   const resources: { [key: string]: string[] } = {};
