@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for taking the time to tell us about your issue using Confluent for VS Code!
 
-        Requests for features and improvements to the extension or documentation should be opened in [discussions](https://github.com/confluentinc/vscode/discussions/new?category=ideas). For more information about opening a feature request, [read more](https://github.com/confluentinc/vscode/blob/main/CONTRIBUTING.md).
+        Requests for features and improvements to the extension or documentation should be opened in [discussions](https://github.com/confluentinc/vscode/discussions/new?category=ideas). For more information about opening a feature request, [read more](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md).
 
         Before opening a new issue, please do a [search](https://github.com/confluentinc/vscode/issues) of existing issues and :+1: upvote the existing issue instead. This will result in a quicker resolution.
   - type: checkboxes
