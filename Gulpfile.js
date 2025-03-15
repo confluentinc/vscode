@@ -28,8 +28,10 @@ import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
 configDotenv();
 const DESTINATION = "out";
+
 const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
+const IS_MAC = process.platform === "darwin";
 
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
@@ -626,7 +628,7 @@ export async function testRun() {
       "--profile-temp",
       "--skip-release-notes",
       "--skip-welcome",
-      "--disable-gpu-sandbox",
+      "--disable-gpu",
       "--disable-updates",
       "--disable-workspace-trust",
       "--disable-extensions",
