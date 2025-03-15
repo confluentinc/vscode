@@ -102,16 +102,32 @@ blocks:
       prologue:
         commands:
           - checkout
+          - make ci-bin-sem-cache-restore
           - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
           - |
             if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
               Write-Output "Skipping Vault setup for Semaphore CI"
             } else {
               $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
-              vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              vault login -no-print token=$token
             }
-      jobs: *build-test-jobs-stable
-      epilogue: *build-test-epilogue
+          - $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+          - Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
+          - $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+          - Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
+      jobs:
+        - name: "Build & Test (VS Code)"
+          commands:
+            - npm ci --prefer-offline --include=dev
+            - npx playwright install
+            - npx gulp ci
+            - npx gulp test
+            - npx gulp functional
+      epilogue:
+        commands:
+          - Remove-Item .env -ErrorAction SilentlyContinue
+          - make store-test-results-to-semaphore
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
 
