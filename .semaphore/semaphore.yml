@@ -121,7 +121,6 @@ blocks:
           commands:
             - npm ci --prefer-offline --include=dev
             - npx playwright install
-            - npx gulp ci
             - npx gulp test
             - npx gulp functional
       epilogue:
@@ -136,6 +135,7 @@ blocks:
     skip: &build-test-skip-insiders
       when: "branch != 'main' AND change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
+      prologue: *build-test-prologue
       jobs: &build-test-jobs-insiders
         - name: "Build & Test (VS Code Insiders)"
           commands:
