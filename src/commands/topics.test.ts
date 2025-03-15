@@ -25,11 +25,13 @@ import * as sidecar from "../sidecar";
 import { ExecutionResult } from "../utils/workerPool";
 import {
   handleSchemaValidationErrors,
+  produceMessage,
   ProduceMessageBadRequestError,
   produceMessagesFromDocument,
   ProduceResult,
   summarizeErrors,
 } from "./topics";
+import { ProduceMessageSchemaOptions } from "./utils/types";
 
 const fakeMessage = {
   key: "test-key",
@@ -533,10 +535,10 @@ describe("commands/topics.ts summarizeErrors()", function () {
       new Error("Schema error"),
       new Error("Schema error"),
     ];
-    errors[1].name = "ProduceMessageSchemaValidationError";
-    errors[2].name = "ProduceMessageSchemaValidationError";
+    errors[1].name = "ProduceMessageBadRequestError";
+    errors[2].name = "ProduceMessageBadRequestError";
 
-    const result = summarizeErrors(errors, ["ProduceMessageSchemaValidationError"]);
+    const result = summarizeErrors(errors, ["ProduceMessageBadRequestError"]);
 
     assert.strictEqual(result, "Regular error (x1)");
   });
@@ -704,6 +706,207 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
       PRODUCE_MESSAGE_SCHEMA,
       1,
       "value",
+    );
+  });
+});
+
+describe("commands/topics.ts produceMessage()", function () {
+  let sandbox: sinon.SinonSandbox;
+
+  let recordsV3ApiStub: sinon.SinonStubbedInstance<RecordsV3Api>;
+  let ccloudProduceApiStub: sinon.SinonStubbedInstance<ConfluentCloudProduceRecordsResourceApi>;
+
+  const testSchemaOptions: ProduceMessageSchemaOptions = {
+    keySchema: undefined,
+    valueSchema: undefined,
+    keySubjectNameStrategy: undefined,
+    valueSubjectNameStrategy: undefined,
+  };
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+
+    // create the stubs for the sidecar + service clients
+    const mockSidecarHandle: sinon.SinonStubbedInstance<sidecar.SidecarHandle> =
+      sandbox.createStubInstance(sidecar.SidecarHandle);
+    // non-CCloud:
+    recordsV3ApiStub = sandbox.createStubInstance(RecordsV3Api);
+    mockSidecarHandle.getRecordsV3Api.returns(recordsV3ApiStub);
+    // CCloud:
+    ccloudProduceApiStub = sandbox.createStubInstance(ConfluentCloudProduceRecordsResourceApi);
+    mockSidecarHandle.getConfluentCloudProduceRecordsResourceApi.returns(ccloudProduceApiStub);
+
+    sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should rethrow error 400 responses with JSON as ProduceMessageBadRequestErrors", async function () {
+    const jsonBodyMsg = "Failed to parse data: ...";
+    const errorResponse = new Response(
+      JSON.stringify({
+        message: jsonBodyMsg,
+        error_code: 400,
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+
+    const responseError = new ResponseError(errorResponse);
+    recordsV3ApiStub.produceRecord.rejects(responseError);
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.ok(error instanceof ProduceMessageBadRequestError);
+        assert.strictEqual(error.name, "ProduceMessageBadRequestError");
+        assert.strictEqual(error.message, jsonBodyMsg);
+        assert.strictEqual(error.response, responseError);
+        return true;
+      },
+    );
+  });
+
+  it("should rethrow error 400 responses with text as ProduceMessageBadRequestErrors", async function () {
+    const notJsonBody = "that doesn't match the schema";
+    const errorResponse = new Response(notJsonBody, {
+      status: 400,
+      headers: { "Content-Type": "text/plain" },
+    });
+
+    const responseError = new ResponseError(errorResponse);
+    recordsV3ApiStub.produceRecord.rejects(responseError);
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.ok(error instanceof ProduceMessageBadRequestError);
+        assert.strictEqual(error.name, "ProduceMessageBadRequestError");
+        assert.strictEqual(error.message, notJsonBody);
+        assert.strictEqual(error.response, responseError);
+        return true;
+      },
+    );
+  });
+
+  // same as above, but with a different content type header
+  it("should wrap 400 errors with invalid JSON as ProduceMessageBadRequestError", async function () {
+    const notJsonBody = "oh no";
+    const errorResponse = new Response(notJsonBody, {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+    const responseError = new ResponseError(errorResponse);
+    recordsV3ApiStub.produceRecord.rejects(responseError);
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.ok(error instanceof ProduceMessageBadRequestError);
+        assert.strictEqual(error.name, "ProduceMessageBadRequestError");
+        assert.strictEqual(error.message, notJsonBody);
+        return true;
+      },
+    );
+  });
+
+  it("should rethrow non-400 ResponseErrors and not wrap as ProduceMessageBadRequestErrors", async function () {
+    const errorResponse = new Response(
+      JSON.stringify({ message: "Internal server error", error_code: 500 }),
+      { status: 500 },
+    );
+
+    const responseError = new ResponseError(errorResponse);
+    recordsV3ApiStub.produceRecord.rejects(responseError);
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.strictEqual(error, responseError);
+        assert.ok(!(error instanceof ProduceMessageBadRequestError));
+        return true;
+      },
+    );
+  });
+
+  it("should re-throw non-ResponseError errors without wrapping", async function () {
+    const otherError = new Error("oh no");
+    recordsV3ApiStub.produceRecord.rejects(otherError);
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.strictEqual(error, otherError);
+        assert.ok(!(error instanceof ProduceMessageBadRequestError));
+        return true;
+      },
+    );
+  });
+
+  it("should handle CCloud proxy response errors", async function () {
+    const jsonBodyMsg = "Failed to parse data: ...";
+    const errorResponse = new Response(JSON.stringify({ message: jsonBodyMsg }), { status: 400 });
+
+    const responseError = new ResponseError(errorResponse);
+    ccloudProduceApiStub.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost.rejects(
+      responseError,
+    );
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_CCLOUD_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.ok(error instanceof ProduceMessageBadRequestError);
+        assert.strictEqual(error.name, "ProduceMessageBadRequestError");
+        assert.strictEqual(error.message, jsonBodyMsg);
+        return true;
+      },
+    );
+  });
+
+  it("should include the original request when wrapping as ProduceMessageBadRequestErrors", async function () {
+    const contentWithSchema: ProduceMessage = {
+      ...fakeMessage,
+      key_schema: {
+        subject: "test-key-subject",
+        schema_version: 1,
+        subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
+      },
+    };
+
+    const errorResponse = new Response(JSON.stringify({ message: "Invalid key schema" }), {
+      status: 400,
+    });
+
+    const responseError = new ResponseError(errorResponse);
+    recordsV3ApiStub.produceRecord.rejects(responseError);
+
+    await assert.rejects(
+      async () => produceMessage(contentWithSchema, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.ok(error instanceof ProduceMessageBadRequestError);
+        assert.ok(error.request.key);
+        assert.ok(error.request.key.subject_name_strategy);
+        assert.strictEqual(error.request.key.subject_name_strategy, SubjectNameStrategy.TOPIC_NAME);
+        return true;
+      },
+    );
+  });
+
+  it("should handle empty responses in error handling", async function () {
+    // empty error response
+    const errorResponse = new Response("", { status: 400 });
+
+    const responseError = new ResponseError(errorResponse);
+    recordsV3ApiStub.produceRecord.rejects(responseError);
+
+    await assert.rejects(
+      async () => produceMessage(fakeMessage, TEST_LOCAL_KAFKA_TOPIC, testSchemaOptions),
+      (error) => {
+        assert.ok(error instanceof ProduceMessageBadRequestError);
+        assert.strictEqual(error.message, "");
+        return true;
+      },
     );
   });
 });
