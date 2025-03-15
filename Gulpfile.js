@@ -31,7 +31,6 @@ const DESTINATION = "out";
 
 const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
-const IS_MAC = process.platform === "darwin";
 
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
