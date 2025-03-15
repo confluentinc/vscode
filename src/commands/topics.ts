@@ -452,8 +452,10 @@ async function produceMessages(
 
     let buttons = DEFAULT_ERROR_NOTIFICATION_BUTTONS;
     if (diagnostics.length) {
+      const suffix = plural ? `${plural} (${diagnostics.length.toLocaleString()})` : "";
+      const buttonLabel = `Show Validation Error${suffix}`;
       buttons = {
-        "Show Validation Errors": () => {
+        [buttonLabel]: () => {
           vscode.window.showTextDocument(messageUri, { preview: false }).then(() => {
             vscode.commands.executeCommand("workbench.action.showErrorsWarnings");
           });
@@ -462,23 +464,72 @@ async function produceMessages(
       };
     }
 
-    // aggregate error message counts and show them in descending order by count
-    const errorTypeCounts: { [key: string]: number } = {};
-    errorResults.forEach((errorResult) => {
-      errorTypeCounts[errorResult.error.message] =
-        (errorTypeCounts[errorResult.error.message] ?? 0) + 1;
-    });
-    const errorSummary = Object.entries(errorTypeCounts)
-      .sort(([, a], [, b]) => b - a)
-      .map(([msg, count]) => `${count}x ${msg}`)
-      .slice(0, 3); // limit to 3 most common errors
+    // only display up to the top three non-validation errors and their counts
+    const errorSummary: string = summarizeErrors(
+      errorResults.map((result) => result.error),
+      ["ProduceMessageSchemaValidationError"],
+      3,
+    );
+
+    // if we only have validation errors, no summary will be shown, but we should provide the
+    // "Show Validation Errors" button
     showErrorNotificationWithButtons(
-      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}":\n\n${errorSummary}`,
+      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}"${errorSummary ? `:\n${errorSummary}` : ""}`,
       buttons,
     );
   }
 }
 
+/**
+ * Aggregates counts of error messages and returns a summary string.
+ * - If a single error is provided, it returns the error message.
+ * - For multiple error messages, this returns a string with the count of each unique error message
+ * in descending order.
+ *
+ * @param errors - An array of Error objects.
+ * @param ignoredTypes - An array of error types to exclude from the summary.
+ * @param limit - The maximum number of unique error messages to include in the summary.
+ */
+export function summarizeErrors(
+  errors: Error[],
+  ignoredTypes: string[] = [],
+  limit: number = 3,
+): string {
+  if (!errors.length) {
+    return "";
+  }
+  if (errors.length === 1) {
+    // only return the single message if it isn't excluded
+    if (ignoredTypes.includes(errors[0].name)) {
+      return "";
+    }
+    return errors[0].message;
+  }
+  // aggregate error message counts and show them in descending order by count
+  const errorTypeCounts: { [key: string]: number } = {};
+  errors.forEach((error) => {
+    if (ignoredTypes.includes(error.name)) {
+      return;
+    }
+    errorTypeCounts[error.message] = (errorTypeCounts[error.message] ?? 0) + 1;
+  });
+  const errorSummary: string = Object.entries(errorTypeCounts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([msg, count]) => `${msg} (x${count})`)
+    .slice(0, limit)
+    .join(", ");
+  return errorSummary;
+}
+
+/**
+ * Handles schema validation errors by mapping them to the corresponding ranges in the document.
+ * This function collects all errors and their range promises while maintaining the index mapping,
+ * and then applies the validation-related error diagnostics to the document.
+ *
+ * @param results - An array of ExecutionResult objects containing ProduceResult.
+ * @param messageUri - The URI of the message document.
+ * @returns An array of vscode.Diagnostic objects representing the validation errors.
+ */
 export async function handleSchemaValidationErrors(
   results: ExecutionResult<ProduceResult>[],
   messageUri: vscode.Uri,
