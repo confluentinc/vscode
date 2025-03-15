@@ -593,7 +593,7 @@ export async function handleSchemaValidationErrors(
   return messageDiagnostics;
 }
 
-interface ProduceResult {
+export interface ProduceResult {
   timestamp: Date;
   response: ProduceResponse;
 }
