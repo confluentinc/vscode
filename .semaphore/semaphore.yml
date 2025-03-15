@@ -20,16 +20,6 @@ queue:
     processing: parallel
 
 global_job_config:
-  prologue:
-    commands:
-      - checkout
-      - make ci-bin-sem-cache-restore
-      - |
-        if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
-          echo "Skipping Vault setup for Semaphore CI"
-        else
-          . vault-setup
-        fi
   epilogue:
     always:
       commands:
@@ -37,42 +27,160 @@ global_job_config:
         - make store-test-results-to-semaphore
 
 blocks:
-  - name: "Build & Test (VS Code)"
+  # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
+  - name: "Build & Test (VS Code: linux x64)"
     dependencies: []
     # Skip when:
     # - change in the release.svg file, signaling a `chore: none version bump vN.N.N` commit.
     # - change in the .versions/next.txt file, signaling a release PR merge commit.
-    skip:
+    skip: &build-test-skip-stable
       when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
-      jobs:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      prologue: &build-test-prologue
+        commands:
+          - checkout
+          - make ci-bin-sem-cache-restore
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
+      jobs: &build-test-jobs-stable
         - name: "Build & Test (VS Code)"
           commands:
             - make test
-          # Not setting VSCODE_VERSION env var will default using the latest stable release version
-      epilogue:
+          env_vars:
+            - name: VSCODE_VERSION
+              value: stable
+      epilogue: &build-test-epilogue
         always:
           commands:
             - make remove-test-env
-  - name: "Build & Test (VS Code Insiders)"
+
+  - name: "Build & Test (VS Code: linux arm64)"
     dependencies: []
-    skip:
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-arm64-1
+      prologue: *build-test-prologue
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (VS Code: darwin x64)"
+    dependencies: []
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-amd64
+      prologue: *build-test-prologue
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (VS Code: darwin arm64)"
+    dependencies: []
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-macos-13-5-arm64
+      prologue: *build-test-prologue
+      jobs: *build-test-jobs-stable
+      epilogue: *build-test-epilogue
+
+  - name: "Build & Test (VS Code: win32 x64)"
+    dependencies: []
+    skip: *build-test-skip-stable
+    task:
+      agent:
+        machine:
+          type: s1-prod-windows
+      prologue:
+        commands:
+          - checkout
+          - make ci-bin-sem-cache-restore
+          - $Env:PATH += ";C:\Program Files\Git\bin"
+          - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+          # Ensure npm and npx are available
+          - npm --version
+          - npx --version
+          - choco install gh -y
+          - $Env:PATH += ";C:\Program Files\GitHub CLI\"
+          - gh --version
+          - |
+            if (Test-Path "$HOME/.gh-token") {
+              $Env:GH_TOKEN = Get-Content "$HOME/.gh-token" -Raw | ForEach-Object { $_.Trim() }
+              if ([string]::IsNullOrEmpty($Env:GH_TOKEN)) {
+                  Write-Error "Token file exists but is empty"
+                  exit 1
+              }
+              gh config set prompt disabled
+              $Env:GH_TOKEN | gh auth login --with-token
+              gh auth status
+            } else {
+                Write-Error "Token file not found at $HOME/.gh-token"
+                exit 1
+            }
+          - |
+            if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
+              Write-Output "Skipping Vault setup for Semaphore CI"
+            } else {
+              $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+              $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              vault login -no-print token=$token
+            }
+          - $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+          - Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
+          - $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+          - Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
+      jobs:
+        - name: "Build & Test (VS Code)"
+          commands:
+            - npm ci --prefer-offline --include=dev
+            - npx playwright install
+            - npx gulp build
+            - npx gulp test
+            - npx gulp functional
+      epilogue:
+        always:
+          commands:
+            - Remove-Item .env -ErrorAction SilentlyContinue
+            # Windows version of store-test-results-to-semaphore
+            - |
+              $TestResultFile = Join-Path -Path $PWD -ChildPath "TEST-result.xml"
+              if (Test-Path $TestResultFile) {
+                  Write-Output "Publishing test results from $TestResultFile"
+                  test-results publish $TestResultFile --force
+              } else {
+                  Write-Output "Test results not found at $TestResultFile"
+              }
+
+  # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
+
+  - name: "Build & Test (VS Code Insiders: linux x64)"
+    dependencies: []
+    skip: &build-test-skip-insiders
       when: "branch != 'main' AND change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
     task:
-      jobs:
+      prologue: *build-test-prologue
+      jobs: &build-test-jobs-insiders
         - name: "Build & Test (VS Code Insiders)"
           commands:
             - make test
           env_vars:
             - name: VSCODE_VERSION
               value: insiders
-      epilogue:
-        always:
-          commands:
-            - make remove-test-env
+      epilogue: *build-test-epilogue
 
   - name: "Bump microversion"
-    dependencies: ["Build & Test (VS Code)"]
+    dependencies:
+      - "Build & Test (VS Code: linux x64)"
     skip:
       # For main branch:    Always bump microversion on every commit (except those that bump next.txt
       #                       to set the next version under development)
@@ -90,7 +198,8 @@ blocks:
             - make bump-microversion
 
   - name: "Set next version under development"
-    dependencies: ["Build & Test (VS Code)"]
+    dependencies:
+      - "Build & Test (VS Code: linux x64)"
     run:
       when: "branch = 'main' and change_in('/.versions/next.txt', {pipeline_file: 'ignore', default_branch: 'main'})"
     task:
