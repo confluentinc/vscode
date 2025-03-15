@@ -443,7 +443,7 @@ export class AuthCredentials extends HTMLElement {
       // start with a clean slate when auth type changes
       this._internals.setValidity({});
       // Initialize form values after bindings. Small timeout to ensure DOM is ready
-      setTimeout(() => this.initializeFormValues(), 100);
+      setTimeout(() => this.initializeFormValues(), 50);
     });
 
     // Before form submits, invoke validation checks
