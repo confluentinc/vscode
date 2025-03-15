@@ -424,7 +424,7 @@ test("adds advanced ssl fields even if section is collapsed", async ({ execute, 
   await page.selectOption("select[name='kafka_cluster.ssl.truststore.type']", "PKCS12");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
-
+  await page.waitForTimeout(100);
   // Click to hide the advanced settings, then submit the form
   await page.click("p:has-text('TLS Configuration')");
   await expect(page.locator("input[name='kafka_cluster.ssl.truststore.path']")).not.toBeVisible();
@@ -474,6 +474,8 @@ test("submits values for SASL/SCRAM auth type when filled in", async ({ execute,
   await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
   await page.selectOption("select[name='kafka_cluster.auth_type']", "SCRAM");
   // Don't update hash_algorithm, so we can verify it is sent with default value
+  // Wait a few milliseconds to ensure the default value is set to form (test is much faster than human)
+  await page.waitForTimeout(100);
   // await page.selectOption(
   //   "select[name='kafka_cluster.credentials.hash_algorithm']",
   //   "SCRAM_SHA_256",
@@ -765,6 +767,8 @@ test("submits values for Kerberos auth type when filled in", async ({ execute, p
   await page.fill("input[name='kafka_cluster.credentials.principal']", "user@EXAMPLE.COM");
   await page.fill("input[name='kafka_cluster.credentials.keytab_path']", "/path/to/keytab");
   // Don't fill in service_name, so we can verify it is sent with default value
+  // Wait a few milliseconds to ensure the default value is set to form (test is much faster than human)
+  await page.waitForTimeout(100);
   // await page.fill("input[name='kafka_cluster.credentials.service_name']", "kafka");
 
   // Submit the form
@@ -946,6 +950,7 @@ test("submits default types for keystore and truststore", async ({ execute, page
   await page.click("p:has-text('TLS Configuration')");
   await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
+  await page.waitForTimeout(100);
   // Submit the form
   await page.click("input[type=submit][value='Save']");
   const submitCallHandle = await sendWebviewMessage.evaluateHandle(
