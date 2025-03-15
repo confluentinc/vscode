@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before opening a new documentation issue, is this something you can help us with? Your contributions are welcomed and appreciated. See our [Contribution Guide](https://github.com/confluentinc/vscode/blob/master/CONTRIBUTING.md) to learn how to edit the Next.js docs.
+        Before opening a new documentation issue, is this something you can help us with? Your contributions are welcomed and appreciated. See our [Contribution Guide](https://github.com/confluentinc/vscode/blob/main/docs/CONTRIBUTING.md) to learn how to edit the Next.js docs.
 
         If you are reporting about an documentation request, please open it in our [discussions](https://github.com/confluentinc/vscode/discussions/new?category=ideas) instead.
   - type: markdown
