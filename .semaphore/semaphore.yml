@@ -146,9 +146,9 @@ blocks:
             - npx gulp test
             - npx gulp functional
       epilogue:
-        commands:
-          - Remove-Item .env -ErrorAction SilentlyContinue
-          - make store-test-results-to-semaphore
+        always:
+          commands:
+            - Remove-Item .env -ErrorAction SilentlyContinue
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
 
