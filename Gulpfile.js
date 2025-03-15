@@ -651,6 +651,9 @@ export async function testRun() {
 
   const extensionTestsPath = resolve(DESTINATION, "src/testing.js");
   if (IS_CI && IS_MAC) {
+    // hack for using require in an ESM module
+    const { createRequire } = await import("module");
+    const require = createRequire(import.meta.url);
     // run directly, not through runTests()
     try {
       const testModule = require(extensionTestsPath);
