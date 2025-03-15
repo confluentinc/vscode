@@ -618,9 +618,12 @@ export async function testRun() {
 
   // adjust the launch arguments and env vars depending on the environment
   // (darwin CI needs to run in headless mode)
-  let extensionTestsEnv = {};
+  let extensionTestsEnv = {
+    // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
+    FGREP: testFilter,
+  };
   const launchArgs = [];
-  if (!(IS_CI && IS_MAC)) {
+  if (IS_CI && IS_MAC) {
     extensionTestsEnv = {
       ELECTRON_ENABLE_LOGGING: "true",
       ELECTRON_ENABLE_STACK_DUMPING: "true",
@@ -629,6 +632,7 @@ export async function testRun() {
       VSCODE_CLI: "1",
       ELECTRON_RUN_AS_NODE: "1",
     };
+  } else {
     launchArgs.push(
       "--no-sandbox",
       "--profile-temp",
@@ -640,11 +644,6 @@ export async function testRun() {
       "--disable-workspace-trust",
       "--disable-extensions",
     );
-  } else {
-    extensionTestsEnv = {
-      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-      FGREP: testFilter,
-    };
   }
   console.log(`Running tests for ${process.platform}-${process.arch}`);
   console.log(`Launch args: ${launchArgs.join(" ")}`);
