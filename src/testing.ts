@@ -8,6 +8,8 @@ import { Logger } from "./logging";
 const logger = new Logger("testing");
 
 export async function run() {
+  console.log(`process.cwd=${process.cwd()} __dirname=${__dirname}`);
+
   const version = process.env.VSCODE_VERSION ?? "stable";
   const mocha = new Mocha({
     color: true,
