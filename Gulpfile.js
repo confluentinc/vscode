@@ -670,39 +670,11 @@ export async function testRun() {
       "--skip-release-notes",
       "--skip-welcome",
       "--disable-gpu",
-      "--disable-chromium-sandbox",
       "--disable-updates",
       "--disable-workspace-trust",
       "--disable-extensions",
-    );
-  }
-  console.log(`Running tests for ${process.platform}-${process.arch}`);
-  console.log(`Launch args: ${JSON.stringify(launchArgs, null, 2)}`);
-  console.log(`Env vars: ${JSON.stringify(extensionTestsEnv, null, 2)}`);
-
-  const extensionTestsPath = resolve(DESTINATION, "src/testing.js");
-  if (IS_CI && IS_MAC) {
-    // run directly, not through runTests()
-    try {
-      // hack for using require in an ESM module
-      const { createRequire } = await import("module");
-      const require = createRequire(import.meta.url);
-      const testModule = require(extensionTestsPath);
-      await testModule.run();
-    } catch (error) {
-      console.error("Test execution failed:", error);
-      throw error;
-    }
-  } else {
-    await runTests({
-      version: process.env.VSCODE_VERSION,
-      extensionDevelopmentPath: resolve(DESTINATION),
-      extensionTestsPath,
-      extensionTestsEnv,
-      launchArgs,
-    });
-  }
-
+    ],
+  });
   if (reportCoverage) {
     let coverageMap = libCoverage.createCoverageMap();
     let sourceMapStore = libSourceMaps.createSourceMapStore();
