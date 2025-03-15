@@ -19,13 +19,6 @@ queue:
   - when: "branch != 'main'"
     processing: parallel
 
-global_job_config:
-  epilogue:
-    always:
-      commands:
-        - make ci-bin-sem-cache-store
-        - make store-test-results-to-semaphore
-
 blocks:
   # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
   - name: "Build & Test (VS Code: linux x64)"
@@ -60,6 +53,8 @@ blocks:
         always:
           commands:
             - make remove-test-env
+            - make ci-bin-sem-cache-store
+            - make store-test-results-to-semaphore
 
   - name: "Build & Test (VS Code: linux arm64)"
     dependencies: []
