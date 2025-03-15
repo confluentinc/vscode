@@ -151,6 +151,15 @@ blocks:
         always:
           commands:
             - Remove-Item .env -ErrorAction SilentlyContinue
+            # Windows version of store-test-results-to-semaphore
+            - |
+              $TestResultFile = Join-Path -Path $PWD -ChildPath "TEST-result.xml"
+              if (Test-Path $TestResultFile) {
+                  Write-Output "Publishing test results from $TestResultFile"
+                  test-results publish $TestResultFile --force
+              } else {
+                  Write-Output "Test results not found at $TestResultFile"
+              }
 
   # --- End Build & Test (multi-platform/-arch) for VS Code (stable) ---
 
