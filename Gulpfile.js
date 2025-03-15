@@ -677,8 +677,8 @@ export async function testRun() {
     );
   }
   console.log(`Running tests for ${process.platform}-${process.arch}`);
-  console.log(`Launch args: ${launchArgs.join(" ")}`);
-  console.log(`Env vars: ${JSON.stringify(extensionTestsEnv)}`);
+  console.log(`Launch args: ${JSON.stringify(launchArgs, null, 2)}`);
+  console.log(`Env vars: ${JSON.stringify(extensionTestsEnv, null, 2)}`);
 
   await runTests({
     version: process.env.VSCODE_VERSION,
