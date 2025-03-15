@@ -16,7 +16,11 @@ import {
 } from "../clients/sidecar";
 import { MessageViewerConfig } from "../consume";
 import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
-import { showErrorNotificationWithButtons } from "../errors";
+import {
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  isResponseError,
+  showErrorNotificationWithButtons,
+} from "../errors";
 import { Logger } from "../logging";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { isCCloud } from "../models/resource";
@@ -27,6 +31,7 @@ import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../qui
 import { promptForSchema } from "../quickpicks/utils/schemas";
 import { getSubjectNameStrategy } from "../quickpicks/utils/schemaSubjects";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
+import { getRangeForDocument } from "../schemas/parsing";
 import {
   PRODUCE_MESSAGE_SCHEMA,
   ProduceMessage,
@@ -441,15 +446,154 @@ async function produceMessages(
   }
 
   if (errorResults.length) {
-    const errorMessages = errorResults.map(({ error }) => error).join("\n");
-    // this format isn't great if there are multiple errors, but it's better than nothing
+    // send all results to the error diagnostics handler since we want the indices of the results
+    // for any error diagnostics
+    const diagnostics = await handleSchemaValidationErrors(results, messageUri);
+
+    let buttons = DEFAULT_ERROR_NOTIFICATION_BUTTONS;
+    if (diagnostics.length) {
+      const suffix = plural ? `${plural} (${diagnostics.length.toLocaleString()})` : "";
+      const buttonLabel = `Show Validation Error${suffix}`;
+      buttons = {
+        [buttonLabel]: () => {
+          vscode.window.showTextDocument(messageUri, { preview: false }).then(() => {
+            vscode.commands.executeCommand("workbench.action.showErrorsWarnings");
+          });
+        },
+        ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+      };
+    }
+
+    // only display up to the top three non-validation errors and their counts
+    const errorSummary: string = summarizeErrors(
+      errorResults.map((result) => result.error),
+      ["ProduceMessageSchemaValidationError"],
+      3,
+    );
+
+    // if we only have validation errors, no summary will be shown, but we should provide the
+    // "Show Validation Errors" button
     showErrorNotificationWithButtons(
-      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}":\n${errorMessages}`,
+      `Failed to produce ${errorResults.length.toLocaleString()}${ofTotal} message${plural} to topic "${topic.name}"${errorSummary ? `:\n${errorSummary}` : ""}`,
+      buttons,
     );
   }
 }
 
-interface ProduceResult {
+/**
+ * Aggregates counts of error messages and returns a summary string.
+ * - If a single error is provided, it returns the error message.
+ * - For multiple error messages, this returns a string with the count of each unique error message
+ * in descending order.
+ *
+ * @param errors - An array of Error objects.
+ * @param ignoredTypes - An array of error types to exclude from the summary.
+ * @param limit - The maximum number of unique error messages to include in the summary.
+ */
+export function summarizeErrors(
+  errors: Error[],
+  ignoredTypes: string[] = [],
+  limit: number = 3,
+): string {
+  if (!errors.length) {
+    return "";
+  }
+  if (errors.length === 1) {
+    // only return the single message if it isn't excluded
+    if (ignoredTypes.includes(errors[0].name)) {
+      return "";
+    }
+    return errors[0].message;
+  }
+  // aggregate error message counts and show them in descending order by count
+  const errorTypeCounts: { [key: string]: number } = {};
+  errors.forEach((error) => {
+    if (ignoredTypes.includes(error.name)) {
+      return;
+    }
+    errorTypeCounts[error.message] = (errorTypeCounts[error.message] ?? 0) + 1;
+  });
+  const errorSummary: string = Object.entries(errorTypeCounts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([msg, count]) => `${msg} (x${count})`)
+    .slice(0, limit)
+    .join(", ");
+  return errorSummary;
+}
+
+/**
+ * Handles schema validation errors by mapping them to the corresponding ranges in the document.
+ * This function collects all errors and their range promises while maintaining the index mapping,
+ * and then applies the validation-related error diagnostics to the document.
+ *
+ * @param results - An array of ExecutionResult objects containing ProduceResult.
+ * @param messageUri - The URI of the message document.
+ * @returns An array of vscode.Diagnostic objects representing the validation errors.
+ */
+export async function handleSchemaValidationErrors(
+  results: ExecutionResult<ProduceResult>[],
+  messageUri: vscode.Uri,
+) {
+  // map the original error position, the error itself, and the promise for looking up the range
+  interface ErrorMapping {
+    resultIndex: number;
+    error: Error;
+    rangePromise: Promise<vscode.Range>;
+  }
+
+  const errorMappings: ErrorMapping[] = [];
+
+  // collect all errors and their range promises while maintaining the index mapping
+  results.forEach((result, idx) => {
+    if (result.error instanceof ProduceMessageBadRequestError) {
+      // check if the validation error was caused by the key and/or the value by looking at the
+      // request, which may create multiple ranges for a single message
+      // TODO(shoup): this is a workaround for the fact that we don't get more information from the
+      // serializer errors, but we should revisit this once we're able to get more information like
+      // key/value and specific field(s) or paths
+      const forKey = typeof result.error.request.key?.subject_name_strategy === "string";
+      const forValue = typeof result.error.request.value?.subject_name_strategy === "string";
+      if (forKey) {
+        errorMappings.push({
+          resultIndex: idx,
+          error: result.error,
+          rangePromise: getRangeForDocument(messageUri, PRODUCE_MESSAGE_SCHEMA, idx, "key"),
+        });
+      }
+      if (forValue) {
+        errorMappings.push({
+          resultIndex: idx,
+          error: result.error,
+          rangePromise: getRangeForDocument(messageUri, PRODUCE_MESSAGE_SCHEMA, idx, "value"),
+        });
+      }
+    }
+  });
+  const resolvedMappings = await Promise.all(
+    errorMappings.map(async (mapping) => ({
+      ...mapping,
+      range: await mapping.rangePromise,
+    })),
+  );
+
+  const messageDiagnostics: vscode.Diagnostic[] = [];
+  if (resolvedMappings.length > 0) {
+    // apply the validation-related error diagnostics to the document
+    resolvedMappings.forEach((mapping) => {
+      messageDiagnostics.push(
+        new vscode.Diagnostic(
+          mapping.range,
+          mapping.error.message,
+          vscode.DiagnosticSeverity.Error,
+        ),
+      );
+    });
+    JSON_DIAGNOSTIC_COLLECTION.set(messageUri, messageDiagnostics);
+  }
+  return messageDiagnostics;
+}
+
+export interface ProduceResult {
   timestamp: Date;
   response: ProduceResponse;
 }
@@ -493,25 +637,56 @@ export async function produceMessage(
 
   const sidecar = await getSidecar();
 
-  if (forCCloudTopic) {
-    const ccloudClient: ConfluentCloudProduceRecordsResourceApi =
-      sidecar.getConfluentCloudProduceRecordsResourceApi(topic.connectionId);
-    const ccloudResponse = await ccloudClient.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost({
-      ...request,
-      x_connection_id: topic.connectionId,
-      dry_run: false,
-      ProduceRequest: produceRequest as CCloudProduceRequest,
-    });
-    response = ccloudResponse as ProduceResponse;
-  } else {
-    // non-CCloud topic route:
-    const client: RecordsV3Api = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
-    response = await client.produceRecord({ ...request, ProduceRequest: produceRequest });
+  try {
+    if (forCCloudTopic) {
+      const ccloudClient: ConfluentCloudProduceRecordsResourceApi =
+        sidecar.getConfluentCloudProduceRecordsResourceApi(topic.connectionId);
+      const ccloudResponse =
+        await ccloudClient.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost({
+          ...request,
+          x_connection_id: topic.connectionId,
+          dry_run: false,
+          ProduceRequest: produceRequest as CCloudProduceRequest,
+        });
+      response = ccloudResponse as ProduceResponse;
+    } else {
+      // non-CCloud topic route:
+      const client: RecordsV3Api = sidecar.getRecordsV3Api(topic.clusterId, topic.connectionId);
+      response = await client.produceRecord({ ...request, ProduceRequest: produceRequest });
+    }
+  } catch (err) {
+    // only attempt to catch schema validation errors
+    if (isResponseError(err) && err.response.status === 400) {
+      let errBody: string | undefined;
+      try {
+        // should be {"message":"Failed to parse data: ... ","error_code":400}
+        const respJson = await err.response.clone().json();
+        if (respJson && typeof respJson === "object" && respJson.message) {
+          errBody = respJson.message;
+        }
+      } catch {
+        errBody = await err.response.clone().text();
+      }
+      if (errBody !== undefined)
+        throw new ProduceMessageBadRequestError(errBody, produceRequest, err);
+    }
+    throw err;
   }
 
   timestamp = response.timestamp ? new Date(response.timestamp) : timestamp;
 
   return { timestamp, response };
+}
+
+export class ProduceMessageBadRequestError extends Error {
+  request: ProduceRequest;
+  response: ResponseError;
+  constructor(message: string, request: ProduceRequest, response: ResponseError) {
+    super(message);
+    this.name = "ProduceMessageSchemaValidationError";
+    this.request = request;
+    this.response = response;
+  }
 }
 
 export function registerTopicCommands(): vscode.Disposable[] {

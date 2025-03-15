@@ -20,6 +20,10 @@ All notable changes to this extension will be documented in this file.
   re-authenticate.
 - "View Messages" and "Send Message(s)" icons have been updated for better visibility and
   accessibility.
+- Errors encountered while producing messages to a topic have been improved:
+  - Schema validation errors will now highlight problematic message content in the Problems panel
+    for easier troubleshooting.
+  - Non-validation errors are aggregated and summarized in the error notification.
 
 ### Fixed
 

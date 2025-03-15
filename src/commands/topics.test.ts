@@ -14,9 +14,22 @@ import * as schemaQuickPicks from "../quickpicks/schemas";
 import * as uriQuickpicks from "../quickpicks/uris";
 import * as schemaSubjectUtils from "../quickpicks/utils/schemaSubjects";
 import * as schemaUtils from "../quickpicks/utils/schemas";
-import { ProduceMessage, SubjectNameStrategy } from "../schemas/produceMessageSchema";
+import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
+import * as parsing from "../schemas/parsing";
+import {
+  PRODUCE_MESSAGE_SCHEMA,
+  ProduceMessage,
+  SubjectNameStrategy,
+} from "../schemas/produceMessageSchema";
 import * as sidecar from "../sidecar";
-import { produceMessagesFromDocument } from "./topics";
+import { ExecutionResult } from "../utils/workerPool";
+import {
+  handleSchemaValidationErrors,
+  ProduceMessageBadRequestError,
+  produceMessagesFromDocument,
+  ProduceResult,
+  summarizeErrors,
+} from "./topics";
 
 const fakeMessage = {
   key: "test-key",
@@ -448,6 +461,249 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
     sinon.assert.notCalled(recordsV3ApiStub.produceRecord);
     sinon.assert.notCalled(
       ccloudProduceApiStub.gatewayV1ClustersClusterIdTopicsTopicNameRecordsPost,
+    );
+  });
+});
+
+describe("commands/topics.ts summarizeErrors()", function () {
+  it("should return empty string when no errors are provided", function () {
+    const result = summarizeErrors([]);
+
+    assert.strictEqual(result, "");
+  });
+
+  it("should return a single error message when one error is provided", function () {
+    const error = new Error("Test error message");
+
+    const result = summarizeErrors([error]);
+
+    assert.strictEqual(result, "Test error message");
+  });
+
+  it("should return empty string when a single error is provided but its type is in the ignored list", function () {
+    const error = new Error("Test error message");
+    error.name = "IgnoredErrorType";
+
+    const result = summarizeErrors([error], ["IgnoredErrorType"]);
+
+    assert.strictEqual(result, "");
+  });
+
+  it("should aggregate multiple errors with the same message", function () {
+    const errors = [new Error("Error 1"), new Error("Error 1"), new Error("Error 2")];
+
+    const result = summarizeErrors(errors);
+
+    assert.strictEqual(result, "Error 1 (x2), Error 2 (x1)");
+  });
+
+  it("should limit the number of unique error messages in the summary", function () {
+    const errors = [
+      new Error("Error 1"),
+      new Error("Error 1"),
+      new Error("Error 2"),
+      new Error("Error 3"),
+      new Error("Error 4"),
+    ];
+
+    const result = summarizeErrors(errors, [], 2);
+
+    // only show the top two errors
+    assert.strictEqual(result, "Error 1 (x2), Error 2 (x1)");
+  });
+
+  it("should sort error messages in descending order by count", function () {
+    const errors = [
+      new Error("Error 1"),
+      new Error("Error 2"),
+      new Error("Error 2"),
+      new Error("Error 3"),
+      new Error("Error 3"),
+      new Error("Error 3"),
+    ];
+
+    const result = summarizeErrors(errors);
+
+    assert.strictEqual(result, "Error 3 (x3), Error 2 (x2), Error 1 (x1)");
+  });
+
+  it("should ignore errors of specified types", function () {
+    const errors = [
+      new Error("Regular error"),
+      new Error("Schema error"),
+      new Error("Schema error"),
+    ];
+    errors[1].name = "ProduceMessageSchemaValidationError";
+    errors[2].name = "ProduceMessageSchemaValidationError";
+
+    const result = summarizeErrors(errors, ["ProduceMessageSchemaValidationError"]);
+
+    assert.strictEqual(result, "Regular error (x1)");
+  });
+});
+
+describe("commands/topics.ts handleSchemaValidationErrors()", function () {
+  let sandbox: sinon.SinonSandbox;
+  let getRangeForDocumentStub: sinon.SinonStub;
+  let diagnosticCollectionSetStub: sinon.SinonStub;
+
+  const messageUri = vscode.Uri.file("test.json");
+
+  beforeEach(function () {
+    sandbox = sinon.createSandbox();
+
+    // stub getRangeForDocument to return a predictable range
+    getRangeForDocumentStub = sandbox
+      .stub(parsing, "getRangeForDocument")
+      .resolves(new vscode.Range(0, 0, 1, 10));
+
+    // stub the diagnostic collection's set method
+    diagnosticCollectionSetStub = sandbox.stub();
+    sandbox.stub(JSON_DIAGNOSTIC_COLLECTION, "set").value(diagnosticCollectionSetStub);
+  });
+
+  afterEach(function () {
+    sandbox.restore();
+  });
+
+  it("should return empty array when no validation errors are found", async function () {
+    const results: ExecutionResult<ProduceResult>[] = [
+      { result: undefined, error: new Error("Regular error") },
+    ];
+
+    const diagnostics = await handleSchemaValidationErrors(results, messageUri);
+
+    assert.strictEqual(diagnostics.length, 0);
+    sinon.assert.notCalled(getRangeForDocumentStub);
+    sinon.assert.notCalled(diagnosticCollectionSetStub);
+  });
+
+  it("should create diagnostics for ProduceMessageBadRequestError with key schema", async function () {
+    // validation error for a key schema
+    const badRequestError = new ProduceMessageBadRequestError(
+      "Invalid key schema",
+      {
+        key: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
+        value: {},
+      } as any,
+      new ResponseError(new Response()),
+    );
+    const results: ExecutionResult<ProduceResult>[] = [
+      { result: undefined, error: badRequestError },
+    ];
+
+    const diagnostics = await handleSchemaValidationErrors(results, messageUri);
+
+    assert.strictEqual(diagnostics.length, 1);
+    sinon.assert.calledOnce(getRangeForDocumentStub);
+    sinon.assert.calledWith(getRangeForDocumentStub, messageUri, PRODUCE_MESSAGE_SCHEMA, 0, "key");
+    sinon.assert.calledOnce(diagnosticCollectionSetStub);
+  });
+
+  it("should create diagnostics for ProduceMessageBadRequestError with value schema", async function () {
+    // validation error for a value schema
+    const badRequestError = new ProduceMessageBadRequestError(
+      "Invalid value schema",
+      {
+        key: {},
+        value: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
+      } as any,
+      new ResponseError(new Response()),
+    );
+    const results: ExecutionResult<ProduceResult>[] = [
+      { result: undefined, error: badRequestError },
+    ];
+
+    const diagnostics = await handleSchemaValidationErrors(results, messageUri);
+
+    assert.strictEqual(diagnostics.length, 1);
+    sinon.assert.calledOnce(getRangeForDocumentStub);
+    sinon.assert.calledWith(
+      getRangeForDocumentStub,
+      messageUri,
+      PRODUCE_MESSAGE_SCHEMA,
+      0,
+      "value",
+    );
+  });
+
+  it("should create multiple diagnostics for errors with both key and value issues", async function () {
+    // validation error for both key and value schemas
+    const badRequestError = new ProduceMessageBadRequestError(
+      "Invalid schemas",
+      {
+        key: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
+        value: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
+      } as any,
+      new ResponseError(new Response()),
+    );
+    const results: ExecutionResult<ProduceResult>[] = [
+      { result: undefined, error: badRequestError },
+    ];
+
+    const diagnostics = await handleSchemaValidationErrors(results, messageUri);
+
+    assert.strictEqual(diagnostics.length, 2);
+    assert.strictEqual(getRangeForDocumentStub.callCount, 2);
+
+    // first call for `key`, second for `value`
+    sinon.assert.calledWith(
+      getRangeForDocumentStub.firstCall,
+      messageUri,
+      PRODUCE_MESSAGE_SCHEMA,
+      0,
+      "key",
+    );
+    sinon.assert.calledWith(
+      getRangeForDocumentStub.secondCall,
+      messageUri,
+      PRODUCE_MESSAGE_SCHEMA,
+      0,
+      "value",
+    );
+    // make sure the key and value ranges are different
+    assert.notStrictEqual(
+      getRangeForDocumentStub.firstCall.returnValue,
+      getRangeForDocumentStub.secondCall.returnValue,
+    );
+  });
+
+  it("should handle multiple errors across different indices", async function () {
+    // simulate errors at different message indices
+    const error1 = new ProduceMessageBadRequestError(
+      "Invalid key schema at index 0",
+      { key: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME } } as any,
+      new ResponseError(new Response()),
+    );
+    const error2 = new ProduceMessageBadRequestError(
+      "Invalid value schema at index 1",
+      { value: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME } } as any,
+      new ResponseError(new Response()),
+    );
+    const results: ExecutionResult<ProduceResult>[] = [
+      { result: undefined, error: error1 },
+      { result: undefined, error: error2 },
+    ];
+
+    const diagnostics = await handleSchemaValidationErrors(results, messageUri);
+
+    assert.strictEqual(diagnostics.length, 2);
+    assert.strictEqual(getRangeForDocumentStub.callCount, 2);
+
+    // calls should be made with the correct message indices
+    sinon.assert.calledWith(
+      getRangeForDocumentStub.firstCall,
+      messageUri,
+      PRODUCE_MESSAGE_SCHEMA,
+      0,
+      "key",
+    );
+    sinon.assert.calledWith(
+      getRangeForDocumentStub.secondCall,
+      messageUri,
+      PRODUCE_MESSAGE_SCHEMA,
+      1,
+      "value",
     );
   });
 });

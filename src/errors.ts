@@ -26,6 +26,16 @@ export type AnyResponseError =
   | ScaffoldingServiceResponseError
   | DockerResponseError;
 
+export function isResponseError(error: unknown): error is AnyResponseError {
+  return (
+    error instanceof SidecarResponseError ||
+    error instanceof KafkaResponseError ||
+    error instanceof SchemaRegistryResponseError ||
+    error instanceof ScaffoldingServiceResponseError ||
+    error instanceof DockerResponseError
+  );
+}
+
 /**
  * Check if an {@link Error} has a `cause` property of type `Error`, indicating it has at least
  * one nested error.
