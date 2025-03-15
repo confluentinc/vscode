@@ -53,7 +53,9 @@ blocks:
         - name: "Build & Test (VS Code)"
           commands:
             - make test
-          # Not setting VSCODE_VERSION env var will default using the latest stable release version
+          env_vars:
+            - name: VSCODE_VERSION
+              value: stable
       epilogue: &build-test-epilogue
         always:
           commands:
