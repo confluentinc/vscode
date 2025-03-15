@@ -270,7 +270,7 @@ test("submits the form with empty trust/key stores as defaults when ssl enabled"
     "schema_registry.uri": "http://localhost:8081",
   });
 });
-test("submits the form with namespaced ssl advanced config fields when filled", async ({
+test("submits the form with namespaced TLS config fields when filled", async ({
   execute,
   page,
 }) => {
@@ -332,7 +332,7 @@ test("submits the form with namespaced ssl advanced config fields when filled", 
     "kafka_cluster.ssl.truststore.type": "PKCS12",
   });
 });
-test("adds only edited ssl fields to form data", async ({ execute, page }) => {
+test("adds only edited TLS fields to form data", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
     return sendWebviewMessage as SinonStub;
@@ -772,7 +772,6 @@ test("populates values for SASL/OAUTHBEARER auth type when they exist in the spe
     SPEC_SAMPLE_OAUTH.schema_registry.credentials.client_secret,
   );
 });
-
 test("submits values for Kerberos auth type when filled in", async ({ execute, page }) => {
   const sendWebviewMessage = await execute(async () => {
     const { sendWebviewMessage } = await import("./comms/comms");
@@ -824,7 +823,6 @@ test("submits values for Kerberos auth type when filled in", async ({ execute, p
     "schema_registry.uri": "",
   });
 });
-
 test("populates values for Kerberos auth type when they exist in the spec (edit/import)", async ({
   execute,
   page,
@@ -884,6 +882,117 @@ test("populates values for Kerberos auth type when they exist in the spec (edit/
     // @ts-expect-error credentials could be of different types
     SPEC_SAMPLE_KERBEROS.kafka_cluster.credentials.service_name,
   );
+});
+test("submits ssl verify_hostname as false when unchecked", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  await page.fill("input[name=name]", "SSL Verify Test");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
+
+  await page.click("p:has-text('TLS Configuration')");
+  await page.uncheck("input[name='kafka_cluster.ssl.verify_hostname']");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+
+  // Verify the submitted data
+  const submitCall = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args[1],
+  );
+  const submitData = await submitCall?.jsonValue();
+  // ssl defaults to"true"; verify_hostname is "false" when unchecked
+  expect(submitData["kafka_cluster.ssl.enabled"]).toBe("true");
+  expect(submitData["kafka_cluster.ssl.verify_hostname"]).toBe("false");
+  expect(submitData["schema_registry.ssl.enabled"]).toBe("true");
+});
+test("submits ssl.enabled as false when unchecked", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in basic form data
+  await page.fill("input[name=name]", "SSL Disabled Test");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
+
+  // Ensure SSL is unchecked for both Kafka and Schema Registry
+  await page.uncheck("input[name='kafka_cluster.ssl.enabled']");
+  await page.uncheck("input[name='schema_registry.ssl.enabled']");
+
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+
+  // Verify the submitted data
+  const submitCall = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args[1],
+  );
+  const submitData = await submitCall?.jsonValue();
+
+  // Verify that ssl.enabled was explicitly set to "false"
+  expect(submitData["kafka_cluster.ssl.enabled"]).toBe("false");
+  expect(submitData["schema_registry.ssl.enabled"]).toBe("false");
+});
+test("submits default types for keystore and truststore", async ({ execute, page }) => {
+  const sendWebviewMessage = await execute(async () => {
+    const { sendWebviewMessage } = await import("./comms/comms");
+    return sendWebviewMessage as SinonStub;
+  });
+  await execute(async (stub) => {
+    stub.withArgs("Submit").resolves(null);
+  }, sendWebviewMessage);
+
+  await execute(async () => {
+    await import("./main");
+    await import("./direct-connect-form");
+    window.dispatchEvent(new Event("DOMContentLoaded"));
+  });
+
+  // Fill in basic form data
+  await page.fill("input[name=name]", "SSL Disabled Test");
+  await page.fill("input[name='kafka_cluster.bootstrap_servers']", "localhost:9092");
+  await page.fill("input[name='schema_registry.uri']", "http://localhost:8081");
+  await page.click("p:has-text('TLS Configuration')");
+  await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
+  await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
+  // Small delay to ensure all default values are initialized; the test robot is faster than a human
+  await page.waitForTimeout(200);
+  // Submit the form
+  await page.click("input[type=submit][value='Save']");
+  const submitCallHandle = await sendWebviewMessage.evaluateHandle(
+    (stub) => stub.getCalls().find((call) => call?.args[0] === "Submit")?.args,
+  );
+  const submitCall = await submitCallHandle?.jsonValue();
+  expect(submitCall).not.toBeUndefined();
+  expect(submitCall?.[0]).toBe("Submit");
+
+  // Verify that the default type (JKS) for keystore and truststore are sent with form data if path is defined
+  expect(submitCall?.[1]["kafka_cluster.ssl.keystore.type"]).toBe("JKS");
+  expect(submitCall?.[1]["kafka_cluster.ssl.truststore.type"]).toBe("JKS");
 });
 
 // Test Fixtures
