@@ -675,11 +675,6 @@ export async function testRun() {
       "--disable-workspace-trust",
       "--disable-extensions",
     );
-  } else {
-    extensionTestsEnv = {
-      // used by https://mochajs.org/api/mocha#fgrep for running isolated tests
-      FGREP: testFilter,
-    };
   }
   console.log(`Running tests for ${process.platform}-${process.arch}`);
   console.log(`Launch args: ${launchArgs.join(" ")}`);
