@@ -20,16 +20,6 @@ queue:
     processing: parallel
 
 global_job_config:
-  prologue:
-    commands:
-      - checkout
-      - make ci-bin-sem-cache-restore
-      - |
-        if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
-          echo "Skipping Vault setup for Semaphore CI"
-        else
-          . vault-setup
-        fi
   epilogue:
     always:
       commands:
@@ -49,6 +39,16 @@ blocks:
       agent:
         machine:
           type: s1-prod-ubuntu24-04-amd64-1
+      prologue: &build-test-prologue
+        commands:
+          - checkout
+          - make ci-bin-sem-cache-restore
+          - |
+            if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
+              echo "Skipping Vault setup for Semaphore CI"
+            else
+              . vault-setup
+            fi
       jobs: &build-test-jobs-stable
         - name: "Build & Test (VS Code)"
           commands:
@@ -66,6 +66,7 @@ blocks:
       agent:
         machine:
           type: s1-prod-ubuntu24-04-arm64-1
+      prologue: *build-test-prologue
       jobs: *build-test-jobs-stable
       epilogue: *build-test-epilogue
 
@@ -76,6 +77,7 @@ blocks:
       agent:
         machine:
           type: s1-prod-macos-13-5-amd64
+      prologue: *build-test-prologue
       jobs: *build-test-jobs-stable
       epilogue: *build-test-epilogue
 
@@ -86,6 +88,7 @@ blocks:
       agent:
         machine:
           type: s1-prod-macos-13-5-arm64
+      prologue: *build-test-prologue
       jobs: *build-test-jobs-stable
       epilogue: *build-test-epilogue
 
@@ -96,6 +99,17 @@ blocks:
       agent:
         machine:
           type: s1-prod-windows
+      prologue:
+        commands:
+          - checkout
+          - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+          - |
+            if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
+              Write-Output "Skipping Vault setup for Semaphore CI"
+            } else {
+              $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+              vault login -no-print token=$(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+            }
       jobs: *build-test-jobs-stable
       epilogue: *build-test-epilogue
 
