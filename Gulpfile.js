@@ -649,13 +649,25 @@ export async function testRun() {
   console.log(`Launch args: ${JSON.stringify(launchArgs, null, 2)}`);
   console.log(`Env vars: ${JSON.stringify(extensionTestsEnv, null, 2)}`);
 
-  await runTests({
-    version: process.env.VSCODE_VERSION,
-    extensionDevelopmentPath: resolve(DESTINATION),
-    extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
-    extensionTestsEnv,
-    launchArgs,
-  });
+  const extensionTestsPath = resolve(DESTINATION, "src/testing.js");
+  if (IS_CI && IS_MAC) {
+    // run directly, not through runTests()
+    try {
+      const testModule = require(extensionTestsPath);
+      await testModule.run();
+    } catch (error) {
+      console.error("Test execution failed:", error);
+      throw error;
+    }
+  } else {
+    await runTests({
+      version: process.env.VSCODE_VERSION,
+      extensionDevelopmentPath: resolve(DESTINATION),
+      extensionTestsPath,
+      extensionTestsEnv,
+      launchArgs,
+    });
+  }
 
   if (reportCoverage) {
     let coverageMap = libCoverage.createCoverageMap();
