@@ -38,11 +38,11 @@ test: setup-test-env install-test-dependencies install-dependencies
 	elif [ $$(uname -s) = "Darwin" ]; then \
 			if pgrep -x "Dock" > /dev/null; then \
 					echo "GUI session is active."; \
+					npx gulp test; \
 			else \
 					echo "No active GUI session. Aborting tests."; \
 					exit 1; \
 			fi \
-			npx gulp test; \
 	else \
 			npx gulp test; \
 	fi
