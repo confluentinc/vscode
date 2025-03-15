@@ -301,6 +301,12 @@ export class SslConfig extends HTMLElement {
     applyBindings(shadow, this.os, this);
     // Initialize form values after bindings. Small timeout to ensure DOM is ready
     setTimeout(() => this.initializeFormValues(), 100);
+    this.os.watch(() => {
+      // re-initialize values if a path is changed by host file selector
+      this.truststorePath();
+      this.keystorePath();
+      setTimeout(() => this.initializeFormValues(), 100);
+    });
   }
 }
 
