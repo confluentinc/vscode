@@ -4,6 +4,8 @@ import Mocha from "mocha";
 import { resolve } from "path";
 
 export async function run() {
+  console.log(`process.cwd=${process.cwd()} __dirname=${__dirname}`);
+
   const version = process.env.VSCODE_VERSION ?? "stable";
   const mocha = new Mocha({
     color: true,
