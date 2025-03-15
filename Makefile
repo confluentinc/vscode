@@ -18,7 +18,12 @@ install-test-dependencies:
 			sudo apt-get update; \
 			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
+			echo "Setting up headless test environment for macOS..."; \
 			HOMEBREW_NO_AUTO_UPDATE=1 brew install gtk+3; \
+			export ELECTRON_ENABLE_LOGGING=true; \
+			export ELECTRON_ENABLE_STACK_DUMPING=true; \
+			export ELECTRON_NO_ATTACH_CONSOLE=true; \
+			export ELECTRON_NO_SANDBOX=1; \
 	else \
 			echo "Unsupported OS for headless testing"; \
 			exit 1; \
