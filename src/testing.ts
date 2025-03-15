@@ -18,7 +18,7 @@ export async function run() {
       reporterEnabled: "spec, mocha-junit-reporter",
       mochaJunitReporterReporterOptions: {
         testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
-        mochaFile: "TEST-result.xml",
+        mochaFile: resolve(process.cwd(), "TEST-result.xml"),
       },
     },
   });
