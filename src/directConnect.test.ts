@@ -261,6 +261,37 @@ describe("directConnect.ts", () => {
       assert.ok(!spec.kafka_cluster.ssl.truststore);
       assert.ok(!spec.kafka_cluster.ssl.keystore);
     });
+    it("should include keystore and truststore information if paths are provided", () => {
+      const formData = {
+        name: "Test Connection",
+        formconnectiontype: "Apache Kafka",
+        "kafka_cluster.bootstrap_servers": "localhost:9092",
+        "kafka_cluster.auth_type": "None",
+        "kafka_cluster.ssl.enabled": "true",
+        "kafka_cluster.ssl.keystore.type": "PEM",
+        "kafka_cluster.ssl.keystore.password": "keypass",
+        "kafka_cluster.ssl.keystore.key_password": "keykeypass",
+        "kafka_cluster.ssl.truststore.path": "/path/to/truststore",
+        "kafka_cluster.ssl.truststore.password": "trustpass",
+        "kafka_cluster.ssl.truststore.type": "JKS",
+        "schema_registry.uri": "",
+        "schema_registry.auth_type": "None",
+        "schema_registry.ssl.enabled": "true",
+      };
+
+      const spec = getConnectionSpecFromFormData(formData);
+
+      assert.strictEqual(spec.name, "Test Connection");
+      assert.ok(spec.kafka_cluster);
+      assert.ok(spec.kafka_cluster.ssl);
+      // keystore path was missing, we should not include values in that section
+      assert.ok(!spec.kafka_cluster.ssl.keystore);
+      // truststore path was provided, we should include all values in that section
+      assert.ok(spec.kafka_cluster.ssl.truststore);
+      assert.strictEqual(spec.kafka_cluster.ssl.truststore.path, "/path/to/truststore");
+      assert.strictEqual(spec.kafka_cluster.ssl.truststore.password, "trustpass");
+      assert.strictEqual(spec.kafka_cluster.ssl.truststore.type, "JKS");
+    });
     it("should not include truststore or keystore for schema if paths are empty", () => {
       const formData = {
         name: "Test Connection",
