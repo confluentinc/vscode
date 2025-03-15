@@ -5,6 +5,8 @@ import { resolve } from "path";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
 
 export async function run() {
+  console.log(`process.cwd=${process.cwd()} __dirname=${__dirname}`);
+
   const version = process.env.VSCODE_VERSION ?? "stable";
   const mocha = new Mocha({
     color: true,
