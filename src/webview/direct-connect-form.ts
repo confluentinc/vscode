@@ -233,16 +233,10 @@ class DirectConnectFormViewModel extends ViewModel {
     }
 
     // checkbox fields are not sent if the user unchecks them; add them back in form data
-    if (this.kafkaSslEnabled()) {
-      if (!data["kafka_cluster.ssl.verify_hostname"])
-        data["kafka_cluster.ssl.verify_hostname"] = "false";
-    } else {
+    if (!this.kafkaSslEnabled()) {
       data["kafka_cluster.ssl.enabled"] = "false";
     }
-    if (this.schemaSslEnabled()) {
-      if (!data["schema_registry.ssl.verify_hostname"])
-        data["schema_registry.ssl.verify_hostname"] = "false";
-    } else {
+    if (!this.schemaSslEnabled()) {
       data["schema_registry.ssl.enabled"] = "false";
     }
 
