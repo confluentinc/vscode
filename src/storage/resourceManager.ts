@@ -49,6 +49,8 @@ export interface CustomConnectionSpec extends ConnectionSpec {
   id: ConnectionId;
   /** The option chosen by the user to describe this connection. Similar to {@link ConnectionType} */
   formConnectionType: FormConnectionType;
+  /** If the formConnectionType is "Other" we prompt users to specify the type */
+  specifiedConnectionType?: string;
 }
 
 /** Map of {@link ConnectionId} to {@link CustomConnectionSpec}; only used for `DIRECT` connections. */
@@ -748,6 +750,7 @@ export function CustomConnectionSpecFromJSON(obj: any): CustomConnectionSpec {
     ...ConnectionSpecFromJSON(obj),
     id: obj["id"] as ConnectionId,
     formConnectionType: obj["formConnectionType"],
+    specifiedConnectionType: obj["specifiedConnectionType"],
   };
 }
 
@@ -756,6 +759,7 @@ export function CustomConnectionSpecToJSON(spec: CustomConnectionSpec): any {
   return {
     ...ConnectionSpecToJSON(spec),
     formConnectionType: spec.formConnectionType,
+    specifiedConnectionType: spec.specifiedConnectionType,
   };
 }
 
