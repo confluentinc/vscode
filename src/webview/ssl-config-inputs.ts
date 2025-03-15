@@ -324,13 +324,12 @@ export class SslConfig extends HTMLElement {
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
-    // Initialize form values after bindings. Small timeout to ensure DOM is ready
-    setTimeout(() => this.initializeFormValues(), 100);
+    this.initializeFormValues();
     this.os.watch(() => {
-      // re-initialize values if a path is changed by host file selector
+      // re-initialize values when path is changed by host (file selector)
       this.truststorePath();
       this.keystorePath();
-      setTimeout(() => this.initializeFormValues(), 100);
+      setTimeout(() => this.initializeFormValues(), 50);
     });
   }
 }
