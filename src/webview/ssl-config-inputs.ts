@@ -60,6 +60,21 @@ export class SslConfig extends HTMLElement {
   set namespace(value: string) {
     this.identifier(value);
   }
+  // Add all initial form values to the form data, including defaults
+  initializeFormValues() {
+    // Get all input/select elements in the shadow DOM
+    const formElements = this.shadowRoot?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select",
+    );
+    if (formElements) {
+      formElements.forEach((element) => {
+        if (element.name && element.value) {
+          this.entries.set(element.name, element.value);
+        }
+      });
+    }
+    this._internals.setFormValue(this.entries);
+  }
 
   handleFileSelection(inputId: string) {
     this.dispatchEvent(
@@ -309,6 +324,8 @@ export class SslConfig extends HTMLElement {
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
+    // Initialize form values after bindings. Small timeout to ensure DOM is ready
+    setTimeout(() => this.initializeFormValues(), 100);
   }
 }
 
