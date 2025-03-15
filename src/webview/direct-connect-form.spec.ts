@@ -301,7 +301,7 @@ test("submits the form with namespaced TLS config fields when filled", async ({
   await page.fill("input[name='kafka_cluster.ssl.truststore.path']", "/path/to/truststore");
   await page.fill("input[name='kafka_cluster.ssl.truststore.password']", "truststore-password");
   await page.uncheck("input[name='kafka_cluster.ssl.verify_hostname']"); // verifies the unchecked state is sent as false
-  await page.selectOption("select[name='kafka_cluster.ssl.keystore.type']", "PEM");
+  await page.selectOption("select[name='kafka_cluster.ssl.keystore.type']", "PKCS12");
   await page.fill("input[name='kafka_cluster.ssl.keystore.path']", "/path/to/keystore");
   await page.fill("input[name='kafka_cluster.ssl.keystore.password']", "keystore-password");
   await page.fill("input[name='kafka_cluster.ssl.keystore.key_password']", "key-password");
