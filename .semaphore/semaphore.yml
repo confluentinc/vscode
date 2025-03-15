@@ -76,7 +76,20 @@ blocks:
       agent:
         machine:
           type: s1-prod-macos-13-5-amd64
-      jobs: *build-test-jobs-stable
+      jobs:
+        - name: "Check GUI Environment"
+          commands:
+            - echo "Checking for active GUI session..."
+            - |
+              if pgrep -x "Dock" > /dev/null; then
+                echo "GUI session is active."
+              else
+                echo "No active GUI session. Aborting tests."
+                exit 1
+              fi
+        - name: "Build & Test (VS Code)"
+          commands:
+              - make test
       epilogue: *build-test-epilogue
 
   - name: "Build & Test (VS Code: darwin arm64)"
