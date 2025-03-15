@@ -1106,6 +1106,13 @@
           "fontPath": "./resources/dist/icons.woff2",
           "fontCharacter": "\\f10d"
         }
+      },
+      "warpstream-logo": {
+        "description": "warpstream-logo icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10e"
+        }
       }
     },
     "walkthroughs": [
