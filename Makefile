@@ -36,12 +36,12 @@ test: setup-test-env install-test-dependencies install-dependencies
 	@if [ $$(uname -s) = "Linux" ]; then \
 			xvfb-run -a npx gulp test; \
 	elif [ $$(uname -s) = "Darwin" ]; then \
-		if pgrep -x "Dock" > /dev/null; then
-			echo "GUI session is active."
-		else
-			echo "No active GUI session. Aborting tests."
-			exit 1
-		fi
+			if pgrep -x "Dock" > /dev/null; then \
+				echo "GUI session is active." \
+			else \
+				echo "No active GUI session. Aborting tests." \
+				exit 1 \
+			fi \
 	else \
 			npx gulp test; \
 	fi
