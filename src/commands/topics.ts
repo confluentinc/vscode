@@ -467,7 +467,7 @@ async function produceMessages(
     // only display up to the top three non-validation errors and their counts
     const errorSummary: string = summarizeErrors(
       errorResults.map((result) => result.error),
-      ["ProduceMessageSchemaValidationError"],
+      ["ProduceMessageBadRequestError"],
       3,
     );
 
@@ -683,7 +683,7 @@ export class ProduceMessageBadRequestError extends Error {
   response: ResponseError;
   constructor(message: string, request: ProduceRequest, response: ResponseError) {
     super(message);
-    this.name = "ProduceMessageSchemaValidationError";
+    this.name = "ProduceMessageBadRequestError";
     this.request = request;
     this.response = response;
   }
