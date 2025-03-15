@@ -33,27 +33,20 @@ remove-test-env:
 .PHONY: test
 test: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
-	ifeq ($(OS),Windows_NT)
-			npx gulp test
-	else
-			@if [ $$(uname -s) = "Linux" ]; then \
-							xvfb-run -a npx gulp test; \
-			elif [ $$(uname -s) = "Darwin" ]; then \
-							if [ "$$CI" = "true" ]; then \
-											echo "CI macOS environment detected, skipping GUI-dependent tests"; \
-											exit 0; \
-							elif pgrep -x "Dock" > /dev/null; then \
-											echo "GUI session is active."; \
-											npx gulp test; \
-							else \
-											echo "No active GUI session. Aborting tests."; \
-											exit 1; \
-							fi \
+	@if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp test; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			if pgrep -x "Dock" > /dev/null; then \
+					echo "GUI session is active."; \
+					npx gulp test; \
 			else \
-							npx gulp test; \
-			fi
-	endif
-			npx gulp functional
+					echo "No active GUI session. Aborting tests."; \
+					exit 1; \
+			fi \
+	else \
+			npx gulp test; \
+	fi
+	npx gulp functional
 
 # Validates bump based on current version (in package.json)
 # and the version to be bumped to (in .versions/next.txt)
