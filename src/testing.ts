@@ -2,6 +2,10 @@ import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
 import { resolve } from "path";
+import { getTestExtensionContext } from "../tests/unit/testUtils";
+import { Logger } from "./logging";
+
+const logger = new Logger("testing");
 
 export async function run() {
   const version = process.env.VSCODE_VERSION ?? "stable";
@@ -40,8 +44,20 @@ export async function run() {
   }
 }
 
-function globalBeforeAll() {
+async function globalBeforeAll() {
   console.log("Global test suite setup");
 
-  // Nothing for now. Just a hook for the future.
+  // smoke-test to make sure we can set up the environment for tests by activating the extension:
+  // - set the extension context
+  // - start the sidecar process
+  logger.log(
+    "Activating the extension, setting extension context, and attempting to start the sidecar...",
+  );
+  await getTestExtensionContext();
+  // if this fails, it will throw and we'll see something like:
+  // 1) "before all" hook: Global suite setup in "{root}":
+  //    Activating extension 'confluentinc.vscode-confluent' failed: ...
+
+  // otherwise, we should see this log line and tests should continue:
+  logger.log("✅ Test environment is ready. Running tests...");
 }
