@@ -233,6 +233,15 @@ class DirectConnectFormViewModel extends ViewModel {
       data["kafka_cluster.ssl.enabled"] = "true";
       data["schema_registry.ssl.enabled"] = "true";
     }
+
+    // checkbox fields are not sent if the user unchecks them; add them back in form data
+    if (!this.kafkaSslEnabled()) {
+      data["kafka_cluster.ssl.enabled"] = "false";
+    }
+    if (!this.schemaSslEnabled()) {
+      data["schema_registry.ssl.enabled"] = "false";
+    }
+
     let result: PostResponse | TestResponse;
     if (submitter.value === "Test") {
       result = await post("Test", data);
