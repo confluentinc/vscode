@@ -13,6 +13,7 @@ import {
   isCCloud,
   isDirect,
   isLocal,
+  isResource,
   isSearchable,
 } from "./resource";
 import { KafkaTopic } from "./topic";
@@ -90,4 +91,27 @@ describe("getConnectionLabel", () => {
   it("Should throw an error for an unknown connection type", () => {
     assert.throws(() => getConnectionLabel("unknown" as ConnectionType));
   });
+});
+
+describe("isResource", () => {
+  it("should return true for values correctly implementing IResourceBase", () => {
+    const value = {
+      connectionId: "abc123" as ConnectionId,
+      connectionType: ConnectionType.Direct,
+    };
+
+    assert.strictEqual(isResource(value), true);
+  });
+
+  for (const missingField of ["connectionId", "connectionType"]) {
+    it(`should return false for values missing "${missingField}"`, () => {
+      const value: any = {
+        connectionId: "abc123" as ConnectionId,
+        connectionType: ConnectionType.Direct,
+      };
+      delete value[missingField];
+
+      assert.strictEqual(isResource(value), false);
+    });
+  }
 });
