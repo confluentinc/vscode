@@ -55,8 +55,9 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.getAuthTypes()?.kafka ?? "None";
   });
 
+  // SSL enabled is true by default. If this is undefined it means the user never set/saved it
   kafkaSslEnabled = this.derive(() => {
-    if (this.spec()?.kafka_cluster?.ssl?.enabled === false) return false;
+    if (this.spec()?.kafka_cluster?.ssl?.enabled.toString() === "false") return false;
     else return true;
   });
   kafkaSslConfig = this.derive(() => {
@@ -74,7 +75,7 @@ class DirectConnectFormViewModel extends ViewModel {
     return this.getAuthTypes()?.schema || "None";
   });
   schemaSslEnabled = this.derive(() => {
-    if (this.spec()?.schema_registry?.ssl?.enabled === false) return false;
+    if (this.spec()?.schema_registry?.ssl?.enabled.toString() === "false") return false;
     else return true;
   });
   schemaSslConfig = this.derive(() => {

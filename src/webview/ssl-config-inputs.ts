@@ -26,7 +26,7 @@ export class SslConfig extends HTMLElement {
   });
 
   verifyHostname = this.os.derive(() => {
-    if (this.configObj()?.verify_hostname === false) return false;
+    if (this.configObj()?.verify_hostname?.toString() === "false") return false;
     else return true;
   });
   truststorePath = this.os.derive(() => {
