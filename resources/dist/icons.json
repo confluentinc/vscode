@@ -11,5 +11,6 @@
     "confluent-send-message": 61706,
     "confluent-topic-without-schema": 61707,
     "confluent-topic": 61708,
-    "confluent-view-messages": 61709
+    "confluent-view-messages": 61709,
+    "warpstream-logo": 61710
 }

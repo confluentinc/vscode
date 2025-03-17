@@ -47,32 +47,38 @@
               >An easy to remember name to reference this connection in the future</span
             >
           </div>
-          <div class="input-container">
-            <label class="label">Connection Type</label>
-            <select
-              class="input dropdown"
-              id="formconnectiontype"
-              name="formconnectiontype"
-              data-on-input="this.updateValue(event)"
-              data-value="this.platformType()"
-            >
-              <option value="Apache Kafka">Apache Kafka®</option>
-              <option value="Confluent Cloud">Confluent Cloud</option>
-              <option value="Confluent Platform">Confluent Platform</option>
-              <option value="Other">Other</option>
-            </select>
-            <!-- <template data-if="this.platformType() === 'Other'"
-              >&nbsp;&nbsp;
-              <input
-                class="input"
-                id="other"
-                name="other-platform"
-                type="text"
-                data-attr-value="this.otherPlatformType()"
-                data-attr-required="this.platformType() === 'Other' ? true : false"
-                data-on-change="this.updateValue(event)"
-              />
-            </template> -->
+          <div class="input-row">
+            <div class="input-container" style="flex: 0">
+              <label class="label">Connection Type</label>
+              <select
+                class="input dropdown"
+                id="formconnectiontype"
+                name="formconnectiontype"
+                data-on-input="this.updateValue(event)"
+                data-value="this.platformType()"
+              >
+                <option value="Apache Kafka">Apache Kafka®</option>
+                <option value="Confluent Cloud">Confluent Cloud</option>
+                <option value="Confluent Platform">Confluent Platform</option>
+                <option value="WarpStream">WarpStream</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <template data-if="this.platformType() === 'Other'">
+              <div class="input-container" style="flex: 1">
+                <label for="othertype" class="label">Specify</label>
+                <input
+                  class="input"
+                  id="othertype"
+                  name="othertype"
+                  type="text"
+                  placeholder="Please provide custom connection type"
+                  data-value="this.otherPlatformType()"
+                  data-attr-required="this.platformType() === 'Other' ? true : false"
+                  data-on-input="this.updateValue(event)"
+                />
+              </div>
+            </template>
           </div>
         </div>
         <div class="form-section">
