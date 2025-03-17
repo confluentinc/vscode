@@ -2,9 +2,6 @@
 
 ### Work with your Confluent Cloud resources
 
-<!-- <gif showing clicking sign in to confluent cloud, entering credentials and then getting redirected back to vscode -->
-<!-- will resources populated, then clicking through an org -> env -> cluster (displays topics), then SR (displays schema)> -->
-
 Log in to your Confluent Cloud account from the Confluent for VS Code extension by clicking on "Sign in to Confluent Cloud", and explore your Confluent Cloud resources from right within VS Code.
 
 > [!NOTE]
@@ -13,8 +10,6 @@ Log in to your Confluent Cloud account from the Confluent for VS Code extension 
 
 
 ### Bootstrap streaming projects from Confluent-provided templates
-
-<!-- <gif showing clicking button, clicking on a template, fill in values, opening the project, and running it> -->
 
 Confluent for VS Code offers project templates designed to accelerate your development process. These ready-to-use templates are tailored for common development patterns, allowing you to quickly launch new projects with minimal configuration.
 
@@ -42,8 +37,6 @@ Currently, the following Docker images are used:
 
 ### Inspect messages in Kafka topics using Message Viewer
 
-<!-- <gif showing messages streaming in, using histogram, clicking pause, scrolling down a bit clicking a message to open it> -->
-
 Click the ![envelope-with-magnifying-glass](../resources/icons/confluent-view-messages.svg) icon next to the topic name to open the **Message Viewer**, which enables
 searching and exploring messages in a topic. Within Message Viewer, you can:
 
@@ -57,8 +50,6 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 - toggle partitions on/off to show/hide messages from specific partitions
 
 ### Produce messages to Kafka topics
-
-<!-- <gif showing a file open with message headers, key and value, click produce, choose value schema and produce> -->
 
 With Confluent for VS Code, you can produce messages to your Kafka topics, with or without a key/value schema. 
 
@@ -107,13 +98,9 @@ With Confluent for VS Code, you can produce messages to your Kafka topics, with 
 
 #### Producing messages to topics using `TopicRecordNameStrategy` or `RecordNameStrategy`
 
-<!-- <gif showing this> -->
-
 If the Kafka topic you wish to produce a message to does not use [TopicNameStrategy](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#overview), open the extension settings, look for "Confluent -> Topic -> Produce Messages -> Schemas: Use Topic Name Strategy" and disable this setting. You will then be prompted to select the Subject Name Strategy and the subject name while going through the Produce Message quickpick flow.
 
 #### Producing messages to topics using a schema version earlier than latest
-
-<!-- <two screenshots -- one of setting, and one of produce> -->
 
 If you wish to produce a message using a schema version earlier than the latest, open the extension settings and look for "Confluent -> Topic -> Produce Messages -> Schemas: Allow Older Versions" and enable it. You will then be prompted to choose which schema version to use while going through the Produce Message quickpick flow.
 
@@ -246,13 +233,9 @@ Confluent for VS Code supports connecting to Schema Registry using a majority of
 
 ##### Exporting connection details
 
-<screen shot>
-
 You can export the connection details to a local file by clicking the socket-download icon next to the connection. However, note that the file may contain sensitive information like API keys, secrets, and local file paths. **Use caution when saving and sharing connection files since they may contain secrets.**
 
 ##### Importing connection details
-
-<screenshot>
 
 You can import connection details by clicking the "+" icon in the Resources panel, and select "Import from file" in the dropdown. This opens a file browser and you may then choose the desired connection details JSON file. Once imported, 
 make any edits as you wish and click "Test" or "Save".
