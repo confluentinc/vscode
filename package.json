@@ -1136,7 +1136,7 @@
           {
             "id": "create-connections",
             "title": "Connect Directly",
-            "description": "To connect to Confluent Cloud (via API Credential), Confluent Platform, WarpStream, Apache Kafka, and/or Schema Registry clusters.\n Select the $(plus) icon next to Resource to create or import a connection.\n[Create Connection](command:confluent.connections.direct)",
+            "description": "To connect to Confluent Cloud (via API Credential), Confluent Platform, WarpStream, Apache Kafka, and/or Schema Registry clusters.\n Select the $(plus) icon at the top of the Resources view to create or import a connection.\n[Create Connection](command:confluent.connections.direct)",
             "media": {
               "image": "resources/walkthrough/direct-connection-form.png",
               "altText": "Create a new connection to a Kafka cluster and/or Schema Registry"
@@ -1148,7 +1148,7 @@
           {
             "id": "connect-local-cluster",
             "title": "Start Local Environment",
-            "description": "Start Kafka and Stream Registry clusters from within VS Code using the extension in the Resources panel.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+            "description": "Start Kafka and Stream Registry clusters from within VS Code using the extension in the Resources view.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/start-local.png",
               "altText": "Connect to Kafka clusters"
@@ -1184,20 +1184,20 @@
           {
             "id": "inspect-schemas",
             "title": "Inspect Schemas",
-            "description": "Examine schemas associated with your topics either from the Topics panel or the Schemas panel.",
+            "description": "Examine schemas associated with your topics either from the Topics view or the Schemas view.",
             "media": {
               "image": "resources/walkthrough/schema-inspector.png",
-              "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics panel or the Schemas panel"
+              "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics view or the Schemas view"
             },
             "completionEvents": []
           },
           {
             "id": "iterate-schemas",
             "title": "Iterate Schemas",
-            "description": "Create, update, and evolve schemas from the Schemas panel.",
+            "description": "Create, update, and evolve schemas from the Schemas view.",
             "media": {
               "image": "resources/walkthrough/schema-inspector.png",
-              "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics panel or the Schemas panel."
+              "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics view or the Schemas view."
             },
             "completionEvents": [
               "onCommand:confluent.schemas.create",
