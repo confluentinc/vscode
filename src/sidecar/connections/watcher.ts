@@ -24,7 +24,6 @@ import {
 } from "../../ws/messageTypes";
 import { WebsocketManager } from "../websocketManager";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
-import { spec } from "node:test/reporters";
 
 const logger = new Logger("sidecar.connections.watcher");
 
