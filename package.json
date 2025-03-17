@@ -1124,7 +1124,7 @@
           {
             "id": "connect-conflulent-cloud",
             "title": "Connect to Confluent Cloud",
-            "description": "Log in to see your Confluent Cloud resources.\n[Log in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)",
+            "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)",
             "media": {
               "image": "resources/walkthrough/connect.png",
               "altText": "Connect to Kafka clusters"
@@ -1148,7 +1148,7 @@
           {
             "id": "connect-local-cluster",
             "title": "Start Local Environment",
-            "description": "If you have Kafka running locally, it appears automatically in the Resources view.\nYou can also start Kafka and Stream Registry clusters using the extension.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+            "description": "Start Kafka and Stream Registry clusters from within VS Code using the extension in the Resources panel.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/start-local.png",
               "altText": "Connect to Kafka clusters"
