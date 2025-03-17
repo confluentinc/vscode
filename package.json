@@ -1136,7 +1136,7 @@
           {
             "id": "create-connections",
             "title": "Connect Directly",
-            "description": "To connect to Confluent Cloud (via API keys), Confluent Platform, WarpStream, Apache Kafka, and/or Schema Registry clusters.\n Select the $(plus) icon next to Resource to create or import a connection.\n[Create Connection](command:confluent.connections.direct)",
+            "description": "To connect to Confluent Cloud (via API Credential), Confluent Platform, WarpStream, Apache Kafka, and/or Schema Registry clusters.\n Select the $(plus) icon next to Resource to create or import a connection.\n[Create Connection](command:confluent.connections.direct)",
             "media": {
               "image": "resources/walkthrough/direct-connection-form.png",
               "altText": "Create a new connection to a Kafka cluster and/or Schema Registry"
