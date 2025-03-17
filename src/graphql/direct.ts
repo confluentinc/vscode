@@ -1,4 +1,5 @@
 import { graphql } from "gql.tada";
+import { Connection } from "../clients/sidecar/models";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
@@ -46,7 +47,26 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
   }
 
   if (response.directConnections) {
-    // look up the connectionId:spec map from storage
+    // Call connections api to learn the connection state of each connection, then filter
+    // for direct connections so that we can assign to proper value to env.isLoading
+    // Because for reasons the loading info is not in the GraphQL response.
+    const connectionsApi = await sidecar.getConnectionsResourceApi();
+
+    const connections = await connectionsApi.gatewayV1ConnectionsGet();
+
+    // make a map of direct connection id -> connection state is loading or not.
+    const connectionLoadingMap = new Map<string, boolean>();
+    connections.data.forEach((connection: Connection) => {
+      if (connection.spec.type === "DIRECT") {
+        connectionLoadingMap.set(
+          connection.id,
+          connection.status.kafka_cluster?.state === "ATTEMPTING" ||
+            connection.status.schema_registry?.state === "ATTEMPTING",
+        );
+      }
+    });
+
+    // Look up the connectionId:spec map from storage
     const directConnectionMap: DirectConnectionsById =
       await getResourceManager().getDirectConnections();
 
@@ -81,7 +101,8 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         });
       }
 
-      // combine the connection returned from GraphQL with the webview form augmented spec in storage
+      // Combine the connection returned from GraphQL with the webview form augmented
+      // spec in storage, which holds additional fields not known to the GraphQL API.
       const directSpec: CustomConnectionSpec | undefined = directConnectionMap.get(
         connection.id as ConnectionId,
       );
@@ -94,6 +115,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
         schemaRegistry,
         schemaRegistryConfigured: !!directSpec?.schema_registry,
         formConnectionType: directSpec?.formConnectionType,
+        isLoading: connectionLoadingMap.get(connection.id) ?? true,
         ...connectionInfo,
       });
       directResources.push(directEnv);

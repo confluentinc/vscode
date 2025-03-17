@@ -139,6 +139,7 @@ export class DirectEnvironment extends Environment {
       | "schemaRegistry"
       | "schemaRegistryConfigured"
       | "formConnectionType"
+      | "isLoading"
     >,
   ) {
     super();
@@ -151,14 +152,9 @@ export class DirectEnvironment extends Environment {
 
     this.schemaRegistry = props.schemaRegistry;
     this.schemaRegistryConfigured = props.schemaRegistryConfigured;
+    this.isLoading = props.isLoading;
 
     if (props.formConnectionType) this.formConnectionType = props.formConnectionType;
-
-    // newly born direct connections are loading unless we already have children.
-    // This will eventually mutate
-    // to false when the connection is stable and emitters.connectionStable fires through
-    // a real Rube Goldberg machine of events.
-    this.isLoading = !this.hasClusters;
   }
 
   get iconName(): IconNames {

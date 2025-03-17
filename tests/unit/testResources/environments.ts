@@ -24,6 +24,7 @@ export const TEST_DIRECT_ENVIRONMENT: DirectEnvironment = new DirectEnvironment(
   kafkaConfigured: false,
   schemaRegistry: undefined,
   schemaRegistryConfigured: false,
+  isLoading: true,
 });
 
 export const TEST_LOCAL_ENVIRONMENT_ID = TEST_LOCAL_CONNECTION.id as unknown as EnvironmentId;
