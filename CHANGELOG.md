@@ -6,6 +6,8 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- On the connections form, add WarpStream to the list of supported platforms and add a text box for
+  users to specify Other platform used.
 - Support for the following authentication types were added for Kafka Cluster connections
   - SASL/OAUTHBEARER
   - SASL/GSSAPI
