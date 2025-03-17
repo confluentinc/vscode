@@ -26,7 +26,7 @@ export class SslConfig extends HTMLElement {
   });
 
   verifyHostname = this.os.derive(() => {
-    if (this.configObj()?.verify_hostname === false) return false;
+    if (this.configObj()?.verify_hostname?.toString() === "false") return false;
     else return true;
   });
   truststorePath = this.os.derive(() => {
@@ -59,6 +59,21 @@ export class SslConfig extends HTMLElement {
   }
   set namespace(value: string) {
     this.identifier(value);
+  }
+  // Add all initial form values to the form data, including defaults
+  initializeFormValues() {
+    // Get all input/select elements in the shadow DOM
+    const formElements = this.shadowRoot?.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      "input, select",
+    );
+    if (formElements) {
+      formElements.forEach((element) => {
+        if (element.name && element.value) {
+          this.entries.set(element.name, element.value);
+        }
+      });
+    }
+    this._internals.setFormValue(this.entries);
   }
 
   handleFileSelection(inputId: string) {
@@ -309,6 +324,13 @@ export class SslConfig extends HTMLElement {
     shadow.adoptedStyleSheets = [sheet];
     shadow.innerHTML = this.template;
     applyBindings(shadow, this.os, this);
+    this.initializeFormValues();
+    this.os.watch(() => {
+      // re-initialize values when path is changed by host (file selector)
+      this.truststorePath();
+      this.keystorePath();
+      setTimeout(() => this.initializeFormValues(), 50);
+    });
   }
 }
 
