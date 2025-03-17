@@ -19,11 +19,11 @@ The extension enables you to:
 
 - [Work with your Confluent Cloud resources](./docs/USAGE.md#work-with-your-confluent-cloud-resources)
 - [Bootstrap streaming projects from Confluent-provided templates](./docs/USAGE.md#bootstrap-streaming-projects-from-confluent-provided-templates)
-- [Accelerate local development against Apache Kafka® and Confluent Schema Registry using Docker](./docs/USAGE.md#accelerate-local-development-against-kafka-and-confluent-schema-registry-using-docker)
-- [Inspect messages in Kafka topics using Message Viewer](./docs/USAGE.md#inspect-messages-in-kafka-topics-using-message-viewer)
+- [Accelerate local development against Kafka and Confluent Schema Registry](./docs/USAGE.md#accelerate-local-development-against-kafka-and-confluent-schema-registry)
+- [Browse messages in Kafka topics using Message Viewer](./docs/USAGE.md#browse-messages-in-kafka-topics-using-message-viewer)
 - [Produce messages to Kafka topics](./docs/USAGE.md#produce-messages-to-kafka-topics)
 - [Explore, create and evolve schemas in Confluent Schema Registry](./docs/USAGE.md#explore-create-and-evolve-schemas-in-confluent-schema-registry)
-- [Connect to any Apache Kafka® compatible cluster and any Confluent Schema Registry compatible server](./docs/USAGE.md#connect-to-any-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
+- [Connect to any Kafka API-compatible cluster and any Confluent Schema Registry compatible server](./docs/USAGE.md#connect-to-any-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
 
 ## Documentation
 

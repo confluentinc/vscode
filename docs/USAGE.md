@@ -16,7 +16,7 @@ Confluent for VS Code offers project templates designed to accelerate your devel
 > [!NOTE]
 > We will continue to add new templates as well as improving existing ones, however, please [file an issue]() or [start a discussion]() if you find bugs/issues in existing templates or have proposals for new templates that could benefit the broader community.
 
-### Accelerate local development against Kafka and Confluent Schema Registry using Docker
+### Accelerate local development against Kafka and Confluent Schema Registry
 
 > [!NOTE]
 > Pre-requisites: You must have Docker Engine (version v24.0 or later) installed on your machine. Please follow the instruction [here](https://docs.docker.com/engine/install/) to install Docker Engine.
@@ -35,7 +35,7 @@ Currently, the following Docker images are used:
 > We plan to expand support for starting Local Resources using other Kafka Docker images,
 > such as [apache/kafka](https://hub.docker.com/r/apache/kafka), [Warpstream](https://docs.warpstream.com/warpstream/getting-started/install-the-warpstream-agent) and more.
 
-### Inspect messages in Kafka topics using Message Viewer
+### Browse messages in Kafka topics using Message Viewer
 
 Click the ![envelope-with-magnifying-glass](../resources/icons/confluent-view-messages.svg) icon next to the topic name to open the **Message Viewer**, which enables
 searching and exploring messages in a topic. Within Message Viewer, you can:
@@ -127,10 +127,10 @@ version.
 Search the marketplace for extensions to validate your Avro, JSON schema, or Protobuf syntax as
 needed.
 
-### Connect to any Kafka compatible cluster and any Confluent Schema Registry compatible server
+### Connect to any Kafka API-compatible cluster and any Confluent Schema Registry API-compatible server
 
-Confluent for VS Code supports connecting to _any_ Kafka compatible cluster and any Confluent
-Schema Registry compatible server. 
+Confluent for VS Code supports connecting to _any_ [Kafka API-compatible](https://kafka.apache.org/protocol.html) cluster and any [Confluent
+Schema Registry API-compatible](https://docs.confluent.io/platform/current/schema-registry/develop/api.html) server.
 
 Get started by clicking the "+" icon in the Resources panel, and select "Enter manually" in the dropdown.
 This opens a new tab containing a Connection form, configure your connection using the fields present.
