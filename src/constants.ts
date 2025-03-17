@@ -20,6 +20,7 @@ export enum IconNames {
   CONNECTION = "plug",
   ORGANIZATION = "account",
   CONFLUENT_LOGO = "confluent-logo",
+  WARPSTREAM_LOGO = "warpstream-logo",
   CCLOUD_ENVIRONMENT = "confluent-environment",
   KAFKA_CLUSTER = "confluent-kafka-cluster",
   LOCAL_RESOURCE_GROUP = "device-desktop",

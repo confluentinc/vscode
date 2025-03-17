@@ -166,6 +166,9 @@ export class DirectEnvironment extends Environment {
       case "Confluent Platform": {
         return IconNames.CONFLUENT_LOGO;
       }
+      case "WarpStream": {
+        return IconNames.WARPSTREAM_LOGO;
+      }
       default: {
         // "Other" or unknown
         return IconNames.CONNECTION;

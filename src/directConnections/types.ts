@@ -3,6 +3,7 @@ export type FormConnectionType =
   | "Apache Kafka"
   | "Confluent Cloud"
   | "Confluent Platform"
+  | "WarpStream"
   | "Other";
 
 export type SupportedAuthTypes = "None" | "Basic" | "API" | "SCRAM" | "OAuth" | "Kerberos";

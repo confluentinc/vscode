@@ -34,9 +34,11 @@ class DirectConnectFormViewModel extends ViewModel {
   platformType = this.derive<FormConnectionType>(() => {
     return this.spec()?.formConnectionType || "Apache Kafka";
   });
-
-  // TODO this is not used anywhere but could be extra metadata for telemetry. We'll have to save it in the spec.
-  // otherPlatformType = this.signal<string | undefined>(undefined);
+  otherPlatformType = this.derive(() => {
+    return this.platformType() === "Other" && this.spec()?.specifiedConnectionType
+      ? this.spec()?.specifiedConnectionType
+      : null;
+  });
 
   name = this.derive(() => {
     return this.spec()?.name || "";
