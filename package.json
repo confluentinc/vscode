@@ -1130,7 +1130,7 @@
               "altText": "Connect to Kafka clusters"
             },
             "completionEvents": [
-              "onCommand:command:confluent.connections.ccloud.signIn"
+              "onCommand:confluent.connections.ccloud.signIn"
             ]
           },
           {
@@ -1201,9 +1201,9 @@
             },
             "completionEvents": [
               "onCommand:confluent.schemas.create",
-              "onCommand:commandId:confluent.schemas.upload",
-              "onCommand:commandId:confluent.schemas.evolve",
-              "onCommand:commandId:confluent.schemas.evolveSchemaSubject"
+              "onCommand:confluent.schemas.upload",
+              "onCommand:confluent.schemas.evolve",
+              "onCommand:confluent.schemas.evolveSchemaSubject"
             ]
           },
           {
