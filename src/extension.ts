@@ -29,7 +29,10 @@ if (process.env.SENTRY_DSN) {
       "ENOENT: no such file or directory",
       "EPERM: operation not permitted",
       "Canceled",
-      "captureException", // only ever floated by the Sentry SDK itself
+      // rejected promises from the CCloud auth provider that can't be wrapped in try/catch:
+      "User cancelled the authentication flow.",
+      "User reset their password.",
+      "Confluent Cloud authentication failed. See browser for details.",
     ],
   });
 }
