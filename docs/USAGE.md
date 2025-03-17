@@ -6,7 +6,7 @@ Log in to your Confluent Cloud account from the Confluent for VS Code extension 
 
 > [!NOTE]
 > If you would like to connect to your Apache Kafka® cluster on Confluent Cloud and/or Confluent Cloud Schema Registry cluster
-> using [API Key (user account or service account)](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/service-accounts/api-keys/overview.html#api-keys-and-ccloud-accounts), [Mutual TLS](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/overview.html), or [OAuth/OIDC](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html), then head to <anchor tag> for how to do that using the extension.
+> using [API Key (user account or service account)](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/service-accounts/api-keys/overview.html#api-keys-and-ccloud-accounts), [Mutual TLS](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/mtls/overview.html), or [OAuth/OIDC](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html), then go [here](#connect-to-any-kafka-api-compatible-cluster-and-any-confluent-schema-registry-api-compatible-server) to understand how to do that using the extension.
 
 
 ### Bootstrap streaming projects from Confluent-provided templates
