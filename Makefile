@@ -9,6 +9,17 @@ install-dependencies:
 	npm ci --prefer-offline --include=dev
 	npx playwright install
 
+# Install additional test dependencies to run VS Code testing in headless mode
+# ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
+# (just linux for now, but maybe eventually darwin)
+.PHONY: install-test-dependencies
+install-test-dependencies:
+	@echo "Installing test dependencies for $(shell uname -s)"
+	@if [ $$(uname -s) = "Linux" ]; then \
+			sudo apt-get update; \
+			sudo apt install -y libgbm1 libgtk-3-0 xvfb; \
+	fi
+
 .PHONY: setup-test-env
 setup-test-env:
 	@echo "Pulling automated-test-user credentials from Vault into .env file for testing"
@@ -20,14 +31,22 @@ remove-test-env:
 	@echo "Removing .env file"
 	@rm -f .env
 
-# Install additional dependencies to run VSCode testing in headless mode
-# ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
 .PHONY: test
-test: setup-test-env install-dependencies
-	sudo apt-get update
-	sudo apt install -y libgbm1 libgtk-3-0 xvfb
+test: setup-test-env install-test-dependencies install-dependencies
 	npx gulp ci
-	xvfb-run -a npx gulp test
+	@if [ $$(uname -s) = "Linux" ]; then \
+			xvfb-run -a npx gulp test; \
+	elif [ $$(uname -s) = "Darwin" ]; then \
+			if pgrep -x "Dock" > /dev/null; then \
+					echo "GUI session is active."; \
+					npx gulp test; \
+			else \
+					echo "No active GUI session. Aborting tests."; \
+					exit 1; \
+			fi \
+	else \
+			npx gulp test; \
+	fi
 	npx gulp functional
 
 # Validates bump based on current version (in package.json)
@@ -73,7 +92,7 @@ EXECUTABLE_DOWNLOAD_PATH := bin/ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner
 SKIP_DOWNLOAD_EXECUTABLE := $(shell [ -x $(EXECUTABLE_DOWNLOAD_PATH) ] && echo true || echo false)
 
 # Get the OS and architecture combination for the sidecar executable
-SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/')" )
+SIDECAR_OS_ARCH ?= $(shell echo "$$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')-$$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')" )
 
 IDE_SIDECAR_REPO := confluentinc/ide-sidecar
 
@@ -89,7 +108,13 @@ else
 	export EXECUTABLE_PATH=ide-sidecar-$(IDE_SIDECAR_VERSION_NO_V)-runner-$(SIDECAR_OS_ARCH) && \
 		curl --fail -L -o $(EXECUTABLE_DOWNLOAD_PATH) "https://github.com/$(IDE_SIDECAR_REPO)/releases/download/$(IDE_SIDECAR_VERSION)/$${EXECUTABLE_PATH}" && \
 		chmod +x $(EXECUTABLE_DOWNLOAD_PATH) && \
-		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH)";
+		if [ $$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) -lt 1048576 ]; then \
+				echo "Error: Downloaded sidecar executable is too small (< 1MB), likely corrupted or failed download" >&2; \
+				cat $(EXECUTABLE_DOWNLOAD_PATH) | head -20 >&2; \
+				rm -f $(EXECUTABLE_DOWNLOAD_PATH); \
+				exit 1; \
+		fi && \
+		echo "Downloaded sidecar executable to $(EXECUTABLE_DOWNLOAD_PATH) ($$(stat -f%z $(EXECUTABLE_DOWNLOAD_PATH) 2>/dev/null || stat -c%s $(EXECUTABLE_DOWNLOAD_PATH)) bytes)";
 endif
 
 # Downloads the THIRD_PARTY_NOTICES.txt file from the latest release of ide-sidecar as THIRD_PARTY_NOTICES_IDE_SIDECAR.txt
