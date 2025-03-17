@@ -1122,7 +1122,7 @@
         "description": "Interact with Apache Kafka® clusters running locally or on Confluent Cloud.",
         "steps": [
           {
-            "id": "connect-conflulent-cloud",
+            "id": "connect-confluent-cloud",
             "title": "Connect to Confluent Cloud",
             "description": "Sign in to see your Confluent Cloud resources.\n[Sign in](command:confluent.connections.ccloud.signIn)\n[Sign up for free](https://confluent.cloud/signup?utm_source=vscode-ext)",
             "media": {
