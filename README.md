@@ -23,7 +23,7 @@ The extension enables you to:
 - [Browse messages in Kafka topics using Message Viewer](./docs/USAGE.md#browse-messages-in-kafka-topics-using-message-viewer)
 - [Produce messages to Kafka topics](./docs/USAGE.md#produce-messages-to-kafka-topics)
 - [Explore, create and evolve schemas in Confluent Schema Registry](./docs/USAGE.md#explore-create-and-evolve-schemas-in-confluent-schema-registry)
-- [Connect to any Kafka API-compatible cluster and any Confluent Schema Registry compatible server](./docs/USAGE.md#connect-to-any-kafka-compatible-cluster-and-any-confluent-schema-registry-compatible-server)
+- [Connect to any Kafka API-compatible cluster and any Confluent Schema Registry compatible server](./docs/USAGE.md#connect-to-any-kafka-api-compatible-cluster-and-any-confluent-schema-registry-api-compatible-server)
 
 ## Documentation
 
