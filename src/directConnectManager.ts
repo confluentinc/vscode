@@ -30,6 +30,7 @@ import {
 import { logUsage, UserEvent } from "./telemetry/events";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
+import { getCredentialsType } from "./directConnections/credentials";
 
 const logger = new Logger("directConnectManager");
 
@@ -144,6 +145,9 @@ export class DirectConnectionManager {
       action: dryRun ? "tested" : "created",
       withKafka: !!spec.kafka_cluster,
       withSchemaRegistry: !!spec.schema_registry,
+      specifiedConnectionType: spec.specifiedConnectionType,
+      kafkaAuthType: getCredentialsType(spec.kafka_cluster?.credentials),
+      schemaAuthType: getCredentialsType(spec.schema_registry?.credentials),
     });
 
     if (connection && !dryRun) {
@@ -164,6 +168,9 @@ export class DirectConnectionManager {
       action: "deleted",
       withKafka: !!spec?.kafka_cluster,
       withSchemaRegistry: !!spec?.schema_registry,
+      specifiedConnectionType: spec?.specifiedConnectionType,
+      kafkaAuthType: getCredentialsType(spec?.kafka_cluster?.credentials),
+      schemaAuthType: getCredentialsType(spec?.schema_registry?.credentials),
     });
 
     ResourceLoader.deregisterInstance(id);
@@ -181,9 +188,12 @@ export class DirectConnectionManager {
 
     logUsage(UserEvent.DirectConnectionAction, {
       type: incomingSpec.formConnectionType,
+      specifiedConnectionType: incomingSpec.specifiedConnectionType,
       action: "updated",
       withKafka: !!incomingSpec.kafka_cluster,
+      kafkaAuthType: getCredentialsType(incomingSpec.kafka_cluster?.credentials),
       withSchemaRegistry: !!incomingSpec.schema_registry,
+      schemaAuthType: getCredentialsType(incomingSpec.schema_registry?.credentials),
     });
 
     // update the connection in secret storage (via full replace of the connection by its id)
