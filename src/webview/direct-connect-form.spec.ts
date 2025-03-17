@@ -78,7 +78,7 @@ test("renders form html correctly", async ({ page }) => {
   const typeSelect = page.locator("select[name='formconnectiontype']");
   await expect(typeSelect).toBeVisible();
   const typeOptions = await typeSelect.locator("option").all();
-  await expect(typeOptions.length).toBe(4);
+  await expect(typeOptions.length).toBe(5);
 
   const connectionNameInput = page.locator("input[name='name']");
   await expect(connectionNameInput).toBeVisible();
