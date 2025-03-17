@@ -121,23 +121,33 @@ export async function reportUsableState(connection: Connection) {
   // for which configs, etc.
   if (connection.spec.type === ConnectionType.Direct) {
     failedConnectionSummaries.forEach((state) => {
+      const configPrefix = state.configType === "Kafka" ? "kafka" : "schemaRegistry";
       logUsage(UserEvent.DirectConnectionAction, {
         action: "failed to connect",
-        connectionType: ConnectionType.Direct,
-        type: state.type,
+        type: state.type, // formConnectionType
+        specifiedConnectionType: state.specifiedConnectionType,
+        // withKafka or withSchemaRegistry
+        [`with${state.configType.replace(" ", "")}`]: true,
         configType: state.configType,
-        configAuthType: state.authType,
-        configSslEnabled: state.sslEnabled,
+        // kafkaAuthType or schemaRegistryAuthType
+        [`${configPrefix}AuthType`]: state.authType,
+        // kafkaConfigSslEnabled or schemaRegistryConfigSslEnabled
+        [`${configPrefix}SslEnabled`]: state.sslEnabled,
       });
     });
     successfulConnectionSummaries.forEach((state) => {
+      const configPrefix = state.configType === "Kafka" ? "kafka" : "schemaRegistry";
       logUsage(UserEvent.DirectConnectionAction, {
         action: "successfully connected",
-        connectionType: ConnectionType.Direct,
         type: state.type,
+        specifiedConnectionType: state.specifiedConnectionType,
+        // withKafka or withSchemaRegistry
+        [`with${state.configType.replace(" ", "")}`]: true,
         configType: state.configType,
-        configAuthType: state.authType,
-        configSslEnabled: state.sslEnabled,
+        // kafkaAuthType or schemaRegistryAuthType
+        [`${configPrefix}AuthType`]: state.authType,
+        // kafkaConfigSslEnabled or schemaRegistryConfigSslEnabled
+        [`${configPrefix}SslEnabled`]: state.sslEnabled,
       });
     });
   }
@@ -158,6 +168,7 @@ export interface ConnectionSummary {
   configType: ConfigType;
   connectedState: ConnectedState;
   type?: FormConnectionType;
+  specifiedConnectionType?: string; // "Other" form connection type's user-entered string
   authType?: SupportedAuthTypes | "Browser";
   sslEnabled?: boolean;
 }
@@ -188,6 +199,7 @@ export async function getConnectionSummaries(
           states.push({
             connectionType: ConnectionType.Direct,
             type: formSpec?.formConnectionType,
+            specifiedConnectionType: formSpec?.specifiedConnectionType,
             configType: "Kafka",
             authType: getCredentialsType(kafkaConfig?.credentials),
             sslEnabled: kafkaConfig?.ssl?.enabled ?? false,
@@ -203,6 +215,7 @@ export async function getConnectionSummaries(
           states.push({
             connectionType: ConnectionType.Direct,
             type: formSpec?.formConnectionType,
+            specifiedConnectionType: formSpec?.specifiedConnectionType,
             configType: "Schema Registry",
             authType: getCredentialsType(schemaRegistryConfig?.credentials),
             sslEnabled: schemaRegistryConfig?.ssl?.enabled ?? false,
