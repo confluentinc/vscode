@@ -229,12 +229,16 @@ class DirectConnectFormViewModel extends ViewModel {
       this.loading(false);
       return;
     }
+
     if (data["formconnectiontype"] === "Confluent Cloud") {
       // these fields are disabled when CCloud selected; add them back in form data
       data["kafka_cluster.ssl.enabled"] = "true";
       data["schema_registry.ssl.enabled"] = "true";
     }
-
+    // These are disabled when user is editing; add them back in form data
+    if (!data["kafka_cluster.auth_type"]) data["kafka_cluster.auth_type"] = this.kafkaAuthType();
+    if (!data["schema_registry.auth_type"])
+      data["schema_registry.auth_type"] = this.schemaAuthType();
     // checkbox fields are not sent if the user unchecks them; add them back in form data
     if (!this.kafkaSslEnabled()) {
       data["kafka_cluster.ssl.enabled"] = "false";
