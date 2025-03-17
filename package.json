@@ -1136,7 +1136,7 @@
           {
             "id": "create-connections",
             "title": "Connect Directly",
-            "description": "To connect to a Confluent Platform, WarpStream, Apache Kafka, and/or Schema Registry clusters.\n Select $(plus) next to Resource.\n[Create Connection](command:confluent.connections.direct)",
+            "description": "To connect to a Confluent Platform, WarpStream, Apache Kafka, and/or Schema Registry clusters.\n Select the $(plus) icon next to Resource to create or import a connection.\n[Create Connection](command:confluent.connections.direct)",
             "media": {
               "image": "resources/walkthrough/direct-connection-form.png",
               "altText": "Create a new connection to a Kafka cluster and/or Schema Registry"
@@ -1194,12 +1194,17 @@
           {
             "id": "iterate-schemas",
             "title": "Iterate Schemas",
-            "description": "Create, update, and evolve schemas.",
+            "description": "Create, update, and evolve schemas from the Schemas panel.",
             "media": {
               "image": "resources/walkthrough/schema-inspector.png",
               "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics panel or the Schemas panel."
             },
-            "completionEvents": []
+            "completionEvents": [
+              "onCommand:confluent.schemas.create",
+              "onCommand:commandId:confluent.schemas.upload",
+              "onCommand:commandId:confluent.schemas.evolve",
+              "onCommand:commandId:confluent.schemas.evolveSchemaSubject"
+            ]
           },
           {
             "id": "generate-project",
