@@ -13,8 +13,7 @@ Log in to your Confluent Cloud account from the Confluent for VS Code extension 
 
 Confluent for VS Code offers project templates designed to accelerate your development process. These ready-to-use templates are tailored for common development patterns, enabling you to launch new projects quickly with minimal configuration.
 
-> [!NOTE]
-> Confluent will continue to add new templates as well as improving existing ones, but if you find bugs or issues in existing templates, or you have proposals for new templates that could benefit the broader community, please [file an issue]() or [start a discussion]().
+Confluent will continue to add new templates as well as improving existing ones, but if you find bugs or issues in existing templates, or you have proposals for new templates that could benefit the broader community, please [file an issue](https://github.com/confluentinc/vscode/issues/new/choose) or [start a discussion](https://github.com/confluentinc/vscode/discussions/new?category=ideas).
 
 ### Accelerate local development against Kafka and Confluent Schema Registry
 
