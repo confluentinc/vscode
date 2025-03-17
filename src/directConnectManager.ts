@@ -141,13 +141,13 @@ export class DirectConnectionManager {
     );
 
     logUsage(UserEvent.DirectConnectionAction, {
-      type: spec.formConnectionType,
       action: dryRun ? "tested" : "created",
+      type: spec.formConnectionType,
+      specifiedConnectionType: spec.specifiedConnectionType,
       withKafka: !!spec.kafka_cluster,
       withSchemaRegistry: !!spec.schema_registry,
-      specifiedConnectionType: spec.specifiedConnectionType,
       kafkaAuthType: getCredentialsType(spec.kafka_cluster?.credentials),
-      schemaAuthType: getCredentialsType(spec.schema_registry?.credentials),
+      schemaRegistryAuthType: getCredentialsType(spec.schema_registry?.credentials),
     });
 
     if (connection && !dryRun) {
@@ -164,13 +164,15 @@ export class DirectConnectionManager {
     await Promise.all([getResourceManager().deleteDirectConnection(id), tryToDeleteConnection(id)]);
 
     logUsage(UserEvent.DirectConnectionAction, {
-      type: spec?.formConnectionType,
       action: "deleted",
+      type: spec?.formConnectionType,
+      specifiedConnectionType: spec?.specifiedConnectionType,
       withKafka: !!spec?.kafka_cluster,
       withSchemaRegistry: !!spec?.schema_registry,
-      specifiedConnectionType: spec?.specifiedConnectionType,
       kafkaAuthType: getCredentialsType(spec?.kafka_cluster?.credentials),
-      schemaAuthType: getCredentialsType(spec?.schema_registry?.credentials),
+      kafkaSslEnabled: spec?.kafka_cluster?.ssl?.enabled,
+      schemaRegistryAuthType: getCredentialsType(spec?.schema_registry?.credentials),
+      schemaRegistrySslEnabled: spec?.schema_registry?.ssl?.enabled,
     });
 
     ResourceLoader.deregisterInstance(id);
@@ -187,13 +189,15 @@ export class DirectConnectionManager {
     }
 
     logUsage(UserEvent.DirectConnectionAction, {
+      action: "updated",
       type: incomingSpec.formConnectionType,
       specifiedConnectionType: incomingSpec.specifiedConnectionType,
-      action: "updated",
       withKafka: !!incomingSpec.kafka_cluster,
-      kafkaAuthType: getCredentialsType(incomingSpec.kafka_cluster?.credentials),
       withSchemaRegistry: !!incomingSpec.schema_registry,
-      schemaAuthType: getCredentialsType(incomingSpec.schema_registry?.credentials),
+      kafkaAuthType: getCredentialsType(incomingSpec.kafka_cluster?.credentials),
+      kafkaSslEnabled: incomingSpec.kafka_cluster?.ssl?.enabled,
+      schemaRegistryAuthType: getCredentialsType(incomingSpec.schema_registry?.credentials),
+      schemaRegistrySslEnabled: incomingSpec.schema_registry?.ssl?.enabled,
     });
 
     // update the connection in secret storage (via full replace of the connection by its id)
