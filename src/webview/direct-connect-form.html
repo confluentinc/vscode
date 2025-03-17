@@ -108,7 +108,10 @@
               comma-separated list for more than one server)</span
             >
           </div>
-          <div class="input-container">
+          <div
+            class="input-container"
+            data-attr-title="this.editing() ? 'Changing the authentication type of an existing connection is not supported yet' : false"
+          >
             <label for="kafka_cluster.auth_type" class="label">Authentication Type</label>
             <select
               class="input dropdown"
@@ -116,6 +119,7 @@
               name="kafka_cluster.auth_type"
               data-on-input="this.updateValue(event)"
               data-value="this.kafkaAuthType()"
+              data-attr-disabled="this.editing() ? true : false"
             >
               <option value="None" selected>None</option>
               <option value="Basic">Username & Password (SASL/PLAIN)</option>
@@ -183,7 +187,10 @@
               >The URL of the Schema Registry to use for serialization</span
             >
           </div>
-          <div class="input-container">
+          <div
+            class="input-container"
+            data-attr-title="this.editing() ? 'Changing the authentication type of an existing connection is not supported yet' : false"
+          >
             <label for="schema_registry.auth_type" class="label">Authentication Type</label>
             <select
               class="input dropdown"
@@ -191,6 +198,7 @@
               name="schema_registry.auth_type"
               data-on-input="this.updateValue(event)"
               data-value="this.schemaAuthType()"
+              data-attr-disabled="this.editing() ? true : false"
             >
               <option value="None" selected>None</option>
               <option value="Basic">Username & Password</option>
