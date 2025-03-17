@@ -29,8 +29,6 @@ describe("getCommandArgsContext", () => {
     });
   });
 
-  it("should include 'resourceType'' when the first arg is one of our resource models");
-
   for (const idField of RESOURCE_ID_FIELDS) {
     const idFieldTitleCase = idField.charAt(0).toUpperCase() + idField.slice(1);
     const expectedField = `resource${idFieldTitleCase}`;
