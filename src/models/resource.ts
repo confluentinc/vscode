@@ -29,6 +29,10 @@ export interface IResourceBase {
   iconName?: IconNames;
 }
 
+export function isResource(value: any): value is IResourceBase {
+  return value.connectionId !== undefined && value.connectionType !== undefined;
+}
+
 /** Does this resource come from a "local" connection? */
 export function isLocal(resource: IResourceBase): boolean {
   return resource.connectionType === ConnectionType.Local;
