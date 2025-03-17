@@ -11,6 +11,7 @@ install-dependencies:
 
 # Install additional test dependencies to run VS Code testing in headless mode
 # ref: https://code.visualstudio.com/api/working-with-extensions/continuous-integration#github-actions
+# (just linux for now, but maybe eventually darwin)
 .PHONY: install-test-dependencies
 install-test-dependencies:
 	@echo "Installing test dependencies for $(shell uname -s)"
