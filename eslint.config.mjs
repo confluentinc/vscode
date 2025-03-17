@@ -11,6 +11,8 @@ export default [
       ...js.configs.recommended.rules,
       eqeqeq: ["error", "smart"],
       "no-unused-vars": "warn",
+      // ignore line endings between Windows and Unix
+      "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
     languageOptions: {
       globals: {
@@ -36,6 +38,8 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
       // replacement of ESLint's no-redeclare with support for function overload
       "@typescript-eslint/no-redeclare": "error",
+      // ignore line endings between Windows and Unix
+      "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
     languageOptions: {
       parser,
