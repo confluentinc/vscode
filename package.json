@@ -1163,7 +1163,7 @@
             "description": "Select the $(confluent-view-messages) icon next to a topic to open the Message Viewer and explore the messages produced to the topic.",
             "media": {
               "image": "resources/walkthrough/message-viewer.png",
-              "altText": "Select the View button next to a topic to see the Message viewer."
+              "altText": "Select the $(confluent-view-messages) icon next to a topic to see the Message viewer."
             },
             "completionEvents": [
               "onCommand:confluent.topic.consume"
@@ -1187,7 +1187,7 @@
             "description": "Examine schemas associated with your topics either from the Topics view or the Schemas view.",
             "media": {
               "image": "resources/walkthrough/schema-inspector.png",
-              "altText": "Schema structure is shown in the VS Code file viewer while you navigate schemas in the Topics view or the Schemas view"
+              "altText": "Schema definitions are viewable in the editor area after expanding a subject and selecting on a version in the Topics view or the Schemas view."
             },
             "completionEvents": []
           },
