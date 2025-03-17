@@ -1148,7 +1148,7 @@
           {
             "id": "connect-local-cluster",
             "title": "Start Local Environment",
-            "description": "Start Kafka and Stream Registry clusters from within VS Code using the extension in the Resources view.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
+            "description": "Start Kafka and Stream Registry clusters by selecting the $(debug-start) icon next to the 'Local' item in the Resources view.\n[Start Local Resources](command:confluent.docker.startLocalResources)",
             "media": {
               "image": "resources/walkthrough/start-local.png",
               "altText": "Connect to Kafka clusters"
@@ -1175,7 +1175,7 @@
             "description": "Select the $(confluent-send-message) icon next to a topic to produce messages from files.",
             "media": {
               "image": "resources/walkthrough/produce-message.png",
-              "altText": "Select the View button next to a topic to produce message to it."
+              "altText": "Select the 'Send Message(s) to Topic' icon next to a topic to produce message to it."
             },
             "completionEvents": [
               "onCommand:confluent.topic.produce.fromDocument"
