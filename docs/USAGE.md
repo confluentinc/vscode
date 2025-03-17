@@ -54,47 +54,46 @@ searching and exploring messages in a topic. Within Message Viewer, you can:
 With Confluent for VS Code, you can produce messages to your Kafka topics, with or without a key/value schema. 
 
 1. Prepare a JSON file containing message `headers` (optional), `key` and `value` as top-level fields.
-  <details><summary>Example of JSON file for producing message</summary>
-
-  ```json
-  {
-    "headers": [
-      {
-        "key": "task.generation",
-        "value": "350"
-      },
-      {
-        "key": "task.id",
-        "value": "0"
-      },
-      {
-        "key": "current.iteration",
-        "value": "39067914"
-      }
-    ],
-    "key": 39067914,
-    "value": {
-      "ordertime": 1492152554633,
-      "orderid": 39067914,
-      "itemid": "Item_5",
-      "orderunits": 7.508419592693289,
-      "address": {
-        "city": "City_84",
-        "state": "State_85",
-        "zipcode": 83204
-      }
-    }
-  }
-  ```
-
-  </details>
-
 1. Click the produce icon ![produce icon](../resources/icons/confluent-send-message.svg) next to the topic name to open the Produce Message quickpick flow.
 1. You will be prompted to choose a JSON file containing message `headers`, `key` and `value`.
 1. Next, you will be prompted to choose whether to produce the message with/without a key/value schema. 
    Click OK to produce the message.
 1. You will be notified of whether the produce was successful or not. If successful, you can head to the Message Viewer (click the ![envelope-with-magnifying-glass](../resources/icons/confluent-view-messages.svg) icon against the topic) to inspect the message you just produced.
 
+<details><summary>Example of JSON file for producing message</summary>
+
+```json
+{
+  "headers": [
+    {
+      "key": "task.generation",
+      "value": "350"
+    },
+    {
+      "key": "task.id",
+      "value": "0"
+    },
+    {
+      "key": "current.iteration",
+      "value": "39067914"
+    }
+  ],
+  "key": 39067914,
+  "value": {
+    "ordertime": 1492152554633,
+    "orderid": 39067914,
+    "itemid": "Item_5",
+    "orderunits": 7.508419592693289,
+    "address": {
+      "city": "City_84",
+      "state": "State_85",
+      "zipcode": 83204
+    }
+  }
+}
+```
+
+</details>
 
 #### Producing messages to topics using `TopicRecordNameStrategy` or `RecordNameStrategy`
 
