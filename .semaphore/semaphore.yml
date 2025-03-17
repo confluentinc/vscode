@@ -67,29 +67,6 @@ blocks:
       jobs: *build-test-jobs-stable
       epilogue: *build-test-epilogue
 
-  # Disabled until we can connect to an active GUI session
-  # - name: "Build & Test (VS Code: darwin x64)"
-  #   dependencies: []
-  #   skip: *build-test-skip-stable
-  #   task:
-  #     agent:
-  #       machine:
-  #         type: s1-prod-macos-13-5-amd64
-  #     prologue: *build-test-prologue
-  #     jobs: *build-test-jobs-stable
-  #     epilogue: *build-test-epilogue
-
-  # - name: "Build & Test (VS Code: darwin arm64)"
-  #   dependencies: []
-  #   skip: *build-test-skip-stable
-  #   task:
-  #     agent:
-  #       machine:
-  #         type: s1-prod-macos-13-5-arm64
-  #     prologue: *build-test-prologue
-  #     jobs: *build-test-jobs-stable
-  #     epilogue: *build-test-epilogue
-
   - name: "Build & Test (VS Code: win32 x64)"
     dependencies: []
     skip: *build-test-skip-stable
