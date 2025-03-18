@@ -47,7 +47,8 @@ describe("docker/configs functions", function () {
 
     const path: string = configs.getSocketPath();
 
-    assert.strictEqual(path, "/custom/path/docker.sock");
+    // normalized to adjust slashes for Windows vs Unix
+    assert.strictEqual(path, normalize("/custom/path/docker.sock"));
     assert.ok(getConfigStub.calledOnce);
   });
 
