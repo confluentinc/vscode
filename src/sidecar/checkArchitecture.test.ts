@@ -11,7 +11,7 @@ const platformArchToBinaryName: Map<string, string> = new Map([
   ["linux-arm64", join(binariesDir, "linux-arm64")],
   ["darwin-x64", join(binariesDir, "osx-amd64")],
   ["darwin-arm64", join(binariesDir, "osx-aarch64")],
-  ["win32-x64", join(binariesDir, "win32-x64")],
+  ["win32-x64", join(binariesDir, "windows-x64")],
 ]);
 
 describe("getSidecarPlatformArch", () => {
