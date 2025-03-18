@@ -613,11 +613,7 @@ export async function produceMessage(
     }),
   );
   // dig up any schema-related information we may need in the request body
-  const { keyData, valueData } = await createProduceRequestData(
-    content,
-    schemaOptions,
-    forCCloudTopic,
-  );
+  const { keyData, valueData } = await createProduceRequestData(content, schemaOptions);
 
   const produceRequest: ProduceRequest = {
     headers,
