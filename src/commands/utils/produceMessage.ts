@@ -11,20 +11,12 @@ import { ProduceMessageSchemaOptions } from "./types";
 export async function createProduceRequestData(
   message: ProduceMessage,
   schemaOptions: ProduceMessageSchemaOptions = {},
-  forCCloudTopic: boolean = false,
 ): Promise<{ keyData: ProduceRequestData; valueData: ProduceRequestData }> {
   // snake case since this is coming from a JSON document:
   const { key, value, key_schema, value_schema } = message;
   // user-selected schema information via settings and quickpicks
   const { keySchema, keySubjectNameStrategy, valueSchema, valueSubjectNameStrategy } =
     schemaOptions;
-
-  // determine if we have to provide `type` based on whether this is a CCloud-flavored topic or not
-  const schemaless = "JSON";
-  const schemaType: { type?: string } = {};
-  if (forCCloudTopic && !(keySchema || key_schema || valueSchema || value_schema)) {
-    schemaType.type = schemaless;
-  }
 
   // message-provided schema information takes precedence over quickpicked schema
   const keySchemaData: SchemaInfo | undefined = extractSchemaInfo(
@@ -33,7 +25,6 @@ export async function createProduceRequestData(
     keySubjectNameStrategy,
   );
   const keyData: ProduceRequestData = {
-    ...schemaType,
     ...(keySchemaData ?? {}),
     data: key,
   };
@@ -43,7 +34,6 @@ export async function createProduceRequestData(
     valueSubjectNameStrategy,
   );
   const valueData: ProduceRequestData = {
-    ...schemaType,
     ...(valueSchemaData ?? {}),
     data: value,
   };
@@ -68,5 +58,5 @@ export function extractSchemaInfo(
     schemaInfo?.subject_name_strategy ?? subjectNameStrategy ?? "TOPIC_NAME";
 
   // drop type since the sidecar rejects this with a 400
-  return { schema_version, subject, subject_name_strategy, type: undefined };
+  return { schema_version, subject, subject_name_strategy };
 }

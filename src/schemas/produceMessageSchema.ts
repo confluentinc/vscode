@@ -108,7 +108,6 @@ export interface SchemaInfo {
   schema_version: number;
   subject: string;
   subject_name_strategy: SubjectNameStrategy;
-  type?: "BINARY" | "JSON" | "STRING" | undefined;
 }
 
 export interface MessageHeader {
