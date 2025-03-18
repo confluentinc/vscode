@@ -26,29 +26,7 @@ describe("commands/utils/produceMessage.ts createProduceRequestData()", function
     sandbox.restore();
   });
 
-  it("should create request data with 'type' set for CCloud topics", async function () {
-    const result = await createProduceRequestData(
-      {
-        key: "test-key",
-        value: "test-value",
-      },
-      {},
-      true,
-    );
-
-    assert.deepStrictEqual(result, {
-      keyData: {
-        type: "JSON",
-        data: "test-key",
-      },
-      valueData: {
-        type: "JSON",
-        data: "test-value",
-      },
-    });
-  });
-
-  it("should create request data without 'type' for local topics", async function () {
+  it("should nest key/value data under keyData.data and valueData.data", async function () {
     const result = await createProduceRequestData({
       key: "test-key",
       value: "test-value",
@@ -107,7 +85,6 @@ describe("commands/utils/produceMessage.ts extractSchemaInfo()", function () {
       subject: docContentSchemaInfo.subject,
       schema_version: docContentSchemaInfo.schema_version,
       subject_name_strategy: docContentSchemaInfo.subject_name_strategy,
-      type: undefined,
     });
   });
 
@@ -122,7 +99,6 @@ describe("commands/utils/produceMessage.ts extractSchemaInfo()", function () {
       subject: TEST_LOCAL_SCHEMA.subject,
       schema_version: TEST_LOCAL_SCHEMA.version,
       subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
-      type: undefined,
     });
   });
 
@@ -146,7 +122,6 @@ describe("commands/utils/produceMessage.ts extractSchemaInfo()", function () {
       subject: docContentSchemaInfo.subject,
       schema_version: docContentSchemaInfo.schema_version,
       subject_name_strategy: docContentSchemaInfo.subject_name_strategy,
-      type: undefined,
     });
   });
 
