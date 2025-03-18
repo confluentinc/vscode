@@ -26,29 +26,7 @@ describe("commands/utils/produceMessage.ts createProduceRequestData()", function
     sandbox.restore();
   });
 
-  it("should create request data with 'type' set for CCloud topics", async function () {
-    const result = await createProduceRequestData(
-      {
-        key: "test-key",
-        value: "test-value",
-      },
-      {},
-      true,
-    );
-
-    assert.deepStrictEqual(result, {
-      keyData: {
-        type: "JSON",
-        data: "test-key",
-      },
-      valueData: {
-        type: "JSON",
-        data: "test-value",
-      },
-    });
-  });
-
-  it("should create request data without 'type' for local topics", async function () {
+  it("should nest key/value data under keyData.data and valueData.data", async function () {
     const result = await createProduceRequestData({
       key: "test-key",
       value: "test-value",
