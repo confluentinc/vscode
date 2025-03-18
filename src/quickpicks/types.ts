@@ -8,4 +8,3 @@ import { QuickPickItem } from "vscode";
 export type QuickPickItemWithValue<T> = QuickPickItem & {
   value?: T | undefined;
 };
-// TODO(shoup): migrate other quickpicks to use this type
