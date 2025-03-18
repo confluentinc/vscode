@@ -85,7 +85,6 @@ describe("commands/utils/produceMessage.ts extractSchemaInfo()", function () {
       subject: docContentSchemaInfo.subject,
       schema_version: docContentSchemaInfo.schema_version,
       subject_name_strategy: docContentSchemaInfo.subject_name_strategy,
-      type: undefined,
     });
   });
 
@@ -100,7 +99,6 @@ describe("commands/utils/produceMessage.ts extractSchemaInfo()", function () {
       subject: TEST_LOCAL_SCHEMA.subject,
       schema_version: TEST_LOCAL_SCHEMA.version,
       subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
-      type: undefined,
     });
   });
 
@@ -124,7 +122,6 @@ describe("commands/utils/produceMessage.ts extractSchemaInfo()", function () {
       subject: docContentSchemaInfo.subject,
       schema_version: docContentSchemaInfo.schema_version,
       subject_name_strategy: docContentSchemaInfo.subject_name_strategy,
-      type: undefined,
     });
   });
 
