@@ -12,11 +12,13 @@ export function validateBump(readFileVersion, readNextVersion, gitBranch) {
   const packageJsonVersion = JSON.parse(readFileVersion("package.json"));
   // Remove the microversion from the package.json version
   const packageJsonWithoutMicroversion = packageJsonVersion.version.replace(/-\d+$/, "");
+  console.log(`packageJsonWithoutMicroversion: ${packageJsonWithoutMicroversion}`);
 
   // Split the version string into major, minor, and patch components
   let [major, minor, patch] = packageJsonWithoutMicroversion.split(".").map(Number);
 
   const nextTxtContents = readNextVersion(".versions/next.txt");
+  console.log(`nextTxtContents: ${nextTxtContents}`);
 
   // Calculate next versions
   const nextPatchVersion = `${major}.${minor}.${patch + 1}`;
