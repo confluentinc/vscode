@@ -4,6 +4,13 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.0.1
+
+### Fixed
+
+- Fixed an issue where the Topics and Schemas views would refresh too often, causing unintended
+  behavior when calling various topic/schema actions.
+
 ## 1.0.0
 
 ### Added
