@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.0.0
+
 ### Added
 
 - On the connections form, add WarpStream to the list of supported platforms and add a text box for
