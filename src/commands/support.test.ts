@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { normalize } from "path";
 import * as sinon from "sinon";
 import { Uri } from "vscode";
 import * as logging from "../logging";
@@ -49,6 +50,7 @@ describe("commands/support.ts", function () {
     const logFileUri: Uri = sidecarLogFileUri();
     const logfilePath = getSidecarLogfilePath();
 
-    assert.strictEqual(logFileUri.path, logfilePath);
+    // normalized to adjust slashes for Windows vs Unix
+    assert.strictEqual(logFileUri.path, Uri.file(normalize(logfilePath)).path);
   });
 });
