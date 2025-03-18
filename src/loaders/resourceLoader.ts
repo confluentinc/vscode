@@ -1,6 +1,7 @@
 import { Disposable } from "vscode";
 import { TopicData } from "../clients/kafkaRest";
 import { ConnectionType } from "../clients/sidecar";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
@@ -136,17 +137,18 @@ export abstract class ResourceLoader implements IResourceBase {
         // cache allowed ...
         const subjects = await resourceManager.getSubjects(schemaRegistry);
         if (subjects) {
-          // and had contents.
+          // and was either an empty or non-empty array --- just not undefined.
           return subjects;
         }
       }
+
+      // Undefined cache lookup result or was forced to refresh ...
 
       // Deep fetch the subjects from the schema registry, cache, return.
       const subjects = await fetchSubjects(schemaRegistry);
       await resourceManager.setSubjects(schemaRegistry, subjects);
       return subjects;
     } catch (error) {
-      logger.error("Error fetching subjects", error);
       if (
         error instanceof Error &&
         error.message.match(/No schema registry found for environment/)
@@ -154,6 +156,14 @@ export abstract class ResourceLoader implements IResourceBase {
         // Expected error when no schema registry found for the environment.
         // Act as if there are no subjects / schemas.
         return [];
+      } else {
+        // Unexpected error, log it to sentry.
+        logError(
+          error,
+          "Unexpected error within getSubjects",
+          { registryOrEnvironmentId: JSON.stringify(registryOrEnvironmentId, null, 2) },
+          true,
+        );
       }
       throw error;
     }
