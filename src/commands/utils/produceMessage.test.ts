@@ -1,31 +1,11 @@
 import * as assert from "assert";
-import * as sinon from "sinon";
-import { TEST_LOCAL_SCHEMA } from "../../../tests/unit/testResources";
-import { TEST_DIRECT_CONNECTION_FORM_SPEC } from "../../../tests/unit/testResources/connection";
-import { getTestExtensionContext } from "../../../tests/unit/testUtils";
+import { TEST_LOCAL_KEY_SCHEMA, TEST_LOCAL_SCHEMA } from "../../../tests/unit/testResources";
 import { Schema } from "../../models/schema";
 import { SchemaInfo, SubjectNameStrategy } from "../../schemas/produceMessageSchema";
-import { CustomConnectionSpec, getResourceManager } from "../../storage/resourceManager";
 import { createProduceRequestData, extractSchemaInfo } from "./produceMessage";
+import { ProduceMessageSchemaOptions } from "./types";
 
 describe("commands/utils/produceMessage.ts createProduceRequestData()", function () {
-  let sandbox: sinon.SinonSandbox;
-  let getDirectConnectionStub: sinon.SinonStub;
-
-  before(async function () {
-    await getTestExtensionContext();
-  });
-
-  beforeEach(function () {
-    sandbox = sinon.createSandbox();
-
-    getDirectConnectionStub = sandbox.stub(getResourceManager(), "getDirectConnection");
-  });
-
-  afterEach(function () {
-    sandbox.restore();
-  });
-
   it("should nest key/value data under keyData.data and valueData.data", async function () {
     const result = await createProduceRequestData({
       key: "test-key",
@@ -33,35 +13,38 @@ describe("commands/utils/produceMessage.ts createProduceRequestData()", function
     });
 
     assert.deepStrictEqual(result, {
-      keyData: {
-        data: "test-key",
-      },
-      valueData: {
-        data: "test-value",
-      },
+      keyData: { data: "test-key" },
+      valueData: { data: "test-value" },
     });
   });
 
-  it("should create request data without 'type' for direct connection topics", async function () {
-    // even if it's a CCloud direct connection, we don't want to set 'type' since the sidecar will
-    // send it directly to the Kafka cluster instead of through the REST proxy
-    const fakeSpec: CustomConnectionSpec = {
-      ...TEST_DIRECT_CONNECTION_FORM_SPEC,
-      formConnectionType: "Confluent Cloud",
+  it("should include schema info in keyData/valueData when passed", async function () {
+    const schemaOptions: ProduceMessageSchemaOptions = {
+      keySchema: TEST_LOCAL_KEY_SCHEMA,
+      keySubjectNameStrategy: SubjectNameStrategy.TOPIC_RECORD_NAME,
+      valueSchema: TEST_LOCAL_SCHEMA,
+      valueSubjectNameStrategy: SubjectNameStrategy.TOPIC_NAME,
     };
-    getDirectConnectionStub.resolves(fakeSpec);
-
-    const result = await createProduceRequestData({
-      key: "test-key",
-      value: "test-value",
-    });
+    const result = await createProduceRequestData(
+      {
+        key: "test-key",
+        value: "test-value",
+      },
+      schemaOptions,
+    );
 
     assert.deepStrictEqual(result, {
       keyData: {
         data: "test-key",
+        subject: TEST_LOCAL_KEY_SCHEMA.subject,
+        schema_version: TEST_LOCAL_KEY_SCHEMA.version,
+        subject_name_strategy: SubjectNameStrategy.TOPIC_RECORD_NAME,
       },
       valueData: {
         data: "test-value",
+        subject: TEST_LOCAL_SCHEMA.subject,
+        schema_version: TEST_LOCAL_SCHEMA.version,
+        subject_name_strategy: SubjectNameStrategy.TOPIC_NAME,
       },
     });
   });
