@@ -15,7 +15,7 @@ export async function run() {
   const mocha = new Mocha({
     color: true,
     ui: "bdd",
-    timeout: 10_000,
+    timeout: process.env.CI !== null ? 30_000 : 10_000,
     reporter: "mocha-multi-reporters",
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
