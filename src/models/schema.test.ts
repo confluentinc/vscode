@@ -21,6 +21,23 @@ import {
   subjectMatchesTopicName,
 } from "./schema";
 
+describe("Subject model methods", () => {
+  it("Constructor vs bad subject name", () => {
+    const badSubjects = [undefined, null, ""];
+    for (const badSubject of badSubjects) {
+      assert.throws(
+        () => {
+          new Subject(badSubject as string, CCLOUD_CONNECTION_ID, "envId" as EnvironmentId, "srId");
+        },
+        {
+          name: "Error",
+          message: `Subject name cannot be undefined, null, or empty: ${badSubject} from ${CCLOUD_CONNECTION_ID}`,
+        },
+      );
+    }
+  });
+});
+
 describe("Schema model methods", () => {
   it(".matchesTopicName() success / fail tests", () => {
     type SchemaProperties = [string, string, boolean];
