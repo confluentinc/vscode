@@ -9,6 +9,7 @@ import {
   ResponseError,
 } from "./clients/sidecar";
 import { getExtensionContext } from "./context/extension";
+import { getCredentialsType } from "./directConnections/credentials";
 import { directConnectionsChanged } from "./emitters";
 import { ExtensionContextNotSetError } from "./errors";
 import { DirectResourceLoader, ResourceLoader } from "./loaders";
@@ -28,9 +29,9 @@ import {
   getResourceManager,
 } from "./storage/resourceManager";
 import { logUsage, UserEvent } from "./telemetry/events";
+import { ResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
-import { getCredentialsType } from "./directConnections/credentials";
 
 const logger = new Logger("directConnectManager");
 
@@ -228,6 +229,7 @@ export class DirectConnectionManager {
         : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
       if (!dryRun) {
+        ResourceViewProvider.getInstance().flagNewlyCreatedConnection(connectionId);
         window.withProgress(
           {
             location: ProgressLocation.Notification,
