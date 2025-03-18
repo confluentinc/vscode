@@ -11,7 +11,7 @@ const platformArchToBinaryName: Map<string, string> = new Map([
   ["linux-arm64", join(binariesDir, "linux-arm64")],
   ["darwin-x64", join(binariesDir, "osx-amd64")],
   ["darwin-arm64", join(binariesDir, "osx-aarch64")],
-  ["windows-x64", join(binariesDir, "windows-x64")],
+  ["win32-x64", join(binariesDir, "win32-x64")],
 ]);
 
 describe("getSidecarPlatformArch", () => {
@@ -40,7 +40,7 @@ describe("getSidecarPlatformArch", () => {
   });
 
   it("should return the correct platform and architecture for a Windows+x64 sidecar", () => {
-    const path = platformArchToBinaryName.get("windows-x64");
+    const path = platformArchToBinaryName.get("win32-x64");
     const platformArch = getSidecarPlatformArch(path!);
     assert.deepStrictEqual(platformArch, new PlatformArch("win32", "x64"));
   });
