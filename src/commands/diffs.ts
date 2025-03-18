@@ -36,7 +36,13 @@ export async function compareWithSelectedCommand(item: any) {
     return;
   }
   // convert back to Uri
-  const uri1: vscode.Uri = vscode.Uri.parse(uri1str);
+  let uri1: vscode.Uri = vscode.Uri.parse(uri1str);
+  if (process.platform === "win32") {
+    // for some reason, the first character for a windows path is lowercase when stringified, so we
+    // need to change it back to uppercase to be consistent with the other URI's path
+    // e.g. "c:\Users\username" => "C:\Users\username"
+    uri1 = uri1.with({ path: uri1.path.charAt(0).toUpperCase() + uri1.path.slice(1) });
+  }
 
   // replace fsPaths with ~ if they contain $HOME
   const uri1Path = uri1.fsPath.replace(homedir(), "~");
