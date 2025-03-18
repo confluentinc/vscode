@@ -149,12 +149,6 @@ export abstract class ResourceLoader implements IResourceBase {
       await resourceManager.setSubjects(schemaRegistry, subjects);
       return subjects;
     } catch (error) {
-      logError(
-        error,
-        "Error within getSubjects",
-        { registryOrEnvironmentId: JSON.stringify(registryOrEnvironmentId, null, 2) },
-        true,
-      );
       if (
         error instanceof Error &&
         error.message.match(/No schema registry found for environment/)
@@ -162,6 +156,14 @@ export abstract class ResourceLoader implements IResourceBase {
         // Expected error when no schema registry found for the environment.
         // Act as if there are no subjects / schemas.
         return [];
+      } else {
+        // Unexpected error, log it to sentry.
+        logError(
+          error,
+          "Unexpected error within getSubjects",
+          { registryOrEnvironmentId: JSON.stringify(registryOrEnvironmentId, null, 2) },
+          true,
+        );
       }
       throw error;
     }
