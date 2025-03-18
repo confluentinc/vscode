@@ -234,6 +234,10 @@ export enum SchemaKind {
  *  possibly considering erring on VALUE_SUBJECT over OTHER_SUBJECT
  */
 export function getSubjectIcon(subject: string, defaultToValueSubject?: boolean): vscode.ThemeIcon {
+  if (!subject) {
+    return new vscode.ThemeIcon(IconNames.OTHER_SUBJECT);
+  }
+
   if (subject.endsWith("-key")) {
     return new vscode.ThemeIcon(IconNames.KEY_SUBJECT);
   } else if (subject.endsWith("-value") || defaultToValueSubject) {
@@ -252,6 +256,10 @@ export function getSubjectIcon(subject: string, defaultToValueSubject?: boolean)
  * based on either TopicNameStrategy or TopicRecordNameStrategy.
  */
 export function subjectMatchesTopicName(subject: string, topicName: string): boolean {
+  if (!subject) {
+    return false;
+  }
+
   if (subject.endsWith("-key")) {
     // TopicNameStrategy key schema
     return subject === `${topicName}-key`;

@@ -56,6 +56,29 @@ describe("Schema model methods", () => {
     }
   });
 
+  it(".matchesTopicName() should handle undefined subject", () => {
+    // Test with direct function call
+    assert.equal(
+      subjectMatchesTopicName(undefined as any, "test-topic"),
+      false,
+      "undefined subject should return false",
+    );
+
+    // Test with null subject
+    assert.equal(
+      subjectMatchesTopicName(null as any, "test-topic"),
+      false,
+      "null subject should return false",
+    );
+
+    // Edge cases with empty string
+    assert.equal(
+      subjectMatchesTopicName("", "test-topic"),
+      false,
+      "empty string subject should return false",
+    );
+  });
+
   it(".fileExtension() should return the correct file extension for type=AVRO schemas", () => {
     const schema = TEST_CCLOUD_SCHEMA.copy({
       type: SchemaType.Avro,
@@ -125,6 +148,29 @@ describe("getSubjectIcon", () => {
       assert.deepEqual(icon, new vscode.ThemeIcon(expected));
     });
   }
+
+  it("should handle undefined or null subject values", () => {
+    // Test with undefined subject
+    assert.deepEqual(
+      getSubjectIcon(undefined as any),
+      new vscode.ThemeIcon(IconNames.OTHER_SUBJECT),
+      "undefined subject should return OTHER_SUBJECT icon",
+    );
+
+    // Test with null subject
+    assert.deepEqual(
+      getSubjectIcon(null as any),
+      new vscode.ThemeIcon(IconNames.OTHER_SUBJECT),
+      "null subject should return OTHER_SUBJECT icon",
+    );
+
+    // Test with empty string
+    assert.deepEqual(
+      getSubjectIcon(""),
+      new vscode.ThemeIcon(IconNames.OTHER_SUBJECT),
+      "empty string subject should return OTHER_SUBJECT icon",
+    );
+  });
 
   for (const [subject, errOnValueSubject, expected] of [
     ["test-key", true, IconNames.KEY_SUBJECT],
