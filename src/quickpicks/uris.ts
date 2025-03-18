@@ -10,7 +10,6 @@ import {
   window,
   workspace,
 } from "vscode";
-import { LoadedDocumentContent } from "./types";
 
 /** Create a quickpick to list all open editors, as well as an item to select a file from the open
  * dialog. */
@@ -95,6 +94,14 @@ export async function uriQuickpick(
     });
     return uri ? uri[0] : undefined;
   }
+}
+
+/** Representation of content retrieved from a file or editor. `openDocument` will be provided if
+ * the content came from an open editor, or if the associated file is open in an editor for the
+ * current workspace. */
+export interface LoadedDocumentContent {
+  content: string;
+  openDocument?: TextDocument;
 }
 
 /** Load the content of a document, either from an open editor or directly from the file system. */
