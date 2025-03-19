@@ -2,7 +2,7 @@
 
 import { reactToCCloudAuthState } from "../../authn/ccloudStateHandling";
 import { Connection, ConnectionType } from "../../clients/sidecar/models";
-import { connectionStable, environmentChanged } from "../../emitters";
+import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { Logger } from "../../logging";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
 import { ConnectionEventBody } from "../../ws/messageTypes";
@@ -29,6 +29,11 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "CREATED":
         case "UPDATED":
         case "CONNECTED":
+          if (event.action === "CREATED") {
+            // Created connections fire this event to mark them as known 'new'.
+            directConnectionCreated.fire(id);
+          }
+
           if (isDirectConnectionStable(connection)) {
             logger.info(
               `connectionEventHandler: direct connection ${event.action} ${connection.id} stable side effects firing.`,
@@ -40,7 +45,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
             environmentChanged.fire({ id: environmentId, wasDeleted: false });
           } else {
             logger.info(
-              `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing side-effects.`,
+              `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing stable side-effects.`,
             );
           }
           break;

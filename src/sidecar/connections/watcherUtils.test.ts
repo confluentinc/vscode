@@ -11,7 +11,7 @@ import {
 import sinon from "sinon";
 import * as ccloudStateHandling from "../../authn/ccloudStateHandling";
 import { ConnectedState, Status } from "../../clients/sidecar/models";
-import { connectionStable, environmentChanged } from "../../emitters";
+import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { ConnectionEventAction, ConnectionEventBody } from "../../ws/messageTypes";
 import { connectionEventHandler, isConnectionStable } from "./watcherUtils";
 
@@ -20,12 +20,14 @@ describe("connectionEventHandler", () => {
   let sandbox: sinon.SinonSandbox;
   let connectionStableFireStub: sinon.SinonStub;
   let environmentChangedFireStub: sinon.SinonStub;
+  let directConnectionCreatedStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     connectionStableFireStub = sandbox.stub(connectionStable, "fire");
     environmentChangedFireStub = sandbox.stub(environmentChanged, "fire");
+    directConnectionCreatedStub = sandbox.stub(directConnectionCreated, "fire");
   });
 
   afterEach(() => {
@@ -66,6 +68,9 @@ describe("connectionEventHandler", () => {
         reactToCCloudAuthStateStub.calledWith(TEST_CCLOUD_CONNECTION),
         `reactToCCloudAuthState called with ${reactToCCloudAuthStateStub.getCall(0).args[0]}`,
       );
+
+      // ccloud events should never fire directConnectionCreatedStub
+      assert.strictEqual(directConnectionCreatedStub.notCalled, true);
     });
   }
 
@@ -120,6 +125,21 @@ describe("connectionEventHandler", () => {
         }),
         true,
       );
+
+      // directConnectionCreatedStub should be called only for CREATED events
+      if (action === ConnectionEventAction.CREATED) {
+        assert.strictEqual(
+          directConnectionCreatedStub.calledOnce,
+          true,
+          "directConnectionCreatedStub called",
+        );
+      } else {
+        assert.strictEqual(
+          directConnectionCreatedStub.notCalled,
+          true,
+          "directConnectionCreatedStub not called",
+        );
+      }
     });
   }
 
