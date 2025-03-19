@@ -147,9 +147,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
 
   function getSpec() {
     if (connection) {
-      if (action === "import" || action === "update") {
-        return { ...connection, ...specUpdatedValues };
-      }
+      return deepMerge(connection, specUpdatedValues);
     }
     return { ...specUpdatedValues };
   }
