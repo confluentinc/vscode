@@ -1,0 +1,96 @@
+# This file is managed by ServiceBot plugin - Semaphore. The content in this file is created using a common
+# template and configurations in service.yml.
+# Any modifications made to version, name, agent, and global_job_config will be overwritten by the generated
+# content in nightly runs. Code changes made to the remaining sections will not be affected.
+version: v1.0
+name: win32-x64-build-test
+agent:
+  machine:
+    type: s1-prod-windows
+
+auto_cancel:
+  running:
+    when: "branch != 'main'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'main'"
+    processing: parallel
+
+blocks:
+  - name: "Build & Test (win32 x64)"
+    dependencies: []
+    skip:
+      when: "change_in(['/release.svg', '/.versions/next.txt'], {pipeline_file: 'ignore', branch_range: '$SEMAPHORE_GIT_COMMIT_RANGE', default_branch: 'main'})"
+    task:
+      prologue:
+        commands:
+          - checkout
+          - make ci-bin-sem-cache-restore
+          - $Env:PATH += ";C:\Program Files\Git\bin"
+          - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
+          # Ensure npm and npx are available
+          - npm --version
+          - npx --version
+          - choco install gh -y
+          - $Env:PATH += ";C:\Program Files\GitHub CLI\"
+          - gh --version
+          - |
+            if (Test-Path "$HOME/.gh-token") {
+              $Env:GH_TOKEN = Get-Content "$HOME/.gh-token" -Raw | ForEach-Object { $_.Trim() }
+              if ([string]::IsNullOrEmpty($Env:GH_TOKEN)) {
+                  Write-Error "Token file exists but is empty"
+                  exit 1
+              }
+              gh config set prompt disabled
+              $Env:GH_TOKEN | gh auth login --with-token
+              gh auth status
+            } else {
+                Write-Error "Token file not found at $HOME/.gh-token"
+                exit 1
+            }
+          - |
+            if ($Env:SEMAPHORE_ORGANIZATION_URL -like "*.semaphoreci.com") {
+              Write-Output "Skipping Vault setup for Semaphore CI"
+            } else {
+              $Env:VAULT_ADDR = "https://vault.cireops.gcp.internal.confluent.cloud"
+              $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
+              vault login -no-print token=$token
+            }
+          - $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+          - Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
+          - $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+          - Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
+      jobs:
+        - name: "Build & Test (win32 x64)"
+          commands:
+            - npm ci --prefer-offline --include=dev
+            - npx playwright install
+            - npx gulp build
+            - npx gulp test
+            - npx gulp functional
+          matrix:
+            - env_var: VSCODE_VERSION
+              values: ["stable", "insiders"]
+      epilogue:
+        always:
+          commands:
+            - Remove-Item .env -ErrorAction SilentlyContinue
+            # Windows version of store-test-results-to-semaphore
+            - |
+              $TestResultFile = Join-Path -Path $PWD -ChildPath "TEST-result.xml"
+              if (Test-Path $TestResultFile) {
+                  Write-Output "Publishing test results from $TestResultFile"
+                  test-results publish $TestResultFile --force
+              } else {
+                  Write-Output "Test results not found at $TestResultFile"
+              }
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Publish Test Results to Semaphore
+        commands:
+          - test-results gen-pipeline-report || echo "Could not publish pipeline test result report due to probably no test results to publish"
