@@ -664,7 +664,7 @@ export async function produceMessage(
         errBody = await err.response.clone().text();
       }
       if (errBody !== undefined)
-        throw new ProduceMessageBadRequestError(errBody, produceRequest, err);
+        throw new ProduceMessageBadRequestError(errBody, produceRequest, err.response);
     }
     throw err;
   }
@@ -676,8 +676,8 @@ export async function produceMessage(
 
 export class ProduceMessageBadRequestError extends Error {
   request: ProduceRequest;
-  response: ResponseError;
-  constructor(message: string, request: ProduceRequest, response: ResponseError) {
+  response: Response;
+  constructor(message: string, request: ProduceRequest, response: Response) {
     super(message);
     this.name = "ProduceMessageBadRequestError";
     this.request = request;
