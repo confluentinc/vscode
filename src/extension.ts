@@ -60,7 +60,13 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, SIDECAR_OUTPUT_CHANNEL } from "./constants";
+import {
+  AUTH_PROVIDER_ID,
+  AUTH_PROVIDER_LABEL,
+  EXTENSION_ID,
+  EXTENSION_VERSION,
+  SIDECAR_OUTPUT_CHANNEL,
+} from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -73,6 +79,7 @@ import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import { getLaunchDarklyClient, setFlagDefaults } from "./featureFlags/client";
 import { FeatureFlag, FeatureFlags } from "./featureFlags/constants";
+import { DisabledVersion } from "./featureFlags/types";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
@@ -151,15 +158,8 @@ async function _activateExtension(
   }
 
   // set up initial feature flags and the LD client
-  setFlagDefaults();
-  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
-  await ldClient?.waitForInitialization();
-  // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
-  // the local defaults
-  const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
-  if (!globalEnabled) {
-    throw new Error(`Extension is disabled by the feature flag "${FeatureFlag.GLOBAL_ENABLED}".`);
-  }
+  await setupFeatureFlags();
+  logger.info("Feature flags initialized");
 
   // configure the StorageManager for extension access to secrets and global/workspace states, and
   // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
@@ -337,6 +337,45 @@ async function setupPreferences(): Promise<vscode.Disposable> {
   return createConfigChangeListener();
 }
 
+/**
+ * Set up the feature flags for the extension. This includes setting the defaults, initializing the
+ * LaunchDarkly client, and checking if the extension is enabled or disabled.
+ */
+async function setupFeatureFlags(): Promise<void> {
+  // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
+  // the local defaults from `setFlagDefaults()`
+  setFlagDefaults();
+  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
+  await ldClient?.waitForInitialization();
+
+  // first check if the extension is enabled at all
+  const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
+  if (!globalEnabled) {
+    const msg = `Extension is disabled by the feature flag "${FeatureFlag.GLOBAL_ENABLED}".`;
+    logger.error(msg);
+    throw new Error(msg);
+  }
+
+  // then make sure the version of the extension is not disabled
+  const disabledVersions: DisabledVersion[] = FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS];
+  const versionDisabled: DisabledVersion[] = disabledVersions.filter((disabled) => {
+    // will only full-match against production release versions, not pre-release or local builds
+    return (
+      disabled.product === vscode.env.uriScheme &&
+      disabled.extensionId === EXTENSION_ID &&
+      disabled.version === EXTENSION_VERSION
+    );
+  });
+  if (versionDisabled.length > 0) {
+    const disabledReason: string = versionDisabled[0].reason;
+    const msg = disabledReason
+      ? `Extension version "${EXTENSION_VERSION}" is disabled: ${disabledReason}`
+      : `Extension version "${EXTENSION_VERSION}" is disabled.`;
+    logger.error(msg);
+    throw new Error(msg);
+  }
+}
+
 /** Initialize the StorageManager singleton instance and handle any necessary migrations. */
 async function setupStorage(): Promise<void> {
   const manager = StorageManager.getInstance();
@@ -422,6 +461,7 @@ export function deactivate() {
   const logStream = getLogFileStream();
   if (logStream) {
     logStream.end();
+  }
 
   try {
     getLaunchDarklyClient()?.close();
