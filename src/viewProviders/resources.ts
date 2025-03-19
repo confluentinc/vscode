@@ -14,6 +14,7 @@ import {
   ccloudConnected,
   ccloudOrganizationChanged,
   connectionStable,
+  directConnectionCreated,
   directConnectionsChanged,
   localKafkaConnected,
   localSchemaRegistryConnected,
@@ -96,7 +97,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
   environmentsMap: Map<string, CCloudEnvironment | LocalEnvironment | DirectEnvironment> =
     new Map();
 
-  private newlyCreatedConnectionIds: Set<ConnectionId> = new Set();
+  private possiblyLoadingConnectionIds: Set<ConnectionId> = new Set();
 
   // env id -> preannounced loading state coming from sidecar websocket
   // events to us via connectionUsable emitter.
@@ -146,7 +147,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   flagNewlyCreatedConnection(connectionId: ConnectionId): void {
     logger.debug("flagNewlyCreatedConnection marking connection id as new", { connectionId });
-    this.newlyCreatedConnectionIds.add(connectionId);
+    this.possiblyLoadingConnectionIds.add(connectionId);
   }
 
   async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
@@ -301,6 +302,15 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
   /** Set up event listeners for this view provider. */
   setEventListeners(): vscode.Disposable[] {
+    const newlyCreatedConnectionSub: vscode.Disposable = directConnectionCreated.event(
+      (connectionId: ConnectionId) => {
+        logger.debug(
+          "resourcesView: directConnectionCreated event fired, marking as newly created",
+          { connectionId },
+        );
+        this.possiblyLoadingConnectionIds.add(connectionId);
+      },
+    );
     const ccloudConnectedSub: vscode.Disposable = ccloudConnected.event((connected: boolean) => {
       logger.debug("ccloudConnected event fired", { connected });
       // No need to force a deep refresh when the connection status changes because the
@@ -339,6 +349,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
 
     const connectionUsableSub: vscode.Disposable = connectionStable.event((id: ConnectionId) => {
       logger.debug("connectionStable event fired", { id });
+      // if is stable, then is definitely not loading anymore.
+      this.possiblyLoadingConnectionIds.delete(id);
       this.refreshConnection(id, false);
     });
 
@@ -365,6 +377,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     );
 
     return [
+      newlyCreatedConnectionSub,
       ccloudConnectedSub,
       ccloudOrganizationChangedSub,
       directConnectionsChangedSub,
@@ -486,22 +499,30 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     this.totalItemCount = 0;
   }
 
-  /** Assign the loading state to all direct environments. */
+  /**
+   * Assign the loading state to all direct environments.
+   * Takes note as to which connections should be considered
+   * "loading" from the {@link possiblyLoadingConnectionIds} set, and
+   * possibly reassigns the environment's isLoading accordingly.
+   * */
   assignIsLoading(directEnvs: DirectEnvironment[]): void {
     directEnvs.forEach((env) => {
-      const isNewlyCreated = this.newlyCreatedConnectionIds.has(env.connectionId);
-      if (!isNewlyCreated) {
-        // they're born with isLoading = true, which makes the spinny icon. Only
-        // want the spinning icon for new connections.
-        env.isLoading = false;
-        logger.debug(`assignIsLoading() setting isLoading=false for direct environment ${env.id}`, {
+      const isNewlyCreated = this.possiblyLoadingConnectionIds.has(env.connectionId);
+
+      if (isNewlyCreated) {
+        // Connection is new, so we want to show the spinny icon. Leave env.isLoading as is.
+        // Remove the connection ID from the set so we will clean any isLoading in future repaints.
+        this.possiblyLoadingConnectionIds.delete(env.connectionId);
+
+        logger.debug(`assignIsLoading() leaving isLoading=true for direct environment ${env.id}`, {
           connectionId: env.connectionId,
         });
       } else {
-        // remove the connection ID from the set so we don't keep showing the spinny icon
-        this.newlyCreatedConnectionIds.delete(env.connectionId);
-
-        logger.debug(`assignIsLoading() leaving isLoading=true for direct environment ${env.id}`, {
+        // Environment objects w/o clusters are default to isLoading = true, which makes the spinny icon.
+        // Only want the spinning icon for actual new connections which should then get followup
+        // websocket events marking them as no longer loading.
+        env.isLoading = false;
+        logger.debug(`assignIsLoading() setting isLoading=false for direct environment ${env.id}`, {
           connectionId: env.connectionId,
         });
       }

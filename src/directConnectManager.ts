@@ -29,7 +29,6 @@ import {
   getResourceManager,
 } from "./storage/resourceManager";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { ResourceViewProvider } from "./viewProviders/resources";
 import { getSchemasViewProvider } from "./viewProviders/schemas";
 import { getTopicViewProvider } from "./viewProviders/topics";
 
@@ -229,7 +228,6 @@ export class DirectConnectionManager {
         : await tryToCreateConnection(spec, dryRun);
       const connectionId = connection.spec.id as ConnectionId;
       if (!dryRun) {
-        ResourceViewProvider.getInstance().flagNewlyCreatedConnection(connectionId);
         window.withProgress(
           {
             location: ProgressLocation.Notification,
