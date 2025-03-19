@@ -10,6 +10,8 @@ export const SCHEMA_RBAC_WARNINGS_ENABLED =
 
 /** Array of string paths pointing to .pem files in the current environment for SSL/TLS. */
 export const SSL_PEM_PATHS = prefix + "ssl.pemPaths";
+/** Default value for the {@link SSL_PEM_PATHS} setting. */
+export const DEFAULT_SSL_PEM_PATHS: string[] = [];
 
 /**
  * Disable SSL/TLS server certificate verification when making requests to Confluent/Kafka
@@ -17,6 +19,8 @@ export const SSL_PEM_PATHS = prefix + "ssl.pemPaths";
  */
 export const SSL_VERIFY_SERVER_CERT_DISABLED =
   prefix + "debugging.sslTls.serverCertificateVerificationDisabled";
+/** Default value for the {@link SSL_VERIFY_SERVER_CERT_DISABLED} setting. */
+export const DEFAULT_TRUST_ALL_CERTIFICATES = false;
 
 export const LOCAL_DOCKER_SOCKET_PATH = prefix + "localDocker.socketPath";
 
