@@ -126,8 +126,8 @@ describe("connectionEventHandler", () => {
         true,
       );
 
-      // directConnectionCreatedStub should be called for CREATED,  UPDATED events
-      if (action === ConnectionEventAction.CREATED || action === ConnectionEventAction.UPDATED) {
+      // directConnectionCreatedStub should be called only for CREATED events
+      if (action === ConnectionEventAction.CREATED) {
         sinon.assert.calledOnce(directConnectionCreatedStub);
       } else {
         sinon.assert.notCalled(directConnectionCreatedStub);
