@@ -7,6 +7,11 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Improved resolving newly created direct connection connectivity state.
+
+## 1.0.2
+
+### Fixed
+
 - Fixed an issue where the extension would fail to sync CCloud authentication related user settings
   to the sidecar process when updating the extension.
 
