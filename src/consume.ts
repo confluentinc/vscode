@@ -687,17 +687,13 @@ function messageViewerStartPollingCommand(
       case "PreviewJSON": {
         track({ action: "preview-snapshot" });
         const {
-          timestamp,
+          order,
           messages: { values },
           serialized,
         } = stream();
         const includes = bitset()?.predicate() ?? (() => true);
         const records: string[] = [];
-        for (
-          let i = 0, p = timestamp.head, payload;
-          i < timestamp.size;
-          i++, p = timestamp.next[p]
-        ) {
+        for (let i = 0, p = order.head, payload; i < order.size; i++, p = order.next[p]) {
           if (includes(p)) {
             payload = prepare(values[p], serialized.key.includes(p), serialized.value.includes(p));
             records.push("\t" + JSON.stringify(payload));
