@@ -588,7 +588,7 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
         key: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
         value: {},
       } as any,
-      new ResponseError(new Response()),
+      new Response(),
     );
     const results: ExecutionResult<ProduceResult>[] = [
       { result: undefined, error: badRequestError },
@@ -610,7 +610,7 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
         key: {},
         value: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
       } as any,
-      new ResponseError(new Response()),
+      new Response(),
     );
     const results: ExecutionResult<ProduceResult>[] = [
       { result: undefined, error: badRequestError },
@@ -637,7 +637,7 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
         key: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
         value: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME },
       } as any,
-      new ResponseError(new Response()),
+      new Response(),
     );
     const results: ExecutionResult<ProduceResult>[] = [
       { result: undefined, error: badRequestError },
@@ -675,12 +675,12 @@ describe("commands/topics.ts handleSchemaValidationErrors()", function () {
     const error1 = new ProduceMessageBadRequestError(
       "Invalid key schema at index 0",
       { key: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME } } as any,
-      new ResponseError(new Response()),
+      new Response(),
     );
     const error2 = new ProduceMessageBadRequestError(
       "Invalid value schema at index 1",
       { value: { subject_name_strategy: SubjectNameStrategy.TOPIC_NAME } } as any,
-      new ResponseError(new Response()),
+      new Response(),
     );
     const results: ExecutionResult<ProduceResult>[] = [
       { result: undefined, error: error1 },
@@ -762,7 +762,7 @@ describe("commands/topics.ts produceMessage()", function () {
         assert.ok(error instanceof ProduceMessageBadRequestError);
         assert.strictEqual(error.name, "ProduceMessageBadRequestError");
         assert.strictEqual(error.message, jsonBodyMsg);
-        assert.strictEqual(error.response, responseError);
+        assert.strictEqual(error.response, responseError.response);
         return true;
       },
     );
@@ -784,7 +784,7 @@ describe("commands/topics.ts produceMessage()", function () {
         assert.ok(error instanceof ProduceMessageBadRequestError);
         assert.strictEqual(error.name, "ProduceMessageBadRequestError");
         assert.strictEqual(error.message, notJsonBody);
-        assert.strictEqual(error.response, responseError);
+        assert.strictEqual(error.response, responseError.response);
         return true;
       },
     );
