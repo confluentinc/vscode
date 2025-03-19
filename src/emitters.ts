@@ -18,7 +18,7 @@ export const ccloudOrganizationChanged = new vscode.EventEmitter<void>();
 /** Fired whenever the list of direct connections changes. */
 export const directConnectionsChanged = new vscode.EventEmitter<void>();
 
-/** Fired when websocket event for a CREATED direct connection environment is recieved. */
+/** Fired when websocket event for a CREATED direct connection environment is received. */
 export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
