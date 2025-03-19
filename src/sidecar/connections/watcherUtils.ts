@@ -2,7 +2,7 @@
 
 import { reactToCCloudAuthState } from "../../authn/ccloudStateHandling";
 import { Connection, ConnectionType } from "../../clients/sidecar/models";
-import { connectionStable, environmentChanged } from "../../emitters";
+import { connectionStable, directConnectionCreated, environmentChanged } from "../../emitters";
 import { Logger } from "../../logging";
 import { ConnectionId, EnvironmentId } from "../../models/resource";
 import { ConnectionEventBody } from "../../ws/messageTypes";
@@ -29,6 +29,12 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "CREATED":
         case "UPDATED":
         case "CONNECTED":
+          if (event.action === "CREATED" || event.action === "UPDATED") {
+            // Not yet terminal state connections are allowed to be thought to be in the process of being
+            // created, so should show as "loading" in the UI if have no assciated clusters yet.
+            directConnectionCreated.fire(id);
+          }
+
           if (isDirectConnectionStable(connection)) {
             logger.info(
               `connectionEventHandler: direct connection ${event.action} ${connection.id} stable side effects firing.`,
@@ -40,7 +46,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
             environmentChanged.fire({ id: environmentId, wasDeleted: false });
           } else {
             logger.info(
-              `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing side-effects.`,
+              `connectionEventHandler: direct connection ${event.action} ${connection.id} not stable, not firing stable side-effects.`,
             );
           }
           break;

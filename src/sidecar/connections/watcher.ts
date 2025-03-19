@@ -342,7 +342,7 @@ export class ConnectionStateWatcher {
    * the timeoutMs for the next update to arrive.
    * Resolves with the updated Connection or null if the timeout is reached.
    *
-   * Callers who need to guarantee that they are working with a Connection state recieved AFTER
+   * Callers who need to guarantee that they are working with a Connection state received AFTER
    * a point in time should first call purgeCachedConnectionState() *before* mutating
    * the connection and then calling this method. There is an unavoidable inherent race, however.
    */
@@ -358,7 +358,7 @@ export class ConnectionStateWatcher {
       this.connectionStates.set(connectionId, singleConnectionEntry);
     } else {
       // If we already know a connection state, test it against predicate and possibly
-      // immediately return. (Otherwise wait for the next recieved update or timeout.)
+      // immediately return. (Otherwise wait for the next received update or timeout.)
       if (
         singleConnectionEntry.mostRecentEvent &&
         predicate(singleConnectionEntry.mostRecentEvent)
