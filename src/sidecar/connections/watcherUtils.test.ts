@@ -70,7 +70,7 @@ describe("connectionEventHandler", () => {
       );
 
       // ccloud events should never fire directConnectionCreatedStub
-      assert.strictEqual(directConnectionCreatedStub.notCalled, true);
+      sinon.assert.notCalled(directConnectionCreatedStub);
     });
   }
 
@@ -128,17 +128,9 @@ describe("connectionEventHandler", () => {
 
       // directConnectionCreatedStub should be called only for CREATED events
       if (action === ConnectionEventAction.CREATED) {
-        assert.strictEqual(
-          directConnectionCreatedStub.calledOnce,
-          true,
-          "directConnectionCreatedStub called",
-        );
+        sinon.assert.calledOnce(directConnectionCreatedStub);
       } else {
-        assert.strictEqual(
-          directConnectionCreatedStub.notCalled,
-          true,
-          "directConnectionCreatedStub not called",
-        );
+        sinon.assert.notCalled(directConnectionCreatedStub);
       }
     });
   }
