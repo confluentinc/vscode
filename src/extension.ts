@@ -72,12 +72,11 @@ import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
-import { getSidecarManager } from "./sidecar";
+import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
 import { getStorageManager, StorageManager } from "./storage";
@@ -101,18 +100,19 @@ const logger = new Logger("extension");
 export async function activate(
   context: vscode.ExtensionContext,
 ): Promise<vscode.ExtensionContext | undefined> {
-  observabilityContext.extensionVersion = context.extension.packageJSON.version;
+  const extVersion = context.extension.packageJSON.version;
+  observabilityContext.extensionVersion = extVersion;
   observabilityContext.extensionActivated = false;
 
-  logger.info(`Extension ${context.extension.id}" activate() triggered.`);
+  logger.info(`Extension ${context.extension.id}" activate() triggered for version ${extVersion}.`);
   logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
-    logger.info("Extension fully activated");
+    logger.info(`Extension version ${extVersion} fully activated`);
     observabilityContext.extensionActivated = true;
     logUsage(UserEvent.ExtensionActivation, { status: "completed" });
   } catch (e) {
-    logger.error("Error activating extension:", e);
+    logger.error(`Error activating extension version ${extVersion}:`, e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
     Sentry.captureException(e);
     logUsage(UserEvent.ExtensionActivation, { status: "failed" });
@@ -151,6 +151,12 @@ async function _activateExtension(
   // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
+
+  // verify we can connect to the correct version of the sidecar, which may require automatically
+  // killing any (old) sidecar process and starting a new one, going through the handshake, etc.
+  logger.info("Starting/checking the sidecar...");
+  await getSidecar();
+  logger.info("Sidecar ready for use.");
 
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
@@ -315,10 +321,7 @@ async function setupContextValues() {
  */
 async function setupPreferences(): Promise<vscode.Disposable> {
   // pass initial configs to the sidecar on startup
-  const configs: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
-  const pemPaths: string[] = configs.get(SSL_PEM_PATHS, []);
-  const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
-  await updatePreferences({ tls_pem_paths: pemPaths, trust_all_certificates: trustAllCerts });
+  await updatePreferences();
   logger.info("Initial preferences passed to sidecar");
   return createConfigChangeListener();
 }
