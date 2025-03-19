@@ -108,7 +108,7 @@ export async function activate(
   logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
-    logger.info(`Extension ${extVersion} fully activated`);
+    logger.info(`Extension version ${extVersion} fully activated`);
     observabilityContext.extensionActivated = true;
     logUsage(UserEvent.ExtensionActivation, { status: "completed" });
   } catch (e) {
