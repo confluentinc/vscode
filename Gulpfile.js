@@ -614,7 +614,18 @@ export async function testBuild() {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode", "assert", "winston", "mocha", "@playwright/test", "dotenv", "glob"],
+    external: [
+      "vscode",
+      "assert",
+      "winston",
+      "mocha",
+      "@playwright/test",
+      "dotenv",
+      "glob",
+      "electron",
+      "launchdarkly-electron-client-sdk",
+      "launchdarkly-js-sdk-common",
+    ],
   };
   /** @type {import("rollup").OutputOptions} */
   const testOutput = {
