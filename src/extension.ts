@@ -104,15 +104,17 @@ export async function activate(
   observabilityContext.extensionVersion = extVersion;
   observabilityContext.extensionActivated = false;
 
-  logger.info(`Extension ${context.extension.id}" activate() triggered for version ${extVersion}.`);
+  logger.info(
+    `Extension version "${context.extension.id}" activate() triggered for version ${extVersion}.`,
+  );
   logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
     context = await _activateExtension(context);
-    logger.info(`Extension version ${extVersion} fully activated`);
+    logger.info(`Extension version "${extVersion}" fully activated`);
     observabilityContext.extensionActivated = true;
     logUsage(UserEvent.ExtensionActivation, { status: "completed" });
   } catch (e) {
-    logger.error(`Error activating extension version ${extVersion}:`, e);
+    logger.error(`Error activating extension version "${extVersion}":`, e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
     Sentry.captureException(e);
     logUsage(UserEvent.ExtensionActivation, { status: "failed" });
