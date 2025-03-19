@@ -30,11 +30,7 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "UPDATED":
         case "CONNECTED":
           if (event.action === "CREATED") {
-            // Created connections fire this event to mark them as known 'new', then fallthrough for
-            // additional side effects.
-            logger.info(
-              `connectionEventHandler: direct connection ${event.action} ${connection.id} side effects firing.`,
-            );
+            // Created connections fire this event to mark them as known 'new'.
             directConnectionCreated.fire(id);
           }
 

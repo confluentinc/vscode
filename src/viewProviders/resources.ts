@@ -145,11 +145,6 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
     return ResourceViewProvider.instance;
   }
 
-  flagNewlyCreatedConnection(connectionId: ConnectionId): void {
-    logger.debug("flagNewlyCreatedConnection marking connection id as new", { connectionId });
-    this.possiblyLoadingConnectionIds.add(connectionId);
-  }
-
   async getTreeItem(element: ResourceViewProviderData): Promise<vscode.TreeItem> {
     let treeItem: vscode.TreeItem;
     if (element instanceof Environment) {
