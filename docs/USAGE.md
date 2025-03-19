@@ -2,6 +2,10 @@
 
 ### Work with your Confluent Cloud resources
 
+<p align="center">
+  <image src="./resources/work-with-your-confluent-cloud-resources.gif" style="width: 70%; height: 70%">
+</p>
+
 Log in to your Confluent Cloud account from the Confluent for VS Code extension by clicking on "Sign in to Confluent Cloud", and explore your Confluent Cloud resources within VS Code.
 
 > [!NOTE]
@@ -11,11 +15,19 @@ Log in to your Confluent Cloud account from the Confluent for VS Code extension 
 
 ### Bootstrap streaming projects from Confluent-provided templates
 
+<p align="center">
+  <image src="./resources/bootstrap-streaming-projects-from-confluent-provided-templates.png" style="width: 70%; height: 70%">
+</p>
+
 Confluent for VS Code offers project templates designed to accelerate your development process. These ready-to-use templates are tailored for common development patterns, enabling you to launch new projects quickly with minimal configuration.
 
 Confluent will continue to add new templates as well as improving existing ones, but if you find bugs or issues in existing templates, or you have proposals for new templates that could benefit the broader community, please [file an issue](https://github.com/confluentinc/vscode/issues/new/choose) or [start a discussion](https://github.com/confluentinc/vscode/discussions/new?category=ideas).
 
 ### Accelerate local development against Kafka and Confluent Schema Registry
+
+<p align="center">
+  <image src="./resources/accelerate-local-development-against-kafka-and-confluent-schema-registry.gif" style="width: 70%; height: 70%">
+</p>
 
 > [!NOTE]
 > Pre-requisites: You must have Docker Engine (version v24.0 or later) installed on your machine. Follow the instructions [here](https://docs.docker.com/engine/install/) to install Docker Engine.
@@ -126,6 +138,10 @@ Search the marketplace for extensions to validate your Avro, JSON schema, or Pro
 needed.
 
 ### Connect to any Kafka API-compatible cluster and any Confluent Schema Registry API-compatible server
+
+<p align="center">
+  <image src="./resources/direct-connect.gif" style="width: 70%; height: 70%">
+</p>
 
 Confluent for VS Code supports connecting to _any_ [Kafka API-compatible](https://kafka.apache.org/protocol.html) cluster and any [Confluent
 Schema Registry API-compatible](https://docs.confluent.io/platform/current/schema-registry/develop/api.html) server.
