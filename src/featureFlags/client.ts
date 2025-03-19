@@ -66,6 +66,8 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
  * @param client The LaunchDarkly client.
  */
 function setEventListeners(client: LDElectronMainClient): void {
+  // client.on doesn't return a listener, so we have to rely on the extension's deactivate() to
+  // handle the client cleanup
   client.on("ready", () => {
     logger.debug("client ready event, setting flags...");
     // set starting values
