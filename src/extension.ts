@@ -105,7 +105,7 @@ export async function activate(
   observabilityContext.extensionActivated = false;
 
   logger.info(
-    `Extension version "${context.extension.id}" activate() triggered for version ${extVersion}.`,
+    `Extension version ${context.extension.id} activate() triggered for version "${extVersion}".`,
   );
   logUsage(UserEvent.ExtensionActivation, { status: "started" });
   try {
