@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.0.2
+
 ### Fixed
 
 - Fixed an issue where the extension would fail to sync CCloud authentication related user settings
