@@ -29,8 +29,9 @@ export function connectionEventHandler(event: ConnectionEventBody) {
         case "CREATED":
         case "UPDATED":
         case "CONNECTED":
-          if (event.action === "CREATED") {
-            // Created connections fire this event to mark them as known 'new'.
+          if (event.action === "CREATED" || event.action === "UPDATED") {
+            // Not yet terminal state connections are allowed to be thought to be in the process of being
+            // created, so should show as "loading" in the UI if have no assciated clusters yet.
             directConnectionCreated.fire(id);
           }
 
