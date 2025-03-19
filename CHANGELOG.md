@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Improved resolving newly created direct connection connectivity state.
+
 ## 1.0.1
 
 ### Fixed

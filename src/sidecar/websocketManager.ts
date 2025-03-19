@@ -8,7 +8,7 @@ import { Message, MessageBodyDecoders, MessageType, validateMessageBody } from "
 
 const logger = new Logger("websocketManager");
 
-/** Type describing message handler callbacks to whom recieved messages are routed. */
+/** Type describing message handler callbacks to whom received messages are routed. */
 export type MessageCallback<T extends MessageType> = (message: Message<T>) => Promise<void>;
 
 export class WebsocketManager implements Disposable {
@@ -27,7 +27,7 @@ export class WebsocketManager implements Disposable {
   private websocketStateEmitter = new VscodeEventEmitter<WebsocketStateEvent>();
 
   /**
-   * Delivers recieved messages to registered async calbacks based on the message type.
+   * Delivers received messages to registered async calbacks based on the message type.
    *  @see {@link subscribe()}, {@link once()}, and {@link deliverToCallbacks()} methods.
    */
   private messageRouter: NodeEventEmitter;
@@ -35,7 +35,7 @@ export class WebsocketManager implements Disposable {
   private peerWorkspaceCount = 0;
 
   private constructor() {
-    // Set up a NodeJS EventEmitter to route recieved websocket messages to the appropriate async handlers
+    // Set up a NodeJS EventEmitter to route received websocket messages to the appropriate async handlers
     // based on the message type.
     this.messageRouter = constructMessageRouter();
 
@@ -160,10 +160,6 @@ export class WebsocketManager implements Disposable {
           return;
         }
 
-        // logger.debug(
-        //   `Recieved ${message.headers.message_type} websocket message from originator ${message.headers.originator}: ${JSON.stringify(message, null, 2)}`,
-        // );
-
         // Defer to the NodeJS EventEmitter to deliver the message to the registered by-message-type async handler(s).
         this.deliverToCallbacks(message).catch((e) => {
           logger.error(`Error delivering message ${JSON.stringify(message, null, 2)}: ${e}`);
@@ -238,7 +234,7 @@ export class WebsocketManager implements Disposable {
   }
 
   /**
-   * Deliver a recieved-from-websocket message to all registered callbacks for the message type.
+   * Deliver a received-from-websocket message to all registered callbacks for the message type.
    * @param message The message to deliver.
    **/
   public async deliverToCallbacks<T extends MessageType>(message: Message<T>): Promise<void> {
@@ -257,7 +253,7 @@ export class WebsocketManager implements Disposable {
     this.disposables = [];
   }
 
-  /** Parse/deserialize a message recieved from websocket into a Message<T> or die trying **/
+  /** Parse/deserialize a message received from websocket into a Message<T> or die trying **/
   static parseMessage(data: WebSocket.Data): Message<MessageType> {
     const strMessage = data.toString();
     const message = JSON.parse(strMessage) as Message<MessageType>;
