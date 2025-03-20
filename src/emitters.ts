@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
+import { Schema, Subject } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
@@ -23,6 +24,12 @@ export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
+
+/** Fired when a whole SR subject has either been added or deleted. */
+export const schemaSubjectChanged = new vscode.EventEmitter<Subject>();
+
+/** Fired when a schema version has been either created or deleted within a preexisting subject.*/
+export const schemaVersionsChanged = new vscode.EventEmitter<Schema>();
 
 /** Event type used by {@link environmentChanged} */
 export type EnvironmentChangeEvent = {
