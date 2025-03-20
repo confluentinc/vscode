@@ -2,12 +2,14 @@ import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
+import { logError } from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
+import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 
@@ -34,6 +36,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       "confluent.schemas.diffMostRecentVersions",
       diffLatestSchemasCommand,
     ),
+    registerCommandWithLogging("confluent.schemas.deleteVersion", deleteSchemaVersionCommand),
   ];
 }
 
@@ -215,6 +218,163 @@ async function evolveSchemaSubjectCommand(subject: Subject) {
   const schema: Schema = await determineLatestSchema("evolveSchemaSubjectCommand", subject);
 
   await evolveSchemaCommand(schema);
+}
+
+async function deleteSchemaVersionCommand(schema: Schema) {
+  if (!(schema instanceof Schema)) {
+    logger.error("deleteSchemaVersionCommand called with invalid argument type", schema);
+    return;
+  }
+
+  // deterimine if hard or soft delete to perform
+  const strenthStr = await vscode.window.showQuickPick(
+    [
+      "Soft Delete -- existing records will remain deserializable",
+      "Hard Delete -- any existing records will NOT be deserializable",
+    ],
+    {
+      title: "Delete Schema Version",
+      placeHolder: "Select the type of delete to perform",
+    },
+  );
+
+  if (!strenthStr) {
+    // show message
+    vscode.window.showErrorMessage("Schema deletion canceled.");
+    logger.info("User canceled schema version deletion.");
+    return;
+  }
+  const hardDelete = strenthStr.startsWith("Hard");
+
+  const loader = ResourceLoader.getInstance(schema.connectionId);
+
+  const deleteAdverb = hardDelete ? "HARD " : "";
+  const title = `${deleteAdverb}Delete Schema Version ${schema.version}?`;
+
+  const [validator, placeholder] = getSchemaDeletionValidatorAndPlaceholder(
+    schema.version,
+    hardDelete,
+  );
+  const confirmation = await vscode.window.showInputBox({
+    title: title,
+    prompt: await getDeleteSchemaVersionPrompt(hardDelete, schema, loader),
+    validateInput: validator,
+    placeHolder: placeholder,
+  });
+
+  if (!confirmation || validator(confirmation) !== undefined) {
+    vscode.window.showErrorMessage("Schema deletion canceled.");
+    logger.info("User canceled schema version deletion.");
+    return;
+  }
+
+  let success = true;
+
+  // Drive the delete via the resource loader so will be cache consistent.
+  // Resource loader will also emit event to alert views to refresh if needed.
+  try {
+    // await loader.deleteSchemaVersion(schema, hardDelete);
+    vscode.window.showInformationMessage(`Schema version ${schema.version} deleted.`);
+  } catch (e) {
+    success = false;
+    logError(e, "Error deleting schema version", undefined, true);
+    if (e instanceof Error) {
+      vscode.window.showErrorMessage(
+        `Error deleting schema version ${schema.version}: ${e.message}`,
+      );
+    } else {
+      vscode.window.showErrorMessage(`Error deleting schema version ${schema.version}: ${e}`);
+    }
+  }
+
+  logUsage(UserEvent.SchemaAction, {
+    action: "delete schema version",
+    status: success ? "succeeded" : "failed",
+
+    connection_id: schema.connectionId,
+    connection_type: schema.connectionType,
+    environment_id: schema.environmentId,
+
+    schema_registry_id: schema.schemaRegistryId,
+    schema_type: schema.type,
+    subject_hash: hashed(schema.subject),
+    schema_version: schema.version,
+  });
+}
+
+/**
+ * Determine the prompt to show when deleting a schema version.
+ * @param hardDeletion Is a hard delete going to be performed?
+ * @param schema The Schema/version to delete.
+ * @param loader ResourceLoader to use to get the schema group.
+ * @returns Customized prompt for the delete action.
+ */
+async function getDeleteSchemaVersionPrompt(
+  hardDeletion: boolean,
+  schema: Schema,
+  loader: ResourceLoader,
+): Promise<string> {
+  const schemaGroup = await loader.getSchemasForSubject(schema.environmentId!, schema.subject);
+  const isOnlyVersion = schemaGroup.length === 1;
+
+  const deleteVerb = (hardDeletion ? "hard" : "soft") + " delete";
+  let prompt: string;
+
+  if (isOnlyVersion) {
+    prompt = `Are you sure you want to ${deleteVerb} the only version of subject ${schema.subject}?`;
+  } else {
+    const isLatestVersion = schema.version === schemaGroup[0].version;
+    if (isLatestVersion) {
+      prompt = `Are you sure you want to ${deleteVerb} the latest version of subject ${schema.subject}? Version ${schemaGroup[1].version} will become the latest.`;
+    } else {
+      prompt = `Are you sure you want to ${deleteVerb} version ${schema.version} of subject ${schema.subject}?`;
+    }
+  }
+
+  return prompt;
+}
+
+type ValidationFunction = (input: string) => vscode.InputBoxValidationMessage | undefined;
+/**
+ * Returns a pair:
+ *  [0]: Function that can be used to validate the confirmation input for a schema version for deletion.
+ *  [1]: The string to show in the input box as a placeholder.
+ * @param version The version to confirm.
+ * @param hardDeletion Whether this is for a hard deletion or not.
+ * @returns pair of [validation function, prompt string]
+ */
+function getSchemaDeletionValidatorAndPlaceholder(
+  version: number,
+  hardDeletion: boolean,
+): [ValidationFunction, string] {
+  let validator: ValidationFunction;
+  let prompt: string;
+
+  if (hardDeletion) {
+    prompt = `Enter "hard v${version}" to confirm, escape to cancel.`;
+    validator = (input: string) => {
+      if (input === `hard v${version}`) {
+        return;
+      }
+      return {
+        message: `Enter "hard v${version}" to confirm hard deletion, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Error,
+      };
+    };
+  } else {
+    prompt = `Enter "v${version}" to confirm, escape to cancel.`;
+    validator = (input: string) => {
+      if (input === `v${version}`) {
+        return;
+      }
+      return {
+        message: `Enter "v${version}" to confirm, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Error,
+      };
+    };
+  }
+
+  return [validator, prompt];
 }
 
 /**
