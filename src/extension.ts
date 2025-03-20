@@ -44,7 +44,6 @@ if (process.env.SENTRY_DSN) {
   Sentry.addEventProcessor(includeObservabilityContext);
 }
 
-import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
 import { registerCommandWithLogging } from "./commands";
@@ -63,7 +62,6 @@ import { registerTopicCommands } from "./commands/topics";
 import {
   AUTH_PROVIDER_ID,
   AUTH_PROVIDER_LABEL,
-  EXTENSION_ID,
   EXTENSION_VERSION,
   SIDECAR_OUTPUT_CHANNEL,
 } from "./constants";
@@ -78,8 +76,7 @@ import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import { getLaunchDarklyClient, setFlagDefaults } from "./featureFlags/client";
-import { FeatureFlag, FeatureFlags } from "./featureFlags/constants";
-import { DisabledVersion } from "./featureFlags/types";
+import { checkForExtensionDisabledReason } from "./featureFlags/enablement";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { createConfigChangeListener } from "./preferences/listener";
@@ -350,31 +347,10 @@ async function setupFeatureFlags(): Promise<void> {
   // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
   // the local defaults from `setFlagDefaults()`
   setFlagDefaults();
-  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
-  await ldClient?.waitForInitialization();
-
-  // first check if the extension is enabled at all
-  const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
-  if (!globalEnabled) {
-    const msg = `Extension is disabled by the feature flag "${FeatureFlag.GLOBAL_ENABLED}".`;
-    logger.error(msg);
-    throw new Error(msg);
-  }
-
-  // then make sure the version of the extension is not disabled
-  const disabledVersions: DisabledVersion[] = FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS];
-  const versionDisabled: DisabledVersion[] = disabledVersions.filter((disabled) => {
-    // will only full-match against production release versions, not pre-release or local builds
-    return (
-      disabled.product === vscode.env.uriScheme &&
-      disabled.extensionId === EXTENSION_ID &&
-      disabled.version === EXTENSION_VERSION
-    );
-  });
-  if (versionDisabled.length > 0) {
-    const disabledReason: string = versionDisabled[0].reason;
-    const msg = disabledReason
-      ? `Extension version "${EXTENSION_VERSION}" is disabled: ${disabledReason}`
+  const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
+  if (disabledMessage) {
+    const msg = disabledMessage
+      ? `Extension version "${EXTENSION_VERSION}" is disabled: ${disabledMessage}`
       : `Extension version "${EXTENSION_VERSION}" is disabled.`;
     logger.error(msg);
     throw new Error(msg);
