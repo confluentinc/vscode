@@ -1,27 +1,20 @@
 import * as assert from "assert";
-import Sinon from "sinon";
 
 import { TEST_LOCAL_SCHEMA } from "../../../tests/unit/testResources";
-import { ResourceLoader } from "../../loaders";
 import { Schema } from "../../models/schema";
 import { getDeleteSchemaVersionPrompt, getSchemaDeletionValidatorAndPlaceholder } from "./schemas";
 
 describe("commands/utils/schemas.ts getDeleteSchemaVersionPrompt()", function () {
-  let loader: ResourceLoader;
-  let getSchemasForSubject: Sinon.SinonStub;
-
-  beforeEach(() => {
-    // make a sinon mock for the loader + getSchemasForSubject method
-    loader = Sinon.createStubInstance(ResourceLoader);
-    getSchemasForSubject = loader.getSchemasForSubject as Sinon.SinonStub;
-  });
-
   it("single schema version tests", async function () {
     // single version.
-    getSchemasForSubject.resolves([TEST_LOCAL_SCHEMA]);
+    const schemaGroup = [TEST_LOCAL_SCHEMA];
 
     for (const hardDeletion of [true, false]) {
-      const prompt = await getDeleteSchemaVersionPrompt(hardDeletion, TEST_LOCAL_SCHEMA, loader);
+      const prompt = await getDeleteSchemaVersionPrompt(
+        hardDeletion,
+        TEST_LOCAL_SCHEMA,
+        schemaGroup,
+      );
       const expectedPrompt = `Are you sure you want to ${hardDeletion ? "hard" : "soft"} delete the only version of subject ${TEST_LOCAL_SCHEMA.subject}?`;
       assert.strictEqual(prompt, expectedPrompt);
     }
@@ -31,10 +24,10 @@ describe("commands/utils/schemas.ts getDeleteSchemaVersionPrompt()", function ()
     // multiple versions, deleting latest version
 
     const toDelete: Schema = Schema.create({ ...TEST_LOCAL_SCHEMA, version: 2 });
-    getSchemasForSubject.resolves([toDelete, Schema.create({ ...TEST_LOCAL_SCHEMA, version: 1 })]);
+    const schemaGroup = [toDelete, Schema.create({ ...TEST_LOCAL_SCHEMA, version: 1 })];
 
     for (const hardDeletion of [true, false]) {
-      const prompt = await getDeleteSchemaVersionPrompt(hardDeletion, toDelete, loader);
+      const prompt = await getDeleteSchemaVersionPrompt(hardDeletion, toDelete, schemaGroup);
       const expectedPrompt = `Are you sure you want to ${hardDeletion ? "hard" : "soft"} delete the latest version of subject ${TEST_LOCAL_SCHEMA.subject}? Version 1 will become the latest.`;
       assert.strictEqual(prompt, expectedPrompt);
     }
@@ -44,10 +37,10 @@ describe("commands/utils/schemas.ts getDeleteSchemaVersionPrompt()", function ()
     // multiple versions, deleting a non-latest version
 
     const toDelete: Schema = Schema.create({ ...TEST_LOCAL_SCHEMA, version: 2 });
-    getSchemasForSubject.resolves([Schema.create({ ...TEST_LOCAL_SCHEMA, version: 3 }), toDelete]);
+    const schemaGroup = [Schema.create({ ...TEST_LOCAL_SCHEMA, version: 3 }), toDelete];
 
     for (const hardDeletion of [true, false]) {
-      const prompt = await getDeleteSchemaVersionPrompt(hardDeletion, toDelete, loader);
+      const prompt = await getDeleteSchemaVersionPrompt(hardDeletion, toDelete, schemaGroup);
       const expectedPrompt = `Are you sure you want to ${hardDeletion ? "hard" : "soft"} delete version ${toDelete.version} of subject ${TEST_LOCAL_SCHEMA.subject}?`;
       assert.strictEqual(prompt, expectedPrompt);
     }

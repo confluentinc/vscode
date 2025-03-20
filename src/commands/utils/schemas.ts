@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 
-import { ResourceLoader } from "../../loaders";
 import { Schema } from "../../models/schema";
 
 /**
@@ -13,9 +12,8 @@ import { Schema } from "../../models/schema";
 export async function getDeleteSchemaVersionPrompt(
   hardDeletion: boolean,
   schema: Schema,
-  loader: ResourceLoader,
+  schemaGroup: Schema[],
 ): Promise<string> {
-  const schemaGroup = await loader.getSchemasForSubject(schema.environmentId!, schema.subject);
   const isOnlyVersion = schemaGroup.length === 1;
 
   const deleteVerb = (hardDeletion ? "hard" : "soft") + " delete";
