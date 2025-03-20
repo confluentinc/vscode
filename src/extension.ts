@@ -70,7 +70,11 @@ import { registerLocalResourceWorkflows } from "./docker/workflows/workflowIniti
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
-import { getLaunchDarklyClient, setFlagDefaults } from "./featureFlags/client";
+import {
+  disposeLaunchDarklyClient,
+  getLaunchDarklyClient,
+  setFlagDefaults,
+} from "./featureFlags/client";
 import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
@@ -439,11 +443,7 @@ export function deactivate() {
     logStream.end();
   }
 
-  try {
-    getLaunchDarklyClient()?.close();
-  } catch (error) {
-    logger.error("Error closing LD client during extension deactivation:", error);
-  }
+  disposeLaunchDarklyClient();
 
   logger.info("Extension deactivated");
 }

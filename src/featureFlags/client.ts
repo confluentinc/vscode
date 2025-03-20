@@ -7,7 +7,7 @@ import {
   LD_CLIENT_OPTIONS,
   LD_CLIENT_USER_INIT,
 } from "./constants";
-import { handleClientReady, handleFlagChanges } from "./handlers";
+import { setEventListeners } from "./handlers";
 
 const logger = new Logger("featureFlags.client");
 
@@ -44,25 +44,18 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
   return client;
 }
 
-/**
- * Sets up the event listeners for the LaunchDarkly client.
- * @param client The LaunchDarkly client.
- */
-export function setEventListeners(client: LDElectronMainClient): void {
-  // client.on doesn't return a listener, so we have to rely on the extension's deactivate() to
-  // handle the client cleanup
-  client.on("ready", () => handleClientReady(client));
+/** Closes the LaunchDarkly client, if one exists. */
+export function disposeLaunchDarklyClient(): void {
+  if (!client) {
+    return;
+  }
 
-  client.on("failed", (err) => {
-    logger.error("failed event:", err);
-  });
-
-  client.on("error", (err) => {
-    logger.error("error event:", err);
-  });
-
-  // this is the main one we care about after the client is ready:
-  client.on("change", handleFlagChanges);
+  try {
+    client.close();
+  } catch (error) {
+    logger.error("Error closing LD client:", error);
+  }
+  client = undefined;
 }
 
 /** Sets the {@link FeatureFlags} with default values from {@link FEATURE_FLAG_DEFAULTS}. */
