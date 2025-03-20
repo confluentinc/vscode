@@ -59,12 +59,7 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import {
-  AUTH_PROVIDER_ID,
-  AUTH_PROVIDER_LABEL,
-  EXTENSION_VERSION,
-  SIDECAR_OUTPUT_CHANNEL,
-} from "./constants";
+import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, SIDECAR_OUTPUT_CHANNEL } from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -76,7 +71,10 @@ import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import { getLaunchDarklyClient, setFlagDefaults } from "./featureFlags/client";
-import { checkForExtensionDisabledReason } from "./featureFlags/enablement";
+import {
+  checkForExtensionDisabledReason,
+  showExtensionDisabledNotification,
+} from "./featureFlags/enablement";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { createConfigChangeListener } from "./preferences/listener";
@@ -349,11 +347,8 @@ async function setupFeatureFlags(): Promise<void> {
   setFlagDefaults();
   const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
   if (disabledMessage) {
-    const msg = disabledMessage
-      ? `Extension version "${EXTENSION_VERSION}" is disabled: ${disabledMessage}`
-      : `Extension version "${EXTENSION_VERSION}" is disabled.`;
-    logger.error(msg);
-    throw new Error(msg);
+    showExtensionDisabledNotification(disabledMessage);
+    throw new Error(disabledMessage);
   }
 }
 

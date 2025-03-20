@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
-import { EXTENSION_VERSION } from "../constants";
 import { logError, showErrorNotificationWithButtons } from "../errors";
-import { checkForExtensionDisabledReason } from "../featureFlags/enablement";
-import { Logger } from "../logging";
+import {
+  checkForExtensionDisabledReason,
+  showExtensionDisabledNotification,
+} from "../featureFlags/enablement";
 import { IResourceBase, isResource } from "../models/resource";
 import { UserEvent, logUsage } from "../telemetry/events";
-
-const logger = new Logger("commands");
 
 export function registerCommandWithLogging(
   commandName: string,
@@ -14,14 +13,11 @@ export function registerCommandWithLogging(
 ): vscode.Disposable {
   const wrappedCommand = async (...args: any[]) => {
     // if the extension was disabled, we need to prevent any commands from running and show an error
-    // message to the user
+    // notification to the user
     const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
     if (disabledMessage) {
-      const msg = disabledMessage
-        ? `Extension version "${EXTENSION_VERSION}" is disabled: ${disabledMessage}`
-        : `Extension version "${EXTENSION_VERSION}" is disabled.`;
-      logger.error(msg);
-      throw new Error(msg);
+      showExtensionDisabledNotification(disabledMessage);
+      return;
     }
 
     logUsage(UserEvent.CommandInvoked, {

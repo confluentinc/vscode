@@ -33,3 +33,5 @@ export const FEATURE_FLAG_DEFAULTS: LDFlagSet = {
 /** Feature flags and their current values
  * (These may change based on the responses from LaunchDarkly.) */
 export const FeatureFlags: LDFlagSet = {};
+
+export const GLOBAL_DISABLED_MESSAGE = "Extension is disabled globally.";

@@ -1,9 +1,13 @@
 import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
-import { env } from "vscode";
+import { commands, env } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
+import { showErrorNotificationWithButtons } from "../errors";
+import { Logger } from "../logging";
 import { getLaunchDarklyClient } from "./client";
-import { FeatureFlag, FeatureFlags } from "./constants";
+import { FeatureFlag, FeatureFlags, GLOBAL_DISABLED_MESSAGE } from "./constants";
 import { DisabledVersion } from "./types";
+
+const logger = new Logger("featureFlags.enablement");
 
 /**
  * Checks if this extension is disabled globally or if this version of the extension is disabled.
@@ -17,7 +21,7 @@ export async function checkForExtensionDisabledReason(): Promise<string | undefi
   // first check if the extension is enabled at all
   const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
   if (!globalEnabled) {
-    return "Extension is disabled globally.";
+    return GLOBAL_DISABLED_MESSAGE;
   }
 
   // then make sure the version of the extension is not disabled
@@ -33,4 +37,28 @@ export async function checkForExtensionDisabledReason(): Promise<string | undefi
   if (versionDisabled.length > 0) {
     return versionDisabled[0].reason ?? "Unspecified reason";
   }
+}
+
+/**
+ * Shows a notification to the user if the extension is disabled globally or if this version of the
+ * extension is disabled.
+ * - If the extension is **globally disabled**, an error notification with no buttons will be shown.
+ * - If **only this extension version** is disabled, an error notification with an "Update Extension"
+ *   button will be shown.
+ */
+export async function showExtensionDisabledNotification(reason: string) {
+  const msg = reason
+    ? `Extension version "${EXTENSION_VERSION}" is disabled: ${reason}`
+    : `Extension version "${EXTENSION_VERSION}" is disabled.`;
+  logger.error(msg);
+
+  // if the extension is disabled globally, we don't want to show the "Update Extension" button
+  const buttons: Record<string, () => void> = {};
+  if (reason !== GLOBAL_DISABLED_MESSAGE) {
+    buttons["Update Extension"] = () => {
+      commands.executeCommand("workbench.extensions.view.show");
+      commands.executeCommand("workbench.extensions.search", EXTENSION_ID);
+    };
+  }
+  showErrorNotificationWithButtons(msg, buttons);
 }
