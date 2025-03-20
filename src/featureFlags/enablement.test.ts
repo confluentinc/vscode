@@ -3,7 +3,12 @@ import * as sinon from "sinon";
 import { commands, env, window } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import * as clientModule from "./client";
-import { FeatureFlag, FeatureFlags, GLOBAL_DISABLED_MESSAGE } from "./constants";
+import {
+  FEATURE_FLAG_DEFAULTS,
+  FeatureFlag,
+  FeatureFlags,
+  GLOBAL_DISABLED_MESSAGE,
+} from "./constants";
 import * as enablement from "./enablement";
 import { DisabledVersion } from "./types";
 
@@ -160,6 +165,18 @@ describe("featureFlags/enablement.ts", function () {
       baz: 123,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+
+    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+
+    assert.strictEqual(reason, undefined);
+  });
+
+  it("checkForExtensionDisabledReason() should handle unset feature flags", async function () {
+    // delete all "current" feature flags to simulate hitting the check before even the local
+    // defaults are set
+    for (const key of Object.keys(FEATURE_FLAG_DEFAULTS)) {
+      delete FeatureFlags[key];
+    }
 
     const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
 

@@ -23,13 +23,20 @@ export async function checkForExtensionDisabledReason(): Promise<string | undefi
   getLaunchDarklyClient();
 
   // first check if the extension is enabled at all
-  const globalEnabled: boolean = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
+  const globalEnabled: boolean | undefined = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
+  if (globalEnabled === undefined) {
+    return;
+  }
   if (!globalEnabled) {
     return GLOBAL_DISABLED_MESSAGE;
   }
 
   // then make sure the version of the extension is not disabled
-  const disabledVersions: DisabledVersion[] = FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS];
+  const disabledVersions: DisabledVersion[] | undefined =
+    FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS];
+  if (disabledVersions === undefined || !Array.isArray(disabledVersions)) {
+    return;
+  }
   const versionDisabled: DisabledVersion[] = disabledVersions.filter((disabled) => {
     // will only full-match against production release versions, not pre-release or local builds
     return (
