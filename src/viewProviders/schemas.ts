@@ -8,6 +8,10 @@ import {
   EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
+  schemaSubjectChanged,
+  SchemaVersionChangeEvent,
+  schemaVersionsChanged,
+  SubjectChangeEvent,
 } from "../emitters";
 import { ExtensionContextNotSetError, logError } from "../errors";
 import { ResourceLoader } from "../loaders";
@@ -385,12 +389,63 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       },
     );
 
+    // A subject was added or removed.
+    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
+      (event: SubjectChangeEvent) => {
+        // A subject was added or deleted. Refresh toplevel view if we're looking at
+        // the same schema registry.
+        const [subject, change] = [event.subject, event.change];
+
+        if (this.schemaRegistry?.id === subject.schemaRegistryId) {
+          logger.debug(`A subject ${change} in the registry being viewed, refreshing toplevel`, {
+            subject: subject.name,
+          });
+
+          if (change === "deleted") {
+            this.subjectsInTreeView.delete(subject.name);
+          } else {
+            // Otherwise, add it to the map.
+            this.subjectsInTreeView.set(subject.name, subject);
+          }
+          this._onDidChangeTreeData.fire(undefined);
+        }
+      },
+    );
+
+    // A schema version was added or removed.
+    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
+      (event: SchemaVersionChangeEvent) => {
+        // A schema version was added or deleted. Refresh the subject if we're looking at
+        // the same schema registry.
+        const [schema, change] = [event.schema, event.change];
+        if (this.schemaRegistry?.id === schema.schemaRegistryId) {
+          logger.debug(
+            `A schema version ${change} in the registry being viewed, refreshing subject`,
+            { schema: schema.subject },
+          );
+
+          // find the subject in the tree view and refresh just that subtree
+          // Blow away the schemas in the cached subject, so that they will be
+          // refetched when the subject is expanded.
+          const subject = this.subjectsInTreeView.get(schema.subject);
+
+          if (subject) {
+            // Back to 'unknown subjects inside' state, will force a ResourceLoader lookup.
+            subject.schemas = null;
+            // Repaint the subject in the tree view.
+            this._onDidChangeTreeData.fire(subject);
+          }
+        }
+      },
+    );
+
     return [
       environmentChangedSub,
       ccloudConnectedSub,
       localSchemaRegistryConnectedSub,
       currentSchemaRegistryChangedSub,
       schemaSearchSetSub,
+      schemaSubjectChangedSub,
     ];
   }
 
