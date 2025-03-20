@@ -294,20 +294,24 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Deleting schema version ${schema.version}...`,
+        title: `Deleting schema ...`,
       },
       async () => {
         await loader.deleteSchemaVersion(schema, hardDelete, isOnlyVersion);
       },
     );
 
-    vscode.window.showInformationMessage(`Schema version ${schema.version} deleted.`);
-
-    // Fire off event(s)
+    let successMessage = `Version ${schema.version} of subject ${schema.subject} deleted.`;
     if (isOnlyVersion) {
-      schemaSubjectChanged.fire(schema.subjectObject());
+      successMessage += ` Subject ${schema.subject} deleted.`;
+    }
+    vscode.window.showInformationMessage(successMessage);
+
+    // Fire off event to update views if needed.
+    if (isOnlyVersion) {
+      schemaSubjectChanged.fire({ subject: schema.subjectObject(), change: "deleted" });
     } else {
-      schemaVersionsChanged.fire(schema);
+      schemaVersionsChanged.fire({ schema: schema, change: "deleted" });
     }
   } catch (e) {
     success = false;
