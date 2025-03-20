@@ -1,8 +1,28 @@
-import { LDFlagChangeset, LDFlagValue } from "launchdarkly-electron-client-sdk";
+import {
+  LDElectronMainClient,
+  LDFlagChangeset,
+  LDFlagValue,
+} from "launchdarkly-electron-client-sdk";
 import { Logger } from "../logging";
-import { FeatureFlags } from "./constants";
+import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
 
-const logger = new Logger("featureFlags.changes");
+const logger = new Logger("featureFlags.handlers");
+
+/** Callback function for handling "ready" events from the LD stream, which sets up the initial
+ * feature flag values from LaunchDarkly, overriding any default values set during activation. */
+export async function handleClientReady(client: LDElectronMainClient) {
+  logger.debug("client ready event, setting flags...");
+  // set starting values
+  for (const [key, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
+    const actualValue: LDFlagValue = client.variation(key);
+    // NOTE: uncomment the following for local testing new feature flag behavior:
+    // logger.debug(
+    //   `client ready event, setting ${key}=${JSON.stringify(actualValue)} (default=${JSON.stringify(defaultValue)})`,
+    // );
+    FeatureFlags[key] = actualValue ?? defaultValue;
+  }
+  logger.debug("client ready, flags set:", JSON.stringify(FeatureFlags));
+}
 
 /** Callback function for handling "change" events from the LD stream. */
 export async function handleFlagChanges(changes: LDFlagChangeset) {

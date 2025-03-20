@@ -1,4 +1,5 @@
-import { LDFlagSet } from "launchdarkly-electron-client-sdk";
+import { LDFlagSet, LDUser } from "launchdarkly-electron-client-sdk";
+import { env } from "vscode";
 
 /** Client ID to use with the LaunchDarkly SDK. Set during production builds, but can also be
  * overridden in a local .env file for testing. */
@@ -6,6 +7,17 @@ export const LD_CLIENT_ID: string | undefined =
   process.env.NODE_ENV !== "production"
     ? process.env.TEST_LAUNCHDARKLY_CLIENT_ID
     : process.env.LAUNCHDARKLY_CLIENT_ID;
+
+/** Initial user context, only updated during CCloud auth via {@link LDElectronMainClient.identify}. */
+export const LD_CLIENT_USER_INIT: LDUser = {
+  key: `${env.uriScheme}-user`,
+  anonymous: true,
+};
+
+/** Options to use when starting the client via the LaunchDarkly SDK. */
+export const LD_CLIENT_OPTIONS = {
+  streaming: true, // Necessary in order for live flag updating to work
+};
 
 export enum FeatureFlag {
   /** Is this extension enabled at all? */

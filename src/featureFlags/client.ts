@@ -1,13 +1,13 @@
-import {
-  LDElectronMainClient,
-  LDFlagValue,
-  LDUser,
-  initializeInMain,
-} from "launchdarkly-electron-client-sdk";
-import { env } from "vscode";
+import { LDElectronMainClient, initializeInMain } from "launchdarkly-electron-client-sdk";
 import { Logger } from "../logging";
-import { FEATURE_FLAG_DEFAULTS, FeatureFlags, LD_CLIENT_ID } from "./constants";
-import { handleFlagChanges } from "./handlers";
+import {
+  FEATURE_FLAG_DEFAULTS,
+  FeatureFlags,
+  LD_CLIENT_ID,
+  LD_CLIENT_OPTIONS,
+  LD_CLIENT_USER_INIT,
+} from "./constants";
+import { handleClientReady, handleFlagChanges } from "./handlers";
 
 const logger = new Logger("featureFlags.client");
 
@@ -20,12 +20,6 @@ const logger = new Logger("featureFlags.client");
  */
 let client: LDElectronMainClient | undefined = undefined;
 
-/** Initial user context, only updated during CCloud auth via {@link LDElectronMainClient.identify}. */
-let user: LDUser = {
-  key: `${env.uriScheme}-user`,
-  anonymous: true,
-};
-
 /** Returns the LaunchDarkly client. If it fails to initialize, it will log an error and return
  * undefined and any feature flag lookups will return the local defaults. */
 export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
@@ -37,12 +31,8 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
     return client;
   }
 
-  const options = {
-    streaming: true, // Necessary in order for live flag updating to work
-  };
-
   try {
-    client = initializeInMain(LD_CLIENT_ID, user, options);
+    client = initializeInMain(LD_CLIENT_ID, LD_CLIENT_USER_INIT, LD_CLIENT_OPTIONS);
     setEventListeners(client);
   } catch (e) {
     if (e instanceof Error) {
@@ -58,21 +48,10 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
  * Sets up the event listeners for the LaunchDarkly client.
  * @param client The LaunchDarkly client.
  */
-function setEventListeners(client: LDElectronMainClient): void {
+export function setEventListeners(client: LDElectronMainClient): void {
   // client.on doesn't return a listener, so we have to rely on the extension's deactivate() to
   // handle the client cleanup
-  client.on("ready", () => {
-    logger.debug("client ready event, setting flags...");
-    // set starting values
-    for (const [key, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
-      const actualValue: LDFlagValue = client.variation(key);
-      // logger.debug(
-      //   `client ready event, setting ${key}=${JSON.stringify(actualValue)} (default=${JSON.stringify(defaultValue)})`,
-      // );
-      FeatureFlags[key] = actualValue ?? defaultValue;
-    }
-    logger.debug("client ready, flags set:", JSON.stringify(FeatureFlags));
-  });
+  client.on("ready", () => handleClientReady(client));
 
   client.on("failed", (err) => {
     logger.error("failed event:", err);
