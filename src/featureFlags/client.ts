@@ -1,4 +1,5 @@
 import { LDElectronMainClient, initializeInMain } from "launchdarkly-electron-client-sdk";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import {
   FEATURE_FLAG_DEFAULTS,
@@ -34,10 +35,10 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
   try {
     client = initializeInMain(LD_CLIENT_ID, LD_CLIENT_USER_INIT, LD_CLIENT_OPTIONS);
     setEventListeners(client);
-  } catch (e) {
-    if (e instanceof Error) {
-      logger.error("LaunchDarkly client failed to initialize:", e.message);
-    }
+  } catch (error) {
+    // try to send any client init issues to Sentry, but if the user is offline and the extension
+    // can't reach LD (which probably means Sentry isn't available either), this will just log
+    logError(error, "LD client init", {}, true);
     return;
   }
 
