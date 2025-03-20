@@ -13,8 +13,9 @@ const logger = new Logger("featureFlags.handlers");
  * @param client The LaunchDarkly client.
  */
 export function setEventListeners(client: LDElectronMainClient): void {
-  // client.on doesn't return a listener, so we have to rely on the extension's deactivate() to
-  // handle the client cleanup
+  // NOTE: client.on doesn't return a listener, so we have to rely on the extension's deactivate()
+  // to handle the client cleanup
+
   client.on("ready", () => handleClientReady(client));
 
   client.on("failed", (err) => {
