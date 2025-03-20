@@ -57,7 +57,7 @@ export async function showExtensionDisabledNotification(reason: string) {
   if (reason !== GLOBAL_DISABLED_MESSAGE) {
     buttons["Update Extension"] = () => {
       commands.executeCommand("workbench.extensions.view.show");
-      commands.executeCommand("workbench.extensions.search", EXTENSION_ID);
+      commands.executeCommand("workbench.extensions.search", `@id:${EXTENSION_ID}`);
     };
   }
   showErrorNotificationWithButtons(msg, buttons);
