@@ -6,17 +6,10 @@ import {
 } from "launchdarkly-electron-client-sdk";
 import { env } from "vscode";
 import { Logger } from "../logging";
-import { handleFlagChanges } from "./changes";
-import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
+import { FEATURE_FLAG_DEFAULTS, FeatureFlags, LD_CLIENT_ID } from "./constants";
+import { handleFlagChanges } from "./handlers";
 
 const logger = new Logger("featureFlags.client");
-
-// use the client ID fetched from vault at build time for production releases, otherwise use any
-// local test ID set in .env
-const clientSideId: string | undefined =
-  process.env.NODE_ENV !== "production"
-    ? process.env.TEST_LAUNCHDARKLY_CLIENT_ID
-    : process.env.LAUNCHDARKLY_CLIENT_ID;
 
 /**
  * Singleton LaunchDarkly client.
@@ -36,7 +29,7 @@ let user: LDUser = {
 /** Returns the LaunchDarkly client. If it fails to initialize, it will log an error and return
  * undefined and any feature flag lookups will return the local defaults. */
 export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
-  if (!clientSideId) {
+  if (!LD_CLIENT_ID) {
     logger.error("LaunchDarkly client side ID is not set");
     return;
   }
@@ -49,7 +42,7 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
   };
 
   try {
-    client = initializeInMain(clientSideId, user, options);
+    client = initializeInMain(LD_CLIENT_ID, user, options);
     setEventListeners(client);
   } catch (e) {
     if (e instanceof Error) {
@@ -72,10 +65,13 @@ function setEventListeners(client: LDElectronMainClient): void {
     logger.debug("client ready event, setting flags...");
     // set starting values
     for (const [key, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
-      const actualValue: LDFlagValue = client.variation(key, defaultValue);
-      FeatureFlags[key] = actualValue;
+      const actualValue: LDFlagValue = client.variation(key);
+      // logger.debug(
+      //   `client ready event, setting ${key}=${JSON.stringify(actualValue)} (default=${JSON.stringify(defaultValue)})`,
+      // );
+      FeatureFlags[key] = actualValue ?? defaultValue;
     }
-    logger.debug("client ready, flags set:", FeatureFlags);
+    logger.debug("client ready, flags set:", JSON.stringify(FeatureFlags));
   });
 
   client.on("failed", (err) => {
@@ -95,5 +91,5 @@ export function setFlagDefaults(): void {
   for (const [flag, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
     FeatureFlags[flag] = defaultValue;
   }
-  logger.debug("defaults set:", FeatureFlags);
+  logger.debug("local defaults set:", JSON.stringify(FeatureFlags));
 }

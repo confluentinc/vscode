@@ -1,5 +1,12 @@
 import { LDFlagSet } from "launchdarkly-electron-client-sdk";
 
+/** Client ID to use with the LaunchDarkly SDK. Set during production builds, but can also be
+ * overridden in a local .env file for testing. */
+export const LD_CLIENT_ID: string | undefined =
+  process.env.NODE_ENV !== "production"
+    ? process.env.TEST_LAUNCHDARKLY_CLIENT_ID
+    : process.env.LAUNCHDARKLY_CLIENT_ID;
+
 export enum FeatureFlag {
   /** Is this extension enabled at all? */
   GLOBAL_ENABLED = "ide.global.enabled",
