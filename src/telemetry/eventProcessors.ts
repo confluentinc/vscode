@@ -14,8 +14,7 @@ import { configDotenv } from "dotenv";
 import { Logger } from "../logging";
 
 /**
- * Initialize Sentry for error tracking (and future performance monitoring?).
- * Manually setup Sentry client to avoid polluting global scope.
+ * Initialize Sentry for error tracking. Manually setup Sentry client to avoid polluting global scope.
  * @see https://docs.sentry.io/platforms/javascript/best-practices/shared-environments/#shared-environment-setup
  * @see https://docs.sentry.io/platforms/node/
  */
@@ -59,6 +58,7 @@ export function initSentry() {
   const client = new NodeClient({
     // debug: true, // enable for local "prod" debugging with dev console
     dsn: process.env.SENTRY_DSN,
+    // TODO NC remove - Fake values to test
     initialScope: {
       tags: { "my-tag": "my value" },
       user: { id: 42, email: "john.doe@example.com" },
@@ -78,7 +78,7 @@ export function initSentry() {
     transport: makeNodeTransport,
     stackParser: defaultStackParser,
   });
-  SentryScope.setTag("extension", "vscode-confluent");
+  // SentryScope.setTag("extension", "vscode-confluent");
   SentryScope.setClient(client);
   SentryScope.addEventProcessor(checkTelemetrySettings);
   SentryScope.addEventProcessor(includeObservabilityContext);
