@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Initial LaunchDarkly integration for feature flag support
+
 ### Fixed
 
 - Improved resolving newly created direct connection connectivity state.
