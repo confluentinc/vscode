@@ -11,17 +11,18 @@ export interface EnhancedQuickPickOptions<T extends vscode.QuickPickItem>
   onItemButtonClicked?: (event: {
     button: vscode.QuickInputButton;
     item: T;
+    quickPick: vscode.QuickPick<T>;
   }) => Promise<void> | void;
 
   /**
    * Callback for when selection changes
    */
-  onSelectionChange?: (items: readonly T[]) => void;
+  onSelectionChange?: (items: readonly T[], quickPick: vscode.QuickPick<T>) => void;
 
   /**
    * Callback for when the active item changes
    */
-  onActiveItemChange?: (item: T | undefined) => void;
+  onActiveItemChange?: (item: T | undefined, quickPick: vscode.QuickPick<T>) => void;
 
   /**
    * Additional navigation buttons to show at the top of the QuickPick
@@ -31,12 +32,25 @@ export interface EnhancedQuickPickOptions<T extends vscode.QuickPickItem>
   /**
    * Callback for when a navigation button is triggered
    */
-  onButtonClicked?: (button: vscode.QuickInputButton) => Promise<void> | void;
+  onButtonClicked?: (
+    button: vscode.QuickInputButton,
+    quickPick: vscode.QuickPick<T>,
+  ) => Promise<void> | void;
 
   /**
    * Whether this QuickPick should allow selecting multiple items
    */
   canSelectMany?: boolean;
+
+  /**
+   * Items that should be selected by default
+   */
+  selectedItems?: T[];
+
+  /**
+   * Whether the QuickPick should ignore focus out
+   */
+  ignoreFocusOut?: boolean;
 }
 
 /**
@@ -74,31 +88,39 @@ export async function showEnhancedQuickPick<T extends vscode.QuickPickItem>(
     quickPick.items = items;
   }
 
+  // Set default selected items if provided
+  if (options?.selectedItems && options.selectedItems.length > 0) {
+    quickPick.selectedItems = options.selectedItems;
+  }
+
   // Set up event handlers
   let selectedItems: T[] = [];
 
   if (options?.onSelectionChange) {
     quickPick.onDidChangeSelection((items: readonly T[]) => {
-      options.onSelectionChange?.(items);
+      options.onSelectionChange?.(items, quickPick);
     });
   }
 
   if (options?.onActiveItemChange) {
     quickPick.onDidChangeActive((items: readonly T[]) => {
-      options.onActiveItemChange?.(items[0]);
+      options.onActiveItemChange?.(items[0], quickPick);
     });
   }
 
   if (options?.onItemButtonClicked) {
     quickPick.onDidTriggerItemButton((event) => {
-      // Type assertion is safe because we're using the same generic type T
-      options.onItemButtonClicked?.(event as { button: vscode.QuickInputButton; item: T });
+      options.onItemButtonClicked?.({
+        button: event.button,
+        item: event.item as T,
+        quickPick,
+      });
     });
   }
 
   if (options?.onButtonClicked) {
     quickPick.onDidTriggerButton((button) => {
-      options.onButtonClicked?.(button);
+      options.onButtonClicked?.(button, quickPick);
     });
   }
 
@@ -123,4 +145,83 @@ export async function showEnhancedQuickPick<T extends vscode.QuickPickItem>(
   }
 
   return options?.canSelectMany ? selectedItems : selectedItems[0];
+}
+
+/**
+ * Creates and returns a QuickPick instance with enhanced functionality.
+ * This allows more direct control over the QuickPick compared to showEnhancedQuickPick.
+ *
+ * @param items The items to show in the QuickPick
+ * @param options Enhanced QuickPick options
+ * @returns The configured QuickPick instance
+ */
+export function createEnhancedQuickPick<T extends vscode.QuickPickItem>(
+  items: T[] | Promise<T[]>,
+  options?: EnhancedQuickPickOptions<T>,
+): vscode.QuickPick<T> {
+  const quickPick = vscode.window.createQuickPick<T>();
+
+  // Set standard options
+  if (options) {
+    quickPick.placeholder = options.placeHolder;
+    quickPick.ignoreFocusOut = options.ignoreFocusOut ?? false;
+    quickPick.title = options.title;
+    quickPick.canSelectMany = options.canSelectMany ?? false;
+    quickPick.matchOnDescription = options.matchOnDescription ?? false;
+    quickPick.matchOnDetail = options.matchOnDetail ?? false;
+    quickPick.buttons = options.buttons ?? [];
+  }
+
+  // Set items (handle promise if needed)
+  if (!(items instanceof Promise)) {
+    quickPick.items = items;
+  } else {
+    // Handle promise asynchronously
+    (async () => {
+      quickPick.busy = true;
+      quickPick.items = await items;
+      quickPick.busy = false;
+
+      // Set default selected items if provided (after items are loaded)
+      if (options?.selectedItems && options.selectedItems.length > 0) {
+        quickPick.selectedItems = options.selectedItems;
+      }
+    })();
+  }
+
+  // Set default selected items if provided and items are already available
+  if (!(items instanceof Promise) && options?.selectedItems && options.selectedItems.length > 0) {
+    quickPick.selectedItems = options.selectedItems;
+  }
+
+  // Set up event handlers
+  if (options?.onSelectionChange) {
+    quickPick.onDidChangeSelection((items: readonly T[]) => {
+      options.onSelectionChange?.(items, quickPick);
+    });
+  }
+
+  if (options?.onActiveItemChange) {
+    quickPick.onDidChangeActive((items: readonly T[]) => {
+      options.onActiveItemChange?.(items[0], quickPick);
+    });
+  }
+
+  if (options?.onItemButtonClicked) {
+    quickPick.onDidTriggerItemButton((event) => {
+      options.onItemButtonClicked?.({
+        button: event.button,
+        item: event.item as T,
+        quickPick,
+      });
+    });
+  }
+
+  if (options?.onButtonClicked) {
+    quickPick.onDidTriggerButton((button) => {
+      options.onButtonClicked?.(button, quickPick);
+    });
+  }
+
+  return quickPick;
 }
