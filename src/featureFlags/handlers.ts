@@ -17,7 +17,7 @@ export async function handleFlagChanges(changes: LDFlagChangeset) {
     const previousValue: LDFlagValue = changes[flag].previous;
     const currentValue: LDFlagValue = changes[flag].current;
     FeatureFlags[flag] = currentValue;
-    logger.debug(`"${flag}" changed from '${previousValue}' to '${currentValue}'`);
+    logger.debug(`"${flag}" changed:`, { previousValue, currentValue });
 
     // TODO: fork handling based on different flags
   }
