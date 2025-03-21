@@ -16,6 +16,8 @@ import {
   environmentChanged,
   schemaSearchSet,
   schemaSubjectChanged,
+  SchemaVersionChangeEvent,
+  schemaVersionsChanged,
   SubjectChangeEvent,
 } from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
@@ -253,7 +255,7 @@ describe("SchemasViewProvider search behavior", () => {
   });
 });
 
-describe("schemaSubjectChanged event", () => {
+describe("SchemasViewProvider schemaSubjectChanged event", () => {
   let provider: SchemasViewProvider;
   let sandbox: sinon.SinonSandbox;
   let refreshStub: sinon.SinonSpy<any[], any>;
@@ -329,6 +331,98 @@ describe("schemaSubjectChanged event", () => {
     // Should have called .refresh()
     assert.ok(refreshStub.calledOnce);
   });
+});
+
+describe("SchemasViewProvider schemaVersionsChanged event", () => {
+  let provider: SchemasViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let onDidChangeTreeDataFireStub: sinon.SinonSpy<any[], any>;
+  let subjectsInTreeView: Map<string, Subject>;
+
+  before(async () => {
+    await getTestExtensionContext();
+    provider = SchemasViewProvider.getInstance();
+  });
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+
+    subjectsInTreeView = provider["subjectsInTreeView"];
+    subjectsInTreeView.clear();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Not viewing same schema registry, should not call anything", () => {
+    // set to be viewing no schema registry
+    provider.schemaRegistry = null;
+
+    const event: SchemaVersionChangeEvent = {
+      schema: TEST_CCLOUD_SCHEMA,
+      change: "deleted",
+    };
+    schemaVersionsChanged.fire(event);
+
+    // Should not have called .refresh()
+    assert.ok(onDidChangeTreeDataFireStub.notCalled);
+  });
+
+  for (const changeType of ["added", "deleted"] as ("added" | "deleted")[]) {
+    it(`Viewing same schema registry, when schema ${changeType}, should remove from map + call refresh()`, () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectObject();
+      scratchSubject.schemas = [TEST_CCLOUD_SCHEMA];
+
+      // and this subject is in the map and has loaded schemas
+      subjectsInTreeView.set(scratchSubject.name, scratchSubject);
+
+      const event: SchemaVersionChangeEvent = {
+        schema: TEST_CCLOUD_SCHEMA,
+        change: changeType,
+      };
+      schemaVersionsChanged.fire(event);
+
+      // Should have reset the schemas in the subject in the map
+      // to null
+      assert.strictEqual(subjectsInTreeView.size, 1);
+      const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
+      assert.strictEqual(subjectFromMap, scratchSubject);
+      assert.strictEqual(subjectFromMap.schemas, null);
+
+      // Should have fired with the subject
+      assert.ok(onDidChangeTreeDataFireStub.calledOnce);
+      assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
+    });
+
+    it(`Viewing same schema registry, subject in map but no loaded schemas, when schema ${changeType} then no change`, () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectObject();
+      scratchSubject.schemas = null;
+
+      // and this subject is in the map and has no loaded schemas
+      subjectsInTreeView.set(scratchSubject.name, scratchSubject);
+
+      const event: SchemaVersionChangeEvent = {
+        schema: TEST_CCLOUD_SCHEMA,
+        change: changeType,
+      };
+      schemaVersionsChanged.fire(event);
+
+      // Should not have changed the subject in the map or fired event.
+      assert.strictEqual(subjectsInTreeView.size, 1);
+      const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
+      assert.strictEqual(subjectFromMap, scratchSubject);
+      assert.strictEqual(subjectFromMap.schemas, null);
+
+      // Should not have fired anything
+      assert.ok(onDidChangeTreeDataFireStub.notCalled);
+    });
+  }
 });
 
 describe("SchemasViewProvider environmentChanged handler", () => {

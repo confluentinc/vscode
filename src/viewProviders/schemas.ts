@@ -431,7 +431,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
           // schema or removing the deleted schema from the child treeitems.
           const subject = this.subjectsInTreeView.get(schema.subject);
 
-          if (subject) {
+          if (subject && subject.schemas) {
             // Back to 'unknown subjects inside' state, will force a ResourceLoader lookup.
             subject.schemas = null;
             // Repaint the subject in the tree view.
