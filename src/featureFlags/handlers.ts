@@ -3,32 +3,11 @@ import {
   LDFlagChangeset,
   LDFlagValue,
 } from "launchdarkly-electron-client-sdk";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
 
 const logger = new Logger("featureFlags.handlers");
-
-/**
- * Sets up the event listeners for the LaunchDarkly client.
- * @param client The LaunchDarkly client.
- */
-export function setEventListeners(client: LDElectronMainClient): void {
-  // NOTE: client.on doesn't return a listener, so we have to rely on the extension's deactivate()
-  // to handle the client cleanup
-
-  client.on("ready", () => handleClientReady(client));
-
-  client.on("failed", (err) => {
-    logger.error("failed event:", err);
-  });
-
-  client.on("error", (err) => {
-    logger.error("error event:", err);
-  });
-
-  // this is the main one we care about after the client is ready:
-  client.on("change", handleFlagChanges);
-}
 
 /** Callback function for handling "ready" events from the LD stream, which sets up the initial
  * feature flag values from LaunchDarkly, overriding any default values set during activation. */
@@ -62,5 +41,15 @@ export async function handleFlagChanges(changes: LDFlagChangeset) {
     logger.debug(`"${flag}" changed:`, { previousValue, currentValue });
 
     // TODO: fork handling based on different flags
+  }
+}
+
+/** Callback function for handling "error" events from the LD stream. */
+export function handleErrorEvent(error: unknown) {
+  if (error instanceof Error) {
+    // send any error events to Sentry (if online) so we can troubleshoot
+    logError(error, "LD error event", {}, true);
+  } else {
+    logger.error("LD error event:", error);
   }
 }
