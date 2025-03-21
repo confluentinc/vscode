@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
 import { logError, showErrorNotificationWithButtons } from "../errors";
+import {
+  checkForExtensionDisabledReason,
+  showExtensionDisabledNotification,
+} from "../featureFlags/evaluation";
 import { IResourceBase, isResource } from "../models/resource";
 import { UserEvent, logUsage } from "../telemetry/events";
 
@@ -8,6 +12,14 @@ export function registerCommandWithLogging(
   command: (...args: any[]) => void,
 ): vscode.Disposable {
   const wrappedCommand = async (...args: any[]) => {
+    // if the extension was disabled, we need to prevent any commands from running and show an error
+    // notification to the user
+    const disabledMessage: string | undefined = checkForExtensionDisabledReason();
+    if (disabledMessage) {
+      showExtensionDisabledNotification(disabledMessage);
+      return;
+    }
+
     logUsage(UserEvent.CommandInvoked, {
       command: commandName,
       ...getCommandArgsContext(args),
