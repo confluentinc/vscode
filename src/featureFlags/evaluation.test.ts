@@ -100,7 +100,7 @@ describe("featureFlags/evaluation.ts", function () {
     // globally enabled, no versions disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [];
-    clientVariationStub.withArgs(FeatureFlag.GLOBAL_ENABLED, true).returns(true);
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_ENABLED).returns(true);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
@@ -108,8 +108,10 @@ describe("featureFlags/evaluation.ts", function () {
   });
 
   it("checkForExtensionDisabledReason() should handle non-array GLOBAL_DISABLED_VERSIONS", function () {
+    // globally enabled, weird disabled version format
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
-    FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = "not-an-array" as any;
+    FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = "not-an-array";
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns("not-an-array");
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
@@ -126,10 +128,10 @@ describe("featureFlags/evaluation.ts", function () {
       reason: fakeReason,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
-    assert.ok(reason);
     assert.strictEqual(reason, disabledVersion.reason);
   });
 
@@ -142,10 +144,10 @@ describe("featureFlags/evaluation.ts", function () {
       version: EXTENSION_VERSION,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
-    assert.ok(reason);
     assert.strictEqual(reason, "Unspecified reason");
   });
 
@@ -168,6 +170,7 @@ describe("featureFlags/evaluation.ts", function () {
       reason: fakeReason,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
@@ -184,6 +187,7 @@ describe("featureFlags/evaluation.ts", function () {
       reason: fakeReason,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
@@ -200,6 +204,7 @@ describe("featureFlags/evaluation.ts", function () {
       reason: fakeReason,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
@@ -214,6 +219,7 @@ describe("featureFlags/evaluation.ts", function () {
       baz: 123,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
@@ -226,6 +232,7 @@ describe("featureFlags/evaluation.ts", function () {
     for (const key of Object.keys(FEATURE_FLAG_DEFAULTS)) {
       delete FeatureFlags[key];
     }
+    clientVariationStub.returns(undefined);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
