@@ -448,7 +448,7 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
     );
   });
 
-  it("Deletion route call calls logError(), rethrows", async () => {
+  it("Deletion route call calls logError() on deletion attempt failure, rethrows", async () => {
     const schema = TEST_LOCAL_SCHEMA;
 
     const logErrorStub = sandbox.stub(errors, "logError");
