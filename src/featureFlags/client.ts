@@ -32,7 +32,6 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
   try {
     client = clientInit();
     if (!client) {
-      logger.error("LD client failed to initialize");
       return;
     }
     logger.debug("created LD client, setting up event listeners");
