@@ -18,12 +18,8 @@ const logger = new Logger("featureFlags.enablement");
  * disabled.
  */
 export async function checkForExtensionDisabledReason(): Promise<string | undefined> {
-  // not used for anything here, just to (re)try any client initialization that may not have gone
-  // through during extension activation
-  getLaunchDarklyClient();
-
   // first check if the extension is enabled at all
-  const globalEnabled: boolean | undefined = FeatureFlags[FeatureFlag.GLOBAL_ENABLED];
+  const globalEnabled: boolean | undefined = getFlagValue(FeatureFlag.GLOBAL_ENABLED);
   if (globalEnabled === undefined) {
     return;
   }
@@ -32,8 +28,9 @@ export async function checkForExtensionDisabledReason(): Promise<string | undefi
   }
 
   // then make sure the version of the extension is not disabled
-  const disabledVersions: DisabledVersion[] | undefined =
-    FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS];
+  const disabledVersions: DisabledVersion[] | undefined = getFlagValue(
+    FeatureFlag.GLOBAL_DISABLED_VERSIONS,
+  );
   if (disabledVersions === undefined || !Array.isArray(disabledVersions)) {
     return;
   }

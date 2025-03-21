@@ -66,3 +66,13 @@ export function setFlagDefaults(): void {
   }
   logger.debug("local defaults set:", JSON.stringify(FeatureFlags));
 }
+
+/** Look up a feature flag value. If the client is not initialized, it will return the local default. */
+export function getFlagValue<T>(flag: string): T | undefined {
+  // try to re-initialize if we don't have a client
+  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
+  const defaultValue: T | undefined = FEATURE_FLAG_DEFAULTS[flag];
+  let value: T | undefined = ldClient ? ldClient.variation(flag, defaultValue) : defaultValue;
+  logger.debug(`returning value for "${flag}":`, { value, defaultValue });
+  return value;
+}
