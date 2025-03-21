@@ -17,7 +17,10 @@ import {
   getTestStorageManager,
 } from "../../tests/unit/testUtils";
 import { TopicData } from "../clients/kafkaRest";
+import { SubjectsV1Api } from "../clients/schemaRegistryRest";
+import * as errors from "../errors";
 import { Schema, Subject } from "../models/schema";
+import * as sidecar from "../sidecar";
 import { getResourceManager, ResourceManager } from "../storage/resourceManager";
 import * as loaderUtils from "./loaderUtils";
 import { LocalResourceLoader } from "./localResourceLoader";
@@ -344,5 +347,124 @@ describe("ResourceLoader::getSchemasForSubject() tests", () => {
 
     const schemas = await loaderInstance.getTopicSubjectGroups(TEST_LOCAL_KAFKA_TOPIC);
     assert.deepStrictEqual(schemas, []);
+  });
+});
+
+describe("ResourceLoader::deleteSchemaVersion()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+  let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
+  let clearCacheStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+
+    stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
+
+    const mockHandle = {
+      getSubjectsV1Api: () => {
+        return stubbedSubjectsV1Api;
+      },
+    };
+
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
+
+    getSidecarStub.resolves(mockHandle);
+
+    getSchemaRegistryForEnvironmentIdStub = sandbox
+      .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
+      .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
+    clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  for (const shouldClearSubjects of [true, false]) {
+    it(`soft delete test: shouldClearSubjects=${shouldClearSubjects}`, async () => {
+      const schema = TEST_LOCAL_SCHEMA;
+
+      await loaderInstance.deleteSchemaVersion(
+        schema,
+        false, // soft delete
+        shouldClearSubjects,
+      );
+
+      assert.ok(stubbedSubjectsV1Api.deleteSchemaVersion.calledOnce);
+
+      const expectedRequest = {
+        subject: schema.subject,
+        version: `${schema.version}`,
+        permanent: false,
+      };
+
+      assert.deepEqual(
+        stubbedSubjectsV1Api.deleteSchemaVersion.getCall(0).args[0],
+        expectedRequest,
+      );
+
+      if (shouldClearSubjects) {
+        assert.ok(clearCacheStub.calledOnce);
+        assert.ok(getSchemaRegistryForEnvironmentIdStub.calledOnce);
+        assert.ok(getSchemaRegistryForEnvironmentIdStub.calledWithExactly(schema.environmentId));
+        assert.ok(clearCacheStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY));
+      } else {
+        assert.ok(clearCacheStub.notCalled);
+        assert.ok(getSchemaRegistryForEnvironmentIdStub.notCalled);
+      }
+    });
+  }
+
+  it("hard delete test, should soft delete first, then hard.", async () => {
+    const schema = TEST_LOCAL_SCHEMA;
+
+    // hard delete; not the only schema version for the subject.
+    await loaderInstance.deleteSchemaVersion(schema, true, false);
+
+    assert.equal(stubbedSubjectsV1Api.deleteSchemaVersion.callCount, 2);
+
+    const expectedSoftDeleteRequest = {
+      subject: schema.subject,
+      version: `${schema.version}`,
+      permanent: false,
+    };
+
+    assert.deepEqual(
+      stubbedSubjectsV1Api.deleteSchemaVersion.getCall(0).args[0],
+      expectedSoftDeleteRequest,
+    );
+
+    const expectedHardDeleteRequest = {
+      subject: schema.subject,
+      version: `${schema.version}`,
+      permanent: true,
+    };
+    assert.deepEqual(
+      stubbedSubjectsV1Api.deleteSchemaVersion.getCall(1).args[0],
+      expectedHardDeleteRequest,
+    );
+  });
+
+  it("Deletion route call calls logError() on deletion attempt failure, rethrows", async () => {
+    const schema = TEST_LOCAL_SCHEMA;
+
+    const logErrorStub = sandbox.stub(errors, "logError");
+
+    const thrownError = new Error("Deletion error");
+    stubbedSubjectsV1Api.deleteSchemaVersion.rejects(thrownError);
+
+    await assert.rejects(loaderInstance.deleteSchemaVersion(schema, true, false), (err) => {
+      assert.strictEqual((err as Error).message, "Deletion error");
+      return true;
+    });
+
+    const logErrorArgs = logErrorStub.getCall(0).args;
+    assert.strictEqual(logErrorArgs[0], thrownError);
+    assert.strictEqual(logErrorArgs[1], "Error deleting schema version");
+    // would send to Sentry.
+    assert.strictEqual(logErrorArgs[3], true);
   });
 });

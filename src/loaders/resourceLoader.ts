@@ -1,5 +1,6 @@
 import { Disposable } from "vscode";
 import { TopicData } from "../clients/kafkaRest";
+import { DeleteSchemaVersionRequest } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { logError } from "../errors";
 import { Logger } from "../logging";
@@ -9,6 +10,7 @@ import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
 import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import {
   correlateTopicsWithSchemaSubjects,
@@ -256,6 +258,68 @@ export abstract class ResourceLoader implements IResourceBase {
 
     // 5. Return said array.
     return schemaContainers;
+  }
+
+  /**
+   * Delete a schema version from the schema registry.
+   *
+   * Will take care of clearing any ResourceLoader cache clearing as needed, but
+   * does not fire off any events.
+   *
+   * @param schema The Schema/version to delete.
+   * @param hardDelete Should this be a hard delete?
+   * @param shouldClearSubject Hint as to whether the caller should clear the subject cache,
+   *                  as when it was known that this was the last version of the subject.
+   */
+  public async deleteSchemaVersion(
+    schema: Schema,
+    hardDelete: boolean,
+    shouldClearSubject: boolean,
+  ): Promise<void> {
+    const subjectApi = (await getSidecar()).getSubjectsV1Api(
+      schema.schemaRegistryId,
+      schema.connectionId,
+    );
+
+    try {
+      if (hardDelete) {
+        // Must do a soft delete first, then hard delete.
+        const softDeleteRequest: DeleteSchemaVersionRequest = {
+          subject: schema.subject,
+          version: `${schema.version}`,
+          permanent: false,
+        };
+
+        // first the soft delete
+        await subjectApi.deleteSchemaVersion(softDeleteRequest);
+      }
+
+      // Now can perform either a hard or a soft delete.
+      const deleteRequest: DeleteSchemaVersionRequest = {
+        subject: schema.subject,
+        version: `${schema.version}`,
+        permanent: hardDelete,
+      };
+
+      await subjectApi.deleteSchemaVersion(deleteRequest);
+    } catch (error) {
+      logError(
+        error,
+        "Error deleting schema version",
+        { schema: JSON.stringify(schema, null, 2), hardDelete: hardDelete ? "true" : "false" },
+        true,
+      );
+      throw error;
+    }
+
+    if (shouldClearSubject) {
+      // Clear out the cache for the whole of the schema registry, which
+      // right now is just the subjects.
+      const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(schema.environmentId);
+      if (schemaRegistry) {
+        await this.clearCache(schemaRegistry);
+      }
+    }
   }
 
   /**
