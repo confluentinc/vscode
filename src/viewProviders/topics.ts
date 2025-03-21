@@ -7,6 +7,10 @@ import {
   environmentChanged,
   EnvironmentChangeEvent,
   localKafkaConnected,
+  schemaSubjectChanged,
+  SchemaVersionChangeEvent,
+  schemaVersionsChanged,
+  SubjectChangeEvent,
   topicSearchSet,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
@@ -290,12 +294,64 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       },
     );
 
+    // A schema subject was added or removed.
+    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
+      (event: SubjectChangeEvent) => {
+        // A subject was added or deleted. This may cause a topic's icon to change, and then also
+        // its corresponding key/value schemas shown as children.
+        //
+        // Refresh toplevel view if the subject is in the
+        // same environment as the currently selected Kafka cluster.
+
+        // If the topics view controller actually had its own model cache,
+        // we could do a much more fine-grained update here, but the best we can do
+        // for now is to refresh the whole view.
+        const [subject, change] = [event.subject, event.change];
+
+        if (this.kafkaCluster?.environmentId === subject.environmentId) {
+          logger.debug(
+            `A schema subject ${change} in the environment being viewed, refreshing toplevel`,
+            {
+              subject: subject.name,
+            },
+          );
+
+          // Toplevel repaint.
+          this._onDidChangeTreeData.fire(undefined);
+        }
+      },
+    );
+
+    // A schema version was added or removed.
+    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
+      (event: SchemaVersionChangeEvent) => {
+        // A schema version was added or deleted. For much the same reasons as
+        // for when a subject was added or deleted (schemaSubjectChangedSub),
+        // we need to refresh the toplevel view.
+        const [schema, change] = [event.schema, event.change];
+        if (this.kafkaCluster?.environmentId === schema.environmentId) {
+          logger.debug(
+            `A schema version ${change} in the environment being viewed, refreshing toplevel`,
+            {
+              subject: schema.subject,
+              version: schema.version,
+              action: change,
+            },
+          );
+
+          // Toplevel repaint.
+          this._onDidChangeTreeData.fire(undefined);
+        }
+      },
+    );
+
     return [
       environmentChangedSub,
       ccloudConnectedSub,
       localKafkaConnectedSub,
       currentKafkaClusterChangedSub,
       topicSearchSetSub,
+      schemaSubjectChangedSub,
     ];
   }
 
