@@ -408,7 +408,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
             this.subjectsInTreeView.set(subject.name, subject);
           }
           // Toplevel repaint.
-          this._onDidChangeTreeData.fire(undefined);
+          this.refresh();
         }
       },
     );

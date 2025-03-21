@@ -317,7 +317,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
           );
 
           // Toplevel repaint.
-          this._onDidChangeTreeData.fire(undefined);
+          this.refresh();
         }
       },
     );
@@ -340,7 +340,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
           );
 
           // Toplevel repaint.
-          this._onDidChangeTreeData.fire(undefined);
+          this.refresh();
         }
       },
     );
