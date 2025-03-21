@@ -1,10 +1,12 @@
 import { randomUUID } from "crypto";
-import { Uri, ViewColumn, window } from "vscode";
+import { Disposable, Uri, ViewColumn, window, WebviewPanel } from "vscode";
 import { AuthErrors, ConnectedState, Connection, ConnectionType } from "./clients/sidecar";
 import { getCredentialsType } from "./directConnections/credentials";
 import { SupportedAuthTypes } from "./directConnections/types";
 import { DirectConnectionManager } from "./directConnectManager";
+import { directConnectionsChanged } from "./emitters";
 import { ConnectionId } from "./models/resource";
+import { getResourceManager } from "./storage/resourceManager";
 import { CustomConnectionSpec } from "./storage/resourceManager";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -17,6 +19,22 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 const directConnectWebviewCache = new WebviewPanelCache();
+
+/** Handle connection changes for a form. Returns a disposable event listener.
+ * @internal Exported for testing purposes only */
+export async function handleConnectionChange(
+  connection: CustomConnectionSpec,
+  directConnectForm: WebviewPanel,
+): Promise<boolean> {
+  const connections = await getResourceManager().getDirectConnections();
+  // If the current connection is no longer in the list, close the form
+  if (!connections.has(connection.id)) {
+    window.showInformationMessage(`Connection "${connection.name}" was removed in another window.`);
+    directConnectForm.dispose();
+    return true;
+  }
+  return false;
+}
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
   const connectionUUID = connection?.id || (randomUUID() as ConnectionId);
@@ -40,6 +58,22 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   if (formExists) {
     directConnectForm.reveal();
     return;
+  }
+
+  // Listen to changes in connections and close the form if the connection no longer exists
+  // Only needed for edit/update forms, not for new connections
+  let connectionChangesListener: Disposable | null = null;
+  if (action === "update" && connection?.id) {
+    connectionChangesListener = directConnectionsChanged.event(async () => {
+      await handleConnectionChange(connection, directConnectForm);
+    });
+
+    // Clean up the listener when the form is closed
+    directConnectForm.onDidDispose(() => {
+      if (connectionChangesListener) {
+        connectionChangesListener.dispose();
+      }
+    });
   }
 
   /** Communicates with the webview Form & connection manager
