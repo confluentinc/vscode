@@ -36,12 +36,6 @@ export enum MessageType {
    * Sidecar -> Workspace message.
    */
   PROTOCOL_ERROR = "PROTOCOL_ERROR",
-
-  // Workspace -> Workspaces messges. Sidecar doesn't know these constants, will
-  // just pass them along to all workspaces.
-
-  /** When a single schema version has been deleted by a workspace (possibly this workspace) */
-  // SCHEMA_VERSION_DELETED = "SCHEMA_VERSION_DELETED",
 }
 
 /** Header structure for websocket messages. */
