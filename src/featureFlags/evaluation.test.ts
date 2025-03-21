@@ -139,7 +139,7 @@ describe("featureFlags/evaluation.ts", function () {
     // globally enabled, current version disabled but missing reason
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     const disabledVersion: any = {
-      product: "vscode",
+      product: env.uriScheme,
       extensionId: EXTENSION_ID,
       version: EXTENSION_VERSION,
     };
