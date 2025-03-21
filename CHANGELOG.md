@@ -4,6 +4,11 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- New "Delete Schema Version" context menu action for schemas to drive either soft or hard deletions
+  of single schema versions. If the final schema within a subject is deleted, the subject will no longer exist.
+
 ### Fixed
 
 - Improved resolving newly created direct connection connectivity state.
