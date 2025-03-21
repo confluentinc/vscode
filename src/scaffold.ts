@@ -21,6 +21,7 @@ import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
+import { fileUriExists } from "./utils/file";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
@@ -236,22 +237,13 @@ async function getNonConflictingDirPath(
   let extractZipPath = posix.join(destination.path, `${pickedTemplate.spec!.name}`);
 
   // Add some random alphanumeric to the end of the folder name to avoid conflicts
-  if (await pathExists(extractZipPath)) {
+  if (await fileUriExists(vscode.Uri.file(extractZipPath))) {
     const randomString = Math.random().toString(36).substring(7);
 
     extractZipPath = posix.join(destination.path, `${pickedTemplate.spec?.name}-${randomString}`);
   }
   destination = vscode.Uri.file(extractZipPath);
   return destination;
-}
-
-async function pathExists(path: string) {
-  try {
-    await vscode.workspace.fs.stat(vscode.Uri.file(path));
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function pickTemplate(
