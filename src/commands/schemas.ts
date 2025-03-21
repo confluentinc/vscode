@@ -13,10 +13,7 @@ import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
-import {
-  getDeleteSchemaVersionPrompt,
-  getSchemaDeletionValidatorAndPlaceholder,
-} from "./utils/schemas";
+import { confirmSchemaVersionDeletion, hardDeletionQuickPick } from "./utils/schemas";
 
 const logger = new Logger("commands.schemas");
 
@@ -225,6 +222,12 @@ async function evolveSchemaSubjectCommand(subject: Subject) {
   await evolveSchemaCommand(schema);
 }
 
+/**
+ * Delete a single schema version.
+ *
+ * If was the last version bound to the subject, the subject will disappear also.
+ *
+ */
 async function deleteSchemaVersionCommand(schema: Schema) {
   if (!(schema instanceof Schema)) {
     logger.error("deleteSchemaVersionCommand called with invalid argument type", schema);
@@ -234,10 +237,10 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   const loader = ResourceLoader.getInstance(schema.connectionId);
   const schemaGroup = await loader.getSchemasForSubject(schema.environmentId!, schema.subject);
 
-  // Ensure is still present in the registry and UI wasn't stale.
+  // Ensure is still present in the registry / UI view gestured from wasn't stale.
   const found = schemaGroup.find((s) => s.id === schema.id) !== undefined;
   if (!found) {
-    vscode.window.showErrorMessage(`Schema not found in registry.`);
+    vscode.window.showErrorMessage(`Schema not found in registry. View needs refresh?`);
     logger.error(
       `Schema version ${schema.version} not found in registry, cannot delete.`,
       schemaGroup,
@@ -245,40 +248,18 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     return;
   }
 
-  const isOnlyVersion = schemaGroup.length === 1;
-  // deterimine if hard or soft delete to perform
-  const strenthStr = await vscode.window.showQuickPick(
-    [
-      "Soft Delete -- existing records will remain deserializable",
-      "Hard Delete -- any existing records will NOT be deserializable",
-    ],
-    {
-      title: "Delete Schema Version",
-      placeHolder: "Select the type of delete to perform",
-    },
-  );
-
-  if (!strenthStr) {
-    // show message
+  // Determine if user wants to hard or soft delete.
+  const hardDelete = await hardDeletionQuickPick();
+  if (hardDelete === undefined) {
     vscode.window.showErrorMessage("Schema deletion canceled.");
     logger.info("User canceled schema version deletion.");
     return;
   }
-  const hardDelete = strenthStr.startsWith("Hard");
-  const confirmationTitle = `${hardDelete ? "HARD " : ""}Delete Schema Version ${schema.version}?`;
 
-  const [validator, placeholder] = getSchemaDeletionValidatorAndPlaceholder(
-    schema.version,
-    hardDelete,
-  );
-  const confirmation = await vscode.window.showInputBox({
-    title: confirmationTitle,
-    prompt: await getDeleteSchemaVersionPrompt(hardDelete, schema, schemaGroup),
-    validateInput: validator,
-    placeHolder: placeholder,
-  });
+  // Ask if they are sure they want to delete the schema version.
+  const confirmation = await confirmSchemaVersionDeletion(hardDelete, schema, schemaGroup);
 
-  if (!confirmation || validator(confirmation) !== undefined) {
+  if (!confirmation) {
     vscode.window.showErrorMessage("Schema deletion canceled.");
     logger.info("User canceled schema version deletion.");
     return;
@@ -289,6 +270,8 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   // Drive the delete via the resource loader so will be cache consistent.
   // Resource loader will also emit event to alert views to refresh if needed.
   try {
+    const wasOnlyVersionForSubject = schemaGroup.length === 1;
+
     // Delete the schema version. Will take care of clearing any internal
     // caches.
     await vscode.window.withProgress(
@@ -297,18 +280,18 @@ async function deleteSchemaVersionCommand(schema: Schema) {
         title: `Deleting schema ...`,
       },
       async () => {
-        await loader.deleteSchemaVersion(schema, hardDelete, isOnlyVersion);
+        await loader.deleteSchemaVersion(schema, hardDelete, wasOnlyVersionForSubject);
       },
     );
 
     let successMessage = `Version ${schema.version} of subject ${schema.subject} deleted.`;
-    if (isOnlyVersion) {
+    if (wasOnlyVersionForSubject) {
       successMessage += ` Subject ${schema.subject} deleted.`;
     }
     vscode.window.showInformationMessage(successMessage);
 
     // Fire off event to update views if needed.
-    if (isOnlyVersion) {
+    if (wasOnlyVersionForSubject) {
       schemaSubjectChanged.fire({ subject: schema.subjectObject(), change: "deleted" });
     } else {
       schemaVersionsChanged.fire({ schema: schema, change: "deleted" });

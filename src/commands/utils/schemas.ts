@@ -77,3 +77,62 @@ export function getSchemaDeletionValidatorAndPlaceholder(
 
   return [validator, prompt];
 }
+
+/**
+ * Ask user if they wany hard or soft delete behavior.
+ *
+ * @returns {Promise<boolean>} - true if hard delete, false if soft delete; undefined if cancelled.
+ */
+export async function hardDeletionQuickPick(): Promise<boolean | undefined> {
+  const strenthStr = await vscode.window.showQuickPick(
+    [
+      "Soft Delete -- existing records will remain deserializable",
+      "Hard Delete -- any existing records will NOT be deserializable",
+    ],
+    {
+      title: "Delete Schema Version",
+      placeHolder: "Select the type of delete to perform",
+    },
+  );
+
+  if (!strenthStr) {
+    return undefined;
+  }
+
+  return strenthStr.startsWith("Hard");
+}
+
+/**
+ * Ask the user if they're really sure they want to hard/soft delete this schema version
+ *
+ * @returns {Promise<true | undefined>} - true if the user confirmed, undefined if they cancelled
+ * */
+export async function confirmSchemaVersionDeletion(
+  hardDeletion: boolean,
+  schema: Schema,
+  schemaGroup: Schema[],
+): Promise<true | undefined> {
+  const [validator, placeholder] = getSchemaDeletionValidatorAndPlaceholder(
+    schema.version,
+    hardDeletion,
+  );
+
+  const confirmationTitle = `${hardDeletion ? "HARD " : ""}Delete Schema Version ${schema.version}?`;
+
+  const confirmation = await vscode.window.showInputBox({
+    title: confirmationTitle,
+    prompt: await getDeleteSchemaVersionPrompt(hardDeletion, schema, schemaGroup),
+    validateInput: validator,
+    placeHolder: placeholder,
+  });
+
+  if (!confirmation) {
+    // User cancelled the input box, cascade the cancellation.
+    return undefined;
+  }
+
+  // The only other way for showInputBox to return is if the user
+  // enters the correct confirmation string, which we already validated.
+
+  return true;
+}

@@ -407,6 +407,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
             // Otherwise, add it to the map.
             this.subjectsInTreeView.set(subject.name, subject);
           }
+          // Toplevel repaint.
           this._onDidChangeTreeData.fire(undefined);
         }
       },
@@ -426,7 +427,8 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
 
           // find the subject in the tree view and refresh just that subtree
           // Blow away the schemas in the cached subject, so that they will be
-          // refetched when the subject is expanded.
+          // refetched when the subject is expanded, then either showing an added
+          // schema or removing the deleted schema from the child treeitems.
           const subject = this.subjectsInTreeView.get(schema.subject);
 
           if (subject) {
