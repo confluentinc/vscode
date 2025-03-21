@@ -81,6 +81,7 @@ export function build(done) {
     process.env.SENTRY_ENV = "production";
     setupSegment();
     setupSentry();
+    setupLaunchDarkly();
   }
 
   /** @type {import("rollup").RollupOptions} */
@@ -106,6 +107,7 @@ export function build(done) {
         "process.env.SENTRY_RELEASE": JSON.stringify(process.env.SENTRY_RELEASE),
         "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN),
         "process.env.SENTRY_ENV": JSON.stringify(process.env.SENTRY_ENV),
+        "process.env.LAUNCHDARKLY_CLIENT_ID": JSON.stringify(process.env.LAUNCHDARKLY_CLIENT_ID),
         preventAssignment: true,
       }),
       copy({
@@ -136,7 +138,7 @@ export function build(done) {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode"],
+    external: ["vscode", "electron"],
     context: "globalThis",
   };
   /** @type {import("rollup").OutputOptions} */
@@ -331,6 +333,25 @@ function setupSegment() {
     else console.error(segmentKey.stderr.toString());
   } else {
     process.env.SEGMENT_WRITE_KEY = segmentKey.stdout.toString().trim();
+  }
+}
+
+/** Get the LaunchDarkly client ID from Vault to save as an env variable for reference in LD client setup */
+function setupLaunchDarkly() {
+  console.log("Fetching LaunchDarkly client ID from Vault...");
+  const ldClientId = spawnSync(
+    "vault",
+    ["kv", "get", "-field", "LD_CLIENT_ID", "v1/ci/kv/vscodeextension/featureFlags"],
+    { stdio: "pipe", shell: IS_WINDOWS },
+  );
+  if (ldClientId.error != null) {
+    if (IS_CI) throw ldClientId.error;
+    else console.error(ldClientId.error);
+  } else if (ldClientId.status !== 0) {
+    if (IS_CI) throw new Error(`Failed to fetch LD_CLIENT_ID from Vault: ${ldClientId.stderr}`);
+    else console.error(ldClientId.stderr.toString());
+  } else {
+    process.env.LAUNCHDARKLY_CLIENT_ID = ldClientId.stdout.toString().trim();
   }
 }
 
@@ -593,7 +614,18 @@ export async function testBuild() {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode", "assert", "winston", "mocha", "@playwright/test", "dotenv", "glob"],
+    external: [
+      "vscode",
+      "assert",
+      "winston",
+      "mocha",
+      "@playwright/test",
+      "dotenv",
+      "glob",
+      "electron",
+      "launchdarkly-electron-client-sdk",
+      "launchdarkly-js-sdk-common",
+    ],
   };
   /** @type {import("rollup").OutputOptions} */
   const testOutput = {
