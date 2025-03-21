@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- New "Delete Schema Version" context menu action for schemas to drive either soft or hard deletions.
+
 ### Fixed
 
 - Improved resolving newly created direct connection connectivity state.
