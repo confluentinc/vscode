@@ -448,6 +448,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       currentSchemaRegistryChangedSub,
       schemaSearchSetSub,
       schemaSubjectChangedSub,
+      schemaVersionsChangedSub,
     ];
   }
 

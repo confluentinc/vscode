@@ -352,6 +352,7 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       currentKafkaClusterChangedSub,
       topicSearchSetSub,
       schemaSubjectChangedSub,
+      schemaVersionsChangedSub,
     ];
   }
 

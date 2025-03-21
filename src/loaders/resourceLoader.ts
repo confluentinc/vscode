@@ -260,6 +260,17 @@ export abstract class ResourceLoader implements IResourceBase {
     return schemaContainers;
   }
 
+  /**
+   * Delete a schema version from the schema registry.
+   *
+   * Will take care of clearing any ResourceLoader cache clearing as needed, but
+   * does not fire off any events.
+   *
+   * @param schema The Schema/version to delete.
+   * @param hardDelete Should this be a hard delete?
+   * @param shouldClearSubject Hint as to whether the caller should clear the subject cache,
+   *                  as when it was known that this was the last version of the subject.
+   */
   public async deleteSchemaVersion(
     schema: Schema,
     hardDelete: boolean,
