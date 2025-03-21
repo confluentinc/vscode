@@ -70,6 +70,15 @@ import { registerLocalResourceWorkflows } from "./docker/workflows/workflowIniti
 import { MessageDocumentProvider } from "./documentProviders/message";
 import { SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
+import {
+  disposeLaunchDarklyClient,
+  getLaunchDarklyClient,
+  resetFlagDefaults,
+} from "./featureFlags/client";
+import {
+  checkForExtensionDisabledReason,
+  showExtensionDisabledNotification,
+} from "./featureFlags/evaluation";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { createConfigChangeListener } from "./preferences/listener";
@@ -148,6 +157,9 @@ async function _activateExtension(
   if (process.env.LOGGING_MODE === "development") {
     vscode.commands.executeCommand("confluent.showOutputChannel");
   }
+
+  // set up initial feature flags and the LD client
+  await setupFeatureFlags();
 
   // configure the StorageManager for extension access to secrets and global/workspace states, and
   // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
@@ -328,6 +340,39 @@ async function setupPreferences(): Promise<vscode.Disposable> {
   return createConfigChangeListener();
 }
 
+/**
+ * Set up the feature flags for the extension. This includes setting the defaults, initializing the
+ * LaunchDarkly client, and checking if the extension is enabled or disabled.
+ */
+async function setupFeatureFlags(): Promise<void> {
+  // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
+  // the local defaults from `setFlagDefaults()`
+  resetFlagDefaults();
+
+  const client = getLaunchDarklyClient();
+  if (client) {
+    // wait a few seconds for the LD client to initialize for the first time, because if we
+    // continue to use the client before it's ready, it will return the default values for all flags
+    const initialized = await Promise.race([
+      client
+        .waitForInitialization()
+        .then(() => true)
+        .catch((error) => {
+          logger.error("Feature flag client failed to initialize:", error);
+          return false;
+        }),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+    ]);
+    logger.info(`Feature flag client initialization ${initialized ? "completed" : "failed"}`);
+  }
+
+  const disabledMessage: string | undefined = checkForExtensionDisabledReason();
+  if (disabledMessage) {
+    showExtensionDisabledNotification(disabledMessage);
+    throw new Error(disabledMessage);
+  }
+}
+
 /** Initialize the StorageManager singleton instance and handle any necessary migrations. */
 async function setupStorage(): Promise<void> {
   const manager = StorageManager.getInstance();
@@ -368,12 +413,16 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
   // attempt to get a session to trigger the initial auth badge for signing in
   const cloudSession = await getCCloudAuthSession();
 
-  // Send an Identify event to Segment with the session info if available
+  // Send an Identify event to Segment and LaunchDarkly with the session info if available
   if (cloudSession) {
     sendTelemetryIdentifyEvent({
       eventName: UserEvent.ExtensionActivation,
       userInfo: undefined,
       session: cloudSession,
+    });
+    getLaunchDarklyClient()?.identify({
+      key: cloudSession.account.id,
+      email: cloudSession.account.label,
     });
   }
 
@@ -410,6 +459,8 @@ export function deactivate() {
   if (logStream) {
     logStream.end();
   }
+
+  disposeLaunchDarklyClient();
 
   logger.info("Extension deactivated");
 }
