@@ -12,40 +12,26 @@ describe("featureFlags/handlers", function () {
   let sandbox: sinon.SinonSandbox;
 
   let stubbedLDClient: sinon.SinonStubbedInstance<LDElectronMainClient>;
-  let clientOnStub: sinon.SinonStub;
   let clientVariationStub: sinon.SinonStub;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
 
-    // stub the LD client and methods we care about for this module
-    clientOnStub = sandbox.stub();
+    // stub the LD client and methods we care about for this module, but not clientInit or anything
+    // else since we don't care about initialization / lifecycles here
     clientVariationStub = sandbox.stub();
     stubbedLDClient = {
-      on: clientOnStub,
       variation: clientVariationStub,
     } as unknown as sinon.SinonStubbedInstance<LDElectronMainClient>;
 
     // reset feature flags before each test
-    clientModule.setFlagDefaults();
+    clientModule.resetFlagDefaults();
   });
 
   afterEach(function () {
     // reset feature flags after each test
-    clientModule.setFlagDefaults();
+    clientModule.resetFlagDefaults();
     sandbox.restore();
-  });
-
-  it("setEventListeners() should register all required event handlers", function () {
-    handlers.setEventListeners(stubbedLDClient);
-
-    sinon.assert.callCount(clientOnStub, 4); // ready, failed, error, change
-    // unfortunately we can't assert that `handleClientReady` since it's using an arrow function, but
-    // the other tests should cover it
-    sinon.assert.calledWith(clientOnStub, "ready", sinon.match.func);
-    sinon.assert.calledWith(clientOnStub, "failed", sinon.match.func);
-    sinon.assert.calledWith(clientOnStub, "error", sinon.match.func);
-    sinon.assert.calledWith(clientOnStub, "change", handlers.handleFlagChanges);
   });
 
   it("handleClientReady() should update FeatureFlags with values from client.variation", async function () {
