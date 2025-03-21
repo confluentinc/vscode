@@ -73,12 +73,12 @@ import { logError } from "./errors";
 import {
   disposeLaunchDarklyClient,
   getLaunchDarklyClient,
-  setFlagDefaults,
+  resetFlagDefaults,
 } from "./featureFlags/client";
 import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
-} from "./featureFlags/enablement";
+} from "./featureFlags/evaluation";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { createConfigChangeListener } from "./preferences/listener";
@@ -347,7 +347,7 @@ async function setupPreferences(): Promise<vscode.Disposable> {
 async function setupFeatureFlags(): Promise<void> {
   // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
   // the local defaults from `setFlagDefaults()`
-  setFlagDefaults();
+  resetFlagDefaults();
 
   const client = getLaunchDarklyClient();
   if (client) {
@@ -366,7 +366,7 @@ async function setupFeatureFlags(): Promise<void> {
     logger.info(`Feature flag client initialization ${initialized ? "completed" : "failed"}`);
   }
 
-  const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
+  const disabledMessage: string | undefined = checkForExtensionDisabledReason();
   if (disabledMessage) {
     showExtensionDisabledNotification(disabledMessage);
     throw new Error(disabledMessage);

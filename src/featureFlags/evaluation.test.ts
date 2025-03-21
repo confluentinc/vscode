@@ -1,25 +1,36 @@
 import * as assert from "assert";
+import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
 import * as sinon from "sinon";
 import { commands, env, window } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import * as clientModule from "./client";
+import * as constants from "./constants";
 import {
   FEATURE_FLAG_DEFAULTS,
   FeatureFlag,
   FeatureFlags,
   GLOBAL_DISABLED_MESSAGE,
 } from "./constants";
-import * as enablement from "./enablement";
+import {
+  checkForExtensionDisabledReason,
+  getFlagValue,
+  showExtensionDisabledNotification,
+} from "./evaluation";
+import * as init from "./init";
 import { DisabledVersion } from "./types";
 
+const fakeFlag = "test.flag";
 const fakeReason = "TEST TEST TEST This version isn't enabled. TEST TEST TEST";
 
-describe("featureFlags/enablement.ts", function () {
+describe("featureFlags/evaluation.ts", function () {
   let sandbox: sinon.SinonSandbox;
 
-  let getLaunchDarklyClientStub: sinon.SinonStub;
   let showErrorMessageStub: sinon.SinonStub;
   let executeCommandStub: sinon.SinonStub;
+
+  let stubbedLDClient: sinon.SinonStubbedInstance<LDElectronMainClient>;
+  let clientVariationStub: sinon.SinonStub;
+  let getLaunchDarklyClientStub: sinon.SinonStub;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
@@ -28,46 +39,84 @@ describe("featureFlags/enablement.ts", function () {
     executeCommandStub = sandbox.stub(commands, "executeCommand");
     showErrorMessageStub = sandbox.stub(window, "showErrorMessage").resolves();
 
-    // stub the call to get the client; we don't care about the return value for these tests
-    getLaunchDarklyClientStub = sandbox.stub(clientModule, "getLaunchDarklyClient");
+    // stub LD_CLIENT_ID instead of process.env
+    sandbox.stub(constants, "LD_CLIENT_ID").value(constants.LD_CLIENT_ID);
+    clientVariationStub = sandbox.stub();
+    stubbedLDClient = {
+      on: sandbox.stub(),
+      off: sandbox.stub(),
+      close: sandbox.stub(),
+      variation: clientVariationStub,
+    } as unknown as sinon.SinonStubbedInstance<LDElectronMainClient>;
+    // stub the init function to return a fake client because we can't stub the SDK's
+    // initializeInMain function directly
+    sandbox.stub(init, "clientInit").returns(stubbedLDClient);
+    getLaunchDarklyClientStub = sandbox
+      .stub(clientModule, "getLaunchDarklyClient")
+      .returns(stubbedLDClient);
 
-    // reset feature flags before each test
-    clientModule.setFlagDefaults();
+    // reset feature flags and client before each test
+    clientModule.resetFlagDefaults();
+    clientModule.disposeLaunchDarklyClient();
   });
 
   afterEach(function () {
-    // reset feature flags after each test
-    clientModule.setFlagDefaults();
-
+    // reset feature flags and client after each test
+    clientModule.resetFlagDefaults();
+    clientModule.disposeLaunchDarklyClient();
     sandbox.restore();
   });
 
-  it("checkForExtensionDisabledReason() should call getLaunchDarklyClient() to (re)try client initialization", async function () {
-    await enablement.checkForExtensionDisabledReason();
+  it("getFlagValue() should return client variation value when available", function () {
+    clientVariationStub.withArgs(fakeFlag).returns("test-value");
 
-    sinon.assert.calledOnce(getLaunchDarklyClientStub);
+    const value = getFlagValue(fakeFlag);
+
+    assert.strictEqual(value, "test-value");
   });
 
-  it(`checkForExtensionDisabledReason() should return the GLOBAL_DISABLED_MESSAGE when ${FeatureFlag.GLOBAL_ENABLED}=false`, async function () {
+  for (const missingValue of [undefined, null]) {
+    it(`getFlagValue() should return ${missingValue} when client returns ${missingValue}`, function () {
+      FeatureFlags[fakeFlag] = "backup-value";
+      clientVariationStub.withArgs(fakeFlag).returns(missingValue);
+
+      const value = getFlagValue(fakeFlag);
+
+      assert.strictEqual(value, "backup-value");
+    });
+  }
+
+  it(`checkForExtensionDisabledReason() should return the GLOBAL_DISABLED_MESSAGE when ${FeatureFlag.GLOBAL_ENABLED}=false`, function () {
     // globally disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = false;
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_ENABLED).returns(false);
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, GLOBAL_DISABLED_MESSAGE);
   });
 
-  it(`checkForExtensionDisabledReason() should return undefined when ${FeatureFlag.GLOBAL_ENABLED}=true`, async function () {
+  it(`checkForExtensionDisabledReason() should return undefined when ${FeatureFlag.GLOBAL_ENABLED}=true`, function () {
     // globally enabled, no versions disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_ENABLED, true).returns(true);
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, undefined);
   });
 
-  it("checkForExtensionDisabledReason() should return a reason when a matching version is disabled", async function () {
+  it("checkForExtensionDisabledReason() should handle non-array GLOBAL_DISABLED_VERSIONS", function () {
+    FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
+    FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = "not-an-array" as any;
+
+    const reason: string | undefined = checkForExtensionDisabledReason();
+
+    assert.strictEqual(reason, undefined);
+  });
+
+  it("checkForExtensionDisabledReason() should return a reason when a matching version is disabled", function () {
     // globally enabled, current version disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     const disabledVersion: DisabledVersion = {
@@ -78,13 +127,13 @@ describe("featureFlags/enablement.ts", function () {
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.ok(reason);
     assert.strictEqual(reason, disabledVersion.reason);
   });
 
-  it("checkForExtensionDisabledReason() should return 'Unspecified reason' when disabled version has no reason", async function () {
+  it("checkForExtensionDisabledReason() should return 'Unspecified reason' when disabled version has no reason", function () {
     // globally enabled, current version disabled but missing reason
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     const disabledVersion: any = {
@@ -94,22 +143,22 @@ describe("featureFlags/enablement.ts", function () {
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.ok(reason);
     assert.strictEqual(reason, "Unspecified reason");
   });
 
-  it("checkForExtensionDisabledReason() should not wait for initialization when client is undefined", async function () {
+  it("checkForExtensionDisabledReason() should not wait for initialization when client is undefined", function () {
     getLaunchDarklyClientStub.returns(undefined);
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     // should still use default values from FeatureFlags
     assert.strictEqual(reason, undefined);
   });
 
-  it("checkForExtensionDisabledReason() should ignore disabled versions with different product", async function () {
+  it("checkForExtensionDisabledReason() should ignore disabled versions with different product", function () {
     // globally enabled, some other product disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     const disabledVersion: DisabledVersion = {
@@ -120,12 +169,12 @@ describe("featureFlags/enablement.ts", function () {
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, undefined);
   });
 
-  it("checkForExtensionDisabledReason() should ignore disabled versions with different extension ID", async function () {
+  it("checkForExtensionDisabledReason() should ignore disabled versions with different extension ID", function () {
     // globally enabled, some other extension ID disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     const disabledVersion: DisabledVersion = {
@@ -136,12 +185,12 @@ describe("featureFlags/enablement.ts", function () {
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, undefined);
   });
 
-  it("checkForExtensionDisabledReason() should ignore disabled versions with different version", async function () {
+  it("checkForExtensionDisabledReason() should ignore disabled versions with different version", function () {
     // globally enabled, some other version disabled
     FeatureFlags[FeatureFlag.GLOBAL_ENABLED] = true;
     const disabledVersion: DisabledVersion = {
@@ -152,7 +201,7 @@ describe("featureFlags/enablement.ts", function () {
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, undefined);
   });
@@ -166,25 +215,25 @@ describe("featureFlags/enablement.ts", function () {
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, undefined);
   });
 
-  it("checkForExtensionDisabledReason() should handle unset feature flags", async function () {
+  it("checkForExtensionDisabledReason() should handle unset feature flags", function () {
     // delete all "current" feature flags to simulate hitting the check before even the local
     // defaults are set
     for (const key of Object.keys(FEATURE_FLAG_DEFAULTS)) {
       delete FeatureFlags[key];
     }
 
-    const reason: string | undefined = await enablement.checkForExtensionDisabledReason();
+    const reason: string | undefined = checkForExtensionDisabledReason();
 
     assert.strictEqual(reason, undefined);
   });
 
   it("showExtensionDisabledNotification() should show an error notification for a provided reason", async function () {
-    await enablement.showExtensionDisabledNotification(fakeReason);
+    await showExtensionDisabledNotification(fakeReason);
 
     sinon.assert.calledOnce(showErrorMessageStub);
     sinon.assert.calledWithMatch(
@@ -198,7 +247,7 @@ describe("featureFlags/enablement.ts", function () {
     // simulate the user clicking the "Update Extension" button
     showErrorMessageStub.resolves("Update Extension");
 
-    await enablement.showExtensionDisabledNotification(fakeReason);
+    await showExtensionDisabledNotification(fakeReason);
 
     sinon.assert.calledOnce(showErrorMessageStub);
     sinon.assert.calledWith(executeCommandStub, "workbench.extensions.view.show");
@@ -210,7 +259,7 @@ describe("featureFlags/enablement.ts", function () {
   });
 
   it("showExtensionDisabledNotification() should not show update button for global disable", async function () {
-    await enablement.showExtensionDisabledNotification(GLOBAL_DISABLED_MESSAGE);
+    await showExtensionDisabledNotification(GLOBAL_DISABLED_MESSAGE);
 
     sinon.assert.calledOnceWithExactly(
       showErrorMessageStub,
@@ -219,7 +268,7 @@ describe("featureFlags/enablement.ts", function () {
   });
 
   it("showExtensionDisabledNotification() should show generic message when no reason is provided", async function () {
-    await enablement.showExtensionDisabledNotification("");
+    await showExtensionDisabledNotification("");
 
     sinon.assert.calledOnce(showErrorMessageStub);
     sinon.assert.calledWithMatch(

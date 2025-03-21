@@ -1,3 +1,4 @@
+import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
 import { commands, env } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import { showErrorNotificationWithButtons } from "../errors";
@@ -6,7 +7,21 @@ import { getLaunchDarklyClient } from "./client";
 import { FeatureFlag, FeatureFlags, GLOBAL_DISABLED_MESSAGE } from "./constants";
 import { DisabledVersion } from "./types";
 
-const logger = new Logger("featureFlags.enablement");
+const logger = new Logger("featureFlags.evaluation");
+
+/**
+ * Get the current value for a feature flag.
+ *
+ * If the client is not able to communicate with LaunchDarkly, it will return the last value applied
+ * to {@link FeatureFlags} (which may be the default from {@link FEATURE_FLAG_DEFAULTS} if offline).
+ */
+export function getFlagValue<T>(flag: string): T | undefined {
+  // try to re-initialize if we don't have a client
+  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
+  const backupValue: T | undefined = FeatureFlags[flag];
+  let value: T | undefined = ldClient?.variation(flag) ?? backupValue;
+  return value;
+}
 
 /**
  * Checks if this extension is disabled globally or if this version of the extension is disabled.
@@ -17,7 +32,7 @@ const logger = new Logger("featureFlags.enablement");
  * block the command from being run and show an error notification to the user if the extension is
  * disabled.
  */
-export async function checkForExtensionDisabledReason(): Promise<string | undefined> {
+export function checkForExtensionDisabledReason(): string | undefined {
   // first check if the extension is enabled at all
   const globalEnabled: boolean | undefined = getFlagValue(FeatureFlag.GLOBAL_ENABLED);
   if (globalEnabled === undefined) {
