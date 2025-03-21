@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import "mocha";
+import * as sinon from "sinon";
 import { IntervalPoller, pauseWithJitter } from "./timing";
 
 /** mocha tests over function pauseWithJitter */
@@ -28,6 +29,16 @@ describe("pauseWithJitter", () => {
 /** mocha tests over class IntervalPoller */
 
 describe("IntervalPoller", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
   it("should start and stop", () => {
     const poller = new IntervalPoller("test", () => {});
     assert.strictEqual(poller.isRunning(), false);
@@ -57,47 +68,33 @@ describe("IntervalPoller", () => {
   });
 
   it("should work changing frequencies", async () => {
-    let callCount = 0;
-    const func = () => {
-      callCount += 1;
-    };
-    const poller = new IntervalPoller("test", func, 10, 1);
+    const clock = sandbox.useFakeTimers(Date.now());
+    const func = sandbox.stub();
+
+    const poller = new IntervalPoller("test", func, 10, 5);
     poller.start();
-    await sleep(20);
+    // 1ms past two slow-frequency intervals
+    await clock.tickAsync(21);
     poller.stop();
 
-    // should have been called either 1x or 2x, given
-    // the 20ms sleep and the 10ms frequency.
-    assert.strictEqual(
-      callCount >= 1 && callCount <= 2,
-      true,
-      `First slow frequency period calls: ${callCount}`,
-    );
+    sinon.assert.callCount(func, 2);
 
-    // Reset, switch to 1ms fast frequency, and check that it's called more often
-    callCount = 0;
-    // will reschedule with 1ms frequency and implicit start.
+    // reset and switch to fast-frequency polling
+    func.resetHistory();
     poller.useFastFrequency();
-    await sleep(20);
+    // 1ms past four fast-frequency intervals
+    await clock.tickAsync(21);
     poller.stop();
-    // Wide window here 'cause on timing in CI is not very precise. But
-    // if left in slow mode, will have been called 1-2 times.
-    assert.strictEqual(
-      callCount >= 5 && callCount <= 35,
-      true,
-      `Fast frequency period calls: ${callCount}`,
-    );
 
-    // and back to slow frequency again.
-    callCount = 0;
+    sinon.assert.callCount(func, 4);
+
+    // reset and switch back to slow-frequency polling again
+    func.resetHistory();
     poller.useSlowFrequency();
-    await sleep(20);
+    // 1ms past five slow-frequency intervals
+    await clock.tickAsync(51);
     poller.stop();
-    assert.strictEqual(
-      callCount >= 1 && callCount <= 2,
-      true,
-      `Second slow frequency period calls: ${callCount}`,
-    );
+    sinon.assert.callCount(func, 5);
   });
 
   it("should throw on invalid frequencies", () => {

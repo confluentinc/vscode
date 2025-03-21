@@ -1,24 +1,30 @@
 import { writeFile } from "fs/promises";
 import { globSync } from "glob";
 import Mocha from "mocha";
-import { resolve } from "path";
+import { join, resolve } from "path";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
 import { Logger } from "./logging";
 
 const logger = new Logger("testing");
 
 export async function run() {
+  // Unix cwd is ___/vscode, but on Windows it's ___/vscode/.vscode-test/<archive>/
+  // so we're going off of __dirname which is ___/vscode/out/src for both
+  const projectRoot = resolve(__dirname, "../..");
+  const resultFilePath = join(projectRoot, "TEST-result.xml");
+  console.log(`Writing test results to "${resultFilePath}"`);
+
   const version = process.env.VSCODE_VERSION ?? "stable";
   const mocha = new Mocha({
     color: true,
     ui: "bdd",
-    timeout: 10_000,
+    timeout: process.env.CI !== null ? 30_000 : 10_000,
     reporter: "mocha-multi-reporters",
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
       mochaJunitReporterReporterOptions: {
-        testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha`,
-        mochaFile: "TEST-result.xml",
+        testsuitesTitle: `VS Code (${version}) Extension Tests: Mocha (${process.platform} ${process.arch})`,
+        mochaFile: resultFilePath,
       },
     },
   });

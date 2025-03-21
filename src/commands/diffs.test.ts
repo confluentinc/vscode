@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { homedir } from "os";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { TEST_LOCAL_SCHEMA } from "../../tests/unit/testResources";
@@ -69,22 +70,16 @@ describe("commands/diffs.ts", () => {
     const uri2 = new SchemaDocumentProvider().resourceToUri(schema2, schema2.fileName());
     await diffs.compareWithSelectedCommand(schema2);
 
-    assert.ok(executeCommandStub.calledOnce);
-    sinon.assert.calledWith(
-      executeCommandStub,
-      "vscode.diff",
-      // fsPath will show up as `null`, so just compare the scheme, path, and query
-      sinon.match((value) => {
-        return (
-          value.scheme === uri1.scheme && value.path === uri1.path && value.query === uri1.query
-        );
-      }),
-      sinon.match((value) => {
-        return (
-          value.scheme === uri2.scheme && value.path === uri2.path && value.query === uri2.query
-        );
-      }),
-      sinon.match.string, // for the title argument
+    sinon.assert.calledOnce(executeCommandStub);
+    const callArgs = executeCommandStub.getCall(0).args;
+    assert.strictEqual(callArgs.length, 4); // command, uri1, uri2, title
+    const [argCommand, argUri1, argUri2, argTitle] = callArgs;
+    assert.strictEqual(argCommand, "vscode.diff");
+    assert.strictEqual(argUri1.toString(), uri1.toString());
+    assert.strictEqual(argUri2.toString(), uri2.toString());
+    assert.strictEqual(
+      argTitle,
+      `${uri1.fsPath.replace(homedir(), "~")} ↔ ${uri2.fsPath.replace(homedir(), "~")}`,
     );
   });
 
