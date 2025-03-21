@@ -160,7 +160,6 @@ async function _activateExtension(
 
   // set up initial feature flags and the LD client
   await setupFeatureFlags();
-  logger.info("Feature flags initialized");
 
   // configure the StorageManager for extension access to secrets and global/workspace states, and
   // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
@@ -349,6 +348,24 @@ async function setupFeatureFlags(): Promise<void> {
   // if the client initializes properly, it will set the initial flag values. otherwise, we'll use
   // the local defaults from `setFlagDefaults()`
   setFlagDefaults();
+
+  const client = getLaunchDarklyClient();
+  if (client) {
+    // wait a few seconds for the LD client to initialize for the first time, because if we
+    // continue to use the client before it's ready, it will return the default values for all flags
+    const initialized = await Promise.race([
+      client
+        .waitForInitialization()
+        .then(() => true)
+        .catch((error) => {
+          logger.error("Feature flag client failed to initialize:", error);
+          return false;
+        }),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+    ]);
+    logger.info(`Feature flag client initialization ${initialized ? "completed" : "failed"}`);
+  }
+
   const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
   if (disabledMessage) {
     showExtensionDisabledNotification(disabledMessage);
