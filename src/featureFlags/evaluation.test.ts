@@ -128,6 +128,7 @@ describe("featureFlags/evaluation.ts", function () {
       reason: fakeReason,
     };
     FeatureFlags[FeatureFlag.GLOBAL_DISABLED_VERSIONS] = [disabledVersion];
+    clientVariationStub.withArgs(FeatureFlag.GLOBAL_DISABLED_VERSIONS).returns([disabledVersion]);
 
     const reason: string | undefined = checkForExtensionDisabledReason();
 
