@@ -106,4 +106,5 @@ export const TEST_DIRECT_CONNECTION_FORM_SPEC: CustomConnectionSpec = {
   id: TEST_DIRECT_CONNECTION_ID, // enforced ConnectionId type
   formConnectionType: "Apache Kafka",
   specifiedConnectionType: undefined,
+  groupId: null, // Always set to null until connection form supports it
 };

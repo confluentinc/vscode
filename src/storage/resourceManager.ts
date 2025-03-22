@@ -753,7 +753,7 @@ export function CustomConnectionSpecFromJSON(obj: any): CustomConnectionSpec {
     id: obj["id"] as ConnectionId,
     formConnectionType: obj["formConnectionType"],
     specifiedConnectionType: obj["specifiedConnectionType"],
-    groupId: null,  // Always set to null until connection form supports it
+    groupId: null, // Always set to null until connection form supports it
   };
 }
 
