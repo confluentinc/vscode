@@ -235,6 +235,7 @@ export function getConnectionSpecFromFormData(
     name: formData["name"] || "New Connection",
     type: ConnectionType.Direct,
     formConnectionType: formData["formconnectiontype"],
+    groupId: null, // Always set to null until connection form supports it
   };
   if (formData["formconnectiontype"] === "Other") {
     spec.specifiedConnectionType = formData["othertype"];

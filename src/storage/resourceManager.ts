@@ -51,6 +51,8 @@ export interface CustomConnectionSpec extends ConnectionSpec {
   formConnectionType: FormConnectionType;
   /** If the formConnectionType is "Other" we prompt users to specify the type */
   specifiedConnectionType?: string;
+  /** The groupId for this connection. default to null until conection form supports it.  */
+  groupId?: string | null;
 }
 
 /** Map of {@link ConnectionId} to {@link CustomConnectionSpec}; only used for `DIRECT` connections. */
@@ -751,6 +753,7 @@ export function CustomConnectionSpecFromJSON(obj: any): CustomConnectionSpec {
     id: obj["id"] as ConnectionId,
     formConnectionType: obj["formConnectionType"],
     specifiedConnectionType: obj["specifiedConnectionType"],
+    groupId: null,  // Always set to null until connection form supports it
   };
 }
 
@@ -760,6 +763,7 @@ export function CustomConnectionSpecToJSON(spec: CustomConnectionSpec): any {
     ...ConnectionSpecToJSON(spec),
     formConnectionType: spec.formConnectionType,
     specifiedConnectionType: spec.specifiedConnectionType,
+    groupId: spec.groupId,
   };
 }
 
