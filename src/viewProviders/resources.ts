@@ -72,7 +72,8 @@ type ResourceViewProviderData =
   | CCloudResources
   | ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>
   | LocalResources
-  | DirectResources;
+  | DirectResources
+  | ContainerTreeItem<DirectEnvironment>;
 
 export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceViewProviderData> {
   /** Disposables belonging to this provider to be added to the extension context during activation,
@@ -203,16 +204,20 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       const resourcePromises: [
         Promise<ContainerTreeItem<CCloudEnvironment>>,
         Promise<ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>>,
-        Promise<DirectEnvironment[]>,
+        Promise<(DirectEnvironment | ContainerTreeItem<DirectEnvironment>)[]>,
       ] = [loadCCloudResources(this.forceDeepRefresh), loadLocalResources(), loadDirectResources()];
 
       const [ccloudContainer, localContainer, directEnvironments]: [
         ContainerTreeItem<CCloudEnvironment>,
         ContainerTreeItem<LocalKafkaCluster | LocalSchemaRegistry>,
-        DirectEnvironment[],
+        (DirectEnvironment | ContainerTreeItem<DirectEnvironment>)[],
       ] = await Promise.all(resourcePromises);
 
-      this.assignIsLoading(directEnvironments);
+      this.assignIsLoading(
+        directEnvironments.filter(
+          (env): env is DirectEnvironment => env instanceof DirectEnvironment,
+        ),
+      );
 
       children = [ccloudContainer, localContainer, ...directEnvironments];
 
@@ -229,7 +234,10 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       // TODO: we aren't tracking LocalEnvironments yet, so skip that here
       if (directEnvironments) {
         const watcher = ConnectionStateWatcher.getInstance();
-        directEnvironments.forEach((env) => {
+        const directEnvsList = directEnvironments.filter(
+          (env): env is DirectEnvironment => env instanceof DirectEnvironment,
+        );
+        directEnvsList.forEach((env) => {
           // if we have a cached loading state for this environment
           // (due to websocket events coming in before the graphql query completes),
           // update the environment's isLoading state before adding it to the map
@@ -653,12 +661,50 @@ export async function loadLocalResources(): Promise<
   return localContainerItem;
 }
 
-export async function loadDirectResources(): Promise<DirectEnvironment[]> {
+export async function loadDirectResources(): Promise<
+  (DirectEnvironment | ContainerTreeItem<DirectEnvironment>)[]
+> {
   // fetch all direct connections and their resources; each connection will be treated the same as a
   // CCloud environment (connection ID and environment ID are the same)
   const directEnvs = await getDirectResources();
   logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
-  return directEnvs;
+
+  // Look up stored connections to get groupIds
+  const directConnectionMap = await getResourceManager().getDirectConnections();
+
+  // Group environments by groupId
+  const groupedEnvs = new Map<string, DirectEnvironment[]>();
+  const ungroupedEnvs: DirectEnvironment[] = [];
+
+  for (const env of directEnvs) {
+    const spec = directConnectionMap.get(env.connectionId);
+    if (spec?.groupId) {
+      if (!groupedEnvs.has(spec.groupId)) {
+        groupedEnvs.set(spec.groupId, []);
+      }
+      groupedEnvs.get(spec.groupId)!.push(env);
+    } else {
+      ungroupedEnvs.push(env);
+    }
+  }
+
+  // Convert grouped environments into ContainerTreeItems
+  const result: (DirectEnvironment | ContainerTreeItem<DirectEnvironment>)[] = [];
+
+  // Add grouped environments as containers
+  for (const [groupId, envs] of groupedEnvs) {
+    const container = new ContainerTreeItem<DirectEnvironment>(
+      groupId,
+      vscode.TreeItemCollapsibleState.Collapsed,
+      envs,
+    );
+    result.push(container);
+  }
+
+  // Add ungrouped environments directly
+  result.push(...ungroupedEnvs);
+
+  return result;
 }
 
 /**
