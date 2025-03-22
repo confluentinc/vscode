@@ -1,4 +1,4 @@
-import { commands, QuickInputButton, QuickPick, QuickPickItem, ThemeIcon, window } from "vscode";
+import { commands, QuickPickItem, ThemeIcon, window } from "vscode";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import {
@@ -15,6 +15,7 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../preferences/constants";
+import { createEnhancedQuickPick } from "../utils/quickPickUtils";
 
 const logger = new Logger("quickpicks.localResources");
 
@@ -24,12 +25,6 @@ export async function localResourcesQuickPick(
   title: string,
   placeholder: string,
 ): Promise<LocalResourceKind[]> {
-  const quickpick: QuickPick<QuickPickItem> = window.createQuickPick();
-  quickpick.title = title;
-  quickpick.ignoreFocusOut = true;
-  quickpick.placeholder = placeholder;
-  quickpick.canSelectMany = true;
-
   const items: QuickPickItem[] = [];
 
   const kafkaRepoTag = `${getLocalKafkaImageName()}:${getLocalKafkaImageTag()}`;
@@ -79,46 +74,44 @@ export async function localResourcesQuickPick(
     return [items[0].label as LocalResourceKind];
   }
 
-  quickpick.items = items;
-  // set Kafka as selected by default if starting resources and it isn't already running
-  quickpick.selectedItems = starting && !kafkaAvailable ? [kafkaItem] : [];
-  quickpick.show();
-
-  // user selected/deselected an item from the list
-  quickpick.onDidChangeSelection((items: readonly QuickPickItem[]) => {
-    if (
-      !starting &&
-      quickpick.items.includes(schemaRegistryItem) &&
-      items.includes(kafkaItem) &&
-      !items.includes(schemaRegistryItem)
-    ) {
-      // if the user is attempting to stop Kafka and not Schema Registry, ensure Schema Registry is
-      // selected
-      quickpick.selectedItems = [...items, schemaRegistryItem];
-      window.showInformationMessage("Schema Registry must be stopped when stopping Kafka.");
-    } else if (
-      starting &&
-      quickpick.items.includes(kafkaItem) &&
-      items.includes(schemaRegistryItem) &&
-      !items.includes(kafkaItem)
-    ) {
-      // if the user is attempting to start Schema Registry and not Kafka, ensure Kafka is selected
-      quickpick.selectedItems = [kafkaItem, ...items];
-      window.showInformationMessage("Kafka must be available before starting Schema Registry.");
-    }
-  });
-
-  // user clicked one of the secondary buttons to the right of a quickpick item
-  quickpick.onDidTriggerItemButton(
-    async (event: { button: QuickInputButton; item: QuickPickItem }) => {
-      quickpick.hide();
-      if (event.button.tooltip?.includes(LocalResourceKind.Kafka)) {
+  // Create the quickpick using our enhanced utility
+  const quickpick = createEnhancedQuickPick(items, {
+    title,
+    placeHolder: placeholder,
+    ignoreFocusOut: true,
+    canSelectMany: true,
+    selectedItems: starting && !kafkaAvailable ? [kafkaItem] : [],
+    onSelectionChange: (items, quickPick) => {
+      if (
+        !starting &&
+        quickPick.items.includes(schemaRegistryItem) &&
+        items.includes(kafkaItem) &&
+        !items.includes(schemaRegistryItem)
+      ) {
+        // if the user is attempting to stop Kafka and not Schema Registry, ensure Schema Registry is
+        // selected
+        quickPick.selectedItems = [...items, schemaRegistryItem];
+        window.showInformationMessage("Schema Registry must be stopped when stopping Kafka.");
+      } else if (
+        starting &&
+        quickPick.items.includes(kafkaItem) &&
+        items.includes(schemaRegistryItem) &&
+        !items.includes(kafkaItem)
+      ) {
+        // if the user is attempting to start Schema Registry and not Kafka, ensure Kafka is selected
+        quickPick.selectedItems = [kafkaItem, ...items];
+        window.showInformationMessage("Kafka must be available before starting Schema Registry.");
+      }
+    },
+    onItemButtonClicked: async ({ button, quickPick }) => {
+      quickPick.hide();
+      if (button.tooltip?.includes(LocalResourceKind.Kafka)) {
         // open Settings and filter to the Kafka image repo+tag settings
         commands.executeCommand(
           "workbench.action.openSettings",
           `@id:${LOCAL_KAFKA_IMAGE} @id:${LOCAL_KAFKA_IMAGE_TAG}`,
         );
-      } else if (event.button.tooltip?.includes(LocalResourceKind.SchemaRegistry)) {
+      } else if (button.tooltip?.includes(LocalResourceKind.SchemaRegistry)) {
         // open Settings and filter to the Schema Registry image repo+tag settings
         commands.executeCommand(
           "workbench.action.openSettings",
@@ -126,7 +119,10 @@ export async function localResourcesQuickPick(
         );
       }
     },
-  );
+  });
+
+  // Show the QuickPick
+  quickpick.show();
 
   // user clicked "Ok" or hit Enter to accept the selected items, if any
   const selectedItems: QuickPickItem[] = [];
@@ -134,7 +130,6 @@ export async function localResourcesQuickPick(
     logger.debug("selected items", { items: JSON.stringify(quickpick.selectedItems) });
     selectedItems.push(...quickpick.selectedItems);
     quickpick.hide();
-    return;
   });
 
   // block until the quickpick is hidden
