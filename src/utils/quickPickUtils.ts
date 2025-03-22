@@ -1,12 +1,42 @@
 import * as vscode from "vscode";
+import { QuickPickItemWithValue } from "../quickpicks/types";
 
 /**
- * Interface extending QuickPickOptions with additional callback options
+ * Enhanced options for creating a QuickPick with additional functionality.
+ *
+ * @example
+ * ```typescript
+ * const options: EnhancedQuickPickOptions<MyQuickPickItem> = {
+ *   title: "Select an item",
+ *   placeHolder: "Search items...",
+ *   canSelectMany: true,
+ *   buttons: [vscode.QuickInputButtons.Back],
+ *   onButtonClicked: async (button, quickPick) => {
+ *     if (button === vscode.QuickInputButtons.Back) {
+ *       quickPick.hide();
+ *     }
+ *   },
+ *   onSelectionChange: (items, quickPick) => {
+ *     console.log("Selected items:", items);
+ *   }
+ * };
+ * ```
  */
-export interface EnhancedQuickPickOptions<T extends vscode.QuickPickItem>
+export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<vscode.QuickPickItem>>
   extends vscode.QuickPickOptions {
   /**
-   * Callback for when an item button is triggered
+   * Callback triggered when a button on a specific QuickPick item is clicked.
+   * Useful for implementing actions specific to individual items.
+   *
+   * @example
+   * ```typescript
+   * onItemButtonClicked: async ({ button, item, quickPick }) => {
+   *   if (button === deleteButton) {
+   *     await deleteItem(item.value);
+   *     quickPick.items = quickPick.items.filter(i => i !== item);
+   *   }
+   * }
+   * ```
    */
   onItemButtonClicked?: (event: {
     button: vscode.QuickInputButton;
@@ -15,22 +45,61 @@ export interface EnhancedQuickPickOptions<T extends vscode.QuickPickItem>
   }) => Promise<void> | void;
 
   /**
-   * Callback for when selection changes
+   * Callback triggered whenever the selection changes in the QuickPick.
+   * Particularly useful when canSelectMany is true to track multiple selections.
+   *
+   * @example
+   * ```typescript
+   * onSelectionChange: (items, quickPick) => {
+   *   updateStatusBar(`${items.length} items selected`);
+   * }
+   * ```
    */
   onSelectionChange?: (items: readonly T[], quickPick: vscode.QuickPick<T>) => void;
 
   /**
-   * Callback for when the active item changes
+   * Callback triggered when the active (highlighted) item changes.
+   * Useful for previewing or pre-loading data based on the current focus.
+   *
+   * @example
+   * ```typescript
+   * onActiveItemChange: async (item, quickPick) => {
+   *   if (item) {
+   *     await showPreview(item.value);
+   *   }
+   * }
+   * ```
    */
   onActiveItemChange?: (item: T | undefined, quickPick: vscode.QuickPick<T>) => void;
 
   /**
-   * Additional navigation buttons to show at the top of the QuickPick
+   * Navigation buttons displayed at the top of the QuickPick.
+   * Common buttons include Back, Refresh, or custom actions.
+   *
+   * @example
+   * ```typescript
+   * buttons: [
+   *   vscode.QuickInputButtons.Back,
+   *   { iconPath: new vscode.ThemeIcon('refresh') }
+   * ]
+   * ```
    */
   buttons?: readonly vscode.QuickInputButton[];
 
   /**
-   * Callback for when a navigation button is triggered
+   * Callback triggered when a navigation button is clicked.
+   * Use this to handle navigation or perform actions based on button clicks.
+   *
+   * @example
+   * ```typescript
+   * onButtonClicked: async (button, quickPick) => {
+   *   if (button === refreshButton) {
+   *     quickPick.busy = true;
+   *     quickPick.items = await fetchUpdatedItems();
+   *     quickPick.busy = false;
+   *   }
+   * }
+   * ```
    */
   onButtonClicked?: (
     button: vscode.QuickInputButton,
@@ -38,17 +107,27 @@ export interface EnhancedQuickPickOptions<T extends vscode.QuickPickItem>
   ) => Promise<void> | void;
 
   /**
-   * Whether this QuickPick should allow selecting multiple items
+   * Enables multi-select mode in the QuickPick.
+   * When true, users can select multiple items using checkboxes.
+   * @default false
    */
   canSelectMany?: boolean;
 
   /**
-   * Items that should be selected by default
+   * Items that should be pre-selected when the QuickPick opens.
+   * Only applies when canSelectMany is true.
+   *
+   * @example
+   * ```typescript
+   * selectedItems: previouslySelectedItems
+   * ```
    */
   selectedItems?: T[];
 
   /**
-   * Whether the QuickPick should ignore focus out
+   * Controls whether the QuickPick should close when focus is lost.
+   * When true, the QuickPick stays open even when focus moves elsewhere.
+   * @default false
    */
   ignoreFocusOut?: boolean;
 }
@@ -61,7 +140,7 @@ export interface EnhancedQuickPickOptions<T extends vscode.QuickPickItem>
  * @param options Enhanced QuickPick options
  * @returns A promise that resolves to the selected item(s) or undefined if canceled
  */
-export async function showEnhancedQuickPick<T extends vscode.QuickPickItem>(
+export async function showEnhancedQuickPick<T extends QuickPickItemWithValue<vscode.QuickPickItem>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
 ): Promise<T | T[] | undefined> {
@@ -155,7 +234,7 @@ export async function showEnhancedQuickPick<T extends vscode.QuickPickItem>(
  * @param options Enhanced QuickPick options
  * @returns The configured QuickPick instance
  */
-export function createEnhancedQuickPick<T extends vscode.QuickPickItem>(
+export function createEnhancedQuickPick<T extends QuickPickItemWithValue<vscode.QuickPickItem>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
 ): vscode.QuickPick<T> {

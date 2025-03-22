@@ -98,7 +98,7 @@ describe("QuickPick utils", () => {
     const result = await promise;
 
     // Verify the result is the selected item
-    assert.deepEqual(result, items[1]);
+    assert.deepEqual(result, [items[1]]);
   });
 
   it("should handle promises for items", async () => {
