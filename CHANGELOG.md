@@ -6,6 +6,30 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- Initial LaunchDarkly integration for feature flag support
+
+### Fixed
+
+- Improved resolving newly created direct connection connectivity state.
+
+## 1.0.2
+
+### Fixed
+
+- Fixed an issue where the extension would fail to sync CCloud authentication related user settings
+  to the sidecar process when updating the extension.
+
+## 1.0.1
+
+### Fixed
+
+- Fixed an issue where the Topics and Schemas views would refresh too often, causing unintended
+  behavior when calling various topic/schema actions.
+
+## 1.0.0
+
+### Added
+
 - On the connections form, add WarpStream to the list of supported platforms and add a text box for
   users to specify Other platform used.
 - Support for the following authentication types were added for Kafka Cluster connections

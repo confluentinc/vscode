@@ -20,19 +20,14 @@ export function createConfigChangeListener(): Disposable {
       if (event.affectsConfiguration(SSL_PEM_PATHS)) {
         // inform the sidecar that the SSL/TLS .pem paths have changed
         logger.debug(`"${SSL_PEM_PATHS}" config changed`);
-        const pemPaths: string[] = configs.get(SSL_PEM_PATHS, []);
-        await updatePreferences({
-          tls_pem_paths: pemPaths,
-        });
+        await updatePreferences();
         return;
       }
 
       if (event.affectsConfiguration(SSL_VERIFY_SERVER_CERT_DISABLED)) {
         // inform the sidecar that the server cert verification has changed
         logger.debug(`"${SSL_VERIFY_SERVER_CERT_DISABLED}" config changed`);
-        // if the user disables server cert verification, trust all certs
-        const trustAllCerts: boolean = configs.get(SSL_VERIFY_SERVER_CERT_DISABLED, false);
-        await updatePreferences({ trust_all_certificates: trustAllCerts });
+        await updatePreferences();
         return;
       }
 

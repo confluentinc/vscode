@@ -6,8 +6,9 @@ import { observabilityContext } from "../context/observability";
 import { ContextValues, setContextValue } from "../context/values";
 import { ccloudAuthSessionInvalidated, ccloudConnected } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
+import { getLaunchDarklyClient } from "../featureFlags/client";
 import { Logger } from "../logging";
-import { fetchPreferences } from "../preferences/updates";
+import { loadPreferencesFromWorkspaceConfig } from "../preferences/updates";
 import {
   clearCurrentCCloudResources,
   createCCloudConnection,
@@ -166,12 +167,16 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
       throw new Error("CCloud connection failed to become usable after authentication.");
     }
 
-    // User signed in successfully so we send an identify event to Segment
+    // User signed in successfully so we send an identify event to Segment and LaunchDarkly
     if (authenticatedConnection.status.authentication.user) {
       sendTelemetryIdentifyEvent({
         eventName: UserEvent.CCloudAuthentication,
         userInfo: authenticatedConnection.status.authentication.user,
         session: undefined,
+      });
+      getLaunchDarklyClient()?.identify({
+        key: authenticatedConnection.status.authentication.user.id,
+        email: authenticatedConnection.status.authentication.user.username,
       });
     }
     // we want to continue regardless of whether or not the user dismisses the notification,
@@ -363,16 +368,12 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
             this._onAuthFlowCompletedSuccessfully.fire({ success, resetPassword });
 
             if (!success) {
-              // fetch+log current sidecar preferences to help debug any auth issues
-              try {
-                const preferences = await fetchPreferences();
-                logger.debug(
-                  `authProvider: ${SecretStorageKeys.AUTH_COMPLETED} changed (success=${success}); current sidecar preferences:`,
-                  { preferences },
-                );
-              } catch {
-                // fetchPreferences() will log the error before re-throwing; no need to do anything here
-              }
+              // log current preferences to help debug any auth issues
+              const preferences = loadPreferencesFromWorkspaceConfig();
+              logger.debug(
+                `authProvider: ${SecretStorageKeys.AUTH_COMPLETED} changed (success=${success}); current sidecar preferences:`,
+                { preferences },
+              );
             }
             break;
           }

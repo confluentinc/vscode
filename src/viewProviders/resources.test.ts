@@ -18,7 +18,7 @@ import {
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { EXTENSION_VERSION } from "../constants";
 import * as contextValues from "../context/values";
-import { resourceSearchSet } from "../emitters";
+import { directConnectionCreated, resourceSearchSet } from "../emitters";
 import * as direct from "../graphql/direct";
 import * as local from "../graphql/local";
 import * as org from "../graphql/organizations";
@@ -31,7 +31,7 @@ import {
 } from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
 import * as localConnections from "../sidecar/connections/local";
@@ -579,4 +579,33 @@ describe("ResourceViewProvider search behavior", () => {
 
     assert.strictEqual(treeItem.collapsibleState, TreeItemCollapsibleState.Collapsed);
   });
+
+  for (const shouldAnnounceAsCreated of [true, false]) {
+    it(`directConnectionCreated event fired: ${shouldAnnounceAsCreated} vs related environment to be marked as isLoading`, async () => {
+      const testDirectEnv = new DirectEnvironment({
+        ...TEST_DIRECT_ENVIRONMENT,
+        id: "directConnectionCreated-test-id",
+        connectionId: "directConnectionCreated-test-connection-id" as ConnectionId,
+        kafkaClusters: [],
+        schemaRegistry: undefined,
+      });
+
+      // direct environent born w/o any clusters should be isLoading = true
+      assert.strictEqual(testDirectEnv.isLoading, true);
+
+      if (shouldAnnounceAsCreated) {
+        // simulate a direct connection as being announced as been created
+        directConnectionCreated.fire(testDirectEnv.connectionId);
+      }
+
+      // Now call assignIsLoading(), which may reset the isLoading value
+      provider.assignIsLoading([testDirectEnv]);
+
+      assert.strictEqual(
+        testDirectEnv.isLoading,
+        shouldAnnounceAsCreated,
+        `resulting isLoading should be ${shouldAnnounceAsCreated}`,
+      );
+    });
+  }
 });
