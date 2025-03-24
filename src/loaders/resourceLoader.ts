@@ -306,7 +306,12 @@ export abstract class ResourceLoader implements IResourceBase {
       logError(
         error,
         "Error deleting schema version",
-        { schema: JSON.stringify(schema, null, 2), hardDelete: hardDelete ? "true" : "false" },
+        {
+          connectionId: schema.connectionId,
+          environmentId: schema.environmentId ? schema.environmentId : "unknown",
+          schemaRegistryId: schema.schemaRegistryId,
+          hardDelete: hardDelete ? "true" : "false",
+        },
         true,
       );
       throw error;

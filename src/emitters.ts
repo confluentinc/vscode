@@ -7,8 +7,6 @@ import { SchemaRegistry } from "./models/schemaRegistry";
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
 
-export type EventChangeType = "added" | "deleted";
-
 /** Indicate whether or not we have a CCloud connection (controlled by our auth provider). */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
 /** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
@@ -26,6 +24,8 @@ export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
+
+export type EventChangeType = "added" | "deleted";
 
 export type SubjectChangeEvent = {
   /** The subject that changed. */
