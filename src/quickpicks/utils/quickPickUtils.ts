@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { QuickPickItemWithValue } from "../quickpicks/types";
+import { QuickPickItemWithValue } from "../types";
 
 /**
  * Enhanced options for creating a QuickPick with additional functionality.
@@ -130,100 +130,21 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<vscod
    * @default false
    */
   ignoreFocusOut?: boolean;
-}
 
-/**
- * Enhanced version of showQuickPick that provides additional functionality
- * like button callbacks while maintaining a similar API to the original.
- *
- * @param items The items to show in the QuickPick
- * @param options Enhanced QuickPick options
- * @returns A promise that resolves to the selected item(s) or undefined if canceled
- */
-export async function showEnhancedQuickPick<T extends QuickPickItemWithValue<vscode.QuickPickItem>>(
-  items: T[] | Promise<T[]>,
-  options?: EnhancedQuickPickOptions<T>,
-): Promise<T | T[] | undefined> {
-  // Create QuickPick instance
-  const quickPick = vscode.window.createQuickPick<T>();
-
-  // Set standard options
-  if (options) {
-    quickPick.placeholder = options.placeHolder;
-    quickPick.ignoreFocusOut = options.ignoreFocusOut ?? false;
-    quickPick.title = options.title;
-    quickPick.canSelectMany = options.canSelectMany ?? false;
-    quickPick.matchOnDescription = options.matchOnDescription ?? false;
-    quickPick.matchOnDetail = options.matchOnDetail ?? false;
-    quickPick.buttons = options.buttons ?? [];
-  }
-
-  // Set items (handle promise if needed)
-  if (items instanceof Promise) {
-    quickPick.busy = true;
-    quickPick.items = await items;
-    quickPick.busy = false;
-  } else {
-    quickPick.items = items;
-  }
-
-  // Set default selected items if provided
-  if (options?.selectedItems && options.selectedItems.length > 0) {
-    quickPick.selectedItems = options.selectedItems;
-  }
-
-  // Set up event handlers
-  let selectedItems: T[] = [];
-
-  if (options?.onSelectionChange) {
-    quickPick.onDidChangeSelection((items: readonly T[]) => {
-      options.onSelectionChange?.(items, quickPick);
-    });
-  }
-
-  if (options?.onActiveItemChange) {
-    quickPick.onDidChangeActive((items: readonly T[]) => {
-      options.onActiveItemChange?.(items[0], quickPick);
-    });
-  }
-
-  if (options?.onItemButtonClicked) {
-    quickPick.onDidTriggerItemButton((event) => {
-      options.onItemButtonClicked?.({
-        button: event.button,
-        item: event.item as T,
-        quickPick,
-      });
-    });
-  }
-
-  if (options?.onButtonClicked) {
-    quickPick.onDidTriggerButton((button) => {
-      options.onButtonClicked?.(button, quickPick);
-    });
-  }
-
-  quickPick.onDidAccept(() => {
-    selectedItems = [...quickPick.selectedItems];
-    quickPick.hide();
-  });
-
-  // Show the QuickPick
-  quickPick.show();
-
-  // Wait for the QuickPick to be hidden
-  await new Promise<void>((resolve) => {
-    quickPick.onDidHide(() => {
-      resolve();
-    });
-  });
-
-  // Return the selected item(s) or undefined
-  if (selectedItems.length === 0) {
-    return undefined;
-  }
-
-  return options?.canSelectMany ? selectedItems : selectedItems[0];
+  /**
+   * Callback triggered when the user accepts the current selection.
+   * This occurs when the user presses Enter or clicks the OK button.
+   *
+   * @example
+   * ```typescript
+   * onDidAccept: async (quickPick) => {
+   *   const selectedItems = quickPick.selectedItems;
+   *   await processSelection(selectedItems);
+   *   quickPick.hide();
+   * }
+   * ```
+   */
+  onDidAccept?: (quickPick: vscode.QuickPick<T>) => Promise<void> | void;
 }
 
 /**
@@ -299,6 +220,12 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<vscode.
   if (options?.onButtonClicked) {
     quickPick.onDidTriggerButton((button) => {
       options.onButtonClicked?.(button, quickPick);
+    });
+  }
+
+  if (options?.onDidAccept) {
+    quickPick.onDidAccept(() => {
+      options.onDidAccept?.(quickPick);
     });
   }
 

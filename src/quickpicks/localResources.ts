@@ -15,7 +15,7 @@ import {
   LOCAL_SCHEMA_REGISTRY_IMAGE,
   LOCAL_SCHEMA_REGISTRY_IMAGE_TAG,
 } from "../preferences/constants";
-import { createEnhancedQuickPick } from "../utils/quickPickUtils";
+import { createEnhancedQuickPick } from "./utils/quickPickUtils";
 
 const logger = new Logger("quickpicks.localResources");
 
