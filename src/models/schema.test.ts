@@ -172,8 +172,6 @@ describe("getLanguageTypes", () => {
       assert.deepEqual(languageType, expected);
     });
   }
-
-  it(`Schema.get`);
 });
 
 describe("SchemaTreeItem", () => {

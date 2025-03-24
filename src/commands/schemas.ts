@@ -16,6 +16,7 @@ import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
+import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
 import { confirmSchemaVersionDeletion, hardDeletionQuickPick } from "./utils/schemas";
@@ -382,16 +383,6 @@ async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
     scheme: "untitled",
     query: encodeURIComponent(JSON.stringify(schema)),
   });
-}
-
-/** Check if a file URI exists in the filesystem. */
-async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(uri);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
