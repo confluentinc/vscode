@@ -108,10 +108,11 @@ blocks:
               $token = $(vault write -field=token "auth/semaphore_self_hosted/login" role="default" jwt="$Env:SEMAPHORE_OIDC_TOKEN")
               vault login -no-print token=$token
             }
-          - $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
-          - Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
-          - $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
-          - Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
+          - |
+            $E2E_USERNAME = $(vault kv get -field=E2E_USERNAME v1/ci/kv/vscodeextension/testing)
+            Set-Content -Path .env -Value "E2E_USERNAME=$E2E_USERNAME"
+            $E2E_PASSWORD = $(vault kv get -field=E2E_PASSWORD v1/ci/kv/vscodeextension/testing)
+            Add-Content -Path .env -Value "E2E_PASSWORD=$E2E_PASSWORD"
       jobs:
         - name: "Build & Test (VS Code)"
           commands:
