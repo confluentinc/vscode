@@ -1,9 +1,14 @@
 import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { ResponseError } from "../clients/sidecar";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
 import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
-import { logError } from "../errors";
+import {
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  logError,
+  showErrorNotificationWithButtons,
+} from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema";
@@ -235,24 +240,51 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   }
 
   const loader = ResourceLoader.getInstance(schema.connectionId);
-  const schemaGroup = await loader.getSchemasForSubject(schema.environmentId!, schema.subject);
+  let schemaGroup: Schema[] | null = null;
+  try {
+    schemaGroup = await loader.getSchemasForSubject(schema.environmentId!, schema.subject);
 
-  // Ensure is still present in the registry / UI view gestured from wasn't stale.
-  const found = schemaGroup.find((s) => s.id === schema.id) !== undefined;
-  if (!found) {
-    vscode.window.showErrorMessage(`Schema not found in registry. View needs refresh?`);
-    logger.error(
-      `Schema version ${schema.version} not found in registry, cannot delete.`,
-      schemaGroup,
-    );
+    // Ensure is still present in the registry / UI view gestured from wasn't stale.
+    const found = schemaGroup && schemaGroup.find((s) => s.id === schema.id) !== undefined;
+
+    if (!found) {
+      showErrorNotificationWithButtons("Schema not found in registry.", {
+        "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
+        ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+      });
+      logger.error(
+        `Schema version ${schema.version} not found in registry, cannot delete.`,
+        schemaGroup,
+      );
+      return;
+    }
+  } catch (e) {
+    if (e instanceof ResponseError) {
+      // If the whole subject is gone, we will get a 404. Say, last version
+      // already deleted in other workspace or other means?
+      if (e.response.status !== 404) {
+        // not a 404, something unexpected/
+        logError(
+          e,
+          "Error fetching schemas for subject while deleting schema version",
+          { subject: schema.subject },
+          true,
+        );
+      }
+    }
+
+    showErrorNotificationWithButtons("Schema not found in registry.", {
+      "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
+      ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+    });
+    logger.error(`Error fetching schema version ${schema.version}, cannot delete.`, e);
     return;
   }
 
   // Determine if user wants to hard or soft delete.
   const hardDelete = await hardDeletionQuickPick();
   if (hardDelete === undefined) {
-    vscode.window.showErrorMessage("Schema deletion canceled.");
-    logger.info("User canceled schema version deletion.");
+    logger.debug("User canceled schema version deletion.");
     return;
   }
 
@@ -260,8 +292,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   const confirmation = await confirmSchemaVersionDeletion(hardDelete, schema, schemaGroup);
 
   if (!confirmation) {
-    vscode.window.showErrorMessage("Schema deletion canceled.");
-    logger.info("User canceled schema version deletion.");
+    logger.debug("User canceled schema version deletion.");
     return;
   }
 
@@ -299,13 +330,9 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   } catch (e) {
     success = false;
     logError(e, "Error deleting schema version", undefined, true);
-    if (e instanceof Error) {
-      vscode.window.showErrorMessage(
-        `Error deleting schema version ${schema.version}: ${e.message}`,
-      );
-    } else {
-      vscode.window.showErrorMessage(`Error deleting schema version ${schema.version}: ${e}`);
-    }
+    showErrorNotificationWithButtons(
+      `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   logUsage(UserEvent.SchemaAction, {

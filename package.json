@@ -955,7 +955,7 @@
         {
           "command": "confluent.schemas.evolveSchemaSubject",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
-          "group": "inline@1"
+          "group": "inline@2"
         },
         {
           "command": "confluent.schemas.upload",

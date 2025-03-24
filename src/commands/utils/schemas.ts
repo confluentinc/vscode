@@ -79,15 +79,19 @@ export function getSchemaDeletionValidatorAndPlaceholder(
 }
 
 /**
- * Ask user if they wany hard or soft delete behavior.
+ * Ask user if they want hard or soft delete behavior.
  *
  * @returns {Promise<boolean>} - true if hard delete, false if soft delete; undefined if cancelled.
  */
 export async function hardDeletionQuickPick(): Promise<boolean | undefined> {
   const strengthStr = await vscode.window.showQuickPick(
     [
-      "Soft Delete -- existing records will remain deserializable",
-      "Hard Delete -- any existing records will NOT be deserializable",
+      { label: "Soft Delete", description: "All existing records will remain deserializable" },
+      {
+        label: "Hard Delete",
+        description:
+          "Any existing records referencing this version will NO LONGER be deserializable",
+      },
     ],
     {
       title: "Delete Schema Version",
@@ -99,7 +103,7 @@ export async function hardDeletionQuickPick(): Promise<boolean | undefined> {
     return undefined;
   }
 
-  return strengthStr.startsWith("Hard");
+  return strengthStr.label.startsWith("Hard");
 }
 
 /**

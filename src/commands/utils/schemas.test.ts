@@ -105,13 +105,13 @@ describe("commands/schemas/utils/schemas.ts", function () {
     });
 
     it("returns true for hard delete", async function () {
-      showQuickPickStub.resolves("Hard Delete");
+      showQuickPickStub.resolves({ label: "Hard Delete" });
       const result = await hardDeletionQuickPick();
       assert.strictEqual(result, true);
     });
 
     it("returns false for soft delete", async function () {
-      showQuickPickStub.resolves("Soft Delete");
+      showQuickPickStub.resolves({ label: "Soft Delete" });
       const result = await hardDeletionQuickPick();
       assert.strictEqual(result, false);
     });
