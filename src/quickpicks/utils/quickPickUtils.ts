@@ -22,7 +22,7 @@ import { QuickPickItemWithValue } from "../types";
  * };
  * ```
  */
-export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<vscode.QuickPickItem>>
+export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
   extends vscode.QuickPickOptions {
   /**
    * Callback triggered when a button on a specific QuickPick item is clicked.
@@ -155,7 +155,7 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<vscod
  * @param options Enhanced QuickPick options
  * @returns The configured QuickPick instance
  */
-export function createEnhancedQuickPick<T extends QuickPickItemWithValue<vscode.QuickPickItem>>(
+export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
 ): vscode.QuickPick<T> {

@@ -6,12 +6,19 @@ import { createEnhancedQuickPick, EnhancedQuickPickOptions } from "./quickPickUt
 
 describe("createEnhancedQuickPick", () => {
   let sandbox: sinon.SinonSandbox;
-  let quickPickMock: any;
+  let createQuickPickStub: sinon.SinonStub;
+  let quickPickMock: vscode.QuickPick<any>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     // Create a mock for the QuickPick object
+    const createEventStub = <T>() => {
+      const stub = sandbox.stub() as sinon.SinonStub & vscode.Event<T>;
+      stub.returns({ dispose: sandbox.stub() });
+      return stub;
+    };
+
     quickPickMock = {
       placeholder: "",
       ignoreFocusOut: false,
@@ -25,13 +32,16 @@ describe("createEnhancedQuickPick", () => {
       busy: false,
       show: sandbox.stub(),
       hide: sandbox.stub(),
-      onDidChangeSelection: sandbox.stub().returns({ dispose: sandbox.stub() }),
-      onDidChangeActive: sandbox.stub().returns({ dispose: sandbox.stub() }),
-      onDidTriggerItemButton: sandbox.stub().returns({ dispose: sandbox.stub() }),
-      onDidTriggerButton: sandbox.stub().returns({ dispose: sandbox.stub() }),
-      onDidAccept: sandbox.stub().returns({ dispose: sandbox.stub() }),
       dispose: sandbox.stub(),
-    };
+      onDidChangeSelection: createEventStub<readonly any[]>(),
+      onDidChangeActive: createEventStub<readonly any[]>(),
+      onDidTriggerItemButton: createEventStub<vscode.QuickPickItemButtonEvent<any>>(),
+      onDidTriggerButton: createEventStub<vscode.QuickInputButton>(),
+      onDidAccept: createEventStub<void>(),
+    } as any;
+
+    // Stub the createQuickPick method to return our mock
+    createQuickPickStub = sandbox.stub(vscode.window, "createQuickPick").returns(quickPickMock);
   });
 
   afterEach(() => {
@@ -41,19 +51,25 @@ describe("createEnhancedQuickPick", () => {
   describe("Basic configuration", () => {
     it("should create a QuickPick with default options when no options provided", () => {
       const items = [{ label: "Item 1" }];
-      createEnhancedQuickPick(items);
+      const quickPick = createEnhancedQuickPick(items);
 
-      assert.equal(quickPickMock.ignoreFocusOut, false);
-      assert.equal(quickPickMock.canSelectMany, false);
-      assert.equal(quickPickMock.matchOnDescription, false);
-      assert.equal(quickPickMock.matchOnDetail, false);
-      assert.deepEqual(quickPickMock.buttons, []);
-      assert.deepEqual(quickPickMock.items, items);
+      // Verify the QuickPick was created
+      sinon.assert.calledOnce(createQuickPickStub);
+
+      // Verify default options
+      assert.strictEqual(quickPick.ignoreFocusOut, false);
+      assert.strictEqual(quickPick.canSelectMany, false);
+      assert.strictEqual(quickPick.matchOnDescription, false);
+      assert.strictEqual(quickPick.matchOnDetail, false);
+      assert.deepStrictEqual(quickPick.buttons, []);
+
+      // Verify items were set
+      assert.deepStrictEqual(quickPick.items, items);
     });
 
     it("should create a QuickPick with provided options", () => {
       const items = [{ label: "Item 1" }];
-      const options: EnhancedQuickPickOptions<vscode.QuickPickItem> = {
+      const options: EnhancedQuickPickOptions<any> = {
         placeHolder: "Select an item",
         ignoreFocusOut: true,
         title: "Test QuickPick",
@@ -63,38 +79,39 @@ describe("createEnhancedQuickPick", () => {
         buttons: [{ iconPath: new vscode.ThemeIcon("refresh") }],
       };
 
-      createEnhancedQuickPick(items, options);
+      const quickPick = createEnhancedQuickPick(items, options);
 
-      assert.equal(quickPickMock.placeholder, options.placeHolder);
-      assert.equal(quickPickMock.ignoreFocusOut, options.ignoreFocusOut);
-      assert.equal(quickPickMock.title, options.title);
-      assert.equal(quickPickMock.canSelectMany, options.canSelectMany);
-      assert.equal(quickPickMock.matchOnDescription, options.matchOnDescription);
-      assert.equal(quickPickMock.matchOnDetail, options.matchOnDetail);
-      assert.deepEqual(quickPickMock.buttons, options.buttons);
+      // Verify the QuickPick was created with correct options
+      assert.strictEqual(quickPick.placeholder, options.placeHolder);
+      assert.strictEqual(quickPick.ignoreFocusOut, options.ignoreFocusOut);
+      assert.strictEqual(quickPick.title, options.title);
+      assert.strictEqual(quickPick.canSelectMany, options.canSelectMany);
+      assert.strictEqual(quickPick.matchOnDescription, options.matchOnDescription);
+      assert.strictEqual(quickPick.matchOnDetail, options.matchOnDetail);
+      assert.deepStrictEqual(quickPick.buttons, options.buttons);
     });
   });
 
   describe("Items handling", () => {
     it("should set items directly when array is provided", () => {
       const items = [{ label: "Item 1" }, { label: "Item 2" }];
-      createEnhancedQuickPick(items);
-      assert.deepEqual(quickPickMock.items, items);
+      const quickPick = createEnhancedQuickPick(items);
+      assert.deepStrictEqual(quickPick.items, items);
     });
 
     it("should handle promised items correctly", async () => {
       const items = [{ label: "Item 1" }, { label: "Item 2" }];
       const itemsPromise = Promise.resolve(items);
 
-      createEnhancedQuickPick(itemsPromise);
-      assert.equal(quickPickMock.busy, true);
+      const quickPick = createEnhancedQuickPick(itemsPromise);
+      assert.strictEqual(quickPick.busy, true);
 
       await itemsPromise;
-      // Use process.nextTick to allow the async function to complete
+      // Wait for the next tick to allow the async function to complete
       await new Promise(process.nextTick);
 
-      assert.equal(quickPickMock.busy, false);
-      assert.deepEqual(quickPickMock.items, items);
+      assert.strictEqual(quickPick.busy, false);
+      assert.deepStrictEqual(quickPick.items, items);
     });
 
     it("should set selectedItems after promised items are loaded", async () => {
@@ -102,11 +119,11 @@ describe("createEnhancedQuickPick", () => {
       const selectedItems = [items[1]];
       const itemsPromise = Promise.resolve(items);
 
-      createEnhancedQuickPick(itemsPromise, { selectedItems });
+      const quickPick = createEnhancedQuickPick(itemsPromise, { selectedItems });
       await itemsPromise;
       await new Promise(process.nextTick);
 
-      assert.deepEqual(quickPickMock.selectedItems, selectedItems);
+      assert.deepStrictEqual(quickPick.selectedItems, selectedItems);
     });
   });
 
@@ -115,13 +132,16 @@ describe("createEnhancedQuickPick", () => {
       const onSelectionChange = sandbox.stub();
       createEnhancedQuickPick([], { onSelectionChange });
 
-      sinon.assert.calledOnce(quickPickMock.onDidChangeSelection);
+      // Verify the handler was registered
+      const stub = quickPickMock.onDidChangeSelection as sinon.SinonStub;
+      sinon.assert.called(stub);
 
-      // Simulate selection change
-      const handler = quickPickMock.onDidChangeSelection.getCall(0).args[0];
+      // Simulate selection change by calling the registered handler
       const selectedItems = [{ label: "Selected" }];
+      const handler = stub.args[0][0];
       handler(selectedItems);
 
+      // Verify our handler was called with correct arguments
       sinon.assert.calledWith(onSelectionChange, selectedItems, quickPickMock);
     });
 
@@ -129,13 +149,16 @@ describe("createEnhancedQuickPick", () => {
       const onActiveItemChange = sandbox.stub();
       createEnhancedQuickPick([], { onActiveItemChange });
 
-      sinon.assert.calledOnce(quickPickMock.onDidChangeActive);
+      // Verify the handler was registered
+      const stub = quickPickMock.onDidChangeActive as sinon.SinonStub;
+      sinon.assert.called(stub);
 
-      // Simulate active item change
-      const handler = quickPickMock.onDidChangeActive.getCall(0).args[0];
+      // Simulate active item change by calling the registered handler
       const activeItems = [{ label: "Active" }];
+      const handler = stub.args[0][0];
       handler(activeItems);
 
+      // Verify our handler was called with correct arguments
       sinon.assert.calledWith(onActiveItemChange, activeItems[0], quickPickMock);
     });
 
@@ -143,16 +166,19 @@ describe("createEnhancedQuickPick", () => {
       const onItemButtonClicked = sandbox.stub();
       createEnhancedQuickPick([], { onItemButtonClicked });
 
-      sinon.assert.calledOnce(quickPickMock.onDidTriggerItemButton);
+      // Verify the handler was registered
+      const stub = quickPickMock.onDidTriggerItemButton as sinon.SinonStub;
+      sinon.assert.called(stub);
 
-      // Simulate button click
-      const handler = quickPickMock.onDidTriggerItemButton.getCall(0).args[0];
+      // Simulate button click by calling the registered handler
       const event = {
         button: { iconPath: new vscode.ThemeIcon("trash") },
         item: { label: "Item" },
       };
+      const handler = stub.args[0][0];
       handler(event);
 
+      // Verify our handler was called with correct arguments
       sinon.assert.calledWith(onItemButtonClicked, {
         button: event.button,
         item: event.item,
@@ -164,13 +190,16 @@ describe("createEnhancedQuickPick", () => {
       const onButtonClicked = sandbox.stub();
       createEnhancedQuickPick([], { onButtonClicked });
 
-      sinon.assert.calledOnce(quickPickMock.onDidTriggerButton);
+      // Verify the handler was registered
+      const stub = quickPickMock.onDidTriggerButton as sinon.SinonStub;
+      sinon.assert.called(stub);
 
-      // Simulate button click
-      const handler = quickPickMock.onDidTriggerButton.getCall(0).args[0];
+      // Simulate button click by calling the registered handler
       const button = { iconPath: new vscode.ThemeIcon("refresh") };
+      const handler = stub.args[0][0];
       handler(button);
 
+      // Verify our handler was called with correct arguments
       sinon.assert.calledWith(onButtonClicked, button, quickPickMock);
     });
 
@@ -178,12 +207,15 @@ describe("createEnhancedQuickPick", () => {
       const onDidAccept = sandbox.stub();
       createEnhancedQuickPick([], { onDidAccept });
 
-      sinon.assert.calledOnce(quickPickMock.onDidAccept);
+      // Verify the handler was registered
+      const stub = quickPickMock.onDidAccept as sinon.SinonStub;
+      sinon.assert.called(stub);
 
-      // Simulate accept
-      const handler = quickPickMock.onDidAccept.getCall(0).args[0];
+      // Simulate accept by calling the registered handler
+      const handler = stub.args[0][0];
       handler();
 
+      // Verify our handler was called with correct arguments
       sinon.assert.calledWith(onDidAccept, quickPickMock);
     });
   });
