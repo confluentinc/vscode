@@ -134,7 +134,6 @@ export function build(done) {
         project: "vscode-extension",
         release: { name: process.env.SENTRY_RELEASE },
         disable: !process.env.SENTRY_AUTH_TOKEN,
-        applicationKey: "confluent-vscode-extension-sentry-do-not-use",
       }),
     ],
     onLog: handleBuildLog,
