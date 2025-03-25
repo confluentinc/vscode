@@ -13,4 +13,8 @@ export default defineConfig({
       { name: "lcovonly", options: { file: "lcov-functional.info" } },
     ],
   ],
+  use: {
+    // set different baseURL for Windows
+    baseURL: process.platform === "win32" ? "http://localhost:3000" : undefined,
+  },
 });
