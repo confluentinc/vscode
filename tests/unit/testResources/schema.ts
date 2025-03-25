@@ -1,4 +1,4 @@
-import { Schema, SchemaType, Subject } from "../../../src/models/schema";
+import { Schema, SchemaType, Subject, SubjectWithSchemas } from "../../../src/models/schema";
 import { TEST_CCLOUD_SCHEMA_REGISTRY, TEST_LOCAL_SCHEMA_REGISTRY } from "./schemaRegistry";
 import { TEST_CCLOUD_KAFKA_TOPIC, TEST_LOCAL_KAFKA_TOPIC } from "./topic";
 
@@ -49,7 +49,7 @@ export const TEST_CCLOUD_SUBJECT_WITH_SCHEMA = new Subject(
 );
 
 /** A Subject group containing two schema versions */
-export const TEST_CCLOUD_SUBJECT_WITH_SCHEMAS = new Subject(
+export const TEST_CCLOUD_SUBJECT_WITH_SCHEMAS = new SubjectWithSchemas(
   TEST_CCLOUD_SUBJECT.name,
   TEST_CCLOUD_SUBJECT.connectionId,
   TEST_CCLOUD_SUBJECT.environmentId,

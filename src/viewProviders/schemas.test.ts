@@ -319,14 +319,17 @@ describe("SchemasViewProvider schemaSubjectChanged event", () => {
     subjectsInTreeView.set(TEST_CCLOUD_SUBJECT.name, TEST_CCLOUD_SUBJECT);
 
     const event: SubjectChangeEvent = {
-      subject: TEST_CCLOUD_SUBJECT,
+      subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
       change: "added",
     };
     schemaSubjectChanged.fire(event);
 
     // Should have added to the map
     assert.strictEqual(subjectsInTreeView.size, 1);
-    assert.strictEqual(subjectsInTreeView.get(TEST_CCLOUD_SUBJECT.name), TEST_CCLOUD_SUBJECT);
+    assert.deepStrictEqual(
+      subjectsInTreeView.get(TEST_CCLOUD_SUBJECT.name),
+      TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+    );
 
     // Should have called .refresh()
     assert.ok(refreshStub.calledOnce);
@@ -359,7 +362,7 @@ describe("SchemasViewProvider schemaVersionsChanged event", () => {
     provider.schemaRegistry = null;
 
     const event: SchemaVersionChangeEvent = {
-      schema: TEST_CCLOUD_SCHEMA,
+      subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
       change: "deleted",
     };
     schemaVersionsChanged.fire(event);
@@ -369,35 +372,37 @@ describe("SchemasViewProvider schemaVersionsChanged event", () => {
   });
 
   for (const changeType of ["added", "deleted"] as ("added" | "deleted")[]) {
-    it(`Viewing same schema registry, when schema ${changeType}, should remove from map + call refresh()`, () => {
+    it(`Viewing same schema registry, when schema ${changeType} and subject with schemas cached already, should update map + call refresh()`, () => {
       // set to be viewing a schema registry
       provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
 
-      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectObject();
-      scratchSubject.schemas = [TEST_CCLOUD_SCHEMA];
+      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectWithSchemasObject([TEST_CCLOUD_SCHEMA]);
 
-      // and this subject is in the map and has loaded schemas
+      // and this subject is in the map and has one loaded schema
       subjectsInTreeView.set(scratchSubject.name, scratchSubject);
 
+      const updatedSubject = TEST_CCLOUD_SUBJECT_WITH_SCHEMAS;
+
       const event: SchemaVersionChangeEvent = {
-        schema: TEST_CCLOUD_SCHEMA,
+        subject: updatedSubject,
         change: changeType,
       };
+
       schemaVersionsChanged.fire(event);
 
       // Should have reset the schemas in the subject in the map
-      // to null
+      // to TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas
       assert.strictEqual(subjectsInTreeView.size, 1);
       const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
       assert.strictEqual(subjectFromMap, scratchSubject);
-      assert.strictEqual(subjectFromMap.schemas, null);
+      assert.deepEqual(subjectFromMap.schemas, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas);
 
       // Should have fired with the subject
       assert.ok(onDidChangeTreeDataFireStub.calledOnce);
       assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
     });
 
-    it(`Viewing same schema registry, subject in map but no loaded schemas, when schema ${changeType} then no change`, () => {
+    it(`Viewing same schema registry, subject in map but no loaded schemas, when schema ${changeType}, should update map + call refresh()`, () => {
       // set to be viewing a schema registry
       provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
 
@@ -407,8 +412,10 @@ describe("SchemasViewProvider schemaVersionsChanged event", () => {
       // and this subject is in the map and has no loaded schemas
       subjectsInTreeView.set(scratchSubject.name, scratchSubject);
 
+      const updatedSubject = TEST_CCLOUD_SCHEMA.subjectWithSchemasObject([TEST_CCLOUD_SCHEMA]);
+
       const event: SchemaVersionChangeEvent = {
-        schema: TEST_CCLOUD_SCHEMA,
+        subject: updatedSubject,
         change: changeType,
       };
       schemaVersionsChanged.fire(event);
@@ -417,10 +424,12 @@ describe("SchemasViewProvider schemaVersionsChanged event", () => {
       assert.strictEqual(subjectsInTreeView.size, 1);
       const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
       assert.strictEqual(subjectFromMap, scratchSubject);
-      assert.strictEqual(subjectFromMap.schemas, null);
+      assert.strictEqual(subjectFromMap.schemas!.length, 1);
+      assert.deepEqual(subjectFromMap.schemas, updatedSubject.schemas);
 
-      // Should not have fired anything
-      assert.ok(onDidChangeTreeDataFireStub.notCalled);
+      // Should have fired with the subject
+      assert.ok(onDidChangeTreeDataFireStub.calledOnce);
+      assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
     });
   }
 });

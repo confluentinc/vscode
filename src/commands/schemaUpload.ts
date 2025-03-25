@@ -7,6 +7,7 @@ import {
   SubjectVersion,
 } from "../clients/schemaRegistryRest";
 import { SCHEMA_URI_SCHEME } from "../documentProviders/schema";
+import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Schema, SchemaType, Subject } from "../models/schema";
@@ -15,7 +16,7 @@ import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schem
 import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
-import { getSchemasViewProvider, SchemasViewProvider } from "../viewProviders/schemas";
+import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
 
@@ -187,13 +188,11 @@ async function uploadSchema(
 
   logger.info(successMessage);
 
-  const schemaViewProvider = getSchemasViewProvider();
-
   // Refresh the schema registry cache while offering the user the option to view
   // the schema in the Schemas view.
   const [viewchoice, newSchema]: [string | undefined, Schema] = await Promise.all([
     vscode.window.showInformationMessage(successMessage, "View in Schema Registry"),
-    updateRegistryCacheAndFindNewSchema(registry, maybeNewId!, subject, schemaViewProvider),
+    updateRegistryCacheAndFindNewSchema(registry, maybeNewId!, subject),
   ]);
 
   if (viewchoice) {
@@ -201,7 +200,7 @@ async function uploadSchema(
 
     // Unfurl the subject and highlight the new schema.
     // (Will reset the SR being viewed if necessary)
-    await schemaViewProvider.revealSchema(newSchema);
+    await getSchemasViewProvider().revealSchema(newSchema);
   }
 }
 
@@ -579,10 +578,11 @@ async function updateRegistryCacheAndFindNewSchema(
   registry: SchemaRegistry,
   newSchemaID: number,
   boundSubject: string,
-  schemaViewProvider: SchemasViewProvider,
 ): Promise<Schema> {
   const loader = ResourceLoader.getInstance(registry.connectionId);
 
+  logger.debug("updateRegistryCacheAndFindNewSchema: fetching new schemas for subject");
+  // Deep fetch new schemas for this subject.
   const subjectSchemas = await loader.getSchemasForSubject(registry, boundSubject, true);
 
   // Find the schema in the list of schemas for this registry. We know that
@@ -593,30 +593,24 @@ async function updateRegistryCacheAndFindNewSchema(
     throw new Error(`Could not find schema with id ${newSchemaID} in registry ${registry.id}`);
   }
 
-  // While here, if the schema view controller is focused on this registry, inform it
-  // that this subject has changed.
+  const updatedSubject = schema.subjectWithSchemasObject(subjectSchemas);
 
-  // This ensures that even if the user doesn't chose to highlight the new schema in the schema registry view,
-  // they will still see the new schema in the view if they currently have its schema registry open
-  // w/o having to hit the 'refresh' button.
-
-  if (schemaViewProvider.schemaRegistry?.id === registry.id && schema !== undefined) {
-    // If was the only schema in the subject, refresh the whole view so that the new subject
-    // will be visible.
-    if (subjectSchemas.length === 1) {
-      logger.debug("Refreshing whole schema view to load new subject");
-      // erring on deep refresh for time being. Will clear both the view and resource loader/manager subject caches.
-      schemaViewProvider.refresh(true);
-    } else {
-      // Otherwise, just refresh this single subject.
-      logger.debug(`Refreshing just subject ${boundSubject}`);
-      await schemaViewProvider.updateSubjectSchemas(boundSubject, subjectSchemas);
-    }
-  } else if (schemaViewProvider.schemaRegistry?.id !== registry.id) {
-    // If the schema registry view is not focused on this registry, just refresh the
-    // resource loader cache.
-    logger.debug(`Clearing resource loader schema cache for registry ${registry.id}`);
+  // Was a new subject being created?
+  if (subjectSchemas.length === 1) {
+    // Purge the cache of subjects for this registry, 'cause new one now exists. Would be better if the
+    // schema creation were done via the loader, so that it could have handled this
+    // need internally like is done when deleting a schema.
     await loader.clearCache(registry);
+
+    // Announce creation of new subject + known single contained schema version.
+    logger.debug("updateRegistryCacheAndFindNewSchema:: announcing new subject");
+    schemaSubjectChanged.fire({ change: "added", subject: updatedSubject });
+  } else {
+    logger.debug(
+      "updateRegistryCacheAndFindNewSchema:: announcing new schema version within existing subject",
+    );
+    // New schema version for an existing subject. Provide the new schema[].
+    schemaVersionsChanged.fire({ change: "added", subject: updatedSubject });
   }
 
   return schema;
