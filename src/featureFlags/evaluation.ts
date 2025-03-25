@@ -15,7 +15,7 @@ const logger = new Logger("featureFlags.evaluation");
  * If the client is not able to communicate with LaunchDarkly, it will return the last value applied
  * to {@link FeatureFlags} (which may be the default from {@link FEATURE_FLAG_DEFAULTS} if offline).
  */
-export function getFlagValue<T>(flag: string): T | undefined {
+export function getFlagValue<T>(flag: FeatureFlag): T | undefined {
   // try to re-initialize if we don't have a client
   const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
   const backupValue: T | undefined = FeatureFlags[flag];
