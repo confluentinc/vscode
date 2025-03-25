@@ -59,6 +59,7 @@ import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
+import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
@@ -243,6 +244,9 @@ async function _activateExtension(
   const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
   context.subscriptions.push(chatParticipant);
+
+  // track the status bar for CCloud notices
+  context.subscriptions.push(getCCloudStatusBarItem());
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
