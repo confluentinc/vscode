@@ -5,7 +5,7 @@
  * If `suggestion` is provided, it will be displayed in parentheses after the `message`.
  */
 export interface CCloudNotice {
-  level: "info" | "warning" | "error";
+  level: "warning" | "error";
   message: string;
   suggestion?: string;
 }
