@@ -1,7 +1,15 @@
-import assert from "assert";
+import * as vscode from "vscode";
+import * as assert from "assert";
 import { parseTestResult, getConnectionSpecFromFormData, deepMerge } from "./directConnect";
 import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
 import { ConnectedState, Status } from "./clients/sidecar";
+import { ConnectionId } from "./models/resource";
+import { CustomConnectionSpec } from "./storage/resourceManager";
+import sinon from "sinon";
+import * as resourceManagerModule from "./storage/resourceManager";
+import { ResourceManager } from "./storage/resourceManager";
+import { ConnectionType } from "./clients/sidecar/models/ConnectionType";
+import { handleConnectionChange } from "./directConnect";
 
 describe("directConnect.ts", () => {
   describe("getConnectionSpecFromFormData", () => {
@@ -503,6 +511,106 @@ describe("directConnect.ts", () => {
       const obj2 = { ssl: { enabled: true } };
       const result = deepMerge(obj1, obj2);
       assert.deepStrictEqual(result, { name: "test", ssl: { enabled: true } });
+    });
+  });
+
+  describe("handleConnectionChange", () => {
+    let sandbox: sinon.SinonSandbox;
+    let mockDispose: sinon.SinonStub;
+    let mockShowInformationMessage: sinon.SinonStub;
+    let mockResourceManager: Partial<ResourceManager>;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+
+      // Mock WebviewPanel
+      mockDispose = sandbox.stub();
+
+      // Mock window.showInformationMessage
+      mockShowInformationMessage = sandbox.stub();
+      (vscode.window as any).showInformationMessage = mockShowInformationMessage;
+
+      // Mock resource manager with required methods
+      mockResourceManager = {
+        getDirectConnections: sandbox.stub(),
+        // Add other required methods as needed with stubs
+        mutexes: new Map(),
+        storage: {},
+        runWithMutex: sandbox.stub(),
+      } as Partial<ResourceManager>;
+
+      // Stub the getResourceManager function
+      sandbox
+        .stub(resourceManagerModule, "getResourceManager")
+        .returns(mockResourceManager as ResourceManager);
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should close the form when connection is removed", async () => {
+      // Arrange: Create a test connection
+      const testConnection: CustomConnectionSpec = {
+        id: "test-connection-id" as ConnectionId,
+        name: "Test Connection",
+        type: ConnectionType.Direct,
+        formConnectionType: "Apache Kafka",
+        kafka_cluster: { bootstrap_servers: "localhost:9092" },
+      };
+
+      // Setup mock for getDirectConnections to simulate connection removed
+      (mockResourceManager.getDirectConnections as sinon.SinonStub).resolves(new Map());
+
+      // Act: Handle the connection change
+      const result = await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
+
+      // Assert: Verify the form was disposed
+      assert.strictEqual(
+        result,
+        true,
+        "Expected handleConnectionChange to return true when connection is removed",
+      );
+      assert.strictEqual(mockDispose.calledOnce, true, "Expected dispose to be called once");
+      assert.strictEqual(
+        mockShowInformationMessage.calledOnceWithExactly(
+          `Connection "${testConnection.name}" was removed in another window.`,
+        ),
+        true,
+        "Expected showInformationMessage to be called with the correct removal notification",
+      );
+    });
+
+    it("should not close the form when connection still exists", async () => {
+      // Arrange: Create a test connection
+      const testConnection: CustomConnectionSpec = {
+        id: "test-connection-id" as ConnectionId,
+        name: "Test Connection",
+        type: ConnectionType.Direct,
+        formConnectionType: "Apache Kafka",
+        kafka_cluster: { bootstrap_servers: "localhost:9092" },
+      };
+
+      // Setup mock for getDirectConnections to simulate connection still present
+      const connectionMap = new Map<ConnectionId, CustomConnectionSpec>();
+      connectionMap.set(testConnection.id, testConnection);
+      (mockResourceManager.getDirectConnections as sinon.SinonStub).resolves(connectionMap);
+
+      // Act: Handle the connection change
+      const result = await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
+
+      // Assert: Verify the form was not disposed
+      assert.strictEqual(
+        result,
+        false,
+        "Expected handleConnectionChange to return false when connection exists",
+      );
+      assert.strictEqual(mockDispose.called, false, "Expected dispose not to be called");
+      assert.strictEqual(
+        mockShowInformationMessage.called,
+        false,
+        "Expected showInformationMessage not to be called",
+      );
     });
   });
 });
