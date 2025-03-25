@@ -5,7 +5,9 @@ import {
 } from "launchdarkly-electron-client-sdk";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
+import { updateCCloudStatus } from "../statusBar/ccloudItem";
+import { CCloudNotice } from "../statusBar/types";
+import { FEATURE_FLAG_DEFAULTS, FeatureFlag, FeatureFlags } from "./constants";
 
 const logger = new Logger("featureFlags.handlers");
 
@@ -14,13 +16,19 @@ const logger = new Logger("featureFlags.handlers");
 export async function handleClientReady(client: LDElectronMainClient) {
   logger.debug("client ready event, setting flags...");
   // set starting values
-  for (const [key, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
-    const actualValue: LDFlagValue = client.variation(key);
+  for (const [flag, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
+    const actualValue: LDFlagValue = client.variation(flag);
     // NOTE: uncomment the following for local testing new feature flag behavior:
     // logger.debug(
     //   `client ready event, setting ${key}=${JSON.stringify(actualValue)} (default=${JSON.stringify(defaultValue)})`,
     // );
-    FeatureFlags[key] = actualValue ?? defaultValue;
+    FeatureFlags[flag] = actualValue ?? defaultValue;
+
+    if (flag === FeatureFlag.GLOBAL_NOTICES) {
+      // set/unset initial notices
+      const notices: CCloudNotice[] = FeatureFlags[flag] as CCloudNotice[];
+      updateCCloudStatus(notices);
+    }
   }
   logger.debug("client ready, flags set:", JSON.stringify(FeatureFlags));
 }
@@ -40,7 +48,11 @@ export async function handleFlagChanges(changes: LDFlagChangeset) {
     FeatureFlags[flag] = currentValue;
     logger.debug(`"${flag}" changed:`, { previousValue, currentValue });
 
-    // TODO: fork handling based on different flags
+    if (flag === FeatureFlag.GLOBAL_NOTICES) {
+      // update the status bar item with any notices, or reset if none
+      const notices: CCloudNotice[] = currentValue as CCloudNotice[];
+      updateCCloudStatus(notices);
+    }
   }
 }
 
