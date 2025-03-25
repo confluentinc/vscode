@@ -1,5 +1,3 @@
-import * as Sentry from "@sentry/node";
-
 import { commands, window } from "vscode";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
@@ -8,6 +6,7 @@ import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRe
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { logUsage, UserEvent } from "./telemetry/events";
+import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("errors");
 
@@ -124,9 +123,11 @@ export async function logError(
 
   logger.error(errorMessage, { ...errorContext, ...extra });
   if (sendTelemetry) {
-    Sentry.captureException(e, {
-      contexts: { response: { status_code: responseStatusCode } },
-      extra: { ...errorContext, ...extra },
+    sentryCaptureException(e, {
+      data: {
+        contexts: { response: { status_code: responseStatusCode } },
+        extra: { ...errorContext, ...extra },
+      },
     });
   }
 }
