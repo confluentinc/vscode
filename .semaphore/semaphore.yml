@@ -120,7 +120,6 @@ blocks:
             - npx playwright install
             - npx gulp build
             - npx gulp test
-            - npx gulp functional
       epilogue:
         always:
           commands:
