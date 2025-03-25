@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import { utcTicks } from "d3-time";
 import { Data } from "dataclass";
 import { ObservableScope } from "inertial";
@@ -46,6 +45,7 @@ import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { type post } from "./webview/message-viewer";
 import messageViewerTemplate from "./webview/message-viewer.html";
+import { logError, showErrorNotificationWithButtons } from "./errors";
 
 const logger = new Logger("consume");
 
@@ -544,14 +544,8 @@ function messageViewerStartPollingCommand(
             }
             default: {
               reportable = { message: "Something went wrong." };
-              Sentry.captureException(error, { extra: { status, payload } });
-              window
-                .showErrorMessage("Error response while consuming messages.", "Open Logs")
-                .then((action) => {
-                  if (action === "Open Logs") {
-                    commands.executeCommand("confluent.showSidecarOutputChannel");
-                  }
-                });
+              logError(error, "message viewer", { status: status.toString(), payload }, true);
+              showErrorNotificationWithButtons("Error response while consuming messages.");
               break;
             }
           }

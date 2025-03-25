@@ -6,7 +6,7 @@ import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRe
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { logUsage, UserEvent } from "./telemetry/events";
-import { sentryCaptureException } from "./telemetry/eventProcessors";
+import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("errors");
 

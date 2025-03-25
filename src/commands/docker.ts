@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import {
   CancellationToken,
   Disposable,
@@ -19,6 +18,7 @@ import { ConnectionLabel } from "../models/resource";
 import { LOCAL_DOCKER_SOCKET_PATH } from "../preferences/constants";
 import { localResourcesQuickPick } from "../quickpicks/localResources";
 import { UserEvent } from "../telemetry/events";
+import { sentryCaptureException } from "../telemetry/sentryClient";
 
 const logger = new Logger("commands.docker");
 
@@ -137,11 +137,13 @@ export async function runWorkflowWithProgress(
               status: "workflow failed",
               start,
             });
-            Sentry.captureException(error, {
-              tags: {
-                dockerImage: workflow.imageRepoTag,
-                extensionUserFlow: "Local Resource Management",
-                localResourceKind: workflow.resourceKind,
+            sentryCaptureException(error, {
+              data: {
+                tags: {
+                  dockerImage: workflow.imageRepoTag,
+                  extensionUserFlow: "Local Resource Management",
+                  localResourceKind: workflow.resourceKind,
+                },
               },
             });
             let errorMsg: string = "";

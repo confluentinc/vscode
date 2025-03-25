@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
-import { closeSentryClient, initSentry } from "./telemetry/eventProcessors";
+import { closeSentryClient, initSentry } from "./telemetry/sentryClient";
 if (process.env.SENTRY_DSN) {
   initSentry();
 }
@@ -63,7 +63,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { sentryCaptureException } from "./telemetry/eventProcessors";
+import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("extension");
 
