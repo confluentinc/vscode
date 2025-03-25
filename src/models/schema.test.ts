@@ -299,6 +299,25 @@ describe("getSubjectIcon", () => {
       assert.deepEqual(icon, new vscode.ThemeIcon(expected as IconNames));
     });
   }
+
+  for (const [subjectName, iconName, strategy] of [
+    ["test-key", IconNames.KEY_SUBJECT, "TopicNameStrategy"],
+    ["test-value", IconNames.VALUE_SUBJECT, "TopicNameStrategy"],
+    ["test-other", IconNames.OTHER_SUBJECT, "**NOT** TopicNameStrategy"],
+  ]) {
+    it(`subject "${subjectName}" should use the "${iconName}" icon (${strategy})`, () => {
+      const subject = new Subject(
+        subjectName,
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        [TEST_CCLOUD_SCHEMA],
+      );
+      const subjectTreeItem = new SubjectTreeItem(subject);
+
+      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, iconName);
+    });
+  }
 });
 
 describe("getLanguageTypes", () => {
