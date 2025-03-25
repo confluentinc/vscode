@@ -91,6 +91,81 @@ export class Subject implements IResourceBase, ISearchable {
   searchableText(): string {
     return this.name;
   }
+
+  /**
+   * Merge the given schema array into ours, if any, ala mergesort:
+   * If we have NO schemas array currently, retain the provided array.
+   *
+   * If we have a schemas array, then retain any member that is present in the given array,
+   * as well as potentially add newly provided members.
+   */
+  mergeSchemas(newSchemas: Schema[]) {
+    // If we had no schemas previously, then graciously accept the new ones.
+    if (!this.schemas) {
+      this.schemas = newSchemas;
+      return;
+    }
+
+    // Iterate over both arrays in parallel. Both arrays are sorted by schema.version descending, so we can
+    // use a merge sort approach to combine them.
+    // 1. If a schema is present in both existing and new arrays, keep it in updated existing (merged).
+    // 2. If a schema is present in new array, but missing from existing, add it to merged.
+    // 3. If the schema is present in existing, but missing from new array, then skip it (do not add to merged).
+
+    const merged: Schema[] = [];
+    let i = 0,
+      j = 0;
+
+    while (i < this.schemas.length || j < newSchemas.length) {
+      // If we've exhausted new schemas, we're done (don't keep schemas not in new array)
+      if (j >= newSchemas.length) {
+        break;
+      }
+
+      const ourSchema = this.schemas[i];
+      const newSchema = newSchemas[j];
+
+      // Compare versions to determine ordering
+      if (ourSchema.version > newSchema.version) {
+        // Keep our higher version schema only if it exists in new schemas
+        // (We'll encounter it later in the new schemas if it should be kept)
+        i++;
+      } else if (ourSchema.version < newSchema.version) {
+        // Add the new schema which we don't have
+        merged.push(newSchema);
+        j++;
+      } else {
+        // Same version - prefer the existing schema (because view controllers compare by object identity) and advance both indices
+        merged.push(ourSchema);
+        i++;
+        j++;
+      }
+    }
+
+    this.schemas = merged;
+  }
+}
+
+/**
+ * A Subject subclass that guarantees schemas will be available as a non-null array.
+ * This is useful for cases where we know schemas will always be present.
+ */
+export class SubjectWithSchemas extends Subject {
+  declare schemas: Schema[];
+
+  constructor(
+    name: string,
+    connectionId: ConnectionId,
+    environmentId: EnvironmentId,
+    schemaRegistryId: string,
+    schemas: Schema[],
+  ) {
+    if (!schemas || schemas.length === 0) {
+      throw new Error("SubjectWithSchemas requires a non-empty schemas array");
+    }
+
+    super(name, connectionId, environmentId, schemaRegistryId, schemas);
+  }
 }
 
 /** Base class representing a single version of a schema. */
@@ -144,12 +219,27 @@ export class Schema extends Data implements IResourceBase {
     return "";
   }
 
-  /** Produce a Subject instance from this Schema.*/
+  /** Produce a schema-version-free Subject instance from this Schema. Property .schemas will be null.*/
   subjectObject(): Subject {
     if (!this.environmentId) {
       throw new Error("Schema missing environmentId, unable to create Subject object.");
     }
     return new Subject(this.subject, this.connectionId, this.environmentId, this.schemaRegistryId);
+  }
+
+  /** Promote to a Subject object carrying the provided schema versions, which should include this. */
+  subjectWithSchemasObject(schemas: Schema[]): SubjectWithSchemas {
+    if (!this.environmentId) {
+      throw new Error("Schema missing environmentId, unable to create Subject object.");
+    }
+
+    return new SubjectWithSchemas(
+      this.subject,
+      this.connectionId,
+      this.environmentId,
+      this.schemaRegistryId,
+      schemas,
+    );
   }
 
   searchableText(): string {
