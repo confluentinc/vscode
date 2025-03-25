@@ -43,7 +43,7 @@ export async function run() {
   // @ts-expect-error __coverage__ is what istanbul uses for storing coverage data
   const coverageData = global.__coverage__ ?? null;
   if (coverageData != null) {
-    // same handline as resultFilePath above
+    // same handling as resultFilePath above
     const coverageFilePath = join(projectRoot, "coverage.json");
     await writeFile(coverageFilePath, JSON.stringify(coverageData));
   }
