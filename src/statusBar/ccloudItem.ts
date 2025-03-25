@@ -52,7 +52,7 @@ export function createNoticesMarkdown(notices: CCloudNotice[]): MarkdownString {
   const categories = [
     { level: "error", label: "Critical Issues", icon: "error" },
     { level: "warning", label: "Important Notices", icon: "warning" },
-    { level: "info", label: "Announcements", icon: "info" },
+    // no "info" level notices for now, but if we add them in the future, we can use this
   ];
 
   for (const category of categories) {
@@ -90,7 +90,7 @@ export function createNoticesMarkdown(notices: CCloudNotice[]): MarkdownString {
 /** Returns a {@link ThemeColor} for the status bar item based on the provided array of
  * {@link CCloudNotice}.
  *
- * If there are no notices (or the only notices are `info` level), this will return `undefined`.
+ * If there are no notices, this will return `undefined`.
  */
 export function determineStatusBarColor(notices: CCloudNotice[]): ThemeColor | undefined {
   if (!notices.length) {
@@ -106,7 +106,4 @@ export function determineStatusBarColor(notices: CCloudNotice[]): ThemeColor | u
   if (warningNotices) {
     return new ThemeColor("statusBarItem.warningBackground");
   }
-
-  // no need to check for "info" level notices since they don't get a special color and we'll just
-  // return undefined to reset the status bar item color
 }
