@@ -46,7 +46,8 @@ that interests you. You can narrow down the search using `labels` as filters. Se
 "[Label reference](https://docs.github.com/en/contributing/collaborating-on-github-docs/label-reference)"
 for more information. As a general rule, you are welcome to open a PR with a fix unless that issue
 is already assigned to someone else, or someone else has added a comment that they are working on
-it.
+it. Currently unassigned issues can be found using
+[this filter](https://github.com/confluentinc/vscode/issues?q=is%3Aissue%20state%3Aopen%20no%3Aassignee%20-label%3Arelease%20).
 
 ## Install the tools
 
