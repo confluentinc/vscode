@@ -324,9 +324,18 @@ async function deleteSchemaVersionCommand(schema: Schema) {
 
     // Fire off event to update views if needed.
     if (wasOnlyVersionForSubject) {
-      schemaSubjectChanged.fire({ subject: schema.subjectObject(), change: "deleted" });
+      // Announce that the entire subject was deleted.
+      schemaSubjectChanged.fire({ change: "deleted", subject: schema.subjectObject() });
     } else {
-      schemaVersionsChanged.fire({ schema: schema, change: "deleted" });
+      // Announce that a schema version was deleted, and provide the updated schema group.
+
+      // Filter out the deleted schema version from the pre-delete
+      // fetched schema group.
+      const newSubject = schema.subjectWithSchemasObject(
+        schemaGroup.filter((s) => s.id !== schema.id),
+      );
+
+      schemaVersionsChanged.fire({ change: "deleted", subject: newSubject });
     }
   } catch (e) {
     success = false;
