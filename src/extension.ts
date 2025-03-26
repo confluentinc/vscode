@@ -88,7 +88,7 @@ import {
 } from "./featureFlags/evaluation";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { ENABLE_FLINK } from "./preferences/constants";
+import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
@@ -289,9 +289,13 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
+  // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const flinkEnabled = setContextValue(ContextValues.flinkEnabled, config.get(ENABLE_FLINK, false));
+  const chatParticipantEnabled = setContextValue(
+    ContextValues.chatParticipantEnabled,
+    config.get(ENABLE_CHAT_PARTICIPANT, true),
+  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
@@ -335,6 +339,7 @@ async function setupContextValues() {
   ]);
   await Promise.all([
     flinkEnabled,
+    chatParticipantEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
     openInCCloudResources,
