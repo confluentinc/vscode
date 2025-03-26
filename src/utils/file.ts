@@ -45,9 +45,8 @@ export async function getEditorOrFileContents(uri: vscode.Uri): Promise<LoadedDo
   }
 
   try {
-    const fileContents = await readFile(uri);
     return {
-      content: Buffer.from(fileContents).toString("utf8"),
+      content: await readFile(uri),
     };
   } catch (e) {
     // wrap error
