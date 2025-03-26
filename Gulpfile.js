@@ -645,8 +645,17 @@ export async function testRun() {
   const reportCoverage = IS_CI || process.argv.indexOf("--coverage", 2) >= 0;
   // argv array is something like ['gulp', 'test', '-t', 'something'], we look for the one after -t
   const testFilter = process.argv.find((v, i, a) => i > 0 && a[i - 1] === "-t");
+
+  // check for VS Code stable vs Insiders based on TERM_PROGRAM_VERSION
+  // - stable: "1.x.x"
+  // - insiders: "1.x.x-insider"
+  const isInsiders = process.env.TERM_PROGRAM_VERSION?.endsWith("insider");
+  // specify the version of VS Code to use for testing if it isn't provided as an env var
+  const vscodeVersion = process.env.VSCODE_VERSION || (isInsiders ? "insiders" : "stable");
+  console.info(`Starting test runner for VS Code ${vscodeVersion}...`);
+
   await runTests({
-    version: process.env.VSCODE_VERSION,
+    version: vscodeVersion,
     extensionDevelopmentPath: resolve(DESTINATION),
     extensionTestsPath: resolve(DESTINATION + "/src/testing.js"),
     extensionTestsEnv: {

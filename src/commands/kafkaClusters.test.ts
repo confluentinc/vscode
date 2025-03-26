@@ -5,6 +5,19 @@ import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { copyBootstrapServers } from "./kafkaClusters";
 
 describe("copyBootstrapServers", () => {
+  let _originalClipboardContents: string | undefined;
+
+  beforeEach(async () => {
+    // Try to reduce annoying developer running tests corrupting their clipboard.
+    _originalClipboardContents = await vscode.env.clipboard.readText();
+  });
+
+  afterEach(async () => {
+    if (_originalClipboardContents) {
+      await vscode.env.clipboard.writeText(_originalClipboardContents);
+    }
+  });
+
   it("should copy protocol-free bootstrap server(s) to the clipboard", async () => {
     const testCluster: CCloudKafkaCluster = CCloudKafkaCluster.create({
       ...TEST_CCLOUD_KAFKA_CLUSTER,

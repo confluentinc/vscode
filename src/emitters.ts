@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
+import { Subject, SubjectWithSchemas } from "./models/schema";
 import { SchemaRegistry } from "./models/schemaRegistry";
 
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
@@ -23,6 +24,38 @@ export const directConnectionCreated = new vscode.EventEmitter<ConnectionId>();
 
 export const localKafkaConnected = new vscode.EventEmitter<boolean>();
 export const localSchemaRegistryConnected = new vscode.EventEmitter<boolean>();
+
+export type EventChangeType = "added" | "deleted";
+
+/** A whole subject within a schema registry has been added or deleted. */
+export type SubjectChangeEvent = {
+  change: EventChangeType;
+} & (
+  | {
+      change: "added";
+      /** When a subject is added, it will carry the new (probably singleton) schema(s) within. */
+      subject: SubjectWithSchemas;
+    }
+  | {
+      change: "deleted";
+      /** When a subject is deleted, it will not contain schemas */
+      subject: Subject;
+    }
+);
+
+/** Fired when a whole SR subject has either been added or deleted. */
+export const schemaSubjectChanged = new vscode.EventEmitter<SubjectChangeEvent>();
+
+/** A schema version was added or removed from a preexisting and remaining existing subject. */
+export type SchemaVersionChangeEvent = {
+  change: EventChangeType;
+
+  /** The new Subject representation, with refreshed non-null and non-empty .schemas */
+  subject: SubjectWithSchemas;
+};
+
+/** Fired when a schema version has been either created or deleted within a preexisting subject.*/
+export const schemaVersionsChanged = new vscode.EventEmitter<SchemaVersionChangeEvent>();
 
 /** Event type used by {@link environmentChanged} */
 export type EnvironmentChangeEvent = {
