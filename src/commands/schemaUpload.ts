@@ -13,9 +13,10 @@ import { Logger } from "../logging";
 import { Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { schemaSubjectQuickPick, schemaTypeQuickPick } from "../quickpicks/schemas";
-import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
+import { uriQuickpick } from "../quickpicks/uris";
 import { getSidecar } from "../sidecar";
 import { hashed, logUsage, UserEvent } from "../telemetry/events";
+import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 
 const logger = new Logger("commands.schemaUpload");
@@ -72,11 +73,7 @@ export async function uploadSchemaFromFile(registry?: SchemaRegistry, subjectStr
     return;
   }
 
-  const docContent: LoadedDocumentContent = await loadDocumentContent(schemaUri);
-  if (docContent.content === undefined) {
-    vscode.window.showErrorMessage("Could not read schema file");
-    return;
-  }
+  const docContent: LoadedDocumentContent = await getEditorOrFileContents(schemaUri);
 
   // What kind of schema is this? We must tell the schema registry.
   const schemaType: SchemaType | undefined = await determineSchemaType(

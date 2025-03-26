@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { Diagnostic, DiagnosticSeverity, Uri } from "vscode";
-import * as uris from "../quickpicks/uris";
+import * as fileUtils from "../utils/file";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnosticCollection";
 import {
   PRODUCE_MESSAGE_SCHEMA,
@@ -24,14 +24,14 @@ const BASIC_SCHEMA_INFO: SchemaInfo = {
 
 describe("schemas/produceMessageSchema validation", function () {
   let sandbox: sinon.SinonSandbox;
-  let loadDocumentContentStub: sinon.SinonStub;
+  let getEditorOrFileContentsStub: sinon.SinonStub;
 
   const fakeUri = Uri.file("test");
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     // stub the loadDocumentContent function to return fake content from a document
-    loadDocumentContentStub = sandbox.stub(uris, "loadDocumentContent");
+    getEditorOrFileContentsStub = sandbox.stub(fileUtils, "getEditorOrFileContents");
   });
 
   afterEach(function () {
@@ -41,7 +41,7 @@ describe("schemas/produceMessageSchema validation", function () {
   });
 
   it("should not set any diagnostics for a valid (single) message", async function () {
-    loadDocumentContentStub.resolves({ content: JSON.stringify(BASIC_MESSAGE) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(BASIC_MESSAGE) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -50,7 +50,9 @@ describe("schemas/produceMessageSchema validation", function () {
   });
 
   it("should not set any diagnostics for a valid array of messages", async function () {
-    loadDocumentContentStub.resolves({ content: JSON.stringify([BASIC_MESSAGE, BASIC_MESSAGE]) });
+    getEditorOrFileContentsStub.resolves({
+      content: JSON.stringify([BASIC_MESSAGE, BASIC_MESSAGE]),
+    });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -59,7 +61,7 @@ describe("schemas/produceMessageSchema validation", function () {
   });
 
   it("should set a diagnostic for an empty file", async function () {
-    loadDocumentContentStub.resolves({ content: "" });
+    getEditorOrFileContentsStub.resolves({ content: "" });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -74,7 +76,7 @@ describe("schemas/produceMessageSchema validation", function () {
       const invalidMessage = {
         [missingField === "key" ? "value" : "key"]: "foo",
       };
-      loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+      getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
       await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -90,7 +92,7 @@ describe("schemas/produceMessageSchema validation", function () {
       ...BASIC_MESSAGE,
       headers: [{ value: "qux" }],
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -105,7 +107,7 @@ describe("schemas/produceMessageSchema validation", function () {
       ...BASIC_MESSAGE,
       headers: [{ key: "foo", value: 123 }], // numeric value instead of string
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -116,7 +118,7 @@ describe("schemas/produceMessageSchema validation", function () {
   });
 
   it("should set error diagnostics for invalid JSON", async function () {
-    loadDocumentContentStub.resolves({ content: "{key: invalid json}" });
+    getEditorOrFileContentsStub.resolves({ content: "{key: invalid json}" });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -131,7 +133,7 @@ describe("schemas/produceMessageSchema validation", function () {
   });
 
   it("should set an error diagnostic for an empty array", async function () {
-    loadDocumentContentStub.resolves({ content: "[]" });
+    getEditorOrFileContentsStub.resolves({ content: "[]" });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -146,7 +148,7 @@ describe("schemas/produceMessageSchema validation", function () {
       partition_id: 1,
       timestamp: 1234567890,
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(messageWithOptionals) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(messageWithOptionals) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -160,7 +162,7 @@ describe("schemas/produceMessageSchema validation", function () {
         ...BASIC_MESSAGE,
         [field]: "oh no",
       };
-      loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+      getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
       await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -180,7 +182,7 @@ describe("schemas/produceMessageSchema validation", function () {
         subject: "test-value",
       },
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(messageWithSchemas) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(messageWithSchemas) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -196,7 +198,7 @@ describe("schemas/produceMessageSchema validation", function () {
         schema_version: undefined, // missing required field
       },
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -214,7 +216,7 @@ describe("schemas/produceMessageSchema validation", function () {
         subject_name_strategy: "INVALID_STRATEGY", // invalid enum value
       },
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 
@@ -235,7 +237,7 @@ describe("schemas/produceMessageSchema validation", function () {
         schema_version: "1", // string instead of integer
       },
     };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(invalidMessage) });
+    getEditorOrFileContentsStub.resolves({ content: JSON.stringify(invalidMessage) });
 
     await validateDocument(fakeUri, PRODUCE_MESSAGE_SCHEMA);
 

@@ -27,7 +27,7 @@ import { isCCloud } from "../models/resource";
 import { Schema } from "../models/schema";
 import { KafkaTopic } from "../models/topic";
 import { schemaKindMultiSelect, SchemaKindSelection } from "../quickpicks/schemas";
-import { loadDocumentContent, LoadedDocumentContent, uriQuickpick } from "../quickpicks/uris";
+import { uriQuickpick } from "../quickpicks/uris";
 import { promptForSchema } from "../quickpicks/utils/schemas";
 import { getSubjectNameStrategy } from "../quickpicks/utils/schemaSubjects";
 import { JSON_DIAGNOSTIC_COLLECTION } from "../schemas/diagnosticCollection";
@@ -40,6 +40,7 @@ import {
 import { validateDocument } from "../schemas/validateDocument";
 import { getSidecar } from "../sidecar";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { getEditorOrFileContents, LoadedDocumentContent } from "../utils/file";
 import {
   executeInWorkerPool,
   ExecutionResult,
@@ -237,7 +238,7 @@ export async function produceMessagesFromDocument(topic: KafkaTopic) {
     uriScheme: messageUri.scheme, // untitled, file, or confluent.topic.message
   });
 
-  const { content }: LoadedDocumentContent = await loadDocumentContent(messageUri);
+  const { content }: LoadedDocumentContent = await getEditorOrFileContents(messageUri);
   if (!content) {
     logUsage(UserEvent.MessageProduceAction, {
       status: "failed to load message content",
