@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { TextDocument } from "vscode";
-import { readFile, statFile } from "./fs_wrappers";
+import { readFile, statFile } from "./fsWrappers";
 
 /** Check if a file URI exists in the filesystem. */
 export async function fileUriExists(uri: vscode.Uri): Promise<boolean> {

@@ -2,7 +2,7 @@ import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
 import { fileUriExists, getEditorOrFileContents, LoadedDocumentContent } from "./file";
-import * as fsWrappers from "./fs_wrappers";
+import * as fsWrappers from "./fsWrappers";
 
 describe("fileUriExists", () => {
   let sandbox: sinon.SinonSandbox;
