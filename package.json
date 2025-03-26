@@ -55,6 +55,17 @@
         "label": "Confluent Cloud"
       }
     ],
+    "chatParticipants": [
+      {
+        "id": "confluent.chat-participant",
+        "name": "Confluent",
+        "description": "Provides a Copilot-powered chat assistant for Confluent and Apache Kafka® developers, offering guidance on configuration, development best practices, and troubleshooting for Kafka clusters, Schema Registry, Flink, and streaming applications.",
+        "isSticky": true,
+        "commands": [],
+        "disambiguation": [],
+        "when": "confluent.chatParticipantEnabled"
+      }
+    ],
     "commands": [
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -492,6 +503,14 @@
           "markdownDescription": "Enable Flink-related resource loading and associated actions.",
           "tags": [
             "preview"
+          ]
+        },
+        "confluent.experimental.enableChatParticipant": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the Confluent chat participant for Copilot.",
+          "tags": [
+            "experimental"
           ]
         }
       }

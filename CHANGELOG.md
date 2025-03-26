@@ -11,6 +11,7 @@ All notable changes to this extension will be documented in this file.
   of single schema versions. If the final schema within a subject is deleted, the subject will no
   longer exist.
 - Preview setting to enable/disable Flink resources' and associated actions' visibility
+- Experimental setting to enable/disable the Confluent chat participant for Copilot chat
 
 ### Fixed
 
