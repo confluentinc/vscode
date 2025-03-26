@@ -138,7 +138,7 @@ export async function runWorkflowWithProgress(
               start,
             });
             sentryCaptureException(error, {
-              data: {
+              captureContext: {
                 tags: {
                   dockerImage: workflow.imageRepoTag,
                   extensionUserFlow: "Local Resource Management",
