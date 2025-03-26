@@ -2,6 +2,7 @@ import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration
 import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
 import {
+  ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
@@ -42,7 +43,7 @@ export function createConfigChangeListener(): Disposable {
         return;
       }
 
-      // --- PREVIEW SETTINGS --
+      // --- EXPERIMENTAL/PREVIEW SETTINGS --
       // Remove the sections below once the behavior is enabled by default and a setting is no
       // longer needed to opt-in to the feature.
       if (event.affectsConfiguration(ENABLE_FLINK)) {
@@ -50,6 +51,15 @@ export function createConfigChangeListener(): Disposable {
         const enabled = configs.get(ENABLE_FLINK, false);
         logger.debug(`"${ENABLE_FLINK}" config changed`, { enabled });
         setContextValue(ContextValues.flinkEnabled, enabled);
+        return;
+      }
+
+      if (event.affectsConfiguration(ENABLE_CHAT_PARTICIPANT)) {
+        // user toggled the "Enable Chat Participant" experimental setting
+        const enabled = configs.get(ENABLE_CHAT_PARTICIPANT, false);
+        logger.debug(`"${ENABLE_CHAT_PARTICIPANT}" config changed`, { enabled });
+        setContextValue(ContextValues.chatParticipantEnabled, enabled);
+        return;
       }
     },
   );
