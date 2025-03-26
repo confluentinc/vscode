@@ -13,8 +13,10 @@ import {
   LanguageModelChatSelector,
   lm,
 } from "vscode";
+import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
+import { ModelNotSupportedError } from "./errors";
 import { parseReferences } from "./references";
 
 const logger = new Logger("chat.participant");
@@ -54,18 +56,47 @@ export async function chatHandler(
     messages.push(...referenceMessages);
   }
 
+  const model: LanguageModelChat = await getModel({
+    vendor: request.model?.vendor,
+    family: request.model?.family,
+    version: request.model?.version,
+    id: request.model?.id,
+  });
+  logger.debug(`using model id "${model.id}" for request`);
+
+  if (request.command) {
+    // TODO: implement command handling
+    return { metadata: { command: request.command } };
+  }
+
+  // non-command request
   try {
-    if (request.command) {
-      // TODO: implement command handling
-      return { metadata: { command: request.command } };
-    } else {
-      await handleChatMessage(messages, stream, token, request.model);
-      return {};
-    }
+    await handleChatMessage(messages, stream, token, model);
+    return {};
   } catch (error) {
     if (error instanceof Error) {
-      logger.error("error handling messages:", error);
-      stream.markdown("Error: " + error.message);
+      if (error.message.includes("model_not_supported")) {
+        // NOTE: some models returned from `selectChatModels()` may return an error 400 response
+        // while streaming the response. This is out of our control, and attempting to find a fallback
+        // model could get noisy and use more tokens than necessary. Instead, we're trying to catch
+        // this scenario and return a more user-friendly error message.
+        const errMsg = `The "${model.name}" model is not currently supported. Please choose a different model from the dropdown and try again.`;
+        // keep track of how often this is happening so we can
+        logError(
+          new ModelNotSupportedError(`${model.id} is not supported`),
+          "chatHandler",
+          {
+            model: JSON.stringify({ id: model.id, vendor: model.vendor, family: model.family }),
+          },
+          true,
+        );
+        return {
+          errorDetails: { message: errMsg },
+          metadata: { error: true, name: ModelNotSupportedError.name },
+        };
+      }
+      // some other kind of error when sending the request or streaming the response
+      logError(error, "chatHandler", { model: model?.name ?? "unknown" });
       return {
         errorDetails: { message: error.message },
         metadata: { error: true, stack: error.stack, name: error.name },
@@ -75,19 +106,24 @@ export async function chatHandler(
   }
 }
 
-/** Get the language model to use. */
-async function getModel(model?: LanguageModelChat): Promise<LanguageModelChat> {
-  if (model) {
-    // use model provided in the ChatRequest
-    return model;
+/** Get the language model to use based on the model selected in the chat dropdown. If the model
+ * isn't found, try to find a model by generalizing the selector. */
+async function getModel(selector: LanguageModelChatSelector): Promise<LanguageModelChat> {
+  let models: LanguageModelChat[] = [];
+  for (const fieldToRemove of ["id", "version", "family", "vendor"]) {
+    models = await lm.selectChatModels(selector);
+    logger.debug(`${models.length} available chat model(s)`, { models, modelSelector: selector });
+    if (models.length) {
+      break;
+    }
+    // remove one field to try more generic model listing and try again
+    selector = { ...selector, [fieldToRemove]: undefined };
   }
 
-  const modelSelector: LanguageModelChatSelector = { vendor: "copilot", family: "gpt-4o" };
-  const models: LanguageModelChat[] = await lm.selectChatModels(modelSelector);
-  logger.debug("available chat models:", models);
   if (!models.length) {
-    throw new Error(`no language models found for ${JSON.stringify(modelSelector)}`);
+    throw new Error(`no language models found for ${JSON.stringify(selector)}`);
   }
+
   const selectedModel = models[0];
   logger.debug("using language model:", selectedModel);
   return selectedModel;
@@ -98,15 +134,11 @@ async function handleChatMessage(
   messages: LanguageModelChatMessage[],
   stream: ChatResponseStream,
   token: CancellationToken,
-  requestModel?: LanguageModelChat,
+  model: LanguageModelChat,
 ): Promise<void> {
-  logger.debug("handling chat messages:", messages);
+  const response: LanguageModelChatResponse = await model.sendRequest(messages, {}, token);
 
-  const model: LanguageModelChat = requestModel ?? (await getModel());
-  const chatResponse: LanguageModelChatResponse = await model.sendRequest(messages, {}, token);
-  logger.debug("chat response:", chatResponse);
-
-  for await (const fragment of chatResponse.text) {
+  for await (const fragment of response.text) {
     if (token.isCancellationRequested) {
       logger.debug("chat request cancelled");
       return;
