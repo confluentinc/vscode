@@ -1,6 +1,8 @@
 import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
+import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
 import {
+  ENABLE_FLINK,
   LOCAL_DOCKER_SOCKET_PATH,
   SSL_PEM_PATHS,
   SSL_VERIFY_SERVER_CERT_DISABLED,
@@ -43,6 +45,12 @@ export function createConfigChangeListener(): Disposable {
       // --- PREVIEW SETTINGS --
       // Remove the sections below once the behavior is enabled by default and a setting is no
       // longer needed to opt-in to the feature.
+      if (event.affectsConfiguration(ENABLE_FLINK)) {
+        // user toggled the "Enable Flink" preview setting
+        const enabled = configs.get(ENABLE_FLINK, false);
+        logger.debug(`"${ENABLE_FLINK}" config changed`, { enabled });
+        setContextValue(ContextValues.flinkEnabled, enabled);
+      }
     },
   );
 
