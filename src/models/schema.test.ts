@@ -129,6 +129,149 @@ describe("Schema model methods", () => {
     // Non-ccloud schemas do not
     assert.equal(TEST_LOCAL_SCHEMA.ccloudUrl, "");
   });
+
+  describe("mergeSchemas() tests", () => {
+    it("should accept new schemas when subject.schemas is null", () => {
+      const subject = new Subject(
+        "test-subject",
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+      );
+      assert.equal(subject.schemas, null);
+
+      const newSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
+      ];
+
+      subject.mergeSchemas(newSchemas);
+      assert.deepEqual(subject.schemas, newSchemas);
+    });
+
+    it("should merge schemas preserving additional schemas from newSchemas", () => {
+      // As if we had two versions originally in our Subject ...
+      const originalSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
+      ];
+
+      const subject = new Subject(
+        "test-subject",
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        originalSchemas,
+      );
+
+      // And then version three was created, and we want to merge it in.
+      // These will be the results of the latest 'get all schema versions' call for the subject.
+      const newSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 3 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
+      ];
+
+      subject.mergeSchemas(newSchemas);
+
+      // Expect the resulting merge to have the versions ordered 3, 2, 1, and that v2 and v1 are the same objects as the originals.
+      const resultingSchemas = subject.schemas!;
+      assert.strictEqual(resultingSchemas.length, 3);
+      assert.strictEqual(resultingSchemas[0].version, 3);
+      assert.strictEqual(resultingSchemas[1].version, 2);
+      assert.strictEqual(resultingSchemas[2].version, 1);
+
+      assert.strictEqual(resultingSchemas[1], originalSchemas[0]); // version 2
+      assert.strictEqual(resultingSchemas[2], originalSchemas[1]); // version 1
+    });
+
+    it("should remove schemas that are not in newSchemas", () => {
+      const originalSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 3 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
+      ];
+
+      const subject = new Subject(
+        "test-subject",
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        originalSchemas,
+      );
+
+      // As if both versions 3 and 1 were deleted.
+      const newSchemas = [Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 })];
+
+      subject.mergeSchemas(newSchemas);
+
+      // Expect the resulting merge to have the versions ordered 3, 1, and that v2 is removed.
+      const resultingSchemas = subject.schemas!;
+      assert.strictEqual(resultingSchemas.length, 1);
+      assert.strictEqual(resultingSchemas[0], originalSchemas[1]); // Should have kept the original v2 schema.
+    });
+
+    it("Should add and remove schemas when needed", () => {
+      const originalSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 3 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
+      ];
+
+      const subject = new Subject(
+        "test-subject",
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        originalSchemas,
+      );
+
+      // As if both versions 3 and 1 were deleted, and version 4 was added.
+      const newSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 4 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+      ];
+
+      subject.mergeSchemas(newSchemas);
+
+      // Expect the resulting merge to have the versions ordered 4, 2, and that v3 and v1 are removed.
+      const resultingSchemas = subject.schemas!;
+      assert.strictEqual(resultingSchemas.length, 2);
+      assert.strictEqual(resultingSchemas[0].version, 4);
+      assert.strictEqual(resultingSchemas[1].version, 2);
+
+      // v2 should be the same object as the original v2 schema.
+      assert.strictEqual(resultingSchemas[1], originalSchemas[1]);
+    });
+
+    it("Will handle when new schemas is longer than old schemas", () => {
+      const originalSchemas = [Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 })];
+
+      const subject = new Subject(
+        "test-subject",
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        originalSchemas,
+      );
+
+      // As if both versions 2 and 3 were just added.
+      const newSchemas = [
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 3 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
+        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
+      ];
+
+      subject.mergeSchemas(newSchemas);
+
+      // Expect the resulting merge to have the versions ordered 4, 2, and that v3 and v1 are removed.
+      const resultingSchemas = subject.schemas!;
+      assert.strictEqual(resultingSchemas.length, 3);
+      assert.strictEqual(resultingSchemas[0], newSchemas[0]); // version 3
+      assert.strictEqual(resultingSchemas[1], newSchemas[1]); // version 2
+      assert.strictEqual(resultingSchemas[2], originalSchemas[0]); // version 1
+    });
+  });
 });
 
 describe("getSubjectIcon", () => {
@@ -156,6 +299,25 @@ describe("getSubjectIcon", () => {
       assert.deepEqual(icon, new vscode.ThemeIcon(expected as IconNames));
     });
   }
+
+  for (const [subjectName, iconName, strategy] of [
+    ["test-key", IconNames.KEY_SUBJECT, "TopicNameStrategy"],
+    ["test-value", IconNames.VALUE_SUBJECT, "TopicNameStrategy"],
+    ["test-other", IconNames.OTHER_SUBJECT, "**NOT** TopicNameStrategy"],
+  ]) {
+    it(`subject "${subjectName}" should use the "${iconName}" icon (${strategy})`, () => {
+      const subject = new Subject(
+        subjectName,
+        CCLOUD_CONNECTION_ID,
+        "envId" as EnvironmentId,
+        "srId",
+        [TEST_CCLOUD_SCHEMA],
+      );
+      const subjectTreeItem = new SubjectTreeItem(subject);
+
+      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, iconName);
+    });
+  }
 });
 
 describe("getLanguageTypes", () => {
@@ -172,8 +334,6 @@ describe("getLanguageTypes", () => {
       assert.deepEqual(languageType, expected);
     });
   }
-
-  it(`Schema.get`);
 });
 
 describe("SchemaTreeItem", () => {
@@ -227,23 +387,4 @@ describe("SubjectTreeItem", () => {
     );
     assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
   });
-
-  for (const [subjectName, iconName, strategy] of [
-    ["test-key", IconNames.KEY_SUBJECT, "TopicNameStrategy"],
-    ["test-value", IconNames.VALUE_SUBJECT, "TopicNameStrategy"],
-    ["test-other", IconNames.OTHER_SUBJECT, "**NOT** TopicNameStrategy"],
-  ]) {
-    it(`subject "${subjectName}" should use the "${iconName}" icon (${strategy})`, () => {
-      const subject = new Subject(
-        subjectName,
-        CCLOUD_CONNECTION_ID,
-        "envId" as EnvironmentId,
-        "srId",
-        [TEST_CCLOUD_SCHEMA],
-      );
-      const subjectTreeItem = new SubjectTreeItem(subject);
-
-      assert.deepEqual((subjectTreeItem.iconPath as vscode.ThemeIcon).id, iconName);
-    });
-  }
 });

@@ -1,15 +1,25 @@
 import { homedir } from "os";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
+import { ResponseError } from "../clients/sidecar";
 import { fetchSchemaBody, SchemaDocumentProvider } from "../documentProviders/schema";
+import { schemaSubjectChanged, schemaVersionsChanged } from "../emitters";
+import {
+  DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+  logError,
+  showErrorNotificationWithButtons,
+} from "../errors";
 import { ResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { getLanguageTypes, Schema, SchemaType, Subject } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { schemaTypeQuickPick } from "../quickpicks/schemas";
+import { hashed, logUsage, UserEvent } from "../telemetry/events";
+import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
+import { confirmSchemaVersionDeletion, hardDeletionQuickPick } from "./utils/schemas";
 
 const logger = new Logger("commands.schemas");
 
@@ -34,6 +44,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       "confluent.schemas.diffMostRecentVersions",
       diffLatestSchemasCommand,
     ),
+    registerCommandWithLogging("confluent.schemas.deleteVersion", deleteSchemaVersionCommand),
   ];
 }
 
@@ -218,6 +229,138 @@ async function evolveSchemaSubjectCommand(subject: Subject) {
 }
 
 /**
+ * Delete a single schema version.
+ *
+ * If was the last version bound to the subject, the subject will disappear also.
+ *
+ */
+async function deleteSchemaVersionCommand(schema: Schema) {
+  if (!(schema instanceof Schema)) {
+    logger.error("deleteSchemaVersionCommand called with invalid argument type", schema);
+    return;
+  }
+
+  const loader = ResourceLoader.getInstance(schema.connectionId);
+  let schemaGroup: Schema[] | null = null;
+  try {
+    schemaGroup = await loader.getSchemasForSubject(schema.environmentId!, schema.subject);
+
+    // Ensure is still present in the registry / UI view gestured from wasn't stale.
+    const found = schemaGroup && schemaGroup.find((s) => s.id === schema.id) !== undefined;
+
+    if (!found) {
+      showErrorNotificationWithButtons("Schema not found in registry.", {
+        "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
+        ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+      });
+      logger.error(
+        `Schema version ${schema.version} not found in registry, cannot delete.`,
+        schemaGroup,
+      );
+      return;
+    }
+  } catch (e) {
+    if (e instanceof ResponseError) {
+      // If the whole subject is gone, we will get a 404. Say, last version
+      // already deleted in other workspace or other means?
+      if (e.response.status !== 404) {
+        // not a 404, something unexpected/
+        logError(
+          e,
+          "Error fetching schemas for subject while deleting schema version",
+          { subject: schema.subject },
+          true,
+        );
+      }
+    }
+
+    showErrorNotificationWithButtons("Schema not found in registry.", {
+      "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
+      ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+    });
+    logger.error(`Error fetching schema version ${schema.version}, cannot delete.`, e);
+    return;
+  }
+
+  // Determine if user wants to hard or soft delete.
+  const hardDelete = await hardDeletionQuickPick();
+  if (hardDelete === undefined) {
+    logger.debug("User canceled schema version deletion.");
+    return;
+  }
+
+  // Ask if they are sure they want to delete the schema version.
+  const confirmation = await confirmSchemaVersionDeletion(hardDelete, schema, schemaGroup);
+
+  if (!confirmation) {
+    logger.debug("User canceled schema version deletion.");
+    return;
+  }
+
+  let success = true;
+
+  // Drive the delete via the resource loader so will be cache consistent.
+  // Resource loader will also emit event to alert views to refresh if needed.
+  try {
+    const wasOnlyVersionForSubject = schemaGroup.length === 1;
+
+    // Delete the schema version. Will take care of clearing any internal
+    // caches.
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Deleting schema ...`,
+      },
+      async () => {
+        await loader.deleteSchemaVersion(schema, hardDelete, wasOnlyVersionForSubject);
+      },
+    );
+
+    let successMessage = `Version ${schema.version} of subject ${schema.subject} deleted.`;
+    if (wasOnlyVersionForSubject) {
+      successMessage += ` Subject ${schema.subject} deleted.`;
+    }
+    vscode.window.showInformationMessage(successMessage);
+
+    // Fire off event to update views if needed.
+    if (wasOnlyVersionForSubject) {
+      // Announce that the entire subject was deleted.
+      schemaSubjectChanged.fire({ change: "deleted", subject: schema.subjectObject() });
+    } else {
+      // Announce that a schema version was deleted, and provide the updated schema group.
+
+      // Filter out the deleted schema version from the pre-delete
+      // fetched schema group.
+      const newSubject = schema.subjectWithSchemasObject(
+        schemaGroup.filter((s) => s.id !== schema.id),
+      );
+
+      schemaVersionsChanged.fire({ change: "deleted", subject: newSubject });
+    }
+  } catch (e) {
+    success = false;
+    logError(e, "Error deleting schema version", undefined, true);
+    showErrorNotificationWithButtons(
+      `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  logUsage(UserEvent.SchemaAction, {
+    action: "delete schema version",
+    status: success ? "succeeded" : "failed",
+
+    connection_id: schema.connectionId,
+    connection_type: schema.connectionType,
+    environment_id: schema.environmentId,
+
+    schema_registry_id: schema.schemaRegistryId,
+    schema_type: schema.type,
+    subject_hash: hashed(schema.subject),
+    schema_version: schema.version,
+  });
+}
+
+/**
  * Return a URI for a draft schema file that does not exist in the filesystem corresponding to a draft
  * next version of the given schema. The URI will have an untitled scheme and the schema data encoded
  * in the query string for future reference.
@@ -249,16 +392,6 @@ async function determineDraftSchemaUri(schema: Schema): Promise<vscode.Uri> {
     scheme: "untitled",
     query: encodeURIComponent(JSON.stringify(schema)),
   });
-}
-
-/** Check if a file URI exists in the filesystem. */
-async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(uri);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**

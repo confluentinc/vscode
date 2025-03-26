@@ -7,6 +7,10 @@ import {
   environmentChanged,
   EnvironmentChangeEvent,
   localKafkaConnected,
+  schemaSubjectChanged,
+  SchemaVersionChangeEvent,
+  schemaVersionsChanged,
+  SubjectChangeEvent,
   topicSearchSet,
 } from "../emitters";
 import { ExtensionContextNotSetError } from "../errors";
@@ -290,12 +294,38 @@ export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProvi
       },
     );
 
+    const subjectChangeHandler = (event: SubjectChangeEvent | SchemaVersionChangeEvent) => {
+      const [subject, change] = [event.subject, event.change];
+
+      if (this.kafkaCluster?.environmentId === subject.environmentId) {
+        logger.debug(
+          `A schema subject ${change} in the environment being viewed, refreshing toplevel`,
+          {
+            subject: subject.name,
+          },
+        );
+
+        // Toplevel repaint.
+        this.refresh();
+      }
+    };
+
+    // A schema subject was added or removed.
+    const schemaSubjectChangedSub: vscode.Disposable =
+      schemaSubjectChanged.event(subjectChangeHandler);
+
+    // A schema version was added or removed.
+    const schemaVersionsChangedSub: vscode.Disposable =
+      schemaVersionsChanged.event(subjectChangeHandler);
+
     return [
       environmentChangedSub,
       ccloudConnectedSub,
       localKafkaConnectedSub,
       currentKafkaClusterChangedSub,
       topicSearchSetSub,
+      schemaSubjectChangedSub,
+      schemaVersionsChangedSub,
     ];
   }
 

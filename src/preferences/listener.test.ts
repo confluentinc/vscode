@@ -2,7 +2,8 @@ import * as assert from "assert";
 import sinon from "sinon";
 import { ConfigurationChangeEvent, workspace } from "vscode";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
-import { SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
+import * as contextValues from "../context/values";
+import { ENABLE_FLINK, SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
 import { createConfigChangeListener } from "./listener";
 import * as updates from "./updates";
 
@@ -10,6 +11,8 @@ describe("preferences/listener", function () {
   let sandbox: sinon.SinonSandbox;
   let getConfigurationStub: sinon.SinonStub;
   let onDidChangeConfigurationStub: sinon.SinonStub;
+
+  let setContextValueStub: sinon.SinonStub;
 
   before(async () => {
     // ResourceViewProvider interactions require the extension context to be set (used during changes
@@ -22,6 +25,7 @@ describe("preferences/listener", function () {
     // stub the WorkspaceConfiguration and onDidChangeConfiguration emitter
     getConfigurationStub = sandbox.stub(workspace, "getConfiguration");
     onDidChangeConfigurationStub = sandbox.stub(workspace, "onDidChangeConfiguration");
+    setContextValueStub = sandbox.stub(contextValues, "setContextValue");
   });
 
   afterEach(function () {
@@ -78,26 +82,25 @@ describe("preferences/listener", function () {
     assert.ok(updatePreferencesStub.notCalled);
   });
 
-  // TODO: uncomment this when we have preview/experimental settings again
-  // for (const [previewSetting, previewContextValue] of [
-  //   // [SETTING_CONST, contextValues.ContextValues.valueHere],
-  // ]) {
-  //   for (const enabled of [true, false]) {
-  //     it(`should update the "${previewContextValue}" context value when the "${previewSetting}" setting is changed to ${enabled} (REMOVE ONCE PREVIEW SETTING IS NO LONGER USED)`, async () => {
-  //       getConfigurationStub.returns({
-  //         get: sandbox.stub().withArgs(previewSetting).returns(enabled),
-  //       });
-  //       const mockEvent = {
-  //         affectsConfiguration: (config: string) => config === previewSetting,
-  //       } as ConfigurationChangeEvent;
-  //       onDidChangeConfigurationStub.yields(mockEvent);
+  for (const [previewSetting, previewContextValue] of [
+    [ENABLE_FLINK, contextValues.ContextValues.flinkEnabled],
+  ]) {
+    for (const enabled of [true, false]) {
+      it(`should update the "${previewContextValue}" context value when the "${previewSetting}" setting is changed to ${enabled} (REMOVE ONCE PREVIEW SETTING IS NO LONGER USED)`, async () => {
+        getConfigurationStub.returns({
+          get: sandbox.stub().withArgs(previewSetting).returns(enabled),
+        });
+        const mockEvent = {
+          affectsConfiguration: (config: string) => config === previewSetting,
+        } as ConfigurationChangeEvent;
+        onDidChangeConfigurationStub.yields(mockEvent);
 
-  //       createConfigChangeListener();
-  //       // simulate the setting being changed by the user
-  //       await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
+        createConfigChangeListener();
+        // simulate the setting being changed by the user
+        await onDidChangeConfigurationStub.firstCall.args[0](mockEvent);
 
-  //       assert.ok(setContextValueStub.calledWith(previewContextValue, enabled));
-  //     });
-  //   }
-  // }
+        assert.ok(setContextValueStub.calledWith(previewContextValue, enabled));
+      });
+    }
+  }
 });

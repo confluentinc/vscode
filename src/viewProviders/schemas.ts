@@ -8,6 +8,10 @@ import {
   EnvironmentChangeEvent,
   localSchemaRegistryConnected,
   schemaSearchSet,
+  schemaSubjectChanged,
+  SchemaVersionChangeEvent,
+  schemaVersionsChanged,
+  SubjectChangeEvent,
 } from "../emitters";
 import { ExtensionContextNotSetError, logError } from "../errors";
 import { ResourceLoader } from "../loaders";
@@ -385,12 +389,78 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       },
     );
 
+    // A subject was added or removed.
+    const schemaSubjectChangedSub: vscode.Disposable = schemaSubjectChanged.event(
+      (event: SubjectChangeEvent) => {
+        // A subject was added or deleted. Refresh toplevel view if we're looking at
+        // the same schema registry.
+        const [subject, change] = [event.subject, event.change];
+
+        if (this.schemaRegistry?.id === subject.schemaRegistryId) {
+          logger.debug(`A subject ${change} in the registry being viewed, refreshing toplevel`, {
+            subject: subject.name,
+          });
+
+          if (change === "deleted") {
+            this.subjectsInTreeView.delete(subject.name);
+          } else {
+            // Otherwise, add it to the map. It will be carrying the new known single
+            // schema within its `.schemas`
+            this.subjectsInTreeView.set(subject.name, subject);
+          }
+          // Toplevel repaint.
+          this.refresh();
+        }
+      },
+    );
+
+    // A schema version was added or removed, but the subject remains and has
+    // at least one schema version.
+    const schemaVersionsChangedSub: vscode.Disposable = schemaVersionsChanged.event(
+      (event: SchemaVersionChangeEvent) => {
+        // A schema version was added or deleted. Refresh the subject if we're looking at
+        // the same schema registry.
+        const [updatedSubject, change] = [event.subject, event.change];
+        if (this.schemaRegistry?.id === updatedSubject.schemaRegistryId) {
+          logger.debug(
+            `A schema version ${change} in the registry being viewed, refreshing subject`,
+            { subject: updatedSubject.name },
+          );
+
+          // find the subject in the tree view and refresh just that subtree
+          // Blow away the schemas in the cached subject, so that they will be
+          // refetched when the subject is expanded, then either showing an added
+          // schema or removing the deleted schema from the child treeitems.
+          const existingSubject = this.subjectsInTreeView.get(updatedSubject.name);
+
+          if (existingSubject) {
+            // If the event carried a new schemas array (already fetched), then use that, otherwise
+            // just set the schemas to null to force a refresh.
+
+            // Merge the new schemas into the subject's schemas, keeping existing in common,
+            // possibly deleting some, possible adding new ones.
+            existingSubject.mergeSchemas(updatedSubject.schemas);
+
+            // Now get the treeview to realize that the subject's getChildren() will
+            // be different, so it needs to repaint the subject.
+            logger.debug(
+              `Firing change to subject, now has ${existingSubject.schemas!.length} schemas`,
+            );
+            // Repaint the subject in the tree view.
+            this._onDidChangeTreeData.fire(existingSubject);
+          }
+        }
+      },
+    );
+
     return [
       environmentChangedSub,
       ccloudConnectedSub,
       localSchemaRegistryConnectedSub,
       currentSchemaRegistryChangedSub,
       schemaSearchSetSub,
+      schemaSubjectChangedSub,
+      schemaVersionsChangedSub,
     ];
   }
 

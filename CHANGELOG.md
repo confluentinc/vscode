@@ -7,6 +7,10 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - Initial LaunchDarkly integration for feature flag support
+- New "Delete Schema Version" context menu action for schemas to drive either soft or hard deletions
+  of single schema versions. If the final schema within a subject is deleted, the subject will no
+  longer exist.
+- Preview setting to enable/disable Flink resources' and associated actions' visibility
 
 ### Fixed
 

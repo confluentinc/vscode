@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.1.0-12",
+  "version": "1.1.0-20",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -254,6 +254,12 @@
         "category": "Confluent: Schemas"
       },
       {
+        "command": "confluent.schemas.deleteVersion",
+        "icon": "$(confluent-delete-schema-version)",
+        "title": "Delete Schema Version",
+        "category": "Confluent: Schemas"
+      },
+      {
         "command": "confluent.schemas.evolveSchemaSubject",
         "icon": "$(confluent-evolve-schema)",
         "title": "Evolve Latest Schema",
@@ -479,6 +485,14 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
+        },
+        "confluent.preview.enableFlink": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable Flink-related resource loading and associated actions.",
+          "tags": [
+            "preview"
+          ]
         }
       }
     },
@@ -515,21 +529,32 @@
       "confluent": [
         {
           "id": "confluent-resources",
-          "name": "Resources"
+          "name": "Resources",
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-topics",
           "name": "Topics",
-          "visibility": "collapsed"
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-schemas",
           "name": "Schemas",
-          "visibility": "collapsed"
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)"
+        },
+        {
+          "id": "confluent-flink",
+          "name": "Flink",
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)",
+          "when": "confluent.flinkEnabled"
         },
         {
           "id": "confluent-support",
-          "name": "Support"
+          "name": "Support",
+          "icon": "$(confluent-logo)"
         }
       ]
     },
@@ -657,6 +682,10 @@
         },
         {
           "command": "confluent.schemas.evolve",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.deleteVersion",
           "when": "false"
         },
         {
@@ -936,6 +965,11 @@
           "command": "confluent.schemas.evolve",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*evolvable.*schema$/",
           "group": "inline@1"
+        },
+        {
+          "command": "confluent.schemas.deleteVersion",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema$/",
+          "group": "schemas"
         },
         {
           "command": "confluent.schemas.evolveSchemaSubject",

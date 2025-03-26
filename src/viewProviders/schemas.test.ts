@@ -11,7 +11,15 @@ import {
 } from "../../tests/unit/testResources";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ContextValues, getContextValue } from "../context/values";
-import { currentSchemaRegistryChanged, environmentChanged, schemaSearchSet } from "../emitters";
+import {
+  currentSchemaRegistryChanged,
+  environmentChanged,
+  schemaSearchSet,
+  schemaSubjectChanged,
+  SchemaVersionChangeEvent,
+  schemaVersionsChanged,
+  SubjectChangeEvent,
+} from "../emitters";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemasViewProvider } from "./schemas";
 import { SEARCH_DECORATION_URI_SCHEME } from "./search";
@@ -245,6 +253,185 @@ describe("SchemasViewProvider search behavior", () => {
     const isFocused = provider.isFocusedOnCCloud();
     assert.strictEqual(isFocused, false);
   });
+});
+
+describe("SchemasViewProvider schemaSubjectChanged event", () => {
+  let provider: SchemasViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let refreshStub: sinon.SinonSpy<any[], any>;
+  let subjectsInTreeView: Map<string, Subject>;
+
+  before(async () => {
+    await getTestExtensionContext();
+    provider = SchemasViewProvider.getInstance();
+  });
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    refreshStub = sandbox.stub().returns(undefined);
+    sandbox.replace(provider, "refresh", refreshStub);
+
+    subjectsInTreeView = provider["subjectsInTreeView"];
+    subjectsInTreeView.clear();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Not viewing same schema registry, should not call anything", () => {
+    // set to be viewing no schema registry
+    provider.schemaRegistry = null;
+
+    const event: SubjectChangeEvent = {
+      subject: TEST_CCLOUD_SUBJECT,
+      change: "deleted",
+    };
+    schemaSubjectChanged.fire(event);
+
+    // Should not have called .refresh()
+    assert.ok(refreshStub.notCalled);
+  });
+
+  it("Viewing same schema registry, when schema deleted, should remove from map + call reset()", () => {
+    // set to be viewing a schema registry
+    provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+    // and this subject is in the map
+    subjectsInTreeView.set(TEST_CCLOUD_SUBJECT.name, TEST_CCLOUD_SUBJECT);
+
+    const event: SubjectChangeEvent = {
+      subject: TEST_CCLOUD_SUBJECT,
+      change: "deleted",
+    };
+    schemaSubjectChanged.fire(event);
+
+    // Should have removed from the map
+    assert.strictEqual(subjectsInTreeView.size, 0);
+
+    // Should have called .refresh()
+    assert.ok(refreshStub.calledOnce);
+  });
+
+  it("Viewing same schema registry, when schema added, should add to map + call refresh()", () => {
+    // set to be viewing a schema registry
+    provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+    // and this subject is in the map
+    subjectsInTreeView.set(TEST_CCLOUD_SUBJECT.name, TEST_CCLOUD_SUBJECT);
+
+    const event: SubjectChangeEvent = {
+      subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+      change: "added",
+    };
+    schemaSubjectChanged.fire(event);
+
+    // Should have added to the map
+    assert.strictEqual(subjectsInTreeView.size, 1);
+    assert.deepStrictEqual(
+      subjectsInTreeView.get(TEST_CCLOUD_SUBJECT.name),
+      TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+    );
+
+    // Should have called .refresh()
+    assert.ok(refreshStub.calledOnce);
+  });
+});
+
+describe("SchemasViewProvider schemaVersionsChanged event", () => {
+  let provider: SchemasViewProvider;
+  let sandbox: sinon.SinonSandbox;
+  let onDidChangeTreeDataFireStub: sinon.SinonSpy<any[], any>;
+  let subjectsInTreeView: Map<string, Subject>;
+
+  before(async () => {
+    await getTestExtensionContext();
+    provider = SchemasViewProvider.getInstance();
+  });
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    onDidChangeTreeDataFireStub = sandbox.stub(provider["_onDidChangeTreeData"], "fire");
+
+    subjectsInTreeView = provider["subjectsInTreeView"];
+    subjectsInTreeView.clear();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Not viewing same schema registry, should not call anything", () => {
+    // set to be viewing no schema registry
+    provider.schemaRegistry = null;
+
+    const event: SchemaVersionChangeEvent = {
+      subject: TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
+      change: "deleted",
+    };
+    schemaVersionsChanged.fire(event);
+
+    // Should not have called .refresh()
+    assert.ok(onDidChangeTreeDataFireStub.notCalled);
+  });
+
+  for (const changeType of ["added", "deleted"] as ("added" | "deleted")[]) {
+    it(`Viewing same schema registry, when schema ${changeType} and subject with schemas cached already, should update map + call refresh()`, () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectWithSchemasObject([TEST_CCLOUD_SCHEMA]);
+
+      // and this subject is in the map and has one loaded schema
+      subjectsInTreeView.set(scratchSubject.name, scratchSubject);
+
+      const updatedSubject = TEST_CCLOUD_SUBJECT_WITH_SCHEMAS;
+
+      const event: SchemaVersionChangeEvent = {
+        subject: updatedSubject,
+        change: changeType,
+      };
+
+      schemaVersionsChanged.fire(event);
+
+      // Should have reset the schemas in the subject in the map
+      // to TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas
+      assert.strictEqual(subjectsInTreeView.size, 1);
+      const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
+      assert.strictEqual(subjectFromMap, scratchSubject);
+      assert.deepEqual(subjectFromMap.schemas, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.schemas);
+
+      // Should have fired with the subject
+      assert.ok(onDidChangeTreeDataFireStub.calledOnce);
+      assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
+    });
+
+    it(`Viewing same schema registry, subject in map but no loaded schemas, when schema ${changeType}, should update map + call refresh()`, () => {
+      // set to be viewing a schema registry
+      provider.schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
+
+      const scratchSubject = TEST_CCLOUD_SCHEMA.subjectObject();
+      scratchSubject.schemas = null;
+
+      // and this subject is in the map and has no loaded schemas
+      subjectsInTreeView.set(scratchSubject.name, scratchSubject);
+
+      const updatedSubject = TEST_CCLOUD_SCHEMA.subjectWithSchemasObject([TEST_CCLOUD_SCHEMA]);
+
+      const event: SchemaVersionChangeEvent = {
+        subject: updatedSubject,
+        change: changeType,
+      };
+      schemaVersionsChanged.fire(event);
+
+      // Should not have changed the subject in the map or fired event.
+      assert.strictEqual(subjectsInTreeView.size, 1);
+      const subjectFromMap = subjectsInTreeView.get(scratchSubject.name);
+      assert.strictEqual(subjectFromMap, scratchSubject);
+      assert.strictEqual(subjectFromMap.schemas!.length, 1);
+      assert.deepEqual(subjectFromMap.schemas, updatedSubject.schemas);
+
+      // Should have fired with the subject
+      assert.ok(onDidChangeTreeDataFireStub.calledOnce);
+      assert.ok(onDidChangeTreeDataFireStub.calledWith(scratchSubject));
+    });
+  }
 });
 
 describe("SchemasViewProvider environmentChanged handler", () => {

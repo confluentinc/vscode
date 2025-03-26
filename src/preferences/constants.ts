@@ -36,3 +36,5 @@ export const USE_TOPIC_NAME_STRATEGY =
 /** Whether to allow selecting older (than latest) schema versions when producing messages to a topic. */
 export const ALLOW_OLDER_SCHEMA_VERSIONS =
   prefix + "topic.produceMessages.schemas.allowOlderVersions";
+
+export const ENABLE_FLINK = prefix + "preview.enableFlink";
