@@ -3,7 +3,12 @@ import sinon from "sinon";
 import { ConfigurationChangeEvent, workspace } from "vscode";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import * as contextValues from "../context/values";
-import { ENABLE_FLINK, SSL_PEM_PATHS, SSL_VERIFY_SERVER_CERT_DISABLED } from "./constants";
+import {
+  ENABLE_CHAT_PARTICIPANT,
+  ENABLE_FLINK,
+  SSL_PEM_PATHS,
+  SSL_VERIFY_SERVER_CERT_DISABLED,
+} from "./constants";
 import { createConfigChangeListener } from "./listener";
 import * as updates from "./updates";
 
@@ -84,6 +89,7 @@ describe("preferences/listener", function () {
 
   for (const [previewSetting, previewContextValue] of [
     [ENABLE_FLINK, contextValues.ContextValues.flinkEnabled],
+    [ENABLE_CHAT_PARTICIPANT, contextValues.ContextValues.chatParticipantEnabled],
   ]) {
     for (const enabled of [true, false]) {
       it(`should update the "${previewContextValue}" context value when the "${previewSetting}" setting is changed to ${enabled} (REMOVE ONCE PREVIEW SETTING IS NO LONGER USED)`, async () => {
