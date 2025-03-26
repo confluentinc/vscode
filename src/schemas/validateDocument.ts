@@ -18,7 +18,7 @@ import {
   getLanguageService,
 } from "vscode-json-languageservice";
 import { Logger } from "../logging";
-import { loadDocumentContent } from "../quickpicks/uris";
+import { getEditorOrFileContents } from "../utils/file";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./diagnosticCollection";
 
 const logger = new Logger("schemas.validateDocument");
@@ -32,7 +32,7 @@ export async function validateDocument(
   documentUri: Uri,
   schema: JSONSchema,
 ): Promise<Disposable[]> {
-  const { content } = await loadDocumentContent(documentUri);
+  const { content } = await getEditorOrFileContents(documentUri);
   if (!content) {
     logger.error(`no content found for document ${documentUri}`);
     JSON_DIAGNOSTIC_COLLECTION.set(documentUri, [

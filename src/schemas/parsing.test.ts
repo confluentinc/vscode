@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { BaseASTNode, Position as LSPosition, TextDocument } from "vscode-json-languageservice";
-import * as uris from "../quickpicks/uris";
+import * as fileUtils from "../utils/file";
 import { convertToVSPosition, createRange, getRangeForDocument } from "./parsing";
 import * as validateDocument from "./validateDocument";
 
@@ -98,7 +98,7 @@ describe("schemas/parsing.ts createRange()", () => {
 
 describe("schemas/parsing.ts getRangeForDocument()", () => {
   let sandbox: sinon.SinonSandbox;
-  let loadDocumentContentStub: sinon.SinonStub;
+  let getEditorOrFileContentsStub: sinon.SinonStub;
   let initializeJsonDocumentStub: sinon.SinonStub;
 
   const fakeFileUri = vscode.Uri.parse("file:///test.json");
@@ -106,7 +106,7 @@ describe("schemas/parsing.ts getRangeForDocument()", () => {
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
-    loadDocumentContentStub = sandbox.stub(uris, "loadDocumentContent");
+    getEditorOrFileContentsStub = sandbox.stub(fileUtils, "getEditorOrFileContents");
     initializeJsonDocumentStub = sandbox.stub(validateDocument, "initializeJsonDocument");
   });
 
@@ -115,7 +115,7 @@ describe("schemas/parsing.ts getRangeForDocument()", () => {
   });
 
   it("should return empty range for empty document", async () => {
-    loadDocumentContentStub.resolves({ content: "{}" });
+    getEditorOrFileContentsStub.resolves({ content: "{}" });
     initializeJsonDocumentStub.returns({
       textDocument: {} as TextDocument,
       jsonDocument: { root: null },
@@ -130,7 +130,7 @@ describe("schemas/parsing.ts getRangeForDocument()", () => {
   });
 
   it("should find property in single object document", async () => {
-    loadDocumentContentStub.resolves({ content: '{"test": "value"}' });
+    getEditorOrFileContentsStub.resolves({ content: '{"test": "value"}' });
 
     const fakeTextDocument = {
       positionAt: (offset: number) => {
@@ -164,7 +164,7 @@ describe("schemas/parsing.ts getRangeForDocument()", () => {
   });
 
   it("should find item in array document", async () => {
-    loadDocumentContentStub.resolves({ content: '[{"key": "value1"}, {"key": "value2"}]' });
+    getEditorOrFileContentsStub.resolves({ content: '[{"key": "value1"}, {"key": "value2"}]' });
 
     const fakeTextDocument = {
       positionAt: (offset: number) => {
@@ -206,7 +206,7 @@ describe("schemas/parsing.ts getRangeForDocument()", () => {
   });
 
   it("should find property in array item", async () => {
-    loadDocumentContentStub.resolves({ content: '[{"key": "value1"}, {"key": "value2"}]' });
+    getEditorOrFileContentsStub.resolves({ content: '[{"key": "value1"}, {"key": "value2"}]' });
 
     const fakeTextDocument = {
       positionAt: (offset: number) => {
