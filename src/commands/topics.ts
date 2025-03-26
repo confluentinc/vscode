@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
@@ -19,6 +18,7 @@ import { MESSAGE_URI_SCHEME } from "../documentProviders/message";
 import {
   DEFAULT_ERROR_NOTIFICATION_BUTTONS,
   isResponseError,
+  logError,
   showErrorNotificationWithButtons,
 } from "../errors";
 import { Logger } from "../logging";
@@ -104,8 +104,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       topic_name: topic.name,
     });
   } catch (err) {
-    logger.error("Failed to retrieve topic configs list", err);
-    Sentry.captureException(err);
+    logError(err, "list topic configs", {}, true);
     vscode.window.showErrorMessage("Failed to retrieve topic configs");
     return;
   }
@@ -153,8 +152,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
         const errorBody = await err.response.json();
         formError = errorBody.message;
       } else {
-        logger.error("Failed to update topic config", err);
-        Sentry.captureException(err);
+        logError(err, "update topic config", {}, true);
         if (err instanceof Error && err.message) formError = err.message;
       }
       return { success: false, message: formError };

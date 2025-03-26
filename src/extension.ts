@@ -1,47 +1,10 @@
-// Import this first!
-import * as SentryCore from "@sentry/core";
-import * as Sentry from "@sentry/node";
-/**
- * Initialize Sentry for error tracking (and future performance monitoring?).
- * Sentry.init needs to be run first before any other code so that Sentry can capture all errors.
- * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
- *
- * @see https://docs.sentry.io/platforms/node/
- */
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    // debug: true, // enable for local "prod" debugging with dev console
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.SENTRY_ENV,
-    release: process.env.SENTRY_RELEASE,
-    tracesSampleRate: 0,
-    profilesSampleRate: 0,
-    integrations: [
-      // https://docs.sentry.io/platforms/javascript/configuration/filtering/#using-thirdpartyerrorfilterintegration
-      SentryCore.thirdPartyErrorFilterIntegration({
-        filterKeys: ["confluent-vscode-extension-sentry-do-not-use"],
-        behaviour: "drop-error-if-exclusively-contains-third-party-frames",
-      }),
-      Sentry.rewriteFramesIntegration(),
-    ],
-    ignoreErrors: [
-      "The request failed and the interceptors did not return an alternative response",
-      "ENOENT: no such file or directory",
-      "EPERM: operation not permitted",
-      "Canceled",
-      // rejected promises from the CCloud auth provider that can't be wrapped in try/catch:
-      "User cancelled the authentication flow.",
-      "User reset their password.",
-      "Confluent Cloud authentication failed. See browser for details.",
-    ],
-  });
-}
-
 import * as vscode from "vscode";
-import { checkTelemetrySettings, includeObservabilityContext } from "./telemetry/eventProcessors";
+/** First things first, setup Sentry to catch errors during activation and beyond
+ * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
+ * */
+import { closeSentryClient, initSentry } from "./telemetry/sentryClient";
 if (process.env.SENTRY_DSN) {
-  Sentry.addEventProcessor(checkTelemetrySettings);
-  Sentry.addEventProcessor(includeObservabilityContext);
+  initSentry();
 }
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
@@ -101,6 +64,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("extension");
 
@@ -126,7 +90,7 @@ export async function activate(
   } catch (e) {
     logger.error(`Error activating extension version "${extVersion}":`, e);
     // if the extension is failing to activate for whatever reason, we need to know about it to fix it
-    Sentry.captureException(e);
+    sentryCaptureException(e);
     logUsage(UserEvent.ExtensionActivation, { status: "failed" });
     throw e;
   }
@@ -458,7 +422,7 @@ export function deactivate() {
     const msg = "Error disposing telemetry logger during extension deactivation";
     logError(new Error(msg, { cause: e }), msg, {}, true);
   }
-
+  closeSentryClient();
   // close the file stream used with OUTPUT_CHANNEL
   const logStream = getLogFileStream();
   if (logStream) {

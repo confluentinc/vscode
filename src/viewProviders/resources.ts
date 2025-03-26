@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/node";
 import * as vscode from "vscode";
 import { ConnectionStatus } from "../clients/sidecar";
 import {
@@ -20,7 +19,7 @@ import {
   localSchemaRegistryConnected,
   resourceSearchSet,
 } from "../emitters";
-import { ExtensionContextNotSetError, showErrorNotificationWithButtons } from "../errors";
+import { ExtensionContextNotSetError, logError, showErrorNotificationWithButtons } from "../errors";
 import { getDirectResources } from "../graphql/direct";
 import { getLocalResources } from "../graphql/local";
 import { getCurrentOrganization } from "../graphql/organizations";
@@ -562,8 +561,7 @@ export async function loadCCloudResources(
       // if we fail to load CCloud environments, we need to get as much information as possible as to
       // what went wrong since the user is effectively locked out of the CCloud resources for this org
       const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
-      logger.error(msg, e);
-      Sentry.captureException(e);
+      logError(e, "loading CCloud environments", {}, true);
       showErrorNotificationWithButtons(msg);
     }
 
