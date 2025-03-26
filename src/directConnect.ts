@@ -25,15 +25,15 @@ const directConnectWebviewCache = new WebviewPanelCache();
 export async function handleConnectionChange(
   connection: CustomConnectionSpec,
   directConnectForm: WebviewPanel,
-): Promise<boolean> {
-  const connections = await getResourceManager().getDirectConnections();
+): Promise<void> {
+  const existingConnections = await getResourceManager().getDirectConnection(connection.id);
   // If the current connection is no longer in the list, close the form
-  if (!connections.has(connection.id)) {
-    window.showInformationMessage(`Connection "${connection.name}" was removed in another window.`);
+  if (!existingConnections) {
+    window.showInformationMessage(`Connection "${connection.name}" is disconnected.`);
     directConnectForm.dispose();
-    return true;
+    return;
   }
-  return false;
+  return;
 }
 
 export function openDirectConnectionForm(connection: CustomConnectionSpec | null): void {
@@ -63,7 +63,7 @@ export function openDirectConnectionForm(connection: CustomConnectionSpec | null
   // Listen to changes in connections and close the form if the connection no longer exists
   // Only needed for edit/update forms, not for new connections
   let connectionChangesListener: Disposable | null = null;
-  if (action === "update" && connection?.id) {
+  if (action && connection) {
     connectionChangesListener = directConnectionsChanged.event(async () => {
       await handleConnectionChange(connection, directConnectForm);
     });
