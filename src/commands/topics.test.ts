@@ -22,6 +22,7 @@ import {
   SubjectNameStrategy,
 } from "../schemas/produceMessageSchema";
 import * as sidecar from "../sidecar";
+import * as fileUtils from "../utils/file";
 import { ExecutionResult } from "../utils/workerPool";
 import {
   handleSchemaValidationErrors,
@@ -47,7 +48,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   let executeCommandStub: sinon.SinonStub;
 
   let uriQuickpickStub: sinon.SinonStub;
-  let loadDocumentContentStub: sinon.SinonStub;
+  let getEditorOrFileContents: sinon.SinonStub;
 
   let clientStub: sinon.SinonStubbedInstance<RecordsV3Api>;
 
@@ -62,8 +63,8 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
     uriQuickpickStub = sandbox
       .stub(uriQuickpicks, "uriQuickpick")
       .resolves(vscode.Uri.file("test.json"));
-    loadDocumentContentStub = sandbox
-      .stub(uriQuickpicks, "loadDocumentContent")
+    getEditorOrFileContents = sandbox
+      .stub(fileUtils, "getEditorOrFileContents")
       .resolves({ content: JSON.stringify(fakeMessage) });
     // assume schemaless produce for most tests
     const schemaLess: schemaQuickPicks.SchemaKindSelection = {
@@ -104,7 +105,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   });
 
   it("should show an error notification for an invalid JSON message", async function () {
-    loadDocumentContentStub.resolves({ content: "{}" });
+    getEditorOrFileContents.resolves({ content: "{}" });
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
@@ -149,7 +150,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   it("should pass `partition_id` and `timestamp` in the produce request if provided", async function () {
     const partition_id = 123;
     const timestamp = 1234567890;
-    loadDocumentContentStub.resolves({
+    getEditorOrFileContents.resolves({
       content: JSON.stringify({ ...fakeMessage, partition_id, timestamp }),
     });
     clientStub.produceRecord.resolves({
@@ -170,7 +171,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   it("should handle optional fields independently", async function () {
     const partition_id = 123;
     const messageWithPartition = { ...fakeMessage, partition_id };
-    loadDocumentContentStub.resolves({ content: JSON.stringify(messageWithPartition) });
+    getEditorOrFileContents.resolves({ content: JSON.stringify(messageWithPartition) });
 
     await produceMessagesFromDocument(TEST_LOCAL_KAFKA_TOPIC);
 
@@ -183,7 +184,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
   // `key` is an object that won't serialize to a string cleanly
   for (const key of [null, [], { foo: "bar" }]) {
     it(`should open message viewer without a 'textFilter' if the produce-message 'key' is not a primitive type or is null: ${JSON.stringify(key)} (${typeof key})`, async function () {
-      loadDocumentContentStub.resolves({
+      getEditorOrFileContents.resolves({
         content: JSON.stringify({ ...fakeMessage, key }),
       });
       // user clicked the "View Message" button in the info notification
@@ -216,7 +217,7 @@ describe("commands/topics.ts produceMessageFromDocument() without schemas", func
 
   for (const key of ["abc123", 456, true]) {
     it(`should open message viewer with a 'textFilter' if the produce-message 'key' is a primitive type: ${key} (${typeof key})`, async function () {
-      loadDocumentContentStub.resolves({
+      getEditorOrFileContents.resolves({
         content: JSON.stringify({ ...fakeMessage, key }),
       });
       // user clicked the "View Message" button in the info notification
@@ -268,7 +269,7 @@ describe("commands/topics.ts produceMessageFromDocument() with schema(s)", funct
     // stub the quickpick for file/editor URI and the resulting content
     sandbox.stub(uriQuickpicks, "uriQuickpick").resolves(vscode.Uri.file("test.json"));
     loadDocumentContentStub = sandbox
-      .stub(uriQuickpicks, "loadDocumentContent")
+      .stub(fileUtils, "getEditorOrFileContents")
       .resolves({ content: JSON.stringify(fakeMessage) });
 
     schemaKindMultiSelectStub = sandbox.stub(schemaQuickPicks, "schemaKindMultiSelect");

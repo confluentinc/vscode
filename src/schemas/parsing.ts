@@ -6,7 +6,7 @@ import {
   TextDocument,
 } from "vscode-json-languageservice";
 import { Logger } from "../logging";
-import { loadDocumentContent } from "../quickpicks/uris";
+import { getEditorOrFileContents } from "../utils/file";
 import { initializeJsonDocument } from "./validateDocument";
 
 const logger = new Logger("schemas.parsing");
@@ -17,7 +17,7 @@ export async function getRangeForDocument(
   itemIndex: number = 0,
   key?: string,
 ): Promise<VSRange> {
-  const { content } = await loadDocumentContent(documentUri);
+  const { content } = await getEditorOrFileContents(documentUri);
   const { textDocument, jsonDocument } = initializeJsonDocument(documentUri, content, schema);
 
   let range: VSRange = new VSRange(0, 0, 0, 0);
