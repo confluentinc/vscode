@@ -9,6 +9,8 @@ if (process.env.SENTRY_DSN) {
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
+import { PARTICIPANT_ID } from "./chat/constants";
+import { chatHandler } from "./chat/participant";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -22,7 +24,12 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, SIDECAR_OUTPUT_CHANNEL } from "./constants";
+import {
+  AUTH_PROVIDER_ID,
+  AUTH_PROVIDER_LABEL,
+  IconNames,
+  SIDECAR_OUTPUT_CHANNEL,
+} from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -44,7 +51,7 @@ import {
 } from "./featureFlags/evaluation";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
-import { ENABLE_FLINK } from "./preferences/constants";
+import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
 import { registerProjectGenerationCommand } from "./scaffold";
@@ -232,6 +239,11 @@ async function _activateExtension(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
   );
 
+  // register the Copilot chat participant
+  const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
+  chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
+  context.subscriptions.push(chatParticipant);
+
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
 
@@ -241,9 +253,13 @@ async function _activateExtension(
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
-  // PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
+  // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const flinkEnabled = setContextValue(ContextValues.flinkEnabled, config.get(ENABLE_FLINK, false));
+  const chatParticipantEnabled = setContextValue(
+    ContextValues.chatParticipantEnabled,
+    config.get(ENABLE_CHAT_PARTICIPANT, true),
+  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);
@@ -287,6 +303,7 @@ async function setupContextValues() {
   ]);
   await Promise.all([
     flinkEnabled,
+    chatParticipantEnabled,
     kafkaClusterSelected,
     schemaRegistrySelected,
     openInCCloudResources,
