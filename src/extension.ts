@@ -46,6 +46,8 @@ if (process.env.SENTRY_DSN) {
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
+import { PARTICIPANT_ID } from "./chat/constants";
+import { chatHandler } from "./chat/participant";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -59,7 +61,12 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { AUTH_PROVIDER_ID, AUTH_PROVIDER_LABEL, SIDECAR_OUTPUT_CHANNEL } from "./constants";
+import {
+  AUTH_PROVIDER_ID,
+  AUTH_PROVIDER_LABEL,
+  IconNames,
+  SIDECAR_OUTPUT_CHANNEL,
+} from "./constants";
 import { activateMessageViewer } from "./consume";
 import { setExtensionContext } from "./context/extension";
 import { observabilityContext } from "./context/observability";
@@ -267,6 +274,11 @@ async function _activateExtension(
   context.subscriptions.push(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
   );
+
+  // register the Copilot chat participant
+  const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
+  chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
+  context.subscriptions.push(chatParticipant);
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
