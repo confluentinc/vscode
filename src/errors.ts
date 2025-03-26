@@ -122,9 +122,10 @@ export async function logError(
   }
 
   logger.error(errorMessage, { ...errorContext, ...extra });
+  // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
   if (sendTelemetry) {
     sentryCaptureException(e, {
-      data: {
+      captureContext: {
         contexts: { response: { status_code: responseStatusCode } },
         extra: { ...errorContext, ...extra },
       },
