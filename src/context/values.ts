@@ -69,4 +69,9 @@ export enum ContextValues {
    * (This should go away once the `confluent.preview.enableFlink` setting is removed.)
    */
   flinkEnabled = "confluent.flinkEnabled",
+  /**
+   * EXPERIMENTAL: Is the chat participant enabled?
+   * (This should go away once the `confluent.experimental.enableChatParticipant` setting is removed.)
+   */
+  chatParticipantEnabled = "confluent.chatParticipantEnabled",
 }
