@@ -485,6 +485,14 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Allow older schema versions to be used when producing messages to Kafka topics.\n\n- Enabling this will require selecting the schema version to use.\n\n- Disabling this will use the **latest schema version**.\n\n---\n\n⚠️ **WARNING**: Producing messages with older schema versions can be in violation of some schema compatibility settings."
+        },
+        "confluent.preview.enableFlink": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable Flink-related resource loading and associated actions.",
+          "tags": [
+            "preview"
+          ]
         }
       }
     },
@@ -521,21 +529,32 @@
       "confluent": [
         {
           "id": "confluent-resources",
-          "name": "Resources"
+          "name": "Resources",
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-topics",
           "name": "Topics",
-          "visibility": "collapsed"
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)"
         },
         {
           "id": "confluent-schemas",
           "name": "Schemas",
-          "visibility": "collapsed"
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)"
+        },
+        {
+          "id": "confluent-flink",
+          "name": "Flink",
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)",
+          "when": "confluent.flinkEnabled"
         },
         {
           "id": "confluent-support",
-          "name": "Support"
+          "name": "Support",
+          "icon": "$(confluent-logo)"
         }
       ]
     },
