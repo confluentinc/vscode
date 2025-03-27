@@ -14,7 +14,10 @@ export async function selectForCompareCommand(item: any) {
   if (!item) {
     return;
   }
-  const uri: vscode.Uri = convertItemToUri(item);
+  // if the arg was provided from the sidebar, it's likely an instance of a view provider's data
+  // type, so we'll have to convert it. otherwise, the item came from the editor/explorer areas and
+  // is likely already a Uri
+  const uri: vscode.Uri = item instanceof vscode.Uri ? item : convertItemToUri(item);
   logger.debug("Selected item for compare", uri);
   // convert to string before storing so we can Uri.parse it later since Uri is not serializable
   await getStorageManager().setWorkspaceState(WorkspaceStorageKeys.DIFF_BASE_URI, uri.toString());
@@ -26,7 +29,10 @@ export async function compareWithSelectedCommand(item: any) {
   if (!item) {
     return;
   }
-  const uri2: vscode.Uri = convertItemToUri(item);
+  // if the arg was provided from the sidebar, it's likely an instance of a view provider's data
+  // type, so we'll have to convert it. otherwise, the item came from the editor/explorer areas and
+  // is likely already a Uri
+  const uri2: vscode.Uri = item instanceof vscode.Uri ? item : convertItemToUri(item);
   logger.debug("Comparing with selected item", uri2);
   const uri1str: string | undefined = await getStorageManager().getWorkspaceState(
     WorkspaceStorageKeys.DIFF_BASE_URI,
@@ -65,6 +71,8 @@ function convertItemToUri(item: any): vscode.Uri {
   } else if (item instanceof Schema) {
     return new SchemaDocumentProvider().resourceToUri(item, item.fileName());
   } else {
-    throw new Error("Unsupported resource type for comparison");
+    const msg = "Unsupported resource type for comparison";
+    logger.error(msg, item);
+    throw new Error(msg);
   }
 }
