@@ -7,7 +7,7 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { ConnectionId, EnvironmentId, IResourceBase } from "../models/resource";
-import { Schema, Subject, subjectMatchesTopicName } from "../models/schema";
+import { Schema, Subject, subjectMatchesTopicName, SubjectWithSchemas } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -324,6 +324,70 @@ export abstract class ResourceLoader implements IResourceBase {
       if (schemaRegistry) {
         await this.clearCache(schemaRegistry);
       }
+    }
+  }
+
+  /**
+   *
+   * @param subject The subject to delete. Must carry all of the schema versions to delete within its `.schemas` property.
+   * @param hardDelete Should each schema version be hard deleted?
+   */
+  public async deleteSchemaSubject(
+    subject: SubjectWithSchemas,
+    hardDelete: boolean,
+  ): Promise<void> {
+    // Loop over schemas within the subject, calling deleteSchemaVersion on each schema.
+    // The final call, set shouldClearSubject to true, will clear the subject cache.
+
+    logger.info(`Deleting ${subject.schemas.length} schema versions for subject ${subject.name}`);
+    const schemaGroup: Schema[] = subject.schemas;
+    for (let i: number = 0; i < schemaGroup.length; i++) {
+      const schema: Schema = schemaGroup[i];
+      const shouldClearSubject: boolean = i === schemaGroup.length - 1;
+      await this.deleteSchemaVersion(schema, hardDelete, shouldClearSubject);
+      logger.info(`Deleted schema version ${schema.version} for subject ${subject.name}`);
+    }
+
+    logger.info("Checking for lingering schemas after deleteSchemaSubject");
+
+    // Ensure no remaining versions.
+    // Call to getSchemasForSubject() will raise 404 error if the subject is gone.
+    let lingeringSchemas: Schema[] | undefined;
+
+    try {
+      lingeringSchemas = await this.getSchemasForSubject(
+        subject.environmentId,
+        subject.name,
+        true, // forceRefresh
+      );
+    } catch (e: any) {
+      // XXX todo put this in common placve to identify 404s.
+      if (e.name === "ResponseError") {
+        if (e.response.status === 404) {
+          // Expected error when the subject is deleted. This is our happy path.
+          return;
+        }
+      }
+
+      // anything else, raise.
+      logError(
+        e,
+        "Unexpected error within deleteSchemaSubject",
+        {
+          connectionId: subject.connectionId,
+          environmentId: subject.environmentId,
+          schemaRegistryId: subject.schemaRegistryId,
+        },
+        true,
+      );
+      throw e;
+    }
+    // If we get here, the subject is still present and we still have some schema versions(!!)
+
+    if (lingeringSchemas.length) {
+      throw new Error(
+        `Expected no schemas to be present after deleting subject ${subject.name}, but found ${lingeringSchemas.length}`,
+      );
     }
   }
 
