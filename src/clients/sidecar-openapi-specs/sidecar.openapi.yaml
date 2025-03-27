@@ -8,7 +8,7 @@ info:
     name: Confluent for VS Code Support
     url: https://confluent.io/contact
     email: vscode@confluent.io
-  version: 0.181.0
+  version: 0.183.0
 servers:
 - url: http://127.0.0.1:26636
   description: Auto generated value
@@ -527,7 +527,7 @@ components:
       properties:
         api_key:
           description: The API key to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 96
           minLength: 1
           type: string
         api_secret:
@@ -581,7 +581,7 @@ components:
       properties:
         username:
           description: The username to use when connecting to the external service.
-          maxLength: 64
+          maxLength: 96
           minLength: 1
           type: string
         password:
@@ -1489,25 +1489,25 @@ components:
     HealthResponse:
       type: object
       properties:
-        status:
-          enum:
-          - UP
-          - DOWN
-          type: string
         checks:
           type: array
           items:
             $ref: "#/components/schemas/HealthCheck"
-    HealthCheck:
-      type: object
-      properties:
         status:
           enum:
           - UP
           - DOWN
           type: string
+    HealthCheck:
+      type: object
+      properties:
+        name:
+          type: string
         data:
           type: object
           nullable: true
-        name:
+        status:
+          enum:
+          - UP
+          - DOWN
           type: string
