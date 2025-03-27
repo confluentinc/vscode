@@ -149,16 +149,16 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
 
 /**
  * Creates and returns a QuickPick instance with enhanced functionality.
- * This allows more direct control over the QuickPick compared to showEnhancedQuickPick.
+ * The QuickPick will be shown immediately and the function will wait for completion.
  *
  * @param items The items to show in the QuickPick
  * @param options Enhanced QuickPick options
- * @returns The configured QuickPick instance
+ * @returns A Promise that resolves to the QuickPick instance after it is hidden
  */
 export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
-): vscode.QuickPick<T> {
+): Promise<vscode.QuickPick<T>> {
   const quickPick = vscode.window.createQuickPick<T>();
 
   // Set standard options
@@ -229,5 +229,11 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
     });
   }
 
-  return quickPick;
+  // Show the QuickPick and return a promise that resolves when it's hidden
+  quickPick.show();
+  return new Promise((resolve) => {
+    quickPick.onDidHide(() => {
+      resolve(quickPick);
+    });
+  });
 }

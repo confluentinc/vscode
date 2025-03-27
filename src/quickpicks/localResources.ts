@@ -75,7 +75,7 @@ export async function localResourcesQuickPick(
   }
 
   // Create the quickpick using our enhanced utility
-  const quickpick = createEnhancedQuickPick(items, {
+  const quickpick = await createEnhancedQuickPick(items, {
     title,
     placeHolder: placeholder,
     ignoreFocusOut: true,
@@ -121,25 +121,7 @@ export async function localResourcesQuickPick(
     },
   });
 
-  // Show the QuickPick
-  quickpick.show();
-
-  // user clicked "Ok" or hit Enter to accept the selected items, if any
-  const selectedItems: QuickPickItem[] = [];
-  quickpick.onDidAccept(() => {
-    logger.debug("selected items", { items: JSON.stringify(quickpick.selectedItems) });
-    selectedItems.push(...quickpick.selectedItems);
-    quickpick.hide();
-  });
-
-  // block until the quickpick is hidden
-  await new Promise<void>((resolve) => {
-    quickpick.onDidHide(() => {
-      resolve();
-    });
-  });
-
-  return selectedItems.length > 0
-    ? selectedItems.map((item) => item.label as LocalResourceKind)
+  return quickpick.selectedItems.length > 0
+    ? quickpick.selectedItems.map((item) => item.label as LocalResourceKind)
     : [];
 }
