@@ -10,7 +10,7 @@ All notable changes to this extension will be documented in this file.
 - New "Delete Schema Version" context menu action for schemas to drive either soft or hard deletions
   of single schema versions. If the final schema within a subject is deleted, the subject will no
   longer exist.
-- Actions using file contents chosen from open editor list such as schema upload or produce messages will now prefer to use the possibly unsaved editor buffer contents over any possibly stale on-disk contents. Unsaved documents may now be submitted.
+- Unsaved file contents can now be used for schema upload or message producing actions without the need to save the file first.
 - Preview setting to enable/disable Flink resources' and associated actions' visibility
 
 ### Fixed
