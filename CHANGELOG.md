@@ -12,6 +12,8 @@ All notable changes to this extension will be documented in this file.
   longer exist.
 - Preview setting to enable/disable Flink resources' and associated actions' visibility
 - Experimental setting to enable/disable the Confluent chat participant for Copilot chat
+- Support for diffing schema definitions and Kafka topic message documents from the editor title or
+  right-click context areas
 
 ### Fixed
 
