@@ -549,13 +549,10 @@ describe("directConnect.ts", () => {
       await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
 
       // Assert: Verify the form was disposed
-      assert.strictEqual(mockDispose.calledOnce, true, "Expected dispose to be called once");
-      assert.strictEqual(
-        mockShowInformationMessage.calledOnceWithExactly(
-          `Connection "${testConnection.name}" is disconnected.`,
-        ),
-        true,
-        "Expected showInformationMessage to be called with the correct removal notification",
+      sinon.assert.calledOnce(mockDispose);
+      sinon.assert.calledOnceWithExactly(
+        mockShowInformationMessage,
+        `Connection "${testConnection.name}" is disconnected.`,
       );
     });
 
@@ -569,12 +566,7 @@ describe("directConnect.ts", () => {
       await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
 
       // Assert: Verify the form was not disposed
-      assert.strictEqual(mockDispose.called, false, "Expected dispose not to be called");
-      assert.strictEqual(
-        mockShowInformationMessage.called,
-        false,
-        "Expected showInformationMessage not to be called",
-      );
+      sinon.assert.notCalled(mockDispose);
     });
   });
 });
