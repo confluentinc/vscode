@@ -1,7 +1,15 @@
-import assert from "assert";
+import * as vscode from "vscode";
+import * as assert from "assert";
 import { parseTestResult, getConnectionSpecFromFormData, deepMerge } from "./directConnect";
-import { TEST_DIRECT_CONNECTION } from "../tests/unit/testResources/connection";
+import {
+  TEST_DIRECT_CONNECTION,
+  TEST_DIRECT_CONNECTION_FORM_SPEC,
+} from "../tests/unit/testResources/connection";
 import { ConnectedState, Status } from "./clients/sidecar";
+import { CustomConnectionSpec } from "./storage/resourceManager";
+import sinon from "sinon";
+import { ResourceManager } from "./storage/resourceManager";
+import { handleConnectionChange } from "./directConnect";
 
 describe("directConnect.ts", () => {
   describe("getConnectionSpecFromFormData", () => {
@@ -503,6 +511,70 @@ describe("directConnect.ts", () => {
       const obj2 = { ssl: { enabled: true } };
       const result = deepMerge(obj1, obj2);
       assert.deepStrictEqual(result, { name: "test", ssl: { enabled: true } });
+    });
+  });
+
+  describe("handleConnectionChange", () => {
+    let sandbox: sinon.SinonSandbox;
+    let mockDispose: sinon.SinonStub;
+    let mockShowInformationMessage: sinon.SinonStub;
+    let stubResourceManager: sinon.SinonStubbedInstance<ResourceManager>;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+
+      // Mock WebviewPanel
+      mockDispose = sandbox.stub();
+
+      // Mock window.showInformationMessage
+      mockShowInformationMessage = sandbox.stub(vscode.window, "showInformationMessage");
+
+      // Mock resource manager with required methods
+      stubResourceManager = sinon.createStubInstance(ResourceManager);
+      sandbox.stub(ResourceManager, "getInstance").returns(stubResourceManager);
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should close the form when connection is removed", async () => {
+      // Arrange: Create a test connection
+      const testConnection: CustomConnectionSpec = TEST_DIRECT_CONNECTION_FORM_SPEC;
+
+      // Setup mock for getDirectConnections to simulate connection removed
+      (stubResourceManager.getDirectConnection as sinon.SinonStub).resolves(null);
+
+      // Act: Handle the connection change
+      await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
+
+      // Assert: Verify the form was disposed
+      assert.strictEqual(mockDispose.calledOnce, true, "Expected dispose to be called once");
+      assert.strictEqual(
+        mockShowInformationMessage.calledOnceWithExactly(
+          `Connection "${testConnection.name}" is disconnected.`,
+        ),
+        true,
+        "Expected showInformationMessage to be called with the correct removal notification",
+      );
+    });
+
+    it("should not close the form when connection still exists", async () => {
+      // Arrange: Create a test connection
+      const testConnection: CustomConnectionSpec = TEST_DIRECT_CONNECTION_FORM_SPEC;
+
+      (stubResourceManager.getDirectConnection as sinon.SinonStub).resolves(testConnection);
+
+      // Act: Handle the connection change
+      await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
+
+      // Assert: Verify the form was not disposed
+      assert.strictEqual(mockDispose.called, false, "Expected dispose not to be called");
+      assert.strictEqual(
+        mockShowInformationMessage.called,
+        false,
+        "Expected showInformationMessage not to be called",
+      );
     });
   });
 });
