@@ -60,7 +60,9 @@ export function registerDiffCommands(): vscode.Disposable[] {
  * @throws Error if the resource item is not yet supported
  */
 function convertItemToUri(item: any): vscode.Uri {
-  if (item instanceof Schema) {
+  if (item instanceof vscode.Uri) {
+    return item;
+  } else if (item instanceof Schema) {
     return new SchemaDocumentProvider().resourceToUri(item, item.fileName());
   } else {
     throw new Error("Unsupported resource type for comparison");
