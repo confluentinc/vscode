@@ -39,6 +39,8 @@ export enum ContextValues {
   RESOURCES_WITH_NAMES = "confluent.resourcesWithNames",
   /** Array of resources that have a `uri` property for enabling the `Copy URI` action. */
   RESOURCES_WITH_URIS = "confluent.resourcesWithURIs",
+  /** Array of resources that can be selected for comparison and presented in a diff view. */
+  DIFFABLE_RESOURCES = "confluent.diffableResources",
 
   // -- ADJUSTABLE CONTEXT VALUES --
   /** The user has a valid, authenticated connection to Confluent Cloud.

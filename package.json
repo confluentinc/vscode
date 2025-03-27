@@ -785,6 +785,28 @@
           "command": "confluent.topic.consume.duplicate",
           "group": "navigation",
           "when": "activeWebviewPanelId == message-viewer"
+        },
+        {
+          "command": "confluent.diff.selectForCompare",
+          "when": "resourceScheme in confluent.diffableResources",
+          "group": "3_compare"
+        },
+        {
+          "command": "confluent.diff.compareWithSelected",
+          "when": "resourceScheme in confluent.diffableResources && confluent.resourceSelectedForCompare",
+          "group": "3_compare"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "confluent.diff.selectForCompare",
+          "when": "resourceScheme in confluent.diffableResources",
+          "group": "1_diff"
+        },
+        {
+          "command": "confluent.diff.compareWithSelected",
+          "when": "resourceScheme in confluent.diffableResources && confluent.resourceSelectedForCompare",
+          "group": "1_diff"
         }
       ],
       "view/title": [
