@@ -95,32 +95,3 @@ export async function uriQuickpick(
     return uri ? uri[0] : undefined;
   }
 }
-
-/** Representation of content retrieved from a file or editor. `openDocument` will be provided if
- * the content came from an open editor, or if the associated file is open in an editor for the
- * current workspace. */
-export interface LoadedDocumentContent {
-  content: string;
-  openDocument?: TextDocument;
-}
-
-/** Load the content of a document, either from an open editor or directly from the file system. */
-export async function loadDocumentContent(uri: Uri): Promise<LoadedDocumentContent> {
-  let content: string | undefined;
-  let document: TextDocument | undefined;
-  if (uri.scheme === "file") {
-    // file may not be open/visible, so read it directly
-    const contentArray: Uint8Array = await workspace.fs.readFile(uri);
-    content = Buffer.from(contentArray).toString("utf-8");
-    // check if the file is already open in an editor
-    document = workspace.textDocuments.find(
-      (doc: TextDocument) => doc.uri.toString() === uri.toString(),
-    );
-  } else {
-    // "untitled" and custom URI schemes are treated the same way since they aren't saved to
-    // the file system and are always open in an editor if they were chosen through the quickpick
-    document = await workspace.openTextDocument(uri);
-    content = document.getText();
-  }
-  return { openDocument: document, content: content };
-}

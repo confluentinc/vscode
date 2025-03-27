@@ -1,22 +1,21 @@
-import * as vscode from "vscode";
 import * as assert from "assert";
 import sinon from "sinon";
-import * as fileUtils from "./file";
+import * as vscode from "vscode";
+import { fileUriExists, getEditorOrFileContents, LoadedDocumentContent } from "./file";
+import * as fsWrappers from "./fsWrappers";
 
 describe("fileUriExists", () => {
   let sandbox: sinon.SinonSandbox;
 
-  // Setup before each test
   beforeEach(() => {
     sandbox = sinon.createSandbox();
   });
 
-  // Cleanup after each test
   afterEach(() => {
     sandbox.restore();
   });
 
-  it("should stub statFile correctly", async () => {
+  it("should return true if file exists", async () => {
     const uri = vscode.Uri.file("file:///file.ts");
     const fakeStat: vscode.FileStat = {
       type: vscode.FileType.File,
@@ -25,71 +24,79 @@ describe("fileUriExists", () => {
       size: 100,
     };
 
-    const statStub = sandbox.stub(fileUtils, "statFile").resolves(fakeStat);
-    const result = await fileUtils.statFile(uri);
+    sandbox.stub(fsWrappers, "statFile").resolves(fakeStat);
+    const result = await fileUriExists(uri);
 
-    assert.deepStrictEqual(result, fakeStat, "Expected statFile to return fakeStat");
-    assert.strictEqual(statStub.calledOnceWithExactly(uri), true);
+    assert.strictEqual(result, true);
   });
 
-  it("should stub statFile with error", async () => {
-    const uri = vscode.Uri.file("file:///nonexistant/file.ts");
+  it("should return False if file does not exist", async () => {
+    const uri = vscode.Uri.file("file:///nonexistentfile.ts");
+    sandbox.stub(fsWrappers, "statFile").rejects(new Error("File not found"));
 
-    const statStub = sandbox.stub(fileUtils, "statFile").rejects(new Error("File not found"));
-
-    try {
-      await fileUtils.statFile(uri);
-      assert.fail("Expected statFile to throw an error");
-    } catch (error: any) {
-      assert.strictEqual(
-        error.message,
-        "File not found",
-        "Expected error message to be 'File not found'",
-      );
-    }
-
-    assert.strictEqual(statStub.calledOnceWithExactly(uri), true);
-  });
-
-  it("should return true when file exists", async () => {
-    const uri = vscode.Uri.file("file:///file.ts");
-
-    const statStub = sandbox.stub(fileUtils, "fileUriExists").resolves(true);
-
-    const result = await fileUtils.fileUriExists(uri);
-
-    assert.strictEqual(result, true, "Expected fileUriExists to return true");
-    assert.strictEqual(
-      statStub.calledOnceWithExactly(uri),
-      true,
-      "Expected statFile to be called once with the correct URI",
-    );
-  });
-
-  it("should return false when file does not exist", async () => {
-    const uri = vscode.Uri.file("/path/to/nonexistent/file.txt");
-    const statStub = sandbox.stub(fileUtils, "fileUriExists").resolves(false);
-    const result = await fileUtils.fileUriExists(uri);
+    const result = await fileUriExists(uri);
 
     assert.strictEqual(result, false);
-    assert.strictEqual(statStub.calledOnceWithExactly(uri), true);
+  });
+});
+
+describe("getEditorOrFileContents", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
   });
 
-  it("should handle unexpected errors gracefully", async () => {
-    const uri = vscode.Uri.file("/path/to/file.txt");
-    const statStub = sandbox.stub(fileUtils, "statFile").rejects(new Error("Unexpected error"));
+  afterEach(() => {
+    sandbox.restore();
+  });
 
-    try {
-      await fileUtils.statFile(uri);
-      assert.fail("Expected statFile to throw an error");
-    } catch (error: any) {
-      assert.strictEqual(
-        error.message,
-        "Unexpected error",
-        "Expected error message to be 'File not found'",
-      );
-    }
+  it("should prefer editor contents if editor is open over what is on disk", async () => {
+    const uri = vscode.Uri.file("file:///file.ts");
+    const fakeEditorContents = "Fake editor contents";
+    const fakeEditor = {
+      document: {
+        uri,
+        getText: () => fakeEditorContents,
+      },
+    };
+    sandbox.stub(vscode.window, "visibleTextEditors").get(() => [fakeEditor as any]);
 
-    assert.strictEqual(statStub.calledOnceWithExactly(uri), true);
+    // Also stub out differing file contents on disk. getEditorOrFileContents() should
+    // prefer the editor contents over this.
+    const fakeFileContents = "Bad on-disk contents";
+    sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
+
+    const result: LoadedDocumentContent = await getEditorOrFileContents(uri);
+
+    assert.strictEqual(result.content, fakeEditorContents);
+    assert.strictEqual(result.openDocument, fakeEditor.document);
+  });
+
+  it("should return file contents if editor is not open", async () => {
+    const uri = vscode.Uri.file("file:///file.ts");
+    const fakeFileContents = "Fake file contents";
+
+    // No open editors ...
+    sandbox.stub(vscode.window, "visibleTextEditors").get(() => []);
+    // ... but a file that exists ...
+    sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
+
+    const result = await getEditorOrFileContents(uri);
+    assert.strictEqual(result.content, fakeFileContents);
+    assert.strictEqual(result.openDocument, undefined);
+  });
+
+  it("should throw an error if neither open editor nor file exists", async () => {
+    // A file that actually does exist on UNIXen, but we stub out to simulate a non-existent file.
+    // (also proving that the stubbing actually works)
+    const uri = vscode.Uri.file("file:///etc/hosts");
+
+    sandbox.stub(vscode.window, "visibleTextEditors").get(() => []);
+    sandbox.stub(fsWrappers, "readFile").rejects(new Error("File not found"));
+
+    assert.rejects(async () => {
+      await getEditorOrFileContents(uri);
+    });
   });
 });
