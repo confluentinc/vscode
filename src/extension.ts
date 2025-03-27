@@ -421,12 +421,16 @@ function setupDocumentProviders(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   // any document providers set here must provide their own `scheme` to register with
   const providerClasses = [SchemaDocumentProvider, MessageDocumentProvider];
+  const diffSchemes: string[] = [];
   for (const providerClass of providerClasses) {
     const provider = new providerClass();
     disposables.push(
       vscode.workspace.registerTextDocumentContentProvider(provider.scheme, provider),
     );
+    // add the scheme to the list of diffable schemes so we can compare them
+    diffSchemes.push(provider.scheme);
   }
+  setContextValue(ContextValues.DIFFABLE_RESOURCES, diffSchemes);
   logger.info("Document providers registered");
   return disposables;
 }
