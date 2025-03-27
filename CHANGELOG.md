@@ -19,6 +19,7 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Improved resolving newly created direct connection connectivity state.
+- Expanded maximum length of direct connection usernames and API keys, from 64 to 96 characters. Should improve WarpStream compatibility.
 
 ## 1.0.2
 
