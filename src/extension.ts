@@ -9,6 +9,7 @@ if (process.env.SENTRY_DSN) {
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
+import { enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { registerCommandWithLogging } from "./commands";
@@ -245,7 +246,8 @@ async function _activateExtension(
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
   context.subscriptions.push(chatParticipant);
 
-  // track the status bar for CCloud notices
+  // track the status bar for CCloud notices (fetched from the Statuspage Status API)
+  enableCCloudStatusPolling();
   context.subscriptions.push(getCCloudStatusBarItem());
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
