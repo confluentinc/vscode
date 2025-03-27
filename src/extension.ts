@@ -37,8 +37,8 @@ import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
-import { MessageDocumentProvider } from "./documentProviders/message";
-import { SchemaDocumentProvider } from "./documentProviders/schema";
+import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
+import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
 import {
   disposeLaunchDarklyClient,
@@ -63,6 +63,7 @@ import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
 import { logUsage, UserEvent } from "./telemetry/events";
+import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
@@ -71,7 +72,6 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("extension");
 
@@ -301,6 +301,10 @@ async function setupContextValues() {
     "local-schema-registry",
     "direct-schema-registry",
   ]);
+  const diffableResources = setContextValue(ContextValues.DIFFABLE_RESOURCES, [
+    SCHEMA_URI_SCHEME,
+    MESSAGE_URI_SCHEME,
+  ]);
   await Promise.all([
     flinkEnabled,
     chatParticipantEnabled,
@@ -311,6 +315,7 @@ async function setupContextValues() {
     resourcesWithIds,
     resourcesWithNames,
     resourcesWithURIs,
+    diffableResources,
   ]);
 }
 
@@ -421,16 +426,12 @@ function setupDocumentProviders(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   // any document providers set here must provide their own `scheme` to register with
   const providerClasses = [SchemaDocumentProvider, MessageDocumentProvider];
-  const diffSchemes: string[] = [];
   for (const providerClass of providerClasses) {
     const provider = new providerClass();
     disposables.push(
       vscode.workspace.registerTextDocumentContentProvider(provider.scheme, provider),
     );
-    // add the scheme to the list of diffable schemes so we can compare them
-    diffSchemes.push(provider.scheme);
   }
-  setContextValue(ContextValues.DIFFABLE_RESOURCES, diffSchemes);
   logger.info("Document providers registered");
   return disposables;
 }
