@@ -14,13 +14,13 @@ const logger = new Logger("featureFlags.handlers");
 export async function handleClientReady(client: LDElectronMainClient) {
   logger.debug("client ready event, setting flags...");
   // set starting values
-  for (const [key, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
-    const actualValue: LDFlagValue = client.variation(key);
+  for (const [flag, defaultValue] of Object.entries(FEATURE_FLAG_DEFAULTS)) {
+    const actualValue: LDFlagValue = client.variation(flag);
     // NOTE: uncomment the following for local testing new feature flag behavior:
     // logger.debug(
     //   `client ready event, setting ${key}=${JSON.stringify(actualValue)} (default=${JSON.stringify(defaultValue)})`,
     // );
-    FeatureFlags[key] = actualValue ?? defaultValue;
+    FeatureFlags[flag] = actualValue ?? defaultValue;
   }
   logger.debug("client ready, flags set:", JSON.stringify(FeatureFlags));
 }
@@ -39,8 +39,6 @@ export async function handleFlagChanges(changes: LDFlagChangeset) {
     const currentValue: LDFlagValue = changes[flag].current;
     FeatureFlags[flag] = currentValue;
     logger.debug(`"${flag}" changed:`, { previousValue, currentValue });
-
-    // TODO: fork handling based on different flags
   }
 }
 
