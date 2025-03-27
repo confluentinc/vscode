@@ -543,7 +543,7 @@ describe("directConnect.ts", () => {
       const testConnection: CustomConnectionSpec = TEST_DIRECT_CONNECTION_FORM_SPEC;
 
       // Setup mock for getDirectConnections to simulate connection removed
-      (stubResourceManager.getDirectConnection as sinon.SinonStub).resolves(null);
+      stubResourceManager.getDirectConnection.resolves(null);
 
       // Act: Handle the connection change
       await handleConnectionChange(testConnection, { dispose: mockDispose } as any);
