@@ -50,31 +50,23 @@ export function createNoticesMarkdown(notices: CCloudNotice[]): MarkdownString {
 
   // associate each notice `level` to a user-facing label and icon
   const categories = [
-    { level: "error", label: "Critical Issues", icon: "error" },
-    { level: "warning", label: "Important Notices", icon: "warning" },
+    { type: "incident", label: "Incidents" },
+    { type: "maintenance", label: "Scheduled Maintenance" },
     // no "info" level notices for now, but if we add them in the future, we can use this
   ];
 
   for (const category of categories) {
-    const categoryNotices = notices.filter((notice) => notice.level === category.level);
+    const categoryNotices = notices.filter((notice) => notice.type === category.type);
     if (!categoryNotices.length) {
       continue;
     }
 
-    tooltipMarkdown.appendMarkdown(`\n### $(${category.icon}) ${category.label}\n`);
+    tooltipMarkdown.appendMarkdown(`\n### ${category.label}\n`);
     categoryNotices.forEach((notice) => {
       if (!notice.message) {
         return;
       }
       let noticeMessage = `\n- ${notice.message}`;
-      // only show suggestions that don't duplicate the status page link in the footer
-      if (
-        notice.suggestion &&
-        typeof notice.suggestion === "string" &&
-        !notice.suggestion.includes("https://status.confluent.cloud")
-      ) {
-        noticeMessage = `${noticeMessage} (${notice.suggestion})`;
-      }
       tooltipMarkdown.appendMarkdown(noticeMessage);
     });
   }
@@ -97,13 +89,13 @@ export function determineStatusBarColor(notices: CCloudNotice[]): ThemeColor | u
     return;
   }
 
-  const errorNotices = notices.some((notice) => notice.level === "error");
-  if (errorNotices) {
+  const incidentNotices = notices.some((notice) => notice.type === "incident");
+  if (incidentNotices) {
     return new ThemeColor("statusBarItem.errorBackground");
   }
 
-  const warningNotices = notices.some((notice) => notice.level === "warning");
-  if (warningNotices) {
+  const maintenanceNotices = notices.some((notice) => notice.type === "maintenance");
+  if (maintenanceNotices) {
     return new ThemeColor("statusBarItem.warningBackground");
   }
 }

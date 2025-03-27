@@ -51,34 +51,44 @@ export function StatusComponentFromJSON(obj: any): StatusComponent {
 }
 
 export interface StatusUpdate {
-  body: string;
-  created_at: string;
-  display_at: string;
   id: string;
-  incident_id: string;
   status: string;
+  body: string;
+  incident_id: string;
+  created_at: string;
   updated_at: string;
+  display_at: string;
+  affected_components: StatusComponent[];
+  deliver_notifications: boolean;
+  custom_tweet: string | null;
+  tweet_id: string | null;
 }
 
 export function StatusUpdateFromJSON(obj: any): StatusUpdate {
   return {
-    body: obj.body,
-    created_at: obj.created_at,
-    display_at: obj.display_at,
     id: obj.id,
-    incident_id: obj.incident_id,
     status: obj.status,
+    body: obj.body,
+    incident_id: obj.incident_id,
+    created_at: obj.created_at,
     updated_at: obj.updated_at,
+    display_at: obj.display_at,
+    affected_components: obj.affected_components.map((component: any) =>
+      StatusComponentFromJSON(component),
+    ),
+    deliver_notifications: obj.deliver_notifications,
+    custom_tweet: obj.custom_tweet,
+    tweet_id: obj.tweet_id,
   };
 }
 
-export type Impact = "none" | "minor" | "major" | "critical";
+export type ImpactIndicator = "none" | "minor" | "major" | "critical";
 
-/** A Statuspage incident. @see https://metastatuspage.com/api#incidents */
+/** A Statuspage incident. @see https://status.confluent.cloud/api/v2/incidents.json */
 export interface Incident {
   created_at: string;
   id: string;
-  impact: Impact;
+  impact: ImpactIndicator;
   incident_updates: StatusUpdate[];
   monitoring_at: string | null;
   name: string;
@@ -106,10 +116,11 @@ export function IncidentFromJSON(obj: any): Incident {
   };
 }
 
+/** A Statuspage scheduled maintenance. @see https://status.confluent.cloud/api/v2/scheduled-maintenances.json */
 export interface ScheduledMaintenance {
   created_at: string;
   id: string;
-  impact: Impact;
+  impact: ImpactIndicator;
   incident_updates: StatusUpdate[];
   monitoring_at: string | null;
   name: string;
@@ -140,18 +151,18 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
   };
 }
 
-export interface CCloudStatus {
+export interface CCloudStatusSummary {
   page: StatusPage;
   components: StatusComponent[];
   incidents: Incident[];
   scheduled_maintenances: ScheduledMaintenance[];
   status: {
     description: string;
-    indicator: string;
+    indicator: ImpactIndicator;
   };
 }
 
-export function CCloudStatusFromJSON(obj: any): CCloudStatus {
+export function CCloudStatusSummaryFromJSON(obj: any): CCloudStatusSummary {
   return {
     page: StatusPageFromJSON(obj.page),
     components: obj.components.map((component: any) => StatusComponentFromJSON(component)),
