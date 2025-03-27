@@ -96,6 +96,10 @@ const topicWebviewCache = new WebviewPanelCache();
  * @param topic The topic to edit, from the topic tree item where the "confluent.topics.edit" command was invoked
  */
 async function editTopicConfig(topic: KafkaTopic): Promise<void> {
+  // Check this despite the type, since at runtime VSCode could pass the wrong selected item or undefined
+  if (!topic || !(topic instanceof KafkaTopic)) {
+    return;
+  }
   // Retrieve the current topic configuration data
   let topicConfigRemoteItems = null;
   try {
