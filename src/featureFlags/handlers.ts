@@ -5,9 +5,7 @@ import {
 } from "launchdarkly-electron-client-sdk";
 import { logError } from "../errors";
 import { Logger } from "../logging";
-import { updateCCloudStatus } from "../statusBar/ccloudItem";
-import { CCloudNotice } from "../statusBar/types";
-import { FEATURE_FLAG_DEFAULTS, FeatureFlag, FeatureFlags } from "./constants";
+import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
 
 const logger = new Logger("featureFlags.handlers");
 
@@ -23,12 +21,6 @@ export async function handleClientReady(client: LDElectronMainClient) {
     //   `client ready event, setting ${key}=${JSON.stringify(actualValue)} (default=${JSON.stringify(defaultValue)})`,
     // );
     FeatureFlags[flag] = actualValue ?? defaultValue;
-
-    if (flag === FeatureFlag.GLOBAL_NOTICES) {
-      // set/unset initial notices
-      const notices: CCloudNotice[] = FeatureFlags[flag] as CCloudNotice[];
-      updateCCloudStatus(notices);
-    }
   }
   logger.debug("client ready, flags set:", JSON.stringify(FeatureFlags));
 }
@@ -47,12 +39,6 @@ export async function handleFlagChanges(changes: LDFlagChangeset) {
     const currentValue: LDFlagValue = changes[flag].current;
     FeatureFlags[flag] = currentValue;
     logger.debug(`"${flag}" changed:`, { previousValue, currentValue });
-
-    if (flag === FeatureFlag.GLOBAL_NOTICES) {
-      // update the status bar item with any notices, or reset if none
-      const notices: CCloudNotice[] = currentValue as CCloudNotice[];
-      updateCCloudStatus(notices);
-    }
   }
 }
 
