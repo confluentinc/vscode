@@ -138,16 +138,18 @@ export type IncidentStatus =
 export interface Incident {
   id: string;
   name: string;
+  /** The status of the incident. Can be `investigating`, `identified`, `monitoring`, `resolved`, or `postmortem`. */
   status: IncidentStatus;
   created_at: string;
   updated_at: string;
   monitoring_at: string | null;
   resolved_at: string | null;
+  /** The impact of the incident. Can be `none`, `minor`, `major`, or `critical`. */
   impact: ImpactIndicator;
   shortlink: string;
   started_at: string;
   page_id: string;
-  incident_updates: StatusUpdate[];
+  incident_updates: (StatusUpdate & { status: IncidentStatus })[];
   components: StatusComponent[];
   reminder_intervals: string | null;
 }
@@ -186,6 +188,7 @@ export type MaintenanceStatus = "scheduled" | "in_progress" | "verifying" | "com
 export interface ScheduledMaintenance {
   id: string;
   name: string;
+  /** Status of the scheduled maintenance. Can be `scheduled`, `in_progress`, `verifying`, or `completed`. */
   status: MaintenanceStatus;
   created_at: string;
   updated_at: string;
@@ -195,7 +198,7 @@ export interface ScheduledMaintenance {
   shortlink: string;
   started_at: string;
   page_id: string;
-  incident_updates: StatusUpdate[];
+  incident_updates: (StatusUpdate & { status: MaintenanceStatus })[];
   components: StatusComponent[];
   scheduled_for: string;
   scheduled_until: string;
@@ -228,6 +231,7 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
 
 export interface SummaryStatus {
   description: string;
+  /** The status indicator. Can be `none`, `minor`, `major`, or `critical`. */
   indicator: ImpactIndicator;
 }
 
