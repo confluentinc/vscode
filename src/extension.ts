@@ -9,7 +9,7 @@ if (process.env.SENTRY_DSN) {
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
-import { enableCCloudStatusPolling } from "./ccloudStatus/polling";
+import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { registerCommandWithLogging } from "./commands";
@@ -458,6 +458,7 @@ export function deactivate() {
   }
 
   disposeLaunchDarklyClient();
+  disableCCloudStatusPolling();
 
   logger.info("Extension deactivated");
 }
