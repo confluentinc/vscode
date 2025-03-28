@@ -1,3 +1,7 @@
+/**
+ * A Statuspage page object.
+ * @see https://status.confluent.cloud/api/v2
+ */
 export interface StatusPage {
   id: string;
   name: string;
@@ -16,6 +20,10 @@ export function StatusPageFromJSON(obj: any): StatusPage {
   };
 }
 
+/**
+ * A Statuspage component object.
+ * @see https://status.confluent.cloud/api/v2/components.json
+ */
 export interface StatusComponent {
   id: string;
   name: string;
@@ -50,6 +58,36 @@ export function StatusComponentFromJSON(obj: any): StatusComponent {
   };
 }
 
+export type AffectedComponentStatus =
+  | "operational"
+  | "partial_outage"
+  | "major_outage"
+  | "degraded_performance";
+
+/**
+ * A Statuspage affected component object.
+ * @see https://status.confluent.cloud/api/v2/incidents.json
+ */
+export interface AffectedComponent {
+  code: string;
+  name: string;
+  old_status: AffectedComponentStatus;
+  new_status: AffectedComponentStatus;
+}
+
+export function AffectedComponentFromJSON(obj: any): AffectedComponent {
+  return {
+    code: obj.code,
+    name: obj.name,
+    old_status: obj.old_status,
+    new_status: obj.new_status,
+  };
+}
+
+/**
+ * A Statuspage status update object.
+ * @see https://status.confluent.cloud/api/v2/status-updates.json
+ */
 export interface StatusUpdate {
   id: string;
   status: string;
@@ -58,7 +96,7 @@ export interface StatusUpdate {
   created_at: string;
   updated_at: string;
   display_at: string;
-  affected_components: StatusComponent[];
+  affected_components: AffectedComponent[];
   deliver_notifications: boolean;
   custom_tweet: string | null;
   tweet_id: string | null;
@@ -73,9 +111,10 @@ export function StatusUpdateFromJSON(obj: any): StatusUpdate {
     created_at: obj.created_at,
     updated_at: obj.updated_at,
     display_at: obj.display_at,
-    affected_components: (obj.affected_components ?? []).map((component: any) =>
-      StatusComponentFromJSON(component),
-    ),
+    affected_components: (Array.isArray(obj.affected_components)
+      ? obj.affected_components
+      : []
+    ).map((component: any) => AffectedComponentFromJSON(component)),
     deliver_notifications: obj.deliver_notifications,
     custom_tweet: obj.custom_tweet,
     tweet_id: obj.tweet_id,
@@ -84,11 +123,18 @@ export function StatusUpdateFromJSON(obj: any): StatusUpdate {
 
 export type ImpactIndicator = "none" | "minor" | "major" | "critical";
 
+export type IncidentStatus =
+  | "investigating"
+  | "identified"
+  | "monitoring"
+  | "resolved"
+  | "postmortem";
+
 /** A Statuspage incident. @see https://status.confluent.cloud/api/v2/incidents.json */
 export interface Incident {
   id: string;
   name: string;
-  status: string; // investigating, identified, monitoring, resolved, postmortem
+  status: IncidentStatus;
   created_at: string;
   updated_at: string;
   monitoring_at: string | null;
@@ -116,19 +162,26 @@ export function IncidentFromJSON(obj: any): Incident {
     shortlink: obj.shortlink,
     started_at: obj.started_at,
     page_id: obj.page_id,
-    incident_updates: (obj.incident_updates ?? []).map((update: any) =>
-      StatusUpdateFromJSON(update),
+    incident_updates: (Array.isArray(obj.incident_updates) ? obj.incident_updates : []).map(
+      (update: any) => StatusUpdateFromJSON(update),
     ),
-    components: (obj.components ?? []).map((component: any) => StatusComponentFromJSON(component)),
+    components: (Array.isArray(obj.components) ? obj.components : []).map((component: any) =>
+      StatusComponentFromJSON(component),
+    ),
     reminder_intervals: obj.reminder_intervals,
   };
 }
 
-/** A Statuspage scheduled maintenance. @see https://status.confluent.cloud/api/v2/scheduled-maintenances.json */
+export type MaintenanceStatus = "scheduled" | "in_progress" | "verifying" | "completed";
+
+/**
+ * A Statuspage scheduled maintenance object.
+ * @see https://status.confluent.cloud/api/v2/scheduled-maintenances.json
+ */
 export interface ScheduledMaintenance {
   id: string;
   name: string;
-  status: string; // scheduled, in progress, verifying, completed
+  status: MaintenanceStatus;
   created_at: string;
   updated_at: string;
   monitoring_at: string | null;
@@ -156,15 +209,21 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
     shortlink: obj.shortlink,
     started_at: obj.started_at,
     page_id: obj.page_id,
-    incident_updates: (obj.incident_updates ?? []).map((update: any) =>
-      StatusUpdateFromJSON(update),
+    incident_updates: (Array.isArray(obj.incident_updates) ? obj.incident_updates : []).map(
+      (update: any) => StatusUpdateFromJSON(update),
     ),
-    components: (obj.components ?? []).map((component: any) => StatusComponentFromJSON(component)),
+    components: (Array.isArray(obj.components) ? obj.components : []).map((component: any) =>
+      StatusComponentFromJSON(component),
+    ),
     scheduled_for: obj.scheduled_for,
     scheduled_until: obj.scheduled_until,
   };
 }
 
+/**
+ * A Statuspage summary object.
+ * @see https://status.confluent.cloud/api/v2/summary.json
+ */
 export interface CCloudStatusSummary {
   page: StatusPage;
   components: StatusComponent[];
@@ -179,11 +238,16 @@ export interface CCloudStatusSummary {
 export function CCloudStatusSummaryFromJSON(obj: any): CCloudStatusSummary {
   return {
     page: StatusPageFromJSON(obj.page),
-    components: obj.components.map((component: any) => StatusComponentFromJSON(component)),
-    incidents: obj.incidents.map((incident: any) => IncidentFromJSON(incident)),
-    scheduled_maintenances: obj.scheduled_maintenances.map((maintenance: any) =>
-      ScheduledMaintenanceFromJSON(maintenance),
+    components: (Array.isArray(obj.components) ? obj.components : []).map((component: any) =>
+      StatusComponentFromJSON(component),
     ),
+    incidents: (Array.isArray(obj.incidents) ? obj.incidents : []).map((incident: any) =>
+      IncidentFromJSON(incident),
+    ),
+    scheduled_maintenances: (Array.isArray(obj.scheduled_maintenances)
+      ? obj.scheduled_maintenances
+      : []
+    ).map((maintenance: any) => ScheduledMaintenanceFromJSON(maintenance)),
     status: {
       description: obj.status.description,
       indicator: obj.status.indicator,
