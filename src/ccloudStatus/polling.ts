@@ -45,7 +45,10 @@ export async function refreshCCloudStatus() {
     return;
   }
 
-  logger.debug("parsing CCloud status for status bar item update...");
+  logger.debug("parsing CCloud status for status bar item update...", {
+    numIncidents: status.incidents.length,
+    numMaintenances: status.scheduled_maintenances.length,
+  });
   const notices: CCloudNotice[] = convertStatusToNotices(status);
   logger.debug("converted status summary", {
     numIncidents: notices.filter((n) => n.type === "incident").length,
