@@ -15,6 +15,9 @@ export async function fetchCCloudStatus(): Promise<CCloudStatusSummary | undefin
     const data = await response.json();
     return CCloudStatusSummaryFromJSON(data);
   } catch (error) {
+    if (error instanceof TypeError && error.message === "fetch failed") {
+      return; // network error
+    }
     logError(error, "CCloud status", {}, true);
   }
 }
