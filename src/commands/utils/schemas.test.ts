@@ -65,10 +65,9 @@ describe("commands/schemas/utils/schemas.ts", function () {
   describe("getDeleteSchemaSubjectPrompt()", function () {
     it("single schema version tests", function () {
       // single version.
-      const schemaGroup = [TEST_CCLOUD_SCHEMA];
       const subject = TEST_CCLOUD_SUBJECT;
       for (const hardDeletion of [true, false]) {
-        const prompt = getDeleteSchemaSubjectPrompt(hardDeletion, subject, schemaGroup);
+        const prompt = getDeleteSchemaSubjectPrompt(hardDeletion, subject, 1);
         const expectedPrompt = `Are you sure you want to ${hardDeletion ? "hard" : "soft"} delete subject "${subject.name}" and its single schema version?`;
         assert.strictEqual(prompt, expectedPrompt);
       }
@@ -76,14 +75,10 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     it("multiple schema version tests", function () {
       // multiple versions.
-      const schemaGroup = [
-        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 1 }),
-        Schema.create({ ...TEST_CCLOUD_SCHEMA, version: 2 }),
-      ];
       const subject = TEST_CCLOUD_SUBJECT;
       for (const hardDeletion of [true, false]) {
-        const prompt = getDeleteSchemaSubjectPrompt(hardDeletion, subject, schemaGroup);
-        const expectedPrompt = `Are you sure you want to ${hardDeletion ? "hard" : "soft"} delete subject "${subject.name}" and all ${schemaGroup.length} schema versions?`;
+        const prompt = getDeleteSchemaSubjectPrompt(hardDeletion, subject, 2);
+        const expectedPrompt = `Are you sure you want to ${hardDeletion ? "hard" : "soft"} delete subject "${subject.name}" and all 2 schema versions?`;
         assert.strictEqual(prompt, expectedPrompt);
       }
     });

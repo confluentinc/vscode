@@ -6,7 +6,7 @@ import { Schema, Subject } from "../../models/schema";
  * Determine the prompt to show when deleting a schema version.
  * @param hardDeletion Is a hard delete going to be performed?
  * @param schema The Schema/version to delete.
- * @param loader ResourceLoader to use to get the schema group.
+ * @param schemaGroup All of the live schemas in the subject.
  * @returns Customized prompt for the delete action.
  */
 export async function getDeleteSchemaVersionPrompt(
@@ -34,18 +34,18 @@ export async function getDeleteSchemaVersionPrompt(
 }
 
 /**
- * Determine the prompt to show when deleting a schema version.
+ * Determine the prompt to show when deleting an entire subject.
  * @param hardDeletion Is a hard delete going to be performed?
- * @param schema The Schema/version to delete.
- * @param loader ResourceLoader to use to get the schema group.
+ * @param subject The subject to delete.
+ * @param numSchemas The number of live schemas in the subject.
  * @returns Customized prompt for the delete action.
  */
 export function getDeleteSchemaSubjectPrompt(
   hardDeletion: boolean,
   subject: Subject,
-  schemaGroup: Schema[],
+  numSchemas: number,
 ): string {
-  const isOnlyVersion = schemaGroup.length === 1;
+  const isOnlyVersion = numSchemas === 1;
 
   const deleteVerb = (hardDeletion ? "hard" : "soft") + " delete";
   let prompt: string;
@@ -53,7 +53,7 @@ export function getDeleteSchemaSubjectPrompt(
   if (isOnlyVersion) {
     prompt = `Are you sure you want to ${deleteVerb} subject "${subject.name}" and its single schema version?`;
   } else {
-    prompt = `Are you sure you want to ${deleteVerb} subject "${subject.name}" and all ${schemaGroup.length} schema versions?`;
+    prompt = `Are you sure you want to ${deleteVerb} subject "${subject.name}" and all ${numSchemas} schema versions?`;
   }
 
   return prompt;
@@ -184,7 +184,7 @@ export async function confirmSchemaSubjectDeletion(
   const confirmationTitle = `${hardDelete ? "HARD " : ""}Delete Subject ${subject.name} and all of its schema versions?`;
   const confirmation = await vscode.window.showInputBox({
     title: confirmationTitle,
-    prompt: getDeleteSchemaSubjectPrompt(hardDelete, subject, schemaGroup),
+    prompt: getDeleteSchemaSubjectPrompt(hardDelete, subject, schemaGroup.length),
     validateInput: validator,
     placeHolder: placeholder,
   });
