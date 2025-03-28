@@ -1,6 +1,8 @@
-import { MarkdownString, StatusBarAlignment, StatusBarItem, ThemeColor, window } from "vscode";
-import { CustomMarkdownString } from "../models/main";
-import { CCloudNotice } from "./types";
+import { StatusBarAlignment, StatusBarItem, ThemeColor, window } from "vscode";
+import { CCloudStatusSummary, Incident, ScheduledMaintenance } from "../ccloudStatus/types";
+import { IconNames } from "../constants";
+import { ERROR_BACKGROUND_COLOR_ID, WARNING_BACKGROUND_COLOR_ID } from "./constants";
+import { createStatusSummaryMarkdown } from "./formatting";
 
 let statusBarItem: StatusBarItem | undefined;
 
@@ -18,84 +20,59 @@ export function getCCloudStatusBarItem(): StatusBarItem {
     title: "Open Confluent Cloud Status",
     arguments: ["https://status.confluent.cloud/"],
   };
-  statusBarItem.text = "$(confluent-logo)";
+  statusBarItem.text = `$(${IconNames.CONFLUENT_LOGO})`;
   statusBarItem.show();
 
   return statusBarItem;
 }
 
+/** Disposes of the Confluent Cloud {@link StatusBarItem} singleton. */
+export function disposeCCloudStatusBarItem() {
+  if (statusBarItem) {
+    statusBarItem.dispose();
+    statusBarItem = undefined;
+  }
+}
+
 /** Updates the `text`, `tooltip`, and (optionally) `backgroundColor` of the Confluent Cloud status
- * bar item based on the provided array of {@link CCloudNotice}. */
-export function updateCCloudStatus(notices: CCloudNotice[]) {
+ * bar item based on the provided {@link CCloudStatusSummary}. */
+export function updateCCloudStatus(status: CCloudStatusSummary) {
   // not accessing statusBarItem directly here because it may not be initialized yet when we fetch
   // any existing CCloud notices
   const item: StatusBarItem = getCCloudStatusBarItem();
 
-  item.text = `$(confluent-logo) ${notices.length ? notices.length : ""}`.trim();
-  item.tooltip = createNoticesMarkdown(notices);
-  item.backgroundColor = determineStatusBarColor(notices);
-}
-
-/** Returns a {@link MarkdownString} for the status bar item tooltip based on the provided array of
- * {@link CCloudNotice}. */
-export function createNoticesMarkdown(notices: CCloudNotice[]): MarkdownString {
-  if (!notices.length) {
-    return new MarkdownString("No notices for Confluent Cloud at this time.");
-  }
-
-  // header section
-  let tooltipMarkdown: MarkdownString = new CustomMarkdownString(
-    `#### $(confluent-logo) Confluent Cloud: ${notices.length} notice${notices.length === 1 ? "" : "s"}`,
-  ).appendMarkdown("\n\n---\n\n");
-
-  // associate each notice `level` to a user-facing label and icon
-  const categories = [
-    { type: "incident", label: "Incidents" },
-    { type: "maintenance", label: "Scheduled Maintenance" },
-    // no "info" level notices for now, but if we add them in the future, we can use this
-  ];
-
-  for (const category of categories) {
-    const categoryNotices = notices.filter((notice) => notice.type === category.type);
-    if (!categoryNotices.length) {
-      continue;
-    }
-
-    tooltipMarkdown.appendMarkdown(`\n### ${category.label}\n`);
-    categoryNotices.forEach((notice) => {
-      if (!notice.message) {
-        return;
-      }
-      let noticeMessage = `\n- ${notice.message}`;
-      tooltipMarkdown.appendMarkdown(noticeMessage);
-    });
-  }
-
-  // footer section
-  tooltipMarkdown.appendMarkdown("\n\n---\n\n");
-  tooltipMarkdown.appendMarkdown(
-    "Click to view the [Confluent Cloud Status](https://status.confluent.cloud/) page for more details.",
+  const activeIncidents: Incident[] = status.incidents.filter(
+    (incident) => incident.status !== "resolved",
   );
-  return tooltipMarkdown;
+  const activeMaintenances: ScheduledMaintenance[] = status.scheduled_maintenances.filter(
+    (maintenance) => maintenance.status !== "completed",
+  );
+  const noticeCount: number = activeIncidents.length + activeMaintenances.length;
+
+  item.text = `$(${IconNames.CONFLUENT_LOGO}) ${noticeCount || ""}`.trim();
+  item.backgroundColor = determineStatusBarColor(status);
+  item.tooltip = createStatusSummaryMarkdown(status);
 }
 
-/** Returns a {@link ThemeColor} for the status bar item based on the provided array of
- * {@link CCloudNotice}.
+/**
+ * Returns a {@link ThemeColor} for the status bar item based on the provided {@link CCloudStatusSummary}.
  *
- * If there are no notices, this will return `undefined`.
+ * If there are no incidents or scheduled maintenances, this will return `undefined` to reset the
+ * status bar item color.
  */
-export function determineStatusBarColor(notices: CCloudNotice[]): ThemeColor | undefined {
-  if (!notices.length) {
+export function determineStatusBarColor(summary: CCloudStatusSummary): ThemeColor | undefined {
+  if (!summary.incidents.length && !summary.scheduled_maintenances.length) {
     return;
   }
 
-  const incidentNotices = notices.some((notice) => notice.type === "incident");
-  if (incidentNotices) {
-    return new ThemeColor("statusBarItem.errorBackground");
+  if (summary.incidents.filter((incident) => incident.status !== "resolved").length) {
+    return new ThemeColor(ERROR_BACKGROUND_COLOR_ID);
   }
 
-  const maintenanceNotices = notices.some((notice) => notice.type === "maintenance");
-  if (maintenanceNotices) {
-    return new ThemeColor("statusBarItem.warningBackground");
+  if (
+    summary.scheduled_maintenances.filter((maintenance) => maintenance.status !== "completed")
+      .length
+  ) {
+    return new ThemeColor(WARNING_BACKGROUND_COLOR_ID);
   }
 }
