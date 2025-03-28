@@ -40,11 +40,11 @@ export async function getDeleteSchemaVersionPrompt(
  * @param loader ResourceLoader to use to get the schema group.
  * @returns Customized prompt for the delete action.
  */
-export async function getDeleteSchemaSubjectPrompt(
+export function getDeleteSchemaSubjectPrompt(
   hardDeletion: boolean,
   subject: Subject,
   schemaGroup: Schema[],
-): Promise<string> {
+): string {
   const isOnlyVersion = schemaGroup.length === 1;
 
   const deleteVerb = (hardDeletion ? "hard" : "soft") + " delete";
@@ -184,7 +184,7 @@ export async function confirmSchemaSubjectDeletion(
   const confirmationTitle = `${hardDelete ? "HARD " : ""}Delete Subject ${subject.name} and all of its schema versions?`;
   const confirmation = await vscode.window.showInputBox({
     title: confirmationTitle,
-    prompt: await getDeleteSchemaSubjectPrompt(hardDelete, subject, schemaGroup),
+    prompt: getDeleteSchemaSubjectPrompt(hardDelete, subject, schemaGroup),
     validateInput: validator,
     placeHolder: placeholder,
   });
