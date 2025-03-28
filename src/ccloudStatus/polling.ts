@@ -8,13 +8,13 @@ const logger = new Logger("ccloudStatus.polling");
 
 let statusPoller: IntervalPoller | undefined;
 
-/** Starts polling the Confluent Cloud status page for the latest summary every 5 minutes. */
+/** Starts polling the Confluent Cloud status page for the latest summary every 2 minutes. */
 export function enableCCloudStatusPolling() {
   if (!statusPoller) {
     statusPoller = new IntervalPoller(
       "ccloudStatus",
       async () => await refreshCCloudStatus(),
-      1000 * 60 * 5, // every 5 minutes
+      1000 * 60 * 2, // every 2 minutes
       1000 * 60, // every 1 minute
       true, // start immediately
     );
