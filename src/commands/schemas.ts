@@ -435,9 +435,7 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
         title: message,
       },
       async () => {
-        // Promote the subject instance into one definitely carrying the schema group,
-        // then delete it / them.
-        await loader.deleteSchemaSubject(subject.withSchemas(schemaGroup), hardDelete);
+        await loader.deleteSchemaSubject(subject, hardDelete);
       },
     );
 
@@ -447,15 +445,17 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
     vscode.window.showInformationMessage(
       `Subject ${subject.name} and ${versionCount} ${adjective} deleted.`,
     );
-
-    // Inform views that the entire subject was deleted.
-    schemaSubjectChanged.fire({ change: "deleted", subject: subject });
   } catch (e) {
     success = false;
     logError(e, "Error deleting schema subject", undefined, true);
     showErrorNotificationWithButtons(
       `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
     );
+  } finally {
+    // Inform views that the entire subject was either totally or possibly partially deleted.
+    // (if deleteSchemaSubject() throws, we're in an indeterminate state, so be conservative
+    //  instead of possibly lying).
+    schemaSubjectChanged.fire({ change: "deleted", subject: subject });
   }
 
   logUsage(UserEvent.SchemaAction, {
