@@ -6,6 +6,7 @@ import {
 } from "../featureFlags/evaluation";
 import { IResourceBase, isResource } from "../models/resource";
 import { UserEvent, logUsage } from "../telemetry/events";
+import { titleCase } from "../utils";
 
 export function registerCommandWithLogging(
   commandName: string,
@@ -61,7 +62,7 @@ export function getCommandArgsContext(args: any[]): Record<string, any> {
   for (const idField of RESOURCE_ID_FIELDS) {
     if (args[0][idField] !== undefined) {
       // e.g. "environmentId" to "EnvironmentId"
-      const idFieldTitleCase = idField.charAt(0).toUpperCase() + idField.slice(1);
+      const idFieldTitleCase = titleCase(idField);
       argsContext[`resource${idFieldTitleCase}`] = args[0][idField];
     }
   }

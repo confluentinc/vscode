@@ -19,7 +19,7 @@ import {
 import * as init from "./init";
 import { DisabledVersion } from "./types";
 
-const fakeFlag = "test.flag";
+const fakeFlag = "test.flag" as FeatureFlag;
 const fakeReason = "TEST TEST TEST This version isn't enabled. TEST TEST TEST";
 
 describe("featureFlags/evaluation.ts", function () {
