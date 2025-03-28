@@ -11,6 +11,7 @@ export interface StatusPage {
 }
 
 export function StatusPageFromJSON(obj: any): StatusPage {
+  if (obj == null) return obj;
   return {
     id: obj.id,
     name: obj.name,
@@ -41,6 +42,7 @@ export interface StatusComponent {
 }
 
 export function StatusComponentFromJSON(obj: any): StatusComponent {
+  if (obj == null) return obj;
   return {
     id: obj.id,
     name: obj.name,
@@ -76,6 +78,7 @@ export interface AffectedComponent {
 }
 
 export function AffectedComponentFromJSON(obj: any): AffectedComponent {
+  if (obj == null) return obj;
   return {
     code: obj.code,
     name: obj.name,
@@ -103,6 +106,7 @@ export interface StatusUpdate {
 }
 
 export function StatusUpdateFromJSON(obj: any): StatusUpdate {
+  if (obj == null) return obj;
   return {
     id: obj.id,
     status: obj.status,
@@ -150,6 +154,7 @@ export interface Incident {
 
 /** Converts a JSON object to an {@link Incident} object. */
 export function IncidentFromJSON(obj: any): Incident {
+  if (obj == null) return obj;
   return {
     id: obj.id,
     name: obj.name,
@@ -197,6 +202,7 @@ export interface ScheduledMaintenance {
 }
 
 export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
+  if (obj == null) return obj;
   return {
     id: obj.id,
     name: obj.name,
@@ -220,6 +226,19 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
   };
 }
 
+export interface SummaryStatus {
+  description: string;
+  indicator: ImpactIndicator;
+}
+
+export function SummaryStatusFromJSON(obj: any): SummaryStatus {
+  if (obj == null) return obj;
+  return {
+    description: obj.description,
+    indicator: obj.indicator,
+  };
+}
+
 /**
  * A Statuspage summary object.
  * @see https://status.confluent.cloud/api/v2/summary.json
@@ -229,13 +248,11 @@ export interface CCloudStatusSummary {
   components: StatusComponent[];
   incidents: Incident[];
   scheduled_maintenances: ScheduledMaintenance[];
-  status: {
-    description: string;
-    indicator: ImpactIndicator;
-  };
+  status: SummaryStatus;
 }
 
 export function CCloudStatusSummaryFromJSON(obj: any): CCloudStatusSummary {
+  if (obj == null) return obj;
   return {
     page: StatusPageFromJSON(obj.page),
     components: (Array.isArray(obj.components) ? obj.components : []).map((component: any) =>
@@ -248,9 +265,6 @@ export function CCloudStatusSummaryFromJSON(obj: any): CCloudStatusSummary {
       ? obj.scheduled_maintenances
       : []
     ).map((maintenance: any) => ScheduledMaintenanceFromJSON(maintenance)),
-    status: {
-      description: obj.status.description,
-      indicator: obj.status.indicator,
-    },
+    status: SummaryStatusFromJSON(obj.status),
   };
 }
