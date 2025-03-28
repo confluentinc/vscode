@@ -1,6 +1,6 @@
 import { Disposable } from "vscode";
 import { TopicData } from "../clients/kafkaRest";
-import { DeleteSchemaVersionRequest } from "../clients/schemaRegistryRest";
+import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { logError } from "../errors";
 import { Logger } from "../logging";
@@ -328,6 +328,63 @@ export abstract class ResourceLoader implements IResourceBase {
   }
 
   /**
+   *
+   * @param subject The subject to delete. Must carry all of the schema versions to delete within its `.schemas` property.
+   * @param hardDelete Should each schema version be hard or soft deleted?
+   */
+  public async deleteSchemaSubject(subject: Subject, hardDelete: boolean): Promise<void> {
+    logger.info("Checking for lingering schemas after deleteSchemaSubject");
+
+    const subjectApi = (await getSidecar()).getSubjectsV1Api(
+      subject.schemaRegistryId,
+      subject.connectionId,
+    );
+
+    const requests: DeleteSubjectRequest[] = [];
+
+    if (hardDelete) {
+      // Must do a soft delete first, then hard delete.
+      requests.push({
+        subject: subject.name,
+        permanent: false,
+      });
+    }
+
+    // Now can perform either a hard or a soft delete.
+    requests.push({
+      subject: subject.name,
+      permanent: hardDelete,
+    });
+
+    try {
+      for (const request of requests) {
+        await subjectApi.deleteSubject(request);
+      }
+    } catch (error) {
+      logError(
+        error,
+        "Error deleting schema subject",
+        {
+          connectionId: subject.connectionId,
+          environmentId: subject.environmentId,
+          schemaRegistryId: subject.schemaRegistryId,
+          hardDelete: hardDelete ? "true" : "false",
+        },
+        true,
+      );
+      throw error;
+    } finally {
+      // Always clear out the subject cache, regardless of whether the delete was successful.
+      // because a failure could have been encountered half way through deleting
+      // schema versions and the subject remains.
+      const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(subject.environmentId);
+      if (schemaRegistry) {
+        await this.clearCache(schemaRegistry);
+      }
+    }
+  }
+
+  /**
    * General preemptive cache clearing.
    * Clear whatever data may be cached scoped to the given object. Used when
    * a subordinate resource is known to be modified in some way.
@@ -341,7 +398,8 @@ export abstract class ResourceLoader implements IResourceBase {
       throw new Error(`Mismatched connectionId ${this.connectionId} for resource ${resource.id}`);
     }
 
-    // Clear out cached subjects, if any.
+    // Clear out cached subjects, if any. This is our only SR-level cached data right now.
+    // (no schema-group level cache yet.)
     logger.debug(`Clearing subject cache for schema registry ${resource.id}`);
     const resourceManager = getResourceManager();
     await resourceManager.setSubjects(resource, undefined);

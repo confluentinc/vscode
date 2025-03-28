@@ -144,6 +144,25 @@ export class Subject implements IResourceBase, ISearchable {
 
     this.schemas = merged;
   }
+
+  /** Promote a possibly-schemaless Subject into one carrying these schemas. */
+  withSchemas(schemas: Schema[]): SubjectWithSchemas {
+    if (!this.environmentId) {
+      throw new Error("Subject missing environmentId, unable to create Subject object.");
+    }
+
+    if (schemas.length === 0) {
+      throw new Error("SubjectWithSchemas requires a non-empty schemas array");
+    }
+
+    return new SubjectWithSchemas(
+      this.name,
+      this.connectionId,
+      this.environmentId,
+      this.schemaRegistryId,
+      schemas,
+    );
+  }
 }
 
 /**
