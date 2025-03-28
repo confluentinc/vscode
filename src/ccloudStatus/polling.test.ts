@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
 import {
+  AffectedComponent,
+  AffectedComponentFromJSON,
   CCloudStatusSummary,
   CCloudStatusSummaryFromJSON,
   Incident,
@@ -48,6 +50,13 @@ export const TEST_CCLOUD_STATUS_COMPONENT: StatusComponent = StatusComponentFrom
 
 export const TEST_CCLOUD_INCIDENT_ID = randomUUID();
 
+export const TEST_CCLOUD_AFFECTED_COMPONENT: AffectedComponent = AffectedComponentFromJSON({
+  code: randomUUID(),
+  name: TEST_CCLOUD_COMPONENT_NAME,
+  old_status: "operational",
+  new_status: "operational",
+} as AffectedComponent);
+
 export const TEST_CCLOUD_INCIDENT_UPDATE: StatusUpdate = StatusUpdateFromJSON({
   id: randomUUID(),
   status: "resolved",
@@ -56,7 +65,7 @@ export const TEST_CCLOUD_INCIDENT_UPDATE: StatusUpdate = StatusUpdateFromJSON({
   created_at: new Date(Date.now()).toISOString(),
   updated_at: new Date(Date.now()).toISOString(),
   display_at: new Date(Date.now()).toISOString(),
-  affected_components: [TEST_CCLOUD_STATUS_COMPONENT],
+  affected_components: [TEST_CCLOUD_AFFECTED_COMPONENT],
   deliver_notifications: false,
   custom_tweet: null,
   tweet_id: null,
@@ -90,7 +99,7 @@ export const TEST_CCLOUD_SCHEDULED_MAINTENANCE_UPDATE: StatusUpdate = StatusUpda
   created_at: new Date(Date.now()).toISOString(),
   updated_at: new Date(Date.now()).toISOString(),
   display_at: new Date(Date.now()).toISOString(),
-  affected_components: [TEST_CCLOUD_STATUS_COMPONENT],
+  affected_components: [TEST_CCLOUD_AFFECTED_COMPONENT],
   deliver_notifications: false,
   custom_tweet: null,
   tweet_id: null,
