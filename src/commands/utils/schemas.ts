@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import { Schema } from "../../models/schema";
+import { Schema, Subject } from "../../models/schema";
 
 /**
  * Determine the prompt to show when deleting a schema version.
@@ -28,6 +28,32 @@ export async function getDeleteSchemaVersionPrompt(
     } else {
       prompt = `Are you sure you want to ${deleteVerb} version ${schema.version} of subject ${schema.subject}?`;
     }
+  }
+
+  return prompt;
+}
+
+/**
+ * Determine the prompt to show when deleting a schema version.
+ * @param hardDeletion Is a hard delete going to be performed?
+ * @param schema The Schema/version to delete.
+ * @param loader ResourceLoader to use to get the schema group.
+ * @returns Customized prompt for the delete action.
+ */
+export async function getDeleteSchemaSubjectPrompt(
+  hardDeletion: boolean,
+  subject: Subject,
+  schemaGroup: Schema[],
+): Promise<string> {
+  const isOnlyVersion = schemaGroup.length === 1;
+
+  const deleteVerb = (hardDeletion ? "hard" : "soft") + " delete";
+  let prompt: string;
+
+  if (isOnlyVersion) {
+    prompt = `Are you sure you want to ${deleteVerb} subject "${subject.name}" and its single schema version?`;
+  } else {
+    prompt = `Are you sure you want to ${deleteVerb} subject "${subject.name}" and all ${schemaGroup.length} schema versions?`;
   }
 
   return prompt;
@@ -78,12 +104,47 @@ export function getSchemaDeletionValidatorAndPlaceholder(
   return [validator, prompt];
 }
 
+export function getSubjectDeletionValidatorAndPlaceholder(
+  subject: Subject,
+  versionCount: number,
+  hardDelete: boolean,
+): [ValidationFunction, string] {
+  let validator: ValidationFunction;
+  let prompt: string;
+
+  if (hardDelete) {
+    prompt = `Enter "hard ${subject.name} ${versionCount}" to confirm, escape to cancel.`;
+    validator = (input: string) => {
+      if (input === `hard ${subject.name} ${versionCount}`) {
+        return;
+      }
+      return {
+        message: `Enter "hard ${subject.name} ${versionCount}" to confirm hard deletion, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Error,
+      };
+    };
+  } else {
+    prompt = `Enter "${subject.name}" to confirm, escape to cancel.`;
+    validator = (input: string) => {
+      if (input === `${subject.name}`) {
+        return;
+      }
+      return {
+        message: `Enter "${subject.name}" to confirm, escape to cancel.`,
+        severity: vscode.InputBoxValidationSeverity.Error,
+      };
+    };
+  }
+
+  return [validator, prompt];
+}
+
 /**
  * Ask user if they want hard or soft delete behavior.
  *
  * @returns {Promise<boolean>} - true if hard delete, false if soft delete; undefined if cancelled.
  */
-export async function hardDeletionQuickPick(): Promise<boolean | undefined> {
+export async function hardDeletionQuickPick(noun: string): Promise<boolean | undefined> {
   const strengthStr = await vscode.window.showQuickPick(
     [
       { label: "Soft Delete", description: "All existing records will remain deserializable" },
@@ -94,7 +155,7 @@ export async function hardDeletionQuickPick(): Promise<boolean | undefined> {
       },
     ],
     {
-      title: "Delete Schema Version",
+      title: `Delete ${noun}`,
       placeHolder: "Select the type of delete to perform",
     },
   );
@@ -104,6 +165,36 @@ export async function hardDeletionQuickPick(): Promise<boolean | undefined> {
   }
 
   return strengthStr.label.startsWith("Hard");
+}
+/**
+ * Ask the user if they're really sure they want to hard/soft delete this entire subject group?
+ *
+ * @returns {Promise<true | undefined>} - true if the user confirmed, undefined if they cancelled
+ */
+export async function confirmSchemaSubjectDeletion(
+  hardDelete: boolean,
+  subject: Subject,
+  schemaGroup: Schema[],
+): Promise<true | undefined> {
+  const [validator, placeholder] = getSubjectDeletionValidatorAndPlaceholder(
+    subject,
+    schemaGroup.length,
+    hardDelete,
+  );
+  const confirmationTitle = `${hardDelete ? "HARD " : ""}Delete Subject ${subject.name} and all of its schema versions?`;
+  const confirmation = await vscode.window.showInputBox({
+    title: confirmationTitle,
+    prompt: await getDeleteSchemaSubjectPrompt(hardDelete, subject, schemaGroup),
+    validateInput: validator,
+    placeHolder: placeholder,
+  });
+  if (!confirmation) {
+    // User cancelled the input box, cascade the cancellation.
+    return undefined;
+  }
+  // The only other way for showInputBox to return is if the user
+  // enters the correct confirmation string, which we already validated.
+  return true;
 }
 
 /**

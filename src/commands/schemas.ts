@@ -19,7 +19,11 @@ import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
-import { confirmSchemaVersionDeletion, hardDeletionQuickPick } from "./utils/schemas";
+import {
+  confirmSchemaSubjectDeletion,
+  confirmSchemaVersionDeletion,
+  hardDeletionQuickPick,
+} from "./utils/schemas";
 
 const logger = new Logger("commands.schemas");
 
@@ -284,7 +288,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   }
 
   // Determine if user wants to hard or soft delete.
-  const hardDelete = await hardDeletionQuickPick();
+  const hardDelete = await hardDeletionQuickPick("Schema Version");
   if (hardDelete === undefined) {
     logger.debug("User canceled schema version deletion.");
     return;
@@ -405,14 +409,14 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
   }
 
   // Determine if user wants to hard or soft delete.
-  const hardDelete = await hardDeletionQuickPick();
+  const hardDelete = await hardDeletionQuickPick("Schema Subject");
   if (hardDelete === undefined) {
     logger.debug("User canceled schema subject deletion.");
     return;
   }
 
   // Ask if they are sure they want to delete the schema subject.
-  const confirmation = true; // await confirmSchemaSubjectDeletion(true, subject, null);
+  const confirmation = await confirmSchemaSubjectDeletion(hardDelete, subject, schemaGroup);
 
   if (!confirmation) {
     logger.debug("User canceled schema subject deletion.");

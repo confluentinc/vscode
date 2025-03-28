@@ -106,19 +106,19 @@ describe("commands/schemas/utils/schemas.ts", function () {
 
     it("returns true for hard delete", async function () {
       showQuickPickStub.resolves({ label: "Hard Delete" });
-      const result = await hardDeletionQuickPick();
+      const result = await hardDeletionQuickPick("foo");
       assert.strictEqual(result, true);
     });
 
     it("returns false for soft delete", async function () {
       showQuickPickStub.resolves({ label: "Soft Delete" });
-      const result = await hardDeletionQuickPick();
+      const result = await hardDeletionQuickPick("foo");
       assert.strictEqual(result, false);
     });
 
     it("returns undefined for cancellation", async function () {
       showQuickPickStub.resolves(undefined);
-      const result = await hardDeletionQuickPick();
+      const result = await hardDeletionQuickPick("foo");
       assert.strictEqual(result, undefined);
     });
   });
