@@ -41,7 +41,7 @@ export async function refreshCCloudStatus() {
   logger.debug("checking CCloud status...");
   const status: CCloudStatusSummary | undefined = await fetchCCloudStatus();
   if (!status) {
-    logger.error("failed to fetch status summary; not refreshing status bar item");
+    logger.debug("failed to fetch status summary; not refreshing status bar item");
     return;
   }
 
