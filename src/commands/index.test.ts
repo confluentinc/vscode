@@ -2,6 +2,7 @@ import * as assert from "assert";
 import { getCommandArgsContext, RESOURCE_ID_FIELDS } from ".";
 import { ConnectionType } from "../clients/sidecar";
 import { ConnectionId, IResourceBase } from "../models/resource";
+import { titleCase } from "../utils";
 
 describe("getCommandArgsContext", () => {
   it("should handle no args", () => {
@@ -30,8 +31,7 @@ describe("getCommandArgsContext", () => {
   });
 
   for (const idField of RESOURCE_ID_FIELDS) {
-    const idFieldTitleCase = idField.charAt(0).toUpperCase() + idField.slice(1);
-    const expectedField = `resource${idFieldTitleCase}`;
+    const expectedField = `resource${titleCase(idField)}`;
 
     it(`should include '${expectedField}' if '${idField}' exists on the first arg`, () => {
       const fakeResource = {
