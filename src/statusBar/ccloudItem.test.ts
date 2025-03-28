@@ -16,7 +16,7 @@ import {
 } from "./ccloudItem";
 import { ERROR_BACKGROUND_COLOR_ID, WARNING_BACKGROUND_COLOR_ID } from "./constants";
 
-describe.only("statusBar/ccloudItem.ts", () => {
+describe("statusBar/ccloudItem.ts", () => {
   let sandbox: sinon.SinonSandbox;
   let createStatusBarItemSpy: sinon.SinonSpy;
 
