@@ -125,7 +125,7 @@ export function StatusUpdateFromJSON(obj: any): StatusUpdate {
   };
 }
 
-export type ImpactIndicator = "none" | "minor" | "major" | "critical";
+export type ImpactIndicator = "none" | "minor" | "major" | "critical" | "maintenance";
 
 export type IncidentStatus =
   | "investigating"
