@@ -19,7 +19,11 @@ import { hashed, logUsage, UserEvent } from "../telemetry/events";
 import { fileUriExists } from "../utils/file";
 import { getSchemasViewProvider } from "../viewProviders/schemas";
 import { uploadSchemaForSubjectFromfile, uploadSchemaFromFile } from "./schemaUpload";
-import { confirmSchemaVersionDeletion, hardDeletionQuickPick } from "./utils/schemas";
+import {
+  confirmSchemaSubjectDeletion,
+  confirmSchemaVersionDeletion,
+  hardDeletionQuickPick,
+} from "./utils/schemas";
 
 const logger = new Logger("commands.schemas");
 
@@ -45,6 +49,7 @@ export function registerSchemaCommands(): vscode.Disposable[] {
       diffLatestSchemasCommand,
     ),
     registerCommandWithLogging("confluent.schemas.deleteVersion", deleteSchemaVersionCommand),
+    registerCommandWithLogging("confluent.schemas.deleteSubject", deleteSchemaSubjectCommand),
   ];
 }
 
@@ -283,7 +288,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
   }
 
   // Determine if user wants to hard or soft delete.
-  const hardDelete = await hardDeletionQuickPick();
+  const hardDelete = await hardDeletionQuickPick("Schema Version");
   if (hardDelete === undefined) {
     logger.debug("User canceled schema version deletion.");
     return;
@@ -309,7 +314,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `Deleting schema ...`,
+        title: "Deleting schema ...",
       },
       async () => {
         await loader.deleteSchemaVersion(schema, hardDelete, wasOnlyVersionForSubject);
@@ -357,6 +362,118 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     schema_type: schema.type,
     subject_hash: hashed(schema.subject),
     schema_version: schema.version,
+  });
+}
+
+async function deleteSchemaSubjectCommand(subject: Subject) {
+  if (!(subject instanceof Subject)) {
+    logger.error("deleteSchemaSubjectCommand called with invalid argument type", subject);
+    return;
+  }
+
+  const loader = ResourceLoader.getInstance(subject.connectionId);
+  let schemaGroup: Schema[] | null = null;
+
+  // Ensure it still exits.
+  try {
+    schemaGroup = await loader.getSchemasForSubject(subject.environmentId, subject.name);
+
+    if (!schemaGroup) {
+      showErrorNotificationWithButtons("Schema subject not found in registry.", {
+        "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
+        ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+      });
+      logger.error(`Schema subject ${subject.name} not found in registry, cannot delete.`);
+      return;
+    }
+  } catch (e) {
+    if (e instanceof ResponseError) {
+      // If the whole subject is gone, we will get a 404. Say, last version
+      // already deleted in other workspace or other means?
+      if (e.response.status !== 404) {
+        // not a 404, something unexpected/
+        logError(
+          e,
+          "Error fetching schemas for subject while deleting schema subject",
+          { subject: subject.name },
+          true,
+        );
+      }
+    }
+    showErrorNotificationWithButtons("Schema subject not found in registry.", {
+      "Refresh Schemas": () => vscode.commands.executeCommand("confluent.schemas.refresh"),
+      ...DEFAULT_ERROR_NOTIFICATION_BUTTONS,
+    });
+    logger.error(`Error fetching schema subject ${subject.name}, cannot delete.`, e);
+    return;
+  }
+
+  // Determine if user wants to hard or soft delete.
+  const hardDelete = await hardDeletionQuickPick("Schema Subject");
+  if (hardDelete === undefined) {
+    logger.debug("User canceled schema subject deletion.");
+    return;
+  }
+
+  // Ask if they are sure they want to delete the schema subject.
+  const confirmation = await confirmSchemaSubjectDeletion(hardDelete, subject, schemaGroup);
+
+  if (!confirmation) {
+    logger.debug("User canceled schema subject deletion.");
+    return;
+  }
+
+  logger.info("Deleting schema subject", subject.name);
+
+  let success = true;
+
+  try {
+    const message =
+      schemaGroup.length > 1
+        ? `Deleting ${schemaGroup.length} schema versions in ${subject.name}...`
+        : `Deleting single version schema subject "${subject.name}"...`;
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: message,
+      },
+      async () => {
+        await loader.deleteSchemaSubject(subject, hardDelete);
+      },
+    );
+
+    const adjective = hardDelete ? "hard" : "soft";
+    const versionCount =
+      schemaGroup.length > 1 ? `${schemaGroup.length} schema versions` : "single schema version";
+    vscode.window.showInformationMessage(
+      `Subject ${subject.name} and ${versionCount} ${adjective} deleted.`,
+    );
+  } catch (e) {
+    success = false;
+    logError(e, "Error deleting schema subject", undefined, true);
+    showErrorNotificationWithButtons(
+      `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  } finally {
+    // Inform views that the entire subject was either totally or possibly partially deleted.
+    // (if deleteSchemaSubject() throws, we're in an indeterminate state, so be conservative
+    //  instead of possibly lying).
+    schemaSubjectChanged.fire({ change: "deleted", subject: subject });
+  }
+
+  logUsage(UserEvent.SchemaAction, {
+    action: "delete schema subject",
+    status: success ? "succeeded" : "failed",
+
+    connection_id: subject.connectionId,
+    connection_type: subject.connectionType,
+    environment_id: subject.environmentId,
+
+    schema_registry_id: subject.schemaRegistryId,
+    schema_type: schemaGroup[0].type,
+    subject_hash: hashed(subject.name),
+    count_schema_versions_deleted: schemaGroup.length,
   });
 }
 

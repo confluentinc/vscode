@@ -266,8 +266,12 @@
       },
       {
         "command": "confluent.schemas.deleteVersion",
-        "icon": "$(confluent-delete-schema-version)",
         "title": "Delete Schema Version",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.deleteSubject",
+        "title": "Delete All Schemas in Subject",
         "category": "Confluent: Schemas"
       },
       {
@@ -708,6 +712,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.schemas.deleteSubject",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemas.evolveSchemaSubject",
           "when": "false"
         },
@@ -1016,6 +1024,11 @@
           "command": "confluent.schemas.evolveSchemaSubject",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
+        },
+        {
+          "command": "confluent.schemas.deleteSubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
+          "group": "schemas"
         },
         {
           "command": "confluent.schemas.upload",
