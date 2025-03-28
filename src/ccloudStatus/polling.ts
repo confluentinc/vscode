@@ -1,5 +1,7 @@
+import { MarkdownString } from "vscode";
 import { updateCCloudStatus } from "../statusBar/ccloudItem";
 import { CCloudNotice } from "../statusBar/types";
+import { titleCase } from "../utils";
 import { IntervalPoller } from "../utils/timing";
 import { fetchCCloudStatus } from "./api";
 import { CCloudStatusSummary, Incident, ScheduledMaintenance, StatusUpdate } from "./types";
@@ -48,24 +50,42 @@ export function convertStatusToNotices(status: CCloudStatusSummary): CCloudNotic
     status.incidents.forEach((incident: Incident) => {
       notices.push({
         type: "incident",
-        message: incident.name,
+        message: formatStatusUpdate(incident),
       });
     });
   }
 
   if (status.scheduled_maintenances) {
     status.scheduled_maintenances.forEach((maintenance: ScheduledMaintenance) => {
-      let message = maintenance.name;
-      const latestUpdate: StatusUpdate | undefined = maintenance.incident_updates.pop();
-      if (latestUpdate) {
-        message += `: ${latestUpdate.status}`;
-      }
       notices.push({
         type: "maintenance",
-        message,
+        message: formatStatusUpdate(maintenance),
       });
     });
   }
 
   return notices;
+}
+
+export function formatStatusUpdate(item: Incident | ScheduledMaintenance): string {
+  let message = new MarkdownString(`[${item.name}](${item.shortlink})`);
+
+  const latestUpdate: StatusUpdate | undefined = item.incident_updates
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .shift();
+  if (latestUpdate) {
+    const dateStr = new Date(latestUpdate.display_at).toLocaleString("en-US", {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "UTC",
+    });
+    message.appendMarkdown(
+      `\n   - _${dateStr} UTC_: **${titleCase(latestUpdate.status)}** - ${latestUpdate.body}`,
+    );
+  }
+
+  return message.value;
 }

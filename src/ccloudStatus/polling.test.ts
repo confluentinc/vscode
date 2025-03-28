@@ -10,6 +10,8 @@ import {
   StatusComponentFromJSON,
   StatusPage,
   StatusPageFromJSON,
+  StatusUpdate,
+  StatusUpdateFromJSON,
 } from "./types";
 
 export const TEST_CCLOUD_COMPONENT_NAME = "Confluent Cloud";
@@ -22,7 +24,7 @@ export const TEST_CCLOUD_STATUS_PAGE: StatusPage = StatusPageFromJSON({
   name: TEST_CCLOUD_COMPONENT_NAME,
   url: "https://status.confluent.cloud",
   time_zone: "Etc/UTC",
-  updated_at: Date.now().toString(),
+  updated_at: new Date(Date.now()).toISOString(),
 } as StatusPage);
 
 export const TEST_CCLOUD_STATUS_COMPONENT_ID = randomUUID();
@@ -32,12 +34,12 @@ export const TEST_CCLOUD_STATUS_COMPONENT: StatusComponent = StatusComponentFrom
   id: TEST_CCLOUD_STATUS_COMPONENT_ID,
   name: TEST_CCLOUD_COMPONENT_NAME,
   status: "operational",
-  created_at: Date.now().toString(),
-  updated_at: Date.now().toString(),
+  created_at: new Date(Date.now()).toISOString(),
+  updated_at: new Date(Date.now()).toISOString(),
   position: 1,
   description: "Our systems for creating and using Confluent Clusters for setting data in motion.",
   showcase: false,
-  start_date: Date.now().toString(),
+  start_date: new Date(Date.now()).toISOString(),
   group_id: null,
   page_id: TEST_CCLOUD_STATUS_PAGE_ID,
   group: false,
@@ -46,39 +48,72 @@ export const TEST_CCLOUD_STATUS_COMPONENT: StatusComponent = StatusComponentFrom
 
 export const TEST_CCLOUD_INCIDENT_ID = randomUUID();
 
+export const TEST_CCLOUD_INCIDENT_UPDATE: StatusUpdate = StatusUpdateFromJSON({
+  id: randomUUID(),
+  status: "resolved",
+  body: "TEST This incident has been resolved. TEST",
+  incident_id: TEST_CCLOUD_INCIDENT_ID,
+  created_at: new Date(Date.now()).toISOString(),
+  updated_at: new Date(Date.now()).toISOString(),
+  display_at: new Date(Date.now()).toISOString(),
+  affected_components: [TEST_CCLOUD_STATUS_COMPONENT],
+  deliver_notifications: false,
+  custom_tweet: null,
+  tweet_id: null,
+} as StatusUpdate);
+
 /** @see https://status.confluent.cloud/api/v2/summary.json */
 export const TEST_CCLOUD_INCIDENT: Incident = IncidentFromJSON({
-  created_at: Date.now().toString(),
   id: TEST_CCLOUD_INCIDENT_ID,
-  impact: "major",
-  incident_updates: [],
+  name: "TEST Incident for Confluent Cloud TEST",
+  status: "resolved",
+  created_at: new Date(Date.now()).toISOString(),
+  updated_at: new Date(Date.now()).toISOString(),
   monitoring_at: null,
-  name: "TEST TEST TEST Experiencing issues with Confluent Cloud TEST TEST TEST",
-  page_id: TEST_CCLOUD_STATUS_PAGE_ID,
   resolved_at: null,
+  impact: "major",
   shortlink: "https://status.confluent.cloud/incidents/" + TEST_CCLOUD_INCIDENT_ID,
-  status: "investigating",
-  updated_at: Date.now().toString(),
+  started_at: new Date(Date.now()).toISOString(),
+  page_id: TEST_CCLOUD_STATUS_PAGE_ID,
+  incident_updates: [TEST_CCLOUD_INCIDENT_UPDATE],
+  components: [TEST_CCLOUD_STATUS_COMPONENT],
+  reminder_intervals: null,
 } as Incident);
 
 export const TEST_CCLOUD_SCHEDULED_MAINTENANCE_ID = randomUUID();
 
+export const TEST_CCLOUD_SCHEDULED_MAINTENANCE_UPDATE: StatusUpdate = StatusUpdateFromJSON({
+  id: randomUUID(),
+  status: "resolved",
+  body: "TEST This scheduled maintenance has been resolved. TEST",
+  incident_id: TEST_CCLOUD_SCHEDULED_MAINTENANCE_ID,
+  created_at: new Date(Date.now()).toISOString(),
+  updated_at: new Date(Date.now()).toISOString(),
+  display_at: new Date(Date.now()).toISOString(),
+  affected_components: [TEST_CCLOUD_STATUS_COMPONENT],
+  deliver_notifications: false,
+  custom_tweet: null,
+  tweet_id: null,
+} as StatusUpdate);
+
 /** @see https://status.confluent.cloud/api/v2/summary.json */
 export const TEST_CCLOUD_SCHEDULED_MAINTENANCE: ScheduledMaintenance = ScheduledMaintenanceFromJSON(
   {
-    created_at: Date.now().toString(),
     id: TEST_CCLOUD_SCHEDULED_MAINTENANCE_ID,
-    impact: "minor",
-    incident_updates: [],
-    monitoring_at: null,
-    name: "TEST TEST TEST Scheduled Maintenance for Confluent Cloud TEST TEST TEST",
-    page_id: TEST_CCLOUD_STATUS_PAGE_ID,
-    resolved_at: null,
-    scheduled_for: Date.now().toString(),
-    scheduled_until: (Date.now() + 1000 * 60 * 60).toString(), // 1 hour from now
-    shortlink: "https://status.confluent.cloud/incidents/" + TEST_CCLOUD_SCHEDULED_MAINTENANCE_ID,
+    name: "TEST Scheduled Maintenance for Confluent Cloud TEST",
     status: "scheduled",
-    updated_at: Date.now().toString(),
+    created_at: new Date(Date.now()).toISOString(),
+    updated_at: new Date(Date.now()).toISOString(),
+    monitoring_at: null,
+    resolved_at: null,
+    impact: "maintenance",
+    shortlink: "https://status.confluent.cloud/maintenance/" + TEST_CCLOUD_SCHEDULED_MAINTENANCE_ID,
+    started_at: new Date(Date.now()).toISOString(),
+    page_id: TEST_CCLOUD_STATUS_PAGE_ID,
+    incident_updates: [TEST_CCLOUD_SCHEDULED_MAINTENANCE_UPDATE],
+    components: [TEST_CCLOUD_STATUS_COMPONENT],
+    scheduled_for: new Date(Date.now()).toISOString(),
+    scheduled_until: new Date(Date.now()).toISOString(),
   } as ScheduledMaintenance,
 );
 
