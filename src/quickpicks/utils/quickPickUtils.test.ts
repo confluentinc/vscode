@@ -78,12 +78,13 @@ describe("createEnhancedQuickPick", () => {
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
 
-      const quickPick = await quickPickPromise;
+      const { quickPick, selectedItems } = await quickPickPromise;
 
       // Verify default options and items
       assert.deepStrictEqual(quickPick.items, items);
       assert.strictEqual(quickPick.ignoreFocusOut, false);
       assert.strictEqual(quickPick.canSelectMany, false);
+      assert.deepStrictEqual(selectedItems, []);
     });
 
     it("should create a QuickPick with provided options", async () => {
@@ -102,7 +103,7 @@ describe("createEnhancedQuickPick", () => {
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
 
-      const quickPick = await quickPickPromise;
+      const { quickPick, selectedItems } = await quickPickPromise;
 
       // Verify options were applied
       assert.strictEqual(quickPick.placeholder, options.placeHolder);
@@ -110,6 +111,7 @@ describe("createEnhancedQuickPick", () => {
       assert.strictEqual(quickPick.title, options.title);
       assert.strictEqual(quickPick.canSelectMany, options.canSelectMany);
       assert.deepStrictEqual(quickPick.buttons, options.buttons);
+      assert.deepStrictEqual(selectedItems, []);
     });
   });
 
@@ -122,8 +124,10 @@ describe("createEnhancedQuickPick", () => {
       const directQuickPickPromise = createEnhancedQuickPick(items);
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
-      const directQuickPick = await directQuickPickPromise;
+      const { quickPick: directQuickPick, selectedItems: directSelectedItems } =
+        await directQuickPickPromise;
       assert.deepStrictEqual(directQuickPick.items, items);
+      assert.deepStrictEqual(directSelectedItems, []);
 
       // Reset the hide handler stub for the next test
       onDidHideStub.reset();
@@ -142,8 +146,10 @@ describe("createEnhancedQuickPick", () => {
       // Trigger hide to resolve the promise
       const promisedHideHandler = onDidHideStub.args[0][0];
       promisedHideHandler();
-      const promisedQuickPick = await promisedQuickPickPromise;
+      const { quickPick: promisedQuickPick, selectedItems: promisedSelectedItems } =
+        await promisedQuickPickPromise;
       assert.deepStrictEqual(promisedQuickPick.items, items);
+      assert.deepStrictEqual(promisedSelectedItems, []);
     });
 
     it("should handle selected items with promised items", async () => {
@@ -160,8 +166,9 @@ describe("createEnhancedQuickPick", () => {
 
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
-      const quickPick = await quickPickPromise;
+      const { quickPick, selectedItems: resultSelectedItems } = await quickPickPromise;
       assert.deepStrictEqual(quickPick.selectedItems, selectedItems);
+      assert.deepStrictEqual(resultSelectedItems, selectedItems);
     });
   });
 
@@ -214,7 +221,8 @@ describe("createEnhancedQuickPick", () => {
       // Trigger hide to resolve the promise
       const hideHandler = onDidHideStub.args[0][0];
       hideHandler();
-      await quickPickPromise;
+      const { selectedItems: resultSelectedItems } = await quickPickPromise;
+      assert.deepStrictEqual(resultSelectedItems, []);
     });
   });
 });

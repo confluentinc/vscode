@@ -153,13 +153,14 @@ export interface EnhancedQuickPickOptions<T extends QuickPickItemWithValue<any>>
  *
  * @param items The items to show in the QuickPick
  * @param options Enhanced QuickPick options
- * @returns A Promise that resolves to the QuickPick instance after it is hidden
+ * @returns A Promise that resolves to an object containing the QuickPick instance and selected items after it is hidden
  */
 export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
   items: T[] | Promise<T[]>,
   options?: EnhancedQuickPickOptions<T>,
-): Promise<vscode.QuickPick<T>> {
+): Promise<{ quickPick: vscode.QuickPick<T>; selectedItems: T[] }> {
   const quickPick = vscode.window.createQuickPick<T>();
+  let selectedItems: T[] = [];
 
   // Set standard options
   if (options) {
@@ -227,13 +228,24 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
     quickPick.onDidAccept(() => {
       options.onDidAccept?.(quickPick);
     });
+  } else {
+    quickPick.onDidAccept(() => {
+      selectedItems = [...quickPick.selectedItems];
+      quickPick.hide();
+      return;
+    });
   }
 
   // Show the QuickPick and return a promise that resolves when it's hidden
   quickPick.show();
   return new Promise((resolve) => {
     quickPick.onDidHide(() => {
-      resolve(quickPick);
+      // If we have pre-selected items and haven't captured any selections yet,
+      // use the pre-selected items
+      if (selectedItems.length === 0 && options?.selectedItems) {
+        selectedItems = [...options.selectedItems];
+      }
+      resolve({ quickPick, selectedItems });
     });
   });
 }
