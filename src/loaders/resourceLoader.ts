@@ -333,13 +333,12 @@ export abstract class ResourceLoader implements IResourceBase {
    * @param hardDelete Should each schema version be hard or soft deleted?
    */
   public async deleteSchemaSubject(subject: Subject, hardDelete: boolean): Promise<void> {
-    logger.info("Checking for lingering schemas after deleteSchemaSubject");
-
     const subjectApi = (await getSidecar()).getSubjectsV1Api(
       subject.schemaRegistryId,
       subject.connectionId,
     );
 
+    // Will have to do either one or two requests to delete the subject, based on hardness.
     const requests: DeleteSubjectRequest[] = [];
 
     if (hardDelete) {
