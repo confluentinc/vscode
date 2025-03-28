@@ -73,7 +73,7 @@ export function StatusUpdateFromJSON(obj: any): StatusUpdate {
     created_at: obj.created_at,
     updated_at: obj.updated_at,
     display_at: obj.display_at,
-    affected_components: obj.affected_components.map((component: any) =>
+    affected_components: (obj.affected_components ?? []).map((component: any) =>
       StatusComponentFromJSON(component),
     ),
     deliver_notifications: obj.deliver_notifications,
@@ -86,68 +86,82 @@ export type ImpactIndicator = "none" | "minor" | "major" | "critical";
 
 /** A Statuspage incident. @see https://status.confluent.cloud/api/v2/incidents.json */
 export interface Incident {
-  created_at: string;
   id: string;
-  impact: ImpactIndicator;
-  incident_updates: StatusUpdate[];
-  monitoring_at: string | null;
   name: string;
-  page_id: string;
-  resolved_at: string | null;
-  shortlink: string;
   status: string; // investigating, identified, monitoring, resolved, postmortem
+  created_at: string;
   updated_at: string;
+  monitoring_at: string | null;
+  resolved_at: string | null;
+  impact: ImpactIndicator;
+  shortlink: string;
+  started_at: string;
+  page_id: string;
+  incident_updates: StatusUpdate[];
+  components: StatusComponent[];
+  reminder_intervals: string | null;
 }
 
 /** Converts a JSON object to an {@link Incident} object. */
 export function IncidentFromJSON(obj: any): Incident {
   return {
-    created_at: obj.created_at,
     id: obj.id,
-    impact: obj.impact,
-    incident_updates: obj.incident_updates.map((update: any) => StatusUpdateFromJSON(update)),
-    monitoring_at: obj.monitoring_at,
     name: obj.name,
-    page_id: obj.page_id,
-    resolved_at: obj.resolved_at,
-    shortlink: obj.shortlink,
     status: obj.status,
+    created_at: obj.created_at,
     updated_at: obj.updated_at,
+    monitoring_at: obj.monitoring_at,
+    resolved_at: obj.resolved_at,
+    impact: obj.impact,
+    shortlink: obj.shortlink,
+    started_at: obj.started_at,
+    page_id: obj.page_id,
+    incident_updates: (obj.incident_updates ?? []).map((update: any) =>
+      StatusUpdateFromJSON(update),
+    ),
+    components: (obj.components ?? []).map((component: any) => StatusComponentFromJSON(component)),
+    reminder_intervals: obj.reminder_intervals,
   };
 }
 
 /** A Statuspage scheduled maintenance. @see https://status.confluent.cloud/api/v2/scheduled-maintenances.json */
 export interface ScheduledMaintenance {
-  created_at: string;
   id: string;
-  impact: ImpactIndicator;
-  incident_updates: StatusUpdate[];
-  monitoring_at: string | null;
   name: string;
-  page_id: string;
-  resolved_at: string | null;
-  scheduled_for: string;
-  scheduled_until: string | null;
-  shortlink: string;
   status: string; // scheduled, in progress, verifying, completed
+  created_at: string;
   updated_at: string;
+  monitoring_at: string | null;
+  resolved_at: string | null;
+  impact: "maintenance";
+  shortlink: string;
+  started_at: string;
+  page_id: string;
+  incident_updates: StatusUpdate[];
+  components: StatusComponent[];
+  scheduled_for: string;
+  scheduled_until: string;
 }
 
 export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
   return {
-    created_at: obj.created_at,
     id: obj.id,
-    impact: obj.impact,
-    incident_updates: obj.incident_updates.map((update: any) => StatusUpdateFromJSON(update)),
-    monitoring_at: obj.monitoring_at,
     name: obj.name,
-    page_id: obj.page_id,
+    status: obj.status,
+    created_at: obj.created_at,
+    updated_at: obj.updated_at,
+    monitoring_at: obj.monitoring_at,
     resolved_at: obj.resolved_at,
+    impact: "maintenance",
+    shortlink: obj.shortlink,
+    started_at: obj.started_at,
+    page_id: obj.page_id,
+    incident_updates: (obj.incident_updates ?? []).map((update: any) =>
+      StatusUpdateFromJSON(update),
+    ),
+    components: (obj.components ?? []).map((component: any) => StatusComponentFromJSON(component)),
     scheduled_for: obj.scheduled_for,
     scheduled_until: obj.scheduled_until,
-    shortlink: obj.shortlink,
-    status: obj.status,
-    updated_at: obj.updated_at,
   };
 }
 
