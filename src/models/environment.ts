@@ -15,7 +15,7 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { FormConnectionType } from "../directConnections/types";
-import { FlinkComputePool } from "./flinkComputePool";
+import { CCloudFlinkComputePool, FlinkComputePool } from "./flinkComputePool";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -66,7 +66,7 @@ export abstract class Environment implements IResourceBase, ISearchable {
   }
 
   get children(): ISearchable[] {
-    const children: ISearchable[] = [...this.kafkaClusters];
+    const children: ISearchable[] = [...this.kafkaClusters, ...this.flinkComputePools];
     if (this.schemaRegistry) children.push(this.schemaRegistry);
     return children;
   }
@@ -87,6 +87,7 @@ export class CCloudEnvironment extends Environment {
   // set explicit CCloud* typing
   kafkaClusters: CCloudKafkaCluster[];
   schemaRegistry?: CCloudSchemaRegistry | undefined;
+  flinkComputePools: CCloudFlinkComputePool[];
 
   constructor(
     props: Pick<
@@ -110,6 +111,16 @@ export class CCloudEnvironment extends Environment {
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  get children(): ISearchable[] {
+    const children: ISearchable[] = [];
+    children.push(...this.kafkaClusters.map((cluster) => CCloudKafkaCluster.create(cluster)));
+    children.push(
+      ...(this.schemaRegistry ? [CCloudSchemaRegistry.create(this.schemaRegistry)] : []),
+    );
+    children.push(...this.flinkComputePools.map((pool) => new CCloudFlinkComputePool(pool)));
+    return children;
   }
 }
 
