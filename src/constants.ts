@@ -30,6 +30,7 @@ export enum IconNames {
   OTHER_SUBJECT = "question",
   TOPIC = "confluent-topic",
   TOPIC_WITHOUT_SCHEMA = "confluent-topic-without-schema",
+  FLINK_COMPUTE_POOL = "confluent-flink-compute-pool",
   EXPERIMENTAL = "beaker",
   LOADING = "loading~spin",
 }
