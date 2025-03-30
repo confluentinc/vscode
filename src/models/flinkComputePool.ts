@@ -60,7 +60,7 @@ export class FlinkComputePoolTreeItem extends TreeItem {
 
     // user-facing properties
     this.iconPath = new ThemeIcon(resource.iconName);
-    this.description = resource.connectionId;
+    this.description = resource.id;
 
     this.tooltip = createFlinkComputePoolTooltip(resource);
   }
@@ -68,9 +68,9 @@ export class FlinkComputePoolTreeItem extends TreeItem {
 
 function createFlinkComputePoolTooltip(resource: FlinkComputePool) {
   const tooltip = new CustomMarkdownString()
-    .appendMarkdown(`#### $(${resource.iconName}) ${resource.name}\n`)
+    .appendMarkdown(`#### $(${resource.iconName}) Flink Compute Pool\n`)
     .appendMarkdown("\n\n---")
-    .appendMarkdown(`\n\n**ID:** \`${resource.id}\``)
+    .appendMarkdown(`\n\nID: \`${resource.id}\``)
     .appendMarkdown(`\n\nName: \`${resource.name}\``);
   if (isCCloud(resource)) {
     const ccloudPool = resource as CCloudFlinkComputePool;
