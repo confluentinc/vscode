@@ -15,6 +15,7 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { FormConnectionType } from "../directConnections/types";
+import { FlinkComputePool } from "./flinkComputePool";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -52,13 +53,16 @@ export abstract class Environment implements IResourceBase, ISearchable {
    */
   kafkaClusters!: KafkaCluster[];
   schemaRegistry?: SchemaRegistry | undefined;
+  flinkComputePools!: FlinkComputePool[];
 
   // updated by the ResourceViewProvider from connectionUsable events
   // (DirectEnvironment instances are constructed with isLoading = true)
   isLoading: boolean = false;
 
   get hasClusters(): boolean {
-    return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
+    return (
+      this.kafkaClusters.length > 0 || !!this.schemaRegistry || this.flinkComputePools.length > 0
+    );
   }
 
   get children(): ISearchable[] {
@@ -87,7 +91,12 @@ export class CCloudEnvironment extends Environment {
   constructor(
     props: Pick<
       CCloudEnvironment,
-      "id" | "name" | "streamGovernancePackage" | "kafkaClusters" | "schemaRegistry"
+      | "id"
+      | "name"
+      | "streamGovernancePackage"
+      | "kafkaClusters"
+      | "schemaRegistry"
+      | "flinkComputePools"
     >,
   ) {
     super();
@@ -96,6 +105,7 @@ export class CCloudEnvironment extends Environment {
     this.streamGovernancePackage = props.streamGovernancePackage;
     this.kafkaClusters = props.kafkaClusters;
     this.schemaRegistry = props.schemaRegistry;
+    this.flinkComputePools = props.flinkComputePools;
   }
 
   get ccloudUrl(): string {
