@@ -159,8 +159,10 @@ export function formatStatusGroup(
     return "";
   }
 
+  // in_progress is the only multi-word status, so we need to handle it separately
+  const statusHeaderText: string = status === "in_progress" ? "In Progress" : titleCase(status);
   const groupMarkdown: MarkdownString = new CustomMarkdownString(
-    `\n\n${GROUP_HEADER} ${titleCase(status)}`,
+    `\n\n${GROUP_HEADER} ${statusHeaderText}`,
   );
 
   // show only the last MAX_ITEMS_PER_GROUP items sorted by updated_at (newest->oldest)

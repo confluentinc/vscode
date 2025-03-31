@@ -238,6 +238,15 @@ describe("statusBar/formatting.ts formatStatusGroup()", () => {
 
     assert.strictEqual(result, "");
   });
+
+  it("should use 'In Progress' if status is 'in_progress'", () => {
+    const status = "in_progress";
+    const items: Incident[] = [{ ...TEST_CCLOUD_INCIDENT }];
+
+    const result: string = formatStatusGroup(status, items);
+
+    assert.ok(result.includes(`${GROUP_HEADER} In Progress`));
+  });
 });
 
 describe("statusBar/formatting.ts getIconForImpact()", () => {
