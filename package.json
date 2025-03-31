@@ -636,6 +636,11 @@
         "view": "confluent-flink",
         "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
         "when": "!confluent.ccloudConnectionAvailable"
+      },
+      {
+        "view": "confluent-flink",
+        "contents": "NOT YET IMPLEMENTED: Flink resources coming soon.",
+        "when": "confluent.ccloudConnectionAvailable"
       }
     ],
     "menus": {
