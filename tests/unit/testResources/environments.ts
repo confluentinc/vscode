@@ -13,6 +13,7 @@ export const TEST_CCLOUD_ENVIRONMENT: CCloudEnvironment = new CCloudEnvironment(
   streamGovernancePackage: "NONE",
   kafkaClusters: [],
   schemaRegistry: undefined,
+  flinkComputePools: [],
 });
 
 export const TEST_DIRECT_ENVIRONMENT_ID = "test-direct-connection" as EnvironmentId;
