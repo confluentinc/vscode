@@ -15,6 +15,31 @@ import { titleCase } from "../utils";
  * item tooltip. */
 export const MAX_ITEMS_PER_GROUP = 2;
 
+/** The order the "active" incidents will be displayed, per status group. */
+export const ACTIVE_INCIDENT_STATUS_ORDER: IncidentStatus[] = [
+  "investigating",
+  "identified",
+  "monitoring",
+] as IncidentStatus[];
+
+/** Statuses that will be under the "Last resolved" group. */
+export const COMPLETED_INCIDENT_STATUSES: IncidentStatus[] = [
+  "resolved",
+  "postmortem",
+] as IncidentStatus[];
+
+/** The order the "active" maintenances will be displayed, per status group. */
+export const ACTIVE_MAINTENANCE_STATUS_ORDER: MaintenanceStatus[] = [
+  "in_progress",
+  "verifying",
+  "scheduled",
+] as MaintenanceStatus[];
+
+/** Statuses that will be under the "Last completed" group. */
+export const COMPLETED_MAINTENANCE_STATUSES: MaintenanceStatus[] = [
+  "completed",
+] as MaintenanceStatus[];
+
 /** Header (size) to use for "Active incidents"/"Scheduled maintenance" sections */
 export const SECTION_HEADER = "###";
 /** Header (size) to use for status group subsections */
@@ -25,33 +50,23 @@ export const GROUP_HEADER = "####";
  * {@link CCloudStatusSummary}.
  */
 export function createStatusSummaryMarkdown(status: CCloudStatusSummary): MarkdownString {
-  if (!status.incidents.length && !status.scheduled_maintenances.length) {
-    return new MarkdownString("No notices for Confluent Cloud at this time.");
-  }
-
   // header section
   let tooltipMarkdown: MarkdownString = new CustomMarkdownString(
     `**$(${IconNames.CONFLUENT_LOGO}) Confluent Cloud Status** [$(link-external)](https://status.confluent.cloud/)`,
   ).appendMarkdown("\n\n---\n\n");
 
+  if (!status.incidents.length && !status.scheduled_maintenances.length) {
+    tooltipMarkdown.appendMarkdown("No notices for Confluent Cloud at this time.");
+    return tooltipMarkdown;
+  }
+
   if (status.incidents.length) {
-    // the order the "active" incidents will be displayed, per group:
-    const activeIncidentStatusOrder: IncidentStatus[] = [
-      "investigating",
-      "identified",
-      "monitoring",
-    ] as IncidentStatus[];
-    // grouped under "Last resolved" section
-    const resolvedIncidentStatuses: IncidentStatus[] = [
-      "resolved",
-      "postmortem",
-    ] as IncidentStatus[];
     const incidentMarkdown: string = formatIncidentOrMaintenanceSection(
       status.incidents,
       "Active Incidents",
-      activeIncidentStatusOrder,
+      ACTIVE_INCIDENT_STATUS_ORDER,
       "Last resolved",
-      resolvedIncidentStatuses,
+      COMPLETED_INCIDENT_STATUSES,
     );
     tooltipMarkdown.appendMarkdown(incidentMarkdown);
   }
@@ -60,20 +75,12 @@ export function createStatusSummaryMarkdown(status: CCloudStatusSummary): Markdo
     tooltipMarkdown.appendMarkdown("\n\n---\n\n");
   }
   if (status.scheduled_maintenances.length) {
-    // the order the "active" maintenances will be displayed, per group:
-    const activeMaintenanceStatusOrder: MaintenanceStatus[] = [
-      "in_progress",
-      "verifying",
-      "scheduled",
-    ] as MaintenanceStatus[];
-    // grouped under "Last completed" section
-    const completedMaintenanceStatuses: MaintenanceStatus[] = ["completed"] as MaintenanceStatus[];
     const maintenanceMarkdown: string = formatIncidentOrMaintenanceSection(
       status.scheduled_maintenances,
       "Scheduled Maintenance",
-      activeMaintenanceStatusOrder,
+      ACTIVE_MAINTENANCE_STATUS_ORDER,
       "Last completed",
-      completedMaintenanceStatuses,
+      COMPLETED_MAINTENANCE_STATUSES,
     );
     tooltipMarkdown.appendMarkdown(maintenanceMarkdown);
   }

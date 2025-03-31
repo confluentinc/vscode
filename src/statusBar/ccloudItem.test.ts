@@ -1,20 +1,25 @@
 import * as assert from "assert";
 import sinon from "sinon";
-import { StatusBarItem, ThemeColor, window } from "vscode";
+import { MarkdownString, StatusBarItem, ThemeColor, window } from "vscode";
 import {
   TEST_CCLOUD_INCIDENT,
   TEST_CCLOUD_SCHEDULED_MAINTENANCE,
   TEST_CCLOUD_STATUS_SUMMARY,
 } from "../../tests/unit/testResources/ccloudStatus";
-import { CCloudStatusSummary, Incident, ScheduledMaintenance } from "../ccloudStatus/types";
+import { CCloudStatusSummary, Incident } from "../ccloudStatus/types";
 import { IconNames } from "../constants";
 import {
-  determineStatusBarColor,
   disposeCCloudStatusBarItem,
   getCCloudStatusBarItem,
   updateCCloudStatus,
 } from "./ccloudItem";
 import { ERROR_BACKGROUND_COLOR_ID, WARNING_BACKGROUND_COLOR_ID } from "./constants";
+import {
+  ACTIVE_INCIDENT_STATUS_ORDER,
+  ACTIVE_MAINTENANCE_STATUS_ORDER,
+  COMPLETED_INCIDENT_STATUSES,
+  COMPLETED_MAINTENANCE_STATUSES,
+} from "./formatting";
 
 describe("statusBar/ccloudItem.ts", () => {
   let sandbox: sinon.SinonSandbox;
@@ -58,50 +63,54 @@ describe("statusBar/ccloudItem.ts", () => {
 
     assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO})`);
     assert.strictEqual(statusBarItem.backgroundColor, undefined);
-    assert.ok(statusBarItem.tooltip);
+    const tooltip = statusBarItem.tooltip as MarkdownString;
+    assert.ok(tooltip.value.includes(`**$(${IconNames.CONFLUENT_LOGO}) Confluent Cloud Status**`));
+    assert.ok(tooltip.value.includes("No notices for Confluent Cloud at this time"));
   });
 
-  it("updateCCloudStatus() should update the status bar with active incidents", () => {
-    const incidents = [{ ...TEST_CCLOUD_INCIDENT, status: "investigating" }] as Incident[];
-    const activeIncidentSummary: CCloudStatusSummary = {
-      ...TEST_CCLOUD_STATUS_SUMMARY,
-      incidents,
-    };
+  for (const status of ACTIVE_INCIDENT_STATUS_ORDER) {
+    it(`updateCCloudStatus() should update the status bar with active incidents (status=${status})`, () => {
+      const incidents = [{ ...TEST_CCLOUD_INCIDENT, status }] as Incident[];
+      const activeIncidentSummary: CCloudStatusSummary = {
+        ...TEST_CCLOUD_STATUS_SUMMARY,
+        incidents,
+      };
 
-    const statusBarItem = getCCloudStatusBarItem();
-    updateCCloudStatus(activeIncidentSummary);
+      const statusBarItem = getCCloudStatusBarItem();
+      updateCCloudStatus(activeIncidentSummary);
 
-    assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO}) ${incidents.length}`);
-    assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-    // @ts-expect-error - update vscode types so ThemeColor exposes .id
-    assert.strictEqual(statusBarItem.backgroundColor.id, ERROR_BACKGROUND_COLOR_ID);
-  });
-
-  it("updateCCloudStatus() should update the status bar with scheduled maintenances", () => {
-    const scheduled_maintenances = [
-      { ...TEST_CCLOUD_SCHEDULED_MAINTENANCE, status: "scheduled" },
-    ] as ScheduledMaintenance[];
-    const scheduledMaintenanceSummary: CCloudStatusSummary = {
-      ...TEST_CCLOUD_STATUS_SUMMARY,
-      scheduled_maintenances,
-    };
-
-    const statusBarItem = getCCloudStatusBarItem();
-    updateCCloudStatus(scheduledMaintenanceSummary);
-
-    assert.strictEqual(
-      statusBarItem.text,
-      `$(${IconNames.CONFLUENT_LOGO}) ${scheduled_maintenances.length}`,
-    );
-    assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-    assert.strictEqual(
+      assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO}) ${incidents.length}`);
+      assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
       // @ts-expect-error - update vscode types so ThemeColor exposes .id
-      statusBarItem.backgroundColor.id,
-      WARNING_BACKGROUND_COLOR_ID,
-    );
-  });
+      assert.strictEqual(statusBarItem.backgroundColor.id, ERROR_BACKGROUND_COLOR_ID);
+    });
+  }
 
-  it("updateCCloudStatus() should update the status bar with multiple notices", () => {
+  for (const status of ACTIVE_MAINTENANCE_STATUS_ORDER) {
+    it(`updateCCloudStatus() should update the status bar with active scheduled maintenances (status=${status})`, () => {
+      const maintenances = [{ ...TEST_CCLOUD_SCHEDULED_MAINTENANCE, status }];
+      const scheduledMaintenanceSummary: CCloudStatusSummary = {
+        ...TEST_CCLOUD_STATUS_SUMMARY,
+        scheduled_maintenances: maintenances,
+      };
+
+      const statusBarItem = getCCloudStatusBarItem();
+      updateCCloudStatus(scheduledMaintenanceSummary);
+
+      assert.strictEqual(
+        statusBarItem.text,
+        `$(${IconNames.CONFLUENT_LOGO}) ${maintenances.length}`,
+      );
+      assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
+      assert.strictEqual(
+        // @ts-expect-error - update vscode types so ThemeColor exposes .id
+        statusBarItem.backgroundColor.id,
+        WARNING_BACKGROUND_COLOR_ID,
+      );
+    });
+  }
+
+  it("updateCCloudStatus() should update the status bar with active incidents and scheduled maintenances", () => {
     const multipleSummary: CCloudStatusSummary = {
       ...TEST_CCLOUD_STATUS_SUMMARY,
       incidents: [{ ...TEST_CCLOUD_INCIDENT, status: "investigating" }],
@@ -113,6 +122,7 @@ describe("statusBar/ccloudItem.ts", () => {
 
     assert.strictEqual(statusBarItem.text, "$(confluent-logo) 2");
     assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
+    // incident color takes priority
     assert.strictEqual(
       // @ts-expect-error - update vscode types so ThemeColor exposes .id
       statusBarItem.backgroundColor.id,
@@ -120,61 +130,33 @@ describe("statusBar/ccloudItem.ts", () => {
     );
   });
 
-  it("determineStatusBarColor() should return undefined when there are no incidents or maintenances", () => {
-    // no incidents or scheduled maintenances by default
-    const color = determineStatusBarColor(TEST_CCLOUD_STATUS_SUMMARY);
+  for (const status of COMPLETED_INCIDENT_STATUSES) {
+    it(`updateCCloudStatus() should not include '${status}' incidents when determining the status bar text and color`, () => {
+      const activeIncidentSummary: CCloudStatusSummary = {
+        ...TEST_CCLOUD_STATUS_SUMMARY,
+        incidents: [{ ...TEST_CCLOUD_INCIDENT, status }],
+      };
 
-    assert.strictEqual(color, undefined);
-  });
+      const statusBarItem = getCCloudStatusBarItem();
+      updateCCloudStatus(activeIncidentSummary);
 
-  it("determineStatusBarColor() should return the error color when there is at least one active incident", () => {
-    const activeIncidentSummary: CCloudStatusSummary = {
-      ...TEST_CCLOUD_STATUS_SUMMARY,
-      incidents: [{ ...TEST_CCLOUD_INCIDENT, status: "investigating" }],
-    };
+      assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO})`);
+      assert.strictEqual(statusBarItem.backgroundColor, undefined);
+    });
+  }
 
-    const color = determineStatusBarColor(activeIncidentSummary);
+  for (const status of COMPLETED_MAINTENANCE_STATUSES) {
+    it(`updateCCloudStatus() should not include '${status}' scheduled maintenances when determining the status bar text and color`, () => {
+      const activeMaintenanceSummary: CCloudStatusSummary = {
+        ...TEST_CCLOUD_STATUS_SUMMARY,
+        scheduled_maintenances: [{ ...TEST_CCLOUD_SCHEDULED_MAINTENANCE, status }],
+      };
 
-    assert.ok(color instanceof ThemeColor);
-    // @ts-expect-error - update vscode types so ThemeColor exposes .id
-    assert.strictEqual(color.id, ERROR_BACKGROUND_COLOR_ID);
-  });
+      const statusBarItem = getCCloudStatusBarItem();
+      updateCCloudStatus(activeMaintenanceSummary);
 
-  it("determineStatusBarColor() should return the warning color when there is at least one not-completed maintenance window", () => {
-    const scheduledMaintenanceSummary: CCloudStatusSummary = {
-      ...TEST_CCLOUD_STATUS_SUMMARY,
-      scheduled_maintenances: [{ ...TEST_CCLOUD_SCHEDULED_MAINTENANCE, status: "scheduled" }],
-    };
-
-    const color = determineStatusBarColor(scheduledMaintenanceSummary);
-
-    assert.ok(color instanceof ThemeColor);
-    // @ts-expect-error - update vscode types so ThemeColor exposes .id
-    assert.strictEqual(color.id, WARNING_BACKGROUND_COLOR_ID);
-  });
-
-  it("determineStatusBarColor() should prioritize coloring incidents over scheduled maintenance", () => {
-    const bothSummary: CCloudStatusSummary = {
-      ...TEST_CCLOUD_STATUS_SUMMARY,
-      incidents: [{ ...TEST_CCLOUD_INCIDENT, status: "investigating" }],
-      scheduled_maintenances: [{ ...TEST_CCLOUD_SCHEDULED_MAINTENANCE, status: "scheduled" }],
-    };
-
-    const color = determineStatusBarColor(bothSummary);
-
-    assert.ok(color instanceof ThemeColor);
-    // @ts-expect-error - update vscode types so ThemeColor exposes .id
-    assert.strictEqual(color.id, ERROR_BACKGROUND_COLOR_ID);
-  });
-
-  it("determineStatusBarColor() should ignore resolved incidents", () => {
-    const resolvedIncidentSummary: CCloudStatusSummary = {
-      ...TEST_CCLOUD_STATUS_SUMMARY,
-      incidents: [{ ...TEST_CCLOUD_INCIDENT, status: "resolved" }],
-    };
-
-    const color = determineStatusBarColor(resolvedIncidentSummary);
-
-    assert.strictEqual(color, undefined);
-  });
+      assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO})`);
+      assert.strictEqual(statusBarItem.backgroundColor, undefined);
+    });
+  }
 });

@@ -35,7 +35,8 @@ describe("statusBar/formatting.ts createStatusSummaryMarkdown()", () => {
     const result: MarkdownString = createStatusSummaryMarkdown(emptySummary);
 
     assert.ok(result instanceof MarkdownString);
-    assert.strictEqual(result.value, "No notices for Confluent Cloud at this time.");
+    assert.ok(result.value.includes(`**$(${IconNames.CONFLUENT_LOGO}) Confluent Cloud Status**`));
+    assert.ok(result.value.includes("No notices for Confluent Cloud at this time."));
   });
 
   it("should format the incidents section correctly when incidents are provided", () => {
