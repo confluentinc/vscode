@@ -18,8 +18,8 @@ export function enableCCloudStatusPolling() {
       1000 * 60, // every 1 minute
       true, // start immediately
     );
+    statusPoller.start();
   }
-  statusPoller?.start();
 }
 
 /** Stops polling the Confluent Cloud status page. (Called when the extension is deactivated.) */
