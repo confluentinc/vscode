@@ -43,7 +43,7 @@ export class CCloudFlinkComputePool extends FlinkComputePool {
   }
 
   get ccloudUrl(): string {
-    return `https://confluent.cloud/environments/${this.connectionId}/compute-pools/${this.id}`;
+    return `https://confluent.cloud/environments/${this.environmentId}/flink/pools/${this.id}/overview`;
   }
 }
 
