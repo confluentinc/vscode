@@ -2,13 +2,129 @@ import * as assert from "assert";
 import { MarkdownString, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import {
   TEST_CCLOUD_ENVIRONMENT,
+  TEST_CCLOUD_KAFKA_CLUSTER,
+  TEST_CCLOUD_SCHEMA_REGISTRY,
   TEST_DIRECT_ENVIRONMENT,
   TEST_DIRECT_KAFKA_CLUSTER,
   TEST_DIRECT_SCHEMA_REGISTRY,
+  TEST_LOCAL_ENVIRONMENT,
+  TEST_LOCAL_KAFKA_CLUSTER,
+  TEST_LOCAL_SCHEMA_REGISTRY,
 } from "../../tests/unit/testResources";
-import { DirectEnvironment, EnvironmentTreeItem } from "./environment";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import {
+  CCloudEnvironment,
+  DirectEnvironment,
+  EnvironmentTreeItem,
+  LocalEnvironment,
+} from "./environment";
 
-describe("EnvironmentTreeItem", () => {
+describe("models/environment.ts Environment", () => {
+  it("should return the correct .children for a CCloudEnvironment", () => {
+    const env: CCloudEnvironment = TEST_CCLOUD_ENVIRONMENT;
+
+    // no children by default
+    assert.deepStrictEqual(env.children, []);
+
+    // add a Kafka cluster
+    const envWithKafka = new CCloudEnvironment({
+      ...env,
+      kafkaClusters: [TEST_CCLOUD_KAFKA_CLUSTER],
+    });
+    assert.deepStrictEqual(envWithKafka.children, [TEST_CCLOUD_KAFKA_CLUSTER]);
+
+    // add SR
+    const envWithKafkaSR = new CCloudEnvironment({
+      ...envWithKafka,
+      schemaRegistry: TEST_CCLOUD_SCHEMA_REGISTRY,
+    });
+    assert.deepStrictEqual(envWithKafkaSR.children, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+    ]);
+
+    // add Flink
+    const envWithAll = new CCloudEnvironment({
+      ...envWithKafkaSR,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    });
+    assert.deepStrictEqual(envWithAll.children, [
+      TEST_CCLOUD_KAFKA_CLUSTER,
+      TEST_CCLOUD_SCHEMA_REGISTRY,
+      TEST_CCLOUD_FLINK_COMPUTE_POOL,
+    ]);
+  });
+
+  it("should return the correct .children for a LocalEnvironment", () => {
+    const env: LocalEnvironment = TEST_LOCAL_ENVIRONMENT;
+
+    // no children by default
+    assert.deepStrictEqual(env.children, []);
+
+    // add a child
+    const envWithKafka = new LocalEnvironment({
+      ...env,
+      kafkaClusters: [TEST_LOCAL_KAFKA_CLUSTER],
+    });
+    assert.deepStrictEqual(envWithKafka.children, [TEST_LOCAL_KAFKA_CLUSTER]);
+
+    // add SR
+    const envWithKafkaSR = new LocalEnvironment({
+      ...envWithKafka,
+      schemaRegistry: TEST_LOCAL_SCHEMA_REGISTRY,
+    });
+    assert.deepStrictEqual(envWithKafkaSR.children, [
+      TEST_LOCAL_KAFKA_CLUSTER,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+    ]);
+
+    // try to add Flink, but it should be ignored
+    const envWithAll = new LocalEnvironment({
+      ...envWithKafkaSR,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    } as any);
+    assert.deepStrictEqual(envWithAll.children, [
+      TEST_LOCAL_KAFKA_CLUSTER,
+      TEST_LOCAL_SCHEMA_REGISTRY,
+    ]);
+  });
+
+  it("should return the correct .children for a DirectEnvironment", () => {
+    const env: DirectEnvironment = TEST_DIRECT_ENVIRONMENT;
+
+    // no children by default
+    assert.deepStrictEqual(env.children, []);
+
+    // add a child
+    const envWithKafka = new DirectEnvironment({
+      ...env,
+      kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
+    });
+    assert.deepStrictEqual(envWithKafka.children, [TEST_DIRECT_KAFKA_CLUSTER]);
+
+    // add SR
+    const envWithKafkaSR = new DirectEnvironment({
+      ...envWithKafka,
+      schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
+    });
+    assert.deepStrictEqual(envWithKafkaSR.children, [
+      TEST_DIRECT_KAFKA_CLUSTER,
+      TEST_DIRECT_SCHEMA_REGISTRY,
+    ]);
+
+    // try to add Flink, but it should be ignored
+    const envWithAll = new DirectEnvironment({
+      ...envWithKafkaSR,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    } as any);
+    assert.deepStrictEqual(envWithAll.children, [
+      TEST_DIRECT_KAFKA_CLUSTER,
+      TEST_DIRECT_SCHEMA_REGISTRY,
+    ]);
+  });
+});
+
+describe("models/environment.ts EnvironmentTreeItem", () => {
   it("should be collapsed when the environment has clusters", () => {
     const env = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
