@@ -66,7 +66,7 @@ export class FlinkComputePoolTreeItem extends TreeItem {
   }
 }
 
-function createFlinkComputePoolTooltip(resource: FlinkComputePool) {
+export function createFlinkComputePoolTooltip(resource: FlinkComputePool) {
   const tooltip = new CustomMarkdownString()
     .appendMarkdown(`#### $(${resource.iconName}) Flink Compute Pool\n`)
     .appendMarkdown("\n\n---")
