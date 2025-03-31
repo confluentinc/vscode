@@ -1,6 +1,13 @@
-import { ConfigurationChangeEvent, Disposable, workspace, WorkspaceConfiguration } from "vscode";
+import {
+  commands,
+  ConfigurationChangeEvent,
+  Disposable,
+  workspace,
+  WorkspaceConfiguration,
+} from "vscode";
 import { ContextValues, setContextValue } from "../context/values";
 import { Logger } from "../logging";
+import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 import {
   ENABLE_CHAT_PARTICIPANT,
   ENABLE_FLINK,
@@ -51,6 +58,10 @@ export function createConfigChangeListener(): Disposable {
         const enabled = configs.get(ENABLE_FLINK, false);
         logger.debug(`"${ENABLE_FLINK}" config changed`, { enabled });
         setContextValue(ContextValues.flinkEnabled, enabled);
+        // refresh the Resources view to toggle visibility of compute pools under environments
+        if (hasCCloudAuthSession()) {
+          commands.executeCommand("confluent.resources.refresh");
+        }
         return;
       }
 
