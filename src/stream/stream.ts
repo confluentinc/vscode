@@ -365,6 +365,10 @@ export function includesSubstring(value: PartitionConsumeRecord, query: RegExp):
   if (key != null && query.test(key)) return true;
   let val = value.value as any;
   if (val != null && query.test(val)) return true;
+  let offset = value.offset as any;
+  if (offset != null && query.test(offset)) return true;
+  let metadata = value.metadata as any;
+  if (metadata != null && query.test(JSON.stringify(metadata))) return true;
   return false;
 }
 
