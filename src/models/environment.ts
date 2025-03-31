@@ -53,7 +53,7 @@ export abstract class Environment implements IResourceBase, ISearchable {
    */
   kafkaClusters!: KafkaCluster[];
   schemaRegistry?: SchemaRegistry | undefined;
-  flinkComputePools!: FlinkComputePool[];
+  flinkComputePools: FlinkComputePool[] = [];
 
   // updated by the ResourceViewProvider from connectionUsable events
   // (DirectEnvironment instances are constructed with isLoading = true)
