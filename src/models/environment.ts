@@ -15,6 +15,7 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { FormConnectionType } from "../directConnections/types";
+import { CCloudFlinkComputePool, FlinkComputePool } from "./flinkComputePool";
 import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
@@ -52,17 +53,20 @@ export abstract class Environment implements IResourceBase, ISearchable {
    */
   kafkaClusters!: KafkaCluster[];
   schemaRegistry?: SchemaRegistry | undefined;
+  flinkComputePools!: FlinkComputePool[];
 
   // updated by the ResourceViewProvider from connectionUsable events
   // (DirectEnvironment instances are constructed with isLoading = true)
   isLoading: boolean = false;
 
   get hasClusters(): boolean {
-    return this.kafkaClusters.length > 0 || !!this.schemaRegistry;
+    return (
+      this.kafkaClusters.length > 0 || !!this.schemaRegistry || this.flinkComputePools.length > 0
+    );
   }
 
   get children(): ISearchable[] {
-    const children: ISearchable[] = [...this.kafkaClusters];
+    const children: ISearchable[] = [...this.kafkaClusters, ...this.flinkComputePools];
     if (this.schemaRegistry) children.push(this.schemaRegistry);
     return children;
   }
@@ -83,11 +87,17 @@ export class CCloudEnvironment extends Environment {
   // set explicit CCloud* typing
   kafkaClusters: CCloudKafkaCluster[];
   schemaRegistry?: CCloudSchemaRegistry | undefined;
+  flinkComputePools: CCloudFlinkComputePool[];
 
   constructor(
     props: Pick<
       CCloudEnvironment,
-      "id" | "name" | "streamGovernancePackage" | "kafkaClusters" | "schemaRegistry"
+      | "id"
+      | "name"
+      | "streamGovernancePackage"
+      | "kafkaClusters"
+      | "schemaRegistry"
+      | "flinkComputePools"
     >,
   ) {
     super();
@@ -96,10 +106,21 @@ export class CCloudEnvironment extends Environment {
     this.streamGovernancePackage = props.streamGovernancePackage;
     this.kafkaClusters = props.kafkaClusters;
     this.schemaRegistry = props.schemaRegistry;
+    this.flinkComputePools = props.flinkComputePools;
   }
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  get children(): ISearchable[] {
+    const children: ISearchable[] = [];
+    children.push(...this.kafkaClusters.map((cluster) => CCloudKafkaCluster.create(cluster)));
+    children.push(
+      ...(this.schemaRegistry ? [CCloudSchemaRegistry.create(this.schemaRegistry)] : []),
+    );
+    children.push(...this.flinkComputePools.map((pool) => new CCloudFlinkComputePool(pool)));
+    return children;
   }
 }
 

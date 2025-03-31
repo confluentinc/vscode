@@ -2,6 +2,7 @@ import { graphql } from "gql.tada";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
@@ -34,6 +35,13 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
             provider
             region
             uri
+          }
+          flinkComputePools {
+            id
+            display_name
+            provider
+            region
+            max_cfu
           }
         }
       }
@@ -83,6 +91,21 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
       });
     }
 
+    // parse Flink Compute Pools
+    let flinkComputePools: CCloudFlinkComputePool[] = [];
+    if (env.flinkComputePools) {
+      const envFlinkComputePools = env.flinkComputePools.map(
+        (pool: any): CCloudFlinkComputePool =>
+          new CCloudFlinkComputePool({
+            ...pool,
+            environmentId: env.id as EnvironmentId,
+            name: pool.display_name,
+            maxCfu: pool.max_cfu,
+          }),
+      );
+      flinkComputePools.push(...envFlinkComputePools);
+    }
+
     envs.push(
       new CCloudEnvironment({
         id: env.id,
@@ -90,6 +113,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
         streamGovernancePackage: env.governancePackage,
         kafkaClusters,
         schemaRegistry,
+        flinkComputePools,
       }),
     );
   });

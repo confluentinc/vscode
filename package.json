@@ -627,6 +627,11 @@
         "view": "confluent-topics",
         "contents": "No topics match search string. [Clear search](command:confluent.topics.search.clear) or [try a new search](command:confluent.topics.search).",
         "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && confluent.topicSearchApplied"
+      },
+      {
+        "view": "confluent-flink",
+        "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
+        "when": "!confluent.ccloudConnectionAvailable"
       }
     ],
     "menus": {
