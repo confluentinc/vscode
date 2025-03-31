@@ -14,6 +14,8 @@ import {
   StatusPageFromJSON,
   StatusUpdate,
   StatusUpdateFromJSON,
+  SummaryStatus,
+  SummaryStatusFromJSON,
 } from "../../../src/ccloudStatus/types";
 
 export const TEST_CCLOUD_COMPONENT_NAME = "Confluent Cloud";
@@ -125,6 +127,12 @@ export const TEST_CCLOUD_SCHEDULED_MAINTENANCE: ScheduledMaintenance = Scheduled
     scheduled_until: new Date(Date.now()).toISOString(),
   } as ScheduledMaintenance,
 );
+
+/** @see https://status.confluent.cloud/api/v2/summary.json */
+export const TEST_CCLOUD_SUMMARY_STATUS: SummaryStatus = SummaryStatusFromJSON({
+  description: "All Systems Operational",
+  indicator: "none",
+} as SummaryStatus);
 
 /** @see https://status.confluent.cloud/api/v2/summary.json */
 export const TEST_CCLOUD_STATUS_SUMMARY: CCloudStatusSummary = CCloudStatusSummaryFromJSON({
