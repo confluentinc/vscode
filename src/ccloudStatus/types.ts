@@ -194,7 +194,7 @@ export interface ScheduledMaintenance {
   updated_at: string;
   monitoring_at: string | null;
   resolved_at: string | null;
-  impact: "maintenance";
+  impact: ImpactIndicator;
   shortlink: string;
   started_at: string;
   page_id: string;
@@ -214,7 +214,7 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
     updated_at: obj.updated_at,
     monitoring_at: obj.monitoring_at,
     resolved_at: obj.resolved_at,
-    impact: "maintenance",
+    impact: obj.impact ?? "maintenance",
     shortlink: obj.shortlink,
     started_at: obj.started_at,
     page_id: obj.page_id,
@@ -229,6 +229,11 @@ export function ScheduledMaintenanceFromJSON(obj: any): ScheduledMaintenance {
   };
 }
 
+// TODO: come up with a better name for this
+/**
+ * A Statuspage summary status object.
+ * @see https://status.confluent.cloud/api/v2/summary.json
+ */
 export interface SummaryStatus {
   description: string;
   /** The status indicator. Can be `none`, `minor`, `major`, or `critical`. */
