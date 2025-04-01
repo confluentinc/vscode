@@ -6,22 +6,13 @@ info:
   title: Flink Compute Pool Management API
   description: This is the Flink Compute Pool management API.
   version: 0.0.1
-  contact:
-    name: flink
-    url: https://confluent.slack.com/app_redirect?channel=ksqldb
-    email: ksql-team@confluent.io
   x-api-id: 6dfe8977-3286-4727-ac78-883e0fcba8c0
   x-api-group: fcpm/v2
   x-audience: external-public
   x-tag-group: Compute Pool Mgmt for Flink (%s)
-
 servers:
   - url: https://api.confluent.cloud
     description: Confluent Cloud production
-  - url: https://api.stag.cpdev.cloud
-    description: Confluent Cloud staging
-  - url: https://api.devel.cpdev.cloud
-    description: Confluent Cloud development
 paths:
   /fcpm/v2/compute-pools:
     x-lifecycle-stage: General Availability
