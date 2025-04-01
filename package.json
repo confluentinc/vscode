@@ -553,26 +553,38 @@
         {
           "id": "confluent-resources",
           "name": "Resources",
-          "icon": "$(confluent-logo)"
+          "icon": "$(confluent-logo)",
+          "contextualTitle": "Confluent: Resources"
         },
         {
           "id": "confluent-topics",
           "name": "Topics",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)"
+          "icon": "$(confluent-logo)",
+          "contextualTitle": "Confluent: Topics"
         },
         {
           "id": "confluent-schemas",
           "name": "Schemas",
           "visibility": "collapsed",
-          "icon": "$(confluent-logo)"
+          "icon": "$(confluent-logo)",
+          "contextualTitle": "Confluent: Schemas"
         },
         {
-          "id": "confluent-flink",
-          "name": "Flink",
+          "id": "confluent-flink-statements",
+          "name": "Flink Statements",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "confluent.flinkEnabled"
+          "when": "confluent.flinkEnabled",
+          "contextualTitle": "Confluent: Flink Statements"
+        },
+        {
+          "id": "confluent-flink-artifacts",
+          "name": "Flink Artifacts",
+          "visibility": "collapsed",
+          "icon": "$(confluent-logo)",
+          "when": "confluent.flinkEnabled",
+          "contextualTitle": "Confluent: Flink Artifacts"
         },
         {
           "id": "confluent-support",
@@ -633,13 +645,23 @@
         "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && confluent.topicSearchApplied"
       },
       {
-        "view": "confluent-flink",
+        "view": "confluent-flink-statements",
         "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
         "when": "!confluent.ccloudConnectionAvailable"
       },
       {
-        "view": "confluent-flink",
-        "contents": "NOT YET IMPLEMENTED: Flink resources coming soon.",
+        "view": "confluent-flink-statements",
+        "contents": "NOT YET IMPLEMENTED: Flink statements coming soon.",
+        "when": "confluent.ccloudConnectionAvailable"
+      },
+      {
+        "view": "confluent-flink-artifacts",
+        "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
+        "when": "!confluent.ccloudConnectionAvailable"
+      },
+      {
+        "view": "confluent-flink-artifacts",
+        "contents": "NOT YET IMPLEMENTED: Flink artifacts coming soon.",
         "when": "confluent.ccloudConnectionAvailable"
       }
     ],
