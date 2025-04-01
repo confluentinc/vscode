@@ -88,21 +88,18 @@ export interface SqlV1Connection {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1ConnectionApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type SqlV1ConnectionApiVersionEnum =
-  (typeof SqlV1ConnectionApiVersionEnum)[keyof typeof SqlV1ConnectionApiVersionEnum];
-
+export enum SqlV1ConnectionApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1ConnectionKindEnum = {
-  Connection: "Connection",
-} as const;
-export type SqlV1ConnectionKindEnum =
-  (typeof SqlV1ConnectionKindEnum)[keyof typeof SqlV1ConnectionKindEnum];
+export enum SqlV1ConnectionKindEnum {
+  Connection = "Connection",
+}
 
 /**
  * Check if a given object implements the SqlV1Connection interface.

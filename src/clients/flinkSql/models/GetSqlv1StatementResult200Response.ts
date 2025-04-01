@@ -55,21 +55,18 @@ export interface GetSqlv1StatementResult200Response {
 
 /**
  * @export
+ * @enum {string}
  */
-export const GetSqlv1StatementResult200ResponseApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type GetSqlv1StatementResult200ResponseApiVersionEnum =
-  (typeof GetSqlv1StatementResult200ResponseApiVersionEnum)[keyof typeof GetSqlv1StatementResult200ResponseApiVersionEnum];
-
+export enum GetSqlv1StatementResult200ResponseApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetSqlv1StatementResult200ResponseKindEnum = {
-  StatementResult: "StatementResult",
-} as const;
-export type GetSqlv1StatementResult200ResponseKindEnum =
-  (typeof GetSqlv1StatementResult200ResponseKindEnum)[keyof typeof GetSqlv1StatementResult200ResponseKindEnum];
+export enum GetSqlv1StatementResult200ResponseKindEnum {
+  StatementResult = "StatementResult",
+}
 
 /**
  * Check if a given object implements the GetSqlv1StatementResult200Response interface.

@@ -15,14 +15,14 @@
 /**
  * NodeState represents the state of a node.
  * @export
+ * @enum {string}
  */
-export const NodeState = {
-  Unknown: "unknown",
-  Down: "down",
-  Ready: "ready",
-  Disconnected: "disconnected",
-} as const;
-export type NodeState = (typeof NodeState)[keyof typeof NodeState];
+export enum NodeState {
+  Unknown = "unknown",
+  Down = "down",
+  Ready = "ready",
+  Disconnected = "disconnected",
+}
 
 export function instanceOfNodeState(value: any): boolean {
   for (const key in NodeState) {

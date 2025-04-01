@@ -47,23 +47,21 @@ export interface NodeSpec {
 
 /**
  * @export
+ * @enum {string}
  */
-export const NodeSpecRoleEnum = {
-  Worker: "worker",
-  Manager: "manager",
-} as const;
-export type NodeSpecRoleEnum = (typeof NodeSpecRoleEnum)[keyof typeof NodeSpecRoleEnum];
-
+export enum NodeSpecRoleEnum {
+  Worker = "worker",
+  Manager = "manager",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const NodeSpecAvailabilityEnum = {
-  Active: "active",
-  Pause: "pause",
-  Drain: "drain",
-} as const;
-export type NodeSpecAvailabilityEnum =
-  (typeof NodeSpecAvailabilityEnum)[keyof typeof NodeSpecAvailabilityEnum];
+export enum NodeSpecAvailabilityEnum {
+  Active = "active",
+  Pause = "pause",
+  Drain = "drain",
+}
 
 /**
  * Check if a given object implements the NodeSpec interface.

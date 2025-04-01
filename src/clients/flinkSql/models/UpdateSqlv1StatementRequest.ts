@@ -92,21 +92,18 @@ export interface UpdateSqlv1StatementRequest {
 
 /**
  * @export
+ * @enum {string}
  */
-export const UpdateSqlv1StatementRequestApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type UpdateSqlv1StatementRequestApiVersionEnum =
-  (typeof UpdateSqlv1StatementRequestApiVersionEnum)[keyof typeof UpdateSqlv1StatementRequestApiVersionEnum];
-
+export enum UpdateSqlv1StatementRequestApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const UpdateSqlv1StatementRequestKindEnum = {
-  Statement: "Statement",
-} as const;
-export type UpdateSqlv1StatementRequestKindEnum =
-  (typeof UpdateSqlv1StatementRequestKindEnum)[keyof typeof UpdateSqlv1StatementRequestKindEnum];
+export enum UpdateSqlv1StatementRequestKindEnum {
+  Statement = "Statement",
+}
 
 /**
  * Check if a given object implements the UpdateSqlv1StatementRequest interface.
