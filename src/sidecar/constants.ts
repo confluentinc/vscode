@@ -13,6 +13,12 @@ export const SIDECAR_CONNECTION_ID_HEADER: string = "x-connection-id";
 /** Header used to specify a given (Kafka, Schema Registry, etc) cluster ID, if applicable */
 export const CLUSTER_ID_HEADER: string = "x-cluster-id";
 
+/** Header used to specify which cloud provider */
+export const CCLOUD_PROVIDER_HEADER: string = "x-ccloud-provider";
+
+/** Header used to specify a ccloud-supported region within a provider */
+export const CCLOUD_REGION_HEADER: string = "x-ccloud-region";
+
 /** Enable the middleware that emits debug logs for every request to / response from the sidecar. */
 export const ENABLE_REQUEST_RESPONSE_LOGGING: boolean =
   process.env.ENABLE_REQUEST_RESPONSE_LOGGING === "true";
