@@ -473,8 +473,9 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
   let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
-  let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
   let clearCacheStub: sinon.SinonStub;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -503,7 +504,7 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
   });
 
   for (const hardDelete of [true, false]) {
-    it(`deleteSchemaSubject test: hardDelete=${hardDelete}`, async () => {
+    it(`deleteSubject calls test: hardDelete=${hardDelete}`, async () => {
       const subject = TEST_LOCAL_SUBJECT_WITH_SCHEMAS;
 
       await loaderInstance.deleteSchemaSubject(subject, hardDelete);
