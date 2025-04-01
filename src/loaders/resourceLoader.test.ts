@@ -474,8 +474,6 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
   let sandbox: sinon.SinonSandbox;
   let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
   let clearCacheStub: sinon.SinonStub;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -492,7 +490,7 @@ describe("ResourceLoader::deleteSchemaSubject()", () => {
     const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
     getSidecarStub.resolves(mockHandle);
 
-    getSchemaRegistryForEnvironmentIdStub = sandbox
+    sandbox
       .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
       .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
 
