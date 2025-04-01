@@ -4,6 +4,12 @@ import { print } from "graphql";
 // OpenAPI generated static client classes
 
 import {
+  ComputePoolsFcpmV2Api,
+  Configuration as FlinkComputePoolsConfiguration,
+} from "../clients/flinkComputePool";
+
+import { Configuration as FlinkSqlConfiguration, StatementsSqlV1Api } from "../clients/flinkSql";
+import {
   ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
   PartitionV3Api,
@@ -23,6 +29,7 @@ import {
   ConfigurationParameters,
   ConfluentCloudProduceRecordsResourceApi,
   ConnectionsResourceApi,
+  HTTPHeaders,
   KafkaConsumeResourceApi,
   MicroProfileHealthApi,
   Middleware,
@@ -31,9 +38,13 @@ import {
   Configuration as SidecarRestConfiguration,
   VersionResourceApi,
 } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
+  CCLOUD_PROVIDER_HEADER,
+  CCLOUD_REGION_HEADER,
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
   SIDECAR_BASE_URL,
@@ -333,6 +344,41 @@ export class SidecarHandle {
       },
     });
     return new SubjectsV1Api(config);
+  }
+
+  /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link ComputePoolsFcpmV2Api} client instance */
+  public getFlinkComputePoolsApi(computePool: CCloudFlinkComputePool): ComputePoolsFcpmV2Api {
+    const config = new FlinkComputePoolsConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkClientHeaders(computePool),
+    });
+    return new ComputePoolsFcpmV2Api(config);
+  }
+
+  /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
+  public getFlinkSqlStatementsApi(computePool: CCloudFlinkComputePool): StatementsSqlV1Api {
+    const config = new FlinkSqlConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkClientHeaders(computePool),
+    });
+    return new StatementsSqlV1Api(config);
+  }
+
+  /** Convert a CCloudFlinkComputePool to HTTPHeaders for Flink API sidecar client creation. */
+  public constructFlinkClientHeaders(computePool: CCloudFlinkComputePool): HTTPHeaders {
+    // We only support ccloud flink ...
+    if (computePool.connectionId !== CCLOUD_CONNECTION_ID) {
+      throw new Error(
+        `Expected connectionId to be '${CCLOUD_CONNECTION_ID}', got '${computePool.connectionId}'`,
+      );
+    }
+
+    return {
+      ...this.defaultClientConfigParams.headers,
+      [CCLOUD_PROVIDER_HEADER]: computePool.provider,
+      [CCLOUD_REGION_HEADER]: computePool.region,
+      [SIDECAR_CONNECTION_ID_HEADER]: computePool.connectionId,
+    };
   }
 
   // === END OF OPENAPI CLIENT METHODS ===

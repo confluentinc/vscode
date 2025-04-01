@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import "mocha";
 import sinon from "sinon";
+import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { MicroProfileHealthApi, ResponseError } from "../clients/sidecar";
 import * as sidecar from "../sidecar";
@@ -181,5 +182,32 @@ describe("sidecarHandle websocket tests", () => {
         },
       );
     });
+  });
+});
+
+describe("sidecarHandle Flink API method tests", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("constructFlinkClientHeaders() should return headers with correct values", async () => {
+    const handle = await sidecar.getSidecar();
+
+    const headers = handle.constructFlinkClientHeaders(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    assert.strictEqual(headers["x-connection-id"], TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId);
+    assert.strictEqual(headers["x-ccloud-provider"], TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
+    assert.strictEqual(headers["x-ccloud-region"], TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
+  });
+
+  it("getFlinkComputePoolsApi() should return a FlinkComputePoolsApi instance", async () => {
+    const handle = await sidecar.getSidecar();
+    const api = handle.getFlinkComputePoolsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    assert.strictEqual(api.constructor.name, "ComputePoolsFcpmV2Api");
+  });
+
+  it("getFlinkSqlStatementsApi() should return a FlinkSqlStatementsApi instance", async () => {
+    const handle = await sidecar.getSidecar();
+    const api = handle.getFlinkSqlStatementsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+    assert.strictEqual(api.constructor.name, "StatementsSqlV1Api");
   });
 });
