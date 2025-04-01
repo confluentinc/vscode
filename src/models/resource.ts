@@ -83,3 +83,9 @@ export function isSearchable(item: any): item is ISearchable {
   }
   return "searchableText" in item;
 }
+
+/** Extension of IResourceBase identifying a specific schema registry or resources derived from within. */
+export interface ISchemaRegistryResource extends IResourceBase {
+  readonly environmentId: EnvironmentId;
+  readonly schemaRegistryId: string;
+}

@@ -318,12 +318,8 @@ export abstract class ResourceLoader implements IResourceBase {
     }
 
     if (shouldClearSubject) {
-      // Clear out the cache for the whole of the schema registry, which
-      // right now is just the subjects.
-      const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(schema.environmentId);
-      if (schemaRegistry) {
-        await this.clearCache(schemaRegistry);
-      }
+      // Clear out the cache for the whole of the schema registry.
+      await this.clearCache(schema.subjectObject());
     }
   }
 
@@ -392,15 +388,20 @@ export abstract class ResourceLoader implements IResourceBase {
    *
    * @param resource The resource to clear the storage cache for.
    **/
-  public async clearCache(resource: SchemaRegistry): Promise<void> {
+  public async clearCache(resource: SchemaRegistry | Subject): Promise<void> {
     if (resource.connectionId !== this.connectionId) {
-      throw new Error(`Mismatched connectionId ${this.connectionId} for resource ${resource.id}`);
+      throw new Error(
+        `Mismatched connectionId ${this.connectionId} for resource ${JSON.stringify(resource, null, 2)}`,
+      );
     }
 
-    // Clear out cached subjects, if any. This is our only SR-level cached data right now.
-    // (no schema-group level cache yet.)
-    logger.debug(`Clearing subject cache for schema registry ${resource.id}`);
     const resourceManager = getResourceManager();
+
+    // Clear out cached subjects, if any. Clearing out a single subject rounds up to clearing the whole
+    // schema registry by conscious design (the set of subjects for schema registry is the smallest
+    // cache scope, so marking a single subject as unknown is treated as marking the whole schema registry's
+    // cache of subjects as unknown and will prompt a subsequent deep fetch of subjects).
+    logger.debug(`Clearing subject cache for schema registry ${resource.schemaRegistryId}`);
     await resourceManager.setSubjects(resource, undefined);
   }
 

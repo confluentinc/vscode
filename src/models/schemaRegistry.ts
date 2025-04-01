@@ -8,9 +8,19 @@ import {
   UTM_SOURCE_VSCODE,
 } from "../constants";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
+import {
+  ConnectionId,
+  EnvironmentId,
+  IResourceBase,
+  isCCloud,
+  ISchemaRegistryResource,
+  ISearchable,
+} from "./resource";
 
-export abstract class SchemaRegistry extends Data implements IResourceBase, ISearchable {
+export abstract class SchemaRegistry
+  extends Data
+  implements IResourceBase, ISearchable, ISchemaRegistryResource
+{
   abstract connectionId: ConnectionId;
   abstract connectionType: ConnectionType;
   iconName: IconNames = IconNames.SCHEMA_REGISTRY;
@@ -23,6 +33,11 @@ export abstract class SchemaRegistry extends Data implements IResourceBase, ISea
 
   searchableText(): string {
     return `${this.name} ${this.id}`;
+  }
+
+  /** Our id, clarified, for ISchemaRegistryResource purposes. */
+  get schemaRegistryId(): string {
+    return this.id;
   }
 }
 

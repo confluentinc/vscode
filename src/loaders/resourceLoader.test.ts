@@ -210,9 +210,10 @@ describe("ResourceLoader::clearCache()", () => {
   it("Called with wrong connection id resource throws error", async () => {
     const schemaRegistry = TEST_CCLOUD_SCHEMA_REGISTRY;
     await assert.rejects(loaderInstance.clearCache(schemaRegistry), (err) => {
-      assert.strictEqual(
-        (err as Error).message,
-        `Mismatched connectionId ${TEST_LOCAL_ENVIRONMENT_ID} for resource ${TEST_CCLOUD_SCHEMA_REGISTRY.id}`,
+      assert.ok(
+        (err as Error).message.startsWith(
+          `Mismatched connectionId ${TEST_LOCAL_ENVIRONMENT_ID} for resource`,
+        ),
       );
       return true;
     });
@@ -354,7 +355,6 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
   let loaderInstance: ResourceLoader;
   let sandbox: sinon.SinonSandbox;
   let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
-  let getSchemaRegistryForEnvironmentIdStub: sinon.SinonStub;
   let clearCacheStub: sinon.SinonStub;
 
   beforeEach(() => {
@@ -372,10 +372,6 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
     const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
 
     getSidecarStub.resolves(mockHandle);
-
-    getSchemaRegistryForEnvironmentIdStub = sandbox
-      .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
-      .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
     clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
   });
 
@@ -408,12 +404,9 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
 
       if (shouldClearSubjects) {
         assert.ok(clearCacheStub.calledOnce);
-        assert.ok(getSchemaRegistryForEnvironmentIdStub.calledOnce);
-        assert.ok(getSchemaRegistryForEnvironmentIdStub.calledWithExactly(schema.environmentId));
-        assert.ok(clearCacheStub.calledWithExactly(TEST_LOCAL_SCHEMA_REGISTRY));
+        assert.ok(clearCacheStub.calledWithExactly(schema.subjectObject()));
       } else {
         assert.ok(clearCacheStub.notCalled);
-        assert.ok(getSchemaRegistryForEnvironmentIdStub.notCalled);
       }
     });
   }
