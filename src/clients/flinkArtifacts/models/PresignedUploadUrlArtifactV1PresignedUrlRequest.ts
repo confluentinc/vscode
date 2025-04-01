@@ -79,21 +79,18 @@ export interface PresignedUploadUrlArtifactV1PresignedUrlRequest {
 
 /**
  * @export
+ * @enum {string}
  */
-export const PresignedUploadUrlArtifactV1PresignedUrlRequestApiVersionEnum = {
-  ArtifactV1: "artifact/v1",
-} as const;
-export type PresignedUploadUrlArtifactV1PresignedUrlRequestApiVersionEnum =
-  (typeof PresignedUploadUrlArtifactV1PresignedUrlRequestApiVersionEnum)[keyof typeof PresignedUploadUrlArtifactV1PresignedUrlRequestApiVersionEnum];
-
+export enum PresignedUploadUrlArtifactV1PresignedUrlRequestApiVersionEnum {
+  ArtifactV1 = "artifact/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const PresignedUploadUrlArtifactV1PresignedUrlRequestKindEnum = {
-  PresignedUrlRequest: "PresignedUrlRequest",
-} as const;
-export type PresignedUploadUrlArtifactV1PresignedUrlRequestKindEnum =
-  (typeof PresignedUploadUrlArtifactV1PresignedUrlRequestKindEnum)[keyof typeof PresignedUploadUrlArtifactV1PresignedUrlRequestKindEnum];
+export enum PresignedUploadUrlArtifactV1PresignedUrlRequestKindEnum {
+  PresignedUrlRequest = "PresignedUrlRequest",
+}
 
 /**
  * Check if a given object implements the PresignedUploadUrlArtifactV1PresignedUrlRequest interface.

@@ -41,14 +41,13 @@ export interface JsonPatchRequestAddReplace {
 
 /**
  * @export
+ * @enum {string}
  */
-export const JsonPatchRequestAddReplaceOpEnum = {
-  Add: "ADD",
-  Replace: "REPLACE",
-  Test: "TEST",
-} as const;
-export type JsonPatchRequestAddReplaceOpEnum =
-  (typeof JsonPatchRequestAddReplaceOpEnum)[keyof typeof JsonPatchRequestAddReplaceOpEnum];
+export enum JsonPatchRequestAddReplaceOpEnum {
+  Add = "ADD",
+  Replace = "REPLACE",
+  Test = "TEST",
+}
 
 /**
  * Check if a given object implements the JsonPatchRequestAddReplace interface.

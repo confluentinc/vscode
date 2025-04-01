@@ -86,21 +86,18 @@ export interface FcpmV2ComputePool {
 
 /**
  * @export
+ * @enum {string}
  */
-export const FcpmV2ComputePoolApiVersionEnum = {
-  FcpmV2: "fcpm/v2",
-} as const;
-export type FcpmV2ComputePoolApiVersionEnum =
-  (typeof FcpmV2ComputePoolApiVersionEnum)[keyof typeof FcpmV2ComputePoolApiVersionEnum];
-
+export enum FcpmV2ComputePoolApiVersionEnum {
+  FcpmV2 = "fcpm/v2",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const FcpmV2ComputePoolKindEnum = {
-  ComputePool: "ComputePool",
-} as const;
-export type FcpmV2ComputePoolKindEnum =
-  (typeof FcpmV2ComputePoolKindEnum)[keyof typeof FcpmV2ComputePoolKindEnum];
+export enum FcpmV2ComputePoolKindEnum {
+  ComputePool = "ComputePool",
+}
 
 /**
  * Check if a given object implements the FcpmV2ComputePool interface.
