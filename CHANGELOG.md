@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.1.0
+
 ### Added
 
 - Initial LaunchDarkly integration for feature flag support
@@ -19,6 +21,7 @@ All notable changes to this extension will be documented in this file.
 - Experimental setting to enable/disable the Confluent chat participant for Copilot chat
 - Support for diffing schema definitions and Kafka topic message documents from the editor title or
   right-click context areas
+- New status bar item to show the current CCloud status from https://status.confluent.cloud/
 
 ### Fixed
 
