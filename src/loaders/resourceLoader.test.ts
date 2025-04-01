@@ -468,3 +468,62 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
     assert.strictEqual(logErrorArgs[3], true);
   });
 });
+
+describe("ResourceLoader::deleteSchemaSubject()", () => {
+  let loaderInstance: ResourceLoader;
+  let sandbox: sinon.SinonSandbox;
+  let stubbedSubjectsV1Api: sinon.SinonStubbedInstance<SubjectsV1Api>;
+  let clearCacheStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    loaderInstance = LocalResourceLoader.getInstance();
+
+    stubbedSubjectsV1Api = sandbox.createStubInstance(SubjectsV1Api);
+
+    const mockHandle = {
+      getSubjectsV1Api: () => {
+        return stubbedSubjectsV1Api;
+      },
+    };
+
+    const getSidecarStub: sinon.SinonStub = sandbox.stub(sidecar, "getSidecar");
+    getSidecarStub.resolves(mockHandle);
+
+    sandbox
+      .stub(loaderInstance, "getSchemaRegistryForEnvironmentId")
+      .resolves(TEST_LOCAL_SCHEMA_REGISTRY);
+
+    clearCacheStub = sandbox.stub(loaderInstance, "clearCache");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  for (const hardDelete of [true, false]) {
+    it(`deleteSubject calls test: hardDelete=${hardDelete}`, async () => {
+      const subject = TEST_LOCAL_SUBJECT_WITH_SCHEMAS;
+
+      await loaderInstance.deleteSchemaSubject(subject, hardDelete);
+
+      const expectedRequests = hardDelete
+        ? [
+            { subject: subject.name, permanent: false },
+            { subject: subject.name, permanent: true },
+          ]
+        : [{ subject: subject.name, permanent: false }];
+
+      assert.strictEqual(stubbedSubjectsV1Api.deleteSubject.callCount, expectedRequests.length);
+
+      for (let i = 0; i < expectedRequests.length; i++) {
+        assert.deepEqual(
+          stubbedSubjectsV1Api.deleteSubject.getCall(i).args[0],
+          expectedRequests[i],
+        );
+      }
+
+      assert.ok(clearCacheStub.calledOnce);
+    });
+  }
+});
