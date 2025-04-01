@@ -31,7 +31,8 @@ export interface IResourceBase {
 
 /** Interface for subset of model types which describe CCLoud Flink Data Plane resources. */
 export interface IFlinkRegionConnectable {
-  connectionId: string;
+  /* Must be exactly CCLOUD_CONNECTION_ID */
+  connectionId: ConnectionId;
   region: string;
   provider: string;
 }

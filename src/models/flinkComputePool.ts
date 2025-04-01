@@ -2,14 +2,7 @@ import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import { CustomMarkdownString } from "./main";
-import {
-  ConnectionId,
-  EnvironmentId,
-  IFlinkRegionConnectable,
-  IResourceBase,
-  isCCloud,
-  ISearchable,
-} from "./resource";
+import { ConnectionId, EnvironmentId, IResourceBase, isCCloud, ISearchable } from "./resource";
 
 export abstract class FlinkComputePool implements IResourceBase, ISearchable {
   abstract connectionId: ConnectionId;
@@ -26,7 +19,7 @@ export abstract class FlinkComputePool implements IResourceBase, ISearchable {
   }
 }
 
-export class CCloudFlinkComputePool extends FlinkComputePool implements IFlinkRegionConnectable {
+export class CCloudFlinkComputePool extends FlinkComputePool {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 

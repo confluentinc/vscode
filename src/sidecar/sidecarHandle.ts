@@ -38,8 +38,9 @@ import {
   Configuration as SidecarRestConfiguration,
   VersionResourceApi,
 } from "../clients/sidecar";
+import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
-import { IFlinkRegionConnectable } from "../models/resource";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_PROVIDER_HEADER,
@@ -346,34 +347,37 @@ export class SidecarHandle {
   }
 
   /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link ComputePoolsFcpmV2Api} client instance */
-  public getFlinkComputePoolsApi(
-    ccloudProviderRegion: IFlinkRegionConnectable,
-  ): ComputePoolsFcpmV2Api {
+  public getFlinkComputePoolsApi(computePool: CCloudFlinkComputePool): ComputePoolsFcpmV2Api {
     const config = new FlinkComputePoolsConfiguration({
       ...this.defaultClientConfigParams,
-      headers: this.constructFlinkClientHeaders(ccloudProviderRegion),
+      headers: this.constructFlinkClientHeaders(computePool),
     });
     return new ComputePoolsFcpmV2Api(config);
   }
 
   /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
-  public getFlinkSqlStatementsApi(
-    ccloudProviderRegion: IFlinkRegionConnectable,
-  ): StatementsSqlV1Api {
+  public getFlinkSqlStatementsApi(computePool: CCloudFlinkComputePool): StatementsSqlV1Api {
     const config = new FlinkSqlConfiguration({
       ...this.defaultClientConfigParams,
-      headers: this.constructFlinkClientHeaders(ccloudProviderRegion),
+      headers: this.constructFlinkClientHeaders(computePool),
     });
     return new StatementsSqlV1Api(config);
   }
 
-  /** Convert a IFlinkRegionConnectionable to HTTPHeaders for Flink API sidecar client creation. */
-  public constructFlinkClientHeaders(ccloudProviderRegion: IFlinkRegionConnectable): HTTPHeaders {
+  /** Convert a CCloudFlinkComputePool to HTTPHeaders for Flink API sidecar client creation. */
+  public constructFlinkClientHeaders(computePool: CCloudFlinkComputePool): HTTPHeaders {
+    // We only support ccloud flink ...
+    if (computePool.connectionId !== CCLOUD_CONNECTION_ID) {
+      throw new Error(
+        `Expected connectionId to be '${CCLOUD_CONNECTION_ID}', got '${computePool.connectionId}'`,
+      );
+    }
+
     return {
       ...this.defaultClientConfigParams.headers,
-      [CCLOUD_PROVIDER_HEADER]: ccloudProviderRegion.provider,
-      [CCLOUD_REGION_HEADER]: ccloudProviderRegion.region,
-      [SIDECAR_CONNECTION_ID_HEADER]: ccloudProviderRegion.connectionId,
+      [CCLOUD_PROVIDER_HEADER]: computePool.provider,
+      [CCLOUD_REGION_HEADER]: computePool.region,
+      [SIDECAR_CONNECTION_ID_HEADER]: computePool.connectionId,
     };
   }
 
