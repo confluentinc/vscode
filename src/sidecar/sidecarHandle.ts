@@ -4,6 +4,12 @@ import { print } from "graphql";
 // OpenAPI generated static client classes
 
 import {
+  ComputePoolsFcpmV2Api,
+  Configuration as FlinkComputePoolsConfiguration,
+} from "../clients/flinkComputePool";
+
+import { Configuration as FlinkSqlConfiguration, StatementsSqlV1Api } from "../clients/flinkSql";
+import {
   ConfigsV3Api,
   Configuration as KafkaRestConfiguration,
   PartitionV3Api,
@@ -23,6 +29,7 @@ import {
   ConfigurationParameters,
   ConfluentCloudProduceRecordsResourceApi,
   ConnectionsResourceApi,
+  HTTPHeaders,
   KafkaConsumeResourceApi,
   MicroProfileHealthApi,
   Middleware,
@@ -32,8 +39,11 @@ import {
   VersionResourceApi,
 } from "../clients/sidecar";
 import { Logger } from "../logging";
+import { IFlinkRegionConnectable } from "../models/resource";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
+  CCLOUD_PROVIDER_HEADER,
+  CCLOUD_REGION_HEADER,
   CLUSTER_ID_HEADER,
   ENABLE_REQUEST_RESPONSE_LOGGING,
   SIDECAR_BASE_URL,
@@ -333,6 +343,38 @@ export class SidecarHandle {
       },
     });
     return new SubjectsV1Api(config);
+  }
+
+  /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link ComputePoolsFcpmV2Api} client instance */
+  public getFlinkComputePoolsApi(
+    ccloudProviderRegion: IFlinkRegionConnectable,
+  ): ComputePoolsFcpmV2Api {
+    const config = new FlinkComputePoolsConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkClientHeaders(ccloudProviderRegion),
+    });
+    return new ComputePoolsFcpmV2Api(config);
+  }
+
+  /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
+  public getFlinkSqlStatementsApi(
+    ccloudProviderRegion: IFlinkRegionConnectable,
+  ): StatementsSqlV1Api {
+    const config = new FlinkSqlConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: this.constructFlinkClientHeaders(ccloudProviderRegion),
+    });
+    return new StatementsSqlV1Api(config);
+  }
+
+  /** Convert a IFlinkRegionConnectionable to HTTPHeaders for Flink API sidecar client creation. */
+  public constructFlinkClientHeaders(ccloudProviderRegion: IFlinkRegionConnectable): HTTPHeaders {
+    return {
+      ...this.defaultClientConfigParams.headers,
+      [CCLOUD_PROVIDER_HEADER]: ccloudProviderRegion.provider,
+      [CCLOUD_REGION_HEADER]: ccloudProviderRegion.region,
+      [SIDECAR_CONNECTION_ID_HEADER]: ccloudProviderRegion.connectionId,
+    };
   }
 
   // === END OF OPENAPI CLIENT METHODS ===

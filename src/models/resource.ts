@@ -29,6 +29,13 @@ export interface IResourceBase {
   iconName?: IconNames;
 }
 
+/** Interface for subset of model types which describe CCLoud Flink Data Plane resources. */
+export interface IFlinkRegionConnectable {
+  connectionId: string;
+  region: string;
+  provider: string;
+}
+
 export function isResource(value: any): value is IResourceBase {
   return value.connectionId !== undefined && value.connectionType !== undefined;
 }
