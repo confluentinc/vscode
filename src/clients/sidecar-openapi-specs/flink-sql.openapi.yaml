@@ -1,0 +1,2154 @@
+---
+openapi: 3.0.0
+info:
+  title: SQL API v1
+  version: 0.0.1
+  x-api-id: a19bfe13-af66-493b-930a-5b7664bf52b7
+  x-audience: external-public
+  x-tag-group: SQL API (%s)
+  x-api-group: sql/v1
+
+servers:
+  - url: https://flink.region.provider.confluent.cloud
+    description: Flink Compute Pool Endpoint
+
+paths:
+  # Connections API
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/connections:
+    x-lifecycle-stage: Preview
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: listSqlv1Connections
+      summary: List of Connections
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a sorted, filtered and paginated list of all Connections.
+      parameters:
+        - in: path
+          name: organization_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: spec.connection_type
+          in: query
+          required: false
+          schema:
+            type: string
+            x-extensible-enum: [AZUREML, AZUREOPENAI, BEDROCK, COUCHBASE, ELASTIC,
+                                GOOGLEAI, MONGODB, OPENAI, PINECONE, SAGEMAKER, VERTEXAI]
+          description: Filter the results by exact match for spec.connection_type
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            x-max-page-items: 500
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+      tags:
+        - Connections (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Connections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.ConnectionList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    post:
+      x-lifecycle-stage: Preview
+      x-self-access: false
+      x-request-access-name: SQL API v1
+      operationId: createSqlv1Connection
+      summary: Create a Connection
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to create a Connection.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+      tags:
+        - Connections (sql/v1)
+      security:
+        - resource-api-key: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Connection'
+                - type: object
+                  required:
+                    - spec
+                    - name
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - endpoint
+                        - connection_type
+                        - auth_data
+
+      responses:
+        '201':
+          description: A Connection has been successfully created.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+            Location:
+              schema:
+                type: string
+                format: uri
+                example: https://flink.region.provider.confluent.cloud/sql/v1/organizations/{organization_id}/environments/{environment_id}/connections/{name}
+              description: Connection resource uri
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Connection'
+                  - type: object
+                    required:
+                      - spec
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - endpoint
+                          - connection_type
+                          - auth_data
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/connections/{connection_name}:
+    x-lifecycle-stage: Preview
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: Preview
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: getSqlv1Connection
+      summary: Read a Connection
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to read a Connection.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: connection_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The user provided name of the Connection. Unique within a region within an org and env.
+      tags:
+        - Connections (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Connection.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Connection'
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - spec
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - connection_type
+                          - endpoint
+                          - auth_data
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    delete:
+      x-lifecycle-stage: Preview
+      x-self-access: false
+      x-request-access-name: SQL API v1
+      operationId: deleteSqlv1Connection
+      summary: Delete a Connection
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to delete a statement.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: connection_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the connection.
+      tags:
+        - Connections (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: A Connection has been deleted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    put:
+      x-lifecycle-stage: Preview
+      x-self-access: false
+      x-request-access-name: SQL API v1
+      operationId: updateSqlv1Connection
+      summary: Update a Connection
+      description: |-
+        [![Preview](https://img.shields.io/badge/Lifecycle%20Stage-Preview-%2300afba)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to update a connection.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: connection_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the connection.
+      tags:
+        - Connections (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: A Connection has been updated.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Connection'
+                - type: object
+                  required:
+                    - spec
+                    - name
+                    - metadata
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - auth_data
+                    metadata:
+                      type: object
+                      required:
+                        - resource_version
+
+  # Statement Results API
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/statements/{name}/results:
+    x-lifecycle-stage: General Availability
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: getSqlv1StatementResult
+      summary: Read Statement Result
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Read Statement Result.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the statement.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: It contains the field offset in the CollectSinkFunction protocol. On the first request, it should be unset. The offset is assumed to start at 0.
+      tags:
+        - Statement Results (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Statement Result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.StatementResult'
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - results
+                    properties:
+                      results:
+                        type: object
+                        required:
+                          - data
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  # Statements API
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/statements:
+    x-lifecycle-stage: General Availability
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: listSqlv1Statements
+      summary: List of Statements
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a sorted, filtered, paginated list of all statements.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: spec.compute_pool_id
+          in: query
+          required: false
+          schema:
+            type: string
+          example: lfcp-00000
+          description: Filter the results by exact match for spec.compute_pool.
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            x-max-page-items: 500
+          description: A pagination size for collection requests.
+        - name: page_token
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+          description: An opaque pagination token for collection requests.
+        - name: label_selector
+          in: query
+          required: false
+          schema:
+            type: string
+          style: form
+          explode: false
+          description: A comma-separated label selector to filter the statements.
+      tags:
+        - Statements (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Statements.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.StatementList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    post:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: createSqlv1Statement
+      summary: Create a Statement
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to create a statement.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+      tags:
+        - Statements (sql/v1)
+      security:
+        - resource-api-key: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Statement'
+                - type: object
+                  required:
+                    - spec
+                    - name
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - statement
+                        - compute_pool_id
+
+      responses:
+        '201':
+          description: A Statement is being created.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+            Location:
+              schema:
+                type: string
+                format: uri
+                example: https://flink.region.provider.confluent.cloud/sql/v1/organizations/{organization_id}/environments/{environment_id}/statements/{name}
+              description: Statement resource uri
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Statement'
+                  - type: object
+                    required:
+                      - spec
+                      - status
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - statement_name
+                          - statement
+                          - compute_pool_id
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/statements/{statement_name}:
+    x-lifecycle-stage: General Availability
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: getSqlv1Statement
+      summary: Read a Statement
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to read a statement.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: statement_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the statement.
+      tags:
+        - Statements (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Statement.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Statement'
+                  - type: object
+                    required:
+                      - api_version
+                      - kind
+                      - metadata
+                      - spec
+                      - status
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - statement_name
+                          - statement
+                          - compute_pool_id
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    delete:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: deleteSqlv1Statement
+      summary: Delete a Statement
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to delete a statement.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: statement_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the statement.
+      tags:
+        - Statements (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '202':
+          description: A Statement is being deleted.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+    put:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: updateSqlv1Statement
+      summary: Update a Statement
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to update a statement.
+        The request will fail with a 409 Conflict error if the Statement has changed since it was fetched.
+        In this case, do a GET, reapply the modifications, and try the update again.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: statement_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the statement.
+      tags:
+        - Statements (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '202':
+          description: A Statement is being updated.
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/sql.v1.Statement'
+                - type: object
+                  required:
+                    - spec
+                    - name
+                    - metadata
+                  properties:
+                    spec:
+                      type: object
+                      required:
+                        - stopped
+                    metadata:
+                      type: object
+                      required:
+                        - resource_version
+    patch:
+      x-lifecycle-stage: Early Access
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: patchSqlv1Statement
+      summary: Patch a Statement
+      description: |-
+        [![Early Access](https://img.shields.io/badge/Lifecycle%20Stage-Early%20Access-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Make a request to patch a statement.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: statement_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the statement.
+      tags:
+        - Statements (sql/v1)
+      security:
+        - resource-api-key: []
+      requestBody:
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: '#/components/schemas/PatchRequest'
+      responses:
+        '200':
+          description: Patched Statement.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/sql.v1.Statement'
+                  - type: object
+                    required:
+                      - spec
+                      - status
+                    properties:
+                      spec:
+                        type: object
+                        required:
+                          - statement_name
+                          - statement
+                          - compute_pool_id
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+  # Exceptions API
+  /sql/v1/organizations/{organization_id}/environments/{environment_id}/statements/{statement_name}/exceptions:
+    x-lifecycle-stage: General Availability
+    x-self-access: true
+    x-request-access-name: SQL API v1
+    get:
+      x-lifecycle-stage: General Availability
+      x-self-access: true
+      x-request-access-name: SQL API v1
+      operationId: getSqlv1StatementExceptions
+      summary: List of Statement Exceptions
+      description: |-
+        [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+        Retrieve a list of the 10 most recent statement exceptions.
+      parameters:
+        - in: path
+          name: organization_id
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: The unique identifier for the organization.
+        - in: path
+          name: environment_id
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the environment.
+        - name: statement_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for the statement.
+      tags:
+        - Statement Exceptions (sql/v1)
+      security:
+        - resource-api-key: []
+      responses:
+        '200':
+          description: Statement Exceptions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sql.v1.StatementExceptionList'
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: The unique identifier for the API request.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/DefaultSystemError'
+
+components:
+  schemas:
+    sql.v1.Connection:
+      type: object
+      description: |-
+        `Connection` models a reusable endpoint and auth token to authenticate the caller to
+        use that endpoint.
+        Only `OrganizationAdmins` and `EnvironmentAdmins` will have the permissions to create, update and delete `Connections`.
+        `FlinkDevelopers` and `ModelResourceOwners` can later reference a `Connection` resource within their Model
+        creation statements.
+        The API allows you to list, create, read, and delete your connections.
+        ## The Connections Model
+        <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Connection" />
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - Connection
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ObjectMeta'
+            - properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/organizations/org-abc/environments/env-123/connections/my-openai-connection
+                uid:
+                  example: 12345678-1234-1234-1234-123456789012
+                resource_version:
+                  example: a23av
+                resource_name:
+                  example: ""
+        name:
+          type: string
+          example: my-openai-connection
+          description: The user provided name of the resource, unique within this environment.
+          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+          x-immutable: true
+          maxLength: 100
+        spec:
+          $ref: '#/components/schemas/sql.v1.ConnectionSpec'
+        status:
+          $ref: '#/components/schemas/sql.v1.ConnectionStatus'
+
+    sql.v1.ConnectionList:
+      type: object
+      description: |-
+        `Connection` models a reusable endpoint and auth token to authenticate the caller to
+        use that endpoint.
+        Only `OrgAdmins` and `EnvAdmins` will have the permissions to create, update and delete `Connections`.
+        `FlinkDevelopers` and `ModelResourceOwners` can later reference a `Connection` resource within their Model
+        creation statements.
+        The API allows you to list, create, read, and delete your connections.
+        ## The Connection Model
+        <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Connection" />
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - ConnectionList
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ListMeta'
+            - properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/connections
+                first:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-abc123/connections
+                last:
+                  example: ""
+                prev:
+                  example: ""
+                next:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-abc123/connections?page_token=UvmDWOB1iwfAIBPj6EYb
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/sql.v1.Connection'
+              - type: object
+                required:
+                  - api_version
+                  - kind
+                  - metadata
+                  - spec
+                  - status
+                  - name
+                  - organization_id
+                  - environment_id
+                properties:
+                  spec:
+                    type: object
+                    required:
+                      - connection_type
+                      - endpoint
+          uniqueItems: true
+
+    sql.v1.ConnectionStatus:
+      type: object
+      required:
+        - phase
+      description: The status of the Connection
+      properties:
+        phase:
+          type: string
+          x-extensible-enum: [ACTIVE, UNREACHABLE, INVALID_AUTH]
+          description: |
+            Describes the status of the connection:
+
+            READY: The Connection is usable;
+
+            UNREACHABLE: The Connection endpoint is unreachable;
+
+            INVALID_AUTH: The Connection auth token is invalid;
+          example: READY
+          readOnly: true
+        detail:
+          type: string
+          description: Details about why connection transitioned into a given status.
+          example: 'Lookup failed: ai.openai.com'
+          readOnly: true
+      readOnly: true
+
+    sql.v1.PlaintextProvider:
+      type: object
+      description: |
+        Describes a sensitive piece of information passed in plaintext.
+
+        Confluent only accepts authentication tokens of supported model providers from OrgAdmins and EnvAdmins.
+        For now, only 'PlainText' provider is supported. It stores authentication token details as opaque bytes in an encrypted form.
+        This option offers limited security as it only provides a single level of encryption.
+      properties:
+        kind:
+          description: |
+            Plaintext Provider Kind Type
+          type: string
+          enum: [PlaintextProvider]
+          x-immutable: true
+        data:
+          description: |
+            Authentication token in plaintext JSON string.
+            For composite tokens, provide them as JSON.
+            This is sensitive piece of information stored as opaque bytes in an encrypted form with single level of encryption.
+
+            Scoped to an endpoint of a `Connection` resource.
+          type: string
+          format: byte
+
+    sql.v1.ConnectionSpec:
+      type: object
+      description: Encapsulates the model provider access details
+      properties:
+        connection_type:
+          type: string
+          example: OPENAI
+          description: The type of this connection.
+          x-immutable: true
+          x-extensible-enum: [OPENAI, AZUREML, AZUREOPENAI, BEDROCK, SAGEMAKER, GOOGLEAI, VERTEXAI, MONGODB, PINECONE,
+                              ELASTIC]
+        endpoint:
+          type: string
+          example: 'https://api.openai.com/v1/chat/completions'
+          description: The endpoint that is used to run model inferencing.
+          maxLength: 16384
+          x-immutable: true
+        auth_data:
+          type: object
+          description: |
+            The vendor specific authentication token details
+
+            The contents are stored as opaque bytes given in plaintext by an EnvAdmin.
+            In future, we would support more secure methods for distributing authentication tokens.
+          discriminator:
+            propertyName: kind
+            mapping:
+              PlaintextProvider: '#/components/schemas/sql.v1.PlaintextProvider'
+          oneOf:
+            - $ref: '#/components/schemas/sql.v1.PlaintextProvider'
+          x-immutable: false
+      x-enable-listmeta: true
+      x-enable-objectmeta: true
+
+    sql.v1.Statement:
+      type: object
+      description: |-
+        `Statement` represents a core resource used to model SQL statements for execution.
+        A statement generalizes DDL, DML, DQL, etc., but doesn’t attempt to handle session
+        management or any higher-level functionality.
+        The API allows you to list, create, read, and delete your statements.
+        ## The Statements Model
+        <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Statement" />
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+          readOnly: true
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - Statement
+          readOnly: true
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/StatementObjectMeta'
+            - properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements/my-statement
+                uid:
+                  example: 12345678-1234-1234-1234-123456789012
+                resource_version:
+                  example: a23av
+                resource_name:
+                  example: ""
+                labels:
+                  type: object
+                  additionalProperties:
+                      type: string
+        name:
+          type: string
+          example: sql123
+          description: The user provided name of the resource, unique within this environment.
+          pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+          x-immutable: true
+          maxLength: 100
+        organization_id:
+          type: string
+          format: uuid
+          description: The unique identifier for the organization.
+          x-immutable: true
+        environment_id:
+          type: string
+          description: The unique identifier for the environment.
+          x-immutable: true
+        spec:
+          $ref: '#/components/schemas/sql.v1.StatementSpec'
+        status:
+          $ref: '#/components/schemas/sql.v1.StatementStatus'
+        result:
+          $ref: '#/components/schemas/sql.v1.StatementResult'
+
+    sql.v1.StatementStatus:
+      type: object
+      required:
+        - phase
+      description: The status of the Statement
+      properties:
+        phase:
+          type: string
+          x-extensible-enum: [PENDING, RUNNING, COMPLETED, DELETING, FAILING, FAILED, STOPPED]
+          description: |
+            The lifecycle phase of the submitted SQL statement:
+
+            PENDING: SQL statement is pending execution;
+
+            RUNNING: SQL statement execution is in progress;
+
+            COMPLETED: SQL statement is completed;
+
+            DELETING: SQL statement deletion is in progress;
+
+            FAILING: SQL statement is failing;
+
+            FAILED: SQL statement execution has failed;
+
+            STOPPED: SQL statement execution has successfully been stopped;
+          example: RUNNING
+          readOnly: true
+        scaling_status:
+          $ref: '#/components/schemas/sql.v1.ScalingStatus'
+        detail:
+          type: string
+          description: Details about the execution status of this statement.
+          example: Statement is running successfully
+          readOnly: true
+        traits:
+          $ref: '#/components/schemas/sql.v1.StatementTraits'
+        network_kind:
+          type: string
+          x-extensible-enum: [PUBLIC, PRIVATE]
+          description: |
+            The networking type used by the submitted SQL statement:
+
+            PUBLIC: SQL statement is using public networking;
+
+            PRIVATE: SQL statement is using private networking;
+          example: PUBLIC
+          readOnly: true
+        latest_offsets:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            The last Kafka offsets that a statement has processed. Represented by a mapping from Kafka topic to a
+            string representation of partitions mapped to offsets.
+          example:
+            topic-1: partition:0,offset:100;partition:1,offset:200
+            topic-2: partition:0,offset:50
+          readOnly: true
+        latest_offsets_timestamp:
+          type: string
+          format: date-time
+          example: '2023-03-31T00:00:00-00:00'
+          description: The date and time at which the Kafka topic offsets were added to the statement status.
+            It is represented in RFC3339 format and is in UTC.
+          readOnly: true
+      readOnly: true
+    MultipleSearchFilter:
+      description: Filter a collection by a string search for one or more values
+      type: array
+      items:
+        type: string
+    SearchFilter:
+      description: Filter a collection by a string search
+      type: string
+
+    sql.v1.StatementTraits:
+      type: object
+      description: StatementTraits contains detailed information about the properties of a Statement
+      properties:
+        sql_kind:
+          type: string
+          description:
+            Categorizes the SQL statement. The result is Confluent-specific but inspired by SQL.
+            It uses underscores for separating concepts e.g. "CREATE_TABLE".
+          example: "SELECT"
+        is_bounded:
+          type: boolean
+          description: Indicates the special case where results of a statement are bounded.
+        is_append_only:
+          type: boolean
+          description: Indicates the special case where results of a statement are insert/append only.
+        upsert_columns:
+          type: array
+          description: Defines the column indices clients can use as upsert keys.
+          items:
+            type: integer
+        schema:
+          $ref: '#/components/schemas/sql.v1.ResultSchema'
+      readOnly: true
+
+    sql.v1.StatementList:
+      type: object
+      description: |-
+        `Statement` represents a core resource used to model SQL statements for execution.
+        A statement generalizes DDL, DML, DQL, etc., but doesn’t attempt to handle session
+        management or any higher-level functionality.
+        The API allows you to list, create, read, and delete your statements.
+        ## The Statements Model
+        <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Statement" />
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - StatementList
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ListMeta'
+            - properties:
+                self:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements
+                first:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-abc123/statements
+                last:
+                  example: ""
+                prev:
+                  example: ""
+                next:
+                  example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-abc123/statements?page_token=UvmDWOB1iwfAIBPj6EYb
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/sql.v1.Statement'
+              - type: object
+                required:
+                  - api_version
+                  - kind
+                  - metadata
+                  - spec
+                  - status
+                  - name
+                  - organization_id
+                  - environment_id
+                properties:
+                  spec:
+                    type: object
+                    required:
+                      - statement
+                      - compute_pool_id
+          uniqueItems: true
+
+    sql.v1.StatementResult:
+      type: object
+      description: |-
+        `Statement Result` represents a resource used to model results of SQL statements.
+        The API allows you to read your SQL statement result.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - StatementResult
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ResultListMeta'
+        results:
+          allOf:
+            - $ref: '#/components/schemas/sql.v1.StatementResultResults'
+
+    sql.v1.StatementResultResults:
+      type: object
+      description: A results property that contains a data property that contains an array of results.
+      properties:
+        data:
+          type: array
+          description: |
+            A data property that contains an array of results. Each entry in the array is a separate result.
+
+            The value of `op` attribute (if present) represents the kind of change that a row can describe in a changelog:
+
+            `0`: represents `INSERT` (`+I`), i.e. insertion operation;
+
+            `1`: represents `UPDATE_BEFORE` (`-U`), i.e. update operation with the previous content of the updated row.
+            This kind should occur together with `UPDATE_AFTER` for modelling an update that needs to retract
+            the previous row first. It is useful in cases of a non-idempotent update, i.e., an update of a row that is not
+            uniquely identifiable by a key;
+
+            `2`: represents `UPDATE_AFTER` (`+U`), i.e. update operation with new content of the updated row;
+            This kind CAN occur together with `UPDATE_BEFORE` for modelling an update that
+            needs to retract the previous row first or it describes an idempotent update, i.e., an
+            update of a row that is uniquely identifiable by a key;
+
+            `3`: represents `DELETE` (`-D`), i.e. deletion operation;
+
+            Defaults to `0`.
+
+          items: {}
+          example: [{"op": 0, "row": ["101", "Jay", [null, "abc"], [null, "456"], "1990-01-12 12:00.12", [[null, "Alice"], ["42", "Bob"]]]}]
+
+    sql.v1.StatementSpec:
+      type: object
+      description: The specs of the Statement
+      properties:
+        statement:
+          type: string
+          example: SELECT * FROM TABLE WHERE VALUE1 = VALUE2;
+          description: The raw SQL text statement.
+          x-immutable: true
+          maxLength: 131072  # 128KB * 1024bytes, assuming 1 char = 1 byte
+        properties:
+          type: object
+          example:
+            sql.current-catalog: my_environment
+            sql.current-database: my_kafka_cluster
+          description: A map (key-value pairs) of statement properties.
+          additionalProperties:
+            type: string
+          maximum: 8192
+        compute_pool_id:
+          type: string
+          example: fcp-00000
+          description: The id associated with the compute pool in context.
+          maxLength: 255
+        principal:
+          type: string
+          example: sa-abc123
+          description: The id of a principal this statement runs as.
+          maxLength: 255
+          x-immutable: true
+        authorized_principals:
+          type: array
+          example: [sa-abc123, sa-abc456]
+          description: The list of ids of the principals granting permissions to run this statement.
+          items:
+            type: string
+            maxLength: 255
+          x-immutable: true
+        stopped:
+          type: boolean
+          description: Indicates whether the statement should be stopped.
+          example: false
+      x-enable-listmeta: true
+      x-enable-objectmeta: true
+
+    ObjectMeta:
+      description: The metadata of the statement.
+      required:
+        - self
+      properties:
+        self:
+          description: Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL encodes the
+            service location, API version, and other particulars necessary to locate the resource at a point in time
+          type: string
+          format: uri
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements/my-statement
+        created_at:
+          type: string
+          format: date-time
+          example: '1996-03-19T01:02:03-04:05'
+          description: The date and time at which this object was created. It is represented in RFC3339 format and is in UTC.
+        updated_at:
+          type: string
+          format: date-time
+          example: '2023-03-31T00:00:00-00:00'
+          description: The date and time at which this object was last updated. It is represented in RFC3339 format and is
+            in UTC.
+        uid:
+          type: string
+          example: 12345678-1234-1234-1234-123456789012
+          description: A system generated globally unique identifier for this resource.
+        resource_version:
+          type: string
+          example: 'a23av'
+          description: A system generated string that uniquely identifies the version of this resource.
+      readOnly: true
+    StatementObjectMeta:
+      description: The metadata of the statement.
+      required:
+        - self
+      properties:
+        self:
+          description: Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL encodes the
+            service location, API version, and other particulars necessary to locate the resource at a point in time
+          type: string
+          format: uri
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements/my-statement
+        created_at:
+          type: string
+          format: date-time
+          example: '1996-03-19T01:02:03-04:05'
+          description: The date and time at which this object was created. It is represented in RFC3339 format and is in UTC.
+        updated_at:
+          type: string
+          format: date-time
+          example: '2023-03-31T00:00:00-00:00'
+          description: The date and time at which this object was last updated. It is represented in RFC3339 format and is
+            in UTC.
+        uid:
+          type: string
+          example: 12345678-1234-1234-1234-123456789012
+          description: A system generated globally unique identifier for this resource.
+        resource_version:
+          type: string
+          example: 'a23av'
+          description: A system generated string that uniquely identifies the version of this resource.
+        labels:
+          type: object
+          description: A map of key-value pairs that describe the resource.
+          additionalProperties:
+            type: string
+          example:
+            'user.confluent.io/hidden': 'true'
+      readOnly: true
+
+    ListMeta:
+      type: object
+      description: ListMeta describes metadata that resource collections may have
+      properties:
+        self:
+          description: Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL encodes the
+            service location, API version, and other particulars necessary to locate the resource at a point in time
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements
+        next:
+          description: A URL that can be followed to get the next batch of results.
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-abc123/statements?page_token=UvmDWOB1iwfAIBPj6EYb
+
+    ResultListMeta:
+      type: object
+      description: ListMeta describes metadata that resource collections may have
+      properties:
+        self:
+          description: Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL encodes the
+            service location, API version, and other particulars necessary to locate the resource at a point in time
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements
+        next:
+          description: A URL that can be followed to get the next batch of results.
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-abc123/statements?page_token=UvmDWOB1iwfAIBPj6EYb
+        created_at:
+          type: string
+          format: date-time
+          example: '2006-01-02T15:04:05-07:00'
+          readOnly: true
+          description: The date and time at which this object was created. It is represented in RFC3339 format and is in UTC.
+
+    sql.v1.ScalingStatus:
+      description: Scaling status for this statement.
+      type: object
+      properties:
+        scaling_state:
+          description: |
+            OK: The statement runs at the right scale.
+
+            PENDING_SCALE_DOWN: The statement requires less resources, and will be scaled down in the near future.
+
+            PENDING_SCALE_UP: The statement requires more resources, and will be scaled up in the near future.
+
+            POOL_EXHAUSTED: The statement requires more resources, but not enough resources are available.
+          example: OK
+          readOnly: true
+          type: string
+          x-extensible-enum:
+            - OK
+            - PENDING_SCALE_DOWN
+            - PENDING_SCALE_UP
+            - POOL_EXHAUSTED
+        last_updated:
+          description: The last time the scaling status was updated.
+          example: 1996-03-19T01:02:03-04:05
+          format: date-time
+          readOnly: true
+          type: string
+      readOnly: true
+
+    sql.v1.ResultSchema:
+      type: object
+      description: "The table columns of the results schema."
+      properties:
+        columns:
+          type: array
+          description: "The properties of each SQL column in the schema."
+          items:
+            $ref: '#/components/schemas/ColumnDetails'
+
+    ColumnDetails:
+      type: object
+      description: A column in the results schema.
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: The name of the SQL table column.
+          example: "Column_Name"
+        type:
+          allOf:
+            - $ref: '#/components/schemas/DataType'
+          description: JSON object in TableSchema format; describes the data returned by the results serving API.
+          example:
+            type: "CHAR"
+            nullable: true
+            length: 8
+
+    DataType:
+      type: object
+      properties:
+        type:
+          type: string
+          description: "The data type of the column."
+        nullable:
+          type: boolean
+          description: "Indicates whether values in this column can be null."
+        length:
+          type: integer
+          format: int32
+          description: "The length of the data type."
+        precision:
+          type: integer
+          format: int32
+          description: "The precision of the data type."
+        scale:
+          type: integer
+          format: int32
+          description: "The scale of the data type."
+        key_type:
+          allOf:
+            - $ref: '#/components/schemas/DataType'
+          description: "The type of the key in the data type (if applicable)."
+        value_type:
+          allOf:
+            - $ref: '#/components/schemas/DataType'
+          description: "The type of the value in the data type (if applicable)."
+        element_type:
+          allOf:
+            - $ref: '#/components/schemas/DataType'
+          description: "The type of the element in the data type (if applicable)."
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/RowFieldType'
+          description: "The fields of the element in the data type (if applicable)."
+        resolution:
+          type: string
+          description: "The resolution of the data type (if applicable)."
+        fractional_precision:
+          type: integer
+          format: int32
+          description: "The fractional precision of the data type (if applicable)."
+      required:
+        - type
+        - nullable
+
+    RowFieldType:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the field.
+        field_type:
+          allOf:
+            - $ref: '#/components/schemas/DataType'
+          description: The data type of the field.
+        description:
+          type: string
+          description: The description of the field.
+      required:
+        - name
+        - field_type
+
+    Failure:
+      type: object
+      description: Provides information about problems encountered while performing an operation.
+      required:
+        - errors
+      properties:
+        errors:
+          description: List of errors which caused this operation to fail
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+          uniqueItems: true
+    Error:
+      type: object
+      description: Describes a particular error encountered while performing an operation.
+      properties:
+        id:
+          description: A unique identifier for this particular occurrence of the problem.
+          type: string
+          maxLength: 255
+        status:
+          description: The HTTP status code applicable to this problem, expressed as a string value.
+          type: string
+        code:
+          description: An application-specific error code, expressed as a string value.
+          type: string
+        title:
+          description: A short, human-readable summary of the problem. It **SHOULD NOT** change from occurrence to occurrence
+            of the problem, except for purposes of localization.
+          type: string
+        detail:
+          description: A human-readable explanation specific to this occurrence of the problem.
+          type: string
+        source:
+          type: object
+          description: If this error was caused by a particular part of the API request, the source will point to the query
+            string parameter or request body property that caused it.
+          properties:
+            pointer:
+              description: A JSON Pointer [RFC6901] to the associated entity in the request document [e.g. "/spec" for a spec
+                object, or "/spec/title" for a specific field].
+              type: string
+            parameter:
+              description: A string indicating which query parameter caused the error.
+              type: string
+
+    # Exceptions API Components
+
+    ExceptionListMeta:
+      type: object
+      description: ListMeta describes metadata that resource collections may have
+      properties:
+        self:
+          description: Self is a Uniform Resource Locator (URL) at which an object can be addressed. This URL encodes the
+            service location, API version, and other particulars necessary to locate the resource at a point in time
+          type: string
+          example: https://flink.us-west1.aws.confluent.cloud/sql/v1/environments/env-123/statements/sql123/exceptions
+
+    sql.v1.StatementExceptionList:
+      type: object
+      description: |-
+       StatementExceptionList is a list of exceptions coming from FAILED or FAILING Statements created by
+       the SQL Statements API.
+      required:
+        - api_version
+        - kind
+        - metadata
+        - data
+      properties:
+        api_version:
+          type: string
+          enum:
+            - sql/v1
+          description: APIVersion defines the schema version of this representation of a resource.
+          example: sql/v1
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - StatementExceptionList
+        metadata:
+          allOf:
+            - $ref: '#/components/schemas/ExceptionListMeta'
+        data:
+          type: array
+          description: A data property that contains an array of resource items. Each entry in the array is a separate resource.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/sql.v1.StatementException'
+
+    sql.v1.StatementException:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: Kind defines the object this REST resource represents.
+          enum:
+            - StatementException
+        name:
+          type: string
+          description: Name of the SQL statement exception.
+          example: java.lang.RuntimeException
+          readOnly: true
+        message:
+          type: string
+          description: Error message of the statement exception.
+          example: "java.lang.RuntimeException: An error occurred"
+          readOnly: true
+        timestamp:
+          type: string
+          format: date-time
+          example: '2023-03-31T00:00:00-00:00'
+          description: The date and time at which the exception occurred. It is represented in RFC3339 format and is
+            in UTC.
+          readOnly: true
+      x-enable-objectmeta: true
+    PatchRequest:
+      type: array
+      description: PatchRequest represent a json-patch request to be applied to the Statement. See https://tools.ietf.org/html/rfc6902
+      items:
+        oneOf:
+          - $ref: '#/components/schemas/JsonPatchRequestAddReplace'
+          - $ref: '#/components/schemas/JsonPatchRequestRemove'
+          - $ref: '#/components/schemas/JsonPatchRequestMoveCopy'
+    JsonPatchRequestAddReplace:
+      type: object
+      description: This option is used to add or replace a value for a field
+      additionalProperties: false
+      required:
+        - value
+        - op
+        - path
+      properties:
+        path:
+          description: A JSON Pointer path.
+          type: string
+        value:
+          description: The value to add, replace or test.
+        op:
+          description: The operation to perform.
+          type: string
+          enum:
+            - ADD
+            - REPLACE
+            - TEST
+    JsonPatchRequestRemove:
+      type: object
+      description: This option is used to remove a field
+      additionalProperties: false
+      required:
+        - op
+        - path
+      properties:
+        path:
+          description: A JSON Pointer path.
+          type: string
+        op:
+          description: The operation to perform.
+          type: string
+          enum:
+            - REMOVE
+    JsonPatchRequestMoveCopy:
+      type: object
+      description: This option is used to move or copy a field
+      additionalProperties: false
+      required:
+        - from
+        - op
+        - path
+      properties:
+        path:
+          description: A JSON Pointer path.
+          type: string
+        op:
+          description: The operation to perform.
+          type: string
+          enum:
+            - MOVE
+            - COPY
+        from:
+          description: A JSON Pointer path.
+          type: string
+
+  securitySchemes:
+    resource-api-key:
+      type: http
+      scheme: basic
+      description: |
+        Authenticate with resource-specific API Keys using HTTP Basic Auth. Treat the resource-specific API Key ID
+        as the username and resource-specific API Key Secret as the password.
+  responses:
+    BadRequestError:
+      description: Bad Request
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '400'
+                code: invalid_filter
+                title: Invalid Filter
+                detail: The 'delorean' resource can't be filtered by 'num_doors'
+                source:
+                  parameter: num_doors
+    UnauthenticatedError:
+      x-summary: Unauthorized
+      description: The request lacks valid authentication credentials for this resource.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+        WWW-Authenticate:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+          example: Basic error="invalid_key", error_description="The API Key is invalid"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '401'
+                code: user_unauthenticated
+                title: Authentication Required
+                detail: Valid authentication credentials must be provided
+    OverQuotaError:
+      x-summary: Over Quota
+      description: The request would exceed one or more quotas.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '402'
+                code: quota_exceeded
+                title: Kafka Clusters Per Org Quota Exceeded
+                detail: 'The request would exceed the quota: kafka_clusters_per_environment'
+    UnauthorizedError:
+      x-summary: Forbidden
+      description: The access credentials were considered insufficient to grant access
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '403'
+                code: user_unauthorized
+                title: User Access Unauthorized
+                detail: The user 'mcfly' is not allowed to access the 'delorean' resource without the 'plutonium' role.
+    ConflictError:
+      x-summary: Conflict
+      description: The request is in conflict with the current server state
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+        Location:
+          schema:
+            type: string
+            format: uri
+            example: https://api.confluent.cloud/{object}/{id}
+          description: Resource URI of conflicting resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '409'
+                code: resource_already_exists
+                title: Resource Already exists
+                detail: The entitlement '91e3e86f-fca6-4f14-98f5-a48e64113ce2' already exists.
+    NotFoundError:
+      description: Not Found
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '404'
+                title: Not Found
+    ValidationError:
+      description: Validation Failed
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - status: '422'
+                code: invalid_configuration
+                id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                title: Validation Failed
+                detail: "The property '/cluster/storage_size' of type string did not match the following type: integer"
+                source:
+                  pointer: /cluster/storage_size
+    RateLimitError:
+      description: Rate Limit Exceeded
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+    DefaultSystemError:
+      description: Oops, something went wrong!
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: The unique identifier for the API request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Failure'
+          example:
+            errors:
+              - id: ed42afdc-f0d5-4c0d-b428-9fc6ed6e279d
+                status: '500'
+                code: out_of_gas
+                title: DeLorean Out Of Gas
+                detail: The DeLorean has run out of gas, but Doc Brown will fill 'er up for you asap
+tags:
+  - name: Statements (sql/v1)
+    description: |-
+      [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+      `Statement` represents a core resource used to model SQL statements for execution.
+      A statement generalizes DDL, DML, DQL, etc., but doesn’t attempt to handle session
+      management or any higher-level functionality.
+      The API allows you to list, create, read, and delete your statements.
+      ## The Statements Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Statement" />
+  - name: Statement Results (sql/v1)
+    description: |-
+      [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+      `StatementResult` represents a result of a `Statement` resource.
+      The API allows you to read your statement's results.
+      ## The Statement Results Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.StatementResult" />
+  - name: Statement Exceptions (sql/v1)
+    description: |-
+      [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+      `StatementException` represents an exception of a `Statement` resource.
+      The API allows you to read your statement's exceptions.
+      ## The Statement Exceptions Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.StatementException" />
+  - name: Connections (sql/v1)
+    description: |-
+      [![General Availability](https://img.shields.io/badge/Lifecycle%20Stage-General%20Availability-%2345c6e8)](#section/Versioning/API-Lifecycle-Policy)
+
+      `Connection` represents a core resource used to model SQL connections for execution.
+      A connection generalizes DDL, DML, DQL, etc., but doesn’t attempt to handle session
+      management or any higher-level functionality.
+      The API allows you to list, create, read, and delete your connections.
+      ## The Connections Model
+      <SchemaDefinition schemaRef="#/components/schemas/sql.v1.Connection" />
