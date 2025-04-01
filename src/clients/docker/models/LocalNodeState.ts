@@ -15,16 +15,16 @@
 /**
  * Current local status of this node.
  * @export
+ * @enum {string}
  */
-export const LocalNodeState = {
-  Empty: "",
-  Inactive: "inactive",
-  Pending: "pending",
-  Active: "active",
-  Error: "error",
-  Locked: "locked",
-} as const;
-export type LocalNodeState = (typeof LocalNodeState)[keyof typeof LocalNodeState];
+export enum LocalNodeState {
+  Empty = "",
+  Inactive = "inactive",
+  Pending = "pending",
+  Active = "active",
+  Error = "error",
+  Locked = "locked",
+}
 
 export function instanceOfLocalNodeState(value: any): boolean {
   for (const key in LocalNodeState) {

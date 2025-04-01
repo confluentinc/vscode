@@ -65,21 +65,18 @@ export interface ScaffoldV1TemplateCollection {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ScaffoldV1TemplateCollectionApiVersionEnum = {
-  ScaffoldV1: "scaffold/v1",
-} as const;
-export type ScaffoldV1TemplateCollectionApiVersionEnum =
-  (typeof ScaffoldV1TemplateCollectionApiVersionEnum)[keyof typeof ScaffoldV1TemplateCollectionApiVersionEnum];
-
+export enum ScaffoldV1TemplateCollectionApiVersionEnum {
+  ScaffoldV1 = "scaffold/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ScaffoldV1TemplateCollectionKindEnum = {
-  TemplateCollection: "TemplateCollection",
-} as const;
-export type ScaffoldV1TemplateCollectionKindEnum =
-  (typeof ScaffoldV1TemplateCollectionKindEnum)[keyof typeof ScaffoldV1TemplateCollectionKindEnum];
+export enum ScaffoldV1TemplateCollectionKindEnum {
+  TemplateCollection = "TemplateCollection",
+}
 
 /**
  * Check if a given object implements the ScaffoldV1TemplateCollection interface.

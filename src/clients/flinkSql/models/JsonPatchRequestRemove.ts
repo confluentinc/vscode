@@ -35,12 +35,11 @@ export interface JsonPatchRequestRemove {
 
 /**
  * @export
+ * @enum {string}
  */
-export const JsonPatchRequestRemoveOpEnum = {
-  Remove: "REMOVE",
-} as const;
-export type JsonPatchRequestRemoveOpEnum =
-  (typeof JsonPatchRequestRemoveOpEnum)[keyof typeof JsonPatchRequestRemoveOpEnum];
+export enum JsonPatchRequestRemoveOpEnum {
+  Remove = "REMOVE",
+}
 
 /**
  * Check if a given object implements the JsonPatchRequestRemove interface.

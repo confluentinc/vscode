@@ -123,21 +123,18 @@ export interface ArtifactV1FlinkArtifactListDataInner {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ArtifactV1FlinkArtifactListDataInnerApiVersionEnum = {
-  ArtifactV1: "artifact/v1",
-} as const;
-export type ArtifactV1FlinkArtifactListDataInnerApiVersionEnum =
-  (typeof ArtifactV1FlinkArtifactListDataInnerApiVersionEnum)[keyof typeof ArtifactV1FlinkArtifactListDataInnerApiVersionEnum];
-
+export enum ArtifactV1FlinkArtifactListDataInnerApiVersionEnum {
+  ArtifactV1 = "artifact/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ArtifactV1FlinkArtifactListDataInnerKindEnum = {
-  FlinkArtifact: "FlinkArtifact",
-} as const;
-export type ArtifactV1FlinkArtifactListDataInnerKindEnum =
-  (typeof ArtifactV1FlinkArtifactListDataInnerKindEnum)[keyof typeof ArtifactV1FlinkArtifactListDataInnerKindEnum];
+export enum ArtifactV1FlinkArtifactListDataInnerKindEnum {
+  FlinkArtifact = "FlinkArtifact",
+}
 
 /**
  * Check if a given object implements the ArtifactV1FlinkArtifactListDataInner interface.

@@ -49,15 +49,14 @@ export interface ClusterVolumePublishStatusInner {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ClusterVolumePublishStatusInnerStateEnum = {
-  PendingPublish: "pending-publish",
-  Published: "published",
-  PendingNodeUnpublish: "pending-node-unpublish",
-  PendingControllerUnpublish: "pending-controller-unpublish",
-} as const;
-export type ClusterVolumePublishStatusInnerStateEnum =
-  (typeof ClusterVolumePublishStatusInnerStateEnum)[keyof typeof ClusterVolumePublishStatusInnerStateEnum];
+export enum ClusterVolumePublishStatusInnerStateEnum {
+  PendingPublish = "pending-publish",
+  Published = "published",
+  PendingNodeUnpublish = "pending-node-unpublish",
+  PendingControllerUnpublish = "pending-controller-unpublish",
+}
 
 /**
  * Check if a given object implements the ClusterVolumePublishStatusInner interface.

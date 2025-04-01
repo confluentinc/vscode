@@ -1586,11 +1586,10 @@ export class ContainerApi extends runtime.BaseAPI {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ContainerWaitConditionEnum = {
-  NotRunning: "not-running",
-  NextExit: "next-exit",
-  Removed: "removed",
-} as const;
-export type ContainerWaitConditionEnum =
-  (typeof ContainerWaitConditionEnum)[keyof typeof ContainerWaitConditionEnum];
+export enum ContainerWaitConditionEnum {
+  NotRunning = "not-running",
+  NextExit = "next-exit",
+  Removed = "removed",
+}

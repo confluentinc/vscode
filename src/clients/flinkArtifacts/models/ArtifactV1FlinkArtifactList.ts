@@ -66,21 +66,18 @@ export interface ArtifactV1FlinkArtifactList {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ArtifactV1FlinkArtifactListApiVersionEnum = {
-  ArtifactV1: "artifact/v1",
-} as const;
-export type ArtifactV1FlinkArtifactListApiVersionEnum =
-  (typeof ArtifactV1FlinkArtifactListApiVersionEnum)[keyof typeof ArtifactV1FlinkArtifactListApiVersionEnum];
-
+export enum ArtifactV1FlinkArtifactListApiVersionEnum {
+  ArtifactV1 = "artifact/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ArtifactV1FlinkArtifactListKindEnum = {
-  FlinkArtifactList: "FlinkArtifactList",
-} as const;
-export type ArtifactV1FlinkArtifactListKindEnum =
-  (typeof ArtifactV1FlinkArtifactListKindEnum)[keyof typeof ArtifactV1FlinkArtifactListKindEnum];
+export enum ArtifactV1FlinkArtifactListKindEnum {
+  FlinkArtifactList = "FlinkArtifactList",
+}
 
 /**
  * Check if a given object implements the ArtifactV1FlinkArtifactList interface.

@@ -15,13 +15,13 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const TimestampType = {
-  NoTimestampType: "NO_TIMESTAMP_TYPE",
-  CreateTime: "CREATE_TIME",
-  LogAppendTime: "LOG_APPEND_TIME",
-} as const;
-export type TimestampType = (typeof TimestampType)[keyof typeof TimestampType];
+export enum TimestampType {
+  NoTimestampType = "NO_TIMESTAMP_TYPE",
+  CreateTime = "CREATE_TIME",
+  LogAppendTime = "LOG_APPEND_TIME",
+}
 
 export function instanceOfTimestampType(value: any): boolean {
   for (const key in TimestampType) {
