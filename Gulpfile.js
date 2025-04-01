@@ -777,6 +777,10 @@ export async function apigen() {
       "src/clients/scaffoldingService",
     ],
     [
+      "src/clients/sidecar-openapi-specs/flink-artifacts.openapi.yaml",
+      "src/clients/flinkArtifacts",
+    ],
+    [
       "src/clients/sidecar-openapi-specs/flink-compute-pool.openapi.yaml",
       "src/clients/flinkComputePool",
     ],
