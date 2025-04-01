@@ -186,28 +186,32 @@ describe("sidecarHandle websocket tests", () => {
 });
 
 describe("sidecarHandle Flink API method tests", () => {
+  let handle: sidecar.SidecarHandle;
+
   before(async () => {
     await getTestExtensionContext();
+    handle = await sidecar.getSidecar();
   });
 
-  it("constructFlinkClientHeaders() should return headers with correct values", async () => {
-    const handle = await sidecar.getSidecar();
-
-    const headers = handle.constructFlinkClientHeaders(TEST_CCLOUD_FLINK_COMPUTE_POOL);
+  it("constructFlinkDataPlaneClientHeaders() should return headers with correct values", async () => {
+    const headers = handle.constructFlinkDataPlaneClientHeaders(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     assert.strictEqual(headers["x-connection-id"], TEST_CCLOUD_FLINK_COMPUTE_POOL.connectionId);
     assert.strictEqual(headers["x-ccloud-provider"], TEST_CCLOUD_FLINK_COMPUTE_POOL.provider);
     assert.strictEqual(headers["x-ccloud-region"], TEST_CCLOUD_FLINK_COMPUTE_POOL.region);
   });
 
-  it("getFlinkComputePoolsApi() should return a FlinkComputePoolsApi instance", async () => {
-    const handle = await sidecar.getSidecar();
-    const api = handle.getFlinkComputePoolsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
-    assert.strictEqual(api.constructor.name, "ComputePoolsFcpmV2Api");
-  });
-
-  it("getFlinkSqlStatementsApi() should return a FlinkSqlStatementsApi instance", async () => {
-    const handle = await sidecar.getSidecar();
+  it("getFlinkSqlStatementsApi() should return a FlinkSqlStatementsApi instance given a sample flink compute pool", async () => {
     const api = handle.getFlinkSqlStatementsApi(TEST_CCLOUD_FLINK_COMPUTE_POOL);
     assert.strictEqual(api.constructor.name, "StatementsSqlV1Api");
+  });
+
+  it("getFlinkArtifactsApi() should return a FlinkArtifactsApi instance given no args.", async () => {
+    const api = handle.getFlinkArtifactsApi();
+    assert.strictEqual(api.constructor.name, "FlinkArtifactsArtifactV1Api");
+  });
+
+  it("getFlinkComputePoolsApi() should return a FlinkComputePoolsApi instance given no args.", async () => {
+    const api = handle.getFlinkComputePoolsApi();
+    assert.strictEqual(api.constructor.name, "ComputePoolsFcpmV2Api");
   });
 });

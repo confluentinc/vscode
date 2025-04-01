@@ -8,6 +8,10 @@ import {
   Configuration as FlinkComputePoolsConfiguration,
 } from "../clients/flinkComputePool";
 
+import {
+  FlinkArtifactsArtifactV1Api,
+  Configuration as FlinkArtifactsConfiguration,
+} from "../clients/flinkArtifacts";
 import { Configuration as FlinkSqlConfiguration, StatementsSqlV1Api } from "../clients/flinkSql";
 import {
   ConfigsV3Api,
@@ -41,6 +45,7 @@ import {
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { ConnectionId } from "../models/resource";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_PROVIDER_HEADER,
@@ -177,7 +182,7 @@ export class SidecarHandle {
    * Creates and returns a (Sidecar REST OpenAPI spec) {@link KafkaConsumeResourceApi} client instance
    * with a preconfigured {@link SidecarRestConfiguration}.
    */
-  public getKafkaConsumeApi(connectionId: string) {
+  public getKafkaConsumeApi(connectionId: ConnectionId) {
     const configuration = new SidecarRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -236,7 +241,7 @@ export class SidecarHandle {
    * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link TopicV3Api} client instance with a
    * preconfigured {@link KafkaRestConfiguration}.
    */
-  public getTopicV3Api(clusterId: string, connectionId: string): TopicV3Api {
+  public getTopicV3Api(clusterId: string, connectionId: ConnectionId): TopicV3Api {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -248,7 +253,7 @@ export class SidecarHandle {
     return new TopicV3Api(config);
   }
 
-  public getConfigsV3Api(clusterId: string, connectionId: string): ConfigsV3Api {
+  public getConfigsV3Api(clusterId: string, connectionId: ConnectionId): ConfigsV3Api {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -264,7 +269,7 @@ export class SidecarHandle {
    * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link PartitionV3Api} client instance with a
    * preconfigured {@link KafkaRestConfiguration}.
    */
-  public getPartitionV3Api(clusterId: string, connectionId: string): PartitionV3Api {
+  public getPartitionV3Api(clusterId: string, connectionId: ConnectionId): PartitionV3Api {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -280,7 +285,7 @@ export class SidecarHandle {
    * Creates and returns a (Kafka v3 REST OpenAPI spec) {@link RecordsV3Api} client instance with a
    * preconfigured {@link KafkaRestConfiguration}.
    */
-  public getRecordsV3Api(clusterId: string, connectionId: string): RecordsV3Api {
+  public getRecordsV3Api(clusterId: string, connectionId: ConnectionId): RecordsV3Api {
     const config = new KafkaRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -300,7 +305,7 @@ export class SidecarHandle {
    * {@link getRecordsV3Api}.
    */
   public getConfluentCloudProduceRecordsResourceApi(
-    connectionId: string,
+    connectionId: ConnectionId,
   ): ConfluentCloudProduceRecordsResourceApi {
     const configuration = new SidecarRestConfiguration({
       ...this.defaultClientConfigParams,
@@ -318,7 +323,7 @@ export class SidecarHandle {
    * Creates and returns a (Schema Registry REST OpenAPI spec) {@link SchemasV1Api} client instance
    * with a preconfigured {@link SchemaRegistryRestConfiguration}.
    */
-  public getSchemasV1Api(clusterId: string, connectionId: string): SchemasV1Api {
+  public getSchemasV1Api(clusterId: string, connectionId: ConnectionId): SchemasV1Api {
     const config = new SchemaRegistryRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -334,7 +339,7 @@ export class SidecarHandle {
    * Creates and returns a (Schema Registry REST OpenAPI spec) {@link SubjectsV1Api} client instance
    * with a preconfigured {@link SchemaRegistryRestConfiguration}.
    */
-  public getSubjectsV1Api(clusterId: string, connectionId: string): SubjectsV1Api {
+  public getSubjectsV1Api(clusterId: string, connectionId: ConnectionId): SubjectsV1Api {
     const config = new SchemaRegistryRestConfiguration({
       ...this.defaultClientConfigParams,
       headers: {
@@ -346,11 +351,24 @@ export class SidecarHandle {
     return new SubjectsV1Api(config);
   }
 
+  /** Create and returns a (Flink Artifacts REST OpenAPI spec) {@link FlinkArtifactsArtifactV1Api} client instance */
+  public getFlinkArtifactsApi(): FlinkArtifactsArtifactV1Api {
+    const config = new FlinkArtifactsConfiguration({
+      ...this.defaultClientConfigParams,
+      headers: {
+        [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
+      },
+    });
+    return new FlinkArtifactsArtifactV1Api(config);
+  }
+
   /** Create and returns a (Flink Compute Pool REST OpenAPI spec) {@link ComputePoolsFcpmV2Api} client instance */
-  public getFlinkComputePoolsApi(computePool: CCloudFlinkComputePool): ComputePoolsFcpmV2Api {
+  public getFlinkComputePoolsApi(): ComputePoolsFcpmV2Api {
     const config = new FlinkComputePoolsConfiguration({
       ...this.defaultClientConfigParams,
-      headers: this.constructFlinkClientHeaders(computePool),
+      headers: {
+        [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
+      },
     });
     return new ComputePoolsFcpmV2Api(config);
   }
@@ -359,20 +377,13 @@ export class SidecarHandle {
   public getFlinkSqlStatementsApi(computePool: CCloudFlinkComputePool): StatementsSqlV1Api {
     const config = new FlinkSqlConfiguration({
       ...this.defaultClientConfigParams,
-      headers: this.constructFlinkClientHeaders(computePool),
+      headers: this.constructFlinkDataPlaneClientHeaders(computePool),
     });
     return new StatementsSqlV1Api(config);
   }
 
   /** Convert a CCloudFlinkComputePool to HTTPHeaders for Flink API sidecar client creation. */
-  public constructFlinkClientHeaders(computePool: CCloudFlinkComputePool): HTTPHeaders {
-    // We only support ccloud flink ...
-    if (computePool.connectionId !== CCLOUD_CONNECTION_ID) {
-      throw new Error(
-        `Expected connectionId to be '${CCLOUD_CONNECTION_ID}', got '${computePool.connectionId}'`,
-      );
-    }
-
+  public constructFlinkDataPlaneClientHeaders(computePool: CCloudFlinkComputePool): HTTPHeaders {
     return {
       ...this.defaultClientConfigParams.headers,
       [CCLOUD_PROVIDER_HEADER]: computePool.provider,

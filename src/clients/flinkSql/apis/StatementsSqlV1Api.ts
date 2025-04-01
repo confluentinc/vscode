@@ -12,9 +12,11 @@
  * Do not edit the class manually.
  */
 
+import * as runtime from "../runtime";
 import type {
   CreateSqlv1Statement201Response,
   CreateSqlv1StatementRequest,
+  Failure,
   GetSqlv1Statement200Response,
   PatchRequestInner,
   SqlV1StatementList,
@@ -22,13 +24,20 @@ import type {
 } from "../models/index";
 import {
   CreateSqlv1Statement201ResponseFromJSON,
+  CreateSqlv1Statement201ResponseToJSON,
+  CreateSqlv1StatementRequestFromJSON,
   CreateSqlv1StatementRequestToJSON,
+  FailureFromJSON,
+  FailureToJSON,
   GetSqlv1Statement200ResponseFromJSON,
+  GetSqlv1Statement200ResponseToJSON,
+  PatchRequestInnerFromJSON,
   PatchRequestInnerToJSON,
   SqlV1StatementListFromJSON,
+  SqlV1StatementListToJSON,
+  UpdateSqlv1StatementRequestFromJSON,
   UpdateSqlv1StatementRequestToJSON,
 } from "../models/index";
-import * as runtime from "../runtime";
 
 export interface CreateSqlv1StatementOperationRequest {
   organization_id: string;

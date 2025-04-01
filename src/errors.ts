@@ -1,5 +1,6 @@
 import { commands, window } from "vscode";
 import { ResponseError as DockerResponseError } from "./clients/docker";
+import { ResponseError as FlinkArtifactsResponseError } from "./clients/flinkArtifacts";
 import { ResponseError as FlinkComputePoolResponseError } from "./clients/flinkComputePool";
 import { ResponseError as FlinkSqlResponseError } from "./clients/flinkSql";
 import { ResponseError as KafkaResponseError } from "./clients/kafkaRest";
@@ -24,6 +25,7 @@ export type AnyResponseError =
   | SidecarResponseError
   | KafkaResponseError
   | SchemaRegistryResponseError
+  | FlinkArtifactsResponseError
   | FlinkComputePoolResponseError
   | FlinkSqlResponseError
   | ScaffoldingServiceResponseError
@@ -34,6 +36,7 @@ export function isResponseError(error: unknown): error is AnyResponseError {
     error instanceof SidecarResponseError ||
     error instanceof KafkaResponseError ||
     error instanceof SchemaRegistryResponseError ||
+    error instanceof FlinkArtifactsResponseError ||
     error instanceof FlinkComputePoolResponseError ||
     error instanceof FlinkSqlResponseError ||
     error instanceof ScaffoldingServiceResponseError ||
