@@ -67,21 +67,18 @@ export interface SqlV1StatementList {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1StatementListApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type SqlV1StatementListApiVersionEnum =
-  (typeof SqlV1StatementListApiVersionEnum)[keyof typeof SqlV1StatementListApiVersionEnum];
-
+export enum SqlV1StatementListApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1StatementListKindEnum = {
-  StatementList: "StatementList",
-} as const;
-export type SqlV1StatementListKindEnum =
-  (typeof SqlV1StatementListKindEnum)[keyof typeof SqlV1StatementListKindEnum];
+export enum SqlV1StatementListKindEnum {
+  StatementList = "StatementList",
+}
 
 /**
  * Check if a given object implements the SqlV1StatementList interface.

@@ -81,21 +81,18 @@ export interface CreateFcpmV2ComputePoolRequest {
 
 /**
  * @export
+ * @enum {string}
  */
-export const CreateFcpmV2ComputePoolRequestApiVersionEnum = {
-  FcpmV2: "fcpm/v2",
-} as const;
-export type CreateFcpmV2ComputePoolRequestApiVersionEnum =
-  (typeof CreateFcpmV2ComputePoolRequestApiVersionEnum)[keyof typeof CreateFcpmV2ComputePoolRequestApiVersionEnum];
-
+export enum CreateFcpmV2ComputePoolRequestApiVersionEnum {
+  FcpmV2 = "fcpm/v2",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const CreateFcpmV2ComputePoolRequestKindEnum = {
-  ComputePool: "ComputePool",
-} as const;
-export type CreateFcpmV2ComputePoolRequestKindEnum =
-  (typeof CreateFcpmV2ComputePoolRequestKindEnum)[keyof typeof CreateFcpmV2ComputePoolRequestKindEnum];
+export enum CreateFcpmV2ComputePoolRequestKindEnum {
+  ComputePool = "ComputePool",
+}
 
 /**
  * Check if a given object implements the CreateFcpmV2ComputePoolRequest interface.

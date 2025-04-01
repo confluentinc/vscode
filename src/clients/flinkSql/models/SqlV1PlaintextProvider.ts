@@ -46,12 +46,11 @@ export interface SqlV1PlaintextProvider {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1PlaintextProviderKindEnum = {
-  PlaintextProvider: "PlaintextProvider",
-} as const;
-export type SqlV1PlaintextProviderKindEnum =
-  (typeof SqlV1PlaintextProviderKindEnum)[keyof typeof SqlV1PlaintextProviderKindEnum];
+export enum SqlV1PlaintextProviderKindEnum {
+  PlaintextProvider = "PlaintextProvider",
+}
 
 /**
  * Check if a given object implements the SqlV1PlaintextProvider interface.

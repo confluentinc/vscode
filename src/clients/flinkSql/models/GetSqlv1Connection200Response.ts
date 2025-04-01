@@ -74,21 +74,18 @@ export interface GetSqlv1Connection200Response {
 
 /**
  * @export
+ * @enum {string}
  */
-export const GetSqlv1Connection200ResponseApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type GetSqlv1Connection200ResponseApiVersionEnum =
-  (typeof GetSqlv1Connection200ResponseApiVersionEnum)[keyof typeof GetSqlv1Connection200ResponseApiVersionEnum];
-
+export enum GetSqlv1Connection200ResponseApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetSqlv1Connection200ResponseKindEnum = {
-  Connection: "Connection",
-} as const;
-export type GetSqlv1Connection200ResponseKindEnum =
-  (typeof GetSqlv1Connection200ResponseKindEnum)[keyof typeof GetSqlv1Connection200ResponseKindEnum];
+export enum GetSqlv1Connection200ResponseKindEnum {
+  Connection = "Connection",
+}
 
 /**
  * Check if a given object implements the GetSqlv1Connection200Response interface.

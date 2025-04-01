@@ -47,12 +47,11 @@ export interface SqlV1StatementException {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1StatementExceptionKindEnum = {
-  StatementException: "StatementException",
-} as const;
-export type SqlV1StatementExceptionKindEnum =
-  (typeof SqlV1StatementExceptionKindEnum)[keyof typeof SqlV1StatementExceptionKindEnum];
+export enum SqlV1StatementExceptionKindEnum {
+  StatementException = "StatementException",
+}
 
 /**
  * Check if a given object implements the SqlV1StatementException interface.

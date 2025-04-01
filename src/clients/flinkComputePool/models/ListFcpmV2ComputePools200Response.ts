@@ -62,21 +62,18 @@ export interface ListFcpmV2ComputePools200Response {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ListFcpmV2ComputePools200ResponseApiVersionEnum = {
-  FcpmV2: "fcpm/v2",
-} as const;
-export type ListFcpmV2ComputePools200ResponseApiVersionEnum =
-  (typeof ListFcpmV2ComputePools200ResponseApiVersionEnum)[keyof typeof ListFcpmV2ComputePools200ResponseApiVersionEnum];
-
+export enum ListFcpmV2ComputePools200ResponseApiVersionEnum {
+  FcpmV2 = "fcpm/v2",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ListFcpmV2ComputePools200ResponseKindEnum = {
-  ComputePoolList: "ComputePoolList",
-} as const;
-export type ListFcpmV2ComputePools200ResponseKindEnum =
-  (typeof ListFcpmV2ComputePools200ResponseKindEnum)[keyof typeof ListFcpmV2ComputePools200ResponseKindEnum];
+export enum ListFcpmV2ComputePools200ResponseKindEnum {
+  ComputePoolList = "ComputePoolList",
+}
 
 /**
  * Check if a given object implements the ListFcpmV2ComputePools200Response interface.
