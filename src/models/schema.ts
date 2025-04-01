@@ -9,6 +9,7 @@ import {
   EnvironmentId,
   IResourceBase,
   isCCloud,
+  ISchemaRegistryResource,
   ISearchable,
 } from "./resource";
 
@@ -40,13 +41,15 @@ export function getLanguageTypes(schemaType: SchemaType): string[] {
  *
  * Depending on the constructor path, may also carry an array of Schema instances.
  */
-export class Subject implements IResourceBase, ISearchable {
+export class Subject implements IResourceBase, ISearchable, ISchemaRegistryResource {
   name!: string;
 
   connectionId!: ConnectionId;
   environmentId!: EnvironmentId;
+  /** The id of the schema registry the subject was fetched from */
   schemaRegistryId!: string;
 
+  /** Unique conglomeration of the connection id, SR id, and the subject name. */
   id!: string;
 
   /** Will be not-null only when topics view controller's getChildren() called on a topic. */

@@ -1,5 +1,5 @@
 import { Mutex } from "async-mutex";
-import { StorageManager, getStorageManager } from ".";
+import { getStorageManager, StorageManager } from ".";
 import { AuthCallbackEvent } from "../authn/types";
 import {
   ConnectionSpec,
@@ -12,9 +12,9 @@ import { FormConnectionType } from "../directConnections/types";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster, KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
-import { ConnectionId, isCCloud, isLocal } from "../models/resource";
+import { ConnectionId, isCCloud, ISchemaRegistryResource, isLocal } from "../models/resource";
 import { Schema, Subject } from "../models/schema";
-import { CCloudSchemaRegistry, SchemaRegistry } from "../models/schemaRegistry";
+import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { SecretStorageKeys, UriMetadataKeys, WorkspaceStorageKeys } from "./constants";
 
@@ -412,19 +412,19 @@ export class ResourceManager {
    * @param subjects
    */
   async setSubjects(
-    schemaRegistry: SchemaRegistry,
+    schemaRegistryKeyable: ISchemaRegistryResource,
     subjects: Subject[] | undefined,
   ): Promise<void> {
-    const key = this.subjectKeyForSchemaRegistry(schemaRegistry);
+    const workspaceStorageKey = this.subjectKeyForSchemaRegistry(schemaRegistryKeyable);
 
     logger.debug(
-      `Setting ${subjects?.length !== undefined ? subjects.length : "undefined"} subjects for schema registry ${schemaRegistry.name} (${key})`,
+      `Setting ${subjects?.length !== undefined ? subjects.length : "undefined"} subjects for schema registry ${schemaRegistryKeyable.schemaRegistryId} (${workspaceStorageKey})`,
     );
 
-    await this.runWithMutex(key, async () => {
+    await this.runWithMutex(workspaceStorageKey, async () => {
       // Get the JSON-stringified map from storage
       const subjectsByRegistryString: string | undefined =
-        await this.storage.getWorkspaceState<string>(key);
+        await this.storage.getWorkspaceState<string>(workspaceStorageKey);
 
       const subjectsStringsByRegistryID: SubjectStringCache = subjectsByRegistryString
         ? stringToMap(subjectsByRegistryString)
@@ -436,12 +436,15 @@ export class ResourceManager {
         ? subjects.map((subject) => subject.name)
         : undefined;
 
-      // Set the new subjects for the schema registry
-      subjectsStringsByRegistryID.set(schemaRegistry.id, subjectsAsStrings);
+      // Set the new subjects for this specific schema registry within per-connection-type stored map.
+      subjectsStringsByRegistryID.set(schemaRegistryKeyable.schemaRegistryId, subjectsAsStrings);
 
       // Now save the updated map of registry id -> subject list into workspace storage
       // (JSON-stringified) according to the connection type's storage key.
-      await this.storage.setWorkspaceState(key, mapToString(subjectsStringsByRegistryID));
+      await this.storage.setWorkspaceState(
+        workspaceStorageKey,
+        mapToString(subjectsStringsByRegistryID),
+      );
     });
   }
 
@@ -454,8 +457,10 @@ export class ResourceManager {
    * @returns An array of {@link Subject} instances, or undefined if no subjects are cached. The array may be empty if
    * the schema registry was last seen with zero subjects.
    */
-  async getSubjects(schemaRegistry: SchemaRegistry): Promise<Subject[] | undefined> {
-    const key = this.subjectKeyForSchemaRegistry(schemaRegistry);
+  async getSubjects(
+    schemaRegistryKeyable: ISchemaRegistryResource,
+  ): Promise<Subject[] | undefined> {
+    const key = this.subjectKeyForSchemaRegistry(schemaRegistryKeyable);
 
     let subjectsByRegistryIDString: string | undefined;
 
@@ -473,7 +478,7 @@ export class ResourceManager {
     // Will either be undefined or an array of plain strings since
     // just deserialized from storage.
     const vanillaJSONSubjects: string[] | undefined = subjectStringsByRegistryID.get(
-      schemaRegistry.id,
+      schemaRegistryKeyable.schemaRegistryId,
     );
 
     if (vanillaJSONSubjects === undefined) {
@@ -481,7 +486,7 @@ export class ResourceManager {
     }
 
     logger.debug(
-      `Found ${vanillaJSONSubjects.length} subjects for schema registry ${schemaRegistry.name}`,
+      `Found ${vanillaJSONSubjects.length} subjects for schema registry ${schemaRegistryKeyable.schemaRegistryId}`,
     );
 
     // Promote each string member to be an instance of Subject, return.
@@ -492,9 +497,9 @@ export class ResourceManager {
       (subject: string) =>
         new Subject(
           subject,
-          schemaRegistry.connectionId,
-          schemaRegistry.environmentId,
-          schemaRegistry.id,
+          schemaRegistryKeyable.connectionId,
+          schemaRegistryKeyable.environmentId,
+          schemaRegistryKeyable.schemaRegistryId,
           null, // no contained schemas cached here.
         ),
     );
@@ -521,8 +526,10 @@ export class ResourceManager {
    * Determine what workspace storage key should be used for subject storage for this schema registry
    * based on its connection type.
    */
-  subjectKeyForSchemaRegistry(schemaRegistry: SchemaRegistry): WorkspaceStorageKeys {
-    switch (schemaRegistry.connectionType) {
+  subjectKeyForSchemaRegistry(
+    schemaRegistryKeyable: ISchemaRegistryResource,
+  ): WorkspaceStorageKeys {
+    switch (schemaRegistryKeyable.connectionType) {
       case ConnectionType.Ccloud:
         return WorkspaceStorageKeys.CCLOUD_SR_SUBJECTS;
       case ConnectionType.Local:
@@ -530,7 +537,9 @@ export class ResourceManager {
       case ConnectionType.Direct:
         return WorkspaceStorageKeys.DIRECT_SR_SUBJECTS;
       default:
-        logger.warn("Unknown schema registry connection type", schemaRegistry);
+        logger.warn("Unknown schema registry connection type", {
+          sr: JSON.stringify(schemaRegistryKeyable, null, 2),
+        });
         throw new Error("Unknown schema registry connection type");
     }
   }
