@@ -3,6 +3,7 @@
 import fs from "fs";
 import { env, Uri, window } from "vscode";
 import { Logger } from "../logging";
+import { titleCase } from "../utils";
 
 const logger = new Logger("sidecar.diagnoseErrors");
 
@@ -43,7 +44,7 @@ export class PlatformArch {
       os = "OS X (Darwin)";
     } else {
       // titlecase either windows or linux
-      os = os.charAt(0).toUpperCase() + os.slice(1);
+      os = titleCase(os);
     }
 
     let arch = this.arch;

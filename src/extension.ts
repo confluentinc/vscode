@@ -9,6 +9,7 @@ if (process.env.SENTRY_DSN) {
 
 import { ConfluentCloudAuthProvider, getAuthProvider } from "./authn/ccloudProvider";
 import { getCCloudAuthSession } from "./authn/utils";
+import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { registerCommandWithLogging } from "./commands";
@@ -59,6 +60,7 @@ import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
 import { WebsocketManager } from "./sidecar/websocketManager";
+import { getCCloudStatusBarItem } from "./statusBar/ccloudItem";
 import { getStorageManager, StorageManager } from "./storage";
 import { SecretStorageKeys } from "./storage/constants";
 import { migrateStorageIfNeeded } from "./storage/migrationManager";
@@ -243,6 +245,10 @@ async function _activateExtension(
   const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
   context.subscriptions.push(chatParticipant);
+
+  // track the status bar for CCloud notices (fetched from the Statuspage Status API)
+  enableCCloudStatusPolling();
+  context.subscriptions.push(getCCloudStatusBarItem());
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
@@ -452,6 +458,7 @@ export function deactivate() {
   }
 
   disposeLaunchDarklyClient();
+  disableCCloudStatusPolling();
 
   logger.info("Extension deactivated");
 }

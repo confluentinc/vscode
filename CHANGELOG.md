@@ -10,8 +10,12 @@ All notable changes to this extension will be documented in this file.
 - New "Delete Schema Version" context menu action for schemas to drive either soft or hard deletions
   of single schema versions. If the final schema within a subject is deleted, the subject will no
   longer exist.
-- Unsaved file contents can now be used for schema upload or message producing actions without the need to save the file first.
-- Preview setting to enable/disable Flink resources' and associated actions' visibility
+- New "Delete All Schemas in Subject" context menu action for subjects to drive either soft or hard
+  deletions of all schema versions within a subject. The subject will no longer exist.
+- Unsaved file contents can now be used for schema upload or message producing actions without the
+  need to save the file first.
+- Preview setting to enable/disable Flink resources' and associated actions' visibility, including:
+  - CCloud Flink compute pools in the Resources view
 - Experimental setting to enable/disable the Confluent chat participant for Copilot chat
 - Support for diffing schema definitions and Kafka topic message documents from the editor title or
   right-click context areas
@@ -19,7 +23,8 @@ All notable changes to this extension will be documented in this file.
 ### Fixed
 
 - Improved resolving newly created direct connection connectivity state.
-- Expanded maximum length of direct connection usernames and API keys, from 64 to 96 characters. Should improve WarpStream compatibility.
+- Expanded maximum length of direct connection usernames and API keys, from 64 to 96 characters.
+  Should improve WarpStream compatibility.
 
 ## 1.0.2
 

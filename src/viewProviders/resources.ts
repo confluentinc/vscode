@@ -33,6 +33,11 @@ import {
   LocalEnvironment,
 } from "../models/environment";
 import {
+  CCloudFlinkComputePool,
+  FlinkComputePool,
+  FlinkComputePoolTreeItem,
+} from "../models/flinkComputePool";
+import {
   CCloudKafkaCluster,
   DirectKafkaCluster,
   KafkaCluster,
@@ -58,7 +63,11 @@ import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./
 
 const logger = new Logger("viewProviders.resources");
 
-type CCloudResources = CCloudEnvironment | CCloudKafkaCluster | CCloudSchemaRegistry;
+type CCloudResources =
+  | CCloudEnvironment
+  | CCloudKafkaCluster
+  | CCloudSchemaRegistry
+  | CCloudFlinkComputePool;
 type LocalResources = LocalEnvironment | LocalKafkaCluster | LocalSchemaRegistry;
 type DirectResources = DirectEnvironment | DirectKafkaCluster | DirectSchemaRegistry;
 
@@ -156,6 +165,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       treeItem = new KafkaClusterTreeItem(element);
     } else if (element instanceof SchemaRegistry) {
       treeItem = new SchemaRegistryTreeItem(element);
+    } else if (element instanceof FlinkComputePool) {
+      treeItem = new FlinkComputePoolTreeItem(element);
     } else {
       // should only be left with ContainerTreeItems
       treeItem = element;
@@ -189,13 +200,8 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
       if (element instanceof ContainerTreeItem) {
         // expand containers for kafka clusters, schema registry, flink compute pools, etc
         children = element.children;
-      } else if (element instanceof CCloudEnvironment) {
-        children = await getCCloudEnvironmentChildren(element);
-      } else if (element instanceof DirectEnvironment) {
-        if (element.kafkaClusters)
-          children.push(...(element.kafkaClusters as DirectKafkaCluster[]));
-        if (element.schemaRegistry) children.push(element.schemaRegistry);
-        logger.debug(`got ${children.length} direct resources for environment ${element.id}`);
+      } else if (element instanceof Environment) {
+        children = element.children as ResourceViewProviderData[];
       }
     } else {
       // start loading the root-level items
@@ -657,31 +663,4 @@ export async function loadDirectResources(): Promise<DirectEnvironment[]> {
   const directEnvs = await getDirectResources();
   logger.debug(`got ${directEnvs.length} direct environment(s) from GQL query`);
   return directEnvs;
-}
-
-/**
- * Return the children of a CCloud environment (the Kafka clusters and Schema Registry).
- * Called when expanding a CCloud environment tree item.
- *
- * Fetches from the cached resources in the resource manager.
- *
- * @param environment: The CCloud environment to get children for
- * @returns
- */
-async function getCCloudEnvironmentChildren(environment: CCloudEnvironment) {
-  const subItems: (CCloudKafkaCluster | CCloudSchemaRegistry)[] = [];
-
-  const loader = CCloudResourceLoader.getInstance();
-
-  // Get the Kafka clusters for this environment. At worst be an empty array.
-  subItems.push(...(await loader.getKafkaClustersForEnvironmentId(environment.id)));
-
-  // Schema registry?
-  const schemaRegistry = await loader.getSchemaRegistryForEnvironmentId(environment.id);
-  if (schemaRegistry) {
-    subItems.push(schemaRegistry);
-  }
-
-  // TODO: add flink compute pools here ?
-  return subItems;
 }

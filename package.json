@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.1.0-26",
+  "version": "1.2.0-1",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -266,8 +266,12 @@
       },
       {
         "command": "confluent.schemas.deleteVersion",
-        "icon": "$(confluent-delete-schema-version)",
         "title": "Delete Schema Version",
+        "category": "Confluent: Schemas"
+      },
+      {
+        "command": "confluent.schemas.deleteSubject",
+        "title": "Delete All Schemas in Subject",
         "category": "Confluent: Schemas"
       },
       {
@@ -627,6 +631,16 @@
         "view": "confluent-topics",
         "contents": "No topics match search string. [Clear search](command:confluent.topics.search.clear) or [try a new search](command:confluent.topics.search).",
         "when": "(confluent.ccloudConnectionAvailable || confluent.localKafkaClusterAvailable || confluent.directKafkaClusterAvailable) && confluent.kafkaClusterSelected && confluent.topicSearchApplied"
+      },
+      {
+        "view": "confluent-flink",
+        "contents": "No Flink compute pools available.\n[Connect to Confluent Cloud](command:confluent.connections.ccloud.signIn)",
+        "when": "!confluent.ccloudConnectionAvailable"
+      },
+      {
+        "view": "confluent-flink",
+        "contents": "NOT YET IMPLEMENTED: Flink resources coming soon.",
+        "when": "confluent.ccloudConnectionAvailable"
       }
     ],
     "menus": {
@@ -705,6 +719,10 @@
         },
         {
           "command": "confluent.schemas.deleteVersion",
+          "when": "false"
+        },
+        {
+          "command": "confluent.schemas.deleteSubject",
           "when": "false"
         },
         {
@@ -1016,6 +1034,11 @@
           "command": "confluent.schemas.evolveSchemaSubject",
           "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
           "group": "inline@2"
+        },
+        {
+          "command": "confluent.schemas.deleteSubject",
+          "when": "(view == confluent-schemas || view == confluent-topics) && viewItem =~ /.*schema-subject$/",
+          "group": "schemas"
         },
         {
           "command": "confluent.schemas.upload",

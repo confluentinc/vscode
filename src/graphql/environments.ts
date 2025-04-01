@@ -1,10 +1,13 @@
 import { graphql } from "gql.tada";
+import { workspace, WorkspaceConfiguration } from "vscode";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
+import { ENABLE_FLINK } from "../preferences/constants";
 import { getSidecar } from "../sidecar";
 
 /**
@@ -35,6 +38,13 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
             region
             uri
           }
+          flinkComputePools {
+            id
+            display_name
+            provider
+            region
+            max_cfu
+          }
         }
       }
     }
@@ -54,6 +64,10 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
   if (!environments) {
     return envs;
   }
+
+  // TODO: remove this once Flink support is enabled by default
+  const config: WorkspaceConfiguration = workspace.getConfiguration();
+  const flinkEnabled: boolean = config.get(ENABLE_FLINK, false);
 
   environments.forEach((env) => {
     if (!env) {
@@ -83,6 +97,21 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
       });
     }
 
+    // parse Flink Compute Pools
+    let flinkComputePools: CCloudFlinkComputePool[] = [];
+    if (flinkEnabled && env.flinkComputePools) {
+      const envFlinkComputePools = env.flinkComputePools.map(
+        (pool: any): CCloudFlinkComputePool =>
+          new CCloudFlinkComputePool({
+            ...pool,
+            environmentId: env.id as EnvironmentId,
+            name: pool.display_name,
+            maxCfu: pool.max_cfu,
+          }),
+      );
+      flinkComputePools.push(...envFlinkComputePools);
+    }
+
     envs.push(
       new CCloudEnvironment({
         id: env.id,
@@ -90,6 +119,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
         streamGovernancePackage: env.governancePackage,
         kafkaClusters,
         schemaRegistry,
+        flinkComputePools,
       }),
     );
   });

@@ -1,6 +1,6 @@
 import { Disposable } from "vscode";
 import { TopicData } from "../clients/kafkaRest";
-import { DeleteSchemaVersionRequest } from "../clients/schemaRegistryRest";
+import { DeleteSchemaVersionRequest, DeleteSubjectRequest } from "../clients/schemaRegistryRest";
 import { ConnectionType } from "../clients/sidecar";
 import { logError } from "../errors";
 import { Logger } from "../logging";
@@ -320,6 +320,62 @@ export abstract class ResourceLoader implements IResourceBase {
     if (shouldClearSubject) {
       // Clear out the cache for the whole of the schema registry.
       await this.clearCache(schema.subjectObject());
+    }
+  }
+
+  /**
+   *
+   * @param subject The subject to delete. Must carry all of the schema versions to delete within its `.schemas` property.
+   * @param hardDelete Should each schema version be hard or soft deleted?
+   */
+  public async deleteSchemaSubject(subject: Subject, hardDelete: boolean): Promise<void> {
+    const subjectApi = (await getSidecar()).getSubjectsV1Api(
+      subject.schemaRegistryId,
+      subject.connectionId,
+    );
+
+    // Will have to do either one or two requests to delete the subject, based on hardness.
+    const requests: DeleteSubjectRequest[] = [];
+
+    if (hardDelete) {
+      // Must do a soft delete first, then hard delete.
+      requests.push({
+        subject: subject.name,
+        permanent: false,
+      });
+    }
+
+    // Now can perform either a hard or a soft delete.
+    requests.push({
+      subject: subject.name,
+      permanent: hardDelete,
+    });
+
+    try {
+      for (const request of requests) {
+        await subjectApi.deleteSubject(request);
+      }
+    } catch (error) {
+      logError(
+        error,
+        "Error deleting schema subject",
+        {
+          connectionId: subject.connectionId,
+          environmentId: subject.environmentId,
+          schemaRegistryId: subject.schemaRegistryId,
+          hardDelete: hardDelete ? "true" : "false",
+        },
+        true,
+      );
+      throw error;
+    } finally {
+      // Always clear out the subject cache, regardless of whether the delete was successful.
+      // because a failure could have been encountered half way through deleting
+      // schema versions and the subject remains.
+      const schemaRegistry = await this.getSchemaRegistryForEnvironmentId(subject.environmentId);
+      if (schemaRegistry) {
+        await this.clearCache(schemaRegistry);
+      }
     }
   }
 
