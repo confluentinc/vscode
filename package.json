@@ -674,8 +674,13 @@
       },
       {
         "view": "confluent-flink-statements",
-        "contents": "NOT YET IMPLEMENTED: Flink statements coming soon.",
-        "when": "confluent.ccloudConnectionAvailable"
+        "contents": "No Flink compute pool selected. Click below to get started.\n[Select Flink Compute Pool](command:confluent.statements.flink-compute-pool.select)",
+        "when": "confluent.ccloudConnectionAvailable && !confluent.flinkStatementsPoolSelected"
+      },
+      {
+        "view": "confluent-flink-statements",
+        "contents": "No Flink statements found.",
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkStatementsPoolSelected"
       },
       {
         "view": "confluent-flink-artifacts",
@@ -684,8 +689,8 @@
       },
       {
         "view": "confluent-flink-artifacts",
-        "contents": "NOT YET IMPLEMENTED: Flink artifacts coming soon.",
-        "when": "confluent.ccloudConnectionAvailable"
+        "contents": "No Flink statements found.\n[Create Statement](command:confluent.artifacts.flink-compute-pool.select)",
+        "when": "confluent.ccloudConnectionAvailable && !confluent.flinkArtifactsPoolSelected"
       }
     ],
     "menus": {
@@ -967,6 +972,16 @@
           "command": "confluent.topics.copyKafkaClusterBootstrapServers",
           "when": "view == confluent-topics && confluent.kafkaClusterSelected",
           "group": "2_copy@3"
+        },
+        {
+          "command": "confluent.statements.flink-compute-pool.select",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "group": "navigation@1"
+        },
+        {
+          "command": "confluent.artifacts.flink-compute-pool.select",
+          "when": "view == confluent-flink-artifacts && confluent.ccloudConnectionAvailable",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
