@@ -1,11 +1,15 @@
 import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
-import { ContextValues } from "../context/values";
+import { ContextValues, setContextValue } from "../context/values";
+import { currentFlinkArtifactsPoolChanged } from "../emitters";
+import { Logger } from "../logging";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { FlinkComputePool } from "../models/flinkComputePool";
 import { EnvironmentId } from "../models/resource";
 import { BaseViewProvider } from "./base";
+
+const logger = new Logger("viewProviders.flinkArtifacts");
 
 export class FlinkArtifactsViewProvider
   extends BaseViewProvider<FlinkComputePool, FlinkArtifact>
@@ -16,6 +20,9 @@ export class FlinkArtifactsViewProvider
 
   async getChildren(): Promise<FlinkArtifact[]> {
     const children: FlinkArtifact[] = [];
+    if (!this.computePool) {
+      return children;
+    }
 
     // TODO: replace this with real data
     const fakeArtifact = new FlinkArtifact({
@@ -45,7 +52,31 @@ export class FlinkArtifactsViewProvider
   }
 
   setEventListeners(): Disposable[] {
-    return [];
+    const poolChangedSub: Disposable = currentFlinkArtifactsPoolChanged.event(
+      async (pool: FlinkComputePool | null) => {
+        logger.debug(
+          `currentFlinkArtifactsPool event fired, ${pool ? "refreshing" : "resetting"}.`,
+          { pool },
+        );
+        this.setSearch(null); // reset search when pool changes
+        if (!pool) {
+          this.reset();
+        } else {
+          setContextValue(ContextValues.flinkArtifactsPoolSelected, true);
+          this.resource = pool;
+          await this.updateTreeViewDescription();
+          this.refresh();
+        }
+      },
+    );
+    return [poolChangedSub];
+  }
+
+  async reset() {
+    logger.debug("resetting view");
+    setContextValue(ContextValues.flinkArtifactsPoolSelected, false);
+    this.resource = null;
+    await this.updateTreeViewDescription();
   }
 
   get computePool(): FlinkComputePool | null {
