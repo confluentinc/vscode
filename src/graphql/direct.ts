@@ -1,4 +1,5 @@
 import { graphql } from "gql.tada";
+import { ConnectionType } from "../clients/sidecar";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { DirectEnvironment } from "../models/environment";
 import { DirectKafkaCluster } from "../models/kafkaCluster";
@@ -57,7 +58,7 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
 
       const connectionInfo = {
         connectionId: connection.id as ConnectionId,
-        connectionType: connection.type,
+        connectionType: ConnectionType.Direct,
       };
 
       let kafkaCluster: DirectKafkaCluster | undefined;

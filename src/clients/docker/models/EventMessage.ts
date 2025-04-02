@@ -70,31 +70,29 @@ export interface EventMessage {
 
 /**
  * @export
+ * @enum {string}
  */
-export const EventMessageTypeEnum = {
-  Builder: "builder",
-  Config: "config",
-  Container: "container",
-  Daemon: "daemon",
-  Image: "image",
-  Network: "network",
-  Node: "node",
-  Plugin: "plugin",
-  Secret: "secret",
-  Service: "service",
-  Volume: "volume",
-} as const;
-export type EventMessageTypeEnum = (typeof EventMessageTypeEnum)[keyof typeof EventMessageTypeEnum];
-
+export enum EventMessageTypeEnum {
+  Builder = "builder",
+  Config = "config",
+  Container = "container",
+  Daemon = "daemon",
+  Image = "image",
+  Network = "network",
+  Node = "node",
+  Plugin = "plugin",
+  Secret = "secret",
+  Service = "service",
+  Volume = "volume",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const EventMessageScopeEnum = {
-  Local: "local",
-  Swarm: "swarm",
-} as const;
-export type EventMessageScopeEnum =
-  (typeof EventMessageScopeEnum)[keyof typeof EventMessageScopeEnum];
+export enum EventMessageScopeEnum {
+  Local = "local",
+  Swarm = "swarm",
+}
 
 /**
  * Check if a given object implements the EventMessage interface.

@@ -74,21 +74,18 @@ export interface SqlV1ConnectionListDataInner {
 
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1ConnectionListDataInnerApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type SqlV1ConnectionListDataInnerApiVersionEnum =
-  (typeof SqlV1ConnectionListDataInnerApiVersionEnum)[keyof typeof SqlV1ConnectionListDataInnerApiVersionEnum];
-
+export enum SqlV1ConnectionListDataInnerApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const SqlV1ConnectionListDataInnerKindEnum = {
-  Connection: "Connection",
-} as const;
-export type SqlV1ConnectionListDataInnerKindEnum =
-  (typeof SqlV1ConnectionListDataInnerKindEnum)[keyof typeof SqlV1ConnectionListDataInnerKindEnum];
+export enum SqlV1ConnectionListDataInnerKindEnum {
+  Connection = "Connection",
+}
 
 /**
  * Check if a given object implements the SqlV1ConnectionListDataInner interface.

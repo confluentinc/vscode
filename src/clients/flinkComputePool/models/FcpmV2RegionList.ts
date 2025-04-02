@@ -67,21 +67,18 @@ export interface FcpmV2RegionList {
 
 /**
  * @export
+ * @enum {string}
  */
-export const FcpmV2RegionListApiVersionEnum = {
-  FcpmV2: "fcpm/v2",
-} as const;
-export type FcpmV2RegionListApiVersionEnum =
-  (typeof FcpmV2RegionListApiVersionEnum)[keyof typeof FcpmV2RegionListApiVersionEnum];
-
+export enum FcpmV2RegionListApiVersionEnum {
+  FcpmV2 = "fcpm/v2",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const FcpmV2RegionListKindEnum = {
-  RegionList: "RegionList",
-} as const;
-export type FcpmV2RegionListKindEnum =
-  (typeof FcpmV2RegionListKindEnum)[keyof typeof FcpmV2RegionListKindEnum];
+export enum FcpmV2RegionListKindEnum {
+  RegionList = "RegionList",
+}
 
 /**
  * Check if a given object implements the FcpmV2RegionList interface.

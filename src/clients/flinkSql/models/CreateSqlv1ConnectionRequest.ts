@@ -74,21 +74,18 @@ export interface CreateSqlv1ConnectionRequest {
 
 /**
  * @export
+ * @enum {string}
  */
-export const CreateSqlv1ConnectionRequestApiVersionEnum = {
-  SqlV1: "sql/v1",
-} as const;
-export type CreateSqlv1ConnectionRequestApiVersionEnum =
-  (typeof CreateSqlv1ConnectionRequestApiVersionEnum)[keyof typeof CreateSqlv1ConnectionRequestApiVersionEnum];
-
+export enum CreateSqlv1ConnectionRequestApiVersionEnum {
+  SqlV1 = "sql/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const CreateSqlv1ConnectionRequestKindEnum = {
-  Connection: "Connection",
-} as const;
-export type CreateSqlv1ConnectionRequestKindEnum =
-  (typeof CreateSqlv1ConnectionRequestKindEnum)[keyof typeof CreateSqlv1ConnectionRequestKindEnum];
+export enum CreateSqlv1ConnectionRequestKindEnum {
+  Connection = "Connection",
+}
 
 /**
  * Check if a given object implements the CreateSqlv1ConnectionRequest interface.

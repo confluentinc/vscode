@@ -32,16 +32,16 @@
  *     (meaning the schema id was present in the magic bytes, but our classes could not interpret the rest of the bytes.)
  *
  * @export
+ * @enum {string}
  */
-export const DataFormat = {
-  Avro: "AVRO",
-  Jsonschema: "JSONSCHEMA",
-  Protobuf: "PROTOBUF",
-  Json: "JSON",
-  Utf8String: "UTF8_STRING",
-  RawBytes: "RAW_BYTES",
-} as const;
-export type DataFormat = (typeof DataFormat)[keyof typeof DataFormat];
+export enum DataFormat {
+  Avro = "AVRO",
+  Jsonschema = "JSONSCHEMA",
+  Protobuf = "PROTOBUF",
+  Json = "JSON",
+  Utf8String = "UTF8_STRING",
+  RawBytes = "RAW_BYTES",
+}
 
 export function instanceOfDataFormat(value: any): boolean {
   for (const key in DataFormat) {

@@ -71,24 +71,21 @@ export interface ServiceSpecUpdateConfig {
 
 /**
  * @export
+ * @enum {string}
  */
-export const ServiceSpecUpdateConfigFailureActionEnum = {
-  Continue: "continue",
-  Pause: "pause",
-  Rollback: "rollback",
-} as const;
-export type ServiceSpecUpdateConfigFailureActionEnum =
-  (typeof ServiceSpecUpdateConfigFailureActionEnum)[keyof typeof ServiceSpecUpdateConfigFailureActionEnum];
-
+export enum ServiceSpecUpdateConfigFailureActionEnum {
+  Continue = "continue",
+  Pause = "pause",
+  Rollback = "rollback",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const ServiceSpecUpdateConfigOrderEnum = {
-  StopFirst: "stop-first",
-  StartFirst: "start-first",
-} as const;
-export type ServiceSpecUpdateConfigOrderEnum =
-  (typeof ServiceSpecUpdateConfigOrderEnum)[keyof typeof ServiceSpecUpdateConfigOrderEnum];
+export enum ServiceSpecUpdateConfigOrderEnum {
+  StopFirst = "stop-first",
+  StartFirst = "start-first",
+}
 
 /**
  * Check if a given object implements the ServiceSpecUpdateConfig interface.

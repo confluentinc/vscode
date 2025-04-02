@@ -15,12 +15,12 @@
 /**
  *
  * @export
+ * @enum {string}
  */
-export const BrokerTaskType = {
-  AddBroker: "add-broker",
-  RemoveBroker: "remove-broker",
-} as const;
-export type BrokerTaskType = (typeof BrokerTaskType)[keyof typeof BrokerTaskType];
+export enum BrokerTaskType {
+  AddBroker = "add-broker",
+  RemoveBroker = "remove-broker",
+}
 
 export function instanceOfBrokerTaskType(value: any): boolean {
   for (const key in BrokerTaskType) {

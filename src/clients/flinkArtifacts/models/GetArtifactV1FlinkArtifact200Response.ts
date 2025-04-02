@@ -123,21 +123,18 @@ export interface GetArtifactV1FlinkArtifact200Response {
 
 /**
  * @export
+ * @enum {string}
  */
-export const GetArtifactV1FlinkArtifact200ResponseApiVersionEnum = {
-  ArtifactV1: "artifact/v1",
-} as const;
-export type GetArtifactV1FlinkArtifact200ResponseApiVersionEnum =
-  (typeof GetArtifactV1FlinkArtifact200ResponseApiVersionEnum)[keyof typeof GetArtifactV1FlinkArtifact200ResponseApiVersionEnum];
-
+export enum GetArtifactV1FlinkArtifact200ResponseApiVersionEnum {
+  ArtifactV1 = "artifact/v1",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const GetArtifactV1FlinkArtifact200ResponseKindEnum = {
-  FlinkArtifact: "FlinkArtifact",
-} as const;
-export type GetArtifactV1FlinkArtifact200ResponseKindEnum =
-  (typeof GetArtifactV1FlinkArtifact200ResponseKindEnum)[keyof typeof GetArtifactV1FlinkArtifact200ResponseKindEnum];
+export enum GetArtifactV1FlinkArtifact200ResponseKindEnum {
+  FlinkArtifact = "FlinkArtifact",
+}
 
 /**
  * Check if a given object implements the GetArtifactV1FlinkArtifact200Response interface.

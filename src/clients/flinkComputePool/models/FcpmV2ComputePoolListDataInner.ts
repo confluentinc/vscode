@@ -74,21 +74,18 @@ export interface FcpmV2ComputePoolListDataInner {
 
 /**
  * @export
+ * @enum {string}
  */
-export const FcpmV2ComputePoolListDataInnerApiVersionEnum = {
-  FcpmV2: "fcpm/v2",
-} as const;
-export type FcpmV2ComputePoolListDataInnerApiVersionEnum =
-  (typeof FcpmV2ComputePoolListDataInnerApiVersionEnum)[keyof typeof FcpmV2ComputePoolListDataInnerApiVersionEnum];
-
+export enum FcpmV2ComputePoolListDataInnerApiVersionEnum {
+  FcpmV2 = "fcpm/v2",
+}
 /**
  * @export
+ * @enum {string}
  */
-export const FcpmV2ComputePoolListDataInnerKindEnum = {
-  ComputePool: "ComputePool",
-} as const;
-export type FcpmV2ComputePoolListDataInnerKindEnum =
-  (typeof FcpmV2ComputePoolListDataInnerKindEnum)[keyof typeof FcpmV2ComputePoolListDataInnerKindEnum];
+export enum FcpmV2ComputePoolListDataInnerKindEnum {
+  ComputePool = "ComputePool",
+}
 
 /**
  * Check if a given object implements the FcpmV2ComputePoolListDataInner interface.
