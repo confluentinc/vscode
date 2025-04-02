@@ -19,6 +19,7 @@ import { registerDiffCommands } from "./commands/diffs";
 import { registerDockerCommands } from "./commands/docker";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
+import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
@@ -200,6 +201,7 @@ async function _activateExtension(
     ...registerDiffCommands(),
     ...registerExtraCommands(),
     ...registerDockerCommands(),
+    ...registerFlinkComputePoolCommands(),
   ];
   logger.info("Commands registered");
 
