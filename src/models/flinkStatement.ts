@@ -1,3 +1,4 @@
+import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
@@ -31,5 +32,24 @@ export class FlinkStatement implements IResourceBase, ISearchable {
 
   searchableText(): string {
     return `${this.name} ${this.status}`;
+  }
+}
+
+export class FlinkStatementTreeItem extends TreeItem {
+  resource: FlinkStatement;
+
+  constructor(resource: FlinkStatement) {
+    super(resource.name, TreeItemCollapsibleState.None);
+
+    // internal properties
+    this.id = `${resource.connectionId}-${resource.computePoolId}-${resource.name}`;
+    this.resource = resource;
+    this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
+
+    // user-facing properties
+    this.iconPath = new ThemeIcon(resource.iconName);
+    this.description = resource.status;
+
+    // TODO: add tooltip
   }
 }
