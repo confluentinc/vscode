@@ -1,9 +1,10 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
+import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
-export class FlinkStatement implements IResourceBase, ISearchable {
+export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   connectionId!: ConnectionId;
   connectionType!: ConnectionType;
   iconName: IconNames = IconNames.FLINK_STATEMENT;
@@ -28,6 +29,10 @@ export class FlinkStatement implements IResourceBase, ISearchable {
     this.computePoolId = props.computePoolId;
     this.name = props.name;
     this.status = props.status;
+  }
+
+  get id(): string {
+    return `${this.connectionId}-${this.computePoolId}-${this.name}`;
   }
 
   searchableText(): string {
