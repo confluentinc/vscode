@@ -13,7 +13,7 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   computePoolId!: string;
 
   name!: string; // display_name
-  status!: string;
+  description!: string;
 
   provider!: string; // cloud
   region!: string;
@@ -28,7 +28,7 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
       | "environmentId"
       | "computePoolId"
       | "name"
-      | "status"
+      | "description"
       | "provider"
       | "region"
     >,
@@ -38,7 +38,6 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
     this.environmentId = props.environmentId;
     this.computePoolId = props.computePoolId;
     this.name = props.name;
-    this.status = props.status;
     this.provider = props.provider;
     this.region = props.region;
   }
@@ -48,7 +47,7 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   }
 
   searchableText(): string {
-    return `${this.name} ${this.status}`;
+    return `${this.name} ${this.description}`;
   }
 }
 
@@ -65,7 +64,7 @@ export class FlinkArtifactTreeItem extends TreeItem {
 
     // user-facing properties
     this.iconPath = new ThemeIcon(resource.iconName);
-    this.description = resource.status;
+    this.description = resource.description;
 
     // TODO: add tooltip
   }
