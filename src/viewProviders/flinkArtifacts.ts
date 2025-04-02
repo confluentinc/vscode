@@ -2,10 +2,13 @@ import { TreeDataProvider, TreeItem } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues } from "../context/values";
+import { Logger } from "../logging";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { FlinkComputePool } from "../models/flinkComputePool";
 import { EnvironmentId } from "../models/resource";
 import { BaseViewProvider } from "./base";
+
+const logger = new Logger("viewProviders.flinkArtifacts");
 
 export class FlinkArtifactsViewProvider
   extends BaseViewProvider<FlinkComputePool, FlinkArtifact>
@@ -17,6 +20,9 @@ export class FlinkArtifactsViewProvider
 
   async getChildren(): Promise<FlinkArtifact[]> {
     const children: FlinkArtifact[] = [];
+    if (!this.computePool) {
+      return children;
+    }
 
     // TODO: replace this with real data
     const fakeArtifact = new FlinkArtifact({

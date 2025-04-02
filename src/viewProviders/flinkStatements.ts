@@ -2,10 +2,13 @@ import { TreeDataProvider, TreeItem } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues } from "../context/values";
+import { Logger } from "../logging";
 import { FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { EnvironmentId } from "../models/resource";
 import { BaseViewProvider } from "./base";
+
+const logger = new Logger("viewProviders.flinkStatements");
 
 export class FlinkStatementsViewProvider
   extends BaseViewProvider<FlinkComputePool, FlinkStatement>
@@ -17,6 +20,9 @@ export class FlinkStatementsViewProvider
 
   async getChildren(): Promise<FlinkStatement[]> {
     const children: FlinkStatement[] = [];
+    if (!this.computePool) {
+      return children;
+    }
 
     // TODO: replace this with real data
     const fakeStatement = new FlinkStatement({
