@@ -207,6 +207,24 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.flink-compute-pool.select",
+        "icon": "$(confluent-flink-compute-pool)",
+        "title": "Select Flink Compute Pool",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.statements.flink-compute-pool.select",
+        "icon": "$(confluent-flink-compute-pool)",
+        "title": "Select Flink Compute Pool",
+        "category": "Confluent: Flink Statements"
+      },
+      {
+        "command": "confluent.artifacts.flink-compute-pool.select",
+        "icon": "$(confluent-flink-compute-pool)",
+        "title": "Select Flink Compute Pool",
+        "category": "Confluent: Flink Artifacts"
+      },
+      {
         "command": "confluent.resources.search",
         "icon": "$(search)",
         "title": "Search",

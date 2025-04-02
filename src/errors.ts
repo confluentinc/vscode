@@ -150,8 +150,34 @@ export const DEFAULT_ERROR_NOTIFICATION_BUTTONS: Record<
   "File Issue": () => commands.executeCommand("confluent.support.issue"),
 };
 
-/** Shows the error notification with `message` and custom action buttons.
- * @param message Error message to display
+/**
+ * Shows an **info** notification with `message` and custom action buttons.
+ * @param message Message to display in the notification
+ * @param buttons Optional map of button labels to callback functions; defaults to showing
+ *   "Open Logs" and "File Issue" buttons if not provided
+ */
+export async function showInfoNotificationWithButtons(
+  message: string,
+  buttons?: Record<string, (() => void) | (() => Promise<void>)>,
+) {
+  return showNotificationWithButtons("info", message, buttons);
+}
+
+/**
+ * Shows a **warning** notification with `message` and custom action buttons.
+ * @param message Message to display in the notification
+ * @param buttons Optional map of button labels to callback functions; defaults to showing
+ *   "Open Logs" and "File Issue" buttons if not provided
+ */
+export async function showWarningNotificationWithButtons(
+  message: string,
+  buttons?: Record<string, (() => void) | (() => Promise<void>)>,
+) {
+  return showNotificationWithButtons("warning", message, buttons);
+}
+
+/** Shows an **error** notification with `message` and custom action buttons.
+ * @param message Message to display in the notification
  * @param buttons Optional map of button labels to callback functions; defaults to showing
  *   "Open Logs" and "File Issue" buttons if not provided
  */
@@ -159,10 +185,39 @@ export async function showErrorNotificationWithButtons(
   message: string,
   buttons?: Record<string, (() => void) | (() => Promise<void>)>,
 ) {
+  return showNotificationWithButtons("error", message, buttons);
+}
+
+/**
+ * Shows a notification with `message` and custom action buttons.
+ * @param message Message to display in the notification
+ * @param buttons Optional map of button labels to callback functions; defaults to showing
+ *   "Open Logs" and "File Issue" buttons if not provided
+ */
+async function showNotificationWithButtons(
+  level: "info" | "warning" | "error",
+  message: string,
+  buttons?: Record<string, (() => void) | (() => Promise<void>)>,
+) {
   const buttonMap = buttons || DEFAULT_ERROR_NOTIFICATION_BUTTONS;
+
   // we're awaiting the user's selection to more easily test the callback behavior, rather than
   // chaining with .then()
-  const selection = await window.showErrorMessage(message, ...Object.keys(buttonMap));
+  let selection: string | undefined;
+  switch (level) {
+    case "info":
+      selection = await window.showInformationMessage(message, ...Object.keys(buttonMap));
+      break;
+    case "warning":
+      selection = await window.showWarningMessage(message, ...Object.keys(buttonMap));
+      break;
+    case "error":
+      selection = await window.showErrorMessage(message, ...Object.keys(buttonMap));
+      break;
+    default:
+      throw new Error(`Invalid notification level: ${level}`);
+  }
+
   if (selection) {
     try {
       await buttonMap[selection]();
@@ -173,7 +228,7 @@ export async function showErrorNotificationWithButtons(
     // send telemetry for which button was clicked
     logUsage(UserEvent.NotificationButtonClicked, {
       buttonLabel: selection,
-      notificationType: "error",
+      notificationType: level,
     });
   }
 }
