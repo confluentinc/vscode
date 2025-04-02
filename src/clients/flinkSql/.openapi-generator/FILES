@@ -1,4 +1,3 @@
-.openapi-generator-ignore
 apis/ConnectionsSqlV1Api.ts
 apis/StatementExceptionsSqlV1Api.ts
 apis/StatementResultsSqlV1Api.ts
