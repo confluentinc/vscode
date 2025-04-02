@@ -121,12 +121,9 @@
               data-value="this.kafkaAuthType()"
               data-attr-disabled="this.editing() ? true : false"
             >
-              <option value="None" selected>None</option>
-              <option value="Basic">Username & Password (SASL/PLAIN)</option>
-              <option value="API">API Credentials (SASL/PLAIN)</option>
-              <option value="SCRAM">SASL/SCRAM</option>
-              <option value="OAuth">SASL/OAUTHBEARER</option>
-              <option value="Kerberos">Kerberos (SASL/GSSAPI)</option>
+              <template data-for="auth of this.getValidAuthTypes()">
+                <option data-attr-value="this.auth().value" data-text="this.auth().label"></option>
+              </template>
             </select>
           </div>
           <div class="content-wrapper">
