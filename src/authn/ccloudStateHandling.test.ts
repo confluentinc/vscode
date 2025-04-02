@@ -187,7 +187,7 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
     sandbox.restore();
   });
 
-  const nonTransientStatuses: Status[] = ["FAILED", "NO_TOKEN", "VALID_TOKEN"];
+  const nonTransientStatuses: Status[] = [Status.Failed, Status.NoToken, Status.ValidToken];
   nonTransientStatuses.forEach((status) => {
     it(`should fire the nonInvalidTokenStatus event emitter when the CCloud auth status is ${status}`, async () => {
       const connection = createFakeConnection(120);
@@ -201,7 +201,7 @@ describe("authn/ccloudStateHangling.ts reactToCCloudAuthState()", () => {
   });
 
   it("should NOT fire the nonInvalidTokenStatus event emitter when the CCloud auth status is INVALID_TOKEN", async () => {
-    const status = "INVALID_TOKEN";
+    const status = Status.InvalidToken;
     const connection = createFakeConnection(120);
     connection.status.authentication.status = status;
 

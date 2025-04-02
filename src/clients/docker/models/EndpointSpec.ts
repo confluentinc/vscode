@@ -46,12 +46,12 @@ export interface EndpointSpec {
 
 /**
  * @export
+ * @enum {string}
  */
-export const EndpointSpecModeEnum = {
-  Vip: "vip",
-  Dnsrr: "dnsrr",
-} as const;
-export type EndpointSpecModeEnum = (typeof EndpointSpecModeEnum)[keyof typeof EndpointSpecModeEnum];
+export enum EndpointSpecModeEnum {
+  Vip = "vip",
+  Dnsrr = "dnsrr",
+}
 
 /**
  * Check if a given object implements the EndpointSpec interface.

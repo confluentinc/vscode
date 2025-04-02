@@ -91,8 +91,8 @@ export async function reportUsableState(connection: Connection) {
     ConnectionSummary[],
     ConnectionSummary[],
   ] = await Promise.all([
-    getConnectionSummaries(connection, "SUCCESS"),
-    getConnectionSummaries(connection, "FAILED"),
+    getConnectionSummaries(connection, ConnectedState.Success),
+    getConnectionSummaries(connection, ConnectedState.Failed),
   ]);
 
   if (failedConnectionSummaries.length > 0) {

@@ -41,13 +41,12 @@ export interface JsonPatchRequestMoveCopy {
 
 /**
  * @export
+ * @enum {string}
  */
-export const JsonPatchRequestMoveCopyOpEnum = {
-  Move: "MOVE",
-  Copy: "COPY",
-} as const;
-export type JsonPatchRequestMoveCopyOpEnum =
-  (typeof JsonPatchRequestMoveCopyOpEnum)[keyof typeof JsonPatchRequestMoveCopyOpEnum];
+export enum JsonPatchRequestMoveCopyOpEnum {
+  Move = "MOVE",
+  Copy = "COPY",
+}
 
 /**
  * Check if a given object implements the JsonPatchRequestMoveCopy interface.

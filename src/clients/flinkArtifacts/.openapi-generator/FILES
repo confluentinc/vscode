@@ -1,4 +1,3 @@
-.openapi-generator-ignore
 apis/FlinkArtifactsArtifactV1Api.ts
 apis/PresignedUrlsArtifactV1Api.ts
 apis/index.ts
