@@ -1,4 +1,5 @@
 import { version } from "ide-sidecar";
+import { env, version as ideVersion } from "vscode";
 import { Status } from "../clients/sidecar";
 /**
  * Per-extension-instance singleton object for storing basic data to help debug issues, errors, etc.
@@ -17,6 +18,13 @@ import { Status } from "../clients/sidecar";
  */
 class ObservabilityContext {
   constructor(
+    /** The version of VS Code (or variant) in use. */
+    public productVersion: string = ideVersion,
+    /** The name of the VS Code (or variant) in use. */
+    public productName: string = env.appName,
+    /** The URI scheme of the VS Code (or variant) in use. */
+    public productUriScheme: string = env.uriScheme,
+
     /** The version of the activated extension instance, from `package.json`. */
     public extensionVersion: string = "",
     /** Whether or not the extension activated successfully. */
