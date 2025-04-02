@@ -22,6 +22,7 @@ import { filterItems, itemMatchesSearch } from "./search";
 const logger = new Logger("viewProviders.base");
 
 export abstract class BaseViewProvider<
+  P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
   T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
 > implements TreeDataProvider<T>
 {
@@ -42,8 +43,16 @@ export abstract class BaseViewProvider<
 
   /** The parent {@link Environment} of the focused resource.  */
   environment: Environment | null = null;
-  /** The resource instance associated with this provider. */
-  resource: T | null = null;
+  /**
+   * The focused resource instance associated with this provider.
+   *
+   * Examples:
+   * - Topics view: Kafka cluster
+   * - Schemas view: Schema Registry
+   * - Flink Statements view: Flink compute pool
+   * - Flink Artifacts view: Flink compute pool
+   */
+  resource: P | null = null;
 
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
@@ -71,8 +80,8 @@ export abstract class BaseViewProvider<
     this.disposables = [this.treeView, ...listeners];
   }
 
-  private static instanceMap = new Map<string, BaseViewProvider<any>>();
-  static getInstance<U extends BaseViewProvider<any>>(this: new () => U): U {
+  private static instanceMap = new Map<string, BaseViewProvider<any, any>>();
+  static getInstance<U extends BaseViewProvider<any, any>>(this: new () => U): U {
     const className = this.name;
     if (!BaseViewProvider.instanceMap.has(className)) {
       const instance = new this();
