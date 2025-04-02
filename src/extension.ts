@@ -69,6 +69,7 @@ import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
+import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { ResourceViewProvider } from "./viewProviders/resources";
 import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
@@ -154,11 +155,13 @@ async function _activateExtension(
   const resourceViewProvider = ResourceViewProvider.getInstance();
   const topicViewProvider = TopicViewProvider.getInstance();
   const schemasViewProvider = SchemasViewProvider.getInstance();
+  const statementsViewProvider = FlinkStatementsViewProvider.getInstance();
   const supportViewProvider = new SupportViewProvider();
   const viewProviderDisposables: vscode.Disposable[] = [
     ...resourceViewProvider.disposables,
     ...topicViewProvider.disposables,
     ...schemasViewProvider.disposables,
+    ...statementsViewProvider.disposables,
     ...supportViewProvider.disposables,
   ];
   logger.info("View providers initialized");
