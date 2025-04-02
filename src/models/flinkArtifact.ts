@@ -38,6 +38,7 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
     this.environmentId = props.environmentId;
     this.computePoolId = props.computePoolId;
     this.name = props.name;
+    this.description = props.description;
     this.provider = props.provider;
     this.region = props.region;
   }
