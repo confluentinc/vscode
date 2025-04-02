@@ -3,6 +3,7 @@ import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { showInfoNotificationWithButtons } from "../errors";
+import { getEnvironments } from "../graphql/environments";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { FlinkComputePool } from "../models/flinkComputePool";
@@ -13,9 +14,10 @@ import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.flinkComputePools");
 
-/** Wrapper for the Flink Compute Pool quickpick to accomodate data-fetching time and display a progress indicator on the Flink Statements/Artifacts view(s). */
+/** Wrapper for the Flink Compute Pool quickpick to accomodate data-fetching time and display a
+ * progress indicator on the Resources or Flink Statements/Artifacts view(s). */
 export async function flinkComputePoolQuickPickWithViewProgress(
-  viewId: "confluent-flink-statements" | "confluent-flink-artifacts",
+  viewId: "confluent-resources" | "confluent-flink-statements" | "confluent-flink-artifacts",
 ): Promise<FlinkComputePool | undefined> {
   return await window.withProgress(
     {
@@ -40,8 +42,14 @@ export async function flinkComputePoolQuickPickWithViewProgress(
  * ccloud-pool3 (lfcp-id3)
  */
 export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | undefined> {
-  const environments: Environment[] = [];
+  // TODO: implement and use ResourceLoader methods
+  const environments: Environment[] = await getEnvironments();
   const computePools: FlinkComputePool[] = [];
+  for (const env of environments) {
+    if (env.flinkComputePools) {
+      computePools.push(...env.flinkComputePools);
+    }
+  }
 
   if (computePools.length === 0) {
     let login: string = "";
@@ -55,9 +63,7 @@ export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | un
   }
 
   logger.debug("generating Flink compute pool quickpick", {
-    // local: computePools.filter((pool) => isLocal(pool)).length,
     ccloud: computePools.filter((pool) => isCCloud(pool)).length,
-    // direct: computePools.filter((pool) => isDirect(pool)).length,
   });
 
   // convert all available Flink comptue pools to quick pick items and keep track of the last env
@@ -65,23 +71,25 @@ export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | un
   const items: QuickPickItemWithValue<FlinkComputePool>[] = [];
 
   // if any pools are focused in the Statements/Artifacts views, move them to the top of the list
-  const focusedPoolIds: string[] = [];
-  for (const provider of [FlinkStatementsViewProvider, FlinkArtifactsViewProvider]) {
-    const focusedPool: FlinkComputePool | undefined =
-      FlinkStatementsViewProvider.getInstance().resource;
-    if (!focusedPool) {
-      continue;
-    }
-
-    focusedPoolIds.push(focusedPool.id);
-    const focusedPoolIndex: number = computePools.findIndex((pool) =>
-      focusedPoolIds.includes(pool.id),
-    );
+  const focusedPools: FlinkComputePool[] = [];
+  const statementsPool: FlinkComputePool | null =
+    FlinkStatementsViewProvider.getInstance().computePool;
+  if (statementsPool) {
+    focusedPools.push(statementsPool);
+  }
+  const artifactsPool: FlinkComputePool | null =
+    FlinkArtifactsViewProvider.getInstance().computePool;
+  if (artifactsPool) {
+    focusedPools.push(artifactsPool);
+  }
+  for (const focusedPool of focusedPools) {
+    const focusedPoolIndex: number = computePools.findIndex((pool) => focusedPool.id === pool.id);
     if (focusedPoolIndex !== -1) {
       computePools.splice(focusedPoolIndex, 1);
       computePools.unshift(focusedPool!);
     }
   }
+  const focusedPoolIds: string[] = focusedPools.map((pool) => pool.id);
 
   let lastSeparator: string = "";
   for (const pool of computePools) {
