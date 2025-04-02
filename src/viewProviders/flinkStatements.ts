@@ -1,12 +1,13 @@
 import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { EnvironmentId } from "../models/resource";
 import { BaseViewProvider } from "./base";
 
 export class FlinkStatementsViewProvider
-  extends BaseViewProvider<FlinkStatement>
+  extends BaseViewProvider<FlinkComputePool, FlinkStatement>
   implements TreeDataProvider<FlinkStatement>
 {
   viewId = "confluent-flink-statements";
@@ -46,5 +47,9 @@ export class FlinkStatementsViewProvider
 
   setEventListeners(): Disposable[] {
     return [];
+  }
+
+  get computePool(): FlinkComputePool | null {
+    return this.resource;
   }
 }
