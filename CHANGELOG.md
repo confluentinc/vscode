@@ -4,6 +4,10 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+- Add new actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new
+  project. The project generation form will still be opened, and known form fields will be filled in
+  automatically for the clicked resource.
+
 ## 1.1.0
 
 ### Added

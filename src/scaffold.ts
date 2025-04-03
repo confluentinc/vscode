@@ -12,7 +12,7 @@ import {
 } from "./clients/scaffoldingService";
 import { getSidecar } from "./sidecar";
 
-import { ExtensionContext, ViewColumn } from "vscode";
+import { ViewColumn } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { logError } from "./errors";
@@ -22,6 +22,9 @@ import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
 import { fileUriExists } from "./utils/file";
+import { KafkaTopic } from "./models/topic";
+import { KafkaCluster } from "./models/kafkaCluster";
+import { getResourceManager } from "./storage/resourceManager";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
@@ -29,18 +32,25 @@ type MessageResponse<MessageType extends string> = Awaited<
 
 const scaffoldWebviewCache = new WebviewPanelCache();
 
-export const registerProjectGenerationCommand = (context: ExtensionContext) => {
-  const scaffoldProjectCommand = registerCommandWithLogging("confluent.scaffold", () =>
-    scaffoldProjectRequest(),
-  );
-  context.subscriptions.push(scaffoldProjectCommand);
-};
+export function registerProjectGenerationCommands(): vscode.Disposable[] {
+  return [
+    registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
+    registerCommandWithLogging("confluent.resources.scaffold", scaffoldProjectRequest),
+  ];
+}
 
-export const scaffoldProjectRequest = async () => {
+export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
   try {
     const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList();
-    const templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
+    let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
+    if (item) {
+      templateList = templateList.filter((template) => {
+        const tags = template.spec?.tags || [];
+        const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
+        return hasProducerOrConsumer;
+      });
+    }
     const pickedItem = await pickTemplate(templateList);
     pickedTemplate = templateList.find(
       (template) => template.spec!.display_name === pickedItem?.label,
@@ -55,6 +65,7 @@ export const scaffoldProjectRequest = async () => {
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "template picked",
       templateName: pickedTemplate.spec!.display_name,
+      itemType: item ? (item instanceof KafkaTopic ? "topic" : "cluster") : undefined,
     });
   } else {
     return;
@@ -76,12 +87,25 @@ export const scaffoldProjectRequest = async () => {
 
   /** Stores a map of options with key: value pairs that is then updated on form input
    * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   * It also initializes the options with either the initial values or known values from the item
    */
   let optionValues: { [key: string]: string | boolean } = {};
   let options = templateSpec.options || {};
-  Object.entries(options).map(([option, properties]) => {
-    optionValues[option] = properties.initial_value ?? "";
-  });
+  async function getInitialOptionValue(option: string, properties: any): Promise<string | boolean> {
+    if ((option === "topic" || option === "cc_topic") && item instanceof KafkaTopic)
+      return item.name;
+    else if (option === "bootstrap_server" || option === "cc_bootstrap_server") {
+      if (item instanceof KafkaCluster) return item.bootstrapServers;
+      else if (item instanceof KafkaTopic) {
+        const cluster = await getResourceManager().getClusterForTopic(item);
+        return cluster?.bootstrapServers ?? "";
+      }
+    }
+    return properties.initial_value ?? "";
+  }
+  for (const [option, properties] of Object.entries(options)) {
+    optionValues[option] = await getInitialOptionValue(option, properties);
+  }
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }
