@@ -26,14 +26,22 @@ import { observabilityContext } from "../context/observability";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
+import { pause } from "./utils";
 
 /** Header name for the workspace's PID in the request headers. */
 const WORKSPACE_PROCESS_ID_HEADER: string = "x-workspace-process-id";
 
-const MOMENTARY_PAUSE_MS = 500; // half a second.
+export const MOMENTARY_PAUSE_MS = 500; // half a second.
+/**
+ * Time to wait after having delivered a SIGTERM to sidecar before
+ * promoting to SIGKILL. The ratio of this to {@link MOMENTARY_PAUSE_MS}
+ * is the number of times {@link killSidecar} will pause+poll loop waiting
+ * for an old (by either version or access token) sidecar to die.
+ **/
+export const WAIT_FOR_SIDECAR_DEATH_MS = 4_000; // 4 seconds.
 
 /** How many loop attempts to try in startSidecar() and doHand */
-const MAX_ATTEMPTS = 20;
+const MAX_ATTEMPTS = 10;
 
 const logger = new Logger("sidecarManager");
 // Internal singleton class managing starting / restarting sidecar process and handing back a reference to an API client (SidecarHandle)
@@ -139,7 +147,7 @@ export class SidecarManager {
             logger.info(`${logPrefix}:  Wrong access token, restarting sidecar`);
             // Kill the process, pause an iota, restart it, then try again.
             try {
-              killSidecar(e.sidecar_process_id);
+              await killSidecar(e.sidecar_process_id);
             } catch (e: any) {
               logger.error(
                 `${logPrefix}: failed to kill sidecar process ${e.sidecar_process_id}: ${e}`,
@@ -147,7 +155,7 @@ export class SidecarManager {
               throw e;
             }
 
-            await this.pause();
+            await pause(MOMENTARY_PAUSE_MS);
 
             // Start new sidecar proces.
             accessToken = await this.startSidecar(callnum);
@@ -221,7 +229,7 @@ export class SidecarManager {
 
       try {
         // Kill the sidecar process. May possible raise permission errors if, say, the sidecar is running as a different user.
-        killSidecar(sidecarPid);
+        await killSidecar(sidecarPid);
       } catch (e) {
         logger.error(
           `Failed to kill sidecar process ${sidecarPid} due to bad version (${wantedMessage}): ${e}`,
@@ -234,7 +242,7 @@ export class SidecarManager {
       }
 
       // Allow the old one a little bit of time to die off.
-      await this.pause();
+      await pause(MOMENTARY_PAUSE_MS);
 
       if (this.pendingHandlePromise != null) {
         // clear out the old promise and start fresh
@@ -288,7 +296,7 @@ export class SidecarManager {
         // Unauthorized. Will need to restart sidecar.
         // print out the response headers
         logger.error(
-          `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401 with headers: ${JSON.stringify(response.headers)}`,
+          `GET ${SIDECAR_BASE_URL}/gateway/v1/health/live returned 401 with headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`,
         );
         // Take note of the PID in the response headers.
         const sidecar_pid = response.headers.get(SIDECAR_PROCESS_ID_HEADER);
@@ -470,7 +478,7 @@ export class SidecarManager {
         // the sidecar process is coming online.
         for (let i = 0; i < MAX_ATTEMPTS; i++) {
           try {
-            await this.pause();
+            await pause(MOMENTARY_PAUSE_MS);
 
             accessToken = await this.doHandshake();
             await getStorageManager().setSecret(SecretStorageKeys.SIDECAR_AUTH_TOKEN, accessToken);
@@ -597,13 +605,6 @@ export class SidecarManager {
     }
     return "";
   }
-  /**
-   * Pause for MOMENTARY_PAUSE_MS.
-   */
-  private async pause(): Promise<void> {
-    // pause an iota
-    await new Promise((timeout_resolve) => setTimeout(timeout_resolve, MOMENTARY_PAUSE_MS));
-  }
 
   dispose() {
     if (this.logTailer) {
@@ -701,15 +702,61 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 
 /**
  * Kill the sidecar process by its PID. Will raise an exception if the PID does not seem like a concrete process id. See kill(2).
+ *
+ * After delivering the SIGTERM signal, we will wait in a loop for at
+ * most WAIT_FOR_SIDECAR_DEATH_MS in MOMENTARY_PAUSE_MS increments in to wait for the process
+ * dies. If it has not by the end, we upgrade to using SIGKILL, then repeat
+ * the procedure.
+ *
  * @param process_id The sidecar's process id.
+ * @param signal The signal to send to the process. Default is SIGTERM.
  */
-export function killSidecar(process_id: number) {
+export async function killSidecar(process_id: number, signal: "SIGTERM" | "SIGKILL" = "SIGTERM") {
   if (process_id <= 1) {
     logger.warn("Refusing to kill process with PID <= 1");
     throw new Error(`Refusing to kill process with PID <= 1`);
+  }
+
+  safeKill(process_id, signal);
+  logger.debug(`Delivered ${signal} to old sidecar process ${process_id}`);
+
+  // Now loop for at most maxWaitMs, checking if the process is still running, pausing
+  // between checks each time.
+  let isRunning: boolean = isProcessRunning(process_id);
+  let remainingWaitMs = WAIT_FOR_SIDECAR_DEATH_MS;
+  while (isRunning && remainingWaitMs > 0) {
+    logger.info(`Waiting for old sidecar process ${process_id} to die ...`);
+    await pause(MOMENTARY_PAUSE_MS);
+    remainingWaitMs -= MOMENTARY_PAUSE_MS;
+
+    isRunning = isProcessRunning(process_id);
+  }
+
+  if (isRunning) {
+    logger.warn(
+      `Old sidecar process ${process_id} still running after ${WAIT_FOR_SIDECAR_DEATH_MS}ms.`,
+    );
+    if (signal === "SIGTERM") {
+      logger.warn(`Upgrading to using SIGKILL ...`);
+      await killSidecar(process_id, "SIGKILL");
+    } else {
+      logger.warn(`SIGKILL signal already sent, giving up.`);
+      throw new SidecarFatalError("Failed to kill old sidecar process");
+    }
   } else {
-    process.kill(process_id, "SIGTERM");
-    logger.debug(`Killed old sidecar process ${process_id}`);
+    // Successful kill. fallthrough to return.
+    logger.debug(
+      `Old sidecar process ${process_id} has died, took ${WAIT_FOR_SIDECAR_DEATH_MS - remainingWaitMs}ms.`,
+    );
+  }
+}
+
+/** Try / catch wrapper around process.kill(). Always returns. */
+export function safeKill(process_id: number, signal: NodeJS.Signals | 0 = "SIGTERM") {
+  try {
+    process.kill(process_id, signal);
+  } catch (e) {
+    logger.error(`Failed to deliver signal ${signal} to process ${process_id}: ${e}`);
   }
 }
 
