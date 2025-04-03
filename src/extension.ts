@@ -55,7 +55,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
-import { registerProjectGenerationCommand } from "./scaffold";
+import { registerProjectGenerationCommands } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -194,6 +194,7 @@ async function _activateExtension(
     ...registerDiffCommands(),
     ...registerExtraCommands(),
     ...registerDockerCommands(),
+    ...registerProjectGenerationCommands(),
   ];
   logger.info("Commands registered");
 
@@ -212,7 +213,6 @@ async function _activateExtension(
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
-  registerProjectGenerationCommand(context);
 
   // Construct the singletons, let them register their event listeners.
   context.subscriptions.push(...constructResourceLoaderSingletons());
