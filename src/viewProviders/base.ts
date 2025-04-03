@@ -54,8 +54,8 @@ export abstract class BaseViewProvider<
    */
   resource: P | null = null;
 
-  /** The context value to adjust when the search string is set/unset. */
-  abstract searchContextValue: ContextValues;
+  /** Optional context value to adjust when the search string is set/unset. */
+  searchContextValue?: ContextValues;
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
   /** Count of how many times the user has set a search string */
@@ -190,8 +190,10 @@ export abstract class BaseViewProvider<
   setSearch(searchString: string | null): void {
     // set/unset the filter so any calls to getChildren() will filter appropriately
     this.itemSearchString = searchString;
-    // set context value to toggle between "search" and "clear search" actions
-    setContextValue(this.searchContextValue, searchString !== null);
+    if (this.searchContextValue) {
+      // set context value to toggle between "search" and "clear search" actions
+      setContextValue(this.searchContextValue, searchString !== null);
+    }
     // clear from any previous search filter
     this.searchMatches = new Set();
     this.totalItemCount = 0;
