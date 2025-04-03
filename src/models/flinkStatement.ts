@@ -1,9 +1,10 @@
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
+import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
-export class FlinkStatement implements IResourceBase, ISearchable {
+export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   connectionId!: ConnectionId;
   connectionType!: ConnectionType;
   iconName: IconNames = IconNames.FLINK_STATEMENT;
@@ -11,7 +12,7 @@ export class FlinkStatement implements IResourceBase, ISearchable {
   environmentId!: EnvironmentId;
   computePoolId!: string;
 
-  name!: string;
+  id!: string;
   status!: string;
 
   // TODO: add more properties as needed
@@ -19,19 +20,19 @@ export class FlinkStatement implements IResourceBase, ISearchable {
   constructor(
     props: Pick<
       FlinkStatement,
-      "connectionId" | "connectionType" | "environmentId" | "computePoolId" | "name" | "status"
+      "connectionId" | "connectionType" | "environmentId" | "computePoolId" | "id" | "status"
     >,
   ) {
     this.connectionId = props.connectionId;
     this.connectionType = props.connectionType;
     this.environmentId = props.environmentId;
     this.computePoolId = props.computePoolId;
-    this.name = props.name;
+    this.id = props.id;
     this.status = props.status;
   }
 
   searchableText(): string {
-    return `${this.name} ${this.status}`;
+    return `${this.id} ${this.status}`;
   }
 }
 
@@ -39,10 +40,10 @@ export class FlinkStatementTreeItem extends TreeItem {
   resource: FlinkStatement;
 
   constructor(resource: FlinkStatement) {
-    super(resource.name, TreeItemCollapsibleState.None);
+    super(resource.id, TreeItemCollapsibleState.None);
 
     // internal properties
-    this.id = `${resource.connectionId}-${resource.computePoolId}-${resource.name}`;
+    this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 
