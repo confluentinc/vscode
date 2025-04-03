@@ -32,6 +32,7 @@ export enum IconNames {
   TOPIC_WITHOUT_SCHEMA = "confluent-topic-without-schema",
   FLINK_COMPUTE_POOL = "confluent-flink-compute-pool",
   FLINK_STATEMENT = "code",
+  FLINK_ARTIFACT = "folder-library",
   EXPERIMENTAL = "beaker",
   LOADING = "loading~spin",
 }
