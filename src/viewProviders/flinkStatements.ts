@@ -1,11 +1,8 @@
 import { TreeDataProvider, TreeItem } from "vscode";
-import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues } from "../context/values";
 import { Logger } from "../logging";
-import { FlinkComputePool } from "../models/flinkComputePool";
+import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
-import { EnvironmentId } from "../models/resource";
 import { BaseViewProvider } from "./base";
 
 const logger = new Logger("viewProviders.flinkStatements");
@@ -24,28 +21,31 @@ export class FlinkStatementsViewProvider
       return children;
     }
 
+    const pool: CCloudFlinkComputePool = this.computePool as CCloudFlinkComputePool;
+
     // TODO: replace this with real data
-    const fakeStatement = new FlinkStatement({
-      connectionId: CCLOUD_CONNECTION_ID,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: "env1" as EnvironmentId,
-      computePoolId: "pool1",
-      id: "statement1",
-      status: "running",
-    });
-    children.push(
-      fakeStatement,
-      new FlinkStatement({
-        ...fakeStatement,
-        id: "statement2",
-        status: "failed",
-      }),
-      new FlinkStatement({
-        ...fakeStatement,
-        id: "statement3",
-        status: "stopped",
-      }),
-    );
+    const numStatements = Math.floor(Math.random() * 20) + 1;
+    const possibleStatuses = [
+      "RUNNING",
+      "CANCELLING",
+      "CANCELED",
+      "FAILED",
+      "FINISHED",
+      "CREATED",
+      "RESTARTING",
+      "SUSPENDED",
+    ];
+    for (let i = 0; i < numStatements; i++) {
+      const fakeArtifact = new FlinkStatement({
+        connectionId: pool.connectionId,
+        connectionType: pool.connectionType,
+        environmentId: pool.environmentId,
+        computePoolId: pool.id,
+        id: `statement${i + 1}-${pool.name}`,
+        status: possibleStatuses[Math.floor(Math.random() * possibleStatuses.length)].toLowerCase(),
+      });
+      children.push(fakeArtifact);
+    }
 
     return this.filterChildren(undefined, children);
   }
