@@ -55,6 +55,14 @@ export abstract class BaseViewProvider<
    * - Flink Artifacts view: `FlinkComputePool`
    */
   resource: P | null = null;
+  /**
+   * Optional {@link EventEmitter} to listen for when this view provider's parent
+   * {@linkcode resource} is set/unset. This is used in order to control the tree view description,
+   * context value, and search string updates internally.
+   */
+  parentResourceChangedEmitter?: EventEmitter<P | null>;
+  /** Optional context value to adjust when the parent {@linkcode resource} is set/unset. */
+  parentResourceChangedContextValue?: ContextValues;
 
   /** Optional context value to adjust when the search string is set/unset. */
   searchContextValue?: ContextValues;
@@ -105,6 +113,8 @@ export abstract class BaseViewProvider<
 
   /** Set up event listeners for this view provider. */
   private setEventListeners(): Disposable[] {
+    const disposables: Disposable[] = [];
+
     const ccloudConnectedSub: Disposable = ccloudConnected.event((connected: boolean) => {
       if (this.resource && isCCloud(this.resource)) {
         // any transition of CCloud connection state should reset the tree view if we're focused on
@@ -114,7 +124,30 @@ export abstract class BaseViewProvider<
       }
     });
 
-    return [ccloudConnectedSub, ...this.setCustomEventListeners()];
+    const parentResourceChangedSub: Disposable | undefined =
+      this.parentResourceChangedEmitter?.event(async (resource: P | null) => {
+        this.logger.debug(
+          `parent resource change event fired, ${resource ? "refreshing" : "resetting"}.`,
+          { resource },
+        );
+        this.setSearch(null); // reset search when parent resource changes
+        if (!resource) {
+          this.reset();
+        } else {
+          if (this.parentResourceChangedContextValue) {
+            setContextValue(this.parentResourceChangedContextValue, true);
+          }
+          this.resource = resource;
+          await this.updateTreeViewDescription();
+          this.refresh();
+        }
+      });
+    if (parentResourceChangedSub) {
+      disposables.push(parentResourceChangedSub);
+    }
+
+    disposables.push(ccloudConnectedSub, ...this.setCustomEventListeners());
+    return disposables;
   }
 
   /** Optional method for subclasses to provide their own event listeners. */

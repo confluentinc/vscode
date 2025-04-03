@@ -63,6 +63,14 @@ export class FlinkComputePoolTreeItem extends TreeItem {
     this.description = resource.id;
 
     this.tooltip = createFlinkComputePoolTooltip(resource);
+
+    // command that allows the user to select a Flink compute pool from the Resources view and
+    // focus it in the Flink Statements and Flink Artifacts views
+    this.command = {
+      command: "confluent.resources.flink-compute-pool.select",
+      title: "Select Flink Compute Pool",
+      arguments: [resource],
+    };
   }
 }
 
