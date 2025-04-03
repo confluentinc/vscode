@@ -1,11 +1,8 @@
 import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { Logger } from "../logging";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
-
-const logger = new Logger("viewProviders.flinkStatements");
 
 export class FlinkStatementsViewProvider
   extends BaseViewProvider<FlinkComputePool, FlinkStatement>
