@@ -1,4 +1,4 @@
-import { Disposable, TreeDataProvider, TreeItem } from "vscode";
+import { TreeDataProvider, TreeItem } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ContextValues } from "../context/values";
@@ -11,6 +11,7 @@ export class FlinkArtifactsViewProvider
   extends BaseViewProvider<FlinkComputePool, FlinkArtifact>
   implements TreeDataProvider<FlinkArtifact>
 {
+  loggerName = "viewProviders.flinkArtifacts";
   viewId = "confluent-flink-artifacts";
   searchContextValue = ContextValues.flinkArtifactsSearchApplied;
 
@@ -42,10 +43,6 @@ export class FlinkArtifactsViewProvider
 
   getTreeItem(element: FlinkArtifact): TreeItem {
     return new FlinkArtifactTreeItem(element);
-  }
-
-  setEventListeners(): Disposable[] {
-    return [];
   }
 
   get computePool(): FlinkComputePool | null {
