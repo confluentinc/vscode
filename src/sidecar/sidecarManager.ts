@@ -355,7 +355,15 @@ export class SidecarManager {
           try {
             fs.accessSync(executablePath);
           } catch (e) {
-            logger.error(`${logPrefix}: component ${executablePath} does not exist`, e);
+            logError(
+              e,
+              `Sidecar executable "${executablePath}" does not exist`,
+              {
+                originalExecutablePath: sidecarExecutablePath,
+                currentSidecarVersion,
+              },
+              true,
+            );
             reject(new NoSidecarExecutableError(`Component ${executablePath} does not exist`));
           }
 
