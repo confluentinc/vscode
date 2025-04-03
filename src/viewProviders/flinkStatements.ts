@@ -1,6 +1,7 @@
 import { Disposable, TreeDataProvider, TreeItem } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { ContextValues } from "../context/values";
 import { FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { EnvironmentId } from "../models/resource";
@@ -11,6 +12,7 @@ export class FlinkStatementsViewProvider
   implements TreeDataProvider<FlinkStatement>
 {
   viewId = "confluent-flink-statements";
+  searchContextValue = ContextValues.flinkStatementsSearchApplied;
 
   async getChildren(): Promise<FlinkStatement[]> {
     const children: FlinkStatement[] = [];

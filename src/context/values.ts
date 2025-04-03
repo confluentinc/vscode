@@ -66,6 +66,8 @@ export enum ContextValues {
   topicSearchApplied = "confluent.topicSearchApplied",
   /** The user applied a search string to the Schemas view. */
   schemaSearchApplied = "confluent.schemaSearchApplied",
+  /** The user applied a search string to the Flink Statements view. */
+  flinkStatementsSearchApplied = "confluent.flinkStatementsSearchApplied",
   /**
    * PREVIEW: Are Flink resources and associated actions visible?
    * (This should go away once the `confluent.preview.enableFlink` setting is removed.)
