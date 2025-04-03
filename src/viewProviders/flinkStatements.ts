@@ -1,5 +1,6 @@
 import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
+import { currentFlinkStatementsPoolChanged } from "../emitters";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
@@ -10,6 +11,10 @@ export class FlinkStatementsViewProvider
 {
   loggerName = "viewProviders.flinkStatements";
   viewId = "confluent-flink-statements";
+
+  parentResourceChangedEmitter = currentFlinkStatementsPoolChanged;
+  parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
+
   searchContextValue = ContextValues.flinkStatementsSearchApplied;
 
   async getChildren(): Promise<FlinkStatement[]> {

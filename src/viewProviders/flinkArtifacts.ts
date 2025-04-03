@@ -1,5 +1,6 @@
 import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
+import { currentFlinkArtifactsPoolChanged } from "../emitters";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { BaseViewProvider } from "./base";
@@ -10,6 +11,10 @@ export class FlinkArtifactsViewProvider
 {
   loggerName = "viewProviders.flinkArtifacts";
   viewId = "confluent-flink-artifacts";
+
+  parentResourceChangedEmitter = currentFlinkArtifactsPoolChanged;
+  parentResourceChangedContextValue = ContextValues.flinkArtifactsPoolSelected;
+
   searchContextValue = ContextValues.flinkArtifactsSearchApplied;
 
   async getChildren(): Promise<FlinkArtifact[]> {
