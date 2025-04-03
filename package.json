@@ -689,8 +689,13 @@
       },
       {
         "view": "confluent-flink-artifacts",
-        "contents": "No Flink statements found.\n[Create Statement](command:confluent.artifacts.flink-compute-pool.select)",
+        "contents": "No Flink compute pool selected. Click below to get started.\n[Select Flink Compute Pool](command:confluent.artifacts.flink-compute-pool.select)",
         "when": "confluent.ccloudConnectionAvailable && !confluent.flinkArtifactsPoolSelected"
+      },
+      {
+        "view": "confluent-flink-artifacts",
+        "contents": "No Flink artifacts found.",
+        "when": "confluent.ccloudConnectionAvailable && confluent.flinkArtifactsPoolSelected"
       }
     ],
     "menus": {
