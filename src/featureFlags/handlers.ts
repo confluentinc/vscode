@@ -45,8 +45,11 @@ export async function handleFlagChanges(changes: LDFlagChangeset) {
 /** Callback function for handling "error" events from the LD stream. */
 export function handleErrorEvent(error: unknown) {
   if (error instanceof Error) {
-    // send any error events to Sentry (if online) so we can troubleshoot
-    logError(error, "LD error event", {}, true);
+    if (!error.message.includes("network error")) {
+      // send any non-'network error' events to Sentry (if online) so we can troubleshoot
+      // https://support.launchdarkly.com/hc/en-us/articles/12998125691419-Error-LaunchDarklyFlagFetchError-network-error
+      logError(error, "LD error event", {}, true);
+    }
   } else {
     logger.error("LD error event:", error);
   }
