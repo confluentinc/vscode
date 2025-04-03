@@ -47,13 +47,15 @@ export abstract class BaseViewProvider<
    * The focused resource instance associated with this provider.
    *
    * Examples:
-   * - Topics view: Kafka cluster
-   * - Schemas view: Schema Registry
-   * - Flink Statements view: Flink compute pool
-   * - Flink Artifacts view: Flink compute pool
+   * - Topics view: `KafkaCluster`
+   * - Schemas view: `SchemaRegistry`
+   * - Flink Statements view: `FlinkComputePool`
+   * - Flink Artifacts view: `FlinkComputePool`
    */
   resource: P | null = null;
 
+  /** The context value to adjust when the search string is set/unset. */
+  abstract searchContextValue: ContextValues;
   /** String to filter items returned by `getChildren`, if provided. */
   itemSearchString: string | null = null;
   /** Count of how many times the user has set a search string */
@@ -189,7 +191,7 @@ export abstract class BaseViewProvider<
     // set/unset the filter so any calls to getChildren() will filter appropriately
     this.itemSearchString = searchString;
     // set context value to toggle between "search" and "clear search" actions
-    setContextValue(ContextValues.schemaSearchApplied, searchString !== null);
+    setContextValue(this.searchContextValue, searchString !== null);
     // clear from any previous search filter
     this.searchMatches = new Set();
     this.totalItemCount = 0;
