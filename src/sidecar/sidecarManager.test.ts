@@ -8,8 +8,13 @@ import {
   appendSidecarLogToOutputChannel,
   constructSidecarEnv,
   killSidecar,
+  MOMENTARY_PAUSE_MS,
+  safeKill,
+  WAIT_FOR_SIDECAR_DEATH_MS,
   wasConnRefused,
 } from "./sidecarManager";
+
+import * as utils from "./utils";
 
 describe("Test wasConnRefused", () => {
   it("wasConnRefused() should return true for various spellings of a connection refused error", () => {
@@ -70,43 +75,188 @@ describe("constructSidecarEnv tests", () => {
 });
 
 describe("killSidecar() tests", () => {
-  let kill: (pid: number, signal?: string | number | undefined) => true;
+  let sandbox: sinon.SinonSandbox;
+  let killStub: sinon.SinonStub;
+  let clock: sinon.SinonFakeTimers;
+  const pid = 1234;
 
   beforeEach(() => {
-    // mock out process.kill
-    kill = process.kill;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    process.kill = (pid: number, signal: string | number) => {
-      return true;
-    };
+    sandbox = sinon.createSandbox();
+    killStub = sandbox.stub(process, "kill");
+    sandbox.stub(utils, "pause").resolves();
+    clock = sandbox.useFakeTimers(Date.now());
   });
 
   afterEach(() => {
-    // restore
-    process.kill = kill;
+    sandbox.restore();
   });
 
-  it("refuses to kill nonpositive pids", () => {
+  it("refuses to kill nonpositive pids", async () => {
     for (const pid of [0, -1, -2]) {
-      assert.throws(() => killSidecar(pid), /Refusing to kill process with PID <= 1/);
+      await assert.rejects(
+        async () => await killSidecar(pid),
+        /Refusing to kill process with PID <= 1/,
+      );
     }
   });
 
-  it("Will try to kill positive pids", () => {
+  it("Will try to kill positive pids", async () => {
+    // Expect first call to kill the pid with SIGTERM.
+    killStub.onFirstCall().returns(true);
+    // Second call should be kill(pid, 0) to check if the process is still alive. Indicate that
+    // it is not alive.
+    killStub.onSecondCall().throws(new Error("process does not exist"));
+
+    await assert.doesNotReject(async () => await killSidecar(pid));
+
+    assert.strictEqual(killStub.callCount, 2);
+    assert.strictEqual(killStub.getCall(0).args[0], pid);
+    assert.strictEqual(killStub.getCall(0).args[1], "SIGTERM");
+
+    assert.strictEqual(killStub.getCall(1).args[0], pid);
+    assert.strictEqual(killStub.getCall(1).args[1], 0);
+  });
+
+  it("Will loop after SIGTERM until the process is dead, but then be content when it dies", async () => {
+    let checkCallCount = 0;
+    // Expect first call to kill the pid with SIGTERM.
+    killStub.callsFake(
+      // Set up so that the first call with SIGTERM returns true (process killed),
+      // then the first 3 calls with 0 return true (process still alive),
+      // then the last call with 0 throws an error (process not alive).
+      (pid: number, signal: string | number) => {
+        if (signal === "SIGTERM") {
+          return true; // let the call to kill the process succeed.
+        } else if (signal === 0) {
+          // Is checking to see if pid is still alive.
+          // Simulate the process being alive for first 3 checks.
+          checkCallCount++;
+          if (checkCallCount < 3) {
+            return true; // process still alive the first few times
+          } else {
+            throw new Error("process does not exist"); // process not alive anymore
+          }
+        }
+      },
+    );
+
+    const promise = killSidecar(pid);
+
+    // first loop pause ...
+    await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
+    // second
+    await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
+    // third
+    await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
+
+    await assert.doesNotReject(promise);
+
+    assert.strictEqual(killStub.callCount, 4, "total call count"); // 1 kill + 3 checks
+    assert.strictEqual(checkCallCount, 3, "checkCallCount"); // 3 checks before process is dead
+  });
+
+  it("Will upgrade to SIGKILL if process is still alive after WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS checks", async () => {
+    let receivedSigTerm = false;
+    let receivedSigKill = false;
+    killStub.callsFake(
+      // Set up so that the first call with SIGTERM returns true (process killed),
+      // then the first 3 calls with 0 return true (process still alive),
+      // then the last call with 0 throws an error (process not alive).
+      (pid: number, signal: string | number) => {
+        if (signal === "SIGTERM") {
+          receivedSigTerm = true;
+          return true; // let the call to kill the process succeed.
+        } else if (signal === "SIGKILL") {
+          receivedSigKill = true;
+          return true; // let the call to kill the process succeed.
+        } else if (signal === 0) {
+          // Indicate is alive until receivedSigKill is delivered.
+          if (!receivedSigKill) {
+            return true; // process still alive the first few times
+          } else {
+            throw new Error("process does not exist"); // process not alive anymore
+          }
+        }
+      },
+    );
+
+    // Will send sigterm. Then loop poll for WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS
+    // times waiting for death, then will upgrade to SIGKILL.
+    const promise = killSidecar(pid);
+
+    for (let i = 0; i < WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS; i++) {
+      await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
+    }
+
+    await assert.doesNotReject(promise);
+
+    assert.strictEqual(receivedSigTerm, true, "receivedSigTerm");
+    assert.strictEqual(receivedSigKill, true, "receivedSigKill");
+  });
+
+  it("Throws if process is still alive after SIGKILL", async () => {
+    let receivedSigTerm = false;
+    let receivedSigKill = false;
+    killStub.callsFake(
+      // Simulate that for some reason the sidecar never dies, even after SIGKILL.
+      // (say, it is a zombie process or in device wait against bad NFS mount)
+      (pid: number, signal: string | number) => {
+        if (signal === "SIGTERM") {
+          receivedSigTerm = true;
+          return true; // let the call to kill the process succeed.
+        } else if (signal === "SIGKILL") {
+          receivedSigKill = true;
+        } else if (signal === 0) {
+          return true; // process always still alive
+        }
+      },
+    );
+
+    const promise = killSidecar(pid);
+
+    // loop through all of the sigterm checks, then the sigkill checks.
+    for (let i = 0; i < 2 * (WAIT_FOR_SIDECAR_DEATH_MS / MOMENTARY_PAUSE_MS); i++) {
+      await clock.tickAsync(MOMENTARY_PAUSE_MS + 1);
+    }
+
+    await assert.rejects(promise, /Failed to kill old sidecar process/);
+
+    assert.strictEqual(receivedSigTerm, true, "receivedSigTerm");
+    assert.strictEqual(receivedSigKill, true, "receivedSigKill");
+  });
+});
+
+describe("safeKill() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let killStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    killStub = sandbox.stub(process, "kill");
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("safeKill() should call kill with the correct arguments", () => {
     const pid = 1234;
-    // mock out process.kill
-    const kill = process.kill;
-    process.kill = (pid: number, signal: string | number) => {
-      assert.strictEqual(1234, pid);
-      assert.strictEqual("SIGTERM", signal);
-      return true;
-    };
+    const signal = "SIGTERM";
 
-    assert.doesNotThrow(() => killSidecar(pid));
+    safeKill(pid, signal);
 
-    // restore
-    process.kill = kill;
+    assert.strictEqual(killStub.calledWith(pid, signal), true);
+  });
+
+  it("safeKill() should not throw an error if kill raises error", () => {
+    const pid = 1234;
+    const signal = "SIGTERM";
+
+    killStub.throws(new Error("test error"));
+
+    assert.doesNotThrow(() => {
+      safeKill(pid, signal);
+    });
   });
 });
 
