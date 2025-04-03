@@ -218,6 +218,11 @@
         "category": "Confluent: Resources View"
       },
       {
+        "command": "confluent.resources.scaffold",
+        "title": "Generate Project From Resource",
+        "category": "Confluent: Resource Project"
+      },
+      {
         "command": "confluent.scaffold",
         "title": "Generate New Project",
         "category": "Confluent: Project"
@@ -1031,6 +1036,10 @@
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
           "when": "view == confluent-resources && viewItem =~ /.*-kafka-cluster.*/",
           "group": "2_copy@3"
+        },
+        {
+          "command": "confluent.resources.scaffold",
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*-topic.*/)"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
