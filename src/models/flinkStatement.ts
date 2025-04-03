@@ -31,10 +31,6 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
     this.status = props.status;
   }
 
-  get id(): string {
-    return `${this.connectionId}-${this.computePoolId}-${this.name}`;
-  }
-
   searchableText(): string {
     return `${this.id} ${this.status}`;
   }
