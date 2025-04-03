@@ -87,6 +87,7 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
 
   /** Stores a map of options with key: value pairs that is then updated on form input
    * This keeps a sort of "state" so that users don't lose inputs when the form goes in the background
+   * It also initializes the options with either the initial values or known values from the item
    */
   let optionValues: { [key: string]: string | boolean } = {};
   let options = templateSpec.options || {};
@@ -102,11 +103,9 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
     }
     return properties.initial_value ?? "";
   }
-
-  Object.entries(options).forEach(async ([option, properties]) => {
+  for (const [option, properties] of Object.entries(options)) {
     optionValues[option] = await getInitialOptionValue(option, properties);
-  });
-
+  }
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }

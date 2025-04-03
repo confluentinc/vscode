@@ -1039,7 +1039,7 @@
         },
         {
           "command": "confluent.resources.scaffold",
-          "when": "viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*-topic.*/"
+          "when": "view in confluent.viewsWithResources && (viewItem =~ /.*-kafka-cluster.*/ || viewItem =~ /.*-topic.*/)"
         },
         {
           "command": "confluent.schemas.copySchemaRegistryId",
