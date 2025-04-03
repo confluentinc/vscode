@@ -23,19 +23,19 @@ export class FlinkStatementsViewProvider
       connectionType: ConnectionType.Ccloud,
       environmentId: "env1" as EnvironmentId,
       computePoolId: "pool1",
-      name: "statement1",
+      id: "statement1",
       status: "running",
     });
     children.push(
       fakeStatement,
       new FlinkStatement({
         ...fakeStatement,
-        name: "statement2",
+        id: "statement2",
         status: "failed",
       }),
       new FlinkStatement({
         ...fakeStatement,
-        name: "statement3",
+        id: "statement3",
         status: "stopped",
       }),
     );
