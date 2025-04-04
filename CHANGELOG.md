@@ -7,7 +7,7 @@ All notable changes to this extension will be documented in this file.
 ### Added
 
 - New actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new project. The project generation form will still be opened, and known form fields will be filled in automatically for the clicked resource.
-- "View in Confluent Cloud" item added to ccloud-based subjects (previously only available on indivdual schemas).
+- "View in Confluent Cloud" item added to ccloud-based subjects (previously only available on individual schemas).
 
 ### Changed
 
