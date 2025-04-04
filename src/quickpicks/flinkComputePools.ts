@@ -3,7 +3,7 @@ import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
 import { showInfoNotificationWithButtons } from "../errors";
-import { getEnvironments } from "../graphql/environments";
+import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { FlinkComputePool } from "../models/flinkComputePool";
@@ -42,8 +42,8 @@ export async function flinkComputePoolQuickPickWithViewProgress(
  * ccloud-pool3 (lfcp-id3)
  */
 export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | undefined> {
-  // TODO: implement and use ResourceLoader methods
-  const environments: Environment[] = await getEnvironments();
+  const loader = CCloudResourceLoader.getInstance();
+  const environments: Environment[] = await loader.getEnvironments();
   const computePools: FlinkComputePool[] = [];
   for (const env of environments) {
     if (env.flinkComputePools) {
