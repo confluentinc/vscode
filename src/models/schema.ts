@@ -91,6 +91,13 @@ export class Subject implements IResourceBase, ISearchable, ISchemaRegistryResou
     return connectionIdToType(this.connectionId);
   }
 
+  get ccloudUrl(): string {
+    if (isCCloud(this)) {
+      return `https://confluent.cloud/environments/${this.environmentId}/stream-governance/schema-registry/data-contracts/${this.name}?utm_source=${UTM_SOURCE_VSCODE}`;
+    }
+    return "";
+  }
+
   searchableText(): string {
     return this.name;
   }
@@ -266,6 +273,9 @@ export class SubjectTreeItem extends vscode.TreeItem {
     this.iconPath = getSubjectIcon(subject.name);
 
     const propertyParts: string[] = new Array<string>();
+
+    propertyParts.push(subject.connectionType.toLowerCase());
+
     if (subject.schemas) {
       this.description = `${subject.schemas[0].type} (${subject.schemas.length})`;
       if (subject.schemas.length > 1) {
