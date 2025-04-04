@@ -6,7 +6,7 @@ import { showInfoNotificationWithButtons } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
-import { FlinkComputePool } from "../models/flinkComputePool";
+import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
 import { FlinkArtifactsViewProvider } from "../viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
@@ -47,7 +47,9 @@ export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | un
   const computePools: FlinkComputePool[] = [];
   for (const env of environments) {
     if (env.flinkComputePools) {
-      computePools.push(...env.flinkComputePools);
+      const pools = env.flinkComputePools as CCloudFlinkComputePool[];
+      // convert the pools data to CCloudFlinkComputePool instances
+      computePools.push(...pools.map((pool) => new CCloudFlinkComputePool(pool)));
     }
   }
 
