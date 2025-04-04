@@ -1171,7 +1171,7 @@
         },
         {
           "command": "confluent.openCCloudLink",
-          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/ || viewItem =~ /.*ccloud.*schema$/)",
+          "when": "view in confluent.viewsWithResources && (viewItem in confluent.ccloudResources || viewItem =~ /ccloud-kafka-topic.*/ || viewItem =~ /.*ccloud.*subject$/ || viewItem =~ /.*ccloud.*schema$/)",
           "group": "z_openInCloud"
         },
         {
