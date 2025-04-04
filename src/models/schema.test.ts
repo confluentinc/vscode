@@ -7,6 +7,7 @@ import {
   TEST_CCLOUD_SUBJECT_WITH_SCHEMA,
   TEST_CCLOUD_SUBJECT_WITH_SCHEMAS,
   TEST_LOCAL_SCHEMA,
+  TEST_LOCAL_SUBJECT,
 } from "../../tests/unit/testResources";
 import { CCLOUD_CONNECTION_ID, IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { EnvironmentId } from "./resource";
@@ -357,7 +358,7 @@ describe("SchemaTreeItem", () => {
 describe("SubjectTreeItem", () => {
   it("constructor should do the right things when no schemas present", () => {
     const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT);
-    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+    assert.equal(subjectTreeItem.contextValue, "ccloud-schema-subject");
 
     assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
     assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
@@ -367,7 +368,7 @@ describe("SubjectTreeItem", () => {
 
   it("constructor should do the right things when single schema version present", () => {
     const subjectTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMA);
-    assert.equal(subjectTreeItem.contextValue, "schema-subject");
+    assert.equal(subjectTreeItem.contextValue, "ccloud-schema-subject");
 
     assert.equal(subjectTreeItem.label, TEST_CCLOUD_SUBJECT.name);
     assert.equal(subjectTreeItem.id, TEST_CCLOUD_SUBJECT.name);
@@ -377,7 +378,10 @@ describe("SubjectTreeItem", () => {
 
   it("constructor should do the right things when multiple schema versions present", () => {
     const subjectWithSchemasTreeItem = new SubjectTreeItem(TEST_CCLOUD_SUBJECT_WITH_SCHEMAS);
-    assert.equal(subjectWithSchemasTreeItem.contextValue, "multiple-versions-schema-subject");
+    assert.equal(
+      subjectWithSchemasTreeItem.contextValue,
+      "ccloud-multiple-versions-schema-subject",
+    );
 
     assert.equal(subjectWithSchemasTreeItem.label, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
     assert.equal(subjectWithSchemasTreeItem.id, TEST_CCLOUD_SUBJECT_WITH_SCHEMAS.name);
@@ -386,5 +390,11 @@ describe("SubjectTreeItem", () => {
       vscode.TreeItemCollapsibleState.Collapsed,
     );
     assert.equal(subjectWithSchemasTreeItem.description, "AVRO (2)");
+  });
+
+  it("non-ccloud subject should have the right context value", () => {
+    const subjectTreeItem = new SubjectTreeItem(TEST_LOCAL_SUBJECT);
+
+    assert.equal(subjectTreeItem.contextValue, "local-schema-subject");
   });
 });
