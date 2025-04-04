@@ -4,10 +4,15 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
-- Add new actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new
-  project. The project generation form will still be opened, and known form fields will be filled in
-  automatically for the clicked resource.
+### Added
 
+- New actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new project. The project generation form will still be opened, and known form fields will be filled in automatically for the clicked resource.
+
+### Changed
+
+- When deleting a subject containing a single schema, use the simpler
+  confirmation flow for deleting a single schema.
+  
 ## 1.1.0
 
 ### Added

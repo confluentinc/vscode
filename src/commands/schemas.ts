@@ -415,8 +415,16 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
     return;
   }
 
-  // Ask if they are sure they want to delete the schema subject.
-  const confirmation = await confirmSchemaSubjectDeletion(hardDelete, subject, schemaGroup);
+  let confirmation: boolean | undefined;
+
+  if (schemaGroup.length > 1) {
+    // Wordier confirmation message for deleting multiple schema versions.
+    confirmation = await confirmSchemaSubjectDeletion(hardDelete, subject, schemaGroup);
+  } else {
+    // If just one schema version, then defer to confirmSchemaVersionDeletion for simpler
+    // confirmation experience deleting the single version in the subject.
+    confirmation = await confirmSchemaVersionDeletion(hardDelete, schemaGroup[0], schemaGroup);
+  }
 
   if (!confirmation) {
     logger.debug("User canceled schema subject deletion.");
