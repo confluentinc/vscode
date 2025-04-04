@@ -19,7 +19,14 @@ addEventListener("DOMContentLoaded", () => {
   applyBindings(ui, os, vm);
   vm.setupEnterKeyHandler();
 });
-
+const allAuthOptions: Array<{ label: string; value: SupportedAuthTypes }> = [
+  { label: "None", value: "None" },
+  { label: "Username & Password (SASL/PLAIN)", value: "Basic" },
+  { label: "API Credentials (SASL/PLAIN)", value: "API" },
+  { label: "SASL/SCRAM", value: "SCRAM" },
+  { label: "SASL/OAUTHBEARER", value: "OAuth" },
+  { label: "Kerberos (SASL/GSSAPI)", value: "Kerberos" },
+];
 class DirectConnectFormViewModel extends ViewModel {
   /** Load connection spec if it exists (for Edit) */
   spec = this.resolve(async () => {
@@ -81,6 +88,19 @@ class DirectConnectFormViewModel extends ViewModel {
   schemaSslConfig = this.derive(() => {
     return this.spec()?.schema_registry?.ssl || {};
   });
+
+  /** Get valid auth types based on form connection type */
+  getValidAuthTypes = this.derive(() => {
+    switch (this.platformType()) {
+      case "Confluent Cloud":
+        return allAuthOptions.filter((auth) => ["API", "SCRAM", "OAuth"].includes(auth.value));
+      case "WarpStream":
+        return allAuthOptions.filter((auth) => ["Basic", "SCRAM"].includes(auth.value));
+      default:
+        return allAuthOptions;
+    }
+  });
+
   /** Form State */
   message = this.signal("");
   success = this.signal(false);
@@ -154,6 +174,12 @@ class DirectConnectFormViewModel extends ViewModel {
         if (input.value === "Confluent Cloud") {
           this.kafkaSslEnabled(true);
           this.schemaSslEnabled(true);
+          this.kafkaAuthType("API");
+          // this.schemaAuthType("API");
+        }
+        if (input.value === "WarpStream") {
+          this.kafkaAuthType("Basic");
+          // this.schemaAuthType("Basic");
         }
         break;
       case "kafka_cluster.auth_type":
