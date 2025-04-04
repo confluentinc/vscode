@@ -23,7 +23,7 @@ export class FlinkArtifactsViewProvider
       connectionId: CCLOUD_CONNECTION_ID,
       connectionType: ConnectionType.Ccloud,
       environmentId: "env1" as EnvironmentId,
-      computePoolId: "pool1",
+      id: "artifact1",
       name: "artifact1",
       description: "This is a test artifact",
       provider: "aws",
