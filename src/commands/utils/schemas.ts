@@ -166,6 +166,7 @@ export async function hardDeletionQuickPick(noun: string): Promise<boolean | und
 
   return strengthStr.label.startsWith("Hard");
 }
+
 /**
  * Ask the user if they're really sure they want to hard/soft delete this entire subject group?
  *
