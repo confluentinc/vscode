@@ -10,8 +10,8 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
   iconName: IconNames = IconNames.FLINK_ARTIFACT;
 
   environmentId!: EnvironmentId;
-  computePoolId!: string;
 
+  id!: string;
   name!: string; // display_name
   description!: string;
 
@@ -26,7 +26,7 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
       | "connectionId"
       | "connectionType"
       | "environmentId"
-      | "computePoolId"
+      | "id"
       | "name"
       | "description"
       | "provider"
@@ -36,15 +36,11 @@ export class FlinkArtifact implements IResourceBase, IdItem, ISearchable {
     this.connectionId = props.connectionId;
     this.connectionType = props.connectionType;
     this.environmentId = props.environmentId;
-    this.computePoolId = props.computePoolId;
+    this.id = props.id;
     this.name = props.name;
     this.description = props.description;
     this.provider = props.provider;
     this.region = props.region;
-  }
-
-  get id(): string {
-    return `${this.connectionId}-${this.computePoolId}-${this.name}`;
   }
 
   searchableText(): string {
@@ -59,7 +55,7 @@ export class FlinkArtifactTreeItem extends TreeItem {
     super(resource.name, TreeItemCollapsibleState.None);
 
     // internal properties
-    this.id = `${resource.connectionId}-${resource.computePoolId}-${resource.name}`;
+    this.id = resource.id;
     this.resource = resource;
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-artifact`;
 
