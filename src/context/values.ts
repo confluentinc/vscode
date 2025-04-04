@@ -60,6 +60,10 @@ export enum ContextValues {
   kafkaClusterSelected = "confluent.kafkaClusterSelected",
   /** The user clicked a Schema Registry tree item. */
   schemaRegistrySelected = "confluent.schemaRegistrySelected",
+  /** The user focused a Flink compute pool for the Flink Statements view. */
+  flinkStatementsPoolSelected = "confluent.flinkStatementsPoolSelected",
+  /** The user focused a Flink compute pool for the Flink Artifacts view. */
+  flinkArtifactsPoolSelected = "confluent.flinkArtifactsPoolSelected",
   /** The user applied a search string to the Resources view. */
   resourceSearchApplied = "confluent.resourceSearchApplied",
   /** The user applied a search string to the Topics view. */
