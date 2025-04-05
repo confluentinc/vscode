@@ -251,6 +251,7 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
       if (selectedItems.length === 0 && options?.selectedItems) {
         selectedItems = [...options.selectedItems];
       }
+      disposables.forEach(d => d.dispose());
       resolve({ quickPick, selectedItems });
     });
   });
