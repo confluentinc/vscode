@@ -28,14 +28,15 @@ export class FlinkStatementsViewProvider
     // TODO: replace this with real data
     const numStatements = Math.floor(Math.random() * 20) + 1;
     const possibleStatuses = [
-      "RUNNING",
-      "CANCELLING",
-      "CANCELED",
+      "COMPLETED", // in CCloud, not the spec
+      "DEGRADED", // in CCloud, not the spec
+      "DELETING",
       "FAILED",
-      "FINISHED",
-      "CREATED",
-      "RESTARTING",
-      "SUSPENDED",
+      "FAILING",
+      "PENDING",
+      "RUNNING",
+      "STOPPED",
+      "STOPPING", // shouldn't exist?
     ];
     for (let i = 0; i < numStatements; i++) {
       const fakeArtifact = new FlinkStatement({
