@@ -195,17 +195,23 @@ export function createEnhancedQuickPick<T extends QuickPickItemWithValue<any>>(
     quickPick.selectedItems = options.selectedItems;
   }
 
+  const disposables: Disposable[] = [];
+  
   // Set up event handlers
   if (options?.onSelectionChange) {
-    quickPick.onDidChangeSelection((items: readonly T[]) => {
-      options.onSelectionChange?.(items, quickPick);
-    });
+    disposables.push(
+      quickPick.onDidChangeSelection((items: readonly T[]) => {
+        options.onSelectionChange?.(items, quickPick);
+      })
+    );
   }
 
   if (options?.onActiveItemChange) {
-    quickPick.onDidChangeActive((items: readonly T[]) => {
-      options.onActiveItemChange?.(items[0], quickPick);
-    });
+    disposables.push(
+      quickPick.onDidChangeActive((items: readonly T[]) => {
+        options.onActiveItemChange?.(items[0], quickPick);
+      });
+    )
   }
 
   if (options?.onItemButtonClicked) {
