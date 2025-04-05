@@ -1,4 +1,4 @@
-import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames } from "../constants";
 import { IdItem } from "./main";
@@ -48,9 +48,53 @@ export class FlinkStatementTreeItem extends TreeItem {
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 
     // user-facing properties
-    this.iconPath = new ThemeIcon(resource.iconName);
+    this.iconPath = createFlinkStatementIcon(resource.status);
     this.description = resource.status;
 
     // TODO: add tooltip
+  }
+}
+
+export function createFlinkStatementIcon(status: string): ThemeIcon {
+  switch (status.toUpperCase()) {
+    case "COMPLETED":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_COMPLETED,
+        new ThemeColor("charts.lines"), // grayish
+      );
+    case "RUNNING":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_RUNNING,
+        new ThemeColor("charts.green"), // greenish
+      );
+    case "FAILED":
+    case "FAILING":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_FAILED,
+        new ThemeColor("notificationsErrorIcon.foreground"), // red
+      );
+    case "DEGRADED":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_DEGRADED,
+        new ThemeColor("notificationsWarningIcon.foreground"), // yellowish
+      );
+    case "DELETING":
+    case "STOPPING":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_DELETING,
+        new ThemeColor("charts.lines"), // grayish
+      );
+    case "STOPPED":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_STOPPED,
+        new ThemeColor("charts.blue"), // blueish
+      );
+    case "PENDING":
+      return new ThemeIcon(
+        IconNames.FLINK_STATEMENT_STATUS_PENDING,
+        new ThemeColor("charts.blue"), // blueish
+      );
+    default:
+      throw new Error(`Unknown Flink statement status: ${status}`);
   }
 }
