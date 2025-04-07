@@ -18,6 +18,13 @@ All notable changes to this extension will be documented in this file.
 - When deleting a subject containing a single schema, use the simpler confirmation flow for deleting
   a single schema.
 
+## 1.1.1
+
+### Fixed
+- Consult the list of *workspace* open files when submitting schema documents, not the list of
+  *window* open editors, #1429. The user may have chosen an untitled document from a window distinct
+  from the one they have the extension open in.
+
 ## 1.1.0
 
 ### Added

@@ -34,13 +34,11 @@ export interface LoadedDocumentContent {
  * @throws An error if the file cannot be read (and is not open in an editor).
  */
 export async function getEditorOrFileContents(uri: vscode.Uri): Promise<LoadedDocumentContent> {
-  const editor = vscode.window.visibleTextEditors.find(
-    (e) => e.document.uri.toString() === uri.toString(),
-  );
-  if (editor) {
+  const document = vscode.workspace.textDocuments.find((e) => e.uri.toString() === uri.toString());
+  if (document) {
     return {
-      content: editor.document.getText(),
-      openDocument: editor.document,
+      content: document.getText(),
+      openDocument: document,
     };
   }
 
