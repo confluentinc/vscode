@@ -290,20 +290,28 @@ async function setupContextValues() {
     "confluent-resources",
     "confluent-topics",
     "confluent-schemas",
+    "confluent-flink-statements",
+    "confluent-flink-artifacts",
   ]);
+
   // enables the "Copy ID" command; these resources must have the "id" property
   const resourcesWithIds = setContextValue(ContextValues.RESOURCES_WITH_ID, [
     "ccloud-environment", // direct/local environments only have internal IDs
     "ccloud-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
+    "ccloud-flink-artifact",
     "local-kafka-cluster",
     "local-schema-registry",
     "direct-kafka-cluster",
     "direct-schema-registry",
   ]);
+
+  // enables the "Copy Name" command; these resources must have the "name" property
   const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
     "ccloud-environment",
     "ccloud-kafka-cluster",
+    "ccloud-flink-statement",
+    "ccloud-flink-artifact",
     "local-kafka-cluster",
     "direct-kafka-cluster",
     // topics also have names, but their context values vary wildly and must be regex-matched
