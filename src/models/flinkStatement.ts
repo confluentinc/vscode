@@ -12,7 +12,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   environmentId!: EnvironmentId;
   computePoolId!: string;
 
-  id!: string;
+  name!: string;
   status!: string;
 
   // TODO: add more properties as needed
@@ -20,19 +20,27 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   constructor(
     props: Pick<
       FlinkStatement,
-      "connectionId" | "connectionType" | "environmentId" | "computePoolId" | "id" | "status"
+      "connectionId" | "connectionType" | "environmentId" | "computePoolId" | "name" | "status"
     >,
   ) {
     this.connectionId = props.connectionId;
     this.connectionType = props.connectionType;
     this.environmentId = props.environmentId;
     this.computePoolId = props.computePoolId;
-    this.id = props.id;
+    this.name = props.name;
     this.status = props.status;
   }
 
   searchableText(): string {
-    return `${this.id} ${this.status}`;
+    return `${this.name} ${this.status}`;
+  }
+
+  /**
+   * Return the name of the statement as its id.
+   * This is guaranteed to be unique within the environment, per API docs.
+   */
+  get id(): string {
+    return this.name;
   }
 }
 
