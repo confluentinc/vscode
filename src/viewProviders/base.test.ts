@@ -24,12 +24,12 @@ class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement
       TEST_CCLOUD_FLINK_STATEMENT,
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        id: "statement1",
+        name: "statement1",
         status: "PENDING",
       }),
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        id: "statement2",
+        name: "statement2",
         status: "STOPPED",
       }),
     ];
@@ -340,14 +340,14 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
 
     const matchingStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      id: "first-statement",
+      name: "first-statement",
       status: "STOPPED",
     });
     const items = [
       matchingStatement,
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        id: "second-statement",
+        name: "second-statement",
         status: "PENDING",
       }),
     ];
@@ -367,12 +367,12 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     const items = [
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        id: "first-statement",
+        name: "first-statement",
         status: "RUNNING",
       }),
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
-        id: "second-statement",
+        name: "second-statement",
         status: "PENDING",
       }),
     ];
