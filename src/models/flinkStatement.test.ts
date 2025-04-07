@@ -21,7 +21,7 @@ describe("FlinkStatement", () => {
   });
 });
 
-describe("FlinkStatementTreeItme", () => {
+describe("FlinkStatementTreeItem", () => {
   // Prove context value is "ccloud-flink-statement"
   it("has the correct context value", () => {
     const statement = TEST_CCLOUD_FLINK_STATEMENT;
