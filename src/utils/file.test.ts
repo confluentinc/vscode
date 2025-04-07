@@ -53,24 +53,23 @@ describe("getEditorOrFileContents", () => {
 
   it("should prefer editor contents if editor is open over what is on disk", async () => {
     const uri = vscode.Uri.file("file:///file.ts");
-    const fakeEditorContents = "Fake editor contents";
-    const fakeEditor = {
-      document: {
-        uri,
-        getText: () => fakeEditorContents,
-      },
+    const fakeDocumentContents = "Fake editor contents";
+    const fakeDocument = {
+      uri,
+      getText: () => fakeDocumentContents,
     };
-    sandbox.stub(vscode.window, "visibleTextEditors").get(() => [fakeEditor as any]);
+    sandbox.stub(vscode.workspace, "textDocuments").get(() => [fakeDocument as any]);
 
     // Also stub out differing file contents on disk. getEditorOrFileContents() should
     // prefer the editor contents over this.
     const fakeFileContents = "Bad on-disk contents";
-    sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
+    const readFileStub = sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
 
     const result: LoadedDocumentContent = await getEditorOrFileContents(uri);
 
-    assert.strictEqual(result.content, fakeEditorContents);
-    assert.strictEqual(result.openDocument, fakeEditor.document);
+    assert.strictEqual(result.content, fakeDocumentContents);
+    assert.strictEqual(result.openDocument, fakeDocument);
+    assert.ok(readFileStub.notCalled, "readFile should not be called if editor is open");
   });
 
   it("should return file contents if editor is not open", async () => {
