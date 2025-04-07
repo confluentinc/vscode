@@ -43,7 +43,7 @@ export class FlinkStatementsViewProvider
         connectionType: pool.connectionType,
         environmentId: pool.environmentId,
         computePoolId: pool.id,
-        id: `statement${i + 1}-${pool.name}`,
+        name: `statement${i + 1}-${pool.name}`,
         status: possibleStatuses[Math.floor(Math.random() * possibleStatuses.length)].toLowerCase(),
       });
       children.push(fakeArtifact);
