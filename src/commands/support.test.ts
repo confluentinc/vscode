@@ -2,7 +2,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { Uri } from "vscode";
 import * as logging from "../logging";
-import { SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
+import { getSidecarLogfilePath } from "../sidecar/sidecarManager";
 import { extensionLogFileUris, sidecarLogFileUri } from "./support";
 
 describe("commands/support.ts", function () {
@@ -47,7 +47,8 @@ describe("commands/support.ts", function () {
 
   it("sidecarLogFileUri() should return the correct URI for the sidecar log file", function () {
     const logFileUri: Uri = sidecarLogFileUri();
+    const logfilePath = getSidecarLogfilePath();
 
-    assert.strictEqual(logFileUri.path, SIDECAR_LOGFILE_PATH);
+    assert.strictEqual(logFileUri.path, logfilePath);
   });
 });
