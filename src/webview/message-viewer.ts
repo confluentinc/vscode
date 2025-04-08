@@ -321,7 +321,8 @@ class MessageViewerViewModel extends ViewModel {
     offset: {
       index: 2,
       title: () => "Offset",
-      children: (message: PartitionConsumeRecord) => message.offset,
+      children: (message: PartitionConsumeRecord) =>
+        this.formatMessageValue(message.offset, this.searchRegexp()),
       description: (message: PartitionConsumeRecord) => message.offset,
     },
     key: {
