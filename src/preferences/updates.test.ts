@@ -1,7 +1,12 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import { workspace } from "vscode";
-import { Preferences, PreferencesResourceApi, PreferencesSpec } from "../clients/sidecar";
+import {
+  Preferences,
+  PreferencesResourceApi,
+  PreferencesSpec,
+  ResponseError,
+} from "../clients/sidecar";
 import * as errors from "../errors";
 import * as sidecar from "../sidecar";
 import {
@@ -18,6 +23,7 @@ describe("preferences/updates", function () {
   let mockClient: sinon.SinonStubbedInstance<PreferencesResourceApi>;
   let getConfigurationStub: sinon.SinonStub;
   let logErrorStub: sinon.SinonStub;
+  let showErrorNotificationWithButtonsStub: sinon.SinonStub;
 
   beforeEach(function () {
     sandbox = sinon.createSandbox();
@@ -40,6 +46,9 @@ describe("preferences/updates", function () {
       update: sandbox.stub(),
       inspect: sandbox.stub(),
     });
+
+    // stub the notifications
+    showErrorNotificationWithButtonsStub = sandbox.stub(errors, "showErrorNotificationWithButtons");
   });
 
   afterEach(function () {
@@ -82,7 +91,7 @@ describe("preferences/updates", function () {
     });
   });
 
-  it("should update preferences successfully", async function () {
+  it("updatePreferences() should update preferences successfully based on workspace configs", async function () {
     // simulate user changing from the default values
     const tlsPemPaths: string[] = ["path/to/custom.pem"];
     const trustAllCerts = true;
@@ -107,6 +116,8 @@ describe("preferences/updates", function () {
     sinon.assert.calledWithExactly(mockClient.gatewayV1PreferencesPut, {
       Preferences: fakePreferences,
     });
+    sinon.assert.notCalled(logErrorStub);
+    sinon.assert.notCalled(showErrorNotificationWithButtonsStub);
   });
 
   it("updatePreferences() should log and not re-throw errors when updating preferences", async function () {
@@ -123,5 +134,57 @@ describe("preferences/updates", function () {
       {},
       true,
     );
+    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+  });
+
+  it("updatePreferences() should show an error notification when an Error is caught", async function () {
+    const error = new Error("uh oh");
+    mockClient.gatewayV1PreferencesPut.rejects(error);
+    // used for logging and the notification:
+    const errorMessage = "Failed to sync settings";
+
+    await updates.updatePreferences();
+
+    sinon.assert.calledOnce(logErrorStub);
+    sinon.assert.calledWithExactly(logErrorStub, error, "updating preferences", {}, true);
+
+    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+    sinon.assert.calledWithExactly(
+      showErrorNotificationWithButtonsStub,
+      `${errorMessage}: ${error.message}`,
+      undefined, // no buttons set here, use the defaults
+    );
+  });
+
+  it("updatePreferences() should show an error notification with a settings button when a ResponseError is caught and valid failure errors are returned", async function () {
+    const errorResponse = new Response("Bad Request", { status: 400 });
+    const fakeFailureError: updates.PreferencesFailureError = {
+      code: "cert_not_found",
+      title: "Cert file cannot be found",
+      detail: "The cert file '/foo/bar/baz' cannot be found.",
+      source: "/spec/tls_pem_paths",
+    };
+    // have to stub both `.clone()` and `.json()` to get the error details
+    sandbox.stub(errorResponse, "clone").returns(errorResponse);
+    sandbox.stub(errorResponse, "json").resolves({
+      errors: [fakeFailureError],
+    });
+    const error = new ResponseError(errorResponse);
+    mockClient.gatewayV1PreferencesPut.rejects(error);
+    // used for logging and the notification:
+    const errorMessage = `Failed to sync settings: ${fakeFailureError.detail}`;
+    // simulate the user dismissing the notification
+    showErrorNotificationWithButtonsStub.resolves(undefined);
+
+    await updates.updatePreferences();
+
+    sinon.assert.calledOnce(logErrorStub);
+    sinon.assert.calledWithExactly(logErrorStub, error, "updating preferences", {}, true);
+    sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
+    assert.strictEqual(callArgs[0], errorMessage);
+    assert.ok(Object.keys(callArgs[1]).includes("Update Settings"));
+    assert.ok(Object.keys(callArgs[1]).includes("Open Logs"));
+    assert.ok(Object.keys(callArgs[1]).includes("File Issue"));
   });
 });
