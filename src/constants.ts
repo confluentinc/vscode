@@ -33,7 +33,13 @@ export enum IconNames {
   FLINK_COMPUTE_POOL = "confluent-flink-compute-pool",
   FLINK_STATEMENT = "code",
   FLINK_ARTIFACT = "folder-library",
-  EXPERIMENTAL = "beaker",
+  FLINK_STATEMENT_STATUS_COMPLETED = "confluent-flink-statement-status-completed",
+  FLINK_STATEMENT_STATUS_RUNNING = "confluent-flink-statement-status-running",
+  FLINK_STATEMENT_STATUS_FAILED = "confluent-flink-statement-status-failed",
+  FLINK_STATEMENT_STATUS_DEGRADED = "confluent-flink-statement-status-degraded",
+  FLINK_STATEMENT_STATUS_DELETING = "confluent-flink-statement-status-deleting",
+  FLINK_STATEMENT_STATUS_STOPPED = "confluent-flink-statement-status-stopped",
+  FLINK_STATEMENT_STATUS_PENDING = "confluent-flink-statement-status-pending",
   LOADING = "loading~spin",
 }
 
