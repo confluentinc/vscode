@@ -1,10 +1,19 @@
 import * as assert from "assert";
 
+import { ThemeIcon } from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "../../tests/unit/testResources";
 import { TEST_CCLOUD_FLINK_STATEMENT } from "../../tests/unit/testResources/flinkStatement";
 import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID } from "../constants";
-import { FlinkStatement, FlinkStatementTreeItem } from "./flinkStatement";
+import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import {
+  FlinkStatement,
+  FlinkStatementTreeItem,
+  STATUS_BLUE,
+  STATUS_GRAY,
+  STATUS_GREEN,
+  STATUS_RED,
+  STATUS_YELLOW,
+} from "./flinkStatement";
 
 describe("FlinkStatement", () => {
   it("uses name as id", () => {
@@ -28,5 +37,79 @@ describe("FlinkStatementTreeItem", () => {
 
     const treeItem = new FlinkStatementTreeItem(statement);
     assert.strictEqual(treeItem.contextValue, "ccloud-flink-statement");
+  });
+
+  it("should use the correct icons and colors based on the `status`", () => {
+    for (const status of ["FAILED", "FAILING"]) {
+      const failStatement = new FlinkStatement({ ...TEST_CCLOUD_FLINK_STATEMENT, status });
+      const failTreeItem = new FlinkStatementTreeItem(failStatement);
+      const failIcon = failTreeItem.iconPath as ThemeIcon;
+      assert.strictEqual(failIcon.id, IconNames.FLINK_STATEMENT_STATUS_FAILED);
+      assert.strictEqual(failIcon.color, STATUS_RED);
+    }
+
+    const degradedStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "DEGRADED",
+    });
+    const degradedTreeItem = new FlinkStatementTreeItem(degradedStatement);
+    const degradedIcon = degradedTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(degradedIcon.id, IconNames.FLINK_STATEMENT_STATUS_DEGRADED);
+    assert.strictEqual(degradedIcon.color, STATUS_YELLOW);
+
+    const runningStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "RUNNING",
+    });
+    const runningTreeItem = new FlinkStatementTreeItem(runningStatement);
+    const runningIcon = runningTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(runningIcon.id, IconNames.FLINK_STATEMENT_STATUS_RUNNING);
+    assert.strictEqual(runningIcon.color, STATUS_GREEN);
+
+    const completedStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "COMPLETED",
+    });
+    const completedTreeItem = new FlinkStatementTreeItem(completedStatement);
+    const completedIcon = completedTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(completedIcon.id, IconNames.FLINK_STATEMENT_STATUS_COMPLETED);
+    assert.strictEqual(completedIcon.color, STATUS_GRAY);
+
+    for (const status of ["DELETING", "STOPPING"]) {
+      const stopStatement = new FlinkStatement({ ...TEST_CCLOUD_FLINK_STATEMENT, status });
+      const stopTreeItem = new FlinkStatementTreeItem(stopStatement);
+      const stopIcon = stopTreeItem.iconPath as ThemeIcon;
+      assert.strictEqual(stopIcon.id, IconNames.FLINK_STATEMENT_STATUS_DELETING);
+      assert.strictEqual(stopIcon.color, STATUS_GRAY);
+    }
+
+    const stoppedStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "STOPPED",
+    });
+    const stoppedTreeItem = new FlinkStatementTreeItem(stoppedStatement);
+    const stoppedIcon = stoppedTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(stoppedIcon.id, IconNames.FLINK_STATEMENT_STATUS_STOPPED);
+    assert.strictEqual(stoppedIcon.color, STATUS_BLUE);
+
+    const pendingStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "PENDING",
+    });
+    const pendingTreeItem = new FlinkStatementTreeItem(pendingStatement);
+    const pendingIcon = pendingTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(pendingIcon.id, IconNames.FLINK_STATEMENT_STATUS_PENDING);
+    assert.strictEqual(pendingIcon.color, STATUS_BLUE);
+  });
+
+  it("should fall back to a basic icon for untracked status values", () => {
+    const unknownStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "UNKNOWN",
+    });
+    const unknownTreeItem = new FlinkStatementTreeItem(unknownStatement);
+    const unknownIcon = unknownTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(unknownIcon.id, IconNames.FLINK_STATEMENT);
+    assert.strictEqual(unknownIcon.color, undefined);
   });
 });
