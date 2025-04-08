@@ -92,6 +92,6 @@ export function createFlinkStatementIcon(status: string): ThemeIcon {
     case "PENDING":
       return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
     default:
-      throw new Error(`Unknown Flink statement status: ${status}`);
+      return new ThemeIcon(IconNames.FLINK_STATEMENT);
   }
 }

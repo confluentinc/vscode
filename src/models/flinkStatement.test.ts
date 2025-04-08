@@ -101,4 +101,15 @@ describe("FlinkStatementTreeItem", () => {
     assert.strictEqual(pendingIcon.id, IconNames.FLINK_STATEMENT_STATUS_PENDING);
     assert.strictEqual(pendingIcon.color, STATUS_BLUE);
   });
+
+  it("should fall back to a basic icon for untracked status values", () => {
+    const unknownStatement = new FlinkStatement({
+      ...TEST_CCLOUD_FLINK_STATEMENT,
+      status: "UNKNOWN",
+    });
+    const unknownTreeItem = new FlinkStatementTreeItem(unknownStatement);
+    const unknownIcon = unknownTreeItem.iconPath as ThemeIcon;
+    assert.strictEqual(unknownIcon.id, IconNames.FLINK_STATEMENT);
+    assert.strictEqual(unknownIcon.color, undefined);
+  });
 });
