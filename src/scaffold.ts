@@ -143,7 +143,7 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
   optionsForm.onDidDispose(() => disposable.dispose());
 };
 
-async function applyTemplate(
+export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
 ): Promise<PostResponse> {
