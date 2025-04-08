@@ -64,44 +64,33 @@ export class FlinkStatementTreeItem extends TreeItem {
 }
 
 export function createFlinkStatementIcon(status: string): ThemeIcon {
+  // themes will override these colors, but in the default VS Code dark/light theme, these variable
+  // names should be accurate for the assigned theme color
+  // see https://code.visualstudio.com/api/references/theme-color
+  const red = new ThemeColor("notificationsErrorIcon.foreground");
+  const yellow = new ThemeColor("notificationsWarningIcon.foreground");
+  const blue = new ThemeColor("notificationsInfoIcon.foreground");
+  // there aren't as many green or gray options to choose from without using `chart` colors
+  const green = new ThemeColor("charts.green");
+  const gray = new ThemeColor("charts.lines");
+
   switch (status.toUpperCase()) {
-    case "COMPLETED":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_COMPLETED,
-        new ThemeColor("charts.lines"), // grayish
-      );
-    case "RUNNING":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_RUNNING,
-        new ThemeColor("charts.green"), // greenish
-      );
     case "FAILED":
     case "FAILING":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_FAILED,
-        new ThemeColor("notificationsErrorIcon.foreground"), // red
-      );
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, red);
     case "DEGRADED":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_DEGRADED,
-        new ThemeColor("notificationsWarningIcon.foreground"), // yellowish
-      );
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, yellow);
+    case "RUNNING":
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, green);
+    case "COMPLETED":
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, gray);
     case "DELETING":
     case "STOPPING":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_DELETING,
-        new ThemeColor("charts.lines"), // grayish
-      );
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, gray);
     case "STOPPED":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_STOPPED,
-        new ThemeColor("charts.blue"), // blueish
-      );
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, blue);
     case "PENDING":
-      return new ThemeIcon(
-        IconNames.FLINK_STATEMENT_STATUS_PENDING,
-        new ThemeColor("charts.blue"), // blueish
-      );
+      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, blue);
     default:
       throw new Error(`Unknown Flink statement status: ${status}`);
   }
