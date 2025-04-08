@@ -40,7 +40,6 @@ export enum IconNames {
   FLINK_STATEMENT_STATUS_DELETING = "confluent-flink-statement-status-deleting",
   FLINK_STATEMENT_STATUS_STOPPED = "confluent-flink-statement-status-stopped",
   FLINK_STATEMENT_STATUS_PENDING = "confluent-flink-statement-status-pending",
-  EXPERIMENTAL = "ntbl-blobby",
   LOADING = "loading~spin",
 }
 
