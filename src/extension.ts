@@ -12,6 +12,7 @@ import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
+import { ChatToolsRegistrar } from "./chat/tools";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -148,6 +149,8 @@ async function _activateExtension(
   logger.info("Starting/checking the sidecar...");
   await getSidecar();
   logger.info("Sidecar ready for use.");
+
+  ChatToolsRegistrar.registerChatTools(context);
 
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();

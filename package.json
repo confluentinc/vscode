@@ -66,6 +66,44 @@
         "when": "confluent.chatParticipantEnabled"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "generate_clientproject",
+        "tags": [
+          "projects"
+        ],
+        "toolReferenceName": "generateKafkaClientProject",
+        "displayName": "Generate Kafka Client Project",
+        "modelDescription": "Generate a project for a Kafka client. Enter parameters and autogenerate a pre-configured code starter.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(files)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cc_bootstrap_server": {
+              "type": "string",
+              "description": " One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.",
+              "default": ""
+            },
+            "cc_api_key": {
+              "type": "string",
+              "description": "API key for authentication with Confluent Cloud.",
+              "default": ""
+            },
+            "cc_api_secret": {
+              "type": "string",
+              "description": "API secret for authentication with Confluent Cloud.",
+              "default": ""
+            },
+            "cc_topic": {
+              "type": "string",
+              "description": "Name of the Kafka topic to produce or consume messages.",
+              "default": "test_topic"
+            }
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -1418,7 +1456,7 @@
     "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
-    "@types/vscode": "^1.87.0",
+    "@types/vscode": "^1.70.0",
     "@types/ws": "^8.5.13",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",

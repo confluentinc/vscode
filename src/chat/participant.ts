@@ -161,7 +161,6 @@ function filterContextHistory(
   if (filteredHistory.length === 0) {
     return [];
   }
-
   const messages: LanguageModelChatMessage[] = [];
   for (const turn of filteredHistory) {
     // don't re-use previous prompts since the model may misinterpret them as part of the current prompt
