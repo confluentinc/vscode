@@ -27,7 +27,7 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
   }
 
   public async handleUri(uri: vscode.Uri) {
-    const { authority, path, query } = uri;
+    const { path } = uri;
     switch (path) {
       case "/authCallback":
         logger.debug("Got authCallback URI, firing as Event", uri);
@@ -37,11 +37,7 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
         vscode.commands.executeCommand("confluent.topic.consume.fromUri", uri);
         break;
       case "/projectScaffold":
-        if (authority === "confluentinc.vscode-confluent") {
-          projectScaffoldUri.fire(uri); // Emit the event
-        } else {
-          vscode.window.showErrorMessage("Unsupported URI path.");
-        }
+        vscode.window.showErrorMessage("Unsupported URI path.");
         break;
     }
   }
