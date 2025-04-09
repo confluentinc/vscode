@@ -62,20 +62,11 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
             );
             break;
           }
-
-          console.log("Project Scaffold Parameters:", {
-            collection,
-            template,
-            bootstrapServer,
-            apiKey,
-            apiSecret,
-            topic,
-          });
           try {
             const result = await vscode.window.withProgress(
               {
                 location: vscode.ProgressLocation.Notification,
-                title: "Generating Project...",
+                title: "Generating Project ",
                 cancellable: true,
               },
               async (progress) => {

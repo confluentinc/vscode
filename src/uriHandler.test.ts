@@ -5,7 +5,7 @@ import * as applyTemplateModule from "../src/scaffold";
 import * as sinon from "sinon";
 import assert from "assert";
 
-describe.only("UriEventHandler - /projectScaffold", () => {
+describe("UriEventHandler - /projectScaffold", () => {
   let uriHandler: UriEventHandler;
   let applyTemplateStub: sinon.SinonStub;
 
@@ -19,17 +19,14 @@ describe.only("UriEventHandler - /projectScaffold", () => {
   });
 
   it("should call applyTemplate with correct parameters", async () => {
-    // Arrange
     const uri = vscode.Uri.parse(
       "vscode://confluentinc.vscode-confluent/projectScaffold?collection=myCollection&template=myTemplate&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
     );
 
     applyTemplateStub.resolves({ success: true, message: "Project generated successfully." });
 
-    // Act
     await uriHandler.handleUri(uri);
 
-    // Assert
     assert.strictEqual(applyTemplateStub.calledOnce, true, "applyTemplate should be called once");
     const [template, options] = applyTemplateStub.firstCall.args;
 
@@ -50,17 +47,14 @@ describe.only("UriEventHandler - /projectScaffold", () => {
   });
 
   it("should show an error message if required parameters are missing", async () => {
-    // Arrange
     const uri = vscode.Uri.parse(
       "vscode://confluentinc.vscode-confluent/projectScaffold?template=myTemplate",
     );
 
     const showErrorMessageStub = sinon.stub(vscode.window, "showErrorMessage");
 
-    // Act
     await uriHandler.handleUri(uri);
 
-    // Assert
     assert.strictEqual(applyTemplateStub.notCalled, true, "applyTemplate should not be called");
     assert.strictEqual(
       showErrorMessageStub.calledOnceWith(
@@ -72,7 +66,6 @@ describe.only("UriEventHandler - /projectScaffold", () => {
   });
 
   it("should show an error message if applyTemplate fails", async () => {
-    // Arrange
     const uri = vscode.Uri.parse(
       "vscode://confluentinc.vscode-confluent/projectScaffold?collection=myCollection&template=myTemplate",
     );
@@ -80,10 +73,8 @@ describe.only("UriEventHandler - /projectScaffold", () => {
     applyTemplateStub.rejects(new Error("Failed to apply template."));
     const showErrorMessageStub = sinon.stub(vscode.window, "showErrorMessage");
 
-    // Act
     await uriHandler.handleUri(uri);
 
-    // Assert
     assert.strictEqual(applyTemplateStub.calledOnce, true, "applyTemplate should be called once");
     assert.strictEqual(
       showErrorMessageStub.calledOnceWith("Error generating project: Failed to apply template."),
