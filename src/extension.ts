@@ -71,6 +71,7 @@ import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
+import { WriteableTmpDir } from "./utils/file";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { ResourceViewProvider } from "./viewProviders/resources";
@@ -90,6 +91,22 @@ export async function activate(
   const extVersion = context.extension.packageJSON.version;
   observabilityContext.extensionVersion = extVersion;
   observabilityContext.extensionActivated = false;
+
+  // determine the writeable tmpdir for the extension to use. Must be done prior
+  // to starting the sidecar, as it will use this tmpdir for sidecar logfile.
+  const result = await WriteableTmpDir.getInstance().determine();
+  if (result.errors.length) {
+    sentryCaptureException(new Error("No writeable tmpdir found."), {
+      captureContext: {
+        extra: {
+          attemptedDirs: result.dirs.join("; "),
+          errorsEncountered: result.errors.map((e) => e.message).join("; "),
+        },
+      },
+    });
+    // if we can't find a writeable tmpdir, we can't log anything, which is bad
+    throw new Error("Can't activate extension: unable to find a writeable tmpdir");
+  }
 
   logger.info(
     `Extension version ${context.extension.id} activate() triggered for version "${extVersion}".`,
@@ -470,14 +487,15 @@ export function deactivate() {
     logError(new Error(msg, { cause: e }), msg, {}, true);
   }
   closeSentryClient();
-  // close the file stream used with OUTPUT_CHANNEL
-  const logStream = getLogFileStream();
-  if (logStream) {
-    logStream.end();
-  }
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
 
-  logger.info("Extension deactivated");
+  // close the file stream used with OUTPUT_CHANNEL -- needs to be done last to avoid any other
+  // cleanup logging attempting to write to the file stream
+  const logStream = getLogFileStream();
+  if (logStream) {
+    logStream.end();
+  }
+  console.info("Extension deactivated");
 }

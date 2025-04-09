@@ -3,9 +3,6 @@ import { globSync } from "glob";
 import Mocha from "mocha";
 import { resolve } from "path";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
-import { Logger } from "./logging";
-
-const logger = new Logger("testing");
 
 export async function run() {
   const version = process.env.VSCODE_VERSION ?? "stable";
@@ -50,7 +47,7 @@ async function globalBeforeAll() {
   // smoke-test to make sure we can set up the environment for tests by activating the extension:
   // - set the extension context
   // - start the sidecar process
-  logger.log(
+  console.log(
     "Activating the extension, setting extension context, and attempting to start the sidecar...",
   );
   await getTestExtensionContext();
@@ -59,5 +56,5 @@ async function globalBeforeAll() {
   //    Activating extension 'confluentinc.vscode-confluent' failed: ...
 
   // otherwise, we should see this log line and tests should continue:
-  logger.log("✅ Test environment is ready. Running tests...");
+  console.log("✅ Test environment is ready. Running tests...");
 }

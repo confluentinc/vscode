@@ -1,12 +1,15 @@
 import * as assert from "assert";
 import "mocha";
+import { join } from "path";
 import * as sinon from "sinon";
 import { SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { OUTPUT_CHANNEL } from "../logging";
-import { SIDECAR_LOGFILE_PATH } from "./constants";
+import { WriteableTmpDir } from "../utils/file";
+import { SIDECAR_LOGFILE_NAME } from "./constants";
 import {
   appendSidecarLogToOutputChannel,
   constructSidecarEnv,
+  getSidecarLogfilePath,
   killSidecar,
   MOMENTARY_PAUSE_MS,
   safeKill,
@@ -47,6 +50,11 @@ describe("Test wasConnRefused", () => {
 });
 
 describe("constructSidecarEnv tests", () => {
+  before(async () => {
+    // Ensure the tmpdir is established
+    await WriteableTmpDir.getInstance().determine();
+  });
+
   it("Will set QUARKUS_HTTP_HOST if env indicates WSL", () => {
     const env = { WSL_DISTRO_NAME: "Ubuntu" };
     const result = constructSidecarEnv(env);
@@ -64,7 +72,7 @@ describe("constructSidecarEnv tests", () => {
     const result = constructSidecarEnv(env);
     assert.strictEqual(result.QUARKUS_LOG_FILE_ENABLE, "true");
     assert.strictEqual(result.QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT, "false");
-    assert.strictEqual(result.QUARKUS_LOG_FILE_PATH, SIDECAR_LOGFILE_PATH);
+    assert.strictEqual(result.QUARKUS_LOG_FILE_PATH, getSidecarLogfilePath());
   });
 
   it("Other preset env vars are set as expected", () => {
@@ -396,5 +404,35 @@ describe("appendSidecarLogToOutputChannel() tests", () => {
     appendSidecarLogToOutputChannel(logLineWithMdc);
 
     sinon.assert.calledWith(infoStub, "[test] test message", mdc);
+  });
+});
+
+describe("getSidecarLogfilePath() tests", () => {
+  let sandbox: sinon.SinonSandbox;
+  let writeableTmpDirMock: sinon.SinonMock;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+    writeableTmpDirMock = sandbox.mock(WriteableTmpDir.getInstance());
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("Returns the expected path when getWriteableTmpDir() succeeds", () => {
+    writeableTmpDirMock.expects("get").returns("/tmp");
+    const expectedPath = join("/tmp", SIDECAR_LOGFILE_NAME);
+    const actualPath = getSidecarLogfilePath();
+    assert.strictEqual(actualPath, expectedPath);
+  });
+
+  it("When getWriteableTmpDir() fails, getSidecarLogfilePath() should throw an error", () => {
+    writeableTmpDirMock
+      .expects("get")
+      .throws(new Error("get() called before determine() was awaited."));
+    assert.throws(() => {
+      getSidecarLogfilePath();
+    }, /get\(\) called before determine\(\) was awaited./);
   });
 });
