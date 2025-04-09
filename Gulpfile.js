@@ -108,7 +108,7 @@ export async function buildServer() {
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode-languageserver", "vscode-languageserver-textdocument"],
+    external: [],
     context: "globalThis",
   };
 
