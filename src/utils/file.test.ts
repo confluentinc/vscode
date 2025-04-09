@@ -143,7 +143,9 @@ describe("WriteableTmpDir", () => {
   });
 
   it("determine() should throw an error if no writeable temporary directory is found", async () => {
+    tmpdirStub.returns("/tmp");
     writeFileStub.throws(new Error("writeFile() boom"));
+
     await assert.rejects(async () => {
       await instance.determine();
     }, /No writeable tmpdir found/);
