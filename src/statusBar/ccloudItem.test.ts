@@ -81,7 +81,6 @@ describe("statusBar/ccloudItem.ts", () => {
 
       assert.strictEqual(statusBarItem.text, `$(${IconNames.CONFLUENT_LOGO}) ${incidents.length}`);
       assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-      // @ts-expect-error - update vscode types so ThemeColor exposes .id
       assert.strictEqual(statusBarItem.backgroundColor.id, ERROR_BACKGROUND_COLOR_ID);
     });
   }
@@ -102,11 +101,7 @@ describe("statusBar/ccloudItem.ts", () => {
         `$(${IconNames.CONFLUENT_LOGO}) ${maintenances.length}`,
       );
       assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
-      assert.strictEqual(
-        // @ts-expect-error - update vscode types so ThemeColor exposes .id
-        statusBarItem.backgroundColor.id,
-        WARNING_BACKGROUND_COLOR_ID,
-      );
+      assert.strictEqual(statusBarItem.backgroundColor.id, WARNING_BACKGROUND_COLOR_ID);
     });
   }
 
@@ -123,11 +118,7 @@ describe("statusBar/ccloudItem.ts", () => {
     assert.strictEqual(statusBarItem.text, "$(confluent-logo) 2");
     assert.ok(statusBarItem.backgroundColor instanceof ThemeColor);
     // incident color takes priority
-    assert.strictEqual(
-      // @ts-expect-error - update vscode types so ThemeColor exposes .id
-      statusBarItem.backgroundColor.id,
-      ERROR_BACKGROUND_COLOR_ID,
-    );
+    assert.strictEqual(statusBarItem.backgroundColor.id, ERROR_BACKGROUND_COLOR_ID);
   });
 
   for (const status of COMPLETED_INCIDENT_STATUSES) {
