@@ -493,5 +493,5 @@ export function deactivate() {
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
 
-  logger.info("Extension deactivated");
+  console.info("Extension deactivated");
 }
