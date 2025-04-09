@@ -1,11 +1,8 @@
 import { join } from "path";
 import * as vscode from "vscode";
 import { TextDocument } from "vscode";
-import { logError } from "../errors";
-import { Logger } from "../logging";
+import { sentryCaptureException } from "../telemetry/sentryClient";
 import { deleteFile, readFile, statFile, tmpdir, writeFile } from "./fsWrappers";
-
-const logger = new Logger("utils/file");
 
 /** Check if a file URI exists in the filesystem. */
 export async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
@@ -104,24 +101,23 @@ export class WriteableTmpDir {
         await writeFile(fileUri, Buffer.from("test"));
         await deleteFile(fileUri);
         this._tmpdir = dir;
-        logger.info(`Found writeable tmpdir: ${dir}`);
+        console.info(`Found writeable tmpdir: ${dir}`);
         return;
       } catch (e) {
-        logger.warn(`Failed to write to ${dir}: ${e}`);
+        console.warn(`Failed to write to ${dir}: ${e}`);
         errorsEncountered.push(e as Error);
         // Ignore errors and try the next directory
       }
     }
 
-    logError(
-      new Error("No writeable tmpdir found."),
-      "determineWriteableTmpDir()",
-      {
-        attemptedDirs: possibleDirs.join("; "),
-        errorsEncountered: errorsEncountered.map((e) => e.message).join("; "),
+    sentryCaptureException(new Error("No writeable tmpdir found."), {
+      captureContext: {
+        extra: {
+          attemptedDirs: possibleDirs.join("; "),
+          errorsEncountered: errorsEncountered.map((e) => e.message).join("; "),
+        },
       },
-      true,
-    );
+    });
 
     throw new Error("No writeable tmpdir found");
   }
