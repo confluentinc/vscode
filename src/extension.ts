@@ -166,7 +166,9 @@ async function _activateExtension(
   logger.info("Starting/checking the sidecar...");
   await getSidecar();
   logger.info("Sidecar ready for use.");
+  console.log("Chat tools registered during activation.");
 
+  console.log("Activating extension...");
   ChatToolsRegistrar.registerChatTools(context);
 
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
@@ -284,16 +286,17 @@ async function _activateExtension(
   // XXX: used for testing; do not remove
   return context;
 }
+const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+const chatParticipantEnabled = setContextValue(
+  ContextValues.chatParticipantEnabled,
+  config.get(ENABLE_CHAT_PARTICIPANT, true),
+);
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
   // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const flinkEnabled = setContextValue(ContextValues.flinkEnabled, config.get(ENABLE_FLINK, false));
-  const chatParticipantEnabled = setContextValue(
-    ContextValues.chatParticipantEnabled,
-    config.get(ENABLE_CHAT_PARTICIPANT, true),
-  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);

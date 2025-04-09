@@ -18,7 +18,7 @@ import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
 import { parseReferences } from "./references";
-
+import { GenerateProjectTool, IGenerateProjectParameters } from "./tools";
 const logger = new Logger("chat.participant");
 
 /** Main handler for the Copilot chat participant. */
@@ -28,8 +28,42 @@ export async function chatHandler(
   stream: ChatResponseStream,
   token: CancellationToken,
 ): Promise<ChatResult> {
-  logger.debug("received chat request", { request, context });
+  // Check if the request references a tool
+  if (request.toolReferences?.length > 0) {
+    const toolReference = request.toolReferences[0]; // Assuming a single tool reference
+    if (toolReference.name === "generate_clientproject") {
+      logger.debug("GenerateProjectTool tool received:", toolReference.name);
 
+      // Extract parameters from the request
+      if (!("parameters" in request)) {
+        throw new Error("Missing 'parameters' in the request.");
+      }
+      const parameters = request.parameters as IGenerateProjectParameters;
+
+      // Validate that all required parameters are present
+      if (
+        !parameters.cc_bootstrap_server ||
+        !parameters.cc_api_key ||
+        !parameters.cc_api_secret ||
+        !parameters.cc_topic
+      ) {
+        throw new Error(
+          "Missing required parameters: cc_bootstrap_server, cc_api_key, cc_api_secret, cc_topic",
+        );
+      }
+
+      const tool = new GenerateProjectTool();
+      const result = await tool.invoke(
+        {
+          input: parameters,
+          toolInvocationToken: undefined,
+        },
+        token,
+      );
+      stream.markdown(result.content.map((part) => (part as { text: string }).text).join("\n")); // Stream the result back to the chat
+      return { metadata: { tool: toolReference.name } };
+    }
+  }
   const messages: LanguageModelChatMessage[] = [];
 
   // add the initial prompt to the messages

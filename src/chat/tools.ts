@@ -17,6 +17,7 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
     _token: vscode.CancellationToken,
   ): Promise<vscode.LanguageModelToolResult> {
     const params = options.input;
+    console.log("GenerateProjectTool invoked with options:", options.input);
 
     // Validate required parameters
     if (
@@ -38,6 +39,7 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
       - API Secret: ${params.cc_api_secret}
       - Topic: ${params.cc_topic}
     `;
+    console.log("Project structure generated:", projectStructure);
 
     return new vscode.LanguageModelToolResult([
       new vscode.LanguageModelTextPart(`Project generated successfully:\n${projectStructure}`),
@@ -65,12 +67,13 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
     };
   }
 }
-
 class ChatToolsRegistrar {
   static registerChatTools(context: vscode.ExtensionContext) {
+    console.log("Registering chat tools...");
     context.subscriptions.push(
-      vscode.lm.registerTool("generateKafkaClientProject", new GenerateProjectTool()),
+      vscode.lm.registerTool("generate_clientproject", new GenerateProjectTool()),
     );
+    console.log("GenerateProjectTool registered.");
   }
 }
 

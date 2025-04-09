@@ -45,7 +45,7 @@
     "templates"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.confluent.*"
+  "*"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -72,7 +72,7 @@
         "tags": [
           "projects"
         ],
-        "toolReferenceName": "generateKafkaClientProject",
+        "toolReferenceName": "generate_clientproject",
         "displayName": "Generate Kafka Client Project",
         "modelDescription": "Generate a project for a Kafka client. Enter parameters and autogenerate a pre-configured code starter.",
         "canBeReferencedInPrompt": true,
@@ -572,7 +572,7 @@
         },
         "confluent.experimental.enableChatParticipant": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable the Confluent chat participant for Copilot.",
           "tags": [
             "experimental"
