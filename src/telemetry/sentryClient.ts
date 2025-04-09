@@ -10,6 +10,7 @@ import {
 import { Logger } from "../logging";
 import { checkTelemetrySettings, includeObservabilityContext } from "./eventProcessors";
 
+const logger = new Logger("sentry");
 let sentryScope: Scope | null = null;
 let sentryClient: NodeClient | null = null;
 
@@ -17,7 +18,6 @@ let sentryClient: NodeClient | null = null;
  * Returns the Sentry Scope singleton, creating it if it doesn't exist
  */
 export function getSentryScope(): Scope {
-  const logger = new Logger("sentry");
   if (!sentryScope) {
     logger.debug("Creating new Sentry scope");
     sentryScope = new Scope();
@@ -31,7 +31,6 @@ export function getSentryScope(): Scope {
  * @see https://docs.sentry.io/platforms/node/
  */
 export function initSentry() {
-  const logger = new Logger("sentry");
   if (sentryClient) {
     logger.debug("Sentry already initialized");
     return;
@@ -71,7 +70,6 @@ export function initSentry() {
 }
 
 export function sentryCaptureException(ex: unknown, hint?: EventHint | undefined): unknown {
-  const logger = new Logger("sentry");
   const scope = getSentryScope();
   const client = scope.getClient();
   if (!client) {
