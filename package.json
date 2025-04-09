@@ -84,16 +84,7 @@
               "type": "string",
               "description": " One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.",
               "default": ""
-            },
-            "cc_api_key": {
-              "type": "string",
-              "description": "API key for authentication with Confluent Cloud.",
-              "default": ""
-            },
-            "cc_api_secret": {
-              "type": "string",
-              "description": "API secret for authentication with Confluent Cloud.",
-              "default": ""
+            }
             },
             "cc_topic": {
               "type": "string",
