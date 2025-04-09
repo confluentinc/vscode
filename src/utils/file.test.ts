@@ -113,7 +113,6 @@ describe("WriteableTmpDir", () => {
   let deleteFileStub: sinon.SinonStub;
   let instance: WriteableTmpDir;
   let originalInstance: WriteableTmpDir | undefined;
-  let originalEnvTMPDIR: string | undefined;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -123,7 +122,6 @@ describe("WriteableTmpDir", () => {
     deleteFileStub = sandbox.stub(fsWrappers, "deleteFile");
 
     originalInstance = WriteableTmpDir["instance"];
-    originalEnvTMPDIR = process.env["TMPDIR"];
     instance = WriteableTmpDir.getInstance();
     // Set instance to initial state.
     instance["_tmpdir"] = undefined;
@@ -131,7 +129,6 @@ describe("WriteableTmpDir", () => {
 
   afterEach(() => {
     sandbox.restore();
-    process.env["TMPDIR"] = originalEnvTMPDIR;
     WriteableTmpDir["instance"] = originalInstance;
   });
 

@@ -114,8 +114,8 @@ export class WriteableTmpDir {
     }
 
     logError(
-      logger,
-      "determineWriteableTmpDir(): No writeable tmpdir found.",
+      new Error("No writeable tmpdir found."),
+      "determineWriteableTmpDir()",
       {
         attemptedDirs: possibleDirs.join("; "),
         errorsEncountered: errorsEncountered.map((e) => e.message).join("; "),
