@@ -26,11 +26,15 @@ import { rollup, watch } from "rollup";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
+
 configDotenv();
+
 const DESTINATION = "out";
+const SERVER_DESTINATION = `${DESTINATION}/server`;
 const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
+export const build = series(buildServer, buildExtension);
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
 export const liveTest = series(clean, build, testBuild);
@@ -69,8 +73,86 @@ export function pack(done) {
   return done(result.status);
 }
 
-build.description = "Build static assets for extension and webviews. Use -w for watch mode.";
-export function build(done) {
+buildServer.description = "Build the Flink SQL language server.";
+export async function buildServer() {
+  const production = process.env.NODE_ENV === "production";
+
+  /** @type {import("rollup").RollupOptions} */
+  const serverInput = {
+    input: "server/src/server.ts",
+    plugins: [
+      node({ preferBuiltins: true, exportConditions: ["node"] }),
+      commonjs(),
+      json(),
+      esbuild({
+        sourceMap: true,
+        minify: production,
+        platform: "node",
+        target: "es2022",
+      }),
+      copy({
+        copyOnce: true,
+        targets: [
+          {
+            src: "server/package.json",
+            dest: SERVER_DESTINATION,
+            transform(contents) {
+              let pkg = JSON.parse(contents.toString());
+              const dependencies = pkg.dependencies || {};
+              return JSON.stringify(
+                {
+                  name: pkg.name,
+                  version: pkg.version,
+                  type: pkg.type,
+                  dependencies,
+                },
+                null,
+                2,
+              );
+            },
+          },
+        ],
+      }),
+    ],
+    onLog: handleBuildLog,
+    external: ["vscode-languageserver", "vscode-languageserver-textdocument", "dt-sql-parser"],
+    context: "globalThis",
+  };
+
+  /** @type {import("rollup").OutputOptions} */
+  const serverOutput = {
+    dir: SERVER_DESTINATION,
+    format: "esm",
+    sourcemap: true,
+    exports: "named",
+  };
+
+  const bundle = await rollup(serverInput);
+  await bundle.write(serverOutput);
+
+  // install server dependencies
+  console.log("Installing server dependencies...");
+  const npmInstall = spawnSync("npm", ["install", "--omit=dev"], {
+    cwd: SERVER_DESTINATION,
+    stdio: "inherit",
+    shell: IS_WINDOWS,
+  });
+  if (npmInstall.error) {
+    console.error("Failed to install server dependencies:", npmInstall.error);
+    throw npmInstall.error;
+  }
+  if (npmInstall.status !== 0) {
+    console.error(`npm install exited with code ${npmInstall.status}`);
+    throw new Error(`Failed to install server dependencies, exit code: ${npmInstall.status}`);
+  }
+
+  console.log("Server dependencies installed successfully");
+  return 0;
+}
+
+buildExtension.description =
+  "Build static assets for extension and webviews. Use -w for watch mode.";
+export function buildExtension(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
@@ -126,6 +208,7 @@ export function build(done) {
           },
           { src: ["README.md"], dest: DESTINATION },
           { src: ["CHANGELOG.md"], dest: DESTINATION },
+          { src: ["language-configuration.json", "flinksql.tmLanguage.json"], dest: DESTINATION },
         ],
       }),
       sentryRollupPlugin({

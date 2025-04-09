@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "es2022",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": ["ES2022"],
+    "sourceMap": true,
+    "outDir": "out",
+    "strict": true
+  },
+  "exclude": ["node_modules", ".vscode-test"]
+}

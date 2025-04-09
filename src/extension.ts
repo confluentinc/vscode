@@ -1,4 +1,16 @@
+import { join } from "path";
 import * as vscode from "vscode";
+import {
+  CloseAction,
+  ErrorAction,
+  ErrorHandlerResult,
+  LanguageClient,
+  LanguageClientOptions,
+  Message,
+  ServerOptions,
+  TransportKind,
+} from "vscode-languageclient/node";
+
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
@@ -266,6 +278,9 @@ async function _activateExtension(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
   );
 
+  const serverModule = context.asAbsolutePath(join("server", "server.js"));
+  startFlinkSqlLanguageServer(serverModule);
+
   // register the Copilot chat participant
   const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
@@ -475,6 +490,73 @@ function setupDocumentProviders(): vscode.Disposable[] {
   return disposables;
 }
 
+let languageClient: LanguageClient;
+
+function startFlinkSqlLanguageServer(serverModule: string) {
+  // If the extension is launched in debug mode then the debug server options are used
+  // Otherwise the run options are used
+  const serverOptions: ServerOptions = {
+    run: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: {
+        env: {
+          ...process.env,
+          // Force Node.js to use ESM module resolution
+          NODE_OPTIONS: "--experimental-vm-modules",
+        },
+      },
+    },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: {
+        env: {
+          ...process.env,
+          // Force Node.js to use ESM module resolution
+          NODE_OPTIONS: "--experimental-vm-modules",
+        },
+      },
+    },
+  };
+
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [
+      { scheme: "file", language: "flinksql" },
+      { scheme: "untitled", language: "flinksql" },
+    ],
+    synchronize: {
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.flinksql"),
+    },
+    errorHandler: {
+      error: (error: Error, message: Message): ErrorHandlerResult => {
+        vscode.window.showErrorMessage(`Language server error: ${message}`);
+        return { action: ErrorAction.Continue, message: `${message ?? error.message}` };
+      },
+      closed: () => {
+        vscode.window.showWarningMessage("Language server connection closed");
+        return { action: CloseAction.Restart };
+      },
+    },
+  };
+
+  languageClient = new LanguageClient(
+    "flinkSqlLanguageServer",
+    "Confluent (Flink SQL Language Server)",
+    serverOptions,
+    clientOptions,
+  );
+  // starting the client also starts the server
+  languageClient
+    .start()
+    .then(() => {
+      vscode.window.showInformationMessage("Flink SQL Language Server started");
+    })
+    .catch((error) => {
+      vscode.window.showErrorMessage(`Failed to start Flink SQL Language Server: ${error}`);
+    });
+}
+
 export function deactivate() {
   // dispose of the telemetry logger
   try {
@@ -488,6 +570,10 @@ export function deactivate() {
   const logStream = getLogFileStream();
   if (logStream) {
     logStream.end();
+  }
+
+  if (languageClient) {
+    languageClient.stop();
   }
 
   disposeLaunchDarklyClient();
