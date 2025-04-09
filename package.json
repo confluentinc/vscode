@@ -69,6 +69,7 @@
     "languageModelTools": [
       {
         "name": "generate_clientproject",
+        "when": "confluent.chatParticipantEnabled",
         "tags": [
           "projects"
         ],
