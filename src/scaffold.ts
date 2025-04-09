@@ -15,6 +15,7 @@ import { getSidecar } from "./sidecar";
 import { ViewColumn } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
+import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
@@ -143,7 +144,7 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
   optionsForm.onDidDispose(() => disposable.dispose());
 };
 
-async function applyTemplate(
+export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
 ): Promise<PostResponse> {
@@ -301,4 +302,72 @@ async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
     template_collection_name: "vscode",
   };
   return await client.listScaffoldV1Templates(requestBody);
+}
+
+export async function handleProjectScaffoldUri(
+  collection: string | null,
+  template: string | null,
+  options: { [key: string]: string },
+): Promise<void> {
+  if (!collection || !template) {
+    vscode.window.showErrorMessage(
+      "Missing required parameters for project generation. Please check the URI.",
+    );
+    return;
+  }
+
+  try {
+    const result = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Generating Project",
+        cancellable: true,
+      },
+      async (progress) => {
+        progress.report({ message: "Applying template..." });
+        return await applyTemplate(
+          {
+            spec: {
+              name: template,
+              template_collection: { id: collection },
+              display_name: template,
+            },
+          } as ScaffoldV1Template,
+          options,
+        );
+      },
+    );
+
+    if (result.success) {
+      vscode.window.showInformationMessage("Project generated successfully!");
+    } else {
+      vscode.window.showErrorMessage(`Failed to generate project: ${result.message}`);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    vscode.window.showErrorMessage(`Error generating project: ${errorMessage}`);
+    logError(error, "handleProjectScaffoldUri", { collection, template }, true);
+  }
+}
+
+export function setProjectScaffoldListener(): vscode.Disposable {
+  const disposable = projectScaffoldUri.event(async (uri: vscode.Uri) => {
+    const params = new URLSearchParams(uri.query);
+
+    const collection = params.get("collection");
+    const template = params.get("template");
+    const bootstrapServer = params.get("cc_bootstrap_server");
+    const apiKey = params.get("cc_api_key");
+    const apiSecret = params.get("cc_api_secret");
+    const topic = params.get("cc_topic");
+    const options: { [key: string]: string } = {};
+    if (bootstrapServer) options["cc_bootstrap_server"] = bootstrapServer;
+    if (apiKey) options["cc_api_key"] = apiKey;
+    if (apiSecret) options["cc_api_secret"] = apiSecret;
+    if (topic) options["cc_topic"] = topic;
+
+    await handleProjectScaffoldUri(collection, template, options);
+  });
+
+  return disposable;
 }
