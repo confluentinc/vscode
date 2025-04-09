@@ -1,11 +1,7 @@
 import { join } from "path";
 import * as vscode from "vscode";
 import { TextDocument } from "vscode";
-import { logError } from "../errors";
-import { Logger } from "../logging";
 import { deleteFile, readFile, statFile, tmpdir, writeFile } from "./fsWrappers";
-
-const logger = new Logger("utils/file");
 
 /** Check if a file URI exists in the filesystem. */
 export async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
@@ -74,6 +70,16 @@ export class WriteableTmpDir {
     // Private constructor to prevent external instantiation
   }
 
+  possibleDirs = [
+    tmpdir(), // Should work on all platforms, but JamfAppInstallers on OSX may mangle?
+    process.env["TMPDIR"], // UNIX-y, but should also have been what tmpdir() returned.
+    process.env["TEMP"], // Windows-y, probably also what tmpdir() returns on Windows.
+    process.env["TMP"], // sometimes Windows-y
+    "/var/tmp", // UNIX-y
+    "/tmp", // UNIX-y
+    "/private/tmp", // macOS
+  ];
+
   /**
    * Determine a writeable temporary directory. This is a best-effort attempt.
    *
@@ -82,19 +88,10 @@ export class WriteableTmpDir {
    *
    * (We have reports that when installed through JamfAppInstallers on OSX, tmpdir() is not actually writeable.)
    */
-  async determine(): Promise<void> {
-    const possibleDirs = [
-      tmpdir(), // Should work on all platforms, but JamfAppInstallers on OSX may mangle?
-      process.env["TMPDIR"], // UNIX-y, but should also have been what tmpdir() returned.
-      process.env["TEMP"], // Windows-y, probably also what tmpdir() returns on Windows.
-      process.env["TMP"], // sometimes Windows-y
-      "/var/tmp", // UNIX-y
-      "/tmp", // UNIX-y
-      "/private/tmp", // macOS
-    ];
+  async determine(): Promise<Error[]> {
     const errorsEncountered: Error[] = [];
 
-    for (const dir of possibleDirs) {
+    for (const dir of this.possibleDirs) {
       if (!dir) {
         continue; // Skip undefined or null directories
       }
@@ -104,26 +101,16 @@ export class WriteableTmpDir {
         await writeFile(fileUri, Buffer.from("test"));
         await deleteFile(fileUri);
         this._tmpdir = dir;
-        logger.info(`Found writeable tmpdir: ${dir}`);
-        return;
+        console.info(`Found writeable tmpdir: ${dir}`);
+        return [];
       } catch (e) {
-        logger.warn(`Failed to write to ${dir}: ${e}`);
+        console.warn(`Failed to write to ${dir}: ${e}`);
         errorsEncountered.push(e as Error);
         // Ignore errors and try the next directory
       }
     }
 
-    logError(
-      new Error("No writeable tmpdir found."),
-      "determineWriteableTmpDir()",
-      {
-        attemptedDirs: possibleDirs.join("; "),
-        errorsEncountered: errorsEncountered.map((e) => e.message).join("; "),
-      },
-      true,
-    );
-
-    throw new Error("No writeable tmpdir found");
+    return errorsEncountered;
   }
 
   /** Return the determined writeable tmpdir. Must have awaited determineWriteableTmpDir() prior. */

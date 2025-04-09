@@ -5,7 +5,7 @@ import { commands, Disposable, env, Uri, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
-import { CURRENT_LOGFILE_NAME, LOGFILE_DIR, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
+import { CURRENT_LOGFILE_NAME, getLogFileDir, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
 import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
 import { getSidecarLogfilePath } from "../sidecar/sidecarManager";
 import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
@@ -63,7 +63,7 @@ export function extensionLogFileUris(): Uri[] {
   const uris: Uri[] = [];
   const filenames: string[] = [CURRENT_LOGFILE_NAME, ...ROTATED_LOGFILE_NAMES];
   for (const filename of filenames) {
-    const uri = Uri.file(normalize(join(LOGFILE_DIR, filename)));
+    const uri = Uri.file(normalize(join(getLogFileDir(), filename)));
     if (!uris.some((existingUri) => existingUri.fsPath === uri.fsPath)) {
       uris.push(uri);
     }
