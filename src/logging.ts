@@ -1,8 +1,8 @@
 import { readdirSync, statSync, unlinkSync } from "fs";
-import { tmpdir } from "os";
 import { createStream, RotatingFileStream } from "rotating-file-stream";
 import { LogOutputChannel, window } from "vscode";
 import { SIDECAR_LOGFILE_NAME } from "./sidecar/constants";
+import { WriteableTmpDir } from "./utils/file";
 
 /**
  * Main "Confluent" output channel.
@@ -137,12 +137,14 @@ export class Logger {
 }
 
 /**
- * Default path to store downloadable log files for this extension instance.
+ * Default directory to store downloadable log files for this extension instance.
  *
  * The main difference between this and the ExtensionContext.logUri (where LogOutputChannel lines
  * are written) is this will include ALL log levels, not just the ones enabled in the output channel.
  */
-export const LOGFILE_DIR = tmpdir();
+export function getLogFileDir(): string {
+  return WriteableTmpDir.getInstance().get();
+}
 
 /** The name of the currently active log file, including time/index prefixing. */
 export const CURRENT_LOGFILE_NAME: string = `vscode-confluent-${process.pid}.log`;
@@ -174,7 +176,7 @@ export function getLogFileStream(): RotatingFileStream {
       size: MAX_LOGFILE_SIZE,
       maxFiles: MAX_LOGFILES,
       interval: LOGFILE_ROTATION_INTERVAL,
-      path: LOGFILE_DIR,
+      path: getLogFileDir(),
       history: `vscode-confluent-${process.pid}.history.log`,
       encoding: "utf-8",
     });
@@ -228,19 +230,19 @@ export function rotatingFilenameGenerator(time: number | Date, index?: number): 
 /** Helper function to clean up older log files that weren't picked up by the rotating file stream. */
 export function cleanupOldLogFiles() {
   const logger = new Logger("logging.cleanup");
-
+  const logfileDir = getLogFileDir();
   const now = new Date();
   const cutoffDate = new Date(now);
   cutoffDate.setDate(now.getDate() - 3);
 
-  const logFiles: string[] = readdirSync(LOGFILE_DIR).filter((file) => {
+  const logFiles: string[] = readdirSync(logfileDir).filter((file) => {
     // any `vscode-confluent*.log` files, excluding the sidecar log file
     return (
       file.startsWith("vscode-confluent-") && file.endsWith(".log") && file !== SIDECAR_LOGFILE_NAME
     );
   });
   logger.debug(
-    `found ${logFiles.length} extension log file(s) in "${LOGFILE_DIR}":`,
+    `found ${logFiles.length} extension log file(s) in "${logfileDir}":`,
     logFiles.slice(0, 5),
   );
   if (!logFiles.length) {
@@ -249,7 +251,7 @@ export function cleanupOldLogFiles() {
 
   // filter out any log files that were last modified before the cutoff date
   const oldLogFiles = logFiles.filter((file) => {
-    const filePath = `${LOGFILE_DIR}/${file}`;
+    const filePath = `${logfileDir}/${file}`;
     const stats = statSync(filePath);
     return stats.mtime < cutoffDate;
   });
@@ -260,7 +262,7 @@ export function cleanupOldLogFiles() {
 
   // delete the old log files
   for (const file of oldLogFiles) {
-    const filePath = `${LOGFILE_DIR}/${file}`;
+    const filePath = `${logfileDir}/${file}`;
     try {
       logger.debug(`Deleting old log file: ${filePath}`);
       unlinkSync(filePath);
