@@ -484,14 +484,15 @@ export function deactivate() {
     logError(new Error(msg, { cause: e }), msg, {}, true);
   }
   closeSentryClient();
-  // close the file stream used with OUTPUT_CHANNEL
-  const logStream = getLogFileStream();
-  if (logStream) {
-    logStream.end();
-  }
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
 
-  logger.info("Extension deactivated");
+  // close the file stream used with OUTPUT_CHANNEL -- needs to be done last to avoid any other
+  // cleanup logging attempting to write to the file stream
+  const logStream = getLogFileStream();
+  if (logStream) {
+    logStream.end();
+  }
+  console.info("Extension deactivated");
 }
