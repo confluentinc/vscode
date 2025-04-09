@@ -11,7 +11,7 @@ import { Logger, OUTPUT_CHANNEL } from "../logging";
 import { getStorageManager } from "../storage";
 import {
   SIDECAR_BASE_URL,
-  SIDECAR_LOGFILE_PATH,
+  SIDECAR_LOGFILE_NAME,
   SIDECAR_PORT,
   SIDECAR_PROCESS_ID_HEADER,
 } from "./constants";
@@ -19,12 +19,13 @@ import { ErrorResponseMiddleware } from "./middlewares";
 import { SidecarHandle } from "./sidecarHandle";
 import { WebsocketManager, WebsocketStateEvent } from "./websocketManager";
 
-import { normalize } from "path";
+import { join, normalize } from "path";
 import { Tail } from "tail";
 import { EXTENSION_VERSION, SIDECAR_OUTPUT_CHANNEL } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { logError, showErrorNotificationWithButtons } from "../errors";
 import { SecretStorageKeys } from "../storage/constants";
+import { WriteableTmpDir } from "../utils/file";
 import { checkSidecarOsAndArch } from "./checkArchitecture";
 
 /** Header name for the workspace's PID in the request headers. */
@@ -379,7 +380,7 @@ export class SidecarManager {
         // Set up the environment for the sidecar process.
         const sidecar_env = constructSidecarEnv(process.env);
 
-        const stderrPath = `${SIDECAR_LOGFILE_PATH}.stderr`;
+        const stderrPath = `${getSidecarLogfilePath()}.stderr`;
         try {
           // try to create a file to track any stderr output from the sidecar process
           fs.writeFileSync(stderrPath, "");
@@ -524,23 +525,25 @@ export class SidecarManager {
   private startTailingSidecarLogs() {
     // Create sidecar's log file if it doesn't exist so that we can
     // start tailing it right away before the sidecar process may exist.
+
+    const sidecarLogfilePath = getSidecarLogfilePath();
     try {
-      fs.accessSync(SIDECAR_LOGFILE_PATH);
+      fs.accessSync(sidecarLogfilePath);
     } catch {
-      fs.writeFileSync(SIDECAR_LOGFILE_PATH, "");
+      fs.writeFileSync(sidecarLogfilePath, "");
     }
 
     try {
-      this.logTailer = new Tail(SIDECAR_LOGFILE_PATH);
+      this.logTailer = new Tail(sidecarLogfilePath);
     } catch (e) {
       SIDECAR_OUTPUT_CHANNEL.appendLine(
-        `Failed to tail sidecar log file "${SIDECAR_LOGFILE_PATH}": ${e}`,
+        `Failed to tail sidecar log file "${sidecarLogfilePath}": ${e}`,
       );
       return;
     }
 
     SIDECAR_OUTPUT_CHANNEL.appendLine(
-      `Tailing the extension's sidecar logs from "${SIDECAR_LOGFILE_PATH}" ...`,
+      `Tailing the extension's sidecar logs from "${sidecarLogfilePath}" ...`,
     );
 
     // Take note of the start of exception lines in the log file, show as toast (if user has allowed via config)
@@ -673,7 +676,7 @@ export function constructSidecarEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const sidecar_env = Object.create(env);
   sidecar_env["QUARKUS_LOG_FILE_ENABLE"] = "true";
   sidecar_env["QUARKUS_LOG_FILE_ROTATION_ROTATE_ON_BOOT"] = "false";
-  sidecar_env["QUARKUS_LOG_FILE_PATH"] = SIDECAR_LOGFILE_PATH;
+  sidecar_env["QUARKUS_LOG_FILE_PATH"] = getSidecarLogfilePath();
   sidecar_env["VSCODE_VERSION"] = vscode.version;
   sidecar_env["VSCODE_EXTENSION_VERSION"] = EXTENSION_VERSION;
 
@@ -824,7 +827,7 @@ function confirmSidecarProcessIsRunning(
   // configs, etc.)
   const logLines: string[] = [];
   try {
-    const logs = fs.readFileSync(SIDECAR_LOGFILE_PATH, "utf8").trim().split("\n").slice(-20);
+    const logs = fs.readFileSync(getSidecarLogfilePath(), "utf8").trim().split("\n").slice(-20);
     logLines.push(
       ...logs.map((jsonStr) => {
         try {
@@ -856,4 +859,11 @@ function confirmSidecarProcessIsRunning(
     );
   }
   return isRunning;
+}
+
+/**
+ * Construct the full pathname to the sidecar log file.
+ */
+export function getSidecarLogfilePath(): string {
+  return join(WriteableTmpDir.getInstance().get(), SIDECAR_LOGFILE_NAME);
 }

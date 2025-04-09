@@ -6,7 +6,8 @@ import { registerCommandWithLogging } from ".";
 import { EXTENSION_ID } from "../constants";
 import { observabilityContext } from "../context/observability";
 import { CURRENT_LOGFILE_NAME, LOGFILE_DIR, Logger, ROTATED_LOGFILE_NAMES } from "../logging";
-import { SIDECAR_LOGFILE_NAME, SIDECAR_LOGFILE_PATH } from "../sidecar/constants";
+import { SIDECAR_LOGFILE_NAME } from "../sidecar/constants";
+import { getSidecarLogfilePath } from "../sidecar/sidecarManager";
 import { createZipFile, ZipContentEntry, ZipFileEntry } from "./utils/zipFiles";
 
 const logger = new Logger("commands.support");
@@ -72,7 +73,7 @@ export function extensionLogFileUris(): Uri[] {
 
 /** Return the file URI for the sidecar's log file, normalized for the user's OS. */
 export function sidecarLogFileUri(): Uri {
-  return Uri.file(normalize(SIDECAR_LOGFILE_PATH));
+  return Uri.file(normalize(getSidecarLogfilePath()));
 }
 
 /**
