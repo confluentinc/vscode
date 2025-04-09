@@ -3,12 +3,9 @@ import { KafkaTopicOperation } from "../../src/authz/types";
 import { TopicData, TopicDataFromJSON } from "../../src/clients/kafkaRest/models";
 import { EXTENSION_ID } from "../../src/constants";
 import { setExtensionContext } from "../../src/context/extension";
-import { Logger } from "../../src/logging";
 import { Subject } from "../../src/models/schema";
 import { SchemaRegistry } from "../../src/models/schemaRegistry";
 import { StorageManager } from "../../src/storage";
-
-const logger = new Logger("tests.testUtils");
 
 /**
  * Convenience function to get the extension.
@@ -36,10 +33,10 @@ export async function getAndActivateExtension(
 ): Promise<vscode.Extension<any>> {
   const extension = await getExtension(id);
   if (!extension.isActive) {
-    logger.info(`Activating extension: ${id}`);
+    console.info(`Activating extension: ${id}`);
     await extension.activate();
   } else {
-    logger.info(`Extension already activated: ${id}`);
+    console.info(`Extension already activated: ${id}`);
   }
   return extension;
 }

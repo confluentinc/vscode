@@ -1,7 +1,12 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import * as vscode from "vscode";
-import { fileUriExists, getEditorOrFileContents, LoadedDocumentContent } from "./file";
+import {
+  fileUriExists,
+  getEditorOrFileContents,
+  LoadedDocumentContent,
+  WriteableTmpDir,
+} from "./file";
 import * as fsWrappers from "./fsWrappers";
 
 describe("fileUriExists", () => {
@@ -53,24 +58,23 @@ describe("getEditorOrFileContents", () => {
 
   it("should prefer editor contents if editor is open over what is on disk", async () => {
     const uri = vscode.Uri.file("file:///file.ts");
-    const fakeEditorContents = "Fake editor contents";
-    const fakeEditor = {
-      document: {
-        uri,
-        getText: () => fakeEditorContents,
-      },
+    const fakeDocumentContents = "Fake editor contents";
+    const fakeDocument = {
+      uri,
+      getText: () => fakeDocumentContents,
     };
-    sandbox.stub(vscode.window, "visibleTextEditors").get(() => [fakeEditor as any]);
+    sandbox.stub(vscode.workspace, "textDocuments").get(() => [fakeDocument as any]);
 
     // Also stub out differing file contents on disk. getEditorOrFileContents() should
     // prefer the editor contents over this.
     const fakeFileContents = "Bad on-disk contents";
-    sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
+    const readFileStub = sandbox.stub(fsWrappers, "readFile").resolves(fakeFileContents);
 
     const result: LoadedDocumentContent = await getEditorOrFileContents(uri);
 
-    assert.strictEqual(result.content, fakeEditorContents);
-    assert.strictEqual(result.openDocument, fakeEditor.document);
+    assert.strictEqual(result.content, fakeDocumentContents);
+    assert.strictEqual(result.openDocument, fakeDocument);
+    assert.ok(readFileStub.notCalled, "readFile should not be called if editor is open");
   });
 
   it("should return file contents if editor is not open", async () => {
@@ -98,5 +102,60 @@ describe("getEditorOrFileContents", () => {
     assert.rejects(async () => {
       await getEditorOrFileContents(uri);
     });
+  });
+});
+
+describe("WriteableTmpDir", () => {
+  let sandbox: sinon.SinonSandbox;
+
+  let tmpdirStub: sinon.SinonStub;
+  let writeFileStub: sinon.SinonStub;
+  let deleteFileStub: sinon.SinonStub;
+  let instance: WriteableTmpDir;
+  let originalInstance: WriteableTmpDir | undefined;
+
+  beforeEach(() => {
+    sandbox = sinon.createSandbox();
+
+    tmpdirStub = sandbox.stub(fsWrappers, "tmpdir");
+    writeFileStub = sandbox.stub(fsWrappers, "writeFile");
+    deleteFileStub = sandbox.stub(fsWrappers, "deleteFile");
+
+    originalInstance = WriteableTmpDir["instance"];
+    instance = WriteableTmpDir.getInstance();
+    // Set instance to initial state.
+    instance["_tmpdir"] = undefined;
+  });
+
+  afterEach(() => {
+    WriteableTmpDir["instance"] = originalInstance;
+    sandbox.restore();
+  });
+
+  it("determine() should prefer tmpdir() if possible; get() then return it", async () => {
+    tmpdirStub.returns("/tmp");
+    await instance.determine();
+    const result = instance.get();
+    assert.strictEqual(result, "/tmp");
+    sinon.assert.calledOnce(tmpdirStub);
+    sinon.assert.calledOnce(writeFileStub);
+    sinon.assert.calledOnce(deleteFileStub);
+  });
+
+  it("determine() should return an array of errors if no writeable temporary directory is found", async () => {
+    tmpdirStub.returns("/tmp");
+    writeFileStub.throws(new Error("writeFile() boom"));
+
+    const result = await instance.determine();
+
+    assert.ok(result.errors.length);
+    // Should have tried writing at least 4x, based on what env vars set.
+    assert.ok(writeFileStub.callCount >= 4);
+  });
+
+  it("get() should raise if called before determine()", () => {
+    assert.throws(() => {
+      instance.get();
+    }, /get\(\) called before determine\(\) was awaited/);
   });
 });
