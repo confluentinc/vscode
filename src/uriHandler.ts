@@ -44,17 +44,17 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
 
           const collection = params.get("collection");
           const template = params.get("template");
-          const bootstrapServer = params.get("bootstrap_server");
+          const bootstrapServer = params.get("cc_bootstrap_server");
           const apiKey = params.get("cc_api_key");
           const apiSecret = params.get("cc_api_secret");
           const topic = params.get("cc_topic");
 
           // Prepare the options for the template
           const options: { [key: string]: string } = {};
-          if (bootstrapServer) options["bootstrap_server"] = bootstrapServer;
-          if (apiKey) options["api_key"] = apiKey;
-          if (apiSecret) options["api_secret"] = apiSecret;
-          if (topic) options["topic"] = topic;
+          if (bootstrapServer) options["cc_bootstrap_server"] = bootstrapServer;
+          if (apiKey) options["cc_api_key"] = apiKey;
+          if (apiSecret) options["cc_api_secret"] = apiSecret;
+          if (topic) options["cc_topic"] = topic;
 
           if (!collection || !template) {
             vscode.window.showErrorMessage(
@@ -71,18 +71,27 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
             apiSecret,
             topic,
           });
-
-          // Call the scaffoldProjectRequest function
           try {
-            const pickedTemplate: ScaffoldV1Template = {
-              spec: {
-                name: template,
-                template_collection: { id: collection },
-                display_name: template,
+            const result = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: "Generating Project...",
+                cancellable: true,
               },
-            } as ScaffoldV1Template;
-
-            const result = await applyTemplate(pickedTemplate, options);
+              async (progress) => {
+                progress.report({ message: "Applying template..." });
+                return await applyTemplate(
+                  {
+                    spec: {
+                      name: template,
+                      template_collection: { id: collection },
+                      display_name: template,
+                    },
+                  } as ScaffoldV1Template,
+                  options,
+                );
+              },
+            );
             if (result.success) {
               vscode.window.showInformationMessage("Project generated successfully!");
             } else {
