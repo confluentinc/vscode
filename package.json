@@ -20,7 +20,7 @@
   },
   "icon": "resources/confluent_logo-mark-meadow.png",
   "engines": {
-    "vscode": "^1.87.0"
+    "vscode": "^1.97.0"
   },
   "categories": [
     "Programming Languages",
@@ -1467,7 +1467,7 @@
     "@types/sanitize-html": "^2.13.0",
     "@types/sinon": "^17.0.3",
     "@types/tail": "^2.2.3",
-    "@types/vscode": "^1.87.0",
+    "@types/vscode": "^1.97.0",
     "@types/ws": "^8.5.13",
     "@vscode/test-cli": "^0.0.6",
     "@vscode/test-electron": "^2.3.9",
