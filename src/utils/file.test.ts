@@ -128,8 +128,8 @@ describe("WriteableTmpDir", () => {
   });
 
   afterEach(() => {
-    sandbox.restore();
     WriteableTmpDir["instance"] = originalInstance;
+    sandbox.restore();
   });
 
   it("determine() should prefer tmpdir() if possible; get() then return it", async () => {
@@ -142,14 +142,13 @@ describe("WriteableTmpDir", () => {
     sinon.assert.calledOnce(deleteFileStub);
   });
 
-  it("determine() should throw an error if no writeable temporary directory is found", async () => {
+  it("determine() should return an array of errors if no writeable temporary directory is found", async () => {
     tmpdirStub.returns("/tmp");
     writeFileStub.throws(new Error("writeFile() boom"));
 
-    await assert.rejects(async () => {
-      await instance.determine();
-    }, /No writeable tmpdir found/);
+    const result = await instance.determine();
 
+    assert.ok(result.errors.length);
     // Should have tried writing at least 4x, based on what env vars set.
     assert.ok(writeFileStub.callCount >= 4);
   });
