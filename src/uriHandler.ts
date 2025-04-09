@@ -37,6 +37,7 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
         vscode.commands.executeCommand("confluent.topic.consume.fromUri", uri);
         break;
       case "/projectScaffold":
+        projectScaffoldUri.fire(uri);
         vscode.window.showErrorMessage("Unsupported URI path.");
         break;
     }
