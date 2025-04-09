@@ -24,7 +24,7 @@ All notable changes to this extension will be documented in this file.
 - Consult the list of *workspace* open files when submitting schema documents, not the list of
   *window* open editors, #1429. The user may have chosen an untitled document from a window distinct
   from the one they have the extension open in.
-
+- Work around if `os.tmpdir()` ends up not being writeable by trying other probable locations. A writeable temp directory is needed for the sidecar logs.
 ## 1.1.0
 
 ### Added

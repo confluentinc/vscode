@@ -70,6 +70,7 @@ import { sentryCaptureException } from "./telemetry/sentryClient";
 import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
+import { WriteableTmpDir } from "./utils/file";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { ResourceViewProvider } from "./viewProviders/resources";
@@ -142,6 +143,10 @@ async function _activateExtension(
   // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
+
+  // determine the writeable tmpdir for the extension to use. Must be done prior
+  // to starting the sidecar, as it will use this tmpdir for sidecar logfile.
+  await WriteableTmpDir.getInstance().determine();
 
   // verify we can connect to the correct version of the sidecar, which may require automatically
   // killing any (old) sidecar process and starting a new one, going through the handshake, etc.
