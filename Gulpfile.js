@@ -84,12 +84,7 @@ export async function buildServer() {
       node({ preferBuiltins: true, exportConditions: ["node"] }),
       commonjs(),
       json(),
-      esbuild({
-        sourceMap: true,
-        minify: production,
-        platform: "node",
-        target: "es2022",
-      }),
+      esbuild({ sourceMap: true, minify: production }),
       copy({
         copyOnce: true,
         targets: [
@@ -98,24 +93,22 @@ export async function buildServer() {
             dest: SERVER_DESTINATION,
             transform(contents) {
               let pkg = JSON.parse(contents.toString());
-              const dependencies = pkg.dependencies || {};
-              return JSON.stringify(
-                {
-                  name: pkg.name,
-                  version: pkg.version,
-                  type: pkg.type,
-                  dependencies,
-                },
-                null,
-                2,
-              );
+              // add random hex suffix the version for non-CI builds to avoid caching issues
+              pkg.version += process.env.CI ? "" : `+${Math.random().toString(16).slice(2, 8)}`;
+              // no dev only manifests: scripts, dependencies
+              delete pkg.scripts;
+              delete pkg.dependencies;
+              delete pkg.devDependencies;
+              // the target folder is flat so the entry point is known to be in the root
+              pkg.main = "server.js";
+              return JSON.stringify(pkg, null, 2);
             },
           },
         ],
       }),
     ],
     onLog: handleBuildLog,
-    external: ["vscode-languageserver", "vscode-languageserver-textdocument", "dt-sql-parser"],
+    external: ["vscode-languageserver", "vscode-languageserver-textdocument"],
     context: "globalThis",
   };
 
@@ -129,24 +122,6 @@ export async function buildServer() {
 
   const bundle = await rollup(serverInput);
   await bundle.write(serverOutput);
-
-  // install server dependencies
-  console.log("Installing server dependencies...");
-  const npmInstall = spawnSync("npm", ["install", "--omit=dev"], {
-    cwd: SERVER_DESTINATION,
-    stdio: "inherit",
-    shell: IS_WINDOWS,
-  });
-  if (npmInstall.error) {
-    console.error("Failed to install server dependencies:", npmInstall.error);
-    throw npmInstall.error;
-  }
-  if (npmInstall.status !== 0) {
-    console.error(`npm install exited with code ${npmInstall.status}`);
-    throw new Error(`Failed to install server dependencies, exit code: ${npmInstall.status}`);
-  }
-
-  console.log("Server dependencies installed successfully");
   return 0;
 }
 
