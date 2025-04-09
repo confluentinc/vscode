@@ -88,6 +88,20 @@ export async function activate(
   observabilityContext.extensionVersion = extVersion;
   observabilityContext.extensionActivated = false;
 
+  // determine the writeable tmpdir for the extension to use. Must be done prior
+  // to starting the sidecar, as it will use this tmpdir for sidecar logfile.
+  const result = await WriteableTmpDir.getInstance().determine();
+  if (result.errors.length) {
+    sentryCaptureException(new Error("No writeable tmpdir found."), {
+      captureContext: {
+        extra: {
+          attemptedDirs: result.dirs.join("; "),
+          errorsEncountered: result.errors.map((e) => e.message).join("; "),
+        },
+      },
+    });
+  }
+
   logger.info(
     `Extension version ${context.extension.id} activate() triggered for version "${extVersion}".`,
   );
@@ -140,10 +154,6 @@ async function _activateExtension(
   // set the initial context values for the VS Code UI to inform the `when` clauses in package.json
   await Promise.all([setupStorage(), setupContextValues()]);
   logger.info("Storage and context values initialized");
-
-  // determine the writeable tmpdir for the extension to use. Must be done prior
-  // to starting the sidecar, as it will use this tmpdir for sidecar logfile.
-  await WriteableTmpDir.getInstance().determine();
 
   // verify we can connect to the correct version of the sidecar, which may require automatically
   // killing any (old) sidecar process and starting a new one, going through the handshake, etc.
