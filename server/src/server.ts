@@ -8,11 +8,11 @@ import {
   TextDocumentPositionParams,
   TextDocumentSyncKind,
   type DocumentDiagnosticReport,
-} from "vscode-languageserver/node.js";
-import { handleCompletion, handleCompletionResolve } from "./completion.js";
-import { getConnection } from "./connection.js";
-import { validateTextDocument } from "./diagnostics.js";
-import { getDocumentManager } from "./documents.js";
+} from "vscode-languageserver/node";
+import { handleCompletion, handleCompletionResolve } from "./completion";
+import { getConnection } from "./connection";
+import { validateTextDocument } from "./diagnostics";
+import { getDocumentManager } from "./documents";
 
 const connection = getConnection();
 

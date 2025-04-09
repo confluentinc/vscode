@@ -1,17 +1,17 @@
 {
-	"name": "lsp-sample-server",
-	"description": "Example implementation of a language server in node.",
-	"version": "1.0.0",
-	"author": "Microsoft Corporation",
-	"license": "MIT",
+	"name": "confluent-vscode-flinksql-language-server",
+	"version": "0.0.1",
 	"type": "module",
-	"engines": {
-		"node": "*"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
-	},
+	"homepage": "https://github.com/confluentinc/vscode",
+  "publisher": "confluentinc",
+  "author": {
+    "name": "Confluent, Inc."
+  },
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/confluentinc/vscode.git"
+  },
 	"dependencies": {
 		"dt-sql-parser": "^4.1.1",
 		"vscode-languageserver": "^9.0.1",

@@ -1,6 +1,6 @@
 import { TextDocuments } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { getConnection } from "./connection.js";
+import { getConnection } from "./connection";
 
 let docManager: TextDocuments<TextDocument>;
 
