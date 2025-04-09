@@ -69,6 +69,13 @@ export function getConnectionLabel(type: ConnectionType): string {
   }
 }
 
+/** Any connection-id carrying resource which specifies a ccloud provider/region pair */
+export interface IProviderRegion {
+  connectionId: ConnectionId;
+  provider: string;
+  region: string;
+}
+
 export interface ISearchable {
   /** Space-separated strings for a given resource that should be searchable in the UI. */
   searchableText: () => string;

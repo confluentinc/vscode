@@ -1,15 +1,24 @@
 import { Disposable } from "vscode";
 
+import {
+  ListSqlv1StatementsRequest,
+  SqlV1StatementListDataInner,
+  SqlV1StatementSpec,
+} from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FlinkStatement } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { isCCloud } from "../models/resource";
+import { EnvironmentId, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { ResourceLoader } from "./resourceLoader";
 
@@ -44,6 +53,9 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   /** If in progress of loading the coarse resources, the promise doing so. */
   private currentlyCoarseLoadingPromise: Promise<void> | null = null;
+
+  /** The user's current ccloud organization. Only determined when needed, see {@link getOrganizationId}. */
+  private organizationId: string | null = null;
 
   // Singleton class. Use getInstance() to get the singleton instance.
   // (Only public for testing / signon mocking purposes.)
@@ -253,9 +265,89 @@ export class CCloudResourceLoader extends ResourceLoader {
     );
   }
 
+  public async getOrganizationId(): Promise<string> {
+    if (this.organizationId) {
+      return this.organizationId;
+    }
+
+    const organization = await getCurrentOrganization();
+    if (organization) {
+      this.organizationId = organization.id;
+      return this.organizationId;
+    }
+    logger.error("getOrganizationId(): No current organization found.");
+    throw new Error("No current organization found.");
+  }
+
+  // Todo: Make more general interface for getting getFlinkSqlStatementsApi.
+  public async getFlinkStatements(computePool: CCloudFlinkComputePool): Promise<FlinkStatement[]> {
+    const handle = await getSidecar();
+    const statementsClient = handle.getFlinkSqlStatementsApi(computePool);
+
+    const organizationId = await this.getOrganizationId();
+
+    const request: ListSqlv1StatementsRequest = {
+      organization_id: organizationId,
+      environment_id: computePool.environmentId,
+      page_size: 1,
+      page_token: "",
+    };
+
+    const flinkStatements: FlinkStatement[] = [];
+    let needMore: boolean = true;
+
+    while (needMore) {
+      const restResult = await statementsClient.listSqlv1Statements(request);
+
+      logger.debug(
+        `Recieved ${restResult.data.size} more Flink statements (${restResult.data.size + flinkStatements.length} total) from the API.`,
+      );
+      for (const restStatement of restResult.data) {
+        const statement = restFlinkStatementToModelFlinkStatement(restStatement);
+        flinkStatements.push(statement);
+      }
+
+      if (restResult.metadata.next) {
+        // Will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
+        // Must extract the page token from the URL.
+        const nextUrl = new URL(restResult.metadata.next);
+        const pageToken = nextUrl.searchParams.get("page_token");
+        if (!pageToken) {
+          logger.error("Wacky. No page token found in next URL");
+          needMore = false;
+        } else {
+          request.page_token = pageToken;
+        }
+      } else {
+        // No more pages to fetch.
+        needMore = false;
+      }
+    }
+
+    return flinkStatements;
+  }
+
   /** Go back to initial state, not having cached anything. */
   private reset(): void {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
   }
+}
+
+/** Convert a from-REST API depiction of a Flink statement to our codebase model FlinkStatement*/
+export function restFlinkStatementToModelFlinkStatement(
+  restFlinkStatement: SqlV1StatementListDataInner,
+): FlinkStatement {
+  logger.debug(JSON.stringify(restFlinkStatement, null, 2));
+
+  const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
+
+  return new FlinkStatement({
+    connectionId: CCLOUD_CONNECTION_ID,
+    connectionType: ConnectionType.Ccloud,
+    environmentId: restFlinkStatement.environment_id as EnvironmentId,
+    computePoolId: spec.compute_pool_id!,
+    name: restFlinkStatement.name,
+    status: restFlinkStatement.status.phase,
+  });
 }

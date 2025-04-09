@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { FlinkComputePool } from "./models/flinkComputePool";
+import { CCloudFlinkComputePool } from "./models/flinkComputePool";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { ConnectionId, EnvironmentId } from "./models/resource";
 import { Subject, SubjectWithSchemas } from "./models/schema";
@@ -89,13 +89,15 @@ export const currentSchemaRegistryChanged = new vscode.EventEmitter<SchemaRegist
  * view, chosen from the "Select Flink Compute Pool" action from the Flink Statements view or
  * command palette, or cleared out from a connection (or CCloud organization) change.
  */
-export const currentFlinkStatementsPoolChanged = new vscode.EventEmitter<FlinkComputePool | null>();
+export const currentFlinkStatementsPoolChanged =
+  new vscode.EventEmitter<CCloudFlinkComputePool | null>();
 /**
  * Fired whenever a Flink compute pool is selected from the Resources view or the Flink Artifacts
  * view, chosen from the "Select Flink Compute Pool" action from the Flink Artifacts view or
  * command palette, or cleared out from a connection (or CCloud organization) change.
  */
-export const currentFlinkArtifactsPoolChanged = new vscode.EventEmitter<FlinkComputePool | null>();
+export const currentFlinkArtifactsPoolChanged =
+  new vscode.EventEmitter<CCloudFlinkComputePool | null>();
 
 export const connectionStable = new vscode.EventEmitter<ConnectionId>();
 

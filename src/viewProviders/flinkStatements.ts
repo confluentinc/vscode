@@ -1,12 +1,13 @@
 import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
 import { currentFlinkStatementsPoolChanged } from "../emitters";
-import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
+import { CCloudResourceLoader, ResourceLoader } from "../loaders";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
 
 export class FlinkStatementsViewProvider
-  extends BaseViewProvider<FlinkComputePool, FlinkStatement>
+  extends BaseViewProvider<CCloudFlinkComputePool, FlinkStatement>
   implements TreeDataProvider<FlinkStatement>
 {
   loggerName = "viewProviders.flinkStatements";
@@ -17,38 +18,33 @@ export class FlinkStatementsViewProvider
 
   searchContextValue = ContextValues.flinkStatementsSearchApplied;
 
+  // Map of resource id string -> resource currently in the tree view.
+  private resourcesInTreeView: Map<string, FlinkStatement> = new Map();
+
+  /**
+   * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the statements.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async refresh(forceDeepRefresh: boolean = false): Promise<void> {
+    // Out with any existing subjects.
+    this.resourcesInTreeView.clear();
+
+    if (this.resource !== null) {
+      const loader = ResourceLoader.getInstance(this.resource.connectionId) as CCloudResourceLoader;
+
+      // Fetch statements using the loader, pushing down need to do deep refresh.
+      const statements: FlinkStatement[] = await loader.getFlinkStatements(this.resource);
+
+      // Repopulate this.subjectsInTreeView from getSubjects() result.
+      statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
+    }
+
+    // Indicate to view that toplevel items have changed.
+    this._onDidChangeTreeData.fire();
+  }
+
   async getChildren(): Promise<FlinkStatement[]> {
-    const children: FlinkStatement[] = [];
-    if (!this.computePool) {
-      return children;
-    }
-
-    const pool: CCloudFlinkComputePool = this.computePool as CCloudFlinkComputePool;
-
-    // TODO: replace this with real data
-    const numStatements = Math.floor(Math.random() * 20) + 1;
-    const possibleStatuses = [
-      "COMPLETED",
-      "DEGRADED", // in CCloud, not the spec
-      "DELETING",
-      "FAILED",
-      "FAILING",
-      "PENDING",
-      "RUNNING",
-      "STOPPED",
-      "STOPPING", // in CCloud, not the spec
-    ];
-    for (let i = 0; i < numStatements; i++) {
-      const fakeArtifact = new FlinkStatement({
-        connectionId: pool.connectionId,
-        connectionType: pool.connectionType,
-        environmentId: pool.environmentId,
-        computePoolId: pool.id,
-        name: `statement${i + 1}-${pool.name}`,
-        status: possibleStatuses[Math.floor(Math.random() * possibleStatuses.length)].toLowerCase(),
-      });
-      children.push(fakeArtifact);
-    }
+    const children: FlinkStatement[] = Array.from(this.resourcesInTreeView.values());
 
     return this.filterChildren(undefined, children);
   }
@@ -57,7 +53,7 @@ export class FlinkStatementsViewProvider
     return new FlinkStatementTreeItem(element);
   }
 
-  get computePool(): FlinkComputePool | null {
+  get computePool(): CCloudFlinkComputePool | null {
     return this.resource;
   }
 }
