@@ -1,11 +1,7 @@
 import { join } from "path";
 import * as vscode from "vscode";
 import { TextDocument } from "vscode";
-import { logError } from "../errors";
-import { Logger } from "../logging";
 import { deleteFile, readFile, statFile, tmpdir, writeFile } from "./fsWrappers";
-
-const logger = new Logger("utils/file");
 
 /** Check if a file URI exists in the filesystem. */
 export async function fileUriExists(uri: vscode.Uri): Promise<boolean> {
@@ -82,7 +78,7 @@ export class WriteableTmpDir {
    *
    * (We have reports that when installed through JamfAppInstallers on OSX, tmpdir() is not actually writeable.)
    */
-  async determine(): Promise<void> {
+  async determine(): Promise<{ errors: Error[]; dirs: (string | undefined)[] }> {
     const possibleDirs = [
       tmpdir(), // Should work on all platforms, but JamfAppInstallers on OSX may mangle?
       process.env["TMPDIR"], // UNIX-y, but should also have been what tmpdir() returned.
@@ -104,26 +100,16 @@ export class WriteableTmpDir {
         await writeFile(fileUri, Buffer.from("test"));
         await deleteFile(fileUri);
         this._tmpdir = dir;
-        logger.info(`Found writeable tmpdir: ${dir}`);
-        return;
+        console.info(`Found writeable tmpdir: ${dir}`);
+        return { errors: [], dirs: possibleDirs };
       } catch (e) {
-        logger.warn(`Failed to write to ${dir}: ${e}`);
+        console.warn(`Failed to write to ${dir}: ${e}`);
         errorsEncountered.push(e as Error);
         // Ignore errors and try the next directory
       }
     }
 
-    logError(
-      new Error("No writeable tmpdir found."),
-      "determineWriteableTmpDir()",
-      {
-        attemptedDirs: possibleDirs.join("; "),
-        errorsEncountered: errorsEncountered.map((e) => e.message).join("; "),
-      },
-      true,
-    );
-
-    throw new Error("No writeable tmpdir found");
+    return { errors: errorsEncountered, dirs: possibleDirs };
   }
 
   /** Return the determined writeable tmpdir. Must have awaited determineWriteableTmpDir() prior. */
