@@ -6,14 +6,18 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
-- New actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new project. The project generation form will still be opened, and known form fields will be filled in automatically for the clicked resource.
-- "View in Confluent Cloud" item added to ccloud-based subjects (previously only available on individual schemas).
+- New actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new
+  project. The project generation form will still be opened, and known form fields will be filled in
+  automatically for the clicked resource.
+- "View in Confluent Cloud" item added to ccloud-based subjects (previously only available on
+  individual schemas).
+- Error notifications if CCloud TLS/SSL settings fail to sync with the sidecar process.
 
 ### Changed
 
-- When deleting a subject containing a single schema, use the simpler
-  confirmation flow for deleting a single schema.
-  
+- When deleting a subject containing a single schema, use the simpler confirmation flow for deleting
+  a single schema.
+
 ## 1.1.0
 
 ### Added

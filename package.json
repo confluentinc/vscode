@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.2.0-22",
+  "version": "1.2.0-24",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -1218,67 +1218,116 @@
           "fontCharacter": "\\f105"
         }
       },
+      "confluent-flink-statement-status-completed": {
+        "description": "confluent-flink-statement-status-completed icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f106"
+        }
+      },
+      "confluent-flink-statement-status-degraded": {
+        "description": "confluent-flink-statement-status-degraded icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f107"
+        }
+      },
+      "confluent-flink-statement-status-deleting": {
+        "description": "confluent-flink-statement-status-deleting icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f108"
+        }
+      },
+      "confluent-flink-statement-status-failed": {
+        "description": "confluent-flink-statement-status-failed icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f109"
+        }
+      },
+      "confluent-flink-statement-status-pending": {
+        "description": "confluent-flink-statement-status-pending icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10a"
+        }
+      },
+      "confluent-flink-statement-status-running": {
+        "description": "confluent-flink-statement-status-running icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10b"
+        }
+      },
+      "confluent-flink-statement-status-stopped": {
+        "description": "confluent-flink-statement-status-stopped icon",
+        "default": {
+          "fontPath": "./resources/dist/icons.woff2",
+          "fontCharacter": "\\f10c"
+        }
+      },
       "confluent-kafka-cluster": {
         "description": "confluent-kafka-cluster icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f106"
+          "fontCharacter": "\\f10d"
         }
       },
       "confluent-logo": {
         "description": "confluent-logo icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f107"
+          "fontCharacter": "\\f10e"
         }
       },
       "confluent-new-message": {
         "description": "confluent-new-message icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f108"
+          "fontCharacter": "\\f10f"
         }
       },
       "confluent-schema-registry": {
         "description": "confluent-schema-registry icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f109"
+          "fontCharacter": "\\f110"
         }
       },
       "confluent-send-message": {
         "description": "confluent-send-message icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10a"
+          "fontCharacter": "\\f111"
         }
       },
       "confluent-topic-without-schema": {
         "description": "confluent-topic-without-schema icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10b"
+          "fontCharacter": "\\f112"
         }
       },
       "confluent-topic": {
         "description": "confluent-topic icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10c"
+          "fontCharacter": "\\f113"
         }
       },
       "confluent-view-messages": {
         "description": "confluent-view-messages icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10d"
+          "fontCharacter": "\\f114"
         }
       },
       "warpstream-logo": {
         "description": "warpstream-logo icon",
         "default": {
           "fontPath": "./resources/dist/icons.woff2",
-          "fontCharacter": "\\f10e"
+          "fontCharacter": "\\f115"
         }
       }
     },
