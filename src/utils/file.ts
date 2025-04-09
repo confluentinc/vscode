@@ -70,16 +70,6 @@ export class WriteableTmpDir {
     // Private constructor to prevent external instantiation
   }
 
-  possibleDirs = [
-    tmpdir(), // Should work on all platforms, but JamfAppInstallers on OSX may mangle?
-    process.env["TMPDIR"], // UNIX-y, but should also have been what tmpdir() returned.
-    process.env["TEMP"], // Windows-y, probably also what tmpdir() returns on Windows.
-    process.env["TMP"], // sometimes Windows-y
-    "/var/tmp", // UNIX-y
-    "/tmp", // UNIX-y
-    "/private/tmp", // macOS
-  ];
-
   /**
    * Determine a writeable temporary directory. This is a best-effort attempt.
    *
@@ -88,10 +78,19 @@ export class WriteableTmpDir {
    *
    * (We have reports that when installed through JamfAppInstallers on OSX, tmpdir() is not actually writeable.)
    */
-  async determine(): Promise<Error[]> {
+  async determine(): Promise<{ errors: Error[]; dirs: (string | undefined)[] }> {
+    const possibleDirs = [
+      tmpdir(), // Should work on all platforms, but JamfAppInstallers on OSX may mangle?
+      process.env["TMPDIR"], // UNIX-y, but should also have been what tmpdir() returned.
+      process.env["TEMP"], // Windows-y, probably also what tmpdir() returns on Windows.
+      process.env["TMP"], // sometimes Windows-y
+      "/var/tmp", // UNIX-y
+      "/tmp", // UNIX-y
+      "/private/tmp", // macOS
+    ];
     const errorsEncountered: Error[] = [];
 
-    for (const dir of this.possibleDirs) {
+    for (const dir of possibleDirs) {
       if (!dir) {
         continue; // Skip undefined or null directories
       }
@@ -102,7 +101,7 @@ export class WriteableTmpDir {
         await deleteFile(fileUri);
         this._tmpdir = dir;
         console.info(`Found writeable tmpdir: ${dir}`);
-        return [];
+        return { errors: [], dirs: possibleDirs };
       } catch (e) {
         console.warn(`Failed to write to ${dir}: ${e}`);
         errorsEncountered.push(e as Error);
@@ -110,7 +109,7 @@ export class WriteableTmpDir {
       }
     }
 
-    return errorsEncountered;
+    return { errors: errorsEncountered, dirs: possibleDirs };
   }
 
   /** Return the determined writeable tmpdir. Must have awaited determineWriteableTmpDir() prior. */
