@@ -41,15 +41,8 @@ export async function chatHandler(
       const parameters = request.parameters as IGenerateProjectParameters;
 
       // Validate that all required parameters are present
-      if (
-        !parameters.cc_bootstrap_server ||
-        !parameters.cc_api_key ||
-        !parameters.cc_api_secret ||
-        !parameters.cc_topic
-      ) {
-        throw new Error(
-          "Missing required parameters: cc_bootstrap_server, cc_api_key, cc_api_secret, cc_topic",
-        );
+      if (!parameters.cc_bootstrap_server || !parameters.cc_topic) {
+        throw new Error("Missing required parameters: cc_bootstrap_server, cc_topic");
       }
 
       const tool = new GenerateProjectTool();
