@@ -90,7 +90,17 @@ export async function activate(
 
   // determine the writeable tmpdir for the extension to use. Must be done prior
   // to starting the sidecar, as it will use this tmpdir for sidecar logfile.
-  await WriteableTmpDir.getInstance().determine();
+  const errors: Error[] = await WriteableTmpDir.getInstance().determine();
+  if (errors.length) {
+    sentryCaptureException(new Error("No writeable tmpdir found."), {
+      captureContext: {
+        extra: {
+          attemptedDirs: WriteableTmpDir.getInstance().possibleDirs.join("; "),
+          errorsEncountered: errors.map((e) => e.message).join("; "),
+        },
+      },
+    });
+  }
 
   logger.info(
     `Extension version ${context.extension.id} activate() triggered for version "${extVersion}".`,
