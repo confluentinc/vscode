@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { Logger } from "./logging";
-import { applyTemplate } from "./scaffold";
-import { ScaffoldV1Template } from "./clients/scaffoldingService";
+import { projectScaffoldUri } from "./emitters";
 
 const logger = new Logger("uriHandler");
 
@@ -38,63 +37,12 @@ export class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements 
         vscode.commands.executeCommand("confluent.topic.consume.fromUri", uri);
         break;
       case "/projectScaffold":
-        // Ensure the authority and path match the expected URI
-        if (authority === "confluentinc.vscode-confluent" && path === "/projectScaffold") {
-          const params = new URLSearchParams(query);
-
-          const collection = params.get("collection");
-          const template = params.get("template");
-          const bootstrapServer = params.get("cc_bootstrap_server");
-          const apiKey = params.get("cc_api_key");
-          const apiSecret = params.get("cc_api_secret");
-          const topic = params.get("cc_topic");
-
-          // Prepare the options for the template
-          const options: { [key: string]: string } = {};
-          if (bootstrapServer) options["cc_bootstrap_server"] = bootstrapServer;
-          if (apiKey) options["cc_api_key"] = apiKey;
-          if (apiSecret) options["cc_api_secret"] = apiSecret;
-          if (topic) options["cc_topic"] = topic;
-
-          if (!collection || !template) {
-            vscode.window.showErrorMessage(
-              "Missing required parameters for project generation. Please check the URI.",
-            );
-            break;
-          }
-          try {
-            const result = await vscode.window.withProgress(
-              {
-                location: vscode.ProgressLocation.Notification,
-                title: "Generating Project ",
-                cancellable: true,
-              },
-              async (progress) => {
-                progress.report({ message: "Applying template..." });
-                return await applyTemplate(
-                  {
-                    spec: {
-                      name: template,
-                      template_collection: { id: collection },
-                      display_name: template,
-                    },
-                  } as ScaffoldV1Template,
-                  options,
-                );
-              },
-            );
-            if (result.success) {
-              vscode.window.showInformationMessage("Project generated successfully!");
-            } else {
-              vscode.window.showErrorMessage(`Failed to generate project: ${result.message}`);
-            }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(`Error generating project: ${errorMessage}`);
-          }
+        if (authority === "confluentinc.vscode-confluent") {
+          projectScaffoldUri.fire(uri); // Emit the event
         } else {
           vscode.window.showErrorMessage("Unsupported URI path.");
         }
+        break;
     }
   }
 }
