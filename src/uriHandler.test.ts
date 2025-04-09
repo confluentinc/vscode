@@ -4,17 +4,18 @@ import { projectScaffoldUri } from "../src/emitters";
 import * as sinon from "sinon";
 import assert from "assert";
 
-describe.only("UriEventHandler - /projectScaffold", () => {
+describe("UriEventHandler - /projectScaffold", () => {
   let uriHandler: UriEventHandler;
   let projectScaffoldUriStub: sinon.SinonStub;
+  let sandbox = sinon.createSandbox();
 
   beforeEach(() => {
     uriHandler = UriEventHandler.getInstance();
-    projectScaffoldUriStub = sinon.stub(projectScaffoldUri, "fire");
+    projectScaffoldUriStub = sandbox.stub(projectScaffoldUri, "fire");
   });
 
   afterEach(() => {
-    sinon.restore();
+    sandbox.restore();
   });
 
   it("should emit projectScaffoldUri event with correct URI", async () => {
