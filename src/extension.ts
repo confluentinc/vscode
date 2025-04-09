@@ -100,6 +100,8 @@ export async function activate(
         },
       },
     });
+    // if we can't find a writeable tmpdir, we can't log anything, which is bad
+    throw new Error("Can't activate extension: unable to find a writeable tmpdir");
   }
 
   logger.info(
