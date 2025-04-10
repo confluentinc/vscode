@@ -6,23 +6,22 @@ export interface IGenerateProjectParameters {
 }
 
 export class GenerateProjectTool implements vscode.LanguageModelTool<IGenerateProjectParameters> {
-  readonly id = "generate_clientproject";
+  readonly id = "project";
   readonly description =
     "Generate a project for a Kafka client. Enter parameters and autogenerate a pre-configured code starter.";
 
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<IGenerateProjectParameters>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken,
   ): Promise<vscode.LanguageModelToolResult> {
     const params = options.input;
     console.log("GenerateProjectTool invoked with options:", options.input);
 
-    // Validate required parameters
     if (!params.cc_bootstrap_server || !params.cc_topic) {
       throw new Error("All parameters (cc_bootstrap_server, cc_topic) are required.");
     }
-
-    // Generate a simple project structure as an example
+    // Generate a simple project structure as an EXAMPLE -- this becomes the output and needs to be changed
     const projectStructure = `
       Kafka Client Project:
       - Bootstrap Server: ${params.cc_bootstrap_server}
@@ -37,6 +36,7 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
 
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<IGenerateProjectParameters>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
     const confirmationMessages = {
@@ -57,9 +57,7 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
 class ChatToolsRegistrar {
   static registerChatTools(context: vscode.ExtensionContext) {
     console.log("Registering chat tools...");
-    context.subscriptions.push(
-      vscode.lm.registerTool("generate_clientproject", new GenerateProjectTool()),
-    );
+    context.subscriptions.push(vscode.lm.registerTool("project", new GenerateProjectTool()));
     console.log("GenerateProjectTool registered.");
   }
 }

@@ -29,18 +29,16 @@ export async function chatHandler(
   stream: ChatResponseStream,
   token: CancellationToken,
 ): Promise<ChatResult> {
-  // Check if the request references a tool
+
   if (request.toolReferences?.length > 0) {
-    const toolReference = request.toolReferences[0]; // Assuming a single tool reference
-    if (toolReference.name === "generate_clientproject") {
+    const toolReference = request.toolReferences.find((ref) => ref.name === "project");
+
+    if (toolReference?.name === "project") {
       logger.debug("GenerateProjectTool tool received:", toolReference.name);
 
-      // Debug the request object
       logger.debug("Request object:", request);
 
-      // Extract parameters from the prompt if not already present
       if (!("parameters" in request)) {
-        // Prompt the user for missing parameters
         const bootstrapServer = await vscode.window.showInputBox({
           prompt: "Enter the Kafka bootstrap server",
           placeHolder: "e.g., broker.confluent.cloud:9092",
@@ -66,16 +64,15 @@ export async function chatHandler(
 
       const parameters = request.parameters as IGenerateProjectParameters;
 
-      // Validate that all required parameters are present
       if (!parameters.cc_bootstrap_server || !parameters.cc_topic) {
         throw new Error("Missing required parameters: cc_bootstrap_server, cc_topic");
       }
       const toolInvocationToken = request.toolInvocationToken;
       const tool = new GenerateProjectTool();
-      console.log("Tool invocation token:", toolInvocationToken);
-      console.log("Tool reference:", toolReference);
-      console.log("Tool parameters:", parameters);
-      console.log("Tool name:", toolReference.name);
+      logger.debug("Tool invocation token:", toolInvocationToken);
+      logger.debug("Tool reference:", toolReference);
+      logger.debug("Tool parameters:", parameters);
+      logger.debug("Tool name:", toolReference.name);
       const result = await tool.invoke(
         {
           input: parameters,
@@ -83,14 +80,12 @@ export async function chatHandler(
         },
         token,
       );
-      // Debug the result object
+
       console.log("Tool invocation result:", result);
 
-      // Verify the content structure
       if (result.content && Array.isArray(result.content)) {
         console.log("Tool invocation result content:", result.content);
 
-        // Stream the result back to the chat
         const markdownContent = result.content
           .map((part) => (part as { value: string }).value || "Unknown content")
           .join("\n");

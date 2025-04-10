@@ -45,7 +45,7 @@
     "templates"
   ],
   "activationEvents": [
-  "*"
+ "workspaceContains:**/*.confluent.*"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -68,12 +68,12 @@
     ],
     "languageModelTools": [
       {
-        "name": "generate_clientproject",
+        "name": "project",
         "when": "confluent.chatParticipantEnabled",
         "tags": [
           "projects"
         ],
-        "toolReferenceName": "generate_clientproject",
+        "toolReferenceName": "project",
         "displayName": "Generate Kafka Client Project",
         "modelDescription": "Generate a project for a Kafka client. Enter parameters and autogenerate a pre-configured code starter.",
         "canBeReferencedInPrompt": true,
