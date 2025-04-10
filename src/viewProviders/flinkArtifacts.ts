@@ -2,11 +2,11 @@ import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
 import { currentFlinkArtifactsPoolChanged } from "../emitters";
 import { FlinkArtifact, FlinkArtifactTreeItem } from "../models/flinkArtifact";
-import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { BaseViewProvider } from "./base";
 
 export class FlinkArtifactsViewProvider
-  extends BaseViewProvider<FlinkComputePool, FlinkArtifact>
+  extends BaseViewProvider<CCloudFlinkComputePool, FlinkArtifact>
   implements TreeDataProvider<FlinkArtifact>
 {
   loggerName = "viewProviders.flinkArtifacts";
@@ -49,7 +49,7 @@ export class FlinkArtifactsViewProvider
     return new FlinkArtifactTreeItem(element);
   }
 
-  get computePool(): FlinkComputePool | null {
+  get computePool(): CCloudFlinkComputePool | null {
     return this.resource;
   }
 }

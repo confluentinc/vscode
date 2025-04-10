@@ -1,15 +1,23 @@
 import { Disposable } from "vscode";
 
+import {
+  ListSqlv1StatementsRequest,
+  SqlV1StatementListDataInner,
+  SqlV1StatementSpec,
+} from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
+import { FlinkStatement } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { isCCloud } from "../models/resource";
+import { EnvironmentId, IEnvProviderRegion, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { getSidecar } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { ResourceLoader } from "./resourceLoader";
 
@@ -44,6 +52,9 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   /** If in progress of loading the coarse resources, the promise doing so. */
   private currentlyCoarseLoadingPromise: Promise<void> | null = null;
+
+  /** The user's current ccloud organization. Only determined when needed, see {@link getOrganizationId}. */
+  private organizationId: string | null = null;
 
   // Singleton class. Use getInstance() to get the singleton instance.
   // (Only public for testing / signon mocking purposes.)
@@ -253,9 +264,98 @@ export class CCloudResourceLoader extends ResourceLoader {
     );
   }
 
+  public async getOrganizationId(): Promise<string> {
+    if (this.organizationId) {
+      return this.organizationId;
+    }
+
+    const organization = await getCurrentOrganization();
+    if (organization) {
+      this.organizationId = organization.id;
+      return this.organizationId;
+    }
+    logger.error("getOrganizationId(): No current organization found.");
+    throw new Error("No current organization found.");
+  }
+
+  /**
+   * Query the Flink statements for the given CCloud environment + provider-region.
+   * @returns The Flink statements for the given environment + provider-region.
+   * @param providerRegion The CCloud environment, provider, region to get the Flink statements for.
+   */
+  public async getFlinkStatements(providerRegion: IEnvProviderRegion): Promise<FlinkStatement[]> {
+    const handle = await getSidecar();
+    const statementsClient = handle.getFlinkSqlStatementsApi(providerRegion);
+
+    const organizationId = await this.getOrganizationId();
+
+    const request: ListSqlv1StatementsRequest = {
+      organization_id: organizationId,
+      environment_id: providerRegion.environmentId,
+      page_size: 100, // ccloud max page size
+      page_token: "", // start with the first page
+
+      // Don't show hidden statements, only user-created ones. "System" queries like
+      // ccloud workspaces UI examining the system catalog are created with this label
+      // set to true.
+      label_selector: "user.confluent.io/hidden!=true",
+    };
+
+    const flinkStatements: FlinkStatement[] = [];
+    let needMore: boolean = true;
+
+    while (needMore) {
+      const restResult = await statementsClient.listSqlv1Statements(request);
+
+      // Convert each Flink statement from the REST API representation to our codebase model.
+      for (const restStatement of restResult.data) {
+        const statement = restFlinkStatementToModelFlinkStatement(restStatement);
+        flinkStatements.push(statement);
+      }
+
+      // If this wasn't the last page, update the request to get the next page.
+      if (restResult.metadata.next) {
+        // `restResult.metadata.next` will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
+        // Must extract the page token from the URL.
+        const nextUrl = new URL(restResult.metadata.next);
+        const pageToken = nextUrl.searchParams.get("page_token");
+        if (!pageToken) {
+          // Should never happen, but just in case.
+          logger.error("Wacky. No page token found in next URL.");
+          needMore = false;
+        } else {
+          request.page_token = pageToken;
+        }
+      } else {
+        // No more pages to fetch.
+        needMore = false;
+      }
+    }
+
+    return flinkStatements;
+  }
+
   /** Go back to initial state, not having cached anything. */
   private reset(): void {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
   }
+}
+
+/** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
+export function restFlinkStatementToModelFlinkStatement(
+  restFlinkStatement: SqlV1StatementListDataInner,
+): FlinkStatement {
+  // For reasons, restFlinkStatement.spec is typed as `object` in the API client,
+  // but is really a SqlV1StatementSpec.
+  const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
+
+  return new FlinkStatement({
+    connectionId: CCLOUD_CONNECTION_ID,
+    connectionType: ConnectionType.Ccloud,
+    environmentId: restFlinkStatement.environment_id as EnvironmentId,
+    computePoolId: spec.compute_pool_id!,
+    name: restFlinkStatement.name,
+    status: restFlinkStatement.status.phase,
+  });
 }
