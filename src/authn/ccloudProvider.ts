@@ -208,7 +208,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
    * @remarks We don't use `scopes` at all here, since the sidecar manages all connection->access
    * token and scope information.
    */
-  async getSessions(): Promise<readonly vscode.AuthenticationSession[]> {
+  async getSessions(): Promise<vscode.AuthenticationSession[]> {
     logger.debug("getSessions()");
 
     let connection: Connection | null = null;
