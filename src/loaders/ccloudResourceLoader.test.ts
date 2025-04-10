@@ -108,7 +108,8 @@ describe("CCloudResourceLoader", () => {
           environment_id: "56789",
           spec: {
             authorized_principals: [],
-            compute_pool_id: "lfcp-1m68g66",
+            // Only some statements will have compute pool designation.
+            compute_pool_id: i % 2 === 0 ? "lfcp-1m68g66" : undefined,
             principal: "u-n9dfg06",
             properties: {
               "sql.current-catalog": "custom-data-env",

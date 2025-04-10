@@ -11,8 +11,8 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   environmentId!: EnvironmentId;
 
-  /** The flink compute pool that is running/ran the statement. */
-  computePoolId!: string;
+  /** The flink compute pool that maybe is running/ran the statement. */
+  computePoolId: string | undefined;
 
   name!: string;
   status!: string;

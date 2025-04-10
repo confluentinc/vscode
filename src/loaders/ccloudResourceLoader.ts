@@ -346,9 +346,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 export function restFlinkStatementToModelFlinkStatement(
   restFlinkStatement: SqlV1StatementListDataInner,
 ): FlinkStatement {
-  logger.debug(JSON.stringify(restFlinkStatement, null, 2));
-
-  // For some reason, restFlinkStatement.spec is typed as `object` in the API client,
+  // For reasons, restFlinkStatement.spec is typed as `object` in the API client,
   // but is really a SqlV1StatementSpec.
   const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
 
