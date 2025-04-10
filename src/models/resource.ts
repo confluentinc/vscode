@@ -69,9 +69,9 @@ export function getConnectionLabel(type: ConnectionType): string {
   }
 }
 
-/** Any connection-id carrying resource which specifies a ccloud provider/region pair */
-export interface IProviderRegion {
-  connectionId: ConnectionId;
+/** Specifies a (Ccloud) environment/provider/region tuple. */
+export interface IEnvProviderRegion {
+  environmentId: EnvironmentId;
   provider: string;
   region: string;
 }

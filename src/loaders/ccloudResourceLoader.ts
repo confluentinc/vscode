@@ -12,10 +12,9 @@ import { getEnvironments } from "../graphql/environments";
 import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { EnvironmentId, isCCloud } from "../models/resource";
+import { EnvironmentId, IEnvProviderRegion, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
 import { getSidecar } from "../sidecar";
@@ -279,18 +278,27 @@ export class CCloudResourceLoader extends ResourceLoader {
     throw new Error("No current organization found.");
   }
 
-  // Todo: Make more general interface for getting getFlinkSqlStatementsApi.
-  public async getFlinkStatements(computePool: CCloudFlinkComputePool): Promise<FlinkStatement[]> {
+  /**
+   * Query the Flink statements for the given CCloud environment + provider-region.
+   * @returns The Flink statements for the given environment + provider-region.
+   * @param providerRegion The CCloud environment, provider, region to get the Flink statements for.
+   */
+  public async getFlinkStatements(providerRegion: IEnvProviderRegion): Promise<FlinkStatement[]> {
     const handle = await getSidecar();
-    const statementsClient = handle.getFlinkSqlStatementsApi(computePool);
+    const statementsClient = handle.getFlinkSqlStatementsApi(providerRegion);
 
     const organizationId = await this.getOrganizationId();
 
     const request: ListSqlv1StatementsRequest = {
       organization_id: organizationId,
-      environment_id: computePool.environmentId,
-      page_size: 1,
-      page_token: "",
+      environment_id: providerRegion.environmentId,
+      page_size: 100, // ccloud max page size
+      page_token: "", // start with the first page
+
+      // Don't show hidden statements, only user-created ones. "System" queries like
+      // ccloud workspaces UI examining the system catalog are created with this label
+      // set to true.
+      label_selector: "user.confluent.io/hidden!=true",
     };
 
     const flinkStatements: FlinkStatement[] = [];
@@ -299,21 +307,21 @@ export class CCloudResourceLoader extends ResourceLoader {
     while (needMore) {
       const restResult = await statementsClient.listSqlv1Statements(request);
 
-      logger.debug(
-        `Recieved ${restResult.data.size} more Flink statements (${restResult.data.size + flinkStatements.length} total) from the API.`,
-      );
+      // Convert each Flink statement from the REST API representation to our codebase model.
       for (const restStatement of restResult.data) {
         const statement = restFlinkStatementToModelFlinkStatement(restStatement);
         flinkStatements.push(statement);
       }
 
+      // If this wasn't the last page, update the request to get the next page.
       if (restResult.metadata.next) {
-        // Will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
+        // `restResult.metadata.next` will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
         // Must extract the page token from the URL.
         const nextUrl = new URL(restResult.metadata.next);
         const pageToken = nextUrl.searchParams.get("page_token");
         if (!pageToken) {
-          logger.error("Wacky. No page token found in next URL");
+          // Should never happen, but just in case.
+          logger.error("Wacky. No page token found in next URL.");
           needMore = false;
         } else {
           request.page_token = pageToken;
@@ -334,12 +342,14 @@ export class CCloudResourceLoader extends ResourceLoader {
   }
 }
 
-/** Convert a from-REST API depiction of a Flink statement to our codebase model FlinkStatement*/
+/** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
 export function restFlinkStatementToModelFlinkStatement(
   restFlinkStatement: SqlV1StatementListDataInner,
 ): FlinkStatement {
   logger.debug(JSON.stringify(restFlinkStatement, null, 2));
 
+  // For some reason, restFlinkStatement.spec is typed as `object` in the API client,
+  // but is really a SqlV1StatementSpec.
   const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
 
   return new FlinkStatement({

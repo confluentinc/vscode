@@ -5,7 +5,7 @@ import { CustomMarkdownString } from "./main";
 import {
   ConnectionId,
   EnvironmentId,
-  IProviderRegion,
+  IEnvProviderRegion,
   IResourceBase,
   isCCloud,
   ISearchable,
@@ -26,7 +26,7 @@ export abstract class FlinkComputePool implements IResourceBase, ISearchable {
   }
 }
 
-export class CCloudFlinkComputePool extends FlinkComputePool implements IProviderRegion {
+export class CCloudFlinkComputePool extends FlinkComputePool implements IEnvProviderRegion {
   readonly connectionId: ConnectionId = CCLOUD_CONNECTION_ID;
   readonly connectionType: ConnectionType = ConnectionType.Ccloud;
 
