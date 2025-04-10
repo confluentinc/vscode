@@ -4,6 +4,8 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { ServerRequest } from "../languageClient/constants";
+import { sendLanguageServerRequest } from "../languageClient/serverRequests";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
@@ -152,6 +154,9 @@ export class CCloudResourceLoader extends ResourceLoader {
       await Promise.all([
         resourceManager.setCCloudKafkaClusters(kafkaClusters),
         resourceManager.setCCloudSchemaRegistries(schemaRegistries),
+        sendLanguageServerRequest(ServerRequest.SetKafkaClusters, {
+          clusters: kafkaClusters.map((cluster) => cluster.name as string),
+        }),
       ]);
 
       // If made it to this point, all the coarse resources have been fetched and cached and can be trusted.

@@ -7,18 +7,45 @@ import {
 } from "vscode-languageserver/node";
 import { getConnection } from "./connection";
 import { getDocumentManager } from "./documents";
+import { getKafkaClusters } from "./state";
 
 export function handleCompletion(params: TextDocumentPositionParams): CompletionItem[] {
   const connection = getConnection();
+
   const document: TextDocument | undefined = getDocumentManager().get(params.textDocument.uri);
+  if (!document) {
+    connection.console.warn(`No document found for ${params.textDocument.uri}`);
+    return [];
+  }
 
   connection.console.log(
     `Completion requested for ${params.textDocument.uri} at position ${params.position.line}:${params.position.character}`,
   );
 
-  if (!document) {
-    connection.console.warn(`No document found for ${params.textDocument.uri}`);
-    return [];
+  // Get the text of the current line up to the cursor position
+  const text = document
+    .getText({
+      start: { line: params.position.line, character: 0 },
+      end: params.position,
+    })
+    .toLowerCase();
+  connection.console.log(`Current line text: "${text}"`);
+
+  if (text.includes("kafka")) {
+    // list kafka cluster names
+    const kafkaClusters = getKafkaClusters();
+    connection.console.log(`Kafka clusters found: ${JSON.stringify(kafkaClusters)}\n\n`);
+    const clusterCompletions = kafkaClusters.map((cluster, index) => ({
+      label: `${cluster} (Kafka Cluster)`,
+      filterText: `${cluster} kafka cluster`,
+      kind: CompletionItemKind.Value,
+      data: 1000 + index, // support up to 1000 clusters
+      detail: "Kafka Cluster",
+      documentation: `CCloud Kafka cluster name: ${cluster}`,
+      insertText: text.endsWith("`") ? `${cluster}\`` : `\`${cluster}\``,
+    }));
+    connection.console.log(`Returning clusters:\n\n${JSON.stringify(clusterCompletions)}\n\n`);
+    return clusterCompletions;
   }
 
   return [

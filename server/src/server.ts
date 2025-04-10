@@ -9,6 +9,7 @@ import {
   TextDocumentSyncKind,
   type DocumentDiagnosticReport,
 } from "vscode-languageserver/node";
+import { handleRequest } from "./clientRequests";
 import { handleCompletion, handleCompletionResolve } from "./completion";
 import { getConnection } from "./connection";
 import { validateTextDocument } from "./diagnostics";
@@ -71,6 +72,10 @@ connection.onInitialized(() => {
       connection.console.log("Workspace folder change event received.");
     });
   }
+});
+
+connection.onRequest(async (method: string, params: any) => {
+  await handleRequest(method, params);
 });
 
 // DIAGNOSTICS
