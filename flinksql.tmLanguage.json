@@ -1,0 +1,111 @@
+{
+    "name": "Flink SQL",
+    "scopeName": "source.flinksql",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numeric"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#functions"
+        },
+        {
+            "include": "#types"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-dash.flinksql",
+                    "match": "--.*$"
+                },
+                {
+                    "name": "comment.block.flinksql",
+                    "begin": "/\\*",
+                    "end": "\\*/",
+                    "captures": {
+                        "0": { "name": "punctuation.definition.comment.flinksql" }
+                    }
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.flinksql",
+                    "match": "(?i)\\b(CREATE|DROP|ALTER|SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|INSERT|INTO|VALUES|UPDATE|DELETE|SET|AS|JOIN|ON|USING|UNION|ALL|WITH|CASE|WHEN|THEN|ELSE|END|AND|OR|NOT|IN|EXISTS|BETWEEN|IS|NULL|TRUE|FALSE|LIKE|RLIKE|TABLE|VIEW|FUNCTION|DATABASE|CATALOG|USE|SHOW|DESCRIBE|EXPLAIN|FORMAT|ROW|ROWS|BOUNDED|UNBOUNDED|RANGE|CURRENT|FOLLOWING|PRECEDING|OVER|PARTITION|WINDOW|WATERMARK|FOR)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.single.flinksql",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.flinksql",
+                            "match": "''"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.flinksql",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.flinksql",
+                            "match": "\"\""
+                        }
+                    ]
+                }
+            ]
+        },
+        "numeric": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.flinksql",
+                    "match": "\\b\\d+(\\.\\d+)?([eE][+-]?\\d+)?\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.flinksql",
+                    "match": "\\b(>=|<=|!=|=|>|<|\\+|-|\\*|/|%)\\b"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "name": "support.function.flinksql",
+                    "match": "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|LEAD|LAG|FIRST_VALUE|LAST_VALUE|ROW_NUMBER|RANK|DENSE_RANK|TUMBLE|HOP|SESSION|MATCH_RECOGNIZE|TO_TIMESTAMP|CAST|SUBSTRING|TRIM|UPPER|LOWER|POSITION|OVERLAY|ABS|MOD|FLOOR|CEIL|ROUND)\\b"
+                }
+            ]
+        },
+        "types": {
+            "patterns": [
+                {
+                    "name": "support.type.flinksql",
+                    "match": "(?i)\\b(VARCHAR|CHAR|STRING|BOOLEAN|TINYINT|SMALLINT|INT|BIGINT|FLOAT|DOUBLE|DECIMAL|DATE|TIME|TIMESTAMP|INTERVAL|ARRAY|MAP|ROW|MULTISET|BYTES|VARBINARY)\\b"
+                }
+            ]
+        }
+    }
+}
