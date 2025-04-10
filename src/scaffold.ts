@@ -221,14 +221,16 @@ export async function applyTemplate(
     logError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
-      message = e.message;
-      // instanceof ResponseError check fails, but we can check if the response property exists & use it
       const response = (e as ResponseError).response;
       if (response) {
         const status = response.status;
         try {
-          const payload = await response.json().then((json) => JSON.stringify(json));
-          message = `Failed to generate template. ${status}: ${response.statusText}. ${payload}`;
+          const payload = await response.json();
+          if (payload.errors) {
+            message = parseErrorMessage(JSON.stringify(payload));
+          } else {
+            message = `Failed to generate template. ${status}: ${response.statusText}.`;
+          }
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (jsonError) {
           message = `Failed to generate template. Unable to parse error response: ${e}`;
@@ -341,13 +343,34 @@ export async function handleProjectScaffoldUri(
     if (result.success) {
       vscode.window.showInformationMessage("Project generated successfully!");
     } else {
-      vscode.window.showErrorMessage(`Failed to generate project: ${result.message}`);
+      const cleanedErrorMessage = parseErrorMessage(result.message ?? "Unknown error");
+      vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     vscode.window.showErrorMessage(`Error generating project: ${errorMessage}`);
     logError(error, "handleProjectScaffoldUri", { collection, template }, true);
   }
+}
+
+function parseErrorMessage(rawMessage: string): string {
+  try {
+    const parsed = JSON.parse(rawMessage);
+    if (parsed.errors && Array.isArray(parsed.errors)) {
+      return parsed.errors
+        .map((error: any) => {
+          const detail = error.detail || "Unknown error";
+          const pointer = error.source?.pointer || "unknown field";
+          const optionName = pointer.replace("/options/", ""); // Extract the option name
+          return `Invalid format for option '${optionName}': ${detail}`;
+        })
+        .join("\n");
+    }
+  } catch (e) {
+    console.error("Failed to parse error message:", e);
+    return rawMessage; // Return the raw message if parsing fails
+  }
+  return rawMessage;
 }
 
 export function setProjectScaffoldListener(): vscode.Disposable {
