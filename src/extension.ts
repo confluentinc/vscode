@@ -80,6 +80,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { LanguageServerClient } from "./sidecar/languageServerClient";
 
 const logger = new Logger("extension");
 
@@ -171,6 +172,18 @@ async function _activateExtension(
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
+
+  // Initialize and start the language server client
+  const languageServerClient = new LanguageServerClient();
+  await languageServerClient.start(context);
+  await languageServerClient.connect("127.0.0.1:26636");
+
+  // Add the language server client to subscriptions for proper cleanup
+  context.subscriptions.push({
+    dispose: () => {
+      languageServerClient.stop();
+    },
+  });
 
   // set up the different view providers
   const resourceViewProvider = ResourceViewProvider.getInstance();
