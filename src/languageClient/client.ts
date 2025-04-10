@@ -24,24 +24,10 @@ export function getLanguageClient(): LanguageClient {
       run: {
         module: serverModule,
         transport: TransportKind.ipc,
-        options: {
-          env: {
-            ...process.env,
-            // Force Node.js to use ESM module resolution
-            NODE_OPTIONS: "--experimental-vm-modules",
-          },
-        },
       },
       debug: {
         module: serverModule,
         transport: TransportKind.ipc,
-        options: {
-          env: {
-            ...process.env,
-            // Force Node.js to use ESM module resolution
-            NODE_OPTIONS: "--experimental-vm-modules",
-          },
-        },
       },
     };
 
