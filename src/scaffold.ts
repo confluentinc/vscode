@@ -317,58 +317,35 @@ export async function handleProjectScaffoldUri(
     );
     return;
   }
-  try {
-    const result = await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: "Generating Project",
-        cancellable: true,
-      },
-      async (progress) => {
-        progress.report({ message: "Applying template..." });
-        return await applyTemplate(
-          {
-            spec: {
-              name: template,
-              template_collection: { id: collection },
-              display_name: template,
-            },
-          } as ScaffoldV1Template,
-          options,
-        );
-      },
-    );
+  const result = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Generating Project",
+      cancellable: true,
+    },
+    async (progress) => {
+      progress.report({ message: "Applying template..." });
+      return await applyTemplate(
+        {
+          spec: {
+            name: template,
+            template_collection: { id: collection },
+            display_name: template,
+          },
+        } as ScaffoldV1Template,
+        options,
+      );
+    },
+  );
 
-    if (result.success) {
-      vscode.window.showInformationMessage("🎉 Project generated successfully!");
-    } else {
-      const cleanedErrorMessage = parseErrorMessage(result.message ?? "Unknown error");
-      vscode.window.showErrorMessage("Failed to generate project", {
-        modal: true,
-        detail: cleanedErrorMessage,
-      });
-    }
-  } catch (error) {
-    // Handle unexpected errors
-    let errorMessage: string;
-    if (error instanceof ResponseError && error.response) {
-      try {
-        const payload = await error.response.json();
-        errorMessage = payload.errors
-          ? parseErrorMessage(JSON.stringify(payload))
-          : `Failed to generate template:\nStatus: ${error.response.status}\nStatus Text: ${error.response.statusText}`;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (jsonError) {
-        errorMessage = `Failed to generate template:\nStatus: ${error.response.status}\nStatus Text: ${error.response.statusText}`;
-      }
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    } else {
-      errorMessage = String(error);
-    }
-
-    vscode.window.showErrorMessage(`Error generating project:\n${errorMessage}`);
-    logError(error, "handleProjectScaffoldUri", { collection, template }, true);
+  if (result.success) {
+    vscode.window.showInformationMessage("🎉 Project generated successfully!");
+  } else {
+    const cleanedErrorMessage = parseErrorMessage(result.message ?? "");
+    vscode.window.showErrorMessage("Failed to generate project", {
+      modal: true,
+      detail: cleanedErrorMessage,
+    });
   }
 }
 
