@@ -13,6 +13,7 @@ import {
   LanguageModelChatSelector,
   lm,
 } from "vscode";
+import * as vscode from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
@@ -23,7 +24,7 @@ const logger = new Logger("chat.participant");
 
 /** Main handler for the Copilot chat participant. */
 export async function chatHandler(
-  request: ChatRequest & { model?: LanguageModelChat },
+  request: ChatRequest & { model?: LanguageModelChat; parameters?: IGenerateProjectParameters },
   context: ChatContext,
   stream: ChatResponseStream,
   token: CancellationToken,
@@ -34,52 +35,99 @@ export async function chatHandler(
     if (toolReference.name === "generate_clientproject") {
       logger.debug("GenerateProjectTool tool received:", toolReference.name);
 
-      // Extract parameters from the request
+      // Debug the request object
+      logger.debug("Request object:", request);
+
+      // Extract parameters from the prompt if not already present
       if (!("parameters" in request)) {
-        throw new Error("Missing 'parameters' in the request.");
+        // Prompt the user for missing parameters
+        const bootstrapServer = await vscode.window.showInputBox({
+          prompt: "Enter the Kafka bootstrap server",
+          placeHolder: "e.g., broker.confluent.cloud:9092",
+        });
+
+        const topic = await vscode.window.showInputBox({
+          prompt: "Enter the Kafka topic name",
+          placeHolder: "e.g., my-topic",
+        });
+
+        if (!bootstrapServer || !topic) {
+          stream.markdown(
+            "Error: Both `cc_bootstrap_server` and `cc_topic` are required to generate the project.",
+          );
+          throw new Error("Both bootstrap server and topic name are required.");
+        }
+
+        request.parameters = {
+          cc_bootstrap_server: bootstrapServer,
+          cc_topic: topic,
+        } as IGenerateProjectParameters;
       }
+
       const parameters = request.parameters as IGenerateProjectParameters;
 
       // Validate that all required parameters are present
       if (!parameters.cc_bootstrap_server || !parameters.cc_topic) {
         throw new Error("Missing required parameters: cc_bootstrap_server, cc_topic");
       }
-
+      const toolInvocationToken = request.toolInvocationToken;
       const tool = new GenerateProjectTool();
+      console.log("Tool invocation token:", toolInvocationToken);
+      console.log("Tool reference:", toolReference);
+      console.log("Tool parameters:", parameters);
+      console.log("Tool name:", toolReference.name);
       const result = await tool.invoke(
         {
           input: parameters,
-          toolInvocationToken: undefined,
+          toolInvocationToken,
         },
         token,
       );
-      stream.markdown(result.content.map((part) => (part as { text: string }).text).join("\n")); // Stream the result back to the chat
+      // Debug the result object
+      console.log("Tool invocation result:", result);
+
+      // Verify the content structure
+      if (result.content && Array.isArray(result.content)) {
+        console.log("Tool invocation result content:", result.content);
+
+        // Stream the result back to the chat
+        const markdownContent = result.content
+          .map((part) => (part as { value: string }).value || "Unknown content")
+          .join("\n");
+
+        stream.markdown(markdownContent);
+      } else {
+        console.error("Unexpected result content structure:", result.content);
+        stream.markdown("Error: Unexpected result content structure.");
+      }
       return { metadata: { tool: toolReference.name } };
     }
   }
+
+  // Handle non-tool requests
   const messages: LanguageModelChatMessage[] = [];
 
-  // add the initial prompt to the messages
+  // Add the initial prompt to the messages
   messages.push(LanguageModelChatMessage.User(INITIAL_PROMPT, "user"));
 
   const userPrompt = request.prompt.trim();
-  // check for empty request
+  // Check for empty request
   if (userPrompt === "" && request.references.length === 0 && request.command === undefined) {
     stream.markdown("Hmm... I don't know how to respond to that.");
     return {};
   }
 
-  // add historical messages to the context, along with the user prompt if provided
+  // Add historical messages to the context, along with the user prompt if provided
   const historyMessages = filterContextHistory(context.history);
   messages.push(...historyMessages);
   if (userPrompt) {
     messages.push(LanguageModelChatMessage.User(request.prompt, "user"));
   }
 
-  // add any additional references like `#file:<name>`
+  // Add any additional references like `#file:<name>`
   if (request.references.length > 0) {
     const referenceMessages = await parseReferences(request.references);
-    logger.debug(`adding ${referenceMessages.length} reference message(s)`);
+    logger.debug(`Adding ${referenceMessages.length} reference message(s)`);
     messages.push(...referenceMessages);
   }
 
@@ -89,26 +137,21 @@ export async function chatHandler(
     version: request.model?.version,
     id: request.model?.id,
   });
-  logger.debug(`using model id "${model.id}" for request`);
+  logger.debug(`Using model id "${model.id}" for request`);
 
   if (request.command) {
-    // TODO: implement command handling
+    // TODO: Implement command handling
     return { metadata: { command: request.command } };
   }
 
-  // non-command request
+  // Non-command request
   try {
     await handleChatMessage(messages, stream, token, model);
     return {};
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("model_not_supported")) {
-        // NOTE: some models returned from `selectChatModels()` may return an error 400 response
-        // while streaming the response. This is out of our control, and attempting to find a fallback
-        // model could get noisy and use more tokens than necessary. Instead, we're trying to catch
-        // this scenario and return a more user-friendly error message.
         const errMsg = `The "${model.name}" model is not currently supported. Please choose a different model from the dropdown and try again.`;
-        // keep track of how often this is happening so we can
         logError(
           new ModelNotSupportedError(`${model.id} is not supported`),
           "chatHandler",
@@ -122,7 +165,6 @@ export async function chatHandler(
           metadata: { error: true, name: ModelNotSupportedError.name },
         };
       }
-      // some other kind of error when sending the request or streaming the response
       logError(error, "chatHandler", { model: model?.name ?? "unknown" });
       return {
         errorDetails: { message: error.message },
