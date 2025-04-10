@@ -221,16 +221,12 @@ export async function applyTemplate(
     logError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
+      message = e.message;
       const response = (e as ResponseError).response;
       if (response) {
-        const status = response.status;
         try {
-          const payload = await response.json();
-          if (payload.errors) {
-            message = parseErrorMessage(JSON.stringify(payload));
-          } else {
-            message = `Failed to generate template. ${status}: ${response.statusText}.`;
-          }
+          const payload = await response.json().then((json) => JSON.stringify(json));
+          message = parseErrorMessage(payload);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (jsonError) {
           message = `Failed to generate template. Unable to parse error response: ${e}`;
