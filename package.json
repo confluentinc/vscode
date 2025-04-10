@@ -66,6 +66,30 @@
         "when": "confluent.chatParticipantEnabled"
       }
     ],
+    "languages": [
+			{
+				"id": "flinksql",
+				"extensions": [
+					".flinksql"
+				],
+				"aliases": [
+					"Flink SQL",
+					"flinksql"
+				],
+				"configuration": "./language-configuration.json",
+				"icon": {
+					"light": "resources/flinksql-dark.svg",
+					"dark": "resources/flinksql-light.svg"
+				}
+			}
+		],
+		"grammars": [
+			{
+				"language": "flinksql",
+				"scopeName": "source.flinksql",
+				"path": "./flinksql.tmLanguage.json"
+			}
+		],
     "commands": [
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -1514,6 +1538,7 @@
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
     "vscode-json-languageservice": "^5.4.2",
+    "vscode-languageclient": "^9.0.1",
     "ws": "^8.18.0"
   }
 }

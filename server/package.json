@@ -1,0 +1,21 @@
+{
+	"name": "confluent-vscode-flinksql-language-server",
+	"version": "0.0.1",
+	"type": "module",
+	"homepage": "https://github.com/confluentinc/vscode",
+  "publisher": "confluentinc",
+  "author": {
+    "name": "Confluent, Inc."
+  },
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/confluentinc/vscode.git"
+  },
+	"dependencies": {
+		"dt-sql-parser": "^4.1.1",
+		"vscode-languageserver": "^9.0.1",
+		"vscode-languageserver-textdocument": "^1.0.11"
+	},
+	"scripts": {}
+}

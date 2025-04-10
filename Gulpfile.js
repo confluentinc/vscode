@@ -26,11 +26,15 @@ import { rollup, watch } from "rollup";
 import copy from "rollup-plugin-copy";
 import esbuild from "rollup-plugin-esbuild";
 import ts from "typescript";
+
 configDotenv();
+
 const DESTINATION = "out";
+const SERVER_DESTINATION = `${DESTINATION}/server`;
 const IS_CI = process.env.CI != null;
 const IS_WINDOWS = process.platform === "win32";
 
+export const build = series(buildServer, buildExtension);
 export const ci = parallel(check, build, lint);
 export const test = series(clean, testBuild, testRun);
 export const liveTest = series(clean, build, testBuild);
@@ -69,8 +73,61 @@ export function pack(done) {
   return done(result.status);
 }
 
-build.description = "Build static assets for extension and webviews. Use -w for watch mode.";
-export function build(done) {
+buildServer.description = "Build the Flink SQL language server.";
+export async function buildServer() {
+  const production = process.env.NODE_ENV === "production";
+
+  /** @type {import("rollup").RollupOptions} */
+  const serverInput = {
+    input: "server/src/server.ts",
+    plugins: [
+      node({ preferBuiltins: true, exportConditions: ["node"] }),
+      commonjs(),
+      json(),
+      esbuild({ sourceMap: true, minify: production }),
+      copy({
+        copyOnce: true,
+        targets: [
+          {
+            src: "server/package.json",
+            dest: SERVER_DESTINATION,
+            transform(contents) {
+              let pkg = JSON.parse(contents.toString());
+              // add random hex suffix the version for non-CI builds to avoid caching issues
+              pkg.version += process.env.CI ? "" : `+${Math.random().toString(16).slice(2, 8)}`;
+              // no dev only manifests: scripts, dependencies
+              delete pkg.scripts;
+              delete pkg.dependencies;
+              delete pkg.devDependencies;
+              // the target folder is flat so the entry point is known to be in the root
+              pkg.main = "server.js";
+              return JSON.stringify(pkg, null, 2);
+            },
+          },
+        ],
+      }),
+    ],
+    onLog: handleBuildLog,
+    external: [],
+    context: "globalThis",
+  };
+
+  /** @type {import("rollup").OutputOptions} */
+  const serverOutput = {
+    dir: SERVER_DESTINATION,
+    format: "esm",
+    sourcemap: true,
+    exports: "named",
+  };
+
+  const bundle = await rollup(serverInput);
+  await bundle.write(serverOutput);
+  return 0;
+}
+
+buildExtension.description =
+  "Build static assets for extension and webviews. Use -w for watch mode.";
+export function buildExtension(done) {
   const incremental = process.argv.indexOf("-w", 2) > -1;
   const production = process.env.NODE_ENV === "production";
 
@@ -126,6 +183,7 @@ export function build(done) {
           },
           { src: ["README.md"], dest: DESTINATION },
           { src: ["CHANGELOG.md"], dest: DESTINATION },
+          { src: ["language-configuration.json", "flinksql.tmLanguage.json"], dest: DESTINATION },
         ],
       }),
       sentryRollupPlugin({

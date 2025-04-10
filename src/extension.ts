@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+
 /** First things first, setup Sentry to catch errors during activation and beyond
  * `process.env.SENTRY_DSN` is fetched & defined during production builds only for Confluent official release process
  * */
@@ -51,6 +52,7 @@ import {
   checkForExtensionDisabledReason,
   showExtensionDisabledNotification,
 } from "./featureFlags/evaluation";
+import { getLanguageClient } from "./languageClient/client";
 import { constructResourceLoaderSingletons } from "./loaders";
 import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./logging";
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
@@ -266,6 +268,8 @@ async function _activateExtension(
     vscode.window.registerFileDecorationProvider(SEARCH_DECORATION_PROVIDER),
   );
 
+  startFlinkSqlLanguageServer();
+
   // register the Copilot chat participant
   const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
@@ -475,6 +479,19 @@ function setupDocumentProviders(): vscode.Disposable[] {
   return disposables;
 }
 
+function startFlinkSqlLanguageServer() {
+  const languageClient = getLanguageClient();
+  // starting the client also starts the server
+  languageClient
+    .start()
+    .then(() => {
+      vscode.window.showInformationMessage("Flink SQL Language Server started");
+    })
+    .catch((error) => {
+      vscode.window.showErrorMessage(`Failed to start Flink SQL Language Server: ${error}`);
+    });
+}
+
 export function deactivate() {
   // dispose of the telemetry logger
   try {
@@ -484,6 +501,11 @@ export function deactivate() {
     logError(new Error(msg, { cause: e }), msg, {}, true);
   }
   closeSentryClient();
+
+  const languageClient = getLanguageClient();
+  if (languageClient) {
+    languageClient.stop();
+  }
 
   disposeLaunchDarklyClient();
   disableCCloudStatusPolling();
