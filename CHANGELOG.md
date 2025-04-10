@@ -17,6 +17,10 @@ All notable changes to this extension will be documented in this file.
 
 - When deleting a subject containing a single schema, use the simpler confirmation flow for deleting
   a single schema.
+- Bumped the minimum required version of VS Code from
+  [`1.87.0`](https://code.visualstudio.com/updates/v1_87) to
+  [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to help development efforts and integrate
+  with newer VS Code APIs.
 
 ## 1.1.1
 
