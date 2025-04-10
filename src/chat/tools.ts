@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vscode from "vscode";
+import { getTemplatesList, applyTemplate } from "../scaffold";
+import { ScaffoldV1Template } from "../clients/scaffoldingService";
 
 export interface IGenerateProjectParameters {
   cc_bootstrap_server: string;
@@ -12,7 +15,6 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
 
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<IGenerateProjectParameters>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken,
   ): Promise<vscode.LanguageModelToolResult> {
     const params = options.input;
@@ -21,22 +23,76 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
     if (!params.cc_bootstrap_server || !params.cc_topic) {
       throw new Error("All parameters (cc_bootstrap_server, cc_topic) are required.");
     }
-    // Generate a simple project structure as an EXAMPLE -- this becomes the output and needs to be changed
-    const projectStructure = `
-      Kafka Client Project:
-      - Bootstrap Server: ${params.cc_bootstrap_server}
-      - Topic: ${params.cc_topic}
-    `;
-    console.log("Project structure generated:", projectStructure);
 
-    return new vscode.LanguageModelToolResult([
-      new vscode.LanguageModelTextPart(`Project generated successfully:\n${projectStructure}`),
-    ]);
+    // Fetch the list of templates
+    const templateList = await this.getTemplateList();
+    if (!templateList || templateList.length === 0) {
+      throw new Error("No templates available for selection.");
+    }
+
+    // Let the user pick a template
+    const pickedTemplate = await this.pickTemplate(templateList);
+    if (!pickedTemplate) {
+      throw new Error("No template selected.");
+    }
+
+    console.log("Picked template:", pickedTemplate);
+
+    // Ensure API key and secret are always empty
+    const manifestOptionValues = {
+      cc_bootstrap_server: params.cc_bootstrap_server,
+      cc_topic: params.cc_topic,
+      cc_api_key: "", // Always empty
+      cc_api_secret: "", // Always empty
+    };
+
+    try {
+      // Call the applyTemplate function
+      const result = await applyTemplate(pickedTemplate, manifestOptionValues);
+
+      if (!result.success) {
+        throw new Error(result.message || "An unknown error occurred.");
+      }
+
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(`🎉 Project generated successfully:\n${result.message}`),
+      ]);
+    } catch (error) {
+      console.error("Error generating project:", error);
+      if (error instanceof Error) {
+        throw new Error(`Failed to generate project: ${error.message}`);
+      } else {
+        throw new Error("Failed to generate project: An unknown error occurred.");
+      }
+    }
+  }
+
+  async getTemplateList(): Promise<ScaffoldV1Template[]> {
+    try {
+      const templateListResponse = await getTemplatesList();
+      return Array.from(templateListResponse.data) as ScaffoldV1Template[];
+    } catch (error) {
+      console.error("Error fetching template list:", error);
+      throw new Error("Failed to retrieve template list.");
+    }
+  }
+
+  async pickTemplate(templateList: ScaffoldV1Template[]): Promise<ScaffoldV1Template | undefined> {
+    const quickPickItems = templateList.map((template) => ({
+      label: template.spec?.display_name || "Unnamed Template",
+      description: template.spec?.description || "",
+      template,
+    }));
+
+    const pickedItem = await vscode.window.showQuickPick(quickPickItems, {
+      placeHolder: "Select a project template",
+    });
+
+    return pickedItem?.template;
   }
 
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<IGenerateProjectParameters>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
     const confirmationMessages = {
@@ -54,6 +110,7 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
     };
   }
 }
+
 class ChatToolsRegistrar {
   static registerChatTools(context: vscode.ExtensionContext) {
     console.log("Registering chat tools...");

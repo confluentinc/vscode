@@ -29,7 +29,6 @@ export async function chatHandler(
   stream: ChatResponseStream,
   token: CancellationToken,
 ): Promise<ChatResult> {
-
   if (request.toolReferences?.length > 0) {
     const toolReference = request.toolReferences.find((ref) => ref.name === "project");
 

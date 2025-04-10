@@ -302,3 +302,5 @@ async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
   };
   return await client.listScaffoldV1Templates(requestBody);
 }
+
+export { getTemplatesList, applyTemplate, pickTemplate };
