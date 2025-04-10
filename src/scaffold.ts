@@ -317,7 +317,6 @@ export async function handleProjectScaffoldUri(
     );
     return;
   }
-
   try {
     const result = await vscode.window.withProgress(
       {
@@ -341,14 +340,34 @@ export async function handleProjectScaffoldUri(
     );
 
     if (result.success) {
-      vscode.window.showInformationMessage("Project generated successfully!");
+      vscode.window.showInformationMessage("🎉 Project generated successfully!");
     } else {
       const cleanedErrorMessage = parseErrorMessage(result.message ?? "Unknown error");
-      vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`);
+      vscode.window.showErrorMessage("Failed to generate project", {
+        modal: true,
+        detail: cleanedErrorMessage,
+      });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    vscode.window.showErrorMessage(`Error generating project: ${errorMessage}`);
+    // Handle unexpected errors
+    let errorMessage: string;
+    if (error instanceof ResponseError && error.response) {
+      try {
+        const payload = await error.response.json();
+        errorMessage = payload.errors
+          ? parseErrorMessage(JSON.stringify(payload))
+          : `Failed to generate template:\nStatus: ${error.response.status}\nStatus Text: ${error.response.statusText}`;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (jsonError) {
+        errorMessage = `Failed to generate template:\nStatus: ${error.response.status}\nStatus Text: ${error.response.statusText}`;
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    } else {
+      errorMessage = String(error);
+    }
+
+    vscode.window.showErrorMessage(`Error generating project:\n${errorMessage}`);
     logError(error, "handleProjectScaffoldUri", { collection, template }, true);
   }
 }
@@ -361,14 +380,14 @@ function parseErrorMessage(rawMessage: string): string {
         .map((error: any) => {
           const detail = error.detail || "Unknown error";
           const pointer = error.source?.pointer || "unknown field";
-          const optionName = pointer.replace("/options/", ""); // Extract the option name
+          const optionName = pointer.replace("/options/", "");
           return `Invalid format for option '${optionName}': ${detail}`;
         })
         .join("\n");
     }
   } catch (e) {
     console.error("Failed to parse error message:", e);
-    return rawMessage; // Return the raw message if parsing fails
+    return rawMessage;
   }
   return rawMessage;
 }
