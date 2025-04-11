@@ -264,18 +264,16 @@ describe("errors.ts logError()", () => {
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
+    const extra = { extra: { foo: "bar" } };
     const logMessage = "test message";
-    await logError(error, logMessage);
+    await logError(error, logMessage, extra);
 
-    sinon.assert.calledWithMatch(
-      loggerErrorSpy,
-      `[${logMessage}] error: ${error.name}: ${error.message}`,
-      {
-        errorType: error.name,
-        errorMessage: error.message,
-        errorStack: error.stack,
-      },
-    );
+    sinon.assert.calledWithMatch(loggerErrorSpy, `Error: ${logMessage} --> ${error}`, {
+      errorType: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      extra,
+    });
   });
 
   it("should truncate long 'body' values for ResponseErrors", async () => {
