@@ -79,8 +79,10 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-import { LanguageServerClient } from "./sidecar/languageServerClient";
-
+import { CCLOUD_CONNECTION_ID } from "./constants";
+import { LanguageClient, LanguageClientOptions, Trace } from "vscode-languageclient/node";
+import { WebSocket } from "ws";
+import { WebsocketTransport } from "./sidecar/websocketTransport";
 const logger = new Logger("extension");
 
 // This method is called when your extension is activated based on the activation events
@@ -132,6 +134,7 @@ export async function activate(
   }
 }
 
+let languageClient: LanguageClient;
 /**
  * Activate the extension by setting up all the necessary components and registering commands.
  * @remarks This is the try/catch wrapped function called from the extension's .activate() method
@@ -171,18 +174,37 @@ async function _activateExtension(
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
-
-  // Initialize and start the language server client
-  const languageServerClient = new LanguageServerClient();
-  await languageServerClient.start(context);
-  await languageServerClient.connect("127.0.0.1:26636");
-
-  // Add the language server client to subscriptions for proper cleanup
-  context.subscriptions.push({
-    dispose: () => {
-      languageServerClient.stop();
+  const addr = `ws://127.0.0.1:26636/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=us-east1&provider=gcp&environmentId=env-x7727g&organizationId=f551c50b-0397-4f31-802d-d5371a49d3bf`;
+  const conn = new WebSocket(addr);
+  let transport = new WebsocketTransport(conn);
+  let serverOptions = () => {
+    return Promise.resolve(transport);
+  };
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [
+      { scheme: "file", language: "plaintext" },
+      { scheme: "file", language: "flinksql" },
+    ],
+    outputChannelName: "FlinkSQL Language Server",
+    synchronize: {
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.flinksql"),
     },
-  });
+  };
+  languageClient = new LanguageClient(
+    "flinksqlLanguageServer",
+    "FlinkSQL Language Server",
+    serverOptions,
+    clientOptions,
+  );
+  conn.onopen = () => {
+    logger.info("WebSocket connection opened");
+    try {
+      languageClient.setTrace(Trace.Verbose);
+      languageClient.start();
+    } catch (e) {
+      logger.error(`Error starting language server: ${e}`);
+    }
+  };
 
   // set up the different view providers
   const resourceViewProvider = ResourceViewProvider.getInstance();

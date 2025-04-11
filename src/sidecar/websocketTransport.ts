@@ -6,25 +6,27 @@ import {
   PartialMessageInfo,
   DataCallback,
 } from "vscode-languageclient/node";
-import { LanguageServerSocket, WebsocketStateEvent } from "./languageServerSocket";
 import { EventEmitter, Event, Disposable } from "vscode";
 import { Logger } from "../logging";
+import { WebSocket } from "ws";
 
 const logger = new Logger("websocketTransport");
 
 class WebsocketMessageReader implements MessageReader {
-  private socket: LanguageServerSocket;
+  private socket: WebSocket;
   private messageEmitter = new EventEmitter<Message>();
   private errorEmitter = new EventEmitter<Error>();
   private closeEmitter = new EventEmitter<void>();
   private partialMessageEmitter = new EventEmitter<PartialMessageInfo>();
 
-  constructor(socket: LanguageServerSocket) {
+  constructor(socket: WebSocket) {
     this.socket = socket;
-    this.socket.on("message", (data: string) => {
+
+    this.socket.on("message", (data: Buffer | string) => {
       try {
-        logger.info(`Received message from language server: ${data}`);
-        const message = JSON.parse(data);
+        const strData = typeof data === "string" ? data : data.toString("utf8");
+        logger.info(`Received message from language server: ${strData}`);
+        const message = JSON.parse(strData);
         this.messageEmitter.fire(message);
         logger.info("Message emitted to language client");
       } catch (e) {
@@ -33,11 +35,14 @@ class WebsocketMessageReader implements MessageReader {
       }
     });
 
-    this.socket.registerStateChangeHandler((event) => {
-      logger.info(`Websocket state changed: ${event}`);
-      if (event === WebsocketStateEvent.DISCONNECTED) {
-        this.closeEmitter.fire();
-      }
+    this.socket.on("close", () => {
+      logger.info("WebSocket connection closed");
+      this.closeEmitter.fire();
+    });
+
+    this.socket.on("error", (error) => {
+      logger.error(`WebSocket error: ${error}`);
+      this.errorEmitter.fire(error);
     });
   }
 
@@ -60,26 +65,40 @@ class WebsocketMessageReader implements MessageReader {
 }
 
 class WebsocketMessageWriter implements MessageWriter {
-  private socket: LanguageServerSocket;
+  private socket: WebSocket;
   private errorEmitter = new EventEmitter<[Error, Message | undefined, number | undefined]>();
   private closeEmitter = new EventEmitter<void>();
 
-  constructor(socket: LanguageServerSocket) {
+  constructor(socket: WebSocket) {
     this.socket = socket;
-    this.socket.registerStateChangeHandler((event) => {
-      if (event === WebsocketStateEvent.DISCONNECTED) {
-        this.closeEmitter.fire();
-      }
+    this.socket.on("close", () => {
+      this.closeEmitter.fire();
+    });
+
+    this.socket.on("error", (error) => {
+      this.errorEmitter.fire([error, undefined, undefined]);
     });
   }
 
   public async write(message: Message): Promise<void> {
     try {
-      logger.info(`Sending message to language server: ${JSON.stringify(message)}`);
-      this.socket.send(message);
-      logger.info("Message sent successfully");
+      const messageStr = JSON.stringify(message);
+      logger.info(`Sending message to language server: ${messageStr}`);
+
+      return new Promise<void>((resolve, reject) => {
+        this.socket.send(messageStr, (error) => {
+          if (error) {
+            logger.error(`Failed to send message: ${error}`);
+            this.errorEmitter.fire([error, message, undefined]);
+            reject(error);
+          } else {
+            logger.info("Message sent successfully");
+            resolve();
+          }
+        });
+      });
     } catch (error) {
-      logger.error(`Failed to send message: ${error}`);
+      logger.error(`Error preparing message: ${error}`);
       this.errorEmitter.fire([error as Error, message, undefined]);
       throw error;
     }
@@ -89,7 +108,10 @@ class WebsocketMessageWriter implements MessageWriter {
   public onClose: Event<void> = this.closeEmitter.event;
 
   public async end(): Promise<void> {
-    // Not needed for websocket transport
+    // Close the WebSocket connection gently if needed
+    if (this.socket.readyState === WebSocket.OPEN) {
+      this.socket.close(1000, "Client closed connection");
+    }
   }
 
   public dispose(): void {
@@ -102,7 +124,7 @@ export class WebsocketTransport implements MessageTransports {
   public reader: MessageReader;
   public writer: MessageWriter;
 
-  constructor(socket: LanguageServerSocket) {
+  constructor(socket: WebSocket) {
     logger.info("Creating websocket transport");
     this.reader = new WebsocketMessageReader(socket);
     this.writer = new WebsocketMessageWriter(socket);
