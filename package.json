@@ -66,6 +66,57 @@
         "when": "confluent.chatParticipantEnabled"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "project",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "toolReferenceName": "project",
+        "displayName": "Generate Kafka Client Project",
+        "modelDescription": "Generate a project for a Kafka client. Enter parameters and autogenerate a pre-configured code starter.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(files)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cc_bootstrap_server": {
+              "type": "string",
+              "description": " One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests."
+            },
+            "cc_topic": {
+              "type": "string",
+              "description": "Name of the Kafka topic to produce or consume messages."
+            }
+          }
+        }
+      },
+      {
+        "name": "list_projectTemplates",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "List Project Templates",
+        "modelDescription": "List all available templates for creating a streaming data project or application.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Optional tags to filter the list of templates."
+            }
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "confluent.connections.ccloud.signIn",
@@ -534,7 +585,7 @@
         },
         "confluent.experimental.enableChatParticipant": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable the Confluent chat participant for Copilot.",
           "tags": [
             "experimental"
