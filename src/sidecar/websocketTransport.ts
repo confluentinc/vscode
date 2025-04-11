@@ -46,14 +46,15 @@ class WebsocketMessageReader implements MessageReader {
     });
   }
 
-  public onMessage: Event<Message> = this.messageEmitter.event;
   public onError: Event<Error> = this.errorEmitter.event;
   public onClose: Event<void> = this.closeEmitter.event;
   public onPartialMessage: Event<PartialMessageInfo> = this.partialMessageEmitter.event;
 
   public listen(callback: DataCallback): Disposable {
-    // Not needed for websocket transport
-    return new Disposable(() => {});
+    return this.messageEmitter.event(event => {
+      logger.info(`Calling callback with message: ${JSON.stringify(event)}`);
+      callback(event);
+    });
   }
 
   public dispose(): void {
