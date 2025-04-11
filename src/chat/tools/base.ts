@@ -2,6 +2,7 @@ import {
   CancellationToken,
   ChatRequest,
   ChatResponseStream,
+  LanguageModelChatMessage,
   LanguageModelChatTool,
   LanguageModelTool,
   LanguageModelToolCallPart,
@@ -27,12 +28,12 @@ export abstract class BaseLanguageModelTool<T> implements LanguageModelTool<T> {
    * Invokes the tool and processes the result through the {@link ChatResponseStream}.
    * This should be called when the model selects this tool in a {@link LanguageModelToolCallPart}.
    */
-  abstract processInvocation<R>(
+  abstract processInvocation(
     request: ChatRequest,
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
     token: CancellationToken,
-  ): Promise<R | undefined | void>;
+  ): Promise<LanguageModelChatMessage[]>;
 
   /** Converts this tool to a {@link LanguageModelChatTool} for use in chat requests. */
   toChatTool(): LanguageModelChatTool {

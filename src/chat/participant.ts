@@ -73,50 +73,9 @@ export async function chatHandler(
     return { metadata: { command: request.command } };
   }
 
-  const requestOptions: LanguageModelChatRequestOptions = {
-    // inform the model that tools can be invoked as part of the response stream
-    tools: [new GenerateProjectTool().toChatTool(), new ListTemplatesTool().toChatTool()],
-    toolMode: LanguageModelChatToolMode.Auto,
-  };
-
-  const toolsCalled: string[] = [];
   // Non-command request
   try {
-    const response: LanguageModelChatResponse = await model.sendRequest(
-      messages,
-      requestOptions,
-      token,
-    );
-    for await (const fragment of response.stream) {
-      if (token.isCancellationRequested) {
-        logger.debug("chat request cancelled");
-        return {};
-      }
-      if (fragment instanceof LanguageModelToolCallPart) {
-        // tool call
-        logger.debug("Tool call fragment:", fragment);
-        const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(fragment.name);
-        if (!tool) {
-          const errorMsg = `Tool "${fragment.name}" not found.`;
-          logger.error(errorMsg);
-          stream.markdown(errorMsg);
-          return {};
-        }
-        // each registered tool should contribute its own way of handling the invocation and
-        // interacting with the stream
-        logger.debug(`Processing tool invocation for "${fragment.name}"`);
-        try {
-          await tool.processInvocation(request, stream, fragment, token);
-          toolsCalled.push(fragment.name);
-        } catch (error) {
-          logger.error(`Error processing tool invocation for "${fragment.name}":`, error);
-          stream.markdown(`Error processing tool invocation: ${error}`);
-        }
-      } else if (fragment instanceof LanguageModelTextPart) {
-        // basic text response
-        stream.markdown(fragment.value);
-      }
-    }
+    const toolsCalled: string[] = await handleChatMessage(request, model, messages, stream, token);
     return { metadata: { toolsCalled } };
   } catch (error) {
     if (error instanceof Error) {
@@ -203,4 +162,72 @@ function filterContextHistory(
   }
 
   return messages;
+}
+
+export async function handleChatMessage(
+  request: ChatRequest,
+  model: LanguageModelChat,
+  messages: LanguageModelChatMessage[],
+  stream: ChatResponseStream,
+  token: CancellationToken,
+  toolsCalled: string[] = [],
+): Promise<string[]> {
+  const requestOptions: LanguageModelChatRequestOptions = {
+    // inform the model that tools can be invoked as part of the response stream
+    tools: [new GenerateProjectTool().toChatTool(), new ListTemplatesTool().toChatTool()],
+    toolMode: LanguageModelChatToolMode.Auto,
+  };
+
+  const response: LanguageModelChatResponse = await model.sendRequest(
+    messages,
+    requestOptions,
+    token,
+  );
+
+  const toolResultMessages: LanguageModelChatMessage[] = [];
+  for await (const fragment of response.stream) {
+    if (token.isCancellationRequested) {
+      logger.debug("chat request cancelled");
+      return toolsCalled;
+    }
+
+    if (fragment instanceof LanguageModelTextPart) {
+      // basic text response
+      stream.markdown(fragment.value);
+    } else if (fragment instanceof LanguageModelToolCallPart) {
+      const toolCall: LanguageModelToolCallPart = fragment as LanguageModelToolCallPart;
+      const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(toolCall.name);
+      if (!tool) {
+        const errorMsg = `Tool "${toolCall.name}" not found.`;
+        logger.error(errorMsg);
+        stream.markdown(errorMsg);
+        return toolsCalled;
+      }
+      stream.progress(`Invoking tool "${toolCall.name}"...`);
+
+      // each registered tool should contribute its own way of handling the invocation and
+      // interacting with the stream, and can return an array of messages to be sent for another
+      // round of processing
+      logger.debug(`Processing tool invocation for "${toolCall.name}"`);
+      const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
+        request,
+        stream,
+        toolCall,
+        token,
+      );
+      toolResultMessages.push(...newMessages);
+      if (!toolsCalled.includes(toolCall.name)) {
+        // keep track of the tools that have been called so far as part of this chat request flow
+        toolsCalled.push(toolCall.name);
+      }
+    }
+  }
+
+  if (toolResultMessages.length) {
+    // add results to the messages and let the model process them and decide what to do next
+    messages.push(...toolResultMessages);
+    return await handleChatMessage(request, model, messages, stream, token, toolsCalled);
+  }
+
+  return toolsCalled;
 }

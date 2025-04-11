@@ -1,6 +1,8 @@
 import {
+  CancellationToken,
   ChatRequest,
   ChatResponseStream,
+  LanguageModelChatMessage,
   LanguageModelTextPart,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
@@ -20,8 +22,18 @@ export interface IListTemplatesParameters {
 export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParameters> {
   readonly name = "list_projectTemplates";
 
+  // async prepareInvocation(
+  //   options: LanguageModelToolInvocationOptions<IListTemplatesParameters>,
+  // ): Promise<PreparedToolInvocation | null | undefined> {
+  //   logger.debug("prepareInvocation called with options:", options);
+  //   return {
+  //     invocationMessage: "Listing available project templates",
+  //   };
+  // }
+
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTemplatesParameters>,
+    token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
     logger.debug("params:", params);
@@ -37,6 +49,10 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       );
     });
 
+    if (token.isCancellationRequested) {
+      logger.debug("Tool invocation cancelled");
+      return new LanguageModelToolResult([]);
+    }
     return new LanguageModelToolResult(templateStrings);
   }
 
@@ -44,23 +60,28 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
     request: ChatRequest,
     stream: ChatResponseStream,
     toolCall: LanguageModelToolCallPart,
-  ) {
+    token: CancellationToken,
+  ): Promise<LanguageModelChatMessage[]> {
     const parameters = toolCall.input as IListTemplatesParameters;
 
-    stream.progress("Checking with the scaffolding service...");
-    const result: LanguageModelToolResult = await this.invoke({
-      input: parameters,
-      toolInvocationToken: request.toolInvocationToken,
-    });
-    logger.debug("Processing invocation result:", result);
+    const result: LanguageModelToolResult = await this.invoke(
+      {
+        input: parameters,
+        toolInvocationToken: request.toolInvocationToken,
+      },
+      token,
+    );
 
+    const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      const templateMessage: string = `Here are the available templates:\n\n${result.content
-        .map((part) => (part as { value: string }).value || "Unknown content")
-        .join("\n")}`;
-      stream.markdown(templateMessage);
+      let message = `Available project templates:\n`;
+      for (const part of result.content as LanguageModelTextPart[]) {
+        message = `${message}\n\n${part.value}`;
+      }
+      messages.push(LanguageModelChatMessage.User(message, `${this.name}-result`));
     } else {
-      stream.markdown("Error: Unexpected result content structure.");
+      throw new Error(`Unexpected result content structure: ${JSON.stringify(result)}`);
     }
+    return messages;
   }
 }

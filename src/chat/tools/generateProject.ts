@@ -64,25 +64,32 @@ export class GenerateProjectTool extends BaseLanguageModelTool<IGenerateProjectP
     stream: vscode.ChatResponseStream,
     toolCall: vscode.LanguageModelToolCallPart,
     token: vscode.CancellationToken,
-  ) {
+  ): Promise<vscode.LanguageModelChatMessage[]> {
     const parameters = toolCall.input as IGenerateProjectParameters;
     if (!parameters.cc_bootstrap_server || !parameters.cc_topic) {
-      throw new Error("Missing required parameters: cc_bootstrap_server, cc_topic");
+      return [
+        vscode.LanguageModelChatMessage.User(
+          "Both `cc_bootstrap_server` and `cc_topic` parameters are required.",
+          `${this.name}-error`,
+        ),
+      ];
     }
 
     const result: vscode.LanguageModelToolResult = await this.invoke(
       { input: parameters, toolInvocationToken: request.toolInvocationToken },
       token,
     );
-    logger.debug("Processing invocation result:", result);
 
+    const messages: vscode.LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      const markdownContent = result.content
-        .map((part) => (part as { value: string }).value || "Unknown content")
-        .join("\n");
-      stream.markdown(markdownContent);
+      let message = `Available project templates:\n`;
+      for (const part of result.content as vscode.LanguageModelTextPart[]) {
+        message = `${message}\n\n${part.value}`;
+      }
+      messages.push(vscode.LanguageModelChatMessage.User(message, `${this.name}-result`));
     } else {
-      stream.markdown("Error: Unexpected result content structure.");
+      throw new Error(`Unexpected result content structure: ${JSON.stringify(result)}`);
     }
+    return messages;
   }
 }
