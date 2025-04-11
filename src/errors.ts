@@ -232,7 +232,9 @@ async function showNotificationWithButtons(
       await buttonMap[selection]();
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
-      logError(e, `"${selection}" button callback`, { extra: {} });
+      logError(e, `"${selection}" button callback`, {
+        extra: { function_name: "showNotifcationWithButtons" },
+      });
     }
     // send telemetry for which button was clicked
     logUsage(UserEvent.NotificationButtonClicked, {
