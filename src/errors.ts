@@ -73,6 +73,18 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
   return chain;
 }
 
+/** Error class wrapper with a custom name and message, used for Sentry tracking. */
+export class CustomError extends Error {
+  constructor(
+    public readonly name: string,
+    public readonly message: string,
+    public readonly cause: Error,
+  ) {
+    super(message);
+    this.name = name;
+  }
+}
+
 /**
  * Log the provided error along with any additional information, and optionally send to Sentry.
  *
@@ -81,59 +93,76 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
  * additional error context.
  *
  * @param e Error to log
- * @param messagePrefix Prefix to include in the logger.error() message
+ * @param message Text to add in the logger.error() message and top-level Sentry error message
  * @param extra Additional context to include in the log message (and `extra` field in Sentry)
  * @param sendTelemetry Whether to send the error to Sentry (default: `false`)
  * */
 export async function logError(
   e: unknown,
-  messagePrefix: string,
+  message: string,
   extra: Record<string, string> = {},
   sendTelemetry: boolean = false,
 ): Promise<void> {
-  let errorMessage: string = "";
+  if (!(e instanceof Error)) {
+    logger.error(`non-Error passed: ${JSON.stringify(e)}`, { ...extra });
+    return;
+  }
+
+  let logErrorMessage: string = "";
+
+  /** Light wrapper around the original error, used to update the name/message for easier debugging
+   * and event tracking in Sentry. */
+  let wrappedError: Error = e as Error;
+  /** Used to add extra/additional data to the Sentry exception */
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
+  /** Used to set the `contexts.response.status_code` for the Sentry exception */
   let responseStatusCode: number | undefined;
 
-  if ((e as any).response) {
+  if ((e as AnyResponseError).response) {
     // one of our ResponseError types, attempt to extract more information before logging
-    const error = e as AnyResponseError;
-    const errorBody = await error.response.clone().text();
-    errorMessage = `[${messagePrefix}] error response:`;
+    const responseError = e as AnyResponseError;
+    const resp: Response = responseError.response;
+    const errorBody: string = await resp.clone().text();
+    logErrorMessage = `Error response: ${message}`;
     errorContext = {
-      responseStatus: error.response.status,
-      responseStatusText: error.response.statusText,
+      responseStatus: resp.status,
+      responseStatusText: resp.statusText,
       responseBody: errorBody.slice(0, 5000), // limit to 5000 characters
-      responseErrorType: error.name,
+      responseErrorType: responseError.name,
     };
-    responseStatusCode = error.response.status;
+    responseStatusCode = resp.status;
+    wrappedError = new CustomError(
+      responseError.name,
+      `Error ${resp.status} "${resp.statusText}" @ ${resp.url}: ${message}`,
+      responseError,
+    );
   } else {
-    // something we caught that wasn't actually a ResponseError type but was passed in here anyway
-    errorMessage = `[${messagePrefix}] error: ${e}`;
-    if (e instanceof Error) {
-      // top-level error
+    // non-ResponseError error
+    logErrorMessage = `Error: ${message} --> ${e}`;
+    errorContext = {
+      errorType: e.name,
+      errorMessage: e.message,
+      errorStack: e.stack,
+    };
+    wrappedError = new CustomError(e.name, `${message}: ${e.message}`, e);
+  }
+
+  // also handle any nested errors from either the ResponseError or (more likely) other Errors
+  if (hasErrorCause(e)) {
+    const errorChain = getNestedErrorChain(e.cause);
+    if (errorChain.length) {
       errorContext = {
-        errorType: e.name,
-        errorMessage: e.message,
-        errorStack: e.stack,
+        ...errorContext,
+        errors: JSON.stringify(errorChain, null, 2),
       };
-      // also handle any nested errors starting from the `cause` property
-      if (hasErrorCause(e)) {
-        const errorChain = getNestedErrorChain(e.cause);
-        if (errorChain.length) {
-          errorContext = {
-            ...errorContext,
-            errors: JSON.stringify(errorChain, null, 2),
-          };
-        }
-      }
     }
   }
 
-  logger.error(errorMessage, { ...errorContext, ...extra });
+  logger.error(logErrorMessage, { ...errorContext, ...extra });
+
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
   if (sendTelemetry) {
-    sentryCaptureException(e, {
+    sentryCaptureException(wrappedError, {
       captureContext: {
         contexts: { response: { status_code: responseStatusCode } },
         extra: { ...errorContext, ...extra },
