@@ -6,9 +6,7 @@ import {
   LanguageModelTool,
   LanguageModelToolCallPart,
   LanguageModelToolInvocationOptions,
-  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
-  PreparedToolInvocation,
 } from "vscode";
 import { getExtensionContext } from "../../context/extension";
 import { LanguageModelToolContribution } from "./types";
@@ -18,14 +16,7 @@ import { LanguageModelToolContribution } from "./types";
  * converting to a {@link LanguageModelChatTool}.
  */
 export abstract class BaseLanguageModelTool<T> implements LanguageModelTool<T> {
-  abstract readonly id: string;
-  abstract readonly description: string;
-
-  // these two methods are required as part of the`LanguageModelTool` interface
-  abstract prepareInvocation(
-    options: LanguageModelToolInvocationPrepareOptions<T>,
-    token: CancellationToken,
-  ): Promise<PreparedToolInvocation | null | undefined>;
+  abstract readonly name: string;
 
   abstract invoke(
     options: LanguageModelToolInvocationOptions<T>,
@@ -48,14 +39,14 @@ export abstract class BaseLanguageModelTool<T> implements LanguageModelTool<T> {
     const packageJson = getExtensionContext().extension.packageJSON;
     const registeredTool: LanguageModelToolContribution | undefined =
       packageJson.contributes.languageModelTools!.find(
-        (tool: { name: string }) => tool.name === this.id,
+        (tool: { name: string }) => tool.name === this.name,
       );
     if (!registeredTool) {
-      throw new Error(`Tool "${this.id}" not found in package.json`);
+      throw new Error(`Tool "${this.name}" not found in package.json`);
     }
     return {
-      name: this.id,
-      description: this.description,
+      name: this.name,
+      description: registeredTool.modelDescription,
       inputSchema: registeredTool.inputSchema,
     } as LanguageModelChatTool;
   }

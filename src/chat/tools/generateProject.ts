@@ -10,9 +10,7 @@ export interface IGenerateProjectParameters {
 }
 
 export class GenerateProjectTool extends BaseLanguageModelTool<IGenerateProjectParameters> {
-  readonly id = "project";
-  readonly description =
-    "Generate a project for a Kafka client. Enter parameters and autogenerate a pre-configured code starter.";
+  readonly name = "project";
 
   async prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<IGenerateProjectParameters>,
