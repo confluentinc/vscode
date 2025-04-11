@@ -99,7 +99,7 @@
           "projects"
         ],
         "displayName": "List Project Templates",
-        "modelDescription": "List all available templates for creating a streaming application project. This is useful when a user wants to create a new project but hasn't specified what kind of project yet.",
+        "modelDescription": "List all available templates for creating a streaming data project or application.",
         "canBeReferencedInPrompt": false,
         "icon": "$(list-selection)",
         "inputSchema": {
