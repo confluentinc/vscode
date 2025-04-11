@@ -160,7 +160,7 @@ export async function logError(
   logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
   if (Object.keys(sentryContext).length) {
-    sentryCaptureException(e, {
+    sentryCaptureException(wrappedError, {
       captureContext: {
         ...sentryContext,
         contexts: {
