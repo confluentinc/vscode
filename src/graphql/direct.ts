@@ -39,7 +39,9 @@ export async function getDirectResources(): Promise<DirectEnvironment[]> {
   try {
     response = await sidecar.query(query);
   } catch (error) {
-    logError(error, "direct connection resources", {}, true);
+    logError(error, "direct connection resources", {
+      extra: { functionName: "getDirectResources" },
+    });
     showErrorNotificationWithButtons(
       `Failed to fetch resources for direct Kafka / Schema Registry connection(s): ${error}`,
     );

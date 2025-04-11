@@ -66,7 +66,7 @@ export async function updatePreferences() {
     });
     logger.debug("Successfully updated preferences: ", { resp });
   } catch (error) {
-    logError(error, "updating preferences", {}, true);
+    logError(error, "updating preferences", { extra: { functionName: "updatePreferences" } });
     if (error instanceof Error) {
       let errorMsg = error.message;
       let buttons: Record<string, () => void> | undefined;

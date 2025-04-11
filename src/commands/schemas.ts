@@ -270,12 +270,9 @@ async function deleteSchemaVersionCommand(schema: Schema) {
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
         // not a 404, something unexpected/
-        logError(
-          e,
-          "Error fetching schemas for subject while deleting schema version",
-          { subject: schema.subject },
-          true,
-        );
+        logError(e, "Error fetching schemas for subject while deleting schema version", {
+          extra: { subject: schema.subject },
+        });
       }
     }
 
@@ -344,7 +341,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     }
   } catch (e) {
     success = false;
-    logError(e, "Error deleting schema version", undefined, true);
+    logError(e, "Error deleting schema version", { extra: { subject: schema.subject } });
     showErrorNotificationWithButtons(
       `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
     );
@@ -392,12 +389,9 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
       // already deleted in other workspace or other means?
       if (e.response.status !== 404) {
         // not a 404, something unexpected/
-        logError(
-          e,
-          "Error fetching schemas for subject while deleting schema subject",
-          { subject: subject.name },
-          true,
-        );
+        logError(e, "Error fetching schemas for subject while deleting schema subject", {
+          extra: { subject: subject.name },
+        });
       }
     }
     showErrorNotificationWithButtons("Schema subject not found in registry.", {
@@ -459,7 +453,7 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
     );
   } catch (e) {
     success = false;
-    logError(e, "Error deleting schema subject", undefined, true);
+    logError(e, "Error deleting schema subject", { extra: { subject: subject.name } });
     showErrorNotificationWithButtons(
       `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
     );
