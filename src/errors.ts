@@ -8,9 +8,9 @@ import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaf
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
-import { logUsage, UserEvent } from "./telemetry/events";
+import { logUsage, UserEvent } from "./telemetry/events"; // Ensure this is the correct module
 import { sentryCaptureException } from "./telemetry/sentryClient";
-import { PropagationContext, ScopeContext } from "@sentry/core";
+import { ScopeContext } from "@sentry/core";
 
 const logger = new Logger("errors");
 
@@ -162,12 +162,14 @@ export async function logError(
   logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
   const hasMeaningfulSentryContext =
+    [
+      sentryContext.extra,
+      sentryContext.contexts,
+      sentryContext.tags,
+      sentryContext.propagationContext,
+    ].some((context) => context && Object.keys(context).length > 0) ||
     sentryContext.user?.id !== undefined ||
-    Object.keys(sentryContext.extra || {}).length > 0 ||
-    Object.keys(sentryContext.contexts || {}).length > 0 ||
-    Object.keys(sentryContext.tags || {}).length > 0 ||
-    (sentryContext.fingerprint && sentryContext.fingerprint.length > 0) ||
-    Object.keys(sentryContext.propagationContext || {}).length > 0;
+    (sentryContext.fingerprint && sentryContext.fingerprint.length > 0);
 
   if (hasMeaningfulSentryContext) {
     sentryCaptureException(e, {
