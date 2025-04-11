@@ -273,7 +273,7 @@ describe("errors.ts logError()", () => {
         errorType: error.name,
         errorMessage: error.message,
         errorStack: error.stack,
-        ...extra,
+        extra, // ensure the extra field is included and matched correctly
       },
     );
   });
