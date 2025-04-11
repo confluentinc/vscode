@@ -93,6 +93,30 @@
               "default": "test_topic"
             }
           }
+        },
+        {
+          "name": "list_projectTemplates",
+          "when": "confluent.chatParticipantEnabled",
+          "tags": [
+            "projects"
+          ],
+          "displayName": "List Project Templates",
+          "modelDescription": "List all available templates for creating a streaming application project.",
+          "canBeReferencedInPrompt": false,
+          "icon": "$(list-selection)",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Optional tags to filter the list of templates."
+              }
+            }
+          }
         }
     ],
     "commands": [

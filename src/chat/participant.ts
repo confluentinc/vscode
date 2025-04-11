@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import {
   CancellationToken,
   ChatContext,
@@ -13,13 +14,14 @@ import {
   LanguageModelChatSelector,
   lm,
 } from "vscode";
-import * as vscode from "vscode";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
 import { parseReferences } from "./references";
-import { GenerateProjectTool, IGenerateProjectParameters } from "./tools";
+import { GenerateProjectTool, IGenerateProjectParameters } from "./tools/generateProject";
+import { IListTemplatesParameters, ListTemplatesTool } from "./tools/listTemplates";
+import { getToolMap } from "./tools/toolMap";
 const logger = new Logger("chat.participant");
 
 /** Main handler for the Copilot chat participant. */
@@ -29,9 +31,27 @@ export async function chatHandler(
   stream: ChatResponseStream,
   token: CancellationToken,
 ): Promise<ChatResult> {
+  const messages: LanguageModelChatMessage[] = [];
+  // Add the initial prompt to the messages
+  messages.push(LanguageModelChatMessage.User(INITIAL_PROMPT, "user"));
 
-  if (request.toolReferences?.length > 0) {
+  const model: LanguageModelChat = await getModel({
+    vendor: request.model?.vendor,
+    family: request.model?.family,
+    version: request.model?.version,
+    id: request.model?.id,
+  });
+  logger.debug(`Using model id "${model.id}" for request`);
+
+  const toolSelection: vscode.ChatLanguageModelToolReference | null = await compareIntentWithTools(
+    request,
+    model,
+  );
+
+  if ((Array.isArray(request.toolReferences) && request.toolReferences.length) || toolSelection) {
     const toolReference = request.toolReferences.find((ref) => ref.name === "project");
+
+    const toolInvocationToken = request.toolInvocationToken;
 
     if (toolReference?.name === "project") {
       logger.debug("GenerateProjectTool tool received:", toolReference.name);
@@ -67,7 +87,6 @@ export async function chatHandler(
       if (!parameters.cc_bootstrap_server || !parameters.cc_topic) {
         throw new Error("Missing required parameters: cc_bootstrap_server, cc_topic");
       }
-      const toolInvocationToken = request.toolInvocationToken;
       const tool = new GenerateProjectTool();
       logger.debug("Tool invocation token:", toolInvocationToken);
       logger.debug("Tool reference:", toolReference);
@@ -96,14 +115,29 @@ export async function chatHandler(
         stream.markdown("Error: Unexpected result content structure.");
       }
       return { metadata: { tool: toolReference.name } };
+    } else if (toolSelection?.name === "list_projectTemplates") {
+      const tool = new ListTemplatesTool();
+      const params = { ...request.parameters } as IListTemplatesParameters;
+
+      stream.progress("Checking with the scaffolding service...");
+      const result = await tool.invoke({
+        input: params,
+        toolInvocationToken,
+      });
+      if (result.content && Array.isArray(result.content)) {
+        messages.push(
+          LanguageModelChatMessage.User(
+            `Here are the available templates:\n\n${result.content
+              .map((part) => (part as { value: string }).value || "Unknown content")
+              .join("\n")}`,
+            "user",
+          ),
+        );
+      } else {
+        stream.markdown("Error: Unexpected result content structure.");
+      }
     }
   }
-
-  // Handle non-tool requests
-  const messages: LanguageModelChatMessage[] = [];
-
-  // Add the initial prompt to the messages
-  messages.push(LanguageModelChatMessage.User(INITIAL_PROMPT, "user"));
 
   const userPrompt = request.prompt.trim();
   // Check for empty request
@@ -125,14 +159,6 @@ export async function chatHandler(
     logger.debug(`Adding ${referenceMessages.length} reference message(s)`);
     messages.push(...referenceMessages);
   }
-
-  const model: LanguageModelChat = await getModel({
-    vendor: request.model?.vendor,
-    family: request.model?.family,
-    version: request.model?.version,
-    id: request.model?.id,
-  });
-  logger.debug(`Using model id "${model.id}" for request`);
 
   if (request.command) {
     // TODO: Implement command handling
@@ -241,4 +267,30 @@ function filterContextHistory(
   }
 
   return messages;
+}
+
+/** Compare the intent of the request with available tools and select the appropriate tool. */
+async function compareIntentWithTools(
+  request: ChatRequest,
+  model: LanguageModelChat,
+): Promise<vscode.ChatLanguageModelToolReference | null> {
+  const toolMap = getToolMap();
+  const determineToolPrompt = [
+    LanguageModelChatMessage.User(
+      `You are a tool selector. Your job is to analyze the user's request and determine which tool to use among the following:\n\n${JSON.stringify(Array.from(toolMap.keys()))}\n\nIf multiple tools are applicable, choose the most relevant one. Analyze this request and respond only with the EXACT name of the tool to use, or "none" if no tool is needed:\n\n"${request.prompt}"`,
+    ),
+  ];
+  logger.debug("Tool selection prompt:", determineToolPrompt);
+
+  const determineToolResponse: LanguageModelChatResponse = await model.sendRequest(
+    determineToolPrompt,
+    {},
+  );
+  let selection: string = "";
+  for await (const fragment of determineToolResponse.text) {
+    selection += fragment;
+  }
+  logger.debug("Tool selection response:", selection);
+
+  return selection.toLowerCase() !== "none" ? { name: selection } : null;
 }

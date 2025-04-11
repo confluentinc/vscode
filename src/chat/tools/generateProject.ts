@@ -54,12 +54,3 @@ export class GenerateProjectTool implements vscode.LanguageModelTool<IGeneratePr
     };
   }
 }
-class ChatToolsRegistrar {
-  static registerChatTools(context: vscode.ExtensionContext) {
-    console.log("Registering chat tools...");
-    context.subscriptions.push(vscode.lm.registerTool("project", new GenerateProjectTool()));
-    console.log("GenerateProjectTool registered.");
-  }
-}
-
-export { ChatToolsRegistrar };
