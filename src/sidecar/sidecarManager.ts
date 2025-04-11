@@ -364,15 +364,12 @@ export class SidecarManager {
           try {
             fs.accessSync(executablePath);
           } catch (e) {
-            logError(
-              e,
-              `Sidecar executable "${executablePath}" does not exist`,
-              {
+            logError(e, `Sidecar executable "${executablePath}" does not exist`, {
+              extra: {
                 originalExecutablePath: sidecarExecutablePath,
                 currentSidecarVersion,
               },
-              true,
-            );
+            });
             reject(new NoSidecarExecutableError(`Component ${executablePath} does not exist`));
           }
 
@@ -412,7 +409,9 @@ export class SidecarManager {
             });
           } catch (e) {
             // Failure to spawn the process. Reject and return (we're the main codepath here).
-            logError(e, `${logPrefix}: sidecar component spawn error`, {}, true);
+            logError(e, `${logPrefix}: sidecar component spawn error`, {
+              extra: { functionName: "startSidecar" },
+            });
             reject(e);
             return;
           } finally {
@@ -431,7 +430,7 @@ export class SidecarManager {
             const err = new SidecarFatalError(
               `${logPrefix}: sidecar process returned undefined PID`,
             );
-            logError(err, "sidecar process spawn", {}, true);
+            logError(err, "sidecar process spawn", { extra: { functionName: "startSidecar" } });
             reject(err);
             return;
           } else {
@@ -448,7 +447,9 @@ export class SidecarManager {
                   // reject the promise if the sidecar process is not running so we stop attempting
                   // to handshake with it
                   const err = new SidecarFatalError(`${logPrefix}: sidecar process is not running`);
-                  logError(err, "sidecar process check", {}, true);
+                  logError(err, "sidecar process check", {
+                    extra: { functionName: "startSidecar" },
+                  });
                   reject(err);
                   // show a notification to the user to Open Logs or File Issue
                   showErrorNotificationWithButtons(
@@ -457,7 +458,7 @@ export class SidecarManager {
                   return;
                 }
               } catch (e) {
-                logError(e, "sidecar process check", {}, true);
+                logError(e, "sidecar process check", { extra: { functionName: "startSidecar" } });
               }
             }, 2000);
           }
@@ -466,7 +467,9 @@ export class SidecarManager {
           // but the sidecar file architecture check above should catch most of those cases.
         } catch (e) {
           // Failure to spawn the process. Reject and return (we're the main codepath here).
-          logError(e, `${logPrefix}: sidecar component spawn fatal error`, {}, true);
+          logError(e, `${logPrefix}: sidecar component spawn fatal error`, {
+            extra: { functionName: "startSidecar" },
+          });
           reject(e);
           return;
         }
@@ -493,12 +496,9 @@ export class SidecarManager {
           } catch (e) {
             // We expect ECONNREFUSED while the sidecar is coming up, but log + rethrow other unexpected errors.
             if (!wasConnRefused(e)) {
-              logError(
-                e,
-                `${logPrefix}: Attempt raised unexpected error`,
-                { handshake_attempt: `${i}` },
-                true,
-              );
+              logError(e, `${logPrefix}: Attempt raised unexpected error`, {
+                extra: { handshake_attempt: `${i}` },
+              });
             }
             if (i < MAX_ATTEMPTS - 1) {
               logger.info(
@@ -903,15 +903,9 @@ function confirmSidecarProcessIsRunning(
     // report to Sentry so we can investigate
     const failureMsg = `${logPrefix}: Sidecar process ${pid} died immediately after startup`;
     const error = new SidecarFatalError(failureMsg);
-    logError(
-      error,
-      `sidecar process failed to start`,
-      {
-        stderr: stderrContent,
-        logs: logLines.join("\n"),
-      },
-      true,
-    );
+    logError(error, `sidecar process failed to start`, {
+      extra: { stderr: stderrContent, logs: logLines.join("\n") },
+    });
   }
   return isRunning;
 }

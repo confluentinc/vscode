@@ -160,12 +160,9 @@ export abstract class ResourceLoader implements IResourceBase {
         return [];
       } else {
         // Unexpected error, log it to sentry.
-        logError(
-          error,
-          "Unexpected error within getSubjects",
-          { registryOrEnvironmentId: JSON.stringify(registryOrEnvironmentId, null, 2) },
-          true,
-        );
+        logError(error, "Unexpected error within getSubjects", {
+          extra: { registryOrEnvironmentId: JSON.stringify(registryOrEnvironmentId, null, 2) },
+        });
       }
       throw error;
     }
@@ -303,17 +300,14 @@ export abstract class ResourceLoader implements IResourceBase {
 
       await subjectApi.deleteSchemaVersion(deleteRequest);
     } catch (error) {
-      logError(
-        error,
-        "Error deleting schema version",
-        {
+      logError(error, "Error deleting schema version", {
+        extra: {
           connectionId: schema.connectionId,
           environmentId: schema.environmentId ? schema.environmentId : "unknown",
           schemaRegistryId: schema.schemaRegistryId,
           hardDelete: hardDelete ? "true" : "false",
         },
-        true,
-      );
+      });
       throw error;
     }
 
@@ -356,17 +350,14 @@ export abstract class ResourceLoader implements IResourceBase {
         await subjectApi.deleteSubject(request);
       }
     } catch (error) {
-      logError(
-        error,
-        "Error deleting schema subject",
-        {
+      logError(error, "Error deleting schema subject", {
+        extra: {
           connectionId: subject.connectionId,
           environmentId: subject.environmentId,
           schemaRegistryId: subject.schemaRegistryId,
           hardDelete: hardDelete ? "true" : "false",
         },
-        true,
-      );
+      });
       throw error;
     } finally {
       // Always clear out the subject cache, regardless of whether the delete was successful.
