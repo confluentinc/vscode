@@ -299,14 +299,11 @@ export class WebsocketManager implements Disposable {
       try {
         message.body = additionalDeserializer(body);
       } catch (e) {
-        logError(
-          e,
-          "Websocket message body higher-level body deserialization error",
-          {
+        logError(e, "Websocket message body higher-level body deserialization error", {
+          extra: {
             message: strMessage,
           },
-          true,
-        );
+        });
 
         // rethrow the error
         throw e;
