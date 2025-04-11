@@ -1,8 +1,8 @@
-import { LanguageModelTool } from "vscode";
+import { BaseLanguageModelTool } from "./base";
 
-const TOOL_MAP = new Map<string, LanguageModelTool<any>>();
+const TOOL_MAP = new Map<string, BaseLanguageModelTool<any>>();
 
-export function setToolMap(toolId: string, tool: LanguageModelTool<any>) {
+export function setToolMap(toolId: string, tool: BaseLanguageModelTool<any>) {
   TOOL_MAP.set(toolId, tool);
 }
 

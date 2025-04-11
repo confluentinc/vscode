@@ -1,9 +1,10 @@
 import {
+  ChatRequest,
+  ChatResponseStream,
   LanguageModelTextPart,
-  LanguageModelTool,
+  LanguageModelToolCallPart,
   LanguageModelToolConfirmationMessages,
   LanguageModelToolInvocationOptions,
-  LanguageModelToolInvocationPrepareOptions,
   LanguageModelToolResult,
   MarkdownString,
   PreparedToolInvocation,
@@ -11,6 +12,7 @@ import {
 import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
 import { getTemplatesList } from "../../scaffold";
+import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.listTemplates");
 
@@ -18,14 +20,12 @@ export interface IListTemplatesParameters {
   tags: string[];
 }
 
-export class ListTemplatesTool implements LanguageModelTool<IListTemplatesParameters> {
+export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParameters> {
   readonly id = "list_projectTemplates";
   readonly description =
     "List all available templates for creating a streaming application project.";
 
-  async prepareInvocation(
-    options: LanguageModelToolInvocationPrepareOptions<IListTemplatesParameters>,
-  ): Promise<PreparedToolInvocation | null | undefined> {
+  async prepareInvocation(): Promise<PreparedToolInvocation | null | undefined> {
     const confirmationMessage: LanguageModelToolConfirmationMessages = {
       title: "List Templates",
       message: new MarkdownString(
@@ -59,5 +59,29 @@ export class ListTemplatesTool implements LanguageModelTool<IListTemplatesParame
     });
 
     return new LanguageModelToolResult(templateStrings);
+  }
+
+  async processInvocation(
+    request: ChatRequest,
+    stream: ChatResponseStream,
+    toolCall: LanguageModelToolCallPart,
+  ) {
+    const parameters = toolCall.input as IListTemplatesParameters;
+
+    stream.progress("Checking with the scaffolding service...");
+    const result: LanguageModelToolResult = await this.invoke({
+      input: parameters,
+      toolInvocationToken: request.toolInvocationToken,
+    });
+    logger.debug("Processing invocation result:", result);
+
+    if (result.content && Array.isArray(result.content)) {
+      const templateMessage: string = `Here are the available templates:\n\n${result.content
+        .map((part) => (part as { value: string }).value || "Unknown content")
+        .join("\n")}`;
+      stream.markdown(templateMessage);
+    } else {
+      stream.markdown("Error: Unexpected result content structure.");
+    }
   }
 }
