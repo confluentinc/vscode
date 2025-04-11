@@ -45,7 +45,7 @@ export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
   } catch (error) {
     // try to send any client init issues to Sentry, but if the user is offline and the extension
     // can't reach LD (which probably means Sentry isn't available either), this will just log
-    logError(error, "LD client init", {}, true);
+    logError(error, "LD client init", { extra: { functionName: "getLaunchDarklyClient" } });
   }
 }
 
@@ -56,7 +56,7 @@ function handleFailedEvent(error: unknown) {
   if (error instanceof Error) {
     // if online, send any failed events to Sentry so we can troubleshoot
     // if offline, just log the failed event
-    logError(error, "LD failed event", {}, true);
+    logError(error, "LD failed event", { extra: { functionName: "handleFailedEvent" } });
   } else {
     logger.error("LD failed event:", error);
   }
