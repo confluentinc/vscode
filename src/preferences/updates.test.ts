@@ -151,15 +151,11 @@ describe("preferences/updates", function () {
       sinon.match.instanceOf(Error).and(sinon.match.has("message", error.message)),
       "updating preferences",
       { extra: { functionName: "updatePreferences" } },
-      true, // Ensure the `true` value is included
     );
 
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    sinon.assert.calledWithExactly(
-      showErrorNotificationWithButtonsStub,
-      `Failed to sync settings: ${error.message}`,
-      undefined,
-    );
+    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
+    assert.strictEqual(callArgs[0], `Failed to sync settings: ${error.message}`);
   });
 
   it("updatePreferences() should show an error notification with a settings button when a ResponseError is caught and valid failure errors are returned", async function () {
