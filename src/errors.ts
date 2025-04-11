@@ -10,6 +10,7 @@ import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { sentryCaptureException } from "./telemetry/sentryClient";
+import { PropagationContext, ScopeContext } from "@sentry/core";
 
 const logger = new Logger("errors");
 
@@ -82,14 +83,12 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
  *
  * @param e Error to log
  * @param messagePrefix Prefix to include in the logger.error() message
- * @param extra Additional context to include in the log message (and `extra` field in Sentry)
- * @param sendTelemetry Whether to send the error to Sentry (default: `false`)
+ * @param sentryContext Optional Sentry context to include with the error
  * */
 export async function logError(
   e: unknown,
   messagePrefix: string,
-  extra: Record<string, string> = {},
-  sendTelemetry: boolean = false,
+  sentryContext: Partial<ScopeContext> = {},
 ): Promise<void> {
   let errorMessage: string = "";
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
@@ -130,13 +129,21 @@ export async function logError(
     }
   }
 
-  logger.error(errorMessage, { ...errorContext, ...extra });
+  logger.error(errorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
-  if (sendTelemetry) {
+  const hasMeaningfulSentryContext =
+    sentryContext.user?.id !== undefined ||
+    Object.keys(sentryContext.extra || {}).length > 0 ||
+    Object.keys(sentryContext.contexts || {}).length > 0 ||
+    Object.keys(sentryContext.tags || {}).length > 0 ||
+    (sentryContext.fingerprint && sentryContext.fingerprint.length > 0) ||
+    Object.keys(sentryContext.propagationContext || {}).length > 0;
+
+  if (hasMeaningfulSentryContext) {
     sentryCaptureException(e, {
       captureContext: {
         contexts: { response: { status_code: responseStatusCode } },
-        extra: { ...errorContext, ...extra },
+        extra: { ...errorContext, ...sentryContext.extra },
       },
     });
   }
@@ -223,7 +230,7 @@ async function showNotificationWithButtons(
       await buttonMap[selection]();
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
-      logError(e, `"${selection}" button callback`, {}, true);
+      logError(e, `"${selection}" button callback`, { extra: {} });
     }
     // send telemetry for which button was clicked
     logUsage(UserEvent.NotificationButtonClicked, {

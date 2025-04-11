@@ -264,7 +264,7 @@ describe("errors.ts logError()", () => {
     const error = new Error("test");
     const extra = { foo: "bar" };
     const logPrefix = "test message";
-    await logError(error, logPrefix, extra);
+    await logError(error, logPrefix, { extra });
 
     sinon.assert.calledWithMatch(
       loggerErrorSpy,
