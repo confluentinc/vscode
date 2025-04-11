@@ -1,3 +1,4 @@
+import { ScopeContext } from "@sentry/core";
 import { commands, window } from "vscode";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as FlinkArtifactsResponseError } from "./clients/flinkArtifacts";
@@ -10,7 +11,6 @@ import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { logUsage, UserEvent } from "./telemetry/events"; // Ensure this is the correct module
 import { sentryCaptureException } from "./telemetry/sentryClient";
-import { ScopeContext } from "@sentry/core";
 
 const logger = new Logger("errors");
 
@@ -156,8 +156,6 @@ export async function logError(
       };
     }
   }
-
-  logger.error(logErrorMessage, { ...errorContext });
 
   logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data

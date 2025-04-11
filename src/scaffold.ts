@@ -17,15 +17,15 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
+import { KafkaCluster } from "./models/kafkaCluster";
+import { KafkaTopic } from "./models/topic";
+import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
+import { fileUriExists } from "./utils/file";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
-import { fileUriExists } from "./utils/file";
-import { KafkaTopic } from "./models/topic";
-import { KafkaCluster } from "./models/kafkaCluster";
-import { getResourceManager } from "./storage/resourceManager";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
