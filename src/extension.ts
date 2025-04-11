@@ -12,6 +12,7 @@ import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
+import { registerChatTools } from "./chat/tools/registration";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -166,6 +167,8 @@ async function _activateExtension(
   await getSidecar();
   logger.info("Sidecar ready for use.");
 
+  console.log("Activating extension...");
+
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
@@ -269,7 +272,7 @@ async function _activateExtension(
   // register the Copilot chat participant
   const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-  context.subscriptions.push(chatParticipant);
+  context.subscriptions.push(chatParticipant, ...registerChatTools());
 
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
@@ -281,16 +284,17 @@ async function _activateExtension(
   // XXX: used for testing; do not remove
   return context;
 }
+const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
+const chatParticipantEnabled = setContextValue(
+  ContextValues.chatParticipantEnabled,
+  config.get(ENABLE_CHAT_PARTICIPANT, true),
+);
 
 /** Configure any starting contextValues to use for view/menu controls during activation. */
 async function setupContextValues() {
   // EXPERIMENTAL/PREVIEW: set default values for enabling the Flink view, resource fetching, and associated actions
   const config: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration();
   const flinkEnabled = setContextValue(ContextValues.flinkEnabled, config.get(ENABLE_FLINK, false));
-  const chatParticipantEnabled = setContextValue(
-    ContextValues.chatParticipantEnabled,
-    config.get(ENABLE_CHAT_PARTICIPANT, true),
-  );
   // require re-selecting a cluster for the Topics/Schemas views on extension (re)start
   const kafkaClusterSelected = setContextValue(ContextValues.kafkaClusterSelected, false);
   const schemaRegistrySelected = setContextValue(ContextValues.schemaRegistrySelected, false);

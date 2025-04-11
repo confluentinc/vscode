@@ -9,8 +9,12 @@ import {
   ChatResult,
   LanguageModelChat,
   LanguageModelChatMessage,
+  LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
+  LanguageModelChatToolMode,
+  LanguageModelTextPart,
+  LanguageModelToolCallPart,
   lm,
 } from "vscode";
 import { logError } from "../errors";
@@ -18,43 +22,22 @@ import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
 import { parseReferences } from "./references";
-
+import { BaseLanguageModelTool } from "./tools/base";
+import { GenerateProjectTool } from "./tools/generateProject";
+import { ListTemplatesTool } from "./tools/listTemplates";
+import { getToolMap } from "./tools/toolMap";
 const logger = new Logger("chat.participant");
 
 /** Main handler for the Copilot chat participant. */
 export async function chatHandler(
-  request: ChatRequest & { model?: LanguageModelChat },
+  request: ChatRequest,
   context: ChatContext,
   stream: ChatResponseStream,
   token: CancellationToken,
 ): Promise<ChatResult> {
-  logger.debug("received chat request", { request, context });
-
   const messages: LanguageModelChatMessage[] = [];
-
-  // add the initial prompt to the messages
+  // Add the initial prompt to the messages
   messages.push(LanguageModelChatMessage.User(INITIAL_PROMPT, "user"));
-
-  const userPrompt = request.prompt.trim();
-  // check for empty request
-  if (userPrompt === "" && request.references.length === 0 && request.command === undefined) {
-    stream.markdown("Hmm... I don't know how to respond to that.");
-    return {};
-  }
-
-  // add historical messages to the context, along with the user prompt if provided
-  const historyMessages = filterContextHistory(context.history);
-  messages.push(...historyMessages);
-  if (userPrompt) {
-    messages.push(LanguageModelChatMessage.User(request.prompt, "user"));
-  }
-
-  // add any additional references like `#file:<name>`
-  if (request.references.length > 0) {
-    const referenceMessages = await parseReferences(request.references);
-    logger.debug(`adding ${referenceMessages.length} reference message(s)`);
-    messages.push(...referenceMessages);
-  }
 
   const model: LanguageModelChat = await getModel({
     vendor: request.model?.vendor,
@@ -62,26 +45,83 @@ export async function chatHandler(
     version: request.model?.version,
     id: request.model?.id,
   });
-  logger.debug(`using model id "${model.id}" for request`);
+  logger.debug(`Using model id "${model.id}" for request`);
+
+  const userPrompt = request.prompt.trim();
+  // Check for empty request
+  if (userPrompt === "" && request.references.length === 0 && request.command === undefined) {
+    stream.markdown("Hmm... I don't know how to respond to that.");
+    return {};
+  }
+
+  // Add historical messages to the context, along with the user prompt if provided
+  const historyMessages = filterContextHistory(context.history);
+  messages.push(...historyMessages);
+  if (userPrompt) {
+    messages.push(LanguageModelChatMessage.User(request.prompt, "user"));
+  }
+
+  // Add any additional references like `#file:<name>`
+  if (request.references.length > 0) {
+    const referenceMessages = await parseReferences(request.references);
+    logger.debug(`Adding ${referenceMessages.length} reference message(s)`);
+    messages.push(...referenceMessages);
+  }
 
   if (request.command) {
-    // TODO: implement command handling
+    // TODO: Implement command handling
     return { metadata: { command: request.command } };
   }
 
-  // non-command request
+  const requestOptions: LanguageModelChatRequestOptions = {
+    // inform the model that tools can be invoked as part of the response stream
+    tools: [new GenerateProjectTool().toChatTool(), new ListTemplatesTool().toChatTool()],
+    toolMode: LanguageModelChatToolMode.Auto,
+  };
+
+  const toolsCalled: string[] = [];
+  // Non-command request
   try {
-    await handleChatMessage(messages, stream, token, model);
-    return {};
+    const response: LanguageModelChatResponse = await model.sendRequest(
+      messages,
+      requestOptions,
+      token,
+    );
+    for await (const fragment of response.stream) {
+      if (token.isCancellationRequested) {
+        logger.debug("chat request cancelled");
+        return {};
+      }
+      if (fragment instanceof LanguageModelToolCallPart) {
+        // tool call
+        logger.debug("Tool call fragment:", fragment);
+        const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(fragment.name);
+        if (!tool) {
+          const errorMsg = `Tool "${fragment.name}" not found.`;
+          logger.error(errorMsg);
+          stream.markdown(errorMsg);
+          return {};
+        }
+        // each registered tool should contribute its own way of handling the invocation and
+        // interacting with the stream
+        logger.debug(`Processing tool invocation for "${fragment.name}"`);
+        try {
+          await tool.processInvocation(request, stream, fragment, token);
+          toolsCalled.push(fragment.name);
+        } catch (error) {
+          logger.error(`Error processing tool invocation for "${fragment.name}":`, error);
+          stream.markdown(`Error processing tool invocation: ${error}`);
+        }
+      } else if (fragment instanceof LanguageModelTextPart) {
+        // basic text response
+        stream.markdown(fragment.value);
+      }
+    }
+    return { metadata: { toolsCalled } };
   } catch (error) {
     if (error instanceof Error) {
       if (error.message.includes("model_not_supported")) {
-        // NOTE: some models returned from `selectChatModels()` may return an error 400 response
-        // while streaming the response. This is out of our control, and attempting to find a fallback
-        // model could get noisy and use more tokens than necessary. Instead, we're trying to catch
-        // this scenario and return a more user-friendly error message.
         const errMsg = `The "${model.name}" model is not currently supported. Please choose a different model from the dropdown and try again.`;
-        // keep track of how often this is happening so we can
         logError(
           new ModelNotSupportedError(`${model.id} is not supported`),
           "chatHandler",
@@ -95,13 +135,13 @@ export async function chatHandler(
           metadata: { error: true, name: ModelNotSupportedError.name },
         };
       }
-      // some other kind of error when sending the request or streaming the response
       logError(error, "chatHandler", { model: model?.name ?? "unknown" });
       return {
         errorDetails: { message: error.message },
         metadata: { error: true, stack: error.stack, name: error.name },
       };
     }
+    // re-throw any errors that aren't "model not supported"-related
     throw error;
   }
 }
@@ -129,24 +169,6 @@ async function getModel(selector: LanguageModelChatSelector): Promise<LanguageMo
   return selectedModel;
 }
 
-/** Send message(s) and stream the response in markdown format. */
-async function handleChatMessage(
-  messages: LanguageModelChatMessage[],
-  stream: ChatResponseStream,
-  token: CancellationToken,
-  model: LanguageModelChat,
-): Promise<void> {
-  const response: LanguageModelChatResponse = await model.sendRequest(messages, {}, token);
-
-  for await (const fragment of response.text) {
-    if (token.isCancellationRequested) {
-      logger.debug("chat request cancelled");
-      return;
-    }
-    stream.markdown(fragment);
-  }
-}
-
 /** Filter the chat history to only relevant messages for the current chat. */
 function filterContextHistory(
   history: readonly (ChatRequestTurn | ChatResponseTurn)[],
@@ -161,18 +183,21 @@ function filterContextHistory(
   if (filteredHistory.length === 0) {
     return [];
   }
-
   const messages: LanguageModelChatMessage[] = [];
   for (const turn of filteredHistory) {
     // don't re-use previous prompts since the model may misinterpret them as part of the current prompt
     if (turn instanceof ChatRequestTurn) {
-      // TODO: check for references/commands used?
+      if (turn.participant === PARTICIPANT_ID) {
+        messages.push(LanguageModelChatMessage.User(turn.prompt));
+      }
       continue;
     }
     if (turn instanceof ChatResponseTurn) {
       // responses from the participant:
       if (turn.response instanceof ChatResponseMarkdownPart) {
-        messages.push(LanguageModelChatMessage.User(turn.response.value.value, PARTICIPANT_ID));
+        messages.push(
+          LanguageModelChatMessage.Assistant(turn.response.value.value, PARTICIPANT_ID),
+        );
       }
     }
   }

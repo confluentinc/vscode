@@ -16,15 +16,15 @@ import { ViewColumn } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { logError } from "./errors";
+import { KafkaCluster } from "./models/kafkaCluster";
+import { KafkaTopic } from "./models/topic";
+import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
+import { fileUriExists } from "./utils/file";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
-import { fileUriExists } from "./utils/file";
-import { KafkaTopic } from "./models/topic";
-import { KafkaCluster } from "./models/kafkaCluster";
-import { getResourceManager } from "./storage/resourceManager";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
@@ -293,7 +293,7 @@ async function pickTemplate(
   });
 }
 
-async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
+export async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
 
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
