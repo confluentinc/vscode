@@ -12,8 +12,9 @@ export function checkTelemetrySettings(event: Event) {
   return event;
 }
 
-/** Include this extension instance's {@link observabilityContext} under the `extra` context. */
+/** Include this extension instance's {@link observabilityContext} under the `extra` context and `tags`. */
 export function includeObservabilityContext(event: Event): Event {
   event.extra = { ...event.extra, ...observabilityContext.toRecord() };
+  event.tags = { ...event.tags, ...observabilityContext.toRecord() };
   return event;
 }
