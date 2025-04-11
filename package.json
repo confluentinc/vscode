@@ -83,13 +83,11 @@
           "properties": {
             "cc_bootstrap_server": {
               "type": "string",
-              "description": " One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests.",
-              "default": ""
+              "description": " One or more comma-separated host and port pairs that are the addresses where Kafka brokers accept client bootstrap requests."
             },
             "cc_topic": {
               "type": "string",
-              "description": "Name of the Kafka topic to produce or consume messages.",
-              "default": "test_topic"
+              "description": "Name of the Kafka topic to produce or consume messages."
             }
           }
         }
@@ -101,7 +99,7 @@
           "projects"
         ],
         "displayName": "List Project Templates",
-        "modelDescription": "List all available templates for creating a streaming application project.",
+        "modelDescription": "List all available templates for creating a streaming application project. This is useful when a user wants to create a new project but hasn't specified what kind of project yet.",
         "canBeReferencedInPrompt": false,
         "icon": "$(list-selection)",
         "inputSchema": {
