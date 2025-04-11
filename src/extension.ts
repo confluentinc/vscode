@@ -177,31 +177,31 @@ async function _activateExtension(
   context.subscriptions.push(settingsListener);
   const addr = `ws://127.0.0.1:26636/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=us-east1&provider=gcp&environmentId=env-x7727g&organizationId=f551c50b-0397-4f31-802d-d5371a49d3bf`;
   const conn = new WebSocket(addr);
-  let transport = new WebsocketTransport(conn);
-  let serverOptions = () => {
-    return Promise.resolve(transport);
-  };
-  const clientOptions: LanguageClientOptions = {
-    documentSelector: [
-      { scheme: "file", language: "plaintext" },
-      { scheme: "file", language: "flinksql" },
-    ],
-    outputChannelName: "FlinkSQL Language Server",
-    synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.flinksql"),
-    },
-  };
-  languageClient = new LanguageClient(
-    "flinksqlLanguageServer",
-    "FlinkSQL Language Server",
-    serverOptions,
-    clientOptions,
-  );
-  conn.onopen = () => {
+  conn.onopen = async () => {
     logger.info("WebSocket connection opened");
     try {
+      const transport = new WebsocketTransport(conn);
+      let serverOptions = () => {
+        return Promise.resolve(transport);
+      };
+      const clientOptions: LanguageClientOptions = {
+        documentSelector: [
+          { scheme: "file", language: "plaintext" },
+          { scheme: "file", language: "flinksql" },
+        ],
+        outputChannelName: "FlinkSQL Language Server"
+      };
+      languageClient = new LanguageClient(
+        "flinksqlLanguageServer",
+        "FlinkSQL Language Server",
+        serverOptions,
+        clientOptions,
+      );
       languageClient.setTrace(Trace.Verbose);
-      languageClient.start();
+      languageClient.start().then(() => {
+        logger.info("Language server started");
+      });
+      context.subscriptions.push(languageClient);
     } catch (e) {
       logger.error(`Error starting language server: ${e}`);
     }
