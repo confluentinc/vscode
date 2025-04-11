@@ -22,15 +22,6 @@ export interface IListTemplatesParameters {
 export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParameters> {
   readonly name = "list_projectTemplates";
 
-  // async prepareInvocation(
-  //   options: LanguageModelToolInvocationOptions<IListTemplatesParameters>,
-  // ): Promise<PreparedToolInvocation | null | undefined> {
-  //   logger.debug("prepareInvocation called with options:", options);
-  //   return {
-  //     invocationMessage: "Listing available project templates",
-  //   };
-  // }
-
   async invoke(
     options: LanguageModelToolInvocationOptions<IListTemplatesParameters>,
     token: CancellationToken,
