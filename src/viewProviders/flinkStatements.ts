@@ -1,19 +1,30 @@
 import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
-import { currentFlinkStatementsPoolChanged } from "../emitters";
+import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
+import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
 
+/**
+ * View controller for Flink statements. Can be assigned to track either
+ * a single compute cluster, or a CCloud environment.
+ *
+ * If set to a CCloud environment, will show all of the statements
+ * across all of the provider+region pairs that we find Flinkable
+ * within the environment. See {@link CCloudResourceLoader.getFlinkStatements} for
+ * the specifics.
+ *
+ * */
 export class FlinkStatementsViewProvider
-  extends BaseViewProvider<CCloudFlinkComputePool, FlinkStatement>
+  extends BaseViewProvider<CCloudFlinkComputePool | CCloudEnvironment, FlinkStatement>
   implements TreeDataProvider<FlinkStatement>
 {
   loggerName = "viewProviders.flinkStatements";
   viewId = "confluent-flink-statements";
 
-  parentResourceChangedEmitter = currentFlinkStatementsPoolChanged;
+  parentResourceChangedEmitter = currentFlinkStatementsResourceChanged;
   parentResourceChangedContextValue = ContextValues.flinkStatementsPoolSelected;
 
   searchContextValue = ContextValues.flinkStatementsSearchApplied;
@@ -54,6 +65,11 @@ export class FlinkStatementsViewProvider
   }
 
   get computePool(): CCloudFlinkComputePool | null {
-    return this.resource;
+    if (this.resource instanceof CCloudFlinkComputePool) {
+      return this.resource;
+    }
+
+    // if either focused on an entire environement or nothing at all, return null.
+    return null;
   }
 }

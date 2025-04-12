@@ -1,6 +1,9 @@
 import { commands, Disposable } from "vscode";
 import { registerCommandWithLogging } from ".";
-import { currentFlinkArtifactsPoolChanged, currentFlinkStatementsPoolChanged } from "../emitters";
+import {
+  currentFlinkArtifactsPoolChanged,
+  currentFlinkStatementsResourceChanged,
+} from "../emitters";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { flinkComputePoolQuickPickWithViewProgress } from "../quickpicks/flinkComputePools";
 
@@ -39,7 +42,7 @@ export async function selectPoolForStatementsViewCommand(item?: CCloudFlinkCompu
   if (!pool) {
     return;
   }
-  currentFlinkStatementsPoolChanged.fire(pool);
+  currentFlinkStatementsResourceChanged.fire(pool);
   commands.executeCommand("confluent-flink-statements.focus");
 }
 
