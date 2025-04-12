@@ -31,7 +31,7 @@ import {
 } from "../models/environment";
 import { KafkaClusterTreeItem, LocalKafkaCluster } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel } from "../models/resource";
+import { ConnectionId, ConnectionLabel, EnvironmentId } from "../models/resource";
 import { LocalSchemaRegistry, SchemaRegistryTreeItem } from "../models/schemaRegistry";
 import * as ccloudConnections from "../sidecar/connections/ccloud";
 import * as localConnections from "../sidecar/connections/local";
@@ -115,7 +115,7 @@ describe("ResourceViewProvider methods", () => {
   it("removeUnusedDirectEnvironments() should update the environmentsMap to remove any deleted direct connections", async () => {
     provider.environmentsMap = new Map([
       [TEST_DIRECT_ENVIRONMENT.id, TEST_DIRECT_ENVIRONMENT],
-      ["env2", new DirectEnvironment({ ...TEST_DIRECT_ENVIRONMENT, id: "env2" })],
+      ["env2", new DirectEnvironment({ ...TEST_DIRECT_ENVIRONMENT, id: "env2" as EnvironmentId })],
     ]);
     // simulate "env2" being deleted from storage and GQL
     getDirectConnectionsStub.resolves(
@@ -365,13 +365,13 @@ describe("ResourceViewProvider context value updates", () => {
   it("getTreeItem() should handle multiple direct environments correctly when updating context values", async () => {
     const env1 = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
-      id: "env1",
+      id: "env1" as EnvironmentId,
       kafkaClusters: [TEST_DIRECT_KAFKA_CLUSTER],
       schemaRegistry: undefined,
     });
     const env2 = new DirectEnvironment({
       ...TEST_DIRECT_ENVIRONMENT,
-      id: "env2",
+      id: "env2" as EnvironmentId,
       kafkaClusters: [],
       schemaRegistry: TEST_DIRECT_SCHEMA_REGISTRY,
     });
@@ -584,7 +584,7 @@ describe("ResourceViewProvider search behavior", () => {
     it(`directConnectionCreated event fired: ${shouldAnnounceAsCreated} vs related environment to be marked as isLoading`, async () => {
       const testDirectEnv = new DirectEnvironment({
         ...TEST_DIRECT_ENVIRONMENT,
-        id: "directConnectionCreated-test-id",
+        id: "directConnectionCreated-test-id" as EnvironmentId,
         connectionId: "directConnectionCreated-test-connection-id" as ConnectionId,
         kafkaClusters: [],
         schemaRegistry: undefined,

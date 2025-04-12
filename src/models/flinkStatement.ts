@@ -10,7 +10,9 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   iconName: IconNames = IconNames.FLINK_STATEMENT;
 
   environmentId!: EnvironmentId;
-  computePoolId!: string;
+
+  /** The flink compute pool that maybe is running/ran the statement. */
+  computePoolId: string | undefined;
 
   name!: string;
   status!: string;
