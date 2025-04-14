@@ -131,7 +131,6 @@ export async function activate(
   }
 }
 
-let languageClient;
 /**
  * Activate the extension by setting up all the necessary components and registering commands.
  * @remarks This is the try/catch wrapped function called from the extension's .activate() method
@@ -174,7 +173,7 @@ async function _activateExtension(
 
   if (vscode.workspace.getConfiguration().get(ENABLE_FLINK, false)) {
     try {
-      languageClient = await initializeLanguageClient();
+      const languageClient = await initializeLanguageClient();
       logger.info("Language server started");
       context.subscriptions.push(languageClient);
     } catch (e) {
