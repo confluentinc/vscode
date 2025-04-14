@@ -370,6 +370,7 @@ async function produceMessages(
   }>,
   token?: vscode.CancellationToken,
 ) {
+  // TODO: make maxWorkers a user setting?
   const results: ExecutionResult<ProduceResult>[] = await executeInWorkerPool(
     (content) => produceMessage(content, topic, schemaOptions),
     contents,
