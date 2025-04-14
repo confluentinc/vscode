@@ -178,12 +178,6 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.resources.item.rename",
-        "icon": "$(pencil)",
-        "title": "Rename Environment",
-        "category": "Confluent: Resources"
-      },
-      {
         "command": "confluent.kafka-clusters.item.rename",
         "icon": "$(pencil)",
         "title": "Rename Kafka Cluster",
@@ -208,7 +202,8 @@
       },
       {
         "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
-        "title": "View Flink Statements",
+        "title": "Select Flink Environment",
+        "icon": "$(confluent-environment)",
         "category": "Confluent: Resources"
       },
       {
@@ -980,9 +975,14 @@
           "group": "2_copy@3"
         },
         {
-          "command": "confluent.statements.flink-compute-pool.select",
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@1"
+        },
+        {
+          "command": "confluent.statements.flink-compute-pool.select",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "group": "navigation@2"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",

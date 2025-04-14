@@ -308,12 +308,14 @@ export class CCloudResourceLoader extends ResourceLoader {
         (queryable) => `${queryable.provider}-${queryable.region}`,
       );
 
-      // When we support compute-pool-free Flink, then we can
-      // either also loop over all of the Kafka clusters in the environment
-      // and add them to the set as well, or perhaps only do that.
+      // Collect all regions inferred from existing Flink compute pools
+
+      // (Not also Kafka clusters, as that the user may have
+      //  Kafka clusters in not-yet-Flink-supported provider-regions,
+      //  and at time of writing, inquiring causes 500 errors.
       //
-      // For now, though, let's just query based on the presence of
-      // compute pools in the region.
+      //  There must be some way of determining if a provider-region
+      //  is Flink-supported, but not sure what it is yet.)
 
       resource.flinkComputePools.forEach((pool) => {
         providerRegionSet.add({

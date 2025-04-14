@@ -3,13 +3,22 @@ import { registerCommandWithLogging } from ".";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { CCloudEnvironment } from "../models/environment";
 import { environmentQuickPick as ccloudEnvironmentQuickPick } from "../quickpicks/environments";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 async function setFlinkStatementsEnvironmentCommand(item?: CCloudEnvironment): Promise<void> {
-  // the user gestured either from a ccloud environment in the Resources view or used the command palette
+  // the user gestured either from a ccloud environment in the Resources view, flink statements
+  // titlebar, or used the command palette
 
   if (!item) {
-    // the user used the command palette
-    item = await ccloudEnvironmentQuickPick();
+    // the user either used the command palette or the icon in the flink statements titlebar
+    // to select a new environment
+
+    // (ccloudEnvironmentQuickPick currently does deep fetch every time (and is slow), so
+    //  show progress while it is loading)
+    item = await FlinkStatementsViewProvider.getInstance().withProgress(
+      "Select Environment",
+      ccloudEnvironmentQuickPick,
+    );
     if (!item) {
       // aborted the quickpick.
       return;
