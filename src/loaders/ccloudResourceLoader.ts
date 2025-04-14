@@ -286,7 +286,7 @@ export class CCloudResourceLoader extends ResourceLoader {
    * into a list of distinct IFlinkQueryable objects. Each object
    * will be for a separate provider-region pair within the environment.
    */
-  public async determineFlinkQuerables(
+  public async determineFlinkQueryables(
     resource: CCloudEnvironment | CCloudFlinkComputePool,
   ): Promise<IFlinkQueryable[]> {
     const orgId = await this.getOrganizationId();
@@ -338,7 +338,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   public async getFlinkStatements(
     resource: CCloudEnvironment | CCloudFlinkComputePool,
   ): Promise<FlinkStatement[]> {
-    const queryables: IFlinkQueryable[] = await this.determineFlinkQuerables(resource);
+    const queryables: IFlinkQueryable[] = await this.determineFlinkQueryables(resource);
     const handle = await getSidecar();
 
     // For each provider-region pair, get the Flink statements with reasonable concurrency.
