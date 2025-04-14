@@ -47,6 +47,9 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
             fileEvents: vscode.workspace.createFileSystemWatcher("**/*.flinksql"),
           },
           outputChannel: vscode.window.createOutputChannel("Confluent FlinkSQL Language Server"),
+          middleware: {
+            // TODO we need to handle multiple lines "ErrorMessage: non-zero line number not currently supported (use number of characters as column number)"
+          },
         };
 
         languageClient = new LanguageClient(
