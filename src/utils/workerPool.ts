@@ -48,6 +48,7 @@ interface WorkerPoolOptions {
  * a result or an error.
  *
  * @param items Array of items to process
+ * @param context Optional singular context to pass to the callable
  * @param callable Async function to execute for each item
  * @param options Worker pool options
  * @param progress Optional progress reporter

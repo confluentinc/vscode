@@ -18,9 +18,10 @@ import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
-import { getSidecar } from "../sidecar";
+import { getSidecar, SidecarHandle } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
 import { ObjectSet } from "../utils/objectset";
+import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.ccloudResourceLoader");
@@ -338,62 +339,22 @@ export class CCloudResourceLoader extends ResourceLoader {
     const queryables: IFlinkQueryable[] = await this.determineFlinkQuerables(resource);
     const handle = await getSidecar();
 
-    // Our results.
+    // For each provider-region pair, get the Flink statements with reasonable concurrency.
+    const concurrentResults: ExecutionResult<FlinkStatement[]>[] = await executeInWorkerPool(
+      (queryable: IFlinkQueryable) => loadStatementsForProviderRegion(handle, queryable),
+      queryables,
+      { maxWorkers: 5 },
+    );
+
+    logger.debug(`getFlinkStatements() loaded ${concurrentResults.length} provider-region pairs`);
+
+    // Assemble the results into a single array of Flink statements.
     const flinkStatements: FlinkStatement[] = [];
 
-    // Future improvement: This bit should be moved into external function and then
-    // possibly driven in worker pool if querable.length > 1.
-    for (const queryable of queryables) {
-      const statementsClient = handle.getFlinkSqlStatementsApi(queryable);
-
-      const request: ListSqlv1StatementsRequest = {
-        organization_id: queryable.organizationId,
-        environment_id: queryable.environmentId,
-        page_size: 100, // ccloud max page size
-        page_token: "", // start with the first page
-
-        // Possibly filter by compute pool ID, if specified (as when we're called with a CCloudFlinkComputePool instance).
-        spec_compute_pool_id: queryable.computePoolId,
-
-        // Don't show hidden statements, only user-created ones. "System" queries like
-        // ccloud workspaces UI examining the system catalog are created with this label
-        // set to true.
-        label_selector: "user.confluent.io/hidden!=true",
-      };
-
-      logger.debug(
-        `getFlinkStatements() requesting from ${queryable.provider}-${queryable.region} :\n${JSON.stringify(request, null, 2)}`,
-      );
-
-      let needMore: boolean = true;
-
-      while (needMore) {
-        const restResult = await statementsClient.listSqlv1Statements(request);
-
-        // Convert each Flink statement from the REST API representation to our codebase model.
-        for (const restStatement of restResult.data) {
-          const statement = restFlinkStatementToModelFlinkStatement(restStatement);
-          flinkStatements.push(statement);
-        }
-
-        // If this wasn't the last page, update the request to get the next page.
-        if (restResult.metadata.next) {
-          // `restResult.metadata.next` will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
-          // Must extract the page token from the URL.
-          const nextUrl = new URL(restResult.metadata.next);
-          const pageToken = nextUrl.searchParams.get("page_token");
-          if (!pageToken) {
-            // Should never happen, but just in case.
-            logger.error("Wacky. No page token found in next URL.");
-            needMore = false;
-          } else {
-            request.page_token = pageToken;
-          }
-        } else {
-          // No more pages to fetch.
-          needMore = false;
-        }
-      }
+    // extract will raise first error if any error was encountered.
+    const blocks: FlinkStatement[][] = extract(concurrentResults);
+    for (const block of blocks) {
+      flinkStatements.push(...block);
     }
 
     return flinkStatements;
@@ -404,6 +365,72 @@ export class CCloudResourceLoader extends ResourceLoader {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
   }
+}
+
+/**
+ * Load statements for a single provider/region and perhaps cluster-id
+ * (Sub-unit of getFlinkStatements(), factored out for concurrency
+ *  via executeInWorkerPool())
+ * */
+
+async function loadStatementsForProviderRegion(
+  handle: SidecarHandle,
+  queryable: IFlinkQueryable,
+): Promise<FlinkStatement[]> {
+  const statementsClient = handle.getFlinkSqlStatementsApi(queryable);
+
+  const request: ListSqlv1StatementsRequest = {
+    organization_id: queryable.organizationId,
+    environment_id: queryable.environmentId,
+    page_size: 100, // ccloud max page size
+    page_token: "", // start with the first page
+
+    // Possibly filter by compute pool ID, if specified (as when we're called with a CCloudFlinkComputePool instance).
+    spec_compute_pool_id: queryable.computePoolId,
+
+    // Don't show hidden statements, only user-created ones. "System" queries like
+    // ccloud workspaces UI examining the system catalog are created with this label
+    // set to true.
+    label_selector: "user.confluent.io/hidden!=true",
+  };
+
+  logger.debug(
+    `getFlinkStatements() requesting from ${queryable.provider}-${queryable.region} :\n${JSON.stringify(request, null, 2)}`,
+  );
+
+  const flinkStatements: FlinkStatement[] = [];
+
+  let needMore: boolean = true;
+
+  while (needMore) {
+    const restResult = await statementsClient.listSqlv1Statements(request);
+
+    // Convert each Flink statement from the REST API representation to our codebase model.
+    for (const restStatement of restResult.data) {
+      const statement = restFlinkStatementToModelFlinkStatement(restStatement);
+      flinkStatements.push(statement);
+    }
+
+    // If this wasn't the last page, update the request to get the next page.
+    if (restResult.metadata.next) {
+      // `restResult.metadata.next` will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
+      // Must extract the page token from the URL.
+      const nextUrl = new URL(restResult.metadata.next);
+      const pageToken = nextUrl.searchParams.get("page_token");
+      if (!pageToken) {
+        // Should never happen, but just in case.
+        logger.error("Wacky. No page token found in next URL.");
+        needMore = false;
+      } else {
+        request.page_token = pageToken;
+      }
+    } else {
+      // No more pages to fetch.
+      needMore = false;
+    }
+  }
+
+  return flinkStatements;
 }
 
 /** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
