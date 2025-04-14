@@ -178,12 +178,6 @@
         "category": "Confluent: Resources"
       },
       {
-        "command": "confluent.resources.item.rename",
-        "icon": "$(pencil)",
-        "title": "Rename Environment",
-        "category": "Confluent: Resources"
-      },
-      {
         "command": "confluent.kafka-clusters.item.rename",
         "icon": "$(pencil)",
         "title": "Rename Kafka Cluster",
@@ -204,6 +198,12 @@
         "command": "confluent.resources.schema-registry.select",
         "icon": "$(confluent-schema-registry)",
         "title": "Select Schema Registry",
+        "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+        "title": "Select Flink Environment",
+        "icon": "$(confluent-environment)",
         "category": "Confluent: Resources"
       },
       {
@@ -766,10 +766,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.resources.item.rename",
-          "when": "false"
-        },
-        {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
         },
@@ -996,9 +992,14 @@
           "group": "2_copy@3"
         },
         {
-          "command": "confluent.statements.flink-compute-pool.select",
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@1"
+        },
+        {
+          "command": "confluent.statements.flink-compute-pool.select",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "group": "navigation@2"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
@@ -1083,9 +1084,9 @@
           "group": "2_copy@1"
         },
         {
-          "command": "confluent.resources.item.rename",
-          "when": "false",
-          "group": "inline@2"
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+          "when": "view == confluent-resources && viewItem == flinkable-ccloud-environment",
+          "group": "1_flink@1"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",

@@ -44,8 +44,7 @@ import {
 } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { Logger } from "../logging";
-import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { ConnectionId } from "../models/resource";
+import { ConnectionId, IEnvProviderRegion } from "../models/resource";
 import { Message, MessageType } from "../ws/messageTypes";
 import {
   CCLOUD_PROVIDER_HEADER,
@@ -374,21 +373,21 @@ export class SidecarHandle {
   }
 
   /** Create and returns a (Flink SQL Statements REST OpenAPI spec) {@link StatementsSqlV1Api} client instance */
-  public getFlinkSqlStatementsApi(computePool: CCloudFlinkComputePool): StatementsSqlV1Api {
+  public getFlinkSqlStatementsApi(providerRegion: IEnvProviderRegion): StatementsSqlV1Api {
     const config = new FlinkSqlConfiguration({
       ...this.defaultClientConfigParams,
-      headers: this.constructFlinkDataPlaneClientHeaders(computePool),
+      headers: this.constructFlinkDataPlaneClientHeaders(providerRegion),
     });
     return new StatementsSqlV1Api(config);
   }
 
-  /** Convert a CCloudFlinkComputePool to HTTPHeaders for Flink API sidecar client creation. */
-  public constructFlinkDataPlaneClientHeaders(computePool: CCloudFlinkComputePool): HTTPHeaders {
+  /** Convert an IProviderRegion to HTTPHeaders for Flink API sidecar client creation. */
+  public constructFlinkDataPlaneClientHeaders(providerRegion: IEnvProviderRegion): HTTPHeaders {
     return {
       ...this.defaultClientConfigParams.headers,
-      [CCLOUD_PROVIDER_HEADER]: computePool.provider,
-      [CCLOUD_REGION_HEADER]: computePool.region,
-      [SIDECAR_CONNECTION_ID_HEADER]: computePool.connectionId,
+      [CCLOUD_PROVIDER_HEADER]: providerRegion.provider,
+      [CCLOUD_REGION_HEADER]: providerRegion.region,
+      [SIDECAR_CONNECTION_ID_HEADER]: CCLOUD_CONNECTION_ID,
     };
   }
 
