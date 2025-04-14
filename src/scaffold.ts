@@ -292,7 +292,7 @@ async function pickTemplate(
   });
 }
 
-async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
+export async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
   // TODO: fetch CCloud templates here once the sidecar supports authenticated template listing
 
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
