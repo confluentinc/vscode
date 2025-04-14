@@ -69,6 +69,23 @@ export function getConnectionLabel(type: ConnectionType): string {
   }
 }
 
+/** Specifies a (Ccloud) environment/provider/region tuple. */
+export interface IEnvProviderRegion {
+  environmentId: EnvironmentId;
+  provider: string;
+  region: string;
+}
+
+/**
+ * Additional bits needed to make Flink API queries.
+ **/
+export interface IFlinkQueryable extends IEnvProviderRegion {
+  /** The organization ID for the resource. */
+  organizationId: string;
+  /** Limit to a specific compute pool? */
+  computePoolId?: string;
+}
+
 export interface ISearchable {
   /** Space-separated strings for a given resource that should be searchable in the UI. */
   searchableText: () => string;

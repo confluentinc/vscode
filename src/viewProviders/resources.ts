@@ -45,7 +45,13 @@ import {
   LocalKafkaCluster,
 } from "../models/kafkaCluster";
 import { ContainerTreeItem } from "../models/main";
-import { ConnectionId, ConnectionLabel, isDirect, ISearchable } from "../models/resource";
+import {
+  ConnectionId,
+  ConnectionLabel,
+  EnvironmentId,
+  isDirect,
+  ISearchable,
+} from "../models/resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -407,7 +413,7 @@ export class ResourceViewProvider implements vscode.TreeDataProvider<ResourceVie
             // to potentially show the Kafka clusters and Schema Registry and update the collapsible
             // state of the item
             const directEnvs = await getDirectResources();
-            const directEnv = directEnvs.find((env) => env.id === id);
+            const directEnv = directEnvs.find((env) => env.id === (id as unknown as EnvironmentId));
             if (directEnv) {
               environment.kafkaClusters = directEnv.kafkaClusters;
               environment.schemaRegistry = directEnv.schemaRegistry;
