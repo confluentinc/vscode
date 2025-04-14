@@ -2,6 +2,7 @@ import {
   Disposable,
   Event,
   EventEmitter,
+  ProgressOptions,
   TreeDataProvider,
   TreeItem,
   TreeView,
@@ -280,5 +281,22 @@ export abstract class BaseViewProvider<
     });
 
     return children;
+  }
+
+  /**
+   * Run async task in the context of a
+   * progress indicator for this view
+   **/
+  public async withProgress<T>(
+    title: string,
+    task: () => Promise<T>,
+    cancellable: boolean = false,
+  ): Promise<T> {
+    const progressOptions: ProgressOptions = {
+      location: { viewId: this.viewId },
+      title: title,
+      cancellable: cancellable,
+    };
+    return await window.withProgress(progressOptions, task);
   }
 }

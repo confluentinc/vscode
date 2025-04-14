@@ -153,6 +153,24 @@ describe("models/environment.ts EnvironmentTreeItem", () => {
     assert.ok(tooltip.value.includes("confluent.cloud/environments"));
   });
 
+  it("ccloud context value positively reflecting flink-compute-pool availablity", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      flinkComputePools: [TEST_CCLOUD_FLINK_COMPUTE_POOL],
+    });
+    const treeItem = new EnvironmentTreeItem(env);
+    assert.strictEqual(treeItem.contextValue, "flinkable-ccloud-environment");
+  });
+
+  it("ccloud context value negatively reflecting flink-compute-pool availablity", () => {
+    const env = new CCloudEnvironment({
+      ...TEST_CCLOUD_ENVIRONMENT,
+      flinkComputePools: [],
+    });
+    const treeItem = new EnvironmentTreeItem(env);
+    assert.strictEqual(treeItem.contextValue, "ccloud-environment");
+  });
+
   for (const [missingKafka, missingSR] of [
     [true, false],
     [false, true],
