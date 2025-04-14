@@ -542,6 +542,23 @@
         }
       }
     },
+    "languages": [
+			{
+				"id": "flinksql",
+				"extensions": [
+					".flinksql"
+				],
+				"aliases": [
+					"Flink SQL",
+					"flinksql"
+				],
+				"configuration": "./flinksql-language-config.json",
+				"icon": {
+					"light": "resources/flinksql-dark.svg",
+					"dark": "resources/flinksql-light.svg"
+				}
+			}
+		],
     "keybindings": [
       {
         "command": "confluent.resources.search",

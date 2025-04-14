@@ -126,6 +126,7 @@ export function build(done) {
           },
           { src: ["README.md"], dest: DESTINATION },
           { src: ["CHANGELOG.md"], dest: DESTINATION },
+          { src: ["flinksql-language-config.json"], dest: DESTINATION },
         ],
       }),
       sentryRollupPlugin({
