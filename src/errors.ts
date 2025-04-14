@@ -161,21 +161,18 @@ export async function logError(
 
   logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
-  const hasMeaningfulSentryContext =
-    [
-      sentryContext.extra,
-      sentryContext.contexts,
-      sentryContext.tags,
-      sentryContext.propagationContext,
-    ].some((context) => context && Object.keys(context).length > 0) ||
-    sentryContext.user?.id !== undefined ||
-    (sentryContext.fingerprint && sentryContext.fingerprint.length > 0);
-
-  if (hasMeaningfulSentryContext) {
+  if (Object.keys(sentryContext).length) {
     sentryCaptureException(e, {
       captureContext: {
-        contexts: { response: { status_code: responseStatusCode } },
-        extra: { ...errorContext, ...sentryContext.extra },
+        ...sentryContext,
+        contexts: {
+          ...(sentryContext.contexts ?? {}),
+          response: { status_code: responseStatusCode },
+        },
+        extra: {
+          ...(sentryContext.extra ?? {}),
+          ...errorContext,
+        },
       },
     });
   }
