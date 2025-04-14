@@ -1,4 +1,4 @@
-import { TreeDataProvider, TreeItem } from "vscode";
+import { TreeDataProvider, TreeItem, window } from "vscode";
 import { ContextValues } from "../context/values";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
@@ -44,7 +44,15 @@ export class FlinkStatementsViewProvider
       const loader = ResourceLoader.getInstance(this.resource.connectionId) as CCloudResourceLoader;
 
       // Fetch statements using the loader, pushing down need to do deep refresh.
-      const statements: FlinkStatement[] = await loader.getFlinkStatements(this.resource);
+      const statements: FlinkStatement[] = await window.withProgress(
+        {
+          location: { viewId: this.viewId },
+          title: "Loading Flink statements...",
+        },
+        async () => {
+          return await loader.getFlinkStatements(this.resource!);
+        },
+      );
 
       // Repopulate this.subjectsInTreeView from getSubjects() result.
       statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
