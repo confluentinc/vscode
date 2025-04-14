@@ -381,7 +381,7 @@ export class SidecarHandle {
     return new StatementsSqlV1Api(config);
   }
 
-  /** Convert an IProviderRegion to HTTPHeaders for Flink API sidecar client creation. */
+  /** Convert an IEnvProviderRegion to HTTPHeaders for Flink API sidecar client creation. */
   public constructFlinkDataPlaneClientHeaders(providerRegion: IEnvProviderRegion): HTTPHeaders {
     return {
       ...this.defaultClientConfigParams.headers,
