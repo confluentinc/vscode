@@ -297,6 +297,7 @@ async function setupContextValues() {
   // constants for easier `when` clause matching in package.json; not updated dynamically
   const openInCCloudResources = setContextValue(ContextValues.CCLOUD_RESOURCES, [
     "ccloud-environment",
+    "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
@@ -314,6 +315,7 @@ async function setupContextValues() {
   // enables the "Copy ID" command; these resources must have the "id" property
   const resourcesWithIds = setContextValue(ContextValues.RESOURCES_WITH_ID, [
     "ccloud-environment", // direct/local environments only have internal IDs
+    "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
     "ccloud-schema-registry", // only ID, no name
     "ccloud-flink-artifact",
@@ -326,6 +328,7 @@ async function setupContextValues() {
   // enables the "Copy Name" command; these resources must have the "name" property
   const resourcesWithNames = setContextValue(ContextValues.RESOURCES_WITH_NAMES, [
     "ccloud-environment",
+    "flinkable-ccloud-environment",
     "ccloud-kafka-cluster",
     "ccloud-flink-statement",
     "ccloud-flink-artifact",

@@ -1085,7 +1085,7 @@
         },
         {
           "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
-          "when": "view == confluent-resources && viewItem == ccloud-environment",
+          "when": "view == confluent-resources && viewItem == flinkable-ccloud-environment",
           "group": "1_flink@1"
         },
         {

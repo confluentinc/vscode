@@ -255,8 +255,17 @@ export class EnvironmentTreeItem extends TreeItem {
     // internal properties
     this.id = `${resource.connectionId}-${resource.id}`;
     this.resource = resource;
+
+    const contextParts: string[] = [];
+
+    if (isCCloud(resource)) {
+      if (resource.flinkComputePools.length) {
+        contextParts.push("flinkable");
+      }
+    }
+    contextParts.push(`${this.resource.connectionType.toLowerCase()}-environment`);
     // "ccloud-environment", "direct-environment", "local-environment"
-    this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
+    this.contextValue = contextParts.join("-");
 
     // user-facing properties
     this.description = isDirect(this.resource) ? "" : this.resource.id;
