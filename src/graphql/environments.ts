@@ -114,7 +114,7 @@ export async function getEnvironments(): Promise<CCloudEnvironment[]> {
 
     envs.push(
       new CCloudEnvironment({
-        id: env.id,
+        id: env.id as EnvironmentId,
         name: env.name,
         streamGovernancePackage: env.governancePackage,
         kafkaClusters,

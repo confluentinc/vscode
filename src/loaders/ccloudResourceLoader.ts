@@ -1,16 +1,27 @@
 import { Disposable } from "vscode";
 
+import {
+  ListSqlv1StatementsRequest,
+  SqlV1StatementListDataInner,
+  SqlV1StatementSpec,
+} from "../clients/flinkSql";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { ccloudConnected } from "../emitters";
 import { getEnvironments } from "../graphql/environments";
+import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
+import { FlinkStatement } from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
-import { isCCloud } from "../models/resource";
+import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
 import { KafkaTopic } from "../models/topic";
+import { getSidecar, SidecarHandle } from "../sidecar";
 import { getResourceManager } from "../storage/resourceManager";
+import { ObjectSet } from "../utils/objectset";
+import { executeInWorkerPool, ExecutionResult, extract } from "../utils/workerPool";
 import { ResourceLoader } from "./resourceLoader";
 
 const logger = new Logger("storage.ccloudResourceLoader");
@@ -44,6 +55,9 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   /** If in progress of loading the coarse resources, the promise doing so. */
   private currentlyCoarseLoadingPromise: Promise<void> | null = null;
+
+  /** The user's current ccloud organization. Only determined when needed, see {@link getOrganizationId}. */
+  private organizationId: string | null = null;
 
   // Singleton class. Use getInstance() to get the singleton instance.
   // (Only public for testing / signon mocking purposes.)
@@ -253,9 +267,188 @@ export class CCloudResourceLoader extends ResourceLoader {
     );
   }
 
+  public async getOrganizationId(): Promise<string> {
+    if (this.organizationId) {
+      return this.organizationId;
+    }
+
+    const organization = await getCurrentOrganization();
+    if (organization) {
+      this.organizationId = organization.id;
+      return this.organizationId;
+    }
+    logger.error("getOrganizationId(): No current organization found.");
+    throw new Error("No current organization found.");
+  }
+
+  /**
+   * Convert the given CCloudEnvironment or CCloudFlinkComputePool
+   * into a list of distinct IFlinkQueryable objects. Each object
+   * will be for a separate provider-region pair within the environment.
+   */
+  public async determineFlinkQuerables(
+    resource: CCloudEnvironment | CCloudFlinkComputePool,
+  ): Promise<IFlinkQueryable[]> {
+    const orgId = await this.getOrganizationId();
+    if (resource instanceof CCloudFlinkComputePool) {
+      // If we have a single compute pool, just reexpress it.
+      return [
+        {
+          organizationId: orgId,
+          environmentId: resource.environmentId,
+          computePoolId: resource.id,
+          provider: resource.provider,
+          region: resource.region,
+        },
+      ];
+    } else {
+      // The environment may have many resources in the same
+      // provider-region pair. We need to deduplicate them by provider-region.
+      const providerRegionSet: ObjectSet<IFlinkQueryable> = new ObjectSet(
+        (queryable) => `${queryable.provider}-${queryable.region}`,
+      );
+
+      // Collect all regions inferred from existing Flink compute pools
+
+      // (Not also Kafka clusters, as that the user may have
+      //  Kafka clusters in not-yet-Flink-supported provider-regions,
+      //  and at time of writing, inquiring causes 500 errors.
+      //
+      //  There must be some way of determining if a provider-region
+      //  is Flink-supported, but not sure what it is yet.)
+
+      resource.flinkComputePools.forEach((pool) => {
+        providerRegionSet.add({
+          provider: pool.provider,
+          region: pool.region,
+          organizationId: orgId,
+          environmentId: resource.id,
+        });
+      });
+
+      return providerRegionSet.items();
+    }
+  }
+
+  /**
+   * Query the Flink statements for the given CCloud environment + provider-region.
+   * @returns The Flink statements for the given environment + provider-region.
+   * @param providerRegion The CCloud environment, provider, region to get the Flink statements for.
+   */
+  public async getFlinkStatements(
+    resource: CCloudEnvironment | CCloudFlinkComputePool,
+  ): Promise<FlinkStatement[]> {
+    const queryables: IFlinkQueryable[] = await this.determineFlinkQuerables(resource);
+    const handle = await getSidecar();
+
+    // For each provider-region pair, get the Flink statements with reasonable concurrency.
+    const concurrentResults: ExecutionResult<FlinkStatement[]>[] = await executeInWorkerPool(
+      (queryable: IFlinkQueryable) => loadStatementsForProviderRegion(handle, queryable),
+      queryables,
+      { maxWorkers: 5 },
+    );
+
+    logger.debug(`getFlinkStatements() loaded ${concurrentResults.length} provider-region pairs`);
+
+    // Assemble the results into a single array of Flink statements.
+    const flinkStatements: FlinkStatement[] = [];
+
+    // extract will raise first error if any error was encountered.
+    const blocks: FlinkStatement[][] = extract(concurrentResults);
+    for (const block of blocks) {
+      flinkStatements.push(...block);
+    }
+
+    return flinkStatements;
+  }
+
   /** Go back to initial state, not having cached anything. */
   private reset(): void {
     this.coarseLoadingComplete = false;
     this.currentlyCoarseLoadingPromise = null;
   }
+}
+
+/**
+ * Load statements for a single provider/region and perhaps cluster-id
+ * (Sub-unit of getFlinkStatements(), factored out for concurrency
+ *  via executeInWorkerPool())
+ * */
+
+async function loadStatementsForProviderRegion(
+  handle: SidecarHandle,
+  queryable: IFlinkQueryable,
+): Promise<FlinkStatement[]> {
+  const statementsClient = handle.getFlinkSqlStatementsApi(queryable);
+
+  const request: ListSqlv1StatementsRequest = {
+    organization_id: queryable.organizationId,
+    environment_id: queryable.environmentId,
+    page_size: 100, // ccloud max page size
+    page_token: "", // start with the first page
+
+    // Possibly filter by compute pool ID, if specified (as when we're called with a CCloudFlinkComputePool instance).
+    spec_compute_pool_id: queryable.computePoolId,
+
+    // Don't show hidden statements, only user-created ones. "System" queries like
+    // ccloud workspaces UI examining the system catalog are created with this label
+    // set to true.
+    label_selector: "user.confluent.io/hidden!=true",
+  };
+
+  logger.debug(
+    `getFlinkStatements() requesting from ${queryable.provider}-${queryable.region} :\n${JSON.stringify(request, null, 2)}`,
+  );
+
+  const flinkStatements: FlinkStatement[] = [];
+
+  let needMore: boolean = true;
+
+  while (needMore) {
+    const restResult = await statementsClient.listSqlv1Statements(request);
+
+    // Convert each Flink statement from the REST API representation to our codebase model.
+    for (const restStatement of restResult.data) {
+      const statement = restFlinkStatementToModelFlinkStatement(restStatement);
+      flinkStatements.push(statement);
+    }
+
+    // If this wasn't the last page, update the request to get the next page.
+    if (restResult.metadata.next) {
+      // `restResult.metadata.next` will be a full URL like "https://.../statements?page_token=UvmDWOB1iwfAIBPj6EYb"
+      // Must extract the page token from the URL.
+      const nextUrl = new URL(restResult.metadata.next);
+      const pageToken = nextUrl.searchParams.get("page_token");
+      if (!pageToken) {
+        // Should never happen, but just in case.
+        logger.error("Wacky. No page token found in next URL.");
+        needMore = false;
+      } else {
+        request.page_token = pageToken;
+      }
+    } else {
+      // No more pages to fetch.
+      needMore = false;
+    }
+  }
+
+  return flinkStatements;
+}
+
+/** Convert a from-REST API depiction of a Flink statement to our codebase's  FlinkStatement model. */
+function restFlinkStatementToModelFlinkStatement(
+  restFlinkStatement: SqlV1StatementListDataInner,
+): FlinkStatement {
+  // For reasons, restFlinkStatement.spec is typed as `object` in the API client,
+  // but is really a SqlV1StatementSpec.
+  const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
+
+  return new FlinkStatement({
+    connectionId: CCLOUD_CONNECTION_ID,
+    connectionType: ConnectionType.Ccloud,
+    environmentId: restFlinkStatement.environment_id as EnvironmentId,
+    computePoolId: spec.compute_pool_id!,
+    name: restFlinkStatement.name,
+    status: restFlinkStatement.status.phase,
+  });
 }
