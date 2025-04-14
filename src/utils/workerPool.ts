@@ -47,8 +47,8 @@ interface WorkerPoolOptions {
  * Results will be returned in the same order as the input items, with each result containing either
  * a result or an error.
  *
- * @param items Array of items to process
  * @param callable Async function to execute for each item
+ * @param items Array of items to process
  * @param options Worker pool options
  * @param progress Optional progress reporter
  * @param token Optional cancellation token
