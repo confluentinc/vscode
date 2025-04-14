@@ -6,7 +6,7 @@ import { showInfoNotificationWithButtons } from "../errors";
 import { CCloudResourceLoader } from "../loaders";
 import { Logger } from "../logging";
 import { Environment } from "../models/environment";
-import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
+import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
 import { FlinkArtifactsViewProvider } from "../viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
@@ -18,7 +18,7 @@ const logger = new Logger("quickpicks.flinkComputePools");
  * progress indicator on the Resources or Flink Statements/Artifacts view(s). */
 export async function flinkComputePoolQuickPickWithViewProgress(
   viewId: "confluent-resources" | "confluent-flink-statements" | "confluent-flink-artifacts",
-): Promise<FlinkComputePool | undefined> {
+): Promise<CCloudFlinkComputePool | undefined> {
   return await window.withProgress(
     {
       location: { viewId },
@@ -41,10 +41,10 @@ export async function flinkComputePoolQuickPickWithViewProgress(
  * ---------------------------------- Confluent Cloud: env2
  * ccloud-pool3 (lfcp-id3)
  */
-export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | undefined> {
+export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePool | undefined> {
   const loader = CCloudResourceLoader.getInstance();
   const environments: Environment[] = await loader.getEnvironments();
-  const computePools: FlinkComputePool[] = [];
+  const computePools: CCloudFlinkComputePool[] = [];
   for (const env of environments) {
     if (env.flinkComputePools) {
       const pools = env.flinkComputePools as CCloudFlinkComputePool[];
@@ -70,16 +70,16 @@ export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | un
 
   // convert all available Flink comptue pools to quick pick items and keep track of the last env
   // name used for the separators
-  const items: QuickPickItemWithValue<FlinkComputePool>[] = [];
+  const items: QuickPickItemWithValue<CCloudFlinkComputePool>[] = [];
 
   // if any pools are focused in the Statements/Artifacts views, move them to the top of the list
-  const focusedPools: FlinkComputePool[] = [];
-  const statementsPool: FlinkComputePool | null =
+  const focusedPools: CCloudFlinkComputePool[] = [];
+  const statementsPool: CCloudFlinkComputePool | null =
     FlinkStatementsViewProvider.getInstance().computePool;
   if (statementsPool) {
     focusedPools.push(statementsPool);
   }
-  const artifactsPool: FlinkComputePool | null =
+  const artifactsPool: CCloudFlinkComputePool | null =
     FlinkArtifactsViewProvider.getInstance().computePool;
   if (artifactsPool) {
     focusedPools.push(artifactsPool);
@@ -129,7 +129,7 @@ export async function flinkComputePoolQuickPick(): Promise<FlinkComputePool | un
   }
 
   // prompt the user to select a Flink compute pool
-  const chosenItem: QuickPickItemWithValue<FlinkComputePool> | undefined =
+  const chosenItem: QuickPickItemWithValue<CCloudFlinkComputePool> | undefined =
     await window.showQuickPick(items, {
       placeHolder: "Select a Flink compute pool",
       ignoreFocusOut: true,

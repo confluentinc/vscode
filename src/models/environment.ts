@@ -23,7 +23,14 @@ import {
   LocalKafkaCluster,
 } from "./kafkaCluster";
 import { CustomMarkdownString } from "./main";
-import { ConnectionId, IResourceBase, isCCloud, isDirect, ISearchable } from "./resource";
+import {
+  ConnectionId,
+  EnvironmentId,
+  IResourceBase,
+  isCCloud,
+  isDirect,
+  ISearchable,
+} from "./resource";
 import {
   CCloudSchemaRegistry,
   DirectSchemaRegistry,
@@ -42,7 +49,7 @@ export abstract class Environment implements IResourceBase, ISearchable {
   abstract connectionType: ConnectionType;
   abstract iconName: IconNames;
 
-  id!: string;
+  id!: EnvironmentId;
   name!: string;
 
   /**
@@ -111,6 +118,10 @@ export class CCloudEnvironment extends Environment {
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.id}/clusters?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  get environmentId(): EnvironmentId {
+    return this.id;
   }
 
   get children(): ISearchable[] {
@@ -244,6 +255,7 @@ export class EnvironmentTreeItem extends TreeItem {
     // internal properties
     this.id = `${resource.connectionId}-${resource.id}`;
     this.resource = resource;
+    // "ccloud-environment", "direct-environment", "local-environment"
     this.contextValue = `${this.resource.connectionType.toLowerCase()}-environment`;
 
     // user-facing properties
