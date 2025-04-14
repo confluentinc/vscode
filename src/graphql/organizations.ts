@@ -45,6 +45,7 @@ export async function getOrganizations(): Promise<CCloudOrganization[]> {
   return orgs;
 }
 
+/** Perform a deep GraphQL fetch for all organizations, then return the one marked current. */
 export async function getCurrentOrganization(): Promise<CCloudOrganization | undefined> {
   const orgs = await getOrganizations();
   return orgs.find((org) => org.current);

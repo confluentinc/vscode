@@ -207,6 +207,11 @@
         "category": "Confluent: Resources"
       },
       {
+        "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+        "title": "View Flink Statements",
+        "category": "Confluent: Resources"
+      },
+      {
         "command": "confluent.resources.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -749,10 +754,6 @@
           "when": "false"
         },
         {
-          "command": "confluent.resources.item.rename",
-          "when": "false"
-        },
-        {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
         },
@@ -1066,9 +1067,9 @@
           "group": "2_copy@1"
         },
         {
-          "command": "confluent.resources.item.rename",
-          "when": "false",
-          "group": "inline@2"
+          "command": "confluent.resources.ccloudenvironment.viewflinkstatements",
+          "when": "view == confluent-resources && viewItem == ccloud-environment",
+          "group": "1_flink@1"
         },
         {
           "command": "confluent.resources.kafka-cluster.copyBootstrapServers",
