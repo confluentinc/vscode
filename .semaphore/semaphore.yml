@@ -19,6 +19,11 @@ queue:
   - when: "branch != 'main'"
     processing: parallel
 
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+
 blocks:
   # --- Build & Test (multi-platform/-arch) for VS Code (stable) ---
   - name: "Build & Test (VS Code: linux x64)"
