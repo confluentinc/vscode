@@ -1,10 +1,14 @@
 import * as vscode from "vscode";
 import { IconNames } from "../constants";
-import { getEnvironments } from "../graphql/environments";
+import { CCloudResourceLoader } from "../loaders";
 import { CCloudEnvironment } from "../models/environment";
 import { hasCCloudAuthSession } from "../sidecar/connections/ccloud";
 
-export async function environmentQuickPick(): Promise<CCloudEnvironment | undefined> {
+export type envFilter = (env: CCloudEnvironment) => boolean;
+
+export async function ccloudEnvironmentQuickPick(
+  filter: envFilter | undefined,
+): Promise<CCloudEnvironment | undefined> {
   // Convenience function to get the name of a cloud environment if a command was triggered through
   // the command palette instead of through the view->item->context menu
   if (!hasCCloudAuthSession()) {
@@ -12,11 +16,18 @@ export async function environmentQuickPick(): Promise<CCloudEnvironment | undefi
     return undefined;
   }
 
-  const cloudEnvironments: CCloudEnvironment[] = await getEnvironments();
-  if (cloudEnvironments.length === 0) {
+  const allCcloudEnvironments: CCloudEnvironment[] =
+    await CCloudResourceLoader.getInstance().getEnvironments();
+
+  if (allCcloudEnvironments.length === 0) {
     vscode.window.showInformationMessage("No Confluent Cloud environments found.");
     return undefined;
   }
+
+  // If a filter is provided, filter the environments
+  let cloudEnvironments: CCloudEnvironment[] = filter
+    ? allCcloudEnvironments.filter(filter)
+    : allCcloudEnvironments;
 
   let environmentItems: vscode.QuickPickItem[] = [];
   // map the environment names to the CloudEnvironments themselves since we need to pass the ID
@@ -39,4 +50,16 @@ export async function environmentQuickPick(): Promise<CCloudEnvironment | undefi
     },
   );
   return chosenEnvironment ? environmentNameMap.get(chosenEnvironment.label) : undefined;
+}
+
+/**
+ * Quick pick for a CCloud environment from those which are Flink-enabled.
+ * (As determined by the presence of Flink compute pool(s) for the time being until we know a better way)
+ * @returns
+ */
+export async function flinkCcloudEnvironmentQuickPick(): Promise<CCloudEnvironment | undefined> {
+  return await ccloudEnvironmentQuickPick((env) => {
+    // Filter out environments that are not Flink compatible
+    return env.flinkComputePools.length > 0;
+  });
 }
