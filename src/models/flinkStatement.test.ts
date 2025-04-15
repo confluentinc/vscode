@@ -21,7 +21,7 @@ describe("FlinkStatement", () => {
       connectionId: CCLOUD_CONNECTION_ID,
       connectionType: ConnectionType.Ccloud,
       environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
-      computePoolId: "ckp-456",
+      computePoolId: TEST_CCLOUD_FLINK_STATEMENT.computePoolId,
       name: "my-statement",
       status: "RUNNING",
     });
