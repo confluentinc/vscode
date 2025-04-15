@@ -9,7 +9,7 @@ import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaf
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
-import { logUsage, UserEvent } from "./telemetry/events"; // Ensure this is the correct module
+import { logUsage, UserEvent } from "./telemetry/events";
 import { sentryCaptureException } from "./telemetry/sentryClient";
 
 const logger = new Logger("errors");
