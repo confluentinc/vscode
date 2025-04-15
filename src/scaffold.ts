@@ -15,6 +15,7 @@ import { getSidecar } from "./sidecar";
 import { ViewColumn } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
+import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { WebviewPanelCache } from "./webview-cache";
@@ -143,7 +144,7 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
   optionsForm.onDidDispose(() => disposable.dispose());
 };
 
-async function applyTemplate(
+export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
 ): Promise<PostResponse> {
@@ -221,13 +222,11 @@ async function applyTemplate(
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
       message = e.message;
-      // instanceof ResponseError check fails, but we can check if the response property exists & use it
       const response = (e as ResponseError).response;
       if (response) {
-        const status = response.status;
         try {
           const payload = await response.json().then((json) => JSON.stringify(json));
-          message = `Failed to generate template. ${status}: ${response.statusText}. ${payload}`;
+          message = parseErrorMessage(payload);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (jsonError) {
           message = `Failed to generate template. Unable to parse error response: ${e}`;
@@ -301,4 +300,101 @@ async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
     template_collection_name: "vscode",
   };
   return await client.listScaffoldV1Templates(requestBody);
+}
+
+export async function handleProjectScaffoldUri(
+  collection: string | null,
+  template: string | null,
+  options: { [key: string]: string },
+): Promise<void> {
+  if (!collection || !template) {
+    vscode.window.showErrorMessage(
+      "Missing required parameters for project generation. Please check the URI.",
+    );
+    return;
+  }
+  const result = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Generating Project",
+      cancellable: true,
+    },
+    async (progress) => {
+      progress.report({ message: "Applying template..." });
+      return await applyTemplate(
+        {
+          spec: {
+            name: template,
+            template_collection: { id: collection },
+            display_name: template,
+          },
+        } as ScaffoldV1Template,
+        options,
+      );
+    },
+  );
+
+  if (result.success) {
+    vscode.window.showInformationMessage("🎉 Project generated successfully!");
+  } else {
+    const cleanedErrorMessage = parseErrorMessage(result.message ?? "");
+    vscode.window.showErrorMessage("Failed to generate project", {
+      modal: true,
+      detail: cleanedErrorMessage,
+    });
+  }
+}
+
+function parseErrorMessage(rawMessage: string): string {
+  try {
+    const parsed = JSON.parse(rawMessage);
+    if (parsed.errors && Array.isArray(parsed.errors)) {
+      return parsed.errors
+        .map((error: any) => {
+          const detail = error.detail || "Unknown error";
+          const pointer = error.source?.pointer || "unknown field";
+          const optionName = pointer.replace("/options/", "");
+          return `Invalid format for option '${optionName}': ${detail}`;
+        })
+        .join("\n");
+    }
+  } catch (e) {
+    console.error("Failed to parse error message:", e);
+    return rawMessage;
+  }
+  return rawMessage;
+}
+
+export function setProjectScaffoldListener(): vscode.Disposable {
+  const disposable = projectScaffoldUri.event(async (uri: vscode.Uri) => {
+    // manually parse the URI query since URLSearchParams will attempt to decode it again
+    const params = new Map<string, string>();
+    if (uri.query) {
+      const parts = uri.query.split("&");
+      for (const part of parts) {
+        const [key, value] = part.split("=");
+        if (key && typeof value !== "undefined") {
+          params.set(key, value);
+        }
+      }
+    }
+
+    const collection = params.get("collection") ?? null;
+    const template = params.get("template") ?? null;
+    const bootstrapServer = params.get("cc_bootstrap_server") || "";
+    const apiKey = params.get("cc_api_key") || "";
+    const apiSecret = params.get("cc_api_secret") || "";
+    const topic = params.get("cc_topic") || "";
+
+    const options: { [key: string]: string } = {
+      cc_bootstrap_server: bootstrapServer,
+      cc_api_key: apiKey,
+      cc_api_secret: apiSecret,
+      cc_topic: topic,
+    };
+
+    await handleProjectScaffoldUri(collection, template, options);
+  });
+
+  return disposable;
 }
