@@ -21,6 +21,7 @@ import { logError } from "../errors";
 import { Logger } from "../logging";
 import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
+import { participantMessage, systemMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
 import { BaseLanguageModelTool } from "./tools/base";
 import { ListTemplatesTool } from "./tools/listTemplates";
@@ -40,7 +41,7 @@ export async function chatHandler(
   const messages: LanguageModelChatMessage[] = [];
 
   // add the initial prompt to the messages
-  messages.push(LanguageModelChatMessage.User(INITIAL_PROMPT, "user"));
+  messages.push(systemMessage(INITIAL_PROMPT));
 
   const userPrompt = request.prompt.trim();
   // check for empty request
@@ -53,7 +54,7 @@ export async function chatHandler(
   const historyMessages = filterContextHistory(context.history);
   messages.push(...historyMessages);
   if (userPrompt) {
-    messages.push(LanguageModelChatMessage.User(request.prompt, "user"));
+    messages.push(userMessage(request.prompt));
   }
 
   // add any additional references like `#file:<name>`
@@ -145,17 +146,30 @@ export async function handleChatMessage(
   token: CancellationToken,
 ): Promise<string[]> {
   const toolsCalled: string[] = [];
+  // keep track of which calls the model has made to prevent repeats by stringifying any
+  // `LanguageModelToolCallPart` results
+  const toolCallsMade = new Set<string>();
+
+  // limit number of iterations to prevent infinite loops
+  let iterations = 0;
+  const maxIterations = 10; // TODO: make this user-configurable?
+
+  // hint at focusing recency instead of attempting to (re)respond to older messages
+  messages.push(
+    systemMessage(
+      "Focus on answering the user's most recent query directly unless explicitly asked to address previous messages.",
+    ),
+  );
 
   // inform the model that tools can be invoked as part of the response stream
   const requestOptions: LanguageModelChatRequestOptions = {
     tools: [new ListTemplatesTool().toChatTool()],
     toolMode: LanguageModelChatToolMode.Auto,
   };
-
   // determine whether or not to continue sending chat requests to the model as a result of any tool
   // calls
   let continueConversation = true;
-  while (continueConversation) {
+  while (continueConversation && iterations < maxIterations) {
     continueConversation = false;
 
     const response: LanguageModelChatResponse = await model.sendRequest(
@@ -163,12 +177,12 @@ export async function handleChatMessage(
       requestOptions,
       token,
     );
+    iterations++;
 
     const toolResultMessages: LanguageModelChatMessage[] = [];
-    const toolCallsMade: string[] = [];
     for await (const fragment of response.stream) {
       if (token.isCancellationRequested) {
-        logger.debug("chat request cancelled");
+        logger.debug("chat request canceled");
         return toolsCalled;
       }
 
@@ -187,6 +201,18 @@ export async function handleChatMessage(
         }
         stream.progress(tool.progressMessage);
 
+        if (toolCallsMade.has(JSON.stringify(toolCall))) {
+          // don't process the same tool call twice
+          logger.debug(`Tool "${toolCall.name}" already called with input "${toolCall.input}"`);
+          messages.push(
+            systemMessage(
+              `Tool "${toolCall.name}" already called with input "${JSON.stringify(toolCall.input)}". Do not repeatedly call tools with the same inputs. Use previous result(s) if possible.`,
+            ),
+          );
+          continueConversation = true;
+          continue;
+        }
+
         // each registered tool should contribute its own way of handling the invocation and
         // interacting with the stream, and can return an array of messages to be sent for another
         // round of processing
@@ -199,7 +225,7 @@ export async function handleChatMessage(
         );
         toolResultMessages.push(...newMessages);
 
-        toolCallsMade.push(`${toolCall.name}: ${toolCall.input}`);
+        toolCallsMade.add(JSON.stringify(toolCall));
         if (!toolsCalled.includes(toolCall.name)) {
           // keep track of the tools that have been called so far as part of this chat request flow
           toolsCalled.push(toolCall.name);
@@ -210,6 +236,9 @@ export async function handleChatMessage(
     if (toolResultMessages.length) {
       // add results to the messages and let the model process them and decide what to do next
       messages.push(...toolResultMessages);
+      messages.push(
+        systemMessage("Please continue the conversation using the information from the tool call."),
+      );
       continueConversation = true;
     }
   }
@@ -227,7 +256,6 @@ function filterContextHistory(
   const filteredHistory: (ChatRequestTurn | ChatResponseTurn)[] = history.filter(
     (msg) => msg.participant === PARTICIPANT_ID,
   );
-  logger.debug("filtered history:", filteredHistory);
   if (filteredHistory.length === 0) {
     return [];
   }
@@ -236,19 +264,18 @@ function filterContextHistory(
     // don't re-use previous prompts since the model may misinterpret them as part of the current prompt
     if (turn instanceof ChatRequestTurn) {
       if (turn.participant === PARTICIPANT_ID) {
-        messages.push(LanguageModelChatMessage.User(turn.prompt, "user"));
+        messages.push(userMessage(turn.prompt));
       }
       continue;
     }
     if (turn instanceof ChatResponseTurn) {
       // responses from the participant:
       if (turn.response instanceof ChatResponseMarkdownPart) {
-        messages.push(
-          LanguageModelChatMessage.Assistant(turn.response.value.value, PARTICIPANT_ID),
-        );
+        messages.push(participantMessage(turn.response.value.value));
       }
     }
   }
 
+  logger.debug("filtered messages for historic context:", messages);
   return messages;
 }
