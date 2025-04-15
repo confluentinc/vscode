@@ -79,19 +79,17 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         message = `${message}\n\n${part.value}`;
       }
       message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
-      messages.push(LanguageModelChatMessage.User(message, `tool:${this.name}:result`));
+      messages.push(this.toolMessage(message, "result"));
     } else {
-      messages.push(
-        LanguageModelChatMessage.User(
-          `Unexpected result content structure: ${JSON.stringify(result)}`,
-          `tool:${this.name}:error`,
-        ),
-      );
+      const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;
+      logger.error(errorMessage);
+      messages.push(this.toolMessage(errorMessage, "error"));
     }
     return messages;
   }
 }
 
+/** Check if `inputTags` match any of the `specTags`, either directly or as a substring. */
 export function inputTagsMatchSpecTags(
   inputTags: string[],
   specTags: string[] | undefined,
