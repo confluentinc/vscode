@@ -307,6 +307,7 @@ async function setupContextValues() {
     "ccloud-kafka-topic",
     "ccloud-kafka-topic-with-schema",
     "ccloud-schema-registry",
+    "ccloud-flink-statement",
   ]);
   // allow for easier matching using "in" clauses for our Resources/Topics/Schemas views
   const viewsWithResources = setContextValue(ContextValues.VIEWS_WITH_RESOURCES, [
