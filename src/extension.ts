@@ -13,6 +13,7 @@ import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudS
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
 import { registerChatTools } from "./chat/tools/registration";
+import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -284,6 +285,12 @@ async function _activateExtension(
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
   context.subscriptions.push(getCCloudStatusBarItem());
+
+  const provider = new FlinkSqlCodelensProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider("flinksql", provider),
+    ...provider.disposables,
+  );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
