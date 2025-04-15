@@ -233,6 +233,9 @@ export async function handleChatMessage(
     if (toolResultMessages.length) {
       // add results to the messages and let the model process them and decide what to do next
       messages.push(...toolResultMessages);
+      // send synthetic "user" message to the model to indicate that the conversation should continue
+      // (.sendRequest requires the last message to be a `User` message; see
+      // https://github.com/microsoft/vscode-extension-samples/blob/26acb262b8b2b41e9e466115f13a7f72ef63d59d/chat-sample/src/toolsPrompt.tsx#L83)
       messages.push(
         systemMessage("Please continue the conversation using the information from the tool call."),
       );
