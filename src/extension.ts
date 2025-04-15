@@ -26,6 +26,7 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
+import { setProjectScaffoldListener } from "./scaffold";
 import {
   AUTH_PROVIDER_ID,
   AUTH_PROVIDER_LABEL,
@@ -203,6 +204,10 @@ async function _activateExtension(
       schemasViewProvider.refresh(true);
     }),
   ];
+
+  // Register the project scaffold listener
+  const projectScaffoldListener = setProjectScaffoldListener();
+  context.subscriptions.push(projectScaffoldListener);
 
   // register all the commands (apart from the view providers' refresh commands, which are handled above)
   const registeredCommands: vscode.Disposable[] = [
