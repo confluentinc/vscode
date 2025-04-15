@@ -379,8 +379,8 @@ export function setProjectScaffoldListener(): vscode.Disposable {
       }
     }
 
-    const collection = params.get("collection");
-    const template = params.get("template");
+    const collection = params.get("collection") ?? null;
+    const template = params.get("template") ?? null;
     const bootstrapServer = params.get("cc_bootstrap_server") || "";
     const apiKey = params.get("cc_api_key") || "";
     const apiSecret = params.get("cc_api_secret") || "";
