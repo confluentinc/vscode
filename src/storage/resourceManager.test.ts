@@ -679,6 +679,8 @@ describe("ResourceManager Kafka topic methods", function () {
 
 describe("ResourceManager direct connection methods", function () {
   let rm: ResourceManager;
+  /** {@link ConnectionId}s stored during tests that need to be deleted after each test. */
+  const testConnectionIdsToCleanUp = new Set<ConnectionId>();
 
   before(async () => {
     // extension needs to be activated before storage manager(s) can be used
@@ -690,14 +692,17 @@ describe("ResourceManager direct connection methods", function () {
   });
 
   afterEach(async () => {
-    // clean up after each test
-    await rm.deleteDirectConnections();
+    // clean up after each test -- don't use rm.deleteDirectConnections() here since it may affect other tests
+    await Promise.all([
+      ...Array.from(testConnectionIdsToCleanUp).map((id) => rm.deleteDirectConnection(id)),
+    ]);
   });
 
   it("addDirectConnection() should correctly store a direct connection spec", async () => {
     // preload one connection
     const spec = TEST_DIRECT_CONNECTION_FORM_SPEC;
     await rm.addDirectConnection(spec);
+    testConnectionIdsToCleanUp.add(spec.id);
 
     // make sure it exists
     const storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
@@ -736,6 +741,8 @@ describe("ResourceManager direct connection methods", function () {
       TEST_DIRECT_CONNECTION_FORM_SPEC,
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: connId2 },
     ];
+    testConnectionIdsToCleanUp.add(connId1);
+    testConnectionIdsToCleanUp.add(connId2);
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
     // make sure they exist
@@ -762,6 +769,8 @@ describe("ResourceManager direct connection methods", function () {
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: id1 },
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: id2 },
     ];
+    testConnectionIdsToCleanUp.add(id1);
+    testConnectionIdsToCleanUp.add(id2);
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
     // make sure they exist
