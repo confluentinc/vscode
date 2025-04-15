@@ -2,6 +2,7 @@ import assert from "assert";
 import * as sinon from "sinon";
 
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
+import { TEST_CCLOUD_ORGANIZATION } from "../../tests/unit/testResources/organization";
 import {
   SqlV1StatementList,
   SqlV1StatementListApiVersionEnum,
@@ -21,7 +22,6 @@ describe("CCloudResourceLoader", () => {
     let sandbox: sinon.SinonSandbox;
     let flinkStatementsApiStub: sinon.SinonStubbedInstance<StatementsSqlV1Api>;
 
-    const testOrgId = "01234";
     beforeEach(() => {
       sandbox = sinon.createSandbox();
       resourceLoader = CCloudResourceLoader.getInstance();
@@ -33,7 +33,7 @@ describe("CCloudResourceLoader", () => {
       mockSidecarHandle.getFlinkSqlStatementsApi.returns(flinkStatementsApiStub);
       sandbox.stub(sidecar, "getSidecar").resolves(mockSidecarHandle);
 
-      sandbox.stub(resourceLoader, "getOrganizationId").resolves(testOrgId);
+      sandbox.stub(resourceLoader, "getOrganization").resolves(TEST_CCLOUD_ORGANIZATION);
     });
 
     afterEach(() => {
@@ -52,7 +52,7 @@ describe("CCloudResourceLoader", () => {
 
       // Test the args passed to the API.
       const args = flinkStatementsApiStub.listSqlv1Statements.getCall(0).args[0];
-      assert.strictEqual(args.organization_id, testOrgId);
+      assert.strictEqual(args.organization_id, TEST_CCLOUD_ORGANIZATION.id);
       assert.strictEqual(args.environment_id, TEST_CCLOUD_FLINK_COMPUTE_POOL.environmentId);
       assert.strictEqual(args.page_size, 100);
       assert.strictEqual(args.page_token, "");
