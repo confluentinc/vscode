@@ -8,28 +8,30 @@ describe("pauseWithJitter", () => {
   it("should pause", async () => {
     const clock = sinon.useFakeTimers();
 
-    const minMs = 20;
-    const maxMs = 50;
+    try {
+      const minMs = 20;
+      const maxMs = 50;
 
-    // add callback to track when pauseWithJitter resolves
-    let resolved = false;
-    const promise = pauseWithJitter(minMs, maxMs).then(() => {
-      resolved = true;
-    });
+      // add callback to track when pauseWithJitter resolves
+      let resolved = false;
+      const promise = pauseWithJitter(minMs, maxMs).then(() => {
+        resolved = true;
+      });
 
-    // shouldn't resolve yet
-    assert.strictEqual(resolved, false, "resolved immediately");
-    // fast forward just before minMs
-    const firstJump = minMs - 1;
-    await clock.tickAsync(firstJump);
-    assert.strictEqual(resolved, false, "resolved too early");
+      // shouldn't resolve yet
+      assert.strictEqual(resolved, false, "resolved immediately");
+      // fast forward just before minMs
+      const firstJump = minMs - 1;
+      await clock.tickAsync(firstJump);
+      assert.strictEqual(resolved, false, "resolved too early");
 
-    // fast forward past the maxMs time; should now be resolved
-    await clock.tickAsync(maxMs - firstJump + 1);
-    await promise;
-    assert.strictEqual(resolved, true, "didn't resolve before maxMs time");
-
-    clock.restore();
+      // fast forward past the maxMs time; should now be resolved
+      await clock.tickAsync(maxMs - firstJump + 1);
+      await promise;
+      assert.strictEqual(resolved, true, "didn't resolve before maxMs time");
+    } finally {
+      clock.restore();
+    }
   });
 
   it("should throw on invalid inputs", () => {
