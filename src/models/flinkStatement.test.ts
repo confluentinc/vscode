@@ -7,6 +7,7 @@ import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import {
   FlinkStatement,
+  FlinkStatementStatus,
   FlinkStatementTreeItem,
   STATUS_BLUE,
   STATUS_GRAY,
@@ -23,7 +24,7 @@ describe("FlinkStatement", () => {
       environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
       computePoolId: TEST_CCLOUD_FLINK_STATEMENT.computePoolId,
       name: "my-statement",
-      status: "RUNNING",
+      status: makeStatus("RUNNING"),
     });
 
     assert.strictEqual(statement.id, statement.name, "Expect name and id to be the same");
@@ -39,9 +40,12 @@ describe("FlinkStatementTreeItem", () => {
     assert.strictEqual(treeItem.contextValue, "ccloud-flink-statement");
   });
 
-  it("should use the correct icons and colors based on the `status`", () => {
-    for (const status of ["FAILED", "FAILING"]) {
-      const failStatement = new FlinkStatement({ ...TEST_CCLOUD_FLINK_STATEMENT, status });
+  it("should use the correct icons and colors based on the `phase`", () => {
+    for (const phase of ["FAILED", "FAILING"]) {
+      const failStatement = new FlinkStatement({
+        ...TEST_CCLOUD_FLINK_STATEMENT,
+        status: makeStatus(phase),
+      });
       const failTreeItem = new FlinkStatementTreeItem(failStatement);
       const failIcon = failTreeItem.iconPath as ThemeIcon;
       assert.strictEqual(failIcon.id, IconNames.FLINK_STATEMENT_STATUS_FAILED);
@@ -50,7 +54,7 @@ describe("FlinkStatementTreeItem", () => {
 
     const degradedStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      status: "DEGRADED",
+      status: makeStatus("DEGRADED"),
     });
     const degradedTreeItem = new FlinkStatementTreeItem(degradedStatement);
     const degradedIcon = degradedTreeItem.iconPath as ThemeIcon;
@@ -59,7 +63,7 @@ describe("FlinkStatementTreeItem", () => {
 
     const runningStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      status: "RUNNING",
+      status: makeStatus("RUNNING"),
     });
     const runningTreeItem = new FlinkStatementTreeItem(runningStatement);
     const runningIcon = runningTreeItem.iconPath as ThemeIcon;
@@ -68,15 +72,18 @@ describe("FlinkStatementTreeItem", () => {
 
     const completedStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      status: "COMPLETED",
+      status: makeStatus("COMPLETED"),
     });
     const completedTreeItem = new FlinkStatementTreeItem(completedStatement);
     const completedIcon = completedTreeItem.iconPath as ThemeIcon;
     assert.strictEqual(completedIcon.id, IconNames.FLINK_STATEMENT_STATUS_COMPLETED);
     assert.strictEqual(completedIcon.color, STATUS_GRAY);
 
-    for (const status of ["DELETING", "STOPPING"]) {
-      const stopStatement = new FlinkStatement({ ...TEST_CCLOUD_FLINK_STATEMENT, status });
+    for (const phase of ["DELETING", "STOPPING"]) {
+      const stopStatement = new FlinkStatement({
+        ...TEST_CCLOUD_FLINK_STATEMENT,
+        status: makeStatus(phase),
+      });
       const stopTreeItem = new FlinkStatementTreeItem(stopStatement);
       const stopIcon = stopTreeItem.iconPath as ThemeIcon;
       assert.strictEqual(stopIcon.id, IconNames.FLINK_STATEMENT_STATUS_DELETING);
@@ -85,7 +92,7 @@ describe("FlinkStatementTreeItem", () => {
 
     const stoppedStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      status: "STOPPED",
+      status: makeStatus("STOPPED"),
     });
     const stoppedTreeItem = new FlinkStatementTreeItem(stoppedStatement);
     const stoppedIcon = stoppedTreeItem.iconPath as ThemeIcon;
@@ -94,7 +101,7 @@ describe("FlinkStatementTreeItem", () => {
 
     const pendingStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      status: "PENDING",
+      status: makeStatus("PENDING"),
     });
     const pendingTreeItem = new FlinkStatementTreeItem(pendingStatement);
     const pendingIcon = pendingTreeItem.iconPath as ThemeIcon;
@@ -102,10 +109,10 @@ describe("FlinkStatementTreeItem", () => {
     assert.strictEqual(pendingIcon.color, STATUS_BLUE);
   });
 
-  it("should fall back to a basic icon for untracked status values", () => {
+  it("should fall back to a basic icon for untracked phase values", () => {
     const unknownStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
-      status: "UNKNOWN",
+      status: makeStatus("UNKNOWN"),
     });
     const unknownTreeItem = new FlinkStatementTreeItem(unknownStatement);
     const unknownIcon = unknownTreeItem.iconPath as ThemeIcon;
@@ -113,3 +120,12 @@ describe("FlinkStatementTreeItem", () => {
     assert.strictEqual(unknownIcon.color, undefined);
   });
 });
+
+function makeStatus(status: string): FlinkStatementStatus {
+  return {
+    phase: status,
+    detail: "",
+    traits: {},
+    scalingStatus: {},
+  };
+}

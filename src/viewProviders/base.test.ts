@@ -11,7 +11,11 @@ import { ContextValues } from "../context/values";
 import { ccloudConnected } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
 import { CCloudFlinkComputePool, FlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement, FlinkStatementTreeItem } from "../models/flinkStatement";
+import {
+  FlinkStatement,
+  FlinkStatementStatus,
+  FlinkStatementTreeItem,
+} from "../models/flinkStatement";
 import { BaseViewProvider } from "./base";
 
 /** Sample view provider subclass for testing {@link BaseViewProvider}. */
@@ -25,12 +29,12 @@ class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
         name: "statement1",
-        status: "PENDING",
+        status: makeStatus("PENDING"),
       }),
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
         name: "statement2",
-        status: "STOPPED",
+        status: makeStatus("STOPPED"),
       }),
     ];
 
@@ -341,14 +345,14 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     const matchingStatement = new FlinkStatement({
       ...TEST_CCLOUD_FLINK_STATEMENT,
       name: "first-statement",
-      status: "STOPPED",
+      status: makeStatus("STOPPED"),
     });
     const items = [
       matchingStatement,
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
         name: "second-statement",
-        status: "PENDING",
+        status: makeStatus("PENDING"),
       }),
     ];
 
@@ -368,12 +372,12 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
         name: "first-statement",
-        status: "RUNNING",
+        status: makeStatus("RUNNING"),
       }),
       new FlinkStatement({
         ...TEST_CCLOUD_FLINK_STATEMENT,
         name: "second-statement",
-        status: "PENDING",
+        status: makeStatus("PENDING"),
       }),
     ];
 
@@ -386,3 +390,12 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
     );
   });
 });
+
+function makeStatus(phase: string): FlinkStatementStatus {
+  return new FlinkStatementStatus({
+    phase,
+    detail: phase,
+    traits: {},
+    scalingStatus: {},
+  });
+}

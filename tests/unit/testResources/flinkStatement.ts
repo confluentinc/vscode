@@ -1,6 +1,6 @@
 import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
-import { FlinkStatement } from "../../../src/models/flinkStatement";
+import { FlinkStatement, FlinkStatementStatus } from "../../../src/models/flinkStatement";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "./environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL_ID } from "./flinkComputePool";
 
@@ -10,5 +10,10 @@ export const TEST_CCLOUD_FLINK_STATEMENT = new FlinkStatement({
   environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
   computePoolId: TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
   id: "statement0",
-  status: "RUNNING",
+  status: new FlinkStatementStatus({
+    phase: "RUNNING",
+    detail: "Running",
+    traits: {},
+    scalingStatus: {},
+  }),
 } as FlinkStatement);

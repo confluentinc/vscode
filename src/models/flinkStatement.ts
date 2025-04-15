@@ -4,18 +4,19 @@ import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
+/**
+ * Model for a Flink statement.
+ */
 export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   connectionId!: ConnectionId;
   connectionType!: ConnectionType;
-  iconName: IconNames = IconNames.FLINK_STATEMENT;
-
   environmentId!: EnvironmentId;
 
   /** The flink compute pool that maybe is running/ran the statement. */
   computePoolId: string | undefined;
 
   name!: string;
-  status!: string;
+  status!: FlinkStatementStatus;
 
   // TODO: add more properties as needed
 
@@ -34,7 +35,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   }
 
   searchableText(): string {
-    return `${this.name} ${this.status}`;
+    return `${this.name} ${this.phase}`;
   }
 
   /**
@@ -47,6 +48,27 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   get ccloudUrl(): string {
     return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.id}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
+  }
+
+  get phase(): string {
+    return this.status.phase;
+  }
+}
+
+/** Model for the `status` subfield of a Flink statement. */
+export class FlinkStatementStatus {
+  phase!: string;
+  detail: string | undefined;
+
+  // TODO refine in the future.
+  traits!: any;
+  scalingStatus!: any;
+
+  constructor(props: Pick<FlinkStatementStatus, "phase" | "detail" | "traits" | "scalingStatus">) {
+    this.phase = props.phase;
+    this.detail = props.detail;
+    this.traits = props.traits;
+    this.scalingStatus = props.scalingStatus;
   }
 }
 
@@ -62,8 +84,8 @@ export class FlinkStatementTreeItem extends TreeItem {
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 
     // user-facing properties
-    this.iconPath = createFlinkStatementIcon(resource.status);
-    this.description = resource.status;
+    this.iconPath = createFlinkStatementIcon(resource.phase);
+    this.description = resource.status.detail;
 
     // TODO: add tooltip
   }

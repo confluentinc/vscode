@@ -459,6 +459,11 @@ function restFlinkStatementToModelFlinkStatement(
     environmentId: restFlinkStatement.environment_id as EnvironmentId,
     computePoolId: spec.compute_pool_id!,
     name: restFlinkStatement.name,
-    status: restFlinkStatement.status.phase,
+    status: {
+      phase: restFlinkStatement.status.phase,
+      detail: restFlinkStatement.status.detail,
+      traits: restFlinkStatement.status.traits,
+      scalingStatus: restFlinkStatement.status.scaling_status,
+    },
   });
 }
