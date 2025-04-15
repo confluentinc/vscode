@@ -18,6 +18,8 @@ import { LanguageModelToolContribution } from "./types";
  */
 export abstract class BaseLanguageModelTool<T> implements LanguageModelTool<T> {
   abstract readonly name: string;
+  /** Message to be shown when this tool is called in a chat session via `stream.progress()`. */
+  abstract readonly progressMessage: string;
 
   abstract invoke(
     options: LanguageModelToolInvocationOptions<T>,
