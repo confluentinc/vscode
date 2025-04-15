@@ -74,6 +74,18 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
   return chain;
 }
 
+/** Error class wrapper with a custom name and message, used for Sentry tracking. */
+export class CustomError extends Error {
+  constructor(
+    public readonly name: string,
+    public readonly message: string,
+    public readonly cause: Error,
+  ) {
+    super(message);
+    this.name = name;
+  }
+}
+
 /**
  * Log the provided error along with any additional information, and optionally send to Sentry.
  *
@@ -230,7 +242,7 @@ async function showNotificationWithButtons(
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
       logError(e, `"${selection}" button callback`, {
-        extra: { functionName: "showNotifcationWithButtons" },
+        extra: { functionName: "showNotificationWithButtons" },
       });
     }
     // send telemetry for which button was clicked
