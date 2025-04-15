@@ -151,7 +151,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
 
     sinon.assert.calledOnce(showQuickPickStub);
 
-    // Should have only offered the flinkable environemnt.
+    // Should have only offered the flinkable environment.
     const quickPickItems: vscode.QuickPickItem[] = showQuickPickStub.firstCall.args[0];
     assert.strictEqual(quickPickItems.length, 1);
     assert.strictEqual(quickPickItems[0].label, flinkableEnvironment.name);
