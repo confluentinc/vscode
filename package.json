@@ -74,7 +74,7 @@
           "projects"
         ],
         "displayName": "List Project Templates",
-        "modelDescription": "List all available templates for creating a streaming data project or application.",
+        "modelDescription": "List all available templates for creating a streaming data project or application. Use this when the user asks about available templates or you want to show them a list of templates.",
         "canBeReferencedInPrompt": false,
         "icon": "$(list-selection)",
         "inputSchema": {
