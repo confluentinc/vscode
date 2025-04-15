@@ -56,7 +56,7 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
       (template) => template.spec!.display_name === pickedItem?.label,
     );
   } catch (err) {
-    logError(err, "template listing", { extra: {} });
+    logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return;
   }
