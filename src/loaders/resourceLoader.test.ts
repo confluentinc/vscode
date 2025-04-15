@@ -457,6 +457,8 @@ describe("ResourceLoader::deleteSchemaVersion()", () => {
     const logErrorArgs = logErrorStub.getCall(0).args;
     assert.strictEqual(logErrorArgs[0], thrownError);
     assert.strictEqual(logErrorArgs[1], "Error deleting schema version");
+    // would send to Sentry.
+    assert.ok(logErrorArgs[2]);
   });
 });
 

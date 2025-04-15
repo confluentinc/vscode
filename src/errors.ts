@@ -94,7 +94,7 @@ export class CustomError extends Error {
  * additional error context.
  *
  * @param e Error to log
- * @param messagePrefix Prefix to include in the logger.error() message
+ * @param message Text to add in the logger.error() message and top-level Sentry error message
  * @param sentryContext Optional Sentry context to include with the error
  * */
 export async function logError(

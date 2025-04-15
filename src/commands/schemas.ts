@@ -271,7 +271,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
       if (e.response.status !== 404) {
         // not a 404, something unexpected/
         logError(e, "Error fetching schemas for subject while deleting schema version", {
-          extra: { subject: schema.subject },
+          extra: { error: {} },
         });
       }
     }
@@ -341,7 +341,7 @@ async function deleteSchemaVersionCommand(schema: Schema) {
     }
   } catch (e) {
     success = false;
-    logError(e, "Error deleting schema version", { extra: { subject: schema.subject } });
+    logError(e, "Error deleting schema version", { extra: { error: {} } });
     showErrorNotificationWithButtons(
       `Error deleting schema version ${schema.version}: ${e instanceof Error ? e.message : String(e)}`,
     );
@@ -390,7 +390,7 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
       if (e.response.status !== 404) {
         // not a 404, something unexpected/
         logError(e, "Error fetching schemas for subject while deleting schema subject", {
-          extra: { subject: subject.name },
+          extra: { error: {} },
         });
       }
     }
@@ -453,7 +453,7 @@ async function deleteSchemaSubjectCommand(subject: Subject) {
     );
   } catch (e) {
     success = false;
-    logError(e, "Error deleting schema subject", { extra: { subject: subject.name } });
+    logError(e, "Error deleting schema subject", { extra: { error: {} } });
     showErrorNotificationWithButtons(
       `Error deleting schema subject ${subject.name}: ${e instanceof Error ? e.message : String(e)}`,
     );
