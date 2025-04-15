@@ -8,7 +8,7 @@ import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaf
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
-import { logUsage, UserEvent } from "./telemetry/events"; // Ensure this is the correct module
+import { logUsage, UserEvent } from "./telemetry/events";
 import { sentryCaptureException } from "./telemetry/sentryClient";
 import { ScopeContext } from "@sentry/core";
 
@@ -87,27 +87,10 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
  * */
 export async function logError(
   e: unknown,
-<<<<<<< HEAD
-  message: string,
-  sentryContext: Partial<ScopeContext> = {},
-): Promise<void> {
-  if (!(e instanceof Error)) {
-    logger.error(`non-Error passed: ${JSON.stringify(e)}`);
-    return;
-  }
-
-  let logErrorMessage: string = "";
-
-  /** Light wrapper around the original error, used to update the name/message for easier debugging
-   * and event tracking in Sentry. */
-  let wrappedError: Error = e as Error;
-  /** Used to add extra/additional data to the Sentry exception */
-=======
   messagePrefix: string,
   sentryContext: Partial<ScopeContext> = {},
 ): Promise<void> {
   let errorMessage: string = "";
->>>>>>> f1fa939a43678e4dd6d37c4bb93d2ea1dca5cd06
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
   let responseStatusCode: number | undefined;
 
@@ -146,13 +129,7 @@ export async function logError(
     }
   }
 
-<<<<<<< HEAD
-  logger.error(logErrorMessage, { ...errorContext });
-
-  logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
-=======
   logger.error(errorMessage, { ...errorContext, ...sentryContext });
->>>>>>> f1fa939a43678e4dd6d37c4bb93d2ea1dca5cd06
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
   if (Object.keys(sentryContext).length) {
     sentryCaptureException(e, {
