@@ -54,7 +54,7 @@ export class FlinkStatementsViewProvider
         },
       );
 
-      // Repopulate this.subjectsInTreeView from getSubjects() result.
+      // Repopulate this.resourcesInTreeView from getFlinkStatements() result.
       statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
     }
 
