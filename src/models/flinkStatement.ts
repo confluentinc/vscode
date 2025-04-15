@@ -1,6 +1,6 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
-import { IconNames } from "../constants";
+import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
@@ -43,6 +43,10 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
    */
   get id(): string {
     return this.name;
+  }
+
+  get ccloudUrl(): string {
+    return `https://confluent.cloud/environments/${this.environmentId}/flink/statements/${this.id}/activity?utm_source=${UTM_SOURCE_VSCODE}`;
   }
 }
 
