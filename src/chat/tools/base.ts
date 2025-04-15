@@ -37,6 +37,15 @@ export abstract class BaseLanguageModelTool<T> implements LanguageModelTool<T> {
     token: CancellationToken,
   ): Promise<LanguageModelChatMessage[]>;
 
+  /** Return an `Assistant` message with tool-call related information. */
+  toolMessage(message: string, status?: string): LanguageModelChatMessage {
+    let roleName = `tool:${this.name}`;
+    if (status !== undefined) {
+      roleName = `${roleName}:${status}`;
+    }
+    return LanguageModelChatMessage.Assistant(message, roleName);
+  }
+
   /** Converts this tool to a {@link LanguageModelChatTool} for use in chat requests. */
   toChatTool(): LanguageModelChatTool {
     const packageJson = getExtensionContext().extension.packageJSON;
