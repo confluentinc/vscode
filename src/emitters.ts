@@ -112,3 +112,5 @@ export const resourceSearchSet = new vscode.EventEmitter<string | null>();
 export const topicSearchSet = new vscode.EventEmitter<string | null>();
 /** The user set/unset a filter for the Schemas view. */
 export const schemaSearchSet = new vscode.EventEmitter<string | null>();
+
+export const projectScaffoldUri = new vscode.EventEmitter<vscode.Uri>();
