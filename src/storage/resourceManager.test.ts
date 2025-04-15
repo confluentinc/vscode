@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { randomUUID } from "crypto";
 import { StorageManager } from ".";
 import {
   TEST_CCLOUD_ENVIRONMENT,
@@ -754,25 +755,29 @@ describe("ResourceManager direct connection methods", function () {
   });
 
   it("deleteDirectConnections() should delete all direct connections", async () => {
+    const id1 = `deleteme1-${randomUUID()}` as ConnectionId;
+    const id2 = `deleteme2-${randomUUID()}` as ConnectionId;
     // preload multiple connections
     const specs: CustomConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION_FORM_SPEC,
-      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "other-id" as ConnectionId },
-      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "another-id" as ConnectionId },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: id1 },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: id2 },
     ];
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
     // make sure they exist
     let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
     assert.ok(storedSpecs);
-    assert.equal(storedSpecs.size, specs.length);
+    assert.ok(storedSpecs.has(id1));
+    assert.ok(storedSpecs.has(id2));
 
     // delete all connections
     await rm.deleteDirectConnections();
 
-    // make sure they're gone
+    // make sure they're gone -- we aren't checking that `storedSpecs` is empty since other tests
+    // may be trying to work with other specs
     storedSpecs = await rm.getDirectConnections();
-    assert.deepStrictEqual(storedSpecs, new Map());
+    assert.ok(!storedSpecs.has(id1));
+    assert.ok(!storedSpecs.has(id2));
   });
 });
 
