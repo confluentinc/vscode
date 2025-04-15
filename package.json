@@ -66,6 +66,32 @@
         "when": "confluent.chatParticipantEnabled"
       }
     ],
+    "languageModelTools": [
+      {
+        "name": "list_projectTemplates",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "List Project Templates",
+        "modelDescription": "List all available templates for creating a streaming data project or application. Use this when the user asks about available templates or you want to show them a list of templates.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Optional tags to filter the list of templates."
+            }
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "confluent.connections.ccloud.signIn",
