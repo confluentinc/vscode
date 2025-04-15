@@ -56,7 +56,7 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
       (template) => template.spec!.display_name === pickedItem?.label,
     );
   } catch (err) {
-    logError(err, "template listing", {}, true);
+    logError(err, "template listing", { extra: {} });
     vscode.window.showErrorMessage("Failed to retrieve template list");
     return;
   }
@@ -217,7 +217,7 @@ async function applyTemplate(
     }
     return { success: true, message: "Project generated successfully." };
   } catch (e) {
-    logError(e, "applying template", { templateName: pickedTemplate.spec!.name! }, true);
+    logError(e, "applying template", { extra: { templateName: pickedTemplate.spec!.name! } });
     let message = "Failed to generate template. An unknown error occurred.";
     if (e instanceof Error) {
       message = e.message;
