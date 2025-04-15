@@ -44,7 +44,7 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sinon.assert.notCalled(logErrorStub);
   });
 
-  it("should return function name and call logError() on a bad response", async () => {
+  it("should return undefined and call logError() on a bad response", async () => {
     const fakeResponse = new Response("Bad Request", {
       status: 400,
       statusText: "Bad Request",
@@ -76,7 +76,7 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sinon.assert.notCalled(logErrorStub);
   });
 
-  it("should return function name and call logError when json parsing fails", async () => {
+  it("should return undefined and call logError when json parsing fails", async () => {
     const fakeResponse = new Response(JSON.stringify("not json data"), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -93,7 +93,7 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     });
   });
 
-  it("should return function name and log error for other unexpected errors", async () => {
+  it("should return undefined and log error for other unexpected errors", async () => {
     const unexpectedError = new Error("Unexpected error");
     fetchStub.rejects(unexpectedError);
 
