@@ -264,15 +264,13 @@ describe("errors.ts logError()", () => {
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
-    const extra = { foo: "bar" };
     const logMessage = "test message";
-    await logError(error, logMessage, extra);
+    await logError(error, logMessage);
 
     sinon.assert.calledWithMatch(loggerErrorSpy, `Error: ${logMessage} --> ${error}`, {
       errorType: error.name,
       errorMessage: error.message,
       errorStack: error.stack,
-      ...extra,
     });
   });
 

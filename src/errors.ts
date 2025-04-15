@@ -10,6 +10,7 @@ import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
 import { logUsage, UserEvent } from "./telemetry/events";
 import { sentryCaptureException } from "./telemetry/sentryClient";
+import { PropagationContext, ScopeContext } from "@sentry/core";
 
 const logger = new Logger("errors");
 
@@ -93,18 +94,16 @@ export class CustomError extends Error {
  * additional error context.
  *
  * @param e Error to log
- * @param message Text to add in the logger.error() message and top-level Sentry error message
- * @param extra Additional context to include in the log message (and `extra` field in Sentry)
- * @param sendTelemetry Whether to send the error to Sentry (default: `false`)
+ * @param messagePrefix Prefix to include in the logger.error() message
+ * @param sentryContext Optional Sentry context to include with the error
  * */
 export async function logError(
   e: unknown,
   message: string,
-  extra: Record<string, string> = {},
-  sendTelemetry: boolean = false,
+  sentryContext: Partial<ScopeContext> = {},
 ): Promise<void> {
   if (!(e instanceof Error)) {
-    logger.error(`non-Error passed: ${JSON.stringify(e)}`, { ...extra });
+    logger.error(`non-Error passed: ${JSON.stringify(e)}`);
     return;
   }
 
@@ -158,14 +157,23 @@ export async function logError(
     }
   }
 
-  logger.error(logErrorMessage, { ...errorContext, ...extra });
+  logger.error(logErrorMessage, { ...errorContext });
 
+  logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
-  if (sendTelemetry) {
-    sentryCaptureException(wrappedError, {
+  const hasMeaningfulSentryContext =
+    sentryContext.user?.id !== undefined ||
+    Object.keys(sentryContext.extra || {}).length > 0 ||
+    Object.keys(sentryContext.contexts || {}).length > 0 ||
+    Object.keys(sentryContext.tags || {}).length > 0 ||
+    (sentryContext.fingerprint && sentryContext.fingerprint.length > 0) ||
+    Object.keys(sentryContext.propagationContext || {}).length > 0;
+
+  if (hasMeaningfulSentryContext) {
+    sentryCaptureException(e, {
       captureContext: {
         contexts: { response: { status_code: responseStatusCode } },
-        extra: { ...errorContext, ...extra },
+        extra: { ...errorContext, ...sentryContext.extra },
       },
     });
   }
@@ -252,7 +260,7 @@ async function showNotificationWithButtons(
       await buttonMap[selection]();
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
-      logError(e, `"${selection}" button callback`, {}, true);
+      logError(e, `"${selection}" button callback`, { extra: {} });
     }
     // send telemetry for which button was clicked
     logUsage(UserEvent.NotificationButtonClicked, {
