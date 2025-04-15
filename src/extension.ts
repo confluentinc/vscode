@@ -12,6 +12,7 @@ import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
+import { FlinkSqlCodelensProvider } from "./codelens/flinkSqlProvider";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -26,7 +27,6 @@ import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { setProjectScaffoldListener } from "./scaffold";
 import {
   AUTH_PROVIDER_ID,
   AUTH_PROVIDER_LABEL,
@@ -57,7 +57,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
-import { registerProjectGenerationCommands } from "./scaffold";
+import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -279,6 +279,12 @@ async function _activateExtension(
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
   context.subscriptions.push(getCCloudStatusBarItem());
+
+  const provider = new FlinkSqlCodelensProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider("flinksql", provider),
+    ...provider.disposables,
+  );
 
   // one-time cleanup of old log files from before the rotating log file stream was implemented
   cleanupOldLogFiles();
