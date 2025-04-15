@@ -122,38 +122,40 @@ describe("preferences/updates", function () {
 
   it("updatePreferences() should log and not re-throw errors when updating preferences", async function () {
     const errorMessage = "Failed to update preferences";
-    mockClient.gatewayV1PreferencesPut.rejects(new Error(errorMessage));
+    const error = new Error(errorMessage);
+    mockClient.gatewayV1PreferencesPut.rejects(error);
 
     await updates.updatePreferences();
 
     sinon.assert.calledOnce(mockClient.gatewayV1PreferencesPut);
     sinon.assert.calledWithExactly(
       logErrorStub,
-      sinon.match.instanceOf(Error),
+      sinon.match.instanceOf(Error).and(sinon.match.has("message", errorMessage)),
       "updating preferences",
-      {},
-      true,
+      { extra: { functionName: "updatePreferences" } },
     );
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
+    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
+    assert.strictEqual(callArgs[0], `Failed to sync settings: ${errorMessage}`);
   });
 
   it("updatePreferences() should show an error notification when an Error is caught", async function () {
     const error = new Error("uh oh");
     mockClient.gatewayV1PreferencesPut.rejects(error);
-    // used for logging and the notification:
-    const errorMessage = "Failed to sync settings";
 
     await updates.updatePreferences();
 
     sinon.assert.calledOnce(logErrorStub);
-    sinon.assert.calledWithExactly(logErrorStub, error, "updating preferences", {}, true);
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(Error).and(sinon.match.has("message", error.message)),
+      "updating preferences",
+      { extra: { functionName: "updatePreferences" } },
+    );
 
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
-    sinon.assert.calledWithExactly(
-      showErrorNotificationWithButtonsStub,
-      `${errorMessage}: ${error.message}`,
-      undefined, // no buttons set here, use the defaults
-    );
+    const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
+    assert.strictEqual(callArgs[0], `Failed to sync settings: ${error.message}`);
   });
 
   it("updatePreferences() should show an error notification with a settings button when a ResponseError is caught and valid failure errors are returned", async function () {
@@ -164,25 +166,24 @@ describe("preferences/updates", function () {
       detail: "The cert file '/foo/bar/baz' cannot be found.",
       source: "/spec/tls_pem_paths",
     };
-    // have to stub both `.clone()` and `.json()` to get the error details
     sandbox.stub(errorResponse, "clone").returns(errorResponse);
-    sandbox.stub(errorResponse, "json").resolves({
-      errors: [fakeFailureError],
-    });
+    sandbox.stub(errorResponse, "json").resolves({ errors: [fakeFailureError] });
     const error = new ResponseError(errorResponse);
+
     mockClient.gatewayV1PreferencesPut.rejects(error);
-    // used for logging and the notification:
-    const errorMessage = `Failed to sync settings: ${fakeFailureError.detail}`;
-    // simulate the user dismissing the notification
-    showErrorNotificationWithButtonsStub.resolves(undefined);
 
     await updates.updatePreferences();
 
     sinon.assert.calledOnce(logErrorStub);
-    sinon.assert.calledWithExactly(logErrorStub, error, "updating preferences", {}, true);
+    sinon.assert.calledWithExactly(
+      logErrorStub,
+      sinon.match.instanceOf(ResponseError).and(sinon.match.has("response", errorResponse)),
+      "updating preferences",
+      { extra: { functionName: "updatePreferences" } },
+    );
     sinon.assert.calledOnce(showErrorNotificationWithButtonsStub);
     const callArgs = showErrorNotificationWithButtonsStub.getCall(0).args;
-    assert.strictEqual(callArgs[0], errorMessage);
+    assert.strictEqual(callArgs[0], `Failed to sync settings: ${fakeFailureError.detail}`);
     assert.ok(Object.keys(callArgs[1]).includes("Update Settings"));
     assert.ok(Object.keys(callArgs[1]).includes("Open Logs"));
     assert.ok(Object.keys(callArgs[1]).includes("File Issue"));
