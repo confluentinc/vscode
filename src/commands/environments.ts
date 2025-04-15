@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { CCloudEnvironment } from "../models/environment";
-import { environmentQuickPick as ccloudEnvironmentQuickPick } from "../quickpicks/environments";
+import { flinkCcloudEnvironmentQuickPick } from "../quickpicks/environments";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 async function setFlinkStatementsEnvironmentCommand(item?: CCloudEnvironment): Promise<void> {
@@ -17,7 +17,7 @@ async function setFlinkStatementsEnvironmentCommand(item?: CCloudEnvironment): P
     //  show progress while it is loading)
     item = await FlinkStatementsViewProvider.getInstance().withProgress(
       "Select Environment",
-      ccloudEnvironmentQuickPick,
+      flinkCcloudEnvironmentQuickPick,
     );
     if (!item) {
       // aborted the quickpick.
