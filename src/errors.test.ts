@@ -257,7 +257,7 @@ describe("errors.ts logError()", () => {
       sinon.assert.calledWithExactly(
         loggerErrorSpy,
         `non-Error passed: ${JSON.stringify(nonError)}`,
-        extra,
+        // no 'extra' context
       );
     });
   }
@@ -272,7 +272,7 @@ describe("errors.ts logError()", () => {
       errorType: error.name,
       errorMessage: error.message,
       errorStack: error.stack,
-      extra,
+      ...extra,
     });
   });
 
