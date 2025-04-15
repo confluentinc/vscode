@@ -8,8 +8,9 @@ import { ResponseError as ScaffoldingServiceResponseError } from "./clients/scaf
 import { ResponseError as SchemaRegistryResponseError } from "./clients/schemaRegistryRest";
 import { ResponseError as SidecarResponseError } from "./clients/sidecar";
 import { Logger } from "./logging";
-import { logUsage, UserEvent } from "./telemetry/events";
+import { logUsage, UserEvent } from "./telemetry/events"; // Ensure this is the correct module
 import { sentryCaptureException } from "./telemetry/sentryClient";
+import { ScopeContext } from "@sentry/core";
 
 const logger = new Logger("errors");
 
@@ -73,18 +74,6 @@ export function getNestedErrorChain(error: Error): Record<string, string | undef
   return chain;
 }
 
-/** Error class wrapper with a custom name and message, used for Sentry tracking. */
-export class CustomError extends Error {
-  constructor(
-    public readonly name: string,
-    public readonly message: string,
-    public readonly cause: Error,
-  ) {
-    super(message);
-    this.name = name;
-  }
-}
-
 /**
  * Log the provided error along with any additional information, and optionally send to Sentry.
  *
@@ -93,18 +82,17 @@ export class CustomError extends Error {
  * additional error context.
  *
  * @param e Error to log
- * @param message Text to add in the logger.error() message and top-level Sentry error message
- * @param extra Additional context to include in the log message (and `extra` field in Sentry)
- * @param sendTelemetry Whether to send the error to Sentry (default: `false`)
+ * @param messagePrefix Prefix to include in the logger.error() message
+ * @param sentryContext Optional Sentry context to include with the error
  * */
 export async function logError(
   e: unknown,
+<<<<<<< HEAD
   message: string,
-  extra: Record<string, string> = {},
-  sendTelemetry: boolean = false,
+  sentryContext: Partial<ScopeContext> = {},
 ): Promise<void> {
   if (!(e instanceof Error)) {
-    logger.error(`non-Error passed: ${JSON.stringify(e)}`, { ...extra });
+    logger.error(`non-Error passed: ${JSON.stringify(e)}`);
     return;
   }
 
@@ -114,58 +102,70 @@ export async function logError(
    * and event tracking in Sentry. */
   let wrappedError: Error = e as Error;
   /** Used to add extra/additional data to the Sentry exception */
+=======
+  messagePrefix: string,
+  sentryContext: Partial<ScopeContext> = {},
+): Promise<void> {
+  let errorMessage: string = "";
+>>>>>>> f1fa939a43678e4dd6d37c4bb93d2ea1dca5cd06
   let errorContext: Record<string, string | number | boolean | null | undefined> = {};
-  /** Used to set the `contexts.response.status_code` for the Sentry exception */
   let responseStatusCode: number | undefined;
 
-  if ((e as AnyResponseError).response) {
+  if ((e as any).response) {
     // one of our ResponseError types, attempt to extract more information before logging
-    const responseError = e as AnyResponseError;
-    const resp: Response = responseError.response;
-    const errorBody: string = await resp.clone().text();
-    logErrorMessage = `Error response: ${message}`;
+    const error = e as AnyResponseError;
+    const errorBody = await error.response.clone().text();
+    errorMessage = `[${messagePrefix}] error response:`;
     errorContext = {
-      responseStatus: resp.status,
-      responseStatusText: resp.statusText,
+      responseStatus: error.response.status,
+      responseStatusText: error.response.statusText,
       responseBody: errorBody.slice(0, 5000), // limit to 5000 characters
-      responseErrorType: responseError.name,
+      responseErrorType: error.name,
     };
-    responseStatusCode = resp.status;
-    wrappedError = new CustomError(
-      responseError.name,
-      `Error ${resp.status} "${resp.statusText}" @ ${resp.url}: ${message}`,
-      responseError,
-    );
+    responseStatusCode = error.response.status;
   } else {
-    // non-ResponseError error
-    logErrorMessage = `Error: ${message} --> ${e}`;
-    errorContext = {
-      errorType: e.name,
-      errorMessage: e.message,
-      errorStack: e.stack,
-    };
-    wrappedError = new CustomError(e.name, `${message}: ${e.message}`, e);
-  }
-
-  // also handle any nested errors from either the ResponseError or (more likely) other Errors
-  if (hasErrorCause(e)) {
-    const errorChain = getNestedErrorChain(e.cause);
-    if (errorChain.length) {
+    // something we caught that wasn't actually a ResponseError type but was passed in here anyway
+    errorMessage = `[${messagePrefix}] error: ${e}`;
+    if (e instanceof Error) {
+      // top-level error
       errorContext = {
-        ...errorContext,
-        errors: JSON.stringify(errorChain, null, 2),
+        errorType: e.name,
+        errorMessage: e.message,
+        errorStack: e.stack,
       };
+      // also handle any nested errors starting from the `cause` property
+      if (hasErrorCause(e)) {
+        const errorChain = getNestedErrorChain(e.cause);
+        if (errorChain.length) {
+          errorContext = {
+            ...errorContext,
+            errors: JSON.stringify(errorChain, null, 2),
+          };
+        }
+      }
     }
   }
 
-  logger.error(logErrorMessage, { ...errorContext, ...extra });
+<<<<<<< HEAD
+  logger.error(logErrorMessage, { ...errorContext });
 
+  logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
+=======
+  logger.error(errorMessage, { ...errorContext, ...sentryContext });
+>>>>>>> f1fa939a43678e4dd6d37c4bb93d2ea1dca5cd06
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
-  if (sendTelemetry) {
-    sentryCaptureException(wrappedError, {
+  if (Object.keys(sentryContext).length) {
+    sentryCaptureException(e, {
       captureContext: {
-        contexts: { response: { status_code: responseStatusCode } },
-        extra: { ...errorContext, ...extra },
+        ...sentryContext,
+        contexts: {
+          ...(sentryContext.contexts ?? {}),
+          response: { status_code: responseStatusCode },
+        },
+        extra: {
+          ...(sentryContext.extra ?? {}),
+          ...errorContext,
+        },
       },
     });
   }
@@ -252,7 +252,9 @@ async function showNotificationWithButtons(
       await buttonMap[selection]();
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
-      logError(e, `"${selection}" button callback`, {}, true);
+      logError(e, `"${selection}" button callback`, {
+        extra: { functionName: "showNotifcationWithButtons" },
+      });
     }
     // send telemetry for which button was clicked
     logUsage(UserEvent.NotificationButtonClicked, {

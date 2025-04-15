@@ -59,7 +59,6 @@ export function initSentry() {
     includeLocalVariables: true,
     transport: makeNodeTransport,
     stackParser: defaultStackParser,
-    ignoreErrors: ["Canceled"],
   });
 
   const scope = getSentryScope();
