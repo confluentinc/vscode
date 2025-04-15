@@ -573,7 +573,9 @@ export async function loadCCloudResources(
       // if we fail to load CCloud environments, we need to get as much information as possible as to
       // what went wrong since the user is effectively locked out of the CCloud resources for this org
       const msg = `Failed to load Confluent Cloud environments for the "${currentOrg?.name}" organization.`;
-      logError(e, "loading CCloud environments", {}, true);
+      logError(e, "loading CCloud environments", {
+        extra: { functionName: "loadCCloudResources" },
+      });
       showErrorNotificationWithButtons(msg);
     }
 

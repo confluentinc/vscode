@@ -31,12 +31,9 @@ export async function tryToCreateConnection(
     });
     return connection;
   } catch (error) {
-    logError(
-      error,
-      `${dryRun ? "testing" : "creating"} new connection:`,
-      { connectionId: spec.id! },
-      true,
-    );
+    logError(error, `${dryRun ? "testing" : "creating"} new connection:`, {
+      extra: { connectionId: spec.id! },
+    });
     throw error;
   }
 }
@@ -53,7 +50,7 @@ export async function tryToGetConnection(id: string): Promise<Connection | null>
       logger.debug("No connection found", { connectionId: id });
     } else {
       // only log the non-404 errors, since we expect a 404 if the connection doesn't exist
-      logError(error, "fetching connection", { connectionId: id }, true);
+      logError(error, "fetching connection", { extra: { connectionId: id } });
     }
   }
   return connection;
@@ -75,7 +72,7 @@ export async function tryToUpdateConnection(spec: ConnectionSpec): Promise<Conne
     logger.debug("updated connection:", { id: connection.id });
     return connection;
   } catch (error) {
-    logError(error, "updating connection", { connectionId: spec.id! }, true);
+    logError(error, "updating connection", { extra: { connectionId: spec.id! } });
     throw error;
   }
 }
@@ -91,7 +88,7 @@ export async function tryToDeleteConnection(id: string): Promise<void> {
       logger.debug("no connection found to delete:", { id });
       return;
     }
-    logError(error, "deleting connection", { connectionId: id }, true);
+    logError(error, "deleting connection", { extra: { connectionId: id } });
     throw error;
   }
 }

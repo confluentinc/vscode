@@ -31,7 +31,7 @@ export function registerCommandWithLogging(
       if (e instanceof Error) {
         // gather more (possibly-ResponseError) context and send to Sentry (only enabled in
         // production builds)
-        logError(e, `${commandName}`, { command: commandName }, true);
+        logError(e, `${commandName}`, { extra: { command: commandName } });
         // also show error notification to the user with default buttons
         showErrorNotificationWithButtons(`Error invoking command "${commandName}": ${e}`);
       }
