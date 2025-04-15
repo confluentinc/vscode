@@ -264,7 +264,7 @@ describe("errors.ts logError()", () => {
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
-    const extra = { foo: "bar" };
+    const extra = { extra: { functionName: "function" } }; // Replace with a valid property from ScopeContext
     const logMessage = "test message";
     await logError(error, logMessage, extra);
 
