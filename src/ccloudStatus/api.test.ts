@@ -44,7 +44,7 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sinon.assert.notCalled(logErrorStub);
   });
 
-  it("should return undefined and call logError() on a bad response", async () => {
+  it("should return function name and call logError() on a bad response", async () => {
     const fakeResponse = new Response("Bad Request", {
       status: 400,
       statusText: "Bad Request",
@@ -58,10 +58,11 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sinon.assert.calledOnce(logErrorStub);
     sinon.assert.calledWithMatch(
       logErrorStub,
-      sinon.match.instanceOf(Error),
+      sinon.match
+        .instanceOf(Error)
+        .and(sinon.match.has("message", "Failed to fetch Confluent Cloud status: 400 Bad Request")),
       "CCloud status",
-      {},
-      true,
+      { extra: { functionName: "fetchCCloudStatus" } },
     );
   });
 
@@ -75,7 +76,7 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sinon.assert.notCalled(logErrorStub);
   });
 
-  it("should return undefined and call logError when json parsing fails", async () => {
+  it("should return function name and call logError when json parsing fails", async () => {
     const fakeResponse = new Response(JSON.stringify("not json data"), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -87,16 +88,20 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     const result: types.CCloudStatusSummary | undefined = await fetchCCloudStatus();
 
     assert.strictEqual(result, undefined);
-    sinon.assert.calledWith(logErrorStub, parsingError, "CCloud status", {}, true);
+    sinon.assert.calledWith(logErrorStub, parsingError, "CCloud status", {
+      extra: { functionName: "fetchCCloudStatus" },
+    });
   });
 
-  it("should return undefined and log error for other unexpected errors", async () => {
+  it("should return function name and log error for other unexpected errors", async () => {
     const unexpectedError = new Error("Unexpected error");
     fetchStub.rejects(unexpectedError);
 
     const result: types.CCloudStatusSummary | undefined = await fetchCCloudStatus();
 
     assert.strictEqual(result, undefined);
-    sinon.assert.calledWith(logErrorStub, unexpectedError, "CCloud status", {}, true);
+    sinon.assert.calledWith(logErrorStub, unexpectedError, "CCloud status", {
+      extra: { functionName: "fetchCCloudStatus" },
+    });
   });
 });

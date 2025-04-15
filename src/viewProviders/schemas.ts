@@ -568,7 +568,9 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
     try {
       await this.treeView.reveal(schema, { focus: true, select: true });
     } catch (e) {
-      logError(e, "Error revealing schema in tree view", undefined, true);
+      logError(e, "Error revealing schema in tree view", {
+        extra: { functionName: "revealSchema" },
+      });
     }
   }
 
