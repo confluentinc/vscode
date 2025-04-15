@@ -267,11 +267,15 @@ describe("errors.ts logError()", () => {
     const logMessage = "test message";
     await logError(error, logMessage);
 
-    sinon.assert.calledWithMatch(loggerErrorSpy, `Error: ${logMessage} --> ${error}`, {
-      errorType: error.name,
-      errorMessage: error.message,
-      errorStack: error.stack,
-    });
+    sinon.assert.calledWithMatch(
+      loggerErrorSpy,
+      `[${logMessage}] error: ${error.name}: ${error.message}`,
+      {
+        errorType: error.name,
+        errorMessage: error.message,
+        errorStack: error.stack,
+      },
+    );
   });
 
   it("should truncate long 'body' values for ResponseErrors", async () => {
