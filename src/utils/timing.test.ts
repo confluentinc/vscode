@@ -6,11 +6,32 @@ import { IntervalPoller, pauseWithJitter } from "./timing";
 /** mocha tests over function pauseWithJitter */
 describe("pauseWithJitter", () => {
   it("should pause", async () => {
-    const start = Date.now();
-    await pauseWithJitter(20, 50);
-    // Give a little bit more padding for CI.
-    const elapsed = Date.now() - start;
-    assert.strictEqual(elapsed >= 20 && elapsed <= 55, true);
+    const clock = sinon.useFakeTimers();
+
+    try {
+      const minMs = 20;
+      const maxMs = 50;
+
+      // add callback to track when pauseWithJitter resolves
+      let resolved = false;
+      const promise = pauseWithJitter(minMs, maxMs).then(() => {
+        resolved = true;
+      });
+
+      // shouldn't resolve yet
+      assert.strictEqual(resolved, false, "resolved immediately");
+      // fast forward just before minMs
+      const firstJump = minMs - 1;
+      await clock.tickAsync(firstJump);
+      assert.strictEqual(resolved, false, "resolved too early");
+
+      // fast forward past the maxMs time; should now be resolved
+      await clock.tickAsync(maxMs - firstJump + 1);
+      await promise;
+      assert.strictEqual(resolved, true, "didn't resolve before maxMs time");
+    } finally {
+      clock.restore();
+    }
   });
 
   it("should throw on invalid inputs", () => {
