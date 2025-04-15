@@ -623,7 +623,7 @@
           "name": "Flink Artifacts",
           "visibility": "collapsed",
           "icon": "$(confluent-logo)",
-          "when": "confluent.flinkEnabled",
+          "when": "false",
           "contextualTitle": "Confluent: Flink Artifacts"
         },
         {
