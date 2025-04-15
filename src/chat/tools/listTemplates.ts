@@ -44,7 +44,7 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
       }
       templateStrings.push(
         new LanguageModelTextPart(
-          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}; inputOptions="${JSON.stringify(spec.options)}".`,
+          `id="${spec.name}"; display_name="${spec.display_name}"; description="${spec.description}"; inputOptions="${JSON.stringify(spec.options)}".`,
         ),
       );
     });
