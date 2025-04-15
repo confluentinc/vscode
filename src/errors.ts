@@ -258,7 +258,7 @@ async function showNotificationWithButtons(
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
       logError(e, `"${selection}" button callback`, {
-        extra: { functionName: "showNotifcationWithButtons" },
+        extra: { functionName: "showNotificationWithButtons" },
       });
     }
     // send telemetry for which button was clicked
