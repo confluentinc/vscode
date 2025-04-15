@@ -58,10 +58,11 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     sinon.assert.calledOnce(logErrorStub);
     sinon.assert.calledWithMatch(
       logErrorStub,
-      sinon.match.instanceOf(Error),
+      sinon.match
+        .instanceOf(Error)
+        .and(sinon.match.has("message", "Failed to fetch Confluent Cloud status: 400 Bad Request")),
       "CCloud status",
-      {},
-      true,
+      { extra: { functionName: "fetchCCloudStatus" } },
     );
   });
 
@@ -87,7 +88,9 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     const result: types.CCloudStatusSummary | undefined = await fetchCCloudStatus();
 
     assert.strictEqual(result, undefined);
-    sinon.assert.calledWith(logErrorStub, parsingError, "CCloud status", {}, true);
+    sinon.assert.calledWith(logErrorStub, parsingError, "CCloud status", {
+      extra: { functionName: "fetchCCloudStatus" },
+    });
   });
 
   it("should return undefined and log error for other unexpected errors", async () => {
@@ -97,6 +100,8 @@ describe("ccloudStatus/api.ts fetchCCloudStatus()", () => {
     const result: types.CCloudStatusSummary | undefined = await fetchCCloudStatus();
 
     assert.strictEqual(result, undefined);
-    sinon.assert.calledWith(logErrorStub, unexpectedError, "CCloud status", {}, true);
+    sinon.assert.calledWith(logErrorStub, unexpectedError, "CCloud status", {
+      extra: { functionName: "fetchCCloudStatus" },
+    });
   });
 });

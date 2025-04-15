@@ -109,7 +109,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
       topic_name: topic.name,
     });
   } catch (err) {
-    logError(err, "list topic configs", {}, true);
+    logError(err, "list topic configs", { extra: { error: {} } });
     vscode.window.showErrorMessage("Failed to retrieve topic configs");
     return;
   }
@@ -157,7 +157,7 @@ async function editTopicConfig(topic: KafkaTopic): Promise<void> {
         const errorBody = await err.response.json();
         formError = errorBody.message;
       } else {
-        logError(err, "update topic config", {}, true);
+        logError(err, "update topic config", { extra: { functionName: "validateOrUpdateConfig" } });
         if (err instanceof Error && err.message) formError = err.message;
       }
       return { success: false, message: formError };
