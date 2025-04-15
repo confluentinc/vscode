@@ -367,7 +367,17 @@ function parseErrorMessage(rawMessage: string): string {
 
 export function setProjectScaffoldListener(): vscode.Disposable {
   const disposable = projectScaffoldUri.event(async (uri: vscode.Uri) => {
-    const params = new URLSearchParams(uri.query);
+    // manually parse the URI query since URLSearchParams will attempt to decode it again
+    const params = new Map<string, string>();
+    if (uri.query) {
+      const parts = uri.query.split("&");
+      for (const part of parts) {
+        const [key, value] = part.split("=");
+        if (key && typeof value !== "undefined") {
+          params.set(key, value);
+        }
+      }
+    }
 
     const collection = params.get("collection");
     const template = params.get("template");
