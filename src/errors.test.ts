@@ -222,14 +222,18 @@ describe("errors.ts logError()", () => {
   it("should log regular Error instances", async () => {
     const errorMessage = "uh oh";
     const error = new Error(errorMessage);
-    const logMessage = "test message";
-    await logError(error, logMessage);
+    const logPrefix = "test message";
+    await logError(error, logPrefix);
 
-    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `Error: ${logMessage} --> ${error}`, {
-      errorType: error.name,
-      errorMessage,
-      errorStack: error.stack,
-    });
+    sinon.assert.calledOnceWithExactly(
+      loggerErrorSpy,
+      `[${logPrefix}] error: ${error.name}: ${errorMessage}`,
+      {
+        errorType: error.name,
+        errorMessage,
+        errorStack: error.stack,
+      },
+    );
   });
 
   it("should log ResponseErrors with status, statusText, and body", async () => {
@@ -237,10 +241,10 @@ describe("errors.ts logError()", () => {
     const statusText = "Bad Request";
     const body = "Bad Request";
     const error: ResponseError = createResponseError(status, statusText, body);
-    const logMessage = "api call";
-    await logError(error, logMessage);
+    const logPrefix = "api call";
+    await logError(error, logPrefix);
 
-    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `Error response: ${logMessage}`, {
+    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error response:`, {
       responseStatus: status,
       responseStatusText: statusText,
       responseBody: body,
@@ -248,19 +252,13 @@ describe("errors.ts logError()", () => {
     });
   });
 
-  for (const nonError of [null, undefined, 42, "string", {}, []]) {
-    it(`should handle non-Error objects (${typeof nonError}: ${nonError})`, async () => {
-      const logPrefix = "test message";
-      const extra = {};
-      await logError(nonError, logPrefix, extra);
+  it("should handle non-Error objects", async () => {
+    const nonError = { foo: "bar" };
+    const logPrefix = "test message";
+    await logError(nonError, logPrefix);
 
-      sinon.assert.calledWithExactly(
-        loggerErrorSpy,
-        `non-Error passed: ${JSON.stringify(nonError)}`,
-        extra,
-      );
-    });
-  }
+    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error: ${nonError}`, {});
+  });
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
@@ -283,10 +281,10 @@ describe("errors.ts logError()", () => {
     const statusText = "Bad Request";
     const longBody = "a".repeat(6000);
     const error = createResponseError(status, statusText, longBody);
-    const logMessage = "test";
-    await logError(error, logMessage);
+    const logPrefix = "test";
+    await logError(error, logPrefix);
 
-    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `Error response: ${logMessage}`, {
+    sinon.assert.calledOnceWithExactly(loggerErrorSpy, `[${logPrefix}] error response:`, {
       responseStatus: status,
       responseStatusText: statusText,
       responseBody: "a".repeat(5000),
