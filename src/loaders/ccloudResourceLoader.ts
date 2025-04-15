@@ -56,7 +56,7 @@ export class CCloudResourceLoader extends ResourceLoader {
   /** If in progress of loading the coarse resources, the promise doing so. */
   private currentlyCoarseLoadingPromise: Promise<void> | null = null;
 
-  /** The user's current ccloud organization. Only determined when needed, see {@link getOrganizationId}. */
+  /** The user's current ccloud organization. Determined along with coarse resources. */
   private organizationId: string | null = null;
 
   // Singleton class. Use getInstance() to get the singleton instance.
@@ -67,6 +67,10 @@ export class CCloudResourceLoader extends ResourceLoader {
     }
     super();
 
+    this.registerEventListeners();
+  }
+
+  private registerEventListeners(): void {
     // When the ccloud connection state changes, reset the loader's state.
     const ccloudConnectedSub: Disposable = ccloudConnected.event(async (connected: boolean) => {
       this.reset();
@@ -82,6 +86,7 @@ export class CCloudResourceLoader extends ResourceLoader {
 
   protected deleteCoarseResources(): void {
     getResourceManager().deleteCCloudResources();
+    this.organizationId = null;
   }
 
   /**
@@ -106,11 +111,6 @@ export class CCloudResourceLoader extends ResourceLoader {
    * and cached more closely to when they are needed.
    */
   private async ensureCoarseResourcesLoaded(forceDeepRefresh: boolean = false): Promise<void> {
-    // TODO make this private, fix all the callers via ensuring there's an adequate
-    // ResourceLoader API covering the use case end-user code is directly calling
-    // ensureCoarseResourcesLoaded().
-    // Issue https://github.com/confluentinc/vscode/issues/568
-
     // If caller requested a deep refresh, reset the loader's state so that we fall through to
     // re-fetching the coarse resources.
     if (forceDeepRefresh) {
@@ -151,8 +151,12 @@ export class CCloudResourceLoader extends ResourceLoader {
     try {
       const resourceManager = getResourceManager();
 
-      // Queue up to store the environments in the resource manager
-      const environments: CCloudEnvironment[] = await getEnvironments();
+      // Do the GraphQL fetches concurrently.
+      // (this.getOrganizationId() internally caches its result, so we don't need to worry about)
+      const gqlResults = await Promise.all([getEnvironments(), this.getOrganizationId()]);
+
+      // Store the environments, clusters, schema registries in the resource manager
+      const environments: CCloudEnvironment[] = gqlResults[0];
       await resourceManager.setCCloudEnvironments(environments);
 
       // Collect all of the CCloudKafkaCluster and CCloudSchemaRegistries into individual arrays
@@ -267,6 +271,12 @@ export class CCloudResourceLoader extends ResourceLoader {
     );
   }
 
+  /**
+   * Get the current organization ID either from cached value or
+   * directly from the sidecar GraphQL API.
+   *
+   * @returns The current organization ID.
+   */
   public async getOrganizationId(): Promise<string> {
     if (this.organizationId) {
       return this.organizationId;
