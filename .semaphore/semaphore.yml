@@ -39,7 +39,6 @@ blocks:
           type: s1-prod-ubuntu24-04-amd64-1
       prologue: &build-test-prologue
         commands:
-          - checkout
           - make ci-bin-sem-cache-restore
           - |
             if [[ "${SEMAPHORE_ORGANIZATION_URL}" == *".semaphoreci.com" ]]; then
@@ -81,7 +80,6 @@ blocks:
           type: s1-prod-windows
       prologue:
         commands:
-          - checkout
           - make ci-bin-sem-cache-restore
           - $Env:PATH += ";C:\Program Files\Git\bin"
           - $Env:PATH += ";C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64"
