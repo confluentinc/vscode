@@ -1,5 +1,6 @@
 // NOTE: property descriptions below taken from package.json help text, not currently available at
 // https://code.visualstudio.com/api/references/contribution-points
+
 /** An object in the package.json `languageModelTools`. */
 export interface LanguageModelToolContribution {
   /**
