@@ -76,11 +76,11 @@ describe("DirectConnectionManager behavior", () => {
     sandbox.stub(watcher, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // reset the singleton instance
     DirectConnectionManager["instance"] = null;
     // wipe out any stored connections
-    getResourceManager().deleteDirectConnections();
+    await getResourceManager().deleteDirectConnections();
 
     sandbox.restore();
   });
