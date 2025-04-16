@@ -4,6 +4,7 @@ import { TEST_LOCAL_KAFKA_CLUSTER, TEST_LOCAL_SCHEMA_REGISTRY } from "../tests/u
 import {
   TEST_DIRECT_CONNECTION,
   TEST_DIRECT_CONNECTION_FORM_SPEC,
+  TEST_DIRECT_CONNECTION_ID,
 } from "../tests/unit/testResources/connection";
 import { getTestExtensionContext } from "../tests/unit/testUtils";
 import {
@@ -50,6 +51,10 @@ describe("DirectConnectionManager behavior", () => {
 
   let stubbedConnectionsResourceApi: sinon.SinonStubbedInstance<ConnectionsResourceApi>;
 
+  // (these tests should mainly be using TEST_DIRECT_CONNECTION_ID, but we'll track just to be safe)
+  /** {@link ConnectionId}s stored during tests that need to be deleted after each test. */
+  const testConnectionIdsToCleanUp = new Set<ConnectionId>();
+
   before(async () => {
     // DirectConnectionManager requires the extension context to be set
     await getTestExtensionContext();
@@ -76,11 +81,15 @@ describe("DirectConnectionManager behavior", () => {
     sandbox.stub(watcher, "waitForConnectionToBeStable").resolves(TEST_DIRECT_CONNECTION);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // reset the singleton instance
     DirectConnectionManager["instance"] = null;
-    // wipe out any stored connections
-    getResourceManager().deleteDirectConnections();
+    // clean up after each test -- don't use rm.deleteDirectConnections() here since it may affect
+    // other tests
+    const rm = getResourceManager();
+    await Promise.all([
+      ...Array.from(testConnectionIdsToCleanUp).map((id) => rm.deleteDirectConnection(id)),
+    ]);
 
     sandbox.restore();
   });
@@ -96,8 +105,9 @@ describe("DirectConnectionManager behavior", () => {
       schema_registry: testSpec.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: testSpec.name,
-      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      id: TEST_DIRECT_CONNECTION_ID,
     });
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
 
     assert.ok(result.connection, JSON.stringify(result));
     assert.ok(tryToCreateConnectionStub.calledOnce);
@@ -112,13 +122,16 @@ describe("DirectConnectionManager behavior", () => {
     testSpec.schema_registry = undefined;
     const createdConnection = { ...TEST_DIRECT_CONNECTION, spec: testSpec };
     tryToCreateConnectionStub.resolves(createdConnection);
+
     const result = await DirectConnectionManager.getInstance().createConnection({
       kafka_cluster: testSpec.kafka_cluster,
       schema_registry: testSpec.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: testSpec.name,
-      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      id: TEST_DIRECT_CONNECTION_ID,
     });
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
+
     assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
     assert.ok(tryToCreateConnectionStub.calledOnce);
@@ -136,12 +149,13 @@ describe("DirectConnectionManager behavior", () => {
     });
 
     const result = await DirectConnectionManager.getInstance().createConnection({
-      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
       kafka_cluster: PLAIN_LOCAL_KAFKA_SR_SPEC.kafka_cluster,
       schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
+      id: TEST_DIRECT_CONNECTION_ID,
     });
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
 
     assert.ok(result.connection);
     // don't use .calledOnceWith(testSpec) because the `id` will change
@@ -159,8 +173,9 @@ describe("DirectConnectionManager behavior", () => {
       schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
       formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
       name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
-      id: TEST_DIRECT_CONNECTION.spec.id as ConnectionId,
+      id: TEST_DIRECT_CONNECTION_ID,
     });
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
 
     assert.ok(!result.connection);
     assert.ok(result.errorMessage);
@@ -181,10 +196,11 @@ describe("DirectConnectionManager behavior", () => {
         schema_registry: PLAIN_LOCAL_KAFKA_SR_SPEC.schema_registry,
         formConnectionType: TEST_DIRECT_CONNECTION_FORM_SPEC.formConnectionType,
         name: PLAIN_LOCAL_KAFKA_SR_SPEC.name,
-        id: TEST_DIRECT_CONNECTION.id as ConnectionId,
+        id: TEST_DIRECT_CONNECTION_ID,
       },
       true, // dryRun
     );
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
 
     assert.ok(result.connection);
     assert.ok(!result.errorMessage);
@@ -196,6 +212,7 @@ describe("DirectConnectionManager behavior", () => {
   it("updateConnection() should store the updated connection spec after successful response from the sidecar", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
 
     const newName = "Updated Connection";
     const updatedSpec: CustomConnectionSpec = {
@@ -220,6 +237,7 @@ describe("DirectConnectionManager behavior", () => {
   it("updateConnection() should not store the updated connection spec if the sidecar response is unsuccessful", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
 
     const newName = "Updated Connection";
     const updatedSpec: CustomConnectionSpec = {
@@ -243,6 +261,7 @@ describe("DirectConnectionManager behavior", () => {
   it("rehydrateConnections() should inform the sidecar of new/untracked connections", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
     // stub the sidecar not knowing about it
     stubbedConnectionsResourceApi.gatewayV1ConnectionsGet.resolves(fakeConnectionsList);
 
@@ -259,6 +278,7 @@ describe("DirectConnectionManager behavior", () => {
   it("rehydrateConnections() should not inform the sidecar of existing/tracked connections", async () => {
     // preload a direct connection
     await getResourceManager().addDirectConnection(TEST_DIRECT_CONNECTION_FORM_SPEC);
+    testConnectionIdsToCleanUp.add(TEST_DIRECT_CONNECTION_ID);
     // stub the sidecar already tracking it
     const connectionsList: ConnectionsList = {
       ...fakeConnectionsList,
