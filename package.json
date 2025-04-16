@@ -502,6 +502,24 @@
         "icon": "$(confluent-logo)",
         "title": "Manage API Keys in Confluent Cloud",
         "category": "Confluent: Resources"
+      },
+      {
+        "command": "confluent.document.setCCloudOrg",
+        "icon": "$(confluent-logo)",
+        "title": "Set CCloud Organization for Flink Statement",
+        "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.document.flinksql.setCCloudEnv",
+        "icon": "$(confluent-logo)",
+        "title": "Set CCloud Environment for Flink Statement",
+        "category": "Confluent: Flink SQL"
+      },
+      {
+        "command": "confluent.document.flinksql.setCCloudRegionProvider",
+        "icon": "$(confluent-logo)",
+        "title": "Set CCloud Region/Provider for Flink Statement",
+        "category": "Confluent: Flink SQL"
       }
     ],
     "configuration": {
@@ -905,6 +923,18 @@
         },
         {
           "command": "confluent.openCCloudApiKeysUrl",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.setCCloudOrg",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.setCCloudEnv",
+          "when": "false"
+        },
+        {
+          "command": "confluent.document.flinksql.setCCloudRegionProvider",
           "when": "false"
         }
       ],
