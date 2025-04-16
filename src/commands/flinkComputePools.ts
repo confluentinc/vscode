@@ -1,11 +1,15 @@
-import { commands, Disposable } from "vscode";
+import { commands, ConfigurationTarget, Disposable, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   currentFlinkArtifactsPoolChanged,
   currentFlinkStatementsResourceChanged,
 } from "../emitters";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { flinkComputePoolQuickPickWithViewProgress } from "../quickpicks/flinkComputePools";
+import {
+  flinkComputePoolQuickPickWithViewProgress,
+  flinkComputePoolQuickPick,
+} from "../quickpicks/flinkComputePools";
+import { getFlinkSqlSettings } from "../flinkSql/languageClient";
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
@@ -74,5 +78,37 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
       "confluent.artifacts.flink-compute-pool.select",
       selectPoolForArtifactsViewCommand,
     ),
+    registerCommandWithLogging("confluent.flink.configureLanguageServer", async () => {
+      // POC only: one option is saving workspace-level settings
+      const settings = getFlinkSqlSettings();
+
+      const computePool = await flinkComputePoolQuickPick();
+      if (computePool === undefined) return;
+
+      const catalog = await window.showInputBox({
+        prompt: "Enter Flink SQL catalog name",
+        value: settings.catalog,
+      });
+      if (catalog === undefined) return;
+
+      const database = await window.showInputBox({
+        prompt: "Enter Flink SQL database name",
+        value: settings.database,
+      });
+      if (database === undefined) return;
+
+      const config: Record<string, any> = await workspace.getConfiguration();
+      const flinkConfig = config["confluent.flink"] || {};
+      console.log("Updating Flink SQL settings", flinkConfig);
+
+      flinkConfig.catalog = catalog;
+      flinkConfig["database"] = database;
+      flinkConfig["computePoolId"] = computePool.id;
+      await workspace
+        .getConfiguration()
+        .update("confluent.flink", flinkConfig, ConfigurationTarget.Workspace);
+
+      window.showInformationMessage("Flink SQL settings updated.");
+    }),
   ];
 }
