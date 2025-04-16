@@ -61,7 +61,7 @@ export class FlinkStatementStatus {
   detail: string | undefined;
 
   // TODO refine in the future.
-  traits!: any;
+  traits!: FlinkTraits;
   scalingStatus!: any;
 
   constructor(props: Pick<FlinkStatementStatus, "phase" | "detail" | "traits" | "scalingStatus">) {
@@ -69,6 +69,25 @@ export class FlinkStatementStatus {
     this.detail = props.detail;
     this.traits = props.traits;
     this.scalingStatus = props.scalingStatus;
+  }
+}
+
+export class FlinkTraits {
+  sqlKind: string; // CREATE_TABLE_AS, SELECT, ...
+  bounded: boolean;
+  appendOnly: boolean;
+  schema: any; // todo flesh out
+
+  constructor(props: Pick<FlinkTraits, "sqlKind" | "bounded" | "appendOnly" | "schema">) {
+    this.sqlKind = props.sqlKind;
+    this.bounded = props.bounded;
+    this.appendOnly = props.appendOnly;
+    this.schema = props.schema;
+  }
+
+  /** "CREATE_TABLE_AS" -> "CREATE TABLE AS" */
+  get sqlKindDisplay(): string {
+    return this.sqlKind.replace(/_/g, " ");
   }
 }
 

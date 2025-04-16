@@ -2,7 +2,10 @@ import * as assert from "assert";
 
 import { ThemeIcon } from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "../../tests/unit/testResources";
-import { TEST_CCLOUD_FLINK_STATEMENT } from "../../tests/unit/testResources/flinkStatement";
+import {
+  createFlinkStatement,
+  TEST_CCLOUD_FLINK_STATEMENT,
+} from "../../tests/unit/testResources/flinkStatement";
 import { ConnectionType } from "../clients/sidecar";
 import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
 import {
@@ -121,11 +124,6 @@ describe("FlinkStatementTreeItem", () => {
   });
 });
 
-function makeStatus(status: string): FlinkStatementStatus {
-  return {
-    phase: status,
-    detail: "",
-    traits: {},
-    scalingStatus: {},
-  };
+function makeStatus(phase: string): FlinkStatementStatus {
+  return createFlinkStatement({ phase: phase }).status;
 }
