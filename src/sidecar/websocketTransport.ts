@@ -25,10 +25,10 @@ class WebsocketMessageReader implements MessageReader {
     this.socket.on("message", (data: Buffer | string) => {
       try {
         const strData = typeof data === "string" ? data : data.toString("utf8");
-        logger.info(`Received message from language server: ${strData}`);
+        logger.debug(`Received message from language server: ${strData}`);
         const message = JSON.parse(strData);
         this.messageEmitter.fire(message);
-        logger.info("Message emitted to language client");
+        logger.debug("Message emitted to language client");
       } catch (e) {
         logger.error(`Error parsing LSP message: ${e}`);
         this.errorEmitter.fire(e as Error);
@@ -36,7 +36,7 @@ class WebsocketMessageReader implements MessageReader {
     });
 
     this.socket.on("close", () => {
-      logger.info("WebSocket connection closed");
+      logger.debug("WebSocket connection closed");
       this.closeEmitter.fire();
     });
 
@@ -52,7 +52,7 @@ class WebsocketMessageReader implements MessageReader {
 
   public listen(callback: DataCallback): Disposable {
     return this.messageEmitter.event((event) => {
-      logger.info(`Calling callback with message: ${JSON.stringify(event)}`);
+      logger.debug(`Calling callback with message: ${JSON.stringify(event)}`);
       callback(event);
     });
   }
@@ -84,7 +84,7 @@ class WebsocketMessageWriter implements MessageWriter {
   public async write(message: Message): Promise<void> {
     try {
       const messageStr = JSON.stringify(message);
-      logger.info(`Sending message to language server: ${messageStr}`);
+      logger.debug(`Sending message to language server: ${messageStr}`);
 
       return new Promise<void>((resolve, reject) => {
         this.socket.send(messageStr, (error) => {
@@ -93,7 +93,7 @@ class WebsocketMessageWriter implements MessageWriter {
             this.errorEmitter.fire([error, message, undefined]);
             reject(error);
           } else {
-            logger.info("Message sent successfully");
+            logger.debug("Message sent successfully");
             resolve();
           }
         });
@@ -126,13 +126,13 @@ export class WebsocketTransport implements MessageTransports {
   public writer: MessageWriter;
 
   constructor(socket: WebSocket) {
-    logger.info("Creating websocket transport");
+    logger.debug("Creating websocket transport");
     this.reader = new WebsocketMessageReader(socket);
     this.writer = new WebsocketMessageWriter(socket);
   }
 
   public dispose(): void {
-    logger.info("Disposing websocket transport");
+    logger.debug("Disposing websocket transport");
     this.reader.dispose();
     this.writer.dispose();
   }
