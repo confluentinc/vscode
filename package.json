@@ -49,17 +49,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [
-      {
-        "id": "flinksql",
-        "extensions": [
-          ".flinksql"
-        ],
-        "aliases": [
-          "Flink SQL"
-        ]
-      }
-    ],
     "authentication": [
       {
         "id": "confluent-cloud-auth-provider",
@@ -227,6 +216,12 @@
         "command": "confluent.statements.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
+        "category": "Confluent: Flink Statements"
+      },
+      {
+        "command": "confluent.flink.configureLanguageServer",
+        "icon": "$(settings-gear)",
+        "title": "Configure Flink SQL Language Server",
         "category": "Confluent: Flink Statements"
       },
       {
@@ -551,6 +546,48 @@
           "tags": [
             "experimental"
           ]
+        },
+        "confluent.flink": {
+          "type": "object",
+          "title": "Flink SQL",
+          "properties": {
+            "catalog": {
+              "type": "string",
+              "default": "",
+              "description": "Flink SQL catalog to use"
+            },
+            "database": {
+              "type": "string",
+              "default": "",
+              "description": "Flink SQL database to use"
+            },
+            "computePoolId": {
+              "type": "string",
+              "default": "",
+              "description": "ID of the compute pool to use for Flink SQL operations"
+            },
+            "region": {
+              "type": "string",
+              "default": "us-east-1",
+              "description": "Region for Flink SQL services",
+              "enum": [
+                "us-east-1",
+                "us-west-2",
+                "eu-west-1",
+                "ap-southeast-2"
+              ]
+            },
+            "provider": {
+              "type": "string",
+              "default": "aws",
+              "description": "Cloud provider for Flink SQL services",
+              "enum": [
+                "aws",
+                "gcp",
+                "azure"
+              ]
+            }
+          }
         }
       }
     },

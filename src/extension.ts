@@ -79,6 +79,10 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import {
+  initializeLanguageClient,
+  registerFlinkSqlConfigListener,
+} from "./flinkSql/languageClient";
 import { ccloudConnected } from "./emitters";
 const logger = new Logger("extension");
 
@@ -185,17 +189,33 @@ async function _activateExtension(
 
     if (flinkEnabled && isAuthenticated) {
       logger.info("User authenticated and Flink enabled, initializing language client...");
-    try {
-      const languageClient = await initializeLanguageClient();
-        // const configListener = registerFlinkSqlConfigListener();
-        flinkSqlDisposables = [languageClient /* configListener*/];
+      try {
+        const languageClient = await initializeLanguageClient();
+        const configListener = registerFlinkSqlConfigListener();
+        flinkSqlDisposables = [languageClient, configListener];
         context.subscriptions.push(...flinkSqlDisposables);
-    } catch (e) {
-      logger.error(`Error initializing FlinkSQL language client: ${e}`);
-    }
+        // POC: we could ask users to set up/update the language server config here if they haven't already
+        vscode.window
+          .showWarningMessage(
+            "FlinkSQL Language Server configuration required",
+            "Configure",
+            "Cancel",
+          )
+          .then((selection) => {
+            if (selection === "Configure") {
+              vscode.commands.executeCommand("confluent.flink.configureLanguageServer");
+            } else if (selection === "Cancel") {
+              logger.info("Flink SQL Language Server configuration cancelled");
+              languageClient.dispose();
+              configListener.dispose();
+            }
+          });
+      } catch (e) {
+        logger.error(`Error initializing FlinkSQL language client: ${e}`);
+      }
     } else if (flinkEnabled) {
       logger.info("Flink enabled but waiting for authentication to initialize language client");
-  }
+    }
   };
   const authListener = ccloudConnected.event(async (isConnected) => {
     await initFlinkSqlFeatures(isConnected);
