@@ -771,7 +771,8 @@ describe("ResourceManager direct connection methods", function () {
     ];
     testConnectionIdsToCleanUp.add(id1);
     testConnectionIdsToCleanUp.add(id2);
-    await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
+    await rm.addDirectConnection(specs[0]);
+    await rm.addDirectConnection(specs[1]);
 
     // make sure they exist
     let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
