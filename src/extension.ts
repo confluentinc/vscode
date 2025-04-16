@@ -19,6 +19,7 @@ import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
 import { registerDiffCommands } from "./commands/diffs";
 import { registerDockerCommands } from "./commands/docker";
+import { registerDocumentCommands } from "./commands/documents";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
@@ -229,6 +230,7 @@ async function _activateExtension(
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
     ...registerFlinkStatementCommands(),
+    ...registerDocumentCommands(),
   ];
   logger.info("Commands registered");
 
