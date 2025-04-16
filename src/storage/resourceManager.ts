@@ -738,7 +738,10 @@ export class ResourceManager {
   }
 
   async deleteDirectConnections(): Promise<void> {
-    await this.storage.deleteSecret(SecretStorageKeys.DIRECT_CONNECTIONS);
+    const key = SecretStorageKeys.DIRECT_CONNECTIONS;
+    return await this.runWithMutex(key, async () => {
+      await this.storage.deleteSecret(key);
+    });
   }
 }
 
