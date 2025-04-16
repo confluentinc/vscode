@@ -2,8 +2,9 @@ import { ConnectionType } from "../../../src/clients/sidecar";
 import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import {
   FlinkStatement,
+  FlinkStatementMetadata,
   FlinkStatementStatus,
-  FlinkTraits,
+  FlinkStatementTraits,
 } from "../../../src/models/flinkStatement";
 import { EnvironmentId } from "../../../src/models/resource";
 import { TEST_CCLOUD_ENVIRONMENT_ID } from "./environments";
@@ -28,11 +29,14 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT_ID,
     computePoolId: overrides.computePoolId || TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
     name: overrides.name || "statement0",
-
+    metadata: new FlinkStatementMetadata({
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
     status: new FlinkStatementStatus({
       phase: overrides.phase || "RUNNING",
       detail: overrides.detail || "Running",
-      traits: new FlinkTraits({
+      traits: new FlinkStatementTraits({
         sqlKind: overrides.sqlKind || "SELECT",
         bounded: true,
         appendOnly: true,
@@ -40,6 +44,5 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
       }),
       scalingStatus: {},
     }),
-    ...overrides,
   });
 }

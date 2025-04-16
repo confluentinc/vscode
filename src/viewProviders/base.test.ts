@@ -3,7 +3,10 @@ import * as sinon from "sinon";
 import { Disposable, EventEmitter, TreeItem, window } from "vscode";
 import { TEST_CCLOUD_ENVIRONMENT } from "../../tests/unit/testResources/environments";
 import { TEST_CCLOUD_FLINK_COMPUTE_POOL } from "../../tests/unit/testResources/flinkComputePool";
-import { TEST_CCLOUD_FLINK_STATEMENT } from "../../tests/unit/testResources/flinkStatement";
+import {
+  createFlinkStatement,
+  TEST_CCLOUD_FLINK_STATEMENT,
+} from "../../tests/unit/testResources/flinkStatement";
 import { getTestExtensionContext } from "../../tests/unit/testUtils";
 import { ConnectionType } from "../clients/sidecar";
 import * as contextValues from "../context/values";
@@ -392,10 +395,5 @@ describe("viewProviders/base.ts BaseViewProvider setSearch()", () => {
 });
 
 function makeStatus(phase: string): FlinkStatementStatus {
-  return new FlinkStatementStatus({
-    phase,
-    detail: phase,
-    traits: {},
-    scalingStatus: {},
-  });
+  return createFlinkStatement({ phase: phase }).status;
 }

@@ -13,7 +13,11 @@ import { getCurrentOrganization } from "../graphql/organizations";
 import { Logger } from "../logging";
 import { CCloudEnvironment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { FlinkStatement } from "../models/flinkStatement";
+import {
+  FlinkStatement,
+  FlinkStatementMetadata,
+  FlinkStatementTraits,
+} from "../models/flinkStatement";
 import { CCloudKafkaCluster } from "../models/kafkaCluster";
 import { EnvironmentId, IFlinkQueryable, isCCloud } from "../models/resource";
 import { CCloudSchemaRegistry } from "../models/schemaRegistry";
@@ -453,16 +457,32 @@ function restFlinkStatementToModelFlinkStatement(
   // but is really a SqlV1StatementSpec.
   const spec: SqlV1StatementSpec = restFlinkStatement.spec as SqlV1StatementSpec;
 
+  const status = restFlinkStatement.status;
+  const responseTraits = status.traits;
+
+  const modelTraits: FlinkStatementTraits | undefined = responseTraits
+    ? new FlinkStatementTraits({
+        sqlKind: responseTraits.sql_kind,
+        bounded: responseTraits.is_bounded,
+        appendOnly: responseTraits.is_append_only,
+        schema: responseTraits.schema,
+      })
+    : undefined;
+
   return new FlinkStatement({
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,
     environmentId: restFlinkStatement.environment_id as EnvironmentId,
     computePoolId: spec.compute_pool_id!,
     name: restFlinkStatement.name,
+    metadata: new FlinkStatementMetadata({
+      createdAt: restFlinkStatement.metadata.created_at,
+      updatedAt: restFlinkStatement.metadata.updated_at,
+    }),
     status: {
       phase: restFlinkStatement.status.phase,
       detail: restFlinkStatement.status.detail,
-      traits: restFlinkStatement.status.traits,
+      traits: modelTraits,
       scalingStatus: restFlinkStatement.status.scaling_status,
     },
   });

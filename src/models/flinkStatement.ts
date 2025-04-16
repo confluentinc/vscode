@@ -1,6 +1,7 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
+import { makeToolTip } from "../utils/tooltip";
 import { IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
@@ -15,15 +16,22 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   /** The flink compute pool that maybe is running/ran the statement. */
   computePoolId: string | undefined;
 
-  name!: string;
-  status!: FlinkStatementStatus;
+  name: string;
+  metadata: FlinkStatementMetadata;
+  status: FlinkStatementStatus;
 
   // TODO: add more properties as needed
 
   constructor(
     props: Pick<
       FlinkStatement,
-      "connectionId" | "connectionType" | "environmentId" | "computePoolId" | "name" | "status"
+      | "connectionId"
+      | "connectionType"
+      | "environmentId"
+      | "computePoolId"
+      | "name"
+      | "metadata"
+      | "status"
     >,
   ) {
     this.connectionId = props.connectionId;
@@ -31,11 +39,12 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
     this.environmentId = props.environmentId;
     this.computePoolId = props.computePoolId;
     this.name = props.name;
+    this.metadata = props.metadata;
     this.status = props.status;
   }
 
   searchableText(): string {
-    return `${this.name} ${this.phase}`;
+    return `${this.name} ${this.phase} ${this.sqlKindDisplay}`;
   }
 
   /**
@@ -53,13 +62,37 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   get phase(): string {
     return this.status.phase;
   }
+
+  get sqlKindDisplay(): string {
+    return this.status.traits?.sqlKindDisplay || "";
+  }
+
+  get createdAt(): Date | undefined {
+    return this.metadata.createdAt;
+  }
+
+  get updatedAt(): Date | undefined {
+    return this.metadata.updatedAt;
+  }
+}
+
+/** Model for the interesting bits of the `metadata` subfield of Flink statement. */
+export class FlinkStatementMetadata {
+  createdAt?: Date;
+  updatedAt?: Date;
+  // Need to see example of labels to know how they are structured.
+
+  constructor(props: Pick<FlinkStatementMetadata, "createdAt" | "updatedAt">) {
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
 }
 
 /** Model for the `status` subfield of a Flink statement. */
 export class FlinkStatementStatus {
   phase: string;
   detail: string | undefined;
-  traits: FlinkTraits;
+  traits?: FlinkStatementTraits;
   // TODO refine in the future.
   scalingStatus!: any;
 
@@ -71,13 +104,13 @@ export class FlinkStatementStatus {
   }
 }
 
-export class FlinkTraits {
-  sqlKind: string; // CREATE_TABLE_AS, SELECT, ...
-  bounded: boolean;
-  appendOnly: boolean;
+export class FlinkStatementTraits {
+  sqlKind?: string; // CREATE_TABLE_AS, SELECT, ...
+  bounded?: boolean;
+  appendOnly?: boolean;
   schema: any; // todo flesh out
 
-  constructor(props: Pick<FlinkTraits, "sqlKind" | "bounded" | "appendOnly" | "schema">) {
+  constructor(props: Pick<FlinkStatementTraits, "sqlKind" | "bounded" | "appendOnly" | "schema">) {
     this.sqlKind = props.sqlKind;
     this.bounded = props.bounded;
     this.appendOnly = props.appendOnly;
@@ -86,7 +119,7 @@ export class FlinkTraits {
 
   /** "CREATE_TABLE_AS" -> "CREATE TABLE AS" */
   get sqlKindDisplay(): string {
-    return this.sqlKind.replace(/_/g, " ");
+    return this.sqlKind ? this.sqlKind.replace(/_/g, " ") : "";
   }
 }
 
@@ -105,7 +138,15 @@ export class FlinkStatementTreeItem extends TreeItem {
     this.iconPath = createFlinkStatementIcon(resource.phase);
     this.description = resource.status.detail;
 
-    // TODO: add tooltip
+    this.tooltip = makeToolTip("Flink Statement", resource, [
+      ["Kind", resource.sqlKindDisplay],
+      ["Status", resource.phase],
+      ["Created At", resource.createdAt?.toLocaleString()],
+      ["Updated At", resource.updatedAt?.toLocaleString()],
+      ["Environment", resource.environmentId],
+      ["Compute Pool", resource.computePoolId],
+      ["Detail", resource.status.detail],
+    ]);
   }
 }
 

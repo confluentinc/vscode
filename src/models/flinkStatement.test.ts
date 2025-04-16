@@ -1,13 +1,11 @@
 import * as assert from "assert";
 
 import { ThemeIcon } from "vscode";
-import { TEST_CCLOUD_ENVIRONMENT_ID } from "../../tests/unit/testResources";
 import {
   createFlinkStatement,
   TEST_CCLOUD_FLINK_STATEMENT,
 } from "../../tests/unit/testResources/flinkStatement";
-import { ConnectionType } from "../clients/sidecar";
-import { CCLOUD_CONNECTION_ID, IconNames } from "../constants";
+import { IconNames } from "../constants";
 import {
   FlinkStatement,
   FlinkStatementStatus,
@@ -21,14 +19,7 @@ import {
 
 describe("FlinkStatement", () => {
   it("uses name as id", () => {
-    const statement = new FlinkStatement({
-      connectionId: CCLOUD_CONNECTION_ID,
-      connectionType: ConnectionType.Ccloud,
-      environmentId: TEST_CCLOUD_ENVIRONMENT_ID,
-      computePoolId: TEST_CCLOUD_FLINK_STATEMENT.computePoolId,
-      name: "my-statement",
-      status: makeStatus("RUNNING"),
-    });
+    const statement = createFlinkStatement({ name: "statement0" });
 
     assert.strictEqual(statement.id, statement.name, "Expect name and id to be the same");
   });
