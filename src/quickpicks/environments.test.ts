@@ -54,7 +54,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
   it("should show information message and return undefined when not authenticated", async function () {
     hasCCloudAuthSessionStub.returns(false);
 
-    const result = await ccloudEnvironmentQuickPick(undefined);
+    const result = await ccloudEnvironmentQuickPick();
 
     assert.strictEqual(result, undefined);
     sinon.assert.calledOnce(showInfoStub);
@@ -65,7 +65,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
   it("should show information message and return undefined when no environments are found", async function () {
     loaderStub.getEnvironments.resolves([]);
 
-    const result = await ccloudEnvironmentQuickPick(undefined);
+    const result = await ccloudEnvironmentQuickPick();
 
     assert.strictEqual(result, undefined);
     sinon.assert.calledOnce(showInfoStub);
@@ -74,7 +74,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
   });
 
   it("should correctly set quickpick options", async function () {
-    await ccloudEnvironmentQuickPick(undefined);
+    await ccloudEnvironmentQuickPick();
 
     sinon.assert.calledOnce(showQuickPickStub);
     const options = showQuickPickStub.firstCall.args[1];
@@ -82,14 +82,14 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
   });
 
   it("should get environments from the CCloudResourceLoader", async function () {
-    await ccloudEnvironmentQuickPick(undefined);
+    await ccloudEnvironmentQuickPick();
 
     sinon.assert.calledOnce(getInstanceStub);
     sinon.assert.calledOnce(loaderStub.getEnvironments);
   });
 
   it("should show quickpick with environments and appropriate icons", async function () {
-    await ccloudEnvironmentQuickPick(undefined);
+    await ccloudEnvironmentQuickPick();
 
     sinon.assert.calledOnce(showQuickPickStub);
 
@@ -119,7 +119,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
       description: noFlinkEnvironment.id,
     });
 
-    const result = await ccloudEnvironmentQuickPick(undefined);
+    const result = await ccloudEnvironmentQuickPick();
 
     assert.strictEqual(result, noFlinkEnvironment);
   });
@@ -128,7 +128,7 @@ describe("quickpicks/environments.ts ccloudEnvironmentQuickPick() / flinkCcloudE
     // User cancels the quickpick
     showQuickPickStub.resolves(undefined);
 
-    const result = await ccloudEnvironmentQuickPick(undefined);
+    const result = await ccloudEnvironmentQuickPick();
 
     assert.strictEqual(result, undefined);
   });
