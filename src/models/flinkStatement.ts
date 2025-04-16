@@ -57,11 +57,10 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
 /** Model for the `status` subfield of a Flink statement. */
 export class FlinkStatementStatus {
-  phase!: string;
+  phase: string;
   detail: string | undefined;
-
+  traits: FlinkTraits;
   // TODO refine in the future.
-  traits!: FlinkTraits;
   scalingStatus!: any;
 
   constructor(props: Pick<FlinkStatementStatus, "phase" | "detail" | "traits" | "scalingStatus">) {
