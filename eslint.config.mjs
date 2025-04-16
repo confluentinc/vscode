@@ -33,6 +33,7 @@ export default [
       "no-undef": "off",
       "no-unused-vars": "off",
       "no-redeclare": "off",
+      "require-await": "error",
       "@typescript-eslint/no-unused-vars": "warn",
       // Some untyped things may require extra effort to be fixed
       "@typescript-eslint/no-explicit-any": "off",
