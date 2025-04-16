@@ -686,6 +686,8 @@ describe("ResourceManager direct connection methods", function () {
 
   beforeEach(async () => {
     rm = getResourceManager();
+    // fresh slate for each test
+    await rm.deleteDirectConnections();
   });
 
   afterEach(async () => {
