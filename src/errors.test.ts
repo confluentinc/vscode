@@ -257,14 +257,14 @@ describe("errors.ts logError()", () => {
       sinon.assert.calledWithExactly(
         loggerErrorSpy,
         `non-Error passed: ${JSON.stringify(nonError)}`,
-        extra,
+        // no 'extra' context
       );
     });
   }
 
   it("should include extra context in error logs", async () => {
     const error = new Error("test");
-    const extra = { foo: "bar" };
+    const extra = { extra: { foo: "bar" } };
     const logMessage = "test message";
     await logError(error, logMessage, extra);
 

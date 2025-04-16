@@ -1,3 +1,4 @@
+import { ScopeContext } from "@sentry/core";
 import { commands, window } from "vscode";
 import { ResponseError as DockerResponseError } from "./clients/docker";
 import { ResponseError as FlinkArtifactsResponseError } from "./clients/flinkArtifacts";
@@ -94,17 +95,15 @@ export class CustomError extends Error {
  *
  * @param e Error to log
  * @param message Text to add in the logger.error() message and top-level Sentry error message
- * @param extra Additional context to include in the log message (and `extra` field in Sentry)
- * @param sendTelemetry Whether to send the error to Sentry (default: `false`)
+ * @param sentryContext Optional Sentry context to include with the error
  * */
 export async function logError(
   e: unknown,
   message: string,
-  extra: Record<string, string> = {},
-  sendTelemetry: boolean = false,
+  sentryContext: Partial<ScopeContext> = {},
 ): Promise<void> {
   if (!(e instanceof Error)) {
-    logger.error(`non-Error passed: ${JSON.stringify(e)}`, { ...extra });
+    logger.error(`non-Error passed: ${JSON.stringify(e)}`);
     return;
   }
 
@@ -158,14 +157,20 @@ export async function logError(
     }
   }
 
-  logger.error(logErrorMessage, { ...errorContext, ...extra });
-
+  logger.error(logErrorMessage, { ...errorContext, ...sentryContext });
   // TODO: follow up to reuse EventHint type for capturing tags and other more fine-grained data
-  if (sendTelemetry) {
+  if (Object.keys(sentryContext).length) {
     sentryCaptureException(wrappedError, {
       captureContext: {
-        contexts: { response: { status_code: responseStatusCode } },
-        extra: { ...errorContext, ...extra },
+        ...sentryContext,
+        contexts: {
+          ...(sentryContext.contexts ?? {}),
+          response: { status_code: responseStatusCode },
+        },
+        extra: {
+          ...(sentryContext.extra ?? {}),
+          ...errorContext,
+        },
       },
     });
   }
@@ -252,7 +257,9 @@ async function showNotificationWithButtons(
       await buttonMap[selection]();
     } catch (e) {
       // log the error and send telemetry if the callback function throws an error
-      logError(e, `"${selection}" button callback`, {}, true);
+      logError(e, `"${selection}" button callback`, {
+        extra: { functionName: "showNotificationWithButtons" },
+      });
     }
     // send telemetry for which button was clicked
     logUsage(UserEvent.NotificationButtonClicked, {

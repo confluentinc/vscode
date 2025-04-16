@@ -686,6 +686,8 @@ describe("ResourceManager direct connection methods", function () {
 
   beforeEach(async () => {
     rm = getResourceManager();
+    // fresh slate for each test
+    await rm.deleteDirectConnections();
   });
 
   afterEach(async () => {
@@ -756,16 +758,16 @@ describe("ResourceManager direct connection methods", function () {
   it("deleteDirectConnections() should delete all direct connections", async () => {
     // preload multiple connections
     const specs: CustomConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION_FORM_SPEC,
-      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "other-id" as ConnectionId },
-      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "another-id" as ConnectionId },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "foo1" as ConnectionId },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "bar2" as ConnectionId },
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "baz3" as ConnectionId },
     ];
     await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
 
     // make sure they exist
     let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
     assert.ok(storedSpecs);
-    assert.equal(storedSpecs.size, specs.length);
+    assert.equal(storedSpecs.size, specs.length, JSON.stringify(storedSpecs, null, 2));
 
     // delete all connections
     await rm.deleteDirectConnections();
