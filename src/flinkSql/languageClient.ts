@@ -12,6 +12,8 @@ import { WebSocket } from "ws";
 import { Logger } from "../logging";
 import { WebsocketTransport } from "../sidecar/websocketTransport";
 import { CCLOUD_CONNECTION_ID } from "../constants";
+import { getStorageManager } from "../storage";
+import { SecretStorageKeys } from "../storage/constants";
 
 const logger = new Logger("flinkSql.languageClient");
 
@@ -54,8 +56,17 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
     return languageClient;
   }
   const addr = buildFlinkSqlWebSocketUrl();
+  let accessToken: string | undefined = await getStorageManager().getSecret(
+    SecretStorageKeys.SIDECAR_AUTH_TOKEN,
+  );
+  if (!accessToken) {
+    logger.error("No access token found");
+    throw new Error("No access token found");
+  }
   return new Promise((resolve, reject) => {
-    const conn = new WebSocket(addr);
+    const conn = new WebSocket(addr, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
     conn.onopen = async () => {
       logger.info("FlinkSQL WebSocket connection opened");
       try {
