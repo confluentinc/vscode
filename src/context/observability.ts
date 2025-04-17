@@ -23,7 +23,7 @@ class ObservabilityContext {
     /** The OS CPU architecture */
     public arch: string = process.arch,
     /** Indicator that the extension is running in WSL or another remote host. */
-    public remoteName: string = env.remoteName ?? "",
+    public remoteName: string | undefined = env.remoteName,
 
     /** The version of VS Code (or variant) in use. */
     public productVersion: string = ideVersion,
