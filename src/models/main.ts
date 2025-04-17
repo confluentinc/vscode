@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { IconNames } from "../constants";
 import { ISearchable } from "./resource";
 
 /** Anything with an `id` string property */
@@ -57,6 +58,9 @@ export class ContainerTreeItem<T extends IdItem & ISearchable>
   }
 }
 
+export type KeyValuePair = [string, string | undefined];
+export type KeyValuePairArray = KeyValuePair[];
+
 /**
  * This is a custom tooltip class that extends `vscode.MarkdownString` to add constructor arguments
  * for additional properties that are not available in the base class.
@@ -75,5 +79,50 @@ export class CustomMarkdownString extends vscode.MarkdownString {
     public supportThemeIcons: boolean = true,
   ) {
     super(value, supportThemeIcons);
+  }
+
+  /**
+   * Construct a tooltip markdown string from a resource and a set of key-value pairs.
+   * @param title The kind of resource (e.g. "Kafka Cluster", "Compute Pool", etc.)
+   * @param iconName Icon to use beside title, if any.
+   * @param keyValuePairs attribute name + from-resource-value pairs. Any undefined value will be skipped.
+   * @param ccloudUrl Optional URL to view this resource in Confluent Cloud.
+   * @returns
+   */
+  static resourceTooltip(
+    title: string,
+    iconName: IconNames | undefined,
+    ccloudUrl: string | undefined,
+    keyValuePairs: KeyValuePairArray,
+  ): CustomMarkdownString {
+    const tooltip = new CustomMarkdownString();
+
+    if (iconName) {
+      tooltip.appendMarkdown(`#### $(${iconName}) ${title}\n`);
+    } else {
+      tooltip.appendMarkdown(`#### ${title}\n`);
+    }
+    tooltip.appendMarkdown("\n\n---");
+
+    keyValuePairs.forEach(([key, value]) => {
+      // Skip undefined or empty values
+      if (value === undefined || value === "") {
+        return;
+      }
+      tooltip.appendMarkdown(`\n\n${key}: \`${value}\``);
+    });
+
+    if (ccloudUrl) {
+      // Ensure URL is vauguely valid
+      if (!ccloudUrl.startsWith("https://")) {
+        throw new Error(`Invalid URL: ${ccloudUrl}`);
+      }
+      tooltip.appendMarkdown("\n\n---");
+      tooltip.appendMarkdown(
+        `\n\n[$(${IconNames.CONFLUENT_LOGO}) Open in Confluent Cloud](${ccloudUrl})`,
+      );
+    }
+
+    return tooltip;
   }
 }

@@ -1,8 +1,7 @@
 import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
-import { makeToolTip } from "../utils/tooltip";
-import { IdItem } from "./main";
+import { CustomMarkdownString, IdItem } from "./main";
 import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
 
 /**
@@ -63,8 +62,8 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
     return this.status.phase;
   }
 
-  get sqlKindDisplay(): string {
-    return this.status.traits?.sqlKindDisplay || "";
+  get sqlKindDisplay(): string | undefined {
+    return this.status.traits?.sqlKindDisplay;
   }
 
   get createdAt(): Date | undefined {
@@ -118,8 +117,10 @@ export class FlinkStatementTraits {
   }
 
   /** "CREATE_TABLE_AS" -> "CREATE TABLE AS" */
-  get sqlKindDisplay(): string {
-    return this.sqlKind ? this.sqlKind.replace(/_/g, " ") : "";
+  get sqlKindDisplay(): string | undefined {
+    // "FAILED" phase statements may not have a sqlKind, as far as
+    // have observed so far.
+    return this.sqlKind?.replace(/_/g, " ");
   }
 }
 
@@ -135,18 +136,49 @@ export class FlinkStatementTreeItem extends TreeItem {
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 
     // user-facing properties
-    this.iconPath = createFlinkStatementIcon(resource.phase);
     this.description = resource.status.detail;
+    this.iconPath = this.getThemeIcon();
 
-    this.tooltip = makeToolTip("Flink Statement", resource, [
-      ["Kind", resource.sqlKindDisplay],
-      ["Status", resource.phase],
-      ["Created At", resource.createdAt?.toLocaleString()],
-      ["Updated At", resource.updatedAt?.toLocaleString()],
-      ["Environment", resource.environmentId],
-      ["Compute Pool", resource.computePoolId],
-      ["Detail", resource.status.detail],
-    ]);
+    this.tooltip = CustomMarkdownString.resourceTooltip(
+      "Flink Statement",
+      this.iconPath.id as IconNames,
+      resource.ccloudUrl,
+      [
+        ["Kind", resource.sqlKindDisplay],
+        ["Status", resource.phase],
+        ["Created At", resource.createdAt?.toLocaleString()],
+        ["Updated At", resource.updatedAt?.toLocaleString()],
+        ["Environment", resource.environmentId],
+        ["Compute Pool", resource.computePoolId],
+        ["Detail", resource.status.detail],
+      ],
+    );
+  }
+
+  /**
+   * Determine icon + color based on the `phase` of the statement.
+   */
+  getThemeIcon(): ThemeIcon {
+    switch (this.resource.phase.toUpperCase()) {
+      case "FAILED":
+      case "FAILING":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, STATUS_RED);
+      case "DEGRADED":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, STATUS_YELLOW);
+      case "RUNNING":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, STATUS_GREEN);
+      case "COMPLETED":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, STATUS_GRAY);
+      case "DELETING":
+      case "STOPPING":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, STATUS_GRAY);
+      case "STOPPED":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, STATUS_BLUE);
+      case "PENDING":
+        return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
+      default:
+        return new ThemeIcon(IconNames.FLINK_STATEMENT);
+    }
   }
 }
 
@@ -159,26 +191,3 @@ export const STATUS_BLUE = new ThemeColor("notificationsInfoIcon.foreground");
 // there aren't as many green or gray options to choose from without using `chart` colors
 export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
-
-export function createFlinkStatementIcon(status: string): ThemeIcon {
-  switch (status.toUpperCase()) {
-    case "FAILED":
-    case "FAILING":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, STATUS_RED);
-    case "DEGRADED":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, STATUS_YELLOW);
-    case "RUNNING":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, STATUS_GREEN);
-    case "COMPLETED":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, STATUS_GRAY);
-    case "DELETING":
-    case "STOPPING":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, STATUS_GRAY);
-    case "STOPPED":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, STATUS_BLUE);
-    case "PENDING":
-      return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
-    default:
-      return new ThemeIcon(IconNames.FLINK_STATEMENT);
-  }
-}
