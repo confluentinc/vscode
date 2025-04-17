@@ -12,6 +12,7 @@ import { getCCloudAuthSession } from "./authn/utils";
 import { disableCCloudStatusPolling, enableCCloudStatusPolling } from "./ccloudStatus/polling";
 import { PARTICIPANT_ID } from "./chat/constants";
 import { chatHandler } from "./chat/participant";
+import { registerChatTools } from "./chat/tools/registration";
 import { registerCommandWithLogging } from "./commands";
 import { registerConnectionCommands } from "./commands/connections";
 import { registerDebugCommands } from "./commands/debugtools";
@@ -274,7 +275,7 @@ async function _activateExtension(
   // register the Copilot chat participant
   const chatParticipant = vscode.chat.createChatParticipant(PARTICIPANT_ID, chatHandler);
   chatParticipant.iconPath = new vscode.ThemeIcon(IconNames.CONFLUENT_LOGO);
-  context.subscriptions.push(chatParticipant);
+  context.subscriptions.push(chatParticipant, ...registerChatTools());
 
   // track the status bar for CCloud notices (fetched from the Statuspage Status API)
   enableCCloudStatusPolling();
