@@ -113,7 +113,7 @@ export class CustomMarkdownString extends vscode.MarkdownString {
     });
 
     if (ccloudUrl) {
-      // Ensure URL is vauguely valid
+      // Ensure URL is vaguely valid
       if (!ccloudUrl.startsWith("https://")) {
         throw new Error(`Invalid URL: ${ccloudUrl}`);
       }
