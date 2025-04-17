@@ -731,13 +731,13 @@ describe("ResourceManager direct connection methods", function () {
 
   it("deleteDirectConnection() should correctly delete a direct connection and not touch existing connections", async () => {
     // preload two connections
-    const connId1: ConnectionId = TEST_DIRECT_CONNECTION_ID;
+    const connId1: ConnectionId = "new-connection-id" as ConnectionId;
     const connId2: ConnectionId = "other-id" as ConnectionId;
     const specs: CustomConnectionSpec[] = [
-      TEST_DIRECT_CONNECTION_FORM_SPEC,
+      { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: connId1 },
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: connId2 },
     ];
-    await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
+    await rm.addDirectConnections(...specs);
 
     // make sure they exist
     let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
@@ -762,7 +762,7 @@ describe("ResourceManager direct connection methods", function () {
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "bar2" as ConnectionId },
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "baz3" as ConnectionId },
     ];
-    await Promise.all(specs.map((spec) => rm.addDirectConnection(spec)));
+    await rm.addDirectConnections(...specs);
 
     // make sure they exist
     let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
