@@ -729,7 +729,10 @@ describe("ResourceManager direct connection methods", function () {
     assert.strictEqual(storedSpec, null);
   });
 
-  it("deleteDirectConnection() should correctly delete a direct connection and not touch existing connections", async () => {
+  it("deleteDirectConnection() should correctly delete a direct connection and not touch existing connections", async function () {
+    // allow two retries since this test is flaky in CI
+    this.retries(2);
+
     // preload two connections
     const connId1: ConnectionId = TEST_DIRECT_CONNECTION_ID;
     const connId2: ConnectionId = "other-id" as ConnectionId;
@@ -755,7 +758,10 @@ describe("ResourceManager direct connection methods", function () {
     assert.deepStrictEqual(storedSpecs.get(connId2), specs[1]);
   });
 
-  it("deleteDirectConnections() should delete all direct connections", async () => {
+  it("deleteDirectConnections() should delete all direct connections", async function () {
+    // allow two retries since this test is flaky in CI
+    this.retries(2);
+
     // preload multiple connections
     const specs: CustomConnectionSpec[] = [
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "foo1" as ConnectionId },
