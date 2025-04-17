@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.2.0-37",
+  "version": "1.2.0-38",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -64,6 +64,32 @@
         "commands": [],
         "disambiguation": [],
         "when": "confluent.chatParticipantEnabled"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "list_projectTemplates",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "List Project Templates",
+        "modelDescription": "List all available templates for creating a streaming data project or application. Use this when the user asks about available templates or you want to show them a list of templates.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(list-selection)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "Optional tags to filter the list of templates."
+            }
+          }
+        }
       }
     ],
     "commands": [

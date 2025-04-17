@@ -767,7 +767,7 @@ describe("ResourceManager direct connection methods", function () {
     // make sure they exist
     let storedSpecs: DirectConnectionsById = await rm.getDirectConnections();
     assert.ok(storedSpecs);
-    assert.equal(storedSpecs.size, specs.length, JSON.stringify(storedSpecs, null, 2));
+    assert.equal(storedSpecs.size, specs.length, mapToString(storedSpecs));
 
     // delete all connections
     await rm.deleteDirectConnections();
