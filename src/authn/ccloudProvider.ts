@@ -174,7 +174,7 @@ export class ConfluentCloudAuthProvider implements vscode.AuthenticationProvider
         userInfo: authenticatedConnection.status.authentication.user,
         session: undefined,
       });
-      getLaunchDarklyClient()?.identify({
+      (await getLaunchDarklyClient())?.identify({
         key: authenticatedConnection.status.authentication.user.id,
         email: authenticatedConnection.status.authentication.user.username,
       });

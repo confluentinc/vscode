@@ -1,4 +1,5 @@
 import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
+import { LDClient } from "launchdarkly-node-client-sdk";
 import { commands, env } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import { showErrorNotificationWithButtons } from "../errors";
@@ -15,9 +16,9 @@ const logger = new Logger("featureFlags.evaluation");
  * If the client is not able to communicate with LaunchDarkly, it will return the last value applied
  * to {@link FeatureFlags} (which may be the default from {@link FEATURE_FLAG_DEFAULTS} if offline).
  */
-export function getFlagValue<T>(flag: FeatureFlag): T | undefined {
+export async function getFlagValue<T>(flag: FeatureFlag): Promise<T | undefined> {
   // try to re-initialize if we don't have a client
-  const ldClient: LDElectronMainClient | undefined = getLaunchDarklyClient();
+  const ldClient: LDElectronMainClient | LDClient | undefined = await getLaunchDarklyClient();
   const backupValue: T | undefined = FeatureFlags[flag];
   let value: T | undefined = ldClient?.variation(flag) ?? backupValue;
   return value;
@@ -32,9 +33,9 @@ export function getFlagValue<T>(flag: FeatureFlag): T | undefined {
  * block the command from being run and show an error notification to the user if the extension is
  * disabled.
  */
-export function checkForExtensionDisabledReason(): string | undefined {
+export async function checkForExtensionDisabledReason(): Promise<string | undefined> {
   // first check if the extension is enabled at all
-  const globalEnabled: boolean | undefined = getFlagValue(FeatureFlag.GLOBAL_ENABLED);
+  const globalEnabled: boolean | undefined = await getFlagValue(FeatureFlag.GLOBAL_ENABLED);
   if (globalEnabled === undefined) {
     return;
   }
@@ -43,7 +44,7 @@ export function checkForExtensionDisabledReason(): string | undefined {
   }
 
   // then make sure the version of the extension is not disabled
-  const disabledVersions: DisabledVersion[] | undefined = getFlagValue(
+  const disabledVersions: DisabledVersion[] | undefined = await getFlagValue(
     FeatureFlag.GLOBAL_DISABLED_VERSIONS,
   );
   if (disabledVersions === undefined || !Array.isArray(disabledVersions)) {

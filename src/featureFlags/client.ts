@@ -1,4 +1,5 @@
-import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
+import type { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
+import type { LDClient } from "launchdarkly-node-client-sdk";
 import { logError } from "../errors";
 import { Logger } from "../logging";
 import { FEATURE_FLAG_DEFAULTS, FeatureFlags } from "./constants";
@@ -14,7 +15,7 @@ const logger = new Logger("featureFlags.client");
  * However, we're using the Electron client SDK instead of the Node.js SDK:
  * @see https://launchdarkly.com/docs/sdk/client-side/electron#why-use-this-instead-of-the-nodejs-sdk
  */
-let client: LDElectronMainClient | undefined = undefined;
+let client: LDElectronMainClient | LDClient | undefined = undefined;
 
 /**
  * Returns the singleton LaunchDarkly client. If the client is not initialized, it will attempt to
@@ -24,13 +25,15 @@ let client: LDElectronMainClient | undefined = undefined;
  * If the client fails to initialize, it will log an error and return `undefined`, and any feature
  * flag lookups will return the local defaults.
  */
-export function getLaunchDarklyClient(): LDElectronMainClient | undefined {
+export async function getLaunchDarklyClient(): Promise<
+  LDElectronMainClient | LDClient | undefined
+> {
   if (client) {
     return client;
   }
 
   try {
-    client = clientInit();
+    client = await clientInit();
     if (!client) {
       return;
     }
