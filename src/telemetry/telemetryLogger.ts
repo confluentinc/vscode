@@ -116,6 +116,7 @@ export function preparePropertiesForTrack(
     currentSidecarVersion: ideSidecar.version,
     platform: platform(),
     arch: arch(),
+    remoteName: vscode.env.remoteName ?? "", // "wsl", "ssh-remote", etc.
     ...data, // VSCode Common properties in data includes the extension version
   };
 }
