@@ -1,4 +1,5 @@
 import type { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
+import type { LDClientBase } from "launchdarkly-js-sdk-common";
 import type { LDClient } from "launchdarkly-node-client-sdk";
 import { env } from "vscode";
 import { logError } from "../errors";
@@ -8,7 +9,7 @@ import { LD_CLIENT_ID, LD_CLIENT_OPTIONS, LD_CLIENT_USER_INIT } from "./constant
 const logger = new Logger("featureFlags.init");
 
 /** Initializes the LaunchDarkly client. Wraps the SDK's initializeInMain for easier testing. */
-export async function clientInit(): Promise<LDElectronMainClient | LDClient | undefined> {
+export async function clientInit(): Promise<LDClientBase | undefined> {
   if (!LD_CLIENT_ID) {
     return;
   }

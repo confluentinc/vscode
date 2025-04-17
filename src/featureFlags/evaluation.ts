@@ -1,5 +1,4 @@
-import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
-import { LDClient } from "launchdarkly-node-client-sdk";
+import type { LDClientBase } from "launchdarkly-js-sdk-common";
 import { commands, env } from "vscode";
 import { EXTENSION_ID, EXTENSION_VERSION } from "../constants";
 import { showErrorNotificationWithButtons } from "../errors";
@@ -18,7 +17,7 @@ const logger = new Logger("featureFlags.evaluation");
  */
 export async function getFlagValue<T>(flag: FeatureFlag): Promise<T | undefined> {
   // try to re-initialize if we don't have a client
-  const ldClient: LDElectronMainClient | LDClient | undefined = await getLaunchDarklyClient();
+  const ldClient: LDClientBase | undefined = await getLaunchDarklyClient();
   const backupValue: T | undefined = FeatureFlags[flag];
   let value: T | undefined = ldClient?.variation(flag) ?? backupValue;
   return value;
