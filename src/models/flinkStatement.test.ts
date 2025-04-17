@@ -40,7 +40,7 @@ describe("FlinkStatementTreeItem", () => {
     const statement = createFlinkStatement({
       name: "statement0",
       phase: "RUNNING",
-      detail: "Statment is running",
+      detail: "Statement is running",
       sqlKind: "SELECT",
       environmentId: "env0" as EnvironmentId,
       computePoolId: "pool0",
