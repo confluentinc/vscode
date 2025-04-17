@@ -389,7 +389,7 @@ async function setupFeatureFlags(): Promise<void> {
   // the local defaults from `setFlagDefaults()`
   resetFlagDefaults();
 
-  const client = getLaunchDarklyClient();
+  const client = await getLaunchDarklyClient();
   if (client) {
     // wait a few seconds for the LD client to initialize for the first time, because if we
     // continue to use the client before it's ready, it will return the default values for all flags
@@ -406,7 +406,7 @@ async function setupFeatureFlags(): Promise<void> {
     logger.info(`Feature flag client initialization ${initialized ? "completed" : "failed"}`);
   }
 
-  const disabledMessage: string | undefined = checkForExtensionDisabledReason();
+  const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
   if (disabledMessage) {
     showExtensionDisabledNotification(disabledMessage);
     throw new Error(disabledMessage);
@@ -460,7 +460,7 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
       userInfo: undefined,
       session: cloudSession,
     });
-    getLaunchDarklyClient()?.identify({
+    (await getLaunchDarklyClient())?.identify({
       key: cloudSession.account.id,
       email: cloudSession.account.label,
     });
