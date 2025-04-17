@@ -21,13 +21,13 @@ import { registerDockerCommands } from "./commands/docker";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { setProjectScaffoldListener } from "./scaffold";
 import {
   AUTH_PROVIDER_ID,
   AUTH_PROVIDER_LABEL,
@@ -58,7 +58,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
-import { registerProjectGenerationCommands } from "./scaffold";
+import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -226,6 +226,7 @@ async function _activateExtension(
     ...registerDockerCommands(),
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
+    ...registerFlinkStatementCommands(),
   ];
   logger.info("Commands registered");
 

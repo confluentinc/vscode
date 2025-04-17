@@ -3,6 +3,7 @@ import { CCLOUD_CONNECTION_ID } from "../../../src/constants";
 import {
   FlinkStatement,
   FlinkStatementMetadata,
+  FlinkStatementSpec,
   FlinkStatementStatus,
   FlinkStatementTraits,
 } from "../../../src/models/flinkStatement";
@@ -27,7 +28,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     connectionId: CCLOUD_CONNECTION_ID,
     connectionType: ConnectionType.Ccloud,
     environmentId: overrides.environmentId || TEST_CCLOUD_ENVIRONMENT_ID,
-    computePoolId: overrides.computePoolId || TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+
     name: overrides.name || "statement0",
     metadata: new FlinkStatementMetadata({
       createdAt: new Date(),
@@ -43,6 +44,18 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
         schema: {},
       }),
       scalingStatus: {},
+    }),
+    spec: new FlinkStatementSpec({
+      computePoolId: overrides.computePoolId || TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
+      sqlStatement: "SELECT * FROM test_table",
+      principal: "test-principal",
+      authorizedPrincipals: [],
+      properties: {
+        "sql.current-catalog": "custom-data-env",
+        "sql.current-database": "Custom Data Dedicated Replica",
+        "sql.local-time-zone": "GMT-04:00",
+      },
+      stopped: false,
     }),
   });
 }
