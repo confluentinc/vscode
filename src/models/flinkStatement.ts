@@ -136,7 +136,11 @@ export class FlinkStatementTreeItem extends TreeItem {
     this.contextValue = `${resource.connectionType.toLowerCase()}-flink-statement`;
 
     // user-facing properties
-    this.description = resource.status.detail;
+
+    // (Sometimes sqlKindDisplay is undefined, e.g. for failed statements)
+    this.description = resource.sqlKindDisplay
+      ? `${resource.phase} ${resource.sqlKindDisplay}`
+      : resource.phase;
     this.iconPath = this.getThemeIcon();
 
     this.tooltip = CustomMarkdownString.resourceTooltip(
