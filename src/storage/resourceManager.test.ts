@@ -730,9 +730,6 @@ describe("ResourceManager direct connection methods", function () {
   });
 
   it("deleteDirectConnection() should correctly delete a direct connection and not touch existing connections", async function () {
-    // allow two retries since this test is flaky in CI
-    this.retries(2);
-
     // preload two connections
     const connId1: ConnectionId = "new-connection-id" as ConnectionId;
     const connId2: ConnectionId = "other-id" as ConnectionId;
@@ -759,9 +756,6 @@ describe("ResourceManager direct connection methods", function () {
   });
 
   it("deleteDirectConnections() should delete all direct connections", async function () {
-    // allow two retries since this test is flaky in CI
-    this.retries(2);
-
     // preload multiple connections
     const specs: CustomConnectionSpec[] = [
       { ...TEST_DIRECT_CONNECTION_FORM_SPEC, id: "foo1" as ConnectionId },
