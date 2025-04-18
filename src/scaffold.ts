@@ -34,6 +34,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 
 interface PrefilledTemplateOptions {
   templateName?: string;
+  isFormNeeded?: string | undefined;
   [key: string]: string | undefined;
 }
 
@@ -63,12 +64,12 @@ async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) 
   }
 }
 
-export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) => {
+export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledTemplateOptions) => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
   try {
     const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList();
     let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
-    if (item && !item.templateName) {
+    if (templateRequestOptions && !templateRequestOptions.templateName) {
       // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
       // templates that are tagged as producer or consumer but with a quickpick
       templateList = templateList.filter((template) => {
@@ -77,9 +78,11 @@ export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) =>
         return hasProducerOrConsumer;
       });
       pickedTemplate = await pickTemplate(templateList);
-    } else if (item && item.templateName) {
+    } else if (templateRequestOptions && templateRequestOptions.templateName) {
       // Handling from a URI where there is a template name matched and quickpick is not needed
-      pickedTemplate = templateList.find((template) => template.spec!.name === item.templateName);
+      pickedTemplate = templateList.find(
+        (template) => template.spec!.name === templateRequestOptions.templateName,
+      );
     } else {
       // If no arguments are passed, show all templates
       pickedTemplate = await pickTemplate(templateList);
@@ -94,7 +97,11 @@ export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) =>
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "template picked",
       templateName: pickedTemplate.spec!.display_name,
-      itemType: item ? (item instanceof KafkaTopic ? "topic" : "cluster") : undefined,
+      itemType: templateRequestOptions
+        ? templateRequestOptions instanceof KafkaTopic
+          ? "topic"
+          : "cluster"
+        : undefined,
     });
   } else {
     return;
@@ -124,15 +131,13 @@ export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) =>
   let options = templateSpec.options || {};
 
   for (const option of Object.keys(options)) {
-    if (item && item[option] !== undefined) {
-      optionValues[option] =
-        option === "isFormNeeded"
-          ? JSON.stringify(item[option])
-          : (item[option] as string | boolean); // Explicitly cast to string | boolean
+    if (templateRequestOptions && templateRequestOptions[option] !== undefined) {
+      optionValues[option] = templateRequestOptions[option] as string | boolean; // Explicitly cast to string | boolean
     } else {
       optionValues[option] = ""; // Provide a default value for undefined options
     }
   }
+
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
   }
@@ -144,12 +149,10 @@ export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) =>
         return spec satisfies MessageResponse<"GetTemplateSpec">;
       }
       case "GetOptionValues": {
-        logger.debug("GetOptionValues", optionValues);
         return optionValues satisfies MessageResponse<"GetOptionValues">;
       }
       case "SetOptionValue": {
         const { key, value } = body;
-        logger.debug("SetOptionValue", key, value);
         updateOptionValue(key, value);
         return null satisfies MessageResponse<"SetOptionValue">;
       }
@@ -370,19 +373,16 @@ export async function handleProjectScaffoldUri(
   );
   if ((result as PostResponse).success) {
     vscode.window.showInformationMessage("🎉 Project generated successfully!");
+    // } else {
+    //   let cleanedErrorMessage = "Unknown error occurred.";
+    //   if (typeof result === "object" && result !== null && "message" in result) {
+    // cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
   } else {
-    let cleanedErrorMessage = "Unknown error occurred.";
-    if (typeof result === "object" && result !== null && "message" in result) {
-      cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
-      // Removed duplicate error message display
-    } else {
-      vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
-    }
-    vscode.window.showErrorMessage("Failed to generate project", {
-      modal: true,
-      detail: cleanedErrorMessage,
-    });
+    vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
   }
+  // show the form to let the user adjust values as needed
+  await scaffoldProjectRequest({ templateName: template, ...options });
+  // }
 }
 function parseErrorMessage(rawMessage: string): string {
   try {
