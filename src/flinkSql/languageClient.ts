@@ -6,8 +6,7 @@ import {
   LanguageClient,
   LanguageClientOptions,
   Message,
-  Trace,
-} from "vscode-languageclient/node";
+  } from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
 import { WebsocketTransport } from "../sidecar/websocketTransport";
