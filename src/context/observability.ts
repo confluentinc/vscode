@@ -18,6 +18,13 @@ import { Status } from "../clients/sidecar";
  */
 class ObservabilityContext {
   constructor(
+    /** The OS platform */
+    public platform: string = process.platform,
+    /** The OS CPU architecture */
+    public arch: string = process.arch,
+    /** Indicator that the extension is running in WSL or another remote host. */
+    public remoteName: string | undefined = env.remoteName,
+
     /** The version of VS Code (or variant) in use. */
     public productVersion: string = ideVersion,
     /** The name of the VS Code (or variant) in use. */
