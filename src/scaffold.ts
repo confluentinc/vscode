@@ -371,19 +371,20 @@ export async function handleProjectScaffoldUri(
       );
     },
   );
-  if ((result as PostResponse).success) {
-    vscode.window.showInformationMessage("🎉 Project generated successfully!");
-    // } else {
-    //   let cleanedErrorMessage = "Unknown error occurred.";
-    //   if (typeof result === "object" && result !== null && "message" in result) {
-    // cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
+
+  if (result && typeof result === "object" && "success" in result) {
+    if (result.success) {
+      vscode.window.showInformationMessage("🎉 Project generated successfully!");
+    } else {
+      vscode.window.showErrorMessage(
+        `Failed to generate project: ${result.message || "Unknown error occurred."}`,
+      );
+    }
   } else {
-    vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
+    vscode.window.showErrorMessage("Failed to generate project: Unexpected result structure.");
   }
-  // show the form to let the user adjust values as needed
-  await scaffoldProjectRequest({ templateName: template, ...options });
-  // }
 }
+
 function parseErrorMessage(rawMessage: string): string {
   try {
     const parsed = JSON.parse(rawMessage);
