@@ -245,6 +245,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.flink.configureLanguageServer",
+        "icon": "$(settings-gear)",
+        "title": "Configure Flink SQL Language Server",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.artifacts.flink-compute-pool.select",
         "icon": "$(confluent-flink-compute-pool)",
         "title": "Select Flink Compute Pool",
@@ -495,6 +501,17 @@
     "configuration": {
       "title": "Confluent",
       "properties": {
+        "confluent.flinksqlLanguageServer.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "verbose",
+          "description": "Traces the communication between VS Code and the language server."
+        },
         "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
           "type": "boolean",
           "default": true,
@@ -566,6 +583,48 @@
           "tags": [
             "experimental"
           ]
+        },
+        "confluent.flink": {
+          "type": "object",
+          "title": "Flink SQL",
+          "properties": {
+            "catalog": {
+              "type": "string",
+              "default": "",
+              "description": "Flink SQL catalog to use"
+            },
+            "database": {
+              "type": "string",
+              "default": "",
+              "description": "Flink SQL database to use"
+            },
+            "computePoolId": {
+              "type": "string",
+              "default": "",
+              "description": "ID of the compute pool to use for Flink SQL operations"
+            },
+            "region": {
+              "type": "string",
+              "default": "us-east-1",
+              "description": "Region for Flink SQL services",
+              "enum": [
+                "us-east-1",
+                "us-west-2",
+                "eu-west-1",
+                "ap-southeast-2"
+              ]
+            },
+            "provider": {
+              "type": "string",
+              "default": "aws",
+              "description": "Cloud provider for Flink SQL services",
+              "enum": [
+                "aws",
+                "gcp",
+                "azure"
+              ]
+            }
+          }
         }
       }
     },
@@ -1560,6 +1619,8 @@
     "undici": "^6.19.8",
     "unzipit": "^1.4.3",
     "vscode-json-languageservice": "^5.4.2",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
     "ws": "^8.18.0"
   }
 }
