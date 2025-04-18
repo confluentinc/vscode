@@ -90,6 +90,36 @@
             }
           }
         }
+      },
+      {
+        "name": "apply_projectTemplate",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Apply Project Template",
+        "modelDescription": "Apply a selected project template to generate a streaming data project or application. Use this when the user selects a template and provides the necessary options.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the template to apply."
+            },
+            "options": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Key-value pairs of options to configure the template."
+            }
+          },
+          "required": [
+            "templateId"
+          ]
+        }
       }
     ],
     "commands": [
