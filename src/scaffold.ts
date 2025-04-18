@@ -120,7 +120,12 @@ export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) =>
 
   for (const option of Object.keys(options)) {
     if (item && item[option] !== undefined) {
-      optionValues[option] = JSON.stringify(item[option]);
+      optionValues[option] =
+        option === "isFormNeeded"
+          ? JSON.stringify(item[option])
+          : (item[option] as string | boolean); // Explicitly cast to string | boolean
+    } else {
+      optionValues[option] = ""; // Provide a default value for undefined options
     }
   }
   function updateOptionValue(key: string, value: string) {
