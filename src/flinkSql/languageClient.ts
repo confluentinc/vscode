@@ -80,7 +80,6 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
             { scheme: "file", language: "flinksql" },
             { scheme: "untitled", language: "flinksql" }, // POC: We may want to use a different file extension
           ],
-          outputChannel: vscode.window.createOutputChannel("Confluent FlinkSQL Language Server"),
           middleware: {
             didOpen: (document, next) => {
               logger.debug(`Document opened: ${document.uri}`);
@@ -129,13 +128,12 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
         };
 
         languageClient = new LanguageClient(
-          "flinksqlLanguageServer",
-          "FlinkSQL Language Server",
+          "confluent.flinksqlLanguageServer",
+          "ConfluentFlinkSQL",
           serverOptions,
           clientOptions,
         );
 
-        languageClient.setTrace(Trace.Verbose);
         await languageClient.start();
         logger.info("FlinkSQL Language Server started");
         resolve(languageClient);

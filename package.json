@@ -501,6 +501,17 @@
     "configuration": {
       "title": "Confluent",
       "properties": {
+        "confluent.flinksqlLanguageServer.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "verbose",
+          "description": "Traces the communication between VS Code and the language server."
+        },
         "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
           "type": "boolean",
           "default": true,
