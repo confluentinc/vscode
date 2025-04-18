@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { LDElectronMainClient } from "launchdarkly-electron-client-sdk";
+import type { LDClientBase } from "launchdarkly-js-sdk-common";
 import * as sinon from "sinon";
 import * as clientModule from "./client";
 import * as constants from "./constants";
@@ -11,7 +11,7 @@ describe("featureFlags/client.ts", function () {
 
   let ldClientIdStub: sinon.SinonStub;
   let clientInitStub: sinon.SinonStub;
-  let stubbedLDClient: sinon.SinonStubbedInstance<LDElectronMainClient>;
+  let stubbedLDClient: sinon.SinonStubbedInstance<LDClientBase>;
   let clientOnStub: sinon.SinonStub;
   let clientOffStub: sinon.SinonStub;
 
@@ -26,10 +26,10 @@ describe("featureFlags/client.ts", function () {
       on: clientOnStub,
       off: clientOffStub,
       close: sandbox.stub(),
-    } as unknown as sinon.SinonStubbedInstance<LDElectronMainClient>;
+    } as unknown as sinon.SinonStubbedInstance<LDClientBase>;
     // stub the init function to return a fake client because we can't stub the SDK's
     // initializeInMain function directly
-    clientInitStub = sandbox.stub(init, "clientInit").returns(stubbedLDClient);
+    clientInitStub = sandbox.stub(init, "clientInit").resolves(stubbedLDClient);
 
     // reset feature flags and client before each test
     clientModule.resetFlagDefaults();
@@ -43,12 +43,12 @@ describe("featureFlags/client.ts", function () {
     sandbox.restore();
   });
 
-  it("getLaunchDarklyClient() should return undefined when LD_CLIENT_ID is not set", function () {
+  it("getLaunchDarklyClient() should return undefined when LD_CLIENT_ID is not set", async function () {
     // no client ID set
     ldClientIdStub.value(undefined);
     clientInitStub.returns(undefined);
 
-    const client: LDElectronMainClient | undefined = clientModule.getLaunchDarklyClient();
+    const client: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
 
     sinon.assert.calledOnce(clientInitStub);
     assert.strictEqual(client, undefined);
@@ -68,40 +68,39 @@ describe("featureFlags/client.ts", function () {
     assert.deepStrictEqual(FeatureFlags, FEATURE_FLAG_DEFAULTS);
   });
 
-  it("getLaunchDarklyClient() should set up the client and register event listeners when LD_CLIENT_ID is set", function () {
-    const client: LDElectronMainClient | undefined = clientModule.getLaunchDarklyClient();
+  it("getLaunchDarklyClient() should set up the client and register event listeners when LD_CLIENT_ID is set", async function () {
+    const client: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
 
     assert.ok(client);
     // event listeners should have been registered
     sinon.assert.callCount(clientOnStub, 4);
   });
 
-  it("getLaunchDarklyClient() should handle exceptions during client initialization", function () {
+  it("getLaunchDarklyClient() should handle exceptions during client initialization", async function () {
     clientInitStub.throws(new Error("uh oh"));
 
-    const client: LDElectronMainClient | undefined = clientModule.getLaunchDarklyClient();
+    const client: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
 
     assert.strictEqual(client, undefined);
   });
 
-  it("getLaunchDarklyClient() should return the same client instance on repeated calls", function () {
-    const clientA: LDElectronMainClient | undefined = clientModule.getLaunchDarklyClient();
-    const clientB: LDElectronMainClient | undefined = clientModule.getLaunchDarklyClient();
+  it("getLaunchDarklyClient() should return the same client instance on repeated calls", async function () {
+    const clientA: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
+    const clientB: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
 
     assert.strictEqual(clientA, clientB);
   });
 
-  it("disposeLaunchDarklyClient() should close the client and set it to undefined", function () {
+  it("disposeLaunchDarklyClient() should close the client and set it to undefined", async function () {
     // make sure we have a client to start
-    const client: LDElectronMainClient | undefined = clientModule.getLaunchDarklyClient();
+    const client: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
     assert.ok(client);
     sinon.assert.callCount(clientOnStub, 4);
 
     // get rid of it
     clientModule.disposeLaunchDarklyClient();
 
-    const clientAfterDispose: LDElectronMainClient | undefined =
-      clientModule.getLaunchDarklyClient();
+    const clientAfterDispose: LDClientBase | undefined = await clientModule.getLaunchDarklyClient();
     assert.ok(clientAfterDispose);
     // this is the kicker: the client should have transitioned to undefined, which means calling
     // `getLaunchDarklyClient()` again will re-initialize it and set up the event listeners again
