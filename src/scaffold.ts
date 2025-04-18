@@ -11,7 +11,7 @@ import {
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
 import { getSidecar } from "./sidecar";
-
+import { Logger } from "./logging";
 import { ViewColumn } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
@@ -26,13 +26,14 @@ import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
+import { log } from "console";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
 
 const scaffoldWebviewCache = new WebviewPanelCache();
-
+const logger = new Logger("scaffold");
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
@@ -73,6 +74,8 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
   }
 
   const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
+
+  logger.debug("Received Template Spec in Webview:", templateSpec);
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
     { id: templateSpec.name!, template: scaffoldFormTemplate },
     "template-options-form",
@@ -118,10 +121,12 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
         return spec satisfies MessageResponse<"GetTemplateSpec">;
       }
       case "GetOptionValues": {
+        logger.debug("GetOptionValues", optionValues);
         return optionValues satisfies MessageResponse<"GetOptionValues">;
       }
       case "SetOptionValue": {
         const { key, value } = body;
+        logger.debug("SetOptionValue", key, value);
         updateOptionValue(key, value);
         return null satisfies MessageResponse<"SetOptionValue">;
       }
@@ -305,6 +310,7 @@ export async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
 export async function handleProjectScaffoldUri(
   collection: string | null,
   template: string | null,
+  isBootstrapServerOnly: boolean | null,
   options: { [key: string]: string },
 ): Promise<void> {
   if (!collection || !template) {
@@ -313,6 +319,7 @@ export async function handleProjectScaffoldUri(
     );
     return;
   }
+
   const result = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -321,6 +328,77 @@ export async function handleProjectScaffoldUri(
     },
     async (progress) => {
       progress.report({ message: "Applying template..." });
+      if (isBootstrapServerOnly) {
+        // Get template spec from the templates list
+        const templateList = await getTemplatesList();
+        const templateData = Array.from(
+          templateList.data.entries() as Iterable<[string, ScaffoldV1Template]>,
+        ).find(([, templateData]) => templateData.spec?.name === template)?.[1];
+
+        if (!templateData?.spec) {
+          throw new Error("Template not found");
+        }
+
+        // Create template spec with dynamic options
+        const templateSpec = {
+          name: template,
+          template_collection: { id: collection },
+          display_name: templateData.spec.display_name || template,
+          options: Object.fromEntries(
+            Object.entries(templateData.spec.options || {}).map(([key, value]) => [
+              key,
+              {
+                ...(typeof value === "object" && value !== null ? value : {}),
+                initial_value:
+                  key === "cc_bootstrap_server"
+                    ? options["cc_bootstrap_server"] || // Use the bootstrap server directly from the URI params
+                      (typeof value === "object" && value !== null && "initial_value" in value
+                        ? (value as { initial_value?: string }).initial_value
+                        : "") ||
+                      ""
+                    : options[key] || // Use other provided options from the options object
+                      (typeof value === "object" && value !== null && "initial_value" in value
+                        ? (value as { initial_value?: string }).initial_value
+                        : "") ||
+                      "",
+              },
+            ]),
+          ),
+        };
+
+        const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
+          { id: template, template: scaffoldFormTemplate },
+          "bootstrap-server-form",
+          `Configure Bootstrap Server Settings`,
+          ViewColumn.One,
+          { enableScripts: true },
+        );
+
+        if (wasExisting) {
+          optionsForm.reveal();
+          return { success: false, message: "Form already open" };
+        }
+
+        // Wait for form submission
+        return new Promise((resolve) => {
+          const disposable = handleWebviewMessage(optionsForm.webview, async (type, body) => {
+            if (type === "GetTemplateSpec") {
+              return templateSpec;
+            }
+            if (type === "Submit") {
+              const result = await applyTemplate(
+                { spec: templateSpec } as ScaffoldV1Template,
+                body.data,
+              );
+              optionsForm.dispose();
+              disposable.dispose();
+              resolve(result);
+            }
+            return null;
+          });
+        });
+      }
+
       return await applyTemplate(
         {
           spec: {
@@ -333,18 +411,22 @@ export async function handleProjectScaffoldUri(
       );
     },
   );
-
-  if (result.success) {
+  if ((result as PostResponse).success) {
     vscode.window.showInformationMessage("🎉 Project generated successfully!");
   } else {
-    const cleanedErrorMessage = parseErrorMessage(result.message ?? "");
+    let cleanedErrorMessage = "Unknown error occurred.";
+    if (typeof result === "object" && result !== null && "message" in result) {
+      cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
+      // Removed duplicate error message display
+    } else {
+      vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
+    }
     vscode.window.showErrorMessage("Failed to generate project", {
       modal: true,
       detail: cleanedErrorMessage,
     });
   }
 }
-
 function parseErrorMessage(rawMessage: string): string {
   try {
     const parsed = JSON.parse(rawMessage);
@@ -385,6 +467,7 @@ export function setProjectScaffoldListener(): vscode.Disposable {
     const apiKey = params.get("cc_api_key") || "";
     const apiSecret = params.get("cc_api_secret") || "";
     const topic = params.get("cc_topic") || "";
+    const isBootstrapServerOnly = params.get("isBootstrapServerOnly") === "true" ? true : null;
 
     const options: { [key: string]: string } = {
       cc_bootstrap_server: bootstrapServer,
@@ -393,7 +476,7 @@ export function setProjectScaffoldListener(): vscode.Disposable {
       cc_topic: topic,
     };
 
-    await handleProjectScaffoldUri(collection, template, options);
+    await handleProjectScaffoldUri(collection, template, isBootstrapServerOnly, options);
   });
 
   return disposable;
