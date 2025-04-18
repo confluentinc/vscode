@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.1.2
+
 ### Fixed
 
 - The LaunchDarkly client will now use the Node SDK instead of the Electron SDK for remote
