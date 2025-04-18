@@ -145,7 +145,7 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
   });
 }
 
-export function registerFlinkSqlConfigListener(): vscode.Disposable {
+export async function registerFlinkSqlConfigListener(): Promise<vscode.Disposable> {
   // POC: This is one option for updating the server when settings change.
   // The CCloud UI defaults to the currently selected catalog and database from the dropdown
   // & waits until all settings are updated, instead of sending intermittent updates (i.e. catalog changes, then db)

@@ -192,7 +192,7 @@ async function _activateExtension(
       logger.info("User authenticated and Flink enabled, initializing language client...");
       try {
         const languageClient = await initializeLanguageClient();
-        const configListener = registerFlinkSqlConfigListener();
+        const configListener = await registerFlinkSqlConfigListener();
         flinkSqlDisposables = [languageClient, configListener];
         context.subscriptions.push(...flinkSqlDisposables);
         // POC: we could ask users to set up/update the language server config here if they haven't already
