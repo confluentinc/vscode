@@ -48,12 +48,17 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
 
 async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) {
   if (item instanceof KafkaCluster) {
-    return await scaffoldProjectRequest({ cc_bootstrap_server: item.bootstrapServers });
+    return await scaffoldProjectRequest({
+      bootstrap_server: item.bootstrapServers,
+      cc_bootstrap_server: item.bootstrapServers,
+    });
   } else if (item instanceof KafkaTopic) {
     const cluster = await getResourceManager().getClusterForTopic(item);
     return await scaffoldProjectRequest({
+      bootstrap_server: cluster?.bootstrapServers,
       cc_bootstrap_server: cluster?.bootstrapServers,
       cc_topic: item.name,
+      topic: item.name,
     });
   }
 }
