@@ -688,14 +688,17 @@ export class ResourceManager {
 
   /** Look up the {@link ConnectionId}:{@link ConnectionSpec} map for any existing `DIRECT` connections. */
   async getDirectConnections(): Promise<DirectConnectionsById> {
-    // Get the JSON-stringified map from storage
-    const connectionsString: string | undefined = await this.storage.getSecret(
-      SecretStorageKeys.DIRECT_CONNECTIONS,
-    );
+    // Get the JSON-stringified map from storage.
+
+    // (Do this _without_ mutex guarding, since this gets called from within
+    //  the mutex guarding of the addDirectConnections() method. Otherwise deadlock and hilarity.)
+    const connectionsString = await this.storage.getSecret(SecretStorageKeys.DIRECT_CONNECTIONS);
+
     const connectionsById: Map<string, object> = connectionsString
       ? stringToMap(connectionsString)
       : new Map<string, object>();
-    // cast any values back to CustomConnectionSpec instances
+
+    // Promote values back to CustomConnectionSpec instances
     return new Map(
       Array.from(connectionsById).map(([id, spec]) => [
         id as ConnectionId,
@@ -710,14 +713,25 @@ export class ResourceManager {
   }
 
   /**
-   * Add a direct connection spec to the extension state by looking up the existing
-   * {@link DirectConnectionsById} map and adding/overwriting the `spec` by its `id`.
+   * Add a single direct connection.
+   * Use {@link addDirectConnections()} to add multiple connections at once.
+   * @param spec The {@link CustomConnectionSpec} to add
    */
   async addDirectConnection(spec: CustomConnectionSpec): Promise<void> {
+    return await this.addDirectConnections(spec);
+  }
+
+  /**
+   * Add one or more direct connection specs to the extension state by looking up the existing
+   * {@link DirectConnectionsById} map and adding/overwriting each `spec` by its `id`.
+   */
+  async addDirectConnections(...specs: CustomConnectionSpec[]): Promise<void> {
     const key = SecretStorageKeys.DIRECT_CONNECTIONS;
     return await this.runWithMutex(key, async () => {
       const connectionIds: DirectConnectionsById = await this.getDirectConnections();
-      connectionIds.set(spec.id! as ConnectionId, spec);
+      for (const spec of specs) {
+        connectionIds.set(spec.id! as ConnectionId, spec);
+      }
       const serializedConnections = Object.fromEntries(
         Array.from(connectionIds.entries()).map(([id, spec]) => [
           id,
