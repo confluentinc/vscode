@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { posix } from "path";
 import { unzip } from "unzipit";
+import { ViewColumn } from "vscode";
 import {
   ApplyScaffoldV1TemplateOperationRequest,
   ListScaffoldV1TemplatesRequest,
@@ -10,15 +11,15 @@ import {
   ScaffoldV1TemplateSpec,
   TemplatesScaffoldV1Api,
 } from "./clients/scaffoldingService";
-import { getSidecar } from "./sidecar";
-import { Logger } from "./logging";
-import { ViewColumn } from "vscode";
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
+import { Logger } from "./logging";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
+import { QuickPickItemWithValue } from "./quickpicks/types";
+import { getSidecar } from "./sidecar";
 import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
 import { fileUriExists } from "./utils/file";
@@ -26,37 +27,58 @@ import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
 import { PostResponse, type post } from "./webview/scaffold-form";
 import scaffoldFormTemplate from "./webview/scaffold-form.html";
-import { log } from "console";
 type MessageSender = OverloadUnion<typeof post>;
 type MessageResponse<MessageType extends string> = Awaited<
   ReturnType<Extract<MessageSender, (type: MessageType, body: any) => any>>
 >;
+
+interface PrefilledTemplateOptions {
+  templateName?: string;
+  [key: string]: string | undefined;
+}
 
 const scaffoldWebviewCache = new WebviewPanelCache();
 const logger = new Logger("scaffold");
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
-    registerCommandWithLogging("confluent.resources.scaffold", scaffoldProjectRequest),
+    registerCommandWithLogging("confluent.resources.scaffold", resourceScaffoldProjectRequest),
   ];
 }
 
-export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) => {
+async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) {
+  if (item instanceof KafkaCluster) {
+    return await scaffoldProjectRequest({ cc_bootstrap_server: item.bootstrapServers });
+  } else if (item instanceof KafkaTopic) {
+    const cluster = await getResourceManager().getClusterForTopic(item);
+    return await scaffoldProjectRequest({
+      cc_bootstrap_server: cluster?.bootstrapServers,
+      cc_topic: item.name,
+    });
+  }
+}
+
+export const scaffoldProjectRequest = async (item?: PrefilledTemplateOptions) => {
   let pickedTemplate: ScaffoldV1Template | undefined = undefined;
   try {
     const templateListResponse: ScaffoldV1TemplateList = await getTemplatesList();
     let templateList = Array.from(templateListResponse.data) as ScaffoldV1Template[];
-    if (item) {
+    if (item && !item.templateName) {
+      // When we're triggering the scaffolding from the cluster or topic context menu, we want to show only
+      // templates that are tagged as producer or consumer but with a quickpick
       templateList = templateList.filter((template) => {
         const tags = template.spec?.tags || [];
         const hasProducerOrConsumer = tags.includes("producer") || tags.includes("consumer");
         return hasProducerOrConsumer;
       });
+      pickedTemplate = await pickTemplate(templateList);
+    } else if (item && item.templateName) {
+      // Handling from a URI where there is a template name matched and quickpick is not needed
+      pickedTemplate = templateList.find((template) => template.spec!.name === item.templateName);
+    } else {
+      // If no arguments are passed, show all templates
+      pickedTemplate = await pickTemplate(templateList);
     }
-    const pickedItem = await pickTemplate(templateList);
-    pickedTemplate = templateList.find(
-      (template) => template.spec!.display_name === pickedItem?.label,
-    );
   } catch (err) {
     logError(err, "template listing", { extra: { functionName: "scaffoldProjectRequest" } });
     vscode.window.showErrorMessage("Failed to retrieve template list");
@@ -95,20 +117,11 @@ export const scaffoldProjectRequest = async (item?: KafkaCluster | KafkaTopic) =
    */
   let optionValues: { [key: string]: string | boolean } = {};
   let options = templateSpec.options || {};
-  async function getInitialOptionValue(option: string, properties: any): Promise<string | boolean> {
-    if ((option === "topic" || option === "cc_topic") && item instanceof KafkaTopic)
-      return item.name;
-    else if (option === "bootstrap_server" || option === "cc_bootstrap_server") {
-      if (item instanceof KafkaCluster) return item.bootstrapServers;
-      else if (item instanceof KafkaTopic) {
-        const cluster = await getResourceManager().getClusterForTopic(item);
-        return cluster?.bootstrapServers ?? "";
-      }
+
+  for (const option of Object.keys(options)) {
+    if (item && item[option] !== undefined) {
+      optionValues[option] = JSON.stringify(item[option]);
     }
-    return properties.initial_value ?? "";
-  }
-  for (const [option, properties] of Object.entries(options)) {
-    optionValues[option] = await getInitialOptionValue(option, properties);
   }
   function updateOptionValue(key: string, value: string) {
     optionValues[key] = value;
@@ -276,11 +289,11 @@ async function getNonConflictingDirPath(
 
 async function pickTemplate(
   templateList: ScaffoldV1Template[],
-): Promise<vscode.QuickPickItem | undefined> {
+): Promise<ScaffoldV1Template | undefined> {
   const sortedList = templateList.sort((a, b) => {
     return a.spec!.display_name!.toLowerCase().localeCompare(b.spec!.display_name!.toLowerCase());
   });
-  const quickPickItems: vscode.QuickPickItem[] = [];
+  const quickPickItems: QuickPickItemWithValue<ScaffoldV1Template>[] = [];
   sortedList.forEach((templateItem: ScaffoldV1Template) => {
     const spec = templateItem.spec;
     if (!spec) return;
@@ -290,11 +303,13 @@ async function pickTemplate(
       label: spec.display_name!,
       description: tags,
       detail: spec.description!,
+      value: templateItem,
     });
   });
-  return await vscode.window.showQuickPick(quickPickItems, {
+  const pickedItem = await vscode.window.showQuickPick(quickPickItems, {
     placeHolder: "Select a project template",
   });
+  return pickedItem?.value;
 }
 
 export async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
@@ -310,7 +325,7 @@ export async function getTemplatesList(): Promise<ScaffoldV1TemplateList> {
 export async function handleProjectScaffoldUri(
   collection: string | null,
   template: string | null,
-  isBootstrapServerOnly: boolean | null,
+  isFormNeeded: boolean | null,
   options: { [key: string]: string },
 ): Promise<void> {
   if (!collection || !template) {
@@ -328,77 +343,9 @@ export async function handleProjectScaffoldUri(
     },
     async (progress) => {
       progress.report({ message: "Applying template..." });
-      if (isBootstrapServerOnly) {
-        // Get template spec from the templates list
-        const templateList = await getTemplatesList();
-        const templateData = Array.from(
-          templateList.data.entries() as Iterable<[string, ScaffoldV1Template]>,
-        ).find(([, templateData]) => templateData.spec?.name === template)?.[1];
-
-        if (!templateData?.spec) {
-          throw new Error("Template not found");
-        }
-
-        // Create template spec with dynamic options
-        const templateSpec = {
-          name: template,
-          template_collection: { id: collection },
-          display_name: templateData.spec.display_name || template,
-          options: Object.fromEntries(
-            Object.entries(templateData.spec.options || {}).map(([key, value]) => [
-              key,
-              {
-                ...(typeof value === "object" && value !== null ? value : {}),
-                initial_value:
-                  key === "cc_bootstrap_server"
-                    ? options["cc_bootstrap_server"] || // Use the bootstrap server directly from the URI params
-                      (typeof value === "object" && value !== null && "initial_value" in value
-                        ? (value as { initial_value?: string }).initial_value
-                        : "") ||
-                      ""
-                    : options[key] || // Use other provided options from the options object
-                      (typeof value === "object" && value !== null && "initial_value" in value
-                        ? (value as { initial_value?: string }).initial_value
-                        : "") ||
-                      "",
-              },
-            ]),
-          ),
-        };
-
-        const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
-          { id: template, template: scaffoldFormTemplate },
-          "bootstrap-server-form",
-          `Configure Bootstrap Server Settings`,
-          ViewColumn.One,
-          { enableScripts: true },
-        );
-
-        if (wasExisting) {
-          optionsForm.reveal();
-          return { success: false, message: "Form already open" };
-        }
-
-        // Wait for form submission
-        return new Promise((resolve) => {
-          const disposable = handleWebviewMessage(optionsForm.webview, async (type, body) => {
-            if (type === "GetTemplateSpec") {
-              return templateSpec;
-            }
-            if (type === "Submit") {
-              const result = await applyTemplate(
-                { spec: templateSpec } as ScaffoldV1Template,
-                body.data,
-              );
-              optionsForm.dispose();
-              disposable.dispose();
-              resolve(result);
-            }
-            return null;
-          });
-        });
+      if (isFormNeeded) {
+        return await scaffoldProjectRequest({ templateName: template, ...options });
       }
-
       return await applyTemplate(
         {
           spec: {
@@ -467,7 +414,7 @@ export function setProjectScaffoldListener(): vscode.Disposable {
     const apiKey = params.get("cc_api_key") || "";
     const apiSecret = params.get("cc_api_secret") || "";
     const topic = params.get("cc_topic") || "";
-    const isBootstrapServerOnly = params.get("isBootstrapServerOnly") === "true" ? true : null;
+    const isFormNeeded = params.get("isFormNeeded") === "true" ? true : null;
 
     const options: { [key: string]: string } = {
       cc_bootstrap_server: bootstrapServer,
@@ -476,7 +423,7 @@ export function setProjectScaffoldListener(): vscode.Disposable {
       cc_topic: topic,
     };
 
-    await handleProjectScaffoldUri(collection, template, isBootstrapServerOnly, options);
+    await handleProjectScaffoldUri(collection, template, isFormNeeded, options);
   });
 
   return disposable;
