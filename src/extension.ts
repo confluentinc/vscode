@@ -80,7 +80,11 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
-
+import {
+  initializeLanguageClient,
+  registerFlinkSqlConfigListener,
+} from "./flinkSql/languageClient";
+import { ccloudConnected } from "./emitters";
 const logger = new Logger("extension");
 
 // This method is called when your extension is activated based on the activation events
@@ -171,6 +175,53 @@ async function _activateExtension(
   // set up the preferences listener to keep the sidecar in sync with the user/workspace settings
   const settingsListener: vscode.Disposable = await setupPreferences();
   context.subscriptions.push(settingsListener);
+
+  /** Flink SQL Language Server integration
+   *  Only initialize Flink SQL features if enabled and user is authenticated
+   */
+  let flinkSqlDisposables: vscode.Disposable[] = [];
+  const initFlinkSqlFeatures = async (isAuthenticated: boolean) => {
+    const flinkEnabled = vscode.workspace.getConfiguration().get(ENABLE_FLINK, false);
+    // Clean up any existing client(s) first
+    if (flinkSqlDisposables.length > 0) {
+      flinkSqlDisposables.forEach((d) => d.dispose());
+      flinkSqlDisposables = [];
+    }
+
+    if (flinkEnabled && isAuthenticated) {
+      logger.info("User authenticated and Flink enabled, initializing language client...");
+      try {
+        const languageClient = await initializeLanguageClient();
+        const configListener = registerFlinkSqlConfigListener();
+        flinkSqlDisposables = [languageClient, configListener];
+        context.subscriptions.push(...flinkSqlDisposables);
+        // POC: we could ask users to set up/update the language server config here if they haven't already
+        vscode.window
+          .showWarningMessage(
+            "FlinkSQL Language Server configuration required",
+            "Configure",
+            "Cancel",
+          )
+          .then((selection) => {
+            if (selection === "Configure") {
+              vscode.commands.executeCommand("confluent.flink.configureLanguageServer");
+            } else if (selection === "Cancel") {
+              logger.info("Flink SQL Language Server configuration cancelled");
+              languageClient.dispose();
+              configListener.dispose();
+            }
+          });
+      } catch (e) {
+        logger.error(`Error initializing FlinkSQL language client: ${e}`);
+      }
+    } else if (flinkEnabled) {
+      logger.info("Flink enabled but waiting for authentication to initialize language client");
+    }
+  };
+  const authListener = ccloudConnected.event(async (isConnected) => {
+    await initFlinkSqlFeatures(isConnected);
+  });
+  context.subscriptions.push(authListener);
 
   // set up the different view providers
   const resourceViewProvider = ResourceViewProvider.getInstance();
