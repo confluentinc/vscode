@@ -18,7 +18,7 @@ export async function schemaRegistryQuickPickWithViewProgress(): Promise<
 > {
   return await window.withProgress(
     {
-      location: { viewId: "confluent-schemas" },
+      location: { viewId: getSchemasViewProvider().viewId },
       title: "Loading Schema Registries...",
     },
     async () => {
