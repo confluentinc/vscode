@@ -14,6 +14,7 @@ import { WebsocketTransport } from "../sidecar/websocketTransport";
 import { CCLOUD_CONNECTION_ID } from "../constants";
 import { getStorageManager } from "../storage";
 import { SecretStorageKeys } from "../storage/constants";
+import { SIDECAR_PORT } from "../sidecar/constants";
 
 const logger = new Logger("flinkSql.languageClient");
 
@@ -48,7 +49,7 @@ export function buildFlinkSqlWebSocketUrl(): string {
   const environmentId = "env-x7727g"; // DTX a-main-test? TODO:  Get this from active environment
   const organizationId = "f551c50b-0397-4f31-802d-d5371a49d3bf"; // DTX Org TODO: Get from active org
   const settings = { region: "us-east1", provider: "gcp", environmentId, organizationId }; // TODO: Get these from user-specified settings
-  return `ws://127.0.0.1:26636/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${settings.region}&provider=${settings.provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
+  return `ws://localhost:${SIDECAR_PORT}/flsp?connectionId=${CCLOUD_CONNECTION_ID}&region=${settings.region}&provider=${settings.provider}&environmentId=${environmentId}&organizationId=${organizationId}`;
 }
 export async function initializeLanguageClient(): Promise<vscode.Disposable> {
   if (languageClient) {
