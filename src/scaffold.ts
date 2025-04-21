@@ -378,17 +378,16 @@ export async function handleProjectScaffoldUri(
     },
   );
 
-  if (result && typeof result === "object" && "success" in result) {
-    if (result.success) {
-      vscode.window.showInformationMessage("🎉 Project generated successfully!");
-    } else {
-      vscode.window.showErrorMessage(
-        `Failed to generate project: ${result.message || "Unknown error occurred."}`,
-      );
-    }
+  if (typeof result === "object" && result !== null && "message" in result) {
+    let cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
+    vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`, {
+      detail: cleanedErrorMessage,
+    });
   } else {
-    vscode.window.showErrorMessage("Failed to generate project: Unexpected result structure.");
+    vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
   }
+  // show the form to let the user adjust values as needed
+  await scaffoldProjectRequest({ templateName: template, ...options });
 }
 
 function parseErrorMessage(rawMessage: string): string {
@@ -431,7 +430,7 @@ export function setProjectScaffoldListener(): vscode.Disposable {
     const apiKey = params.get("cc_api_key") || "";
     const apiSecret = params.get("cc_api_secret") || "";
     const topic = params.get("cc_topic") || "";
-    const isFormNeeded = params.get("isFormNeeded") === "true" ? true : null;
+    const isFormNeeded = params.get("isFormNeeded") === "true";
 
     const options: { [key: string]: string } = {
       cc_bootstrap_server: bootstrapServer,
