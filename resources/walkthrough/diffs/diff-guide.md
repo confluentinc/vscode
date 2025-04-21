@@ -1,9 +1,7 @@
-# Comparing Resources
-
 The Confluent extension provides read-only document views for schema definitions and topic message
 previews. You can compare them using VS Code's built-in diff editor:
 
-## Comparing two documents
+## From the document context menu
 
 1. **Select the first document:** Right-click inside a document and select _"Select for Compare"_
    from the context menu. ![](./topic-message-diff-select.png)
@@ -14,18 +12,16 @@ previews. You can compare them using VS Code's built-in diff editor:
 3. VS Code will open a side-by-side diff view showing both documents with their differences
    highlighted. ![](./topic-messages-diff.png)
 
-## Alternative methods
+## From the editor tab title
 
-### From the editor tab
-
-You can also access these commands by right-clicking on a document's **tab**:
+You can also access these actions by right-clicking on a document's **tab**:
 
 ![](./schemas-diff-tab-titles.png)
 
-### From the sidebar
+## From the sidebar
 
-For schema versions, you can right-click items in the
-[**Schemas** view](command:confluent-schemas.focus) in the sidebar:
+For schema versions, you can access the same commands by right-clicking individual **schema
+versions** in the [**Schemas** view](command:confluent-schemas.focus) in the sidebar:
 
 ![](./schemas-diff-sidebar.png)
 
