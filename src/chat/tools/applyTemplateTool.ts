@@ -29,7 +29,7 @@ export function parseListTemplatesOutput(part: LanguageModelTextPart): IApplyTem
   }
 
   const templateId = match[1];
-  const options = match[2] ? JSON.parse(match[2]) : {}; // Default to an empty object if inputOptions is missing
+  const options = match[2] ? JSON.parse(match[2]) : {};
 
   return { templateId, options };
 }
@@ -136,26 +136,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       return [this.toolMessage("The `templateId` parameter is required.", `${this.name}-error`)];
     }
 
-    // Fetch options from the user prompt
-    interface Prompt {
-      match?: {
-        bootstrap_server?: string;
-        cc_api_key?: string;
-        cc_api_secret?: string;
-        cc_topic?: string;
-      };
-    }
-
-    const prompt = request.prompt as Prompt;
-
-    const userPromptOptions = {
-      bootstrap_server: prompt.match?.bootstrap_server || "localhost:9092",
-      cc_api_key: prompt.match?.cc_api_key || "",
-      cc_api_secret: prompt.match?.cc_api_secret || "",
-      cc_topic: prompt.match?.cc_topic || "",
-    };
-    logger.debug("USER PROMPT OPTIONS:", userPromptOptions);
-    parameters.options = { ...parameters.options, ...userPromptOptions };
+    parameters.options = { ...parameters.options };
 
     logger.debug("Merged PARAMETERS with user prompt options!", parameters);
 
