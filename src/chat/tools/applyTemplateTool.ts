@@ -44,16 +44,14 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
     logger.debug("OPTIONS:", options);
 
-    // Ensure options are gleaned from ListTemplatesTool response
     try {
       const inputPart = new LanguageModelTextPart(
-        `id="${options.input.templateId}"; inputOptions="${options.input.options ? JSON.stringify(options.input.options) : "{}"}"`,
+        `id="${options.input.templateId}"; inputOptions=${JSON.stringify(options.input.options)}`, // Remove unnecessary quotes around JSON.stringify
       );
       logger.debug("INPUT PART:", inputPart);
       const parsedParameters = parseListTemplatesOutput(inputPart);
       logger.debug("Parsed parameters:", parsedParameters);
 
-      // Merge options from ListTemplatesTool response and user's prompt
       options.input.options = { ...parsedParameters.options, ...options.input.options };
     } catch (error) {
       logger.error("Error parsing template output:", error);
@@ -87,7 +85,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     }
 
     // Ensure options are defined
-    params.options = params.options || {}; // Default to an empty object if undefined
+    params.options = { ...params.options }; // Ensure options retain merged values
     if (typeof params.options !== "object") {
       logger.debug("Invalid options:", params.options);
       throw new Error("The `options` parameter must be a valid object.");
@@ -132,10 +130,34 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     token: CancellationToken,
   ): Promise<LanguageModelChatMessage[]> {
     const parameters = toolCall.input as IApplyTemplateParameters;
+    logger.debug("PARAMS!", parameters);
 
     if (!parameters.templateId) {
       return [this.toolMessage("The `templateId` parameter is required.", `${this.name}-error`)];
     }
+
+    // Fetch options from the user prompt
+    interface Prompt {
+      match?: {
+        bootstrap_server?: string;
+        cc_api_key?: string;
+        cc_api_secret?: string;
+        cc_topic?: string;
+      };
+    }
+
+    const prompt = request.prompt as Prompt;
+
+    const userPromptOptions = {
+      bootstrap_server: prompt.match?.bootstrap_server || "localhost:9092",
+      cc_api_key: prompt.match?.cc_api_key || "",
+      cc_api_secret: prompt.match?.cc_api_secret || "",
+      cc_topic: prompt.match?.cc_topic || "",
+    };
+    logger.debug("USER PROMPT OPTIONS:", userPromptOptions);
+    parameters.options = { ...parameters.options, ...userPromptOptions };
+
+    logger.debug("Merged PARAMETERS with user prompt options!", parameters);
 
     // Call prepareInvocation to validate and prepare the input
     await this.prepareInvocation({ input: parameters }, token);
