@@ -23,13 +23,13 @@ export interface IApplyTemplateParameters {
 
 /** Parse a LanguageModelTextPart from ListTemplatesTool into IApplyTemplateParameters. */
 export function parseListTemplatesOutput(part: LanguageModelTextPart): IApplyTemplateParameters {
-  const match = part.value.match(/id="(.+?)";.*inputOptions="(.+?)"/);
+  const match = part.value.match(/id="(.+?)";.*inputOptions="(.*?)"/);
   if (!match) {
     throw new Error("Invalid template output format");
   }
 
   const templateId = match[1];
-  const options = JSON.parse(match[2]);
+  const options = match[2] ? JSON.parse(match[2]) : {}; // Default to an empty object if inputOptions is missing
 
   return { templateId, options };
 }
@@ -42,15 +42,19 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     options: vscode.LanguageModelToolInvocationPrepareOptions<IApplyTemplateParameters>,
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
-    logger.debug("prepareInvocation called with options:", options);
+    logger.debug("OPTIONS:", options);
 
-    // Example usage of parseListTemplatesOutput
+    // Ensure options are gleaned from ListTemplatesTool response
     try {
       const inputPart = new LanguageModelTextPart(
-        `id="${options.input.templateId}"; inputOptions="${JSON.stringify(options.input.options)}"`,
+        `id="${options.input.templateId}"; inputOptions="${options.input.options ? JSON.stringify(options.input.options) : "{}"}"`,
       );
+      logger.debug("INPUT PART:", inputPart);
       const parsedParameters = parseListTemplatesOutput(inputPart);
       logger.debug("Parsed parameters:", parsedParameters);
+
+      // Merge options from ListTemplatesTool response and user's prompt
+      options.input.options = { ...parsedParameters.options, ...options.input.options };
     } catch (error) {
       logger.error("Error parsing template output:", error);
       throw new Error("Failed to parse template output.");
@@ -77,10 +81,16 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     token: CancellationToken,
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
-    logger.debug("params:", params);
 
     if (!params.templateId) {
       throw new Error("The `templateId` parameter is required.");
+    }
+
+    // Ensure options are defined
+    params.options = params.options || {}; // Default to an empty object if undefined
+    if (typeof params.options !== "object") {
+      logger.debug("Invalid options:", params.options);
+      throw new Error("The `options` parameter must be a valid object.");
     }
 
     // Fetch the template and apply it
@@ -126,6 +136,9 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     if (!parameters.templateId) {
       return [this.toolMessage("The `templateId` parameter is required.", `${this.name}-error`)];
     }
+
+    // Call prepareInvocation to validate and prepare the input
+    await this.prepareInvocation({ input: parameters }, token);
 
     const result: LanguageModelToolResult = await this.invoke(
       {
