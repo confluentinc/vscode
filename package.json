@@ -90,6 +90,34 @@
             }
           }
         }
+      },
+      {
+        "name": "apply_projectTemplate",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Apply Project Template",
+        "modelDescription": "Apply a selected project template to generate a new project. Use this when the user selects a template and provides the necessary options.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "description": "The ID of the template to apply."
+            },
+            "options": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Options to customize the template application."
+            }
+          },
+          "required": ["templateId"]
+        }
       }
     ],
     "commands": [
@@ -561,7 +589,7 @@
         },
         "confluent.experimental.enableChatParticipant": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable the Confluent chat participant for Copilot.",
           "tags": [
             "experimental"
