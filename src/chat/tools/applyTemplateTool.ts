@@ -21,6 +21,19 @@ export interface IApplyTemplateParameters {
   options: { [key: string]: string };
 }
 
+/** Parse a LanguageModelTextPart from ListTemplatesTool into IApplyTemplateParameters. */
+export function parseListTemplatesOutput(part: LanguageModelTextPart): IApplyTemplateParameters {
+  const match = part.value.match(/id="(.+?)";.*inputOptions="(.+?)"/);
+  if (!match) {
+    throw new Error("Invalid template output format");
+  }
+
+  const templateId = match[1];
+  const options = JSON.parse(match[2]);
+
+  return { templateId, options };
+}
+
 export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParameters> {
   readonly name = "apply_projectTemplate";
   readonly progressMessage = "Applying the selected project template...";
@@ -30,6 +43,18 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
     logger.debug("prepareInvocation called with options:", options);
+
+    // Example usage of parseListTemplatesOutput
+    try {
+      const inputPart = new LanguageModelTextPart(
+        `id="${options.input.templateId}"; inputOptions="${JSON.stringify(options.input.options)}"`,
+      );
+      const parsedParameters = parseListTemplatesOutput(inputPart);
+      logger.debug("Parsed parameters:", parsedParameters);
+    } catch (error) {
+      logger.error("Error parsing template output:", error);
+      throw new Error("Failed to parse template output.");
+    }
 
     const confirmationMessages = {
       title: "Apply Project Template",
