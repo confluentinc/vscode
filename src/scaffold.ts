@@ -379,15 +379,22 @@ export async function handleProjectScaffoldUri(
   );
 
   if (typeof result === "object" && result !== null && "message" in result) {
-    let cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
-    vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`, {
-      detail: cleanedErrorMessage,
-    });
-  } else {
+    // Only show error if it's a real error (not success) and not just showing the form
+    if (!(result as PostResponse).success) {
+      let cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
+      vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`, {
+        detail: cleanedErrorMessage,
+      });
+    }
+  } else if (result !== undefined) {
+    // Only show error if we got an actual undefined result, not just showing the form
     vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
   }
-  // show the form to let the user adjust values as needed
-  await scaffoldProjectRequest({ templateName: template, ...options });
+
+  // Only show the form if it hasn't been shown already or if explicit form needed
+  if (!isFormNeeded) {
+    await scaffoldProjectRequest({ templateName: template, ...options });
+  }
 }
 
 function parseErrorMessage(rawMessage: string): string {
