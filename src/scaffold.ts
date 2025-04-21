@@ -34,7 +34,6 @@ type MessageResponse<MessageType extends string> = Awaited<
 
 interface PrefilledTemplateOptions {
   templateName?: string;
-  isFormNeeded?: string | undefined;
   [key: string]: string | undefined;
 }
 
@@ -94,14 +93,21 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   }
 
   if (pickedTemplate !== undefined) {
+    let itemType: string | undefined;
+    if (templateRequestOptions?.templateName) {
+      // only URIs will specify the templateName
+      itemType = "uri";
+    } else if (templateRequestOptions?.topic) {
+      // no templateName, but we have a topic name so this must've come from a topic tree item
+      itemType = "topic";
+    } else if (templateRequestOptions?.bootstrap_server) {
+      // no templateName, but we have a bootstrap_server (but no topic name) so this must've come from a Kafka cluster tree item
+      itemType = "cluster";
+    }
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "template picked",
       templateName: pickedTemplate.spec!.display_name,
-      itemType: templateRequestOptions
-        ? templateRequestOptions instanceof KafkaTopic
-          ? "topic"
-          : "cluster"
-        : undefined,
+      itemType,
     });
   } else {
     return;
