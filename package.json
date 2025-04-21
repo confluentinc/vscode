@@ -45,7 +45,8 @@
     "templates"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.confluent.*"
+    "workspaceContains:**/*.confluent.*",
+    "onUri"
   ],
   "main": "./out/extension.js",
   "contributes": {
