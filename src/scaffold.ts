@@ -380,7 +380,7 @@ export async function handleProjectScaffoldUri(
 
   if (typeof result === "object" && result !== null && "message" in result) {
     // Only show error if it's a real error (not success) and not just showing the form
-    if (!(result as PostResponse).success) {
+    if (result?.success !== undefined) {
       let cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
       vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`, {
         detail: cleanedErrorMessage,
