@@ -570,6 +570,13 @@
         }
       }
     },
+    "grammars": [
+      {
+        "language": "flinksql",
+				"scopeName": "source.flinksql",
+        "path": "./flinksql.tmLanguage.json"
+      }
+    ],
     "languages": [
       {
         "id": "flinksql",
