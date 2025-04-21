@@ -1468,6 +1468,17 @@
             ]
           },
           {
+            "id": "diff-resources",
+            "title": "Compare Resources Side by Side",
+            "description": "Use VS Code's powerful diff editor to compare topic messages or schema definitions, making it easier to spot changes between different items.",
+            "media": {
+              "markdown": "resources/walkthrough/diffs/diff-guide.md"
+            },
+            "completionEvents": [
+              "onCommand:confluent.diff.compareWithSelected"
+            ]
+          },
+          {
             "id": "generate-project",
             "title": "Generate Files for a New Project",
             "description": "Just starting out? Run ``Generate New Project`` to get a complete scaffolding setup with all the necessary boilerplate files to kickstart your Kafka project.\n[Create new project](command:confluent.scaffold)",
