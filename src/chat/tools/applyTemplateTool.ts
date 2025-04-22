@@ -17,7 +17,7 @@ import { BaseLanguageModelTool } from "./base";
 const logger = new Logger("chat.tools.applyTemplate");
 
 export interface IApplyTemplateParameters {
-  templateId: string;
+  name: string;
   options: { [key: string]: string };
 }
 
@@ -28,10 +28,10 @@ export function parseListTemplatesOutput(part: LanguageModelTextPart): IApplyTem
     throw new Error("Invalid template output format");
   }
 
-  const templateId = match[1];
+  const name = match[1];
   const options = match[2] ? JSON.parse(match[2]) : {};
 
-  return { templateId, options };
+  return { name, options };
 }
 
 export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParameters> {
@@ -46,7 +46,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
 
     try {
       const inputPart = new LanguageModelTextPart(
-        `id="${options.input.templateId}"; inputOptions=${JSON.stringify(options.input.options)}`, // Remove unnecessary quotes around JSON.stringify
+        `id="${options.input.name}"; inputOptions=${JSON.stringify(options.input.options)}`, // Remove unnecessary quotes around JSON.stringify
       );
       logger.debug("INPUT PART:", inputPart);
       const parsedParameters = parseListTemplatesOutput(inputPart);
@@ -62,7 +62,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       title: "Apply Project Template",
       message: new vscode.MarkdownString(
         `This will apply the project template with the following parameters:\n\n` +
-          `- **Template ID**: ${options.input.templateId || "Not provided"}\n` +
+          `- **Template ID**: ${options.input.name || "Not provided"}\n` +
           `- **Options**: ${JSON.stringify(options.input.options, null, 2) || "None"}\n\n` +
           `Do you want to proceed?`,
       ),
@@ -80,8 +80,8 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
   ): Promise<LanguageModelToolResult> {
     const params = options.input;
 
-    if (!params.templateId) {
-      throw new Error("The `templateId` parameter is required.");
+    if (!params.name) {
+      throw new Error("The `name` parameter is required.");
     }
 
     // Ensure options are defined
@@ -95,11 +95,11 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     try {
       const templateList = await getTemplatesList();
       const template = Array.from(templateList.data).find(
-        (t) => (t.spec as { name?: string })?.name === params.templateId,
+        (t) => (t.spec as { name?: string })?.name === params.name,
       );
 
       if (!template) {
-        throw new Error(`Template with ID "${params.templateId}" not found.`);
+        throw new Error(`Template with name "${params.name}" not found.`);
       }
 
       const result = await applyTemplate(template as ScaffoldV1Template, params.options);
@@ -132,8 +132,8 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     const parameters = toolCall.input as IApplyTemplateParameters;
     logger.debug("PARAMS!", parameters);
 
-    if (!parameters.templateId) {
-      return [this.toolMessage("The `templateId` parameter is required.", `${this.name}-error`)];
+    if (!parameters.name) {
+      return [this.toolMessage("The `name` parameter is required.", `${this.name}-error`)];
     }
 
     parameters.options = { ...parameters.options };

@@ -105,9 +105,9 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "templateId": {
+            "name": {
               "type": "string",
-              "description": "The ID of the template to apply."
+              "description": "The name of the template to apply."
             },
             "options": {
               "type": "object",
@@ -118,7 +118,7 @@
             }
           },
           "required": [
-            "templateId"
+            "name"
           ]
         }
       },
