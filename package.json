@@ -264,6 +264,12 @@
         "category": "Confluent: Flink Statements"
       },
       {
+        "command": "confluent.flink.configureFlinkDefaults",
+        "icon": "$(settings-gear)",
+        "title": "Configure default settings for Flink SQL actions",
+        "category": "Confluent: Flink Defaults"
+      },
+      {
         "command": "confluent.resources.search",
         "icon": "$(search)",
         "title": "Search",
@@ -578,6 +584,48 @@
           "tags": [
             "experimental"
           ]
+        },
+        "confluent.flink.defaults": {
+          "type": "object",
+          "title": "Flink SQL",
+          "properties": {
+            "catalog": {
+              "type": "string",
+              "default": "",
+              "description": "CCloud Flink SQL catalog to use for Flink SQL operations"
+            },
+            "database": {
+              "type": "string",
+              "default": "",
+              "description": "CCloud Flink SQL database to use for Flink SQL operations"
+            },
+            "computePoolId": {
+              "type": "string",
+              "default": "",
+              "description": "ID for the default CCloud compute pool to use for Flink SQL operations"
+            },
+            "region": {
+              "type": "string",
+              "default": "us-east-1",
+              "description": "Default region to use for Flink SQL services. Region should match compute pool region.",
+              "enum": [
+                "us-east-1",
+                "us-west-2",
+                "eu-west-1",
+                "ap-southeast-2"
+              ]
+            },
+            "provider": {
+              "type": "string",
+              "default": "aws",
+              "description": "Default cloud provider to use for Flink SQL services. Provider should match compute pool provider.",
+              "enum": [
+                "aws",
+                "gcp",
+                "azure"
+              ]
+            }
+          }
         }
       }
     },
