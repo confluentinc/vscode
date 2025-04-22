@@ -23,7 +23,7 @@ export interface IApplyTemplateParameters {
 
 /** Parse a LanguageModelTextPart from ListTemplatesTool into IApplyTemplateParameters. */
 export function parseListTemplatesOutput(part: LanguageModelTextPart): IApplyTemplateParameters {
-  const match = part.value.match(/id="(.+?)";.*inputOptions="(.*?)"/);
+  const match = part.value.match(/id="(.+?)"; inputOptions=(\{.*\})/);
   if (!match) {
     throw new Error("Invalid template output format");
   }
