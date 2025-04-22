@@ -257,12 +257,6 @@
         "category": "Confluent: Flink Statements"
       },
       {
-        "command": "confluent.resources.flink-compute-pool.viewartifacts",
-        "title": "View Artifacts",
-        "icon": "$(confluent-flink-compute-pool)",
-        "category": "Confluent: Resources"
-      },
-      {
         "command": "confluent.resources.search",
         "icon": "$(search)",
         "title": "Search",

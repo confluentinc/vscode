@@ -18,6 +18,7 @@ export interface CreateFlinkStatementArgs {
   phase?: string;
   detail?: string;
   sqlKind?: string;
+  sqlStatement?: string;
 
   environmentId?: EnvironmentId;
   computePoolId?: string;
@@ -46,7 +47,7 @@ export function createFlinkStatement(overrides: CreateFlinkStatementArgs = {}): 
     }),
     spec: new FlinkStatementSpec({
       computePoolId: overrides.computePoolId || TEST_CCLOUD_FLINK_COMPUTE_POOL_ID,
-      sqlStatement: "SELECT * FROM test_table",
+      sqlStatement: overrides.sqlStatement || "SELECT * FROM test_table",
       principal: "test-principal",
       authorizedPrincipals: [],
       properties: {

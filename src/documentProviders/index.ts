@@ -14,16 +14,27 @@ export abstract class ResourceDocumentProvider implements vscode.TextDocumentCon
   abstract provideTextDocumentContent(uri: vscode.Uri): Promise<string>;
 
   /**
+   * Base implementation of converting a resource object to a URI that can be used to display the resource in a read-only editor.
+   * @param scheme
+   * @param resource
+   * @param filename
+   * @returns
+   */
+  static baseResourceToUri(scheme: string, resource: any, filename: string): vscode.Uri {
+    return vscode.Uri.from({
+      scheme,
+      path: join(homedir(), filename),
+      query: encodeURIComponent(JSON.stringify(resource)),
+    });
+  }
+
+  /**
    * Convert a resource object to a URI that can be used to display the resource in a read-only editor.
    * @param resource The resource object
    * @param filename The filename to use for the URI
    */
   resourceToUri(resource: any, filename: string): vscode.Uri {
-    return vscode.Uri.from({
-      scheme: this.scheme,
-      path: join(homedir(), filename),
-      query: encodeURIComponent(JSON.stringify(resource)),
-    });
+    return ResourceDocumentProvider.baseResourceToUri(this.scheme, resource, filename);
   }
 
   /**
