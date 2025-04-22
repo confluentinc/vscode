@@ -15,7 +15,6 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError, showErrorNotificationWithButtons } from "./errors";
-import { Logger } from "./logging";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
 import { QuickPickItemWithValue } from "./quickpicks/types";
@@ -38,7 +37,6 @@ interface PrefilledTemplateOptions {
 }
 
 const scaffoldWebviewCache = new WebviewPanelCache();
-const logger = new Logger("scaffold");
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
     registerCommandWithLogging("confluent.scaffold", scaffoldProjectRequest),
@@ -115,7 +113,6 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
 
   const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
 
-  logger.debug("Received Template Spec in Webview:", templateSpec);
   const [optionsForm, wasExisting] = scaffoldWebviewCache.findOrCreate(
     { id: templateSpec.name!, template: scaffoldFormTemplate },
     "template-options-form",
