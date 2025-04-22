@@ -110,6 +110,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   }
   logUsage(UserEvent.ProjectScaffoldingAction, {
     status: "template picked",
+    templateId: pickedTemplate.spec!.name,
     templateName: pickedTemplate.spec!.display_name,
     itemType: telemetrySource,
   });
@@ -175,6 +176,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
       case "Submit": {
         logUsage(UserEvent.ProjectScaffoldingAction, {
           status: "form submitted",
+          templateId: templateSpec.name,
           templateName: templateSpec.display_name,
           itemType: telemetrySource,
         });
@@ -229,6 +231,7 @@ export async function applyTemplate(
       // This means the user cancelled @ save dialog. Show a message and return
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "cancelled before save",
+        templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
         itemType: telemetrySource,
       });
@@ -241,6 +244,7 @@ export async function applyTemplate(
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
+      templateId: pickedTemplate.spec!.name,
       templateName: pickedTemplate.spec!.display_name,
       itemType: telemetrySource,
     });
@@ -258,6 +262,7 @@ export async function applyTemplate(
       const keepsExistingWindow = selection.title === "Open in New Window";
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "project folder opened",
+        templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
         keepsExistingWindow,
         itemType: telemetrySource,
@@ -402,7 +407,7 @@ export async function handleProjectScaffoldUri(
         );
         logUsage(UserEvent.ProjectScaffoldingAction, {
           status: "URI handling failed",
-          templateName: template,
+          templateId: template,
           itemType: "uri",
         });
       }
@@ -411,7 +416,7 @@ export async function handleProjectScaffoldUri(
     } else {
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "URI handling succeeded",
-        templateName: template,
+        templateId: template,
         itemType: "uri",
       });
     }
