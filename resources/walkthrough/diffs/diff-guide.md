@@ -1,5 +1,5 @@
 The Confluent extension provides read-only document views for schema definitions and topic message
-previews. You can compare them using VS Code's built-in diff editor:
+previews. You can compare them using VS Code's built-in diff viewer:
 
 ## From the document context menu
 
@@ -29,5 +29,5 @@ versions** in the [**Schemas** view](command:confluent-schemas.focus) in the sid
 
 - The diff view is **read-only** but lets you easily spot differences between messages or schema
   versions
-- Use the diff editor navigation arrows to jump between changes
+- Use the diff viewer navigation arrows to jump between changes
 - Schema comparisons are particularly useful when evolving schemas to ensure compatibility
