@@ -1470,7 +1470,7 @@
           {
             "id": "diff-resources",
             "title": "Compare Resources Side by Side",
-            "description": "Use VS Code's powerful diff editor to compare topic messages or schema definitions, making it easier to spot changes between different items.",
+            "description": "Use VS Code's powerful diff viewer to compare topic messages or schema definitions, making it easier to spot changes between different items.",
             "media": {
               "markdown": "resources/walkthrough/diffs/diff-guide.md"
             },
