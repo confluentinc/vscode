@@ -1,6 +1,5 @@
 /* tslint:disable */
 /* eslint-disable */
-export * from "./Action";
 export * from "./ApiKeyAndSecret";
 export * from "./AuthError";
 export * from "./AuthErrors";
@@ -31,7 +30,6 @@ export * from "./KerberosCredentials";
 export * from "./KeyOrValueMetadata";
 export * from "./KeyStore";
 export * from "./LocalConfig";
-export * from "./ModelError";
 export * from "./OAuthCredentials";
 export * from "./PartitionConsumeData";
 export * from "./PartitionConsumeRecord";
@@ -45,14 +43,13 @@ export * from "./ProduceRequestData";
 export * from "./ProduceRequestHeader";
 export * from "./ProduceResponse";
 export * from "./ProduceResponseData";
-export * from "./RBACRequest";
 export * from "./RecordMetadata";
 export * from "./SchemaRegistryConfig";
 export * from "./SchemaRegistryConfigCredentials";
 export * from "./SchemaRegistryStatus";
-export * from "./Scope";
 export * from "./ScramCredentials";
 export * from "./SidecarAccessToken";
+export * from "./SidecarError";
 export * from "./SidecarVersionResponse";
 export * from "./SimpleConsumeMultiPartitionRequest";
 export * from "./SimpleConsumeMultiPartitionResponse";
