@@ -1,8 +1,8 @@
-import * as vscode from "vscode";
-import { UriEventHandler } from "../src/uriHandler";
-import { projectScaffoldUri } from "../src/emitters";
-import * as sinon from "sinon";
 import assert from "assert";
+import * as sinon from "sinon";
+import * as vscode from "vscode";
+import { projectScaffoldUri } from "../src/emitters";
+import { UriEventHandler } from "../src/uriHandler";
 
 describe("UriEventHandler - /projectScaffold", () => {
   let uriHandler: UriEventHandler;
