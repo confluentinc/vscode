@@ -34,12 +34,11 @@ describe("UriEventHandler - /projectScaffold", () => {
   });
 
   it("should throw an error when collection or template not present", async () => {
-    // Missing template parameter
     const uriMissingTemplate = vscode.Uri.parse(
       "vscode://confluentinc.vscode-confluent/projectScaffold?collection=myCollection&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
     );
 
-    const consoleErrorSpy = sandbox.spy(console, "error");
+    const consoleErrorStub = sandbox.stub(console, "error");
 
     await uriHandler.handleUri(uriMissingTemplate);
 
@@ -55,9 +54,8 @@ describe("UriEventHandler - /projectScaffold", () => {
       uriMissingTemplate.toString(),
     );
 
-    // Missing collection parameter test
     projectScaffoldUriStub.reset();
-    consoleErrorSpy.resetHistory();
+    consoleErrorStub.restore();
 
     const uriMissingCollection = vscode.Uri.parse(
       "vscode://confluentinc.vscode-confluent/projectScaffold?template=myTemplate&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
