@@ -9,9 +9,8 @@ import {
   LanguageModelToolInvocationOptions,
   LanguageModelToolResult,
 } from "vscode";
-import { ScaffoldV1Template } from "../../clients/scaffoldingService";
 import { Logger } from "../../logging";
-import { applyTemplate, getTemplatesList } from "../../scaffold";
+import { scaffoldProjectRequest } from "../../scaffold";
 import { BaseLanguageModelTool } from "./base";
 
 const logger = new Logger("chat.tools.applyTemplate");
@@ -91,38 +90,31 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       throw new Error("The `options` parameter must be a valid object.");
     }
 
-    // Fetch the template and apply it
+    // Use scaffoldProjectRequest instead of direct template application
     try {
-      const templateList = await getTemplatesList();
-      const template = Array.from(templateList.data).find(
-        (t) => (t.spec as { name?: string })?.name === params.name,
-      );
+      const result = await scaffoldProjectRequest({
+        templateName: params.name,
+        ...params.options,
+      });
 
-      if (!template) {
-        throw new Error(`Template with name "${params.name}" not found.`);
-      }
-
-      const result = await applyTemplate(template as ScaffoldV1Template, params.options);
-
-      if (result.success) {
-        logger.debug("Template applied successfully:", result.message);
+      if (result !== null) {
+        logger.debug("Template application requested successfully:", result);
         return new LanguageModelToolResult([
-          new LanguageModelTextPart(`Template applied successfully: ${result.message}`),
+          new LanguageModelTextPart(`Template application requested successfully: ${result}`),
         ]);
       } else {
-        logger.error("Failed to apply template:", result.message);
+        logger.error("Failed to request template application:", result);
         return new LanguageModelToolResult([
-          new LanguageModelTextPart(`Failed to apply template: ${result.message}`),
+          new LanguageModelTextPart(`Failed to request template application: ${result}`),
         ]);
       }
     } catch (error) {
-      logger.error("Error applying template:", error);
+      logger.error("Error requesting template application:", error);
       return new LanguageModelToolResult([
-        new LanguageModelTextPart(`Error applying template: ${error}`),
+        new LanguageModelTextPart(`Error requesting template application: ${error}`),
       ]);
     }
   }
-
   async processInvocation(
     request: ChatRequest,
     stream: ChatResponseStream,
@@ -136,31 +128,25 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       return [this.toolMessage("The `name` parameter is required.", `${this.name}-error`)];
     }
 
-    parameters.options = { ...parameters.options };
+    try {
+      // Skip prepare invocation to avoid confirmation loop
+      const result = await scaffoldProjectRequest({
+        templateName: parameters.name,
+        ...parameters.options,
+      });
 
-    logger.debug("Merged PARAMETERS with user prompt options!", parameters);
-
-    // Call prepareInvocation to validate and prepare the input
-    await this.prepareInvocation({ input: parameters }, token);
-
-    const result: LanguageModelToolResult = await this.invoke(
-      {
-        input: parameters,
-        toolInvocationToken: request.toolInvocationToken,
-      },
-      token,
-    );
-
-    const messages: LanguageModelChatMessage[] = [];
-    if (result.content && Array.isArray(result.content)) {
-      let message = `Template application result:\n`;
-      for (const part of result.content as LanguageModelTextPart[]) {
-        message = `${message}\n\n${part.value}`;
-      }
-      messages.push(this.toolMessage(message, `${this.name}-result`));
-    } else {
-      throw new Error(`Unexpected result content structure: ${JSON.stringify(result)}`);
+      return [
+        this.toolMessage(
+          `## Template Request Submitted\n\n` +
+            `🎯 **Template**: \`${parameters.name}\`\n\n` +
+            `A configuration form will appear in a new window. Please complete it to proceed with the template creation.\n\n` +
+            `> Note: Sensitive information like API keys and secrets will be collected securely through the form.`,
+          `${this.name}-result`,
+        ),
+      ];
+    } catch (error) {
+      logger.error("Error requesting template:", error);
+      return [this.toolMessage(`❌ Failed to request template: ${error}`, `${this.name}-error`)];
     }
-    return messages;
   }
 }

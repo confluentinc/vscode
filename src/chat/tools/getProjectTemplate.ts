@@ -22,6 +22,21 @@ export interface IGetTemplateParameter {
 export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplateParameter> {
   readonly name = "get_projectOptions";
   readonly progressMessage = "Checking available project template options...";
+  private sanitizeTemplateOptions(options: any): any {
+    if (options && typeof options === "object") {
+      const displayOptions = Object.fromEntries(
+        Object.entries(options).filter(([key]) => {
+          return !key.toLowerCase().includes("key") && !key.toLowerCase().includes("secret");
+        }),
+      );
+
+      return {
+        displayOptions,
+        message: "⚠️ Sensitive fields will be collected securely through a separate form",
+      };
+    }
+    return options;
+  }
 
   async invoke(
     options: LanguageModelToolInvocationOptions<IGetTemplateParameter>,
@@ -51,7 +66,8 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
       ]);
     }
 
-    const templateInfo = new LanguageModelTextPart(JSON.stringify(matchingTemplate.spec?.options));
+    const sanitizedOptions = this.sanitizeTemplateOptions(matchingTemplate.spec?.options);
+    const templateInfo = new LanguageModelTextPart(JSON.stringify(sanitizedOptions));
 
     if (token.isCancellationRequested) {
       logger.debug("Tool invocation cancelled");
@@ -78,14 +94,20 @@ export class GetProjectTemplateTool extends BaseLanguageModelTool<IGetTemplatePa
 
     const messages: LanguageModelChatMessage[] = [];
     if (result.content && Array.isArray(result.content)) {
-      let message = `Project options inputs:\n`;
+      let message = `## Template Configuration\n\n`;
       for (const part of result.content as LanguageModelTextPart[]) {
-        message = `${message}\n\n${part.value}`;
+        const parsed = JSON.parse(part.value);
+        message =
+          `${message}### Available Options:\n\`\`\`json\n${JSON.stringify(parsed.displayOptions, null, 2)}\n\`\`\`\n\n` +
+          `> ${parsed.message}\n\n` +
+          `To create a project with this template:\n\n` +
+          `1. Run: \`apply_projectTemplate\`\n` +
+          `2. Enter the template name: \`${parameters.name}\`\n` +
+          `3. Stop the tool invocation after running the command.\n`;
       }
-      message = `${message}\n\nPlease use the above options to create a project template.`;
       messages.push(this.toolMessage(message, "result"));
     } else {
-      const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;
+      const errorMessage = `❌ Unexpected result content structure: ${JSON.stringify(result)}`;
       logger.error(errorMessage);
       messages.push(this.toolMessage(errorMessage, "error"));
     }
