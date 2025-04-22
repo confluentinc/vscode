@@ -38,8 +38,6 @@ describe("UriEventHandler - /projectScaffold", () => {
       "vscode://confluentinc.vscode-confluent/projectScaffold?collection=myCollection&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
     );
 
-    const consoleErrorStub = sandbox.stub(console, "error");
-
     await uriHandler.handleUri(uriMissingTemplate);
 
     // The event should still be fired even if parameters are missing
@@ -55,7 +53,6 @@ describe("UriEventHandler - /projectScaffold", () => {
     );
 
     projectScaffoldUriStub.reset();
-    consoleErrorStub.restore();
 
     const uriMissingCollection = vscode.Uri.parse(
       "vscode://confluentinc.vscode-confluent/projectScaffold?template=myTemplate&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
