@@ -17,6 +17,7 @@ import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
 import { logError } from "./errors";
+import { Logger } from "./logging";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
 import { getResourceManager } from "./storage/resourceManager";
@@ -32,6 +33,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 const scaffoldWebviewCache = new WebviewPanelCache();
+const logger = new Logger("scaffold");
 
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
@@ -359,7 +361,7 @@ function parseErrorMessage(rawMessage: string): string {
         .join("\n");
     }
   } catch (e) {
-    console.error("Failed to parse error message:", e);
+    logger.error("Failed to parse error message:", e);
     return rawMessage;
   }
   return rawMessage;
@@ -381,18 +383,9 @@ export function setProjectScaffoldListener(): vscode.Disposable {
 
     const collection = params.get("collection") ?? null;
     const template = params.get("template") ?? null;
-    const bootstrapServer = params.get("cc_bootstrap_server") || "";
-    const apiKey = params.get("cc_api_key") || "";
-    const apiSecret = params.get("cc_api_secret") || "";
-    const topic = params.get("cc_topic") || "";
-
-    const options: { [key: string]: string } = {
-      cc_bootstrap_server: bootstrapServer,
-      cc_api_key: apiKey,
-      cc_api_secret: apiSecret,
-      cc_topic: topic,
-    };
-
+    params.delete("collection");
+    params.delete("template");
+    const options: { [key: string]: string } = Object.fromEntries(params.entries());
     await handleProjectScaffoldUri(collection, template, options);
   });
 
