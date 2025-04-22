@@ -21,13 +21,13 @@ import { registerDockerCommands } from "./commands/docker";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
 import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
 import { registerSchemaRegistryCommands } from "./commands/schemaRegistry";
 import { registerSchemaCommands } from "./commands/schemas";
 import { registerSupportCommands } from "./commands/support";
 import { registerTopicCommands } from "./commands/topics";
-import { setProjectScaffoldListener } from "./scaffold";
 import {
   AUTH_PROVIDER_ID,
   AUTH_PROVIDER_LABEL,
@@ -41,6 +41,7 @@ import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
+import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
@@ -58,7 +59,7 @@ import { cleanupOldLogFiles, getLogFileStream, Logger, OUTPUT_CHANNEL } from "./
 import { ENABLE_CHAT_PARTICIPANT, ENABLE_FLINK } from "./preferences/constants";
 import { createConfigChangeListener } from "./preferences/listener";
 import { updatePreferences } from "./preferences/updates";
-import { registerProjectGenerationCommands } from "./scaffold";
+import { registerProjectGenerationCommands, setProjectScaffoldListener } from "./scaffold";
 import { JSON_DIAGNOSTIC_COLLECTION } from "./schemas/diagnosticCollection";
 import { getSidecar, getSidecarManager } from "./sidecar";
 import { ConnectionStateWatcher } from "./sidecar/connections/watcher";
@@ -226,6 +227,7 @@ async function _activateExtension(
     ...registerDockerCommands(),
     ...registerProjectGenerationCommands(),
     ...registerFlinkComputePoolCommands(),
+    ...registerFlinkStatementCommands(),
   ];
   logger.info("Commands registered");
 
@@ -474,7 +476,11 @@ async function setupAuthProvider(): Promise<vscode.Disposable[]> {
 function setupDocumentProviders(): vscode.Disposable[] {
   const disposables: vscode.Disposable[] = [];
   // any document providers set here must provide their own `scheme` to register with
-  const providerClasses = [SchemaDocumentProvider, MessageDocumentProvider];
+  const providerClasses = [
+    SchemaDocumentProvider,
+    MessageDocumentProvider,
+    FlinkStatementDocumentProvider,
+  ];
   for (const providerClass of providerClasses) {
     const provider = new providerClass();
     disposables.push(
