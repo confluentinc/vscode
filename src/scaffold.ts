@@ -388,9 +388,11 @@ export async function handleProjectScaffoldUri(
   );
 
   if (result && !result.success) {
-    showErrorNotificationWithButtons(
-      "Error generating project. Check the template options and try again.",
-    );
+    if (result.message !== "'Project generation canceled before save.'") {
+      showErrorNotificationWithButtons(
+        "Error generating project. Check the template options and try again.",
+      );
+    }
     // show the form so the user can adjust inputs as needed
     await scaffoldProjectRequest({ templateName: template, ...options });
   }
