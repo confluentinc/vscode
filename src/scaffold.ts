@@ -33,7 +33,7 @@ type MessageResponse<MessageType extends string> = Awaited<
 >;
 
 const scaffoldWebviewCache = new WebviewPanelCache();
-const logger = new Logger("uriHandler");
+const logger = new Logger("scaffold");
 
 export function registerProjectGenerationCommands(): vscode.Disposable[] {
   return [
