@@ -381,17 +381,10 @@ export function setProjectScaffoldListener(): vscode.Disposable {
 
     const collection = params.get("collection") ?? null;
     const template = params.get("template") ?? null;
-    const bootstrapServer = params.get("cc_bootstrap_server") || "";
-    const apiKey = params.get("cc_api_key") || "";
-    const apiSecret = params.get("cc_api_secret") || "";
-    const topic = params.get("cc_topic") || "";
-
-    const options: { [key: string]: string } = {
-      cc_bootstrap_server: bootstrapServer,
-      cc_api_key: apiKey,
-      cc_api_secret: apiSecret,
-      cc_topic: topic,
-    };
+    const filteredParams = new Map(
+      Array.from(params.entries()).filter(([key]) => key !== "collection" && key !== "template"),
+    );
+    const options: { [key: string]: string } = Object.fromEntries(filteredParams);
 
     await handleProjectScaffoldUri(collection, template, options);
   });
