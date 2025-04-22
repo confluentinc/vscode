@@ -6,7 +6,7 @@ import {
   LanguageClient,
   LanguageClientOptions,
   Message,
-  } from "vscode-languageclient/node";
+} from "vscode-languageclient/node";
 import { WebSocket } from "ws";
 import { Logger } from "../logging";
 import { WebsocketTransport } from "../sidecar/websocketTransport";
@@ -81,9 +81,9 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
           ],
           middleware: {
             didOpen: (document, next) => {
-              logger.debug(`Document opened: ${document.uri}`);
+              logger.info(`FlinkSQL document opened: ${document.uri}`);
               // TODO send config when document opens. Must handle empty values to avoid closing connection. (See UI)
-              // const settings = getFlinkSqlSettings();
+              // e.g. const settings = getFlinkSqlSettings();
               languageClient?.sendNotification("workspace/didChangeConfiguration", {
                 settings: {
                   AuthToken: "{{ ccloud.data_plane_token }}",
@@ -95,20 +95,45 @@ export async function initializeLanguageClient(): Promise<vscode.Disposable> {
               return next(document);
             },
             didChange: (event, next) => {
-              logger.debug(`Document changed: ${event.document.uri}`);
-              // TODO clear diagnostics when document is changed? Needs investigation
+              // Clear diagnostics when document changes, so user sees only relevant (new) issues
+              const diagnostics = languageClient?.diagnostics;
+              if (diagnostics) {
+                diagnostics.delete(event.document.uri);
+              }
               return next(event);
             },
             provideCompletionItem: (document, position, context, token, next) => {
-              // TODO we need to manually handle some quirks in multiple lines, backticks, completion position, etc. (see UI)
-              logger.debug(`Providing completion item for: ${document.uri} at ${position}`);
-              return next(document, position, context, token);
+              // Server adds backticks to all Entities, so we need to see
+              // if the character before the word range start is a backtick & if so, adjust the position
+              const range = document.getWordRangeAtPosition(position);
+              const line = document.lineAt(position.line).text;
+              let positionToUse = position;
+              if (range) {
+                const charBeforeWordStart =
+                  range.start.character > 0 ? line.charAt(range.start.character - 1) : "";
+                if (charBeforeWordStart === "`") {
+                  positionToUse = new vscode.Position(position.line, range.start.character - 1);
+                }
+              }
+              return next(document, positionToUse, context, token);
             },
             sendRequest: (type, params, token, next) => {
-              // logger.debug(`Sending request: ${type}`, params);
               if (type === "textDocument/completion") {
-                logger.debug(`Requesting completion items with params: ${params}`);
-                // TODO we need to manually handle some quirks in multiple lines, backticks, completion position, etc. (see UI)
+                // Server does not accept line positions > 0, so we need to convert them to single-line
+                if (params && (params as any).position && (params as any).textDocument?.uri) {
+                  const uri = (params as any).textDocument.uri;
+                  const document = vscode.workspace.textDocuments.find(
+                    (doc) => doc.uri.toString() === uri,
+                  );
+                  if (document) {
+                    const originalPosition = (params as any).position;
+                    (params as any).position = convertToSingleLinePosition(
+                      document,
+                      new vscode.Position(originalPosition.line, originalPosition.character),
+                    );
+                  }
+                }
+
                 return next(type, params, token);
               }
               return next(type, params, token);
@@ -163,10 +188,6 @@ export async function registerFlinkSqlConfigListener(): Promise<vscode.Disposabl
             },
           },
         });
-        logger.info(
-          "Sent workspace/didChangeConfiguration notification with updated settings",
-          settings,
-        );
       } catch (error) {
         logger.error(`Failed to send configuration update to language server: ${error}`);
       }
@@ -190,4 +211,19 @@ export async function registerFlinkSqlConfigListener(): Promise<vscode.Disposabl
       // }
     }
   });
+}
+
+function convertToSingleLinePosition(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+): vscode.Position {
+  const text = document.getText();
+  const lines = text.split("\n");
+  let singleLinePosition = 0;
+
+  for (let i = 0; i < position.line; i++) {
+    singleLinePosition += lines[i].length + 1; // +1 for the newline character
+  }
+  singleLinePosition += position.character;
+  return new vscode.Position(0, singleLinePosition);
 }
