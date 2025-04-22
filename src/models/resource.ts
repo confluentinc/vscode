@@ -29,6 +29,11 @@ export interface IResourceBase {
   iconName?: IconNames;
 }
 
+export interface ICCloudUrlable {
+  /** The URL for this resource in Confluent Cloud. */
+  ccloudUrl: string;
+}
+
 export function isResource(value: any): value is IResourceBase {
   return value.connectionId !== undefined && value.connectionType !== undefined;
 }
@@ -41,6 +46,11 @@ export function isLocal(resource: IResourceBase): boolean {
 /** Does this resource come from a Confluent Cloud connection? */
 export function isCCloud(resource: IResourceBase): boolean {
   return resource.connectionType === ConnectionType.Ccloud;
+}
+
+/** Does this resource have a ccloudUrl? */
+export function hasCcloudUrl(resource: IResourceBase): resource is IResourceBase & ICCloudUrlable {
+  return isCCloud(resource) && "ccloudUrl" in resource;
 }
 
 /** Does this resource come from a "direct" connection? */

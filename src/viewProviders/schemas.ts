@@ -50,21 +50,34 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
    * in the schema registry.
    */
   async refresh(forceDeepRefresh: boolean = false): Promise<void> {
-    // Out with any existing subjects.
-    this.subjectsInTreeView.clear();
+    await vscode.window.withProgress(
+      {
+        location: { viewId: this.viewId },
+        title: "Loading subject...",
+      },
+      async () => {
+        // Out with any existing subjects.
+        this.subjectsInTreeView.clear();
 
-    if (this.schemaRegistry !== null) {
-      const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+        if (this.schemaRegistry !== null) {
+          const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
 
-      // Fetch subjects using the loader, pushing down need to do deep refresh.
-      const subjects: Subject[] = await loader.getSubjects(this.schemaRegistry, forceDeepRefresh);
+          // Fetch subjects using the loader, pushing down need to do deep refresh.
+          const subjects: Subject[] = await loader.getSubjects(
+            this.schemaRegistry,
+            forceDeepRefresh,
+          );
 
-      // Repopulate this.subjectsInTreeView from getSubjects() result.
-      subjects.forEach((subject: Subject) => this.subjectsInTreeView.set(subject.name, subject));
-    }
+          // Repopulate this.subjectsInTreeView from getSubjects() result.
+          subjects.forEach((subject: Subject) =>
+            this.subjectsInTreeView.set(subject.name, subject),
+          );
+        }
 
-    // Indicate to view that toplevel items have changed.
-    this._onDidChangeTreeData.fire();
+        // Indicate to view that toplevel items have changed.
+        this._onDidChangeTreeData.fire();
+      },
+    );
   }
 
   /**
@@ -77,31 +90,40 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
    * @param newSchemas - The new array of schemas to update the subject with.
    */
   async updateSubjectSchemas(subjectString: string, newSchemas: Schema[] | null): Promise<void> {
-    logger.debug("updateSubjectSchemas(): Refreshing single subject in tree view", {
-      subject: subjectString,
-      newSchemaCount: newSchemas?.length,
-    });
+    await vscode.window.withProgress(
+      {
+        location: { viewId: this.viewId },
+        title: `Loading ${subjectString}...`,
+      },
+      async () => {
+        logger.debug("updateSubjectSchemas(): Refreshing single subject in tree view", {
+          subject: subjectString,
+          newSchemaCount: newSchemas?.length,
+        });
 
-    if (newSchemas === null) {
-      // Go get the schemas for this subject
-      if (!this.schemaRegistry) {
-        throw new Error("No schema registry");
-      }
-      const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
-      newSchemas = await loader.getSchemasForSubject(this.schemaRegistry, subjectString);
-    }
+        if (newSchemas === null) {
+          // Go get the schemas for this subject
+          if (!this.schemaRegistry) {
+            throw new Error("No schema registry");
+          }
+          const loader = ResourceLoader.getInstance(this.schemaRegistry.connectionId);
+          newSchemas = await loader.getSchemasForSubject(this.schemaRegistry, subjectString);
+        }
 
-    const subjectInMap = this.subjectsInTreeView.get(subjectString);
-    if (!subjectInMap) {
-      logger.error("Strange, couldn't find subject in tree view", { subjectString });
-      return;
-    }
+        const subjectInMap = this.subjectsInTreeView.get(subjectString);
+        if (!subjectInMap) {
+          logger.error("Strange, couldn't find subject in tree view", { subjectString });
+          return;
+        }
 
-    subjectInMap.schemas = newSchemas;
+        subjectInMap.schemas = newSchemas;
 
-    this._onDidChangeTreeData.fire(subjectInMap);
+        this._onDidChangeTreeData.fire(subjectInMap);
+      },
+    );
   }
 
+  readonly viewId: string = "confluent-schemas";
   private treeView: vscode.TreeView<SchemasViewProviderData>;
   /** The parent of the focused Schema Registry.  */
   public environment: Environment | null = null;
@@ -124,7 +146,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
       throw new ExtensionContextNotSetError("SchemasViewProvider");
     }
 
-    this.treeView = vscode.window.createTreeView("confluent-schemas", { treeDataProvider: this });
+    this.treeView = vscode.window.createTreeView(this.viewId, { treeDataProvider: this });
 
     const listeners: vscode.Disposable[] = this.setEventListeners();
 
@@ -254,7 +276,7 @@ export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewP
         children = [];
         // updateSubjectSchemas() is async and won't begin until this call to getChildren() completes.
         // When it is done, it will update the tree view.
-        this.updateSubjectSchemas(element.name, null);
+        void this.updateSubjectSchemas(element.name, null);
       }
     } else {
       // Selected a schema, no children there.
