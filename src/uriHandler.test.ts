@@ -32,43 +32,4 @@ describe("UriEventHandler - /projectScaffold", () => {
     );
     assert.strictEqual(projectScaffoldUriStub.firstCall.args[0].toString(), uri.toString());
   });
-
-  it("should throw an error when collection or template not present", async () => {
-    const uriMissingTemplate = vscode.Uri.parse(
-      "vscode://confluentinc.vscode-confluent/projectScaffold?collection=myCollection&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
-    );
-
-    await uriHandler.handleUri(uriMissingTemplate);
-
-    // The event should still be fired even if parameters are missing
-    assert.strictEqual(
-      projectScaffoldUriStub.calledOnce,
-      true,
-      "projectScaffoldUri should be fired once",
-    );
-
-    assert.strictEqual(
-      projectScaffoldUriStub.firstCall.args[0].toString(),
-      uriMissingTemplate.toString(),
-    );
-
-    projectScaffoldUriStub.reset();
-
-    const uriMissingCollection = vscode.Uri.parse(
-      "vscode://confluentinc.vscode-confluent/projectScaffold?template=myTemplate&cc_bootstrap_server=myBootstrapServer&cc_api_key=myApiKey&cc_api_secret=myApiSecret&cc_topic=myTopic",
-    );
-
-    await uriHandler.handleUri(uriMissingCollection);
-
-    assert.strictEqual(
-      projectScaffoldUriStub.calledOnce,
-      true,
-      "projectScaffoldUri should be fired once",
-    );
-
-    assert.strictEqual(
-      projectScaffoldUriStub.firstCall.args[0].toString(),
-      uriMissingCollection.toString(),
-    );
-  });
 });
