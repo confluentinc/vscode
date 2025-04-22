@@ -14,7 +14,7 @@ import {
 import { ResponseError } from "./clients/sidecar";
 import { registerCommandWithLogging } from "./commands";
 import { projectScaffoldUri } from "./emitters";
-import { logError } from "./errors";
+import { logError, showErrorNotificationWithButtons } from "./errors";
 import { Logger } from "./logging";
 import { KafkaCluster } from "./models/kafkaCluster";
 import { KafkaTopic } from "./models/topic";
@@ -136,11 +136,21 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
   let optionValues: { [key: string]: string | boolean } = {};
   let options = templateSpec.options || {};
 
-  for (const option of Object.keys(options)) {
+  for (const [option, properties] of Object.entries(options)) {
     if (templateRequestOptions && templateRequestOptions[option] !== undefined) {
-      optionValues[option] = templateRequestOptions[option] as string | boolean; // Explicitly cast to string | boolean
+      let value: string | boolean;
+      const optionValue = templateRequestOptions[option];
+
+      // Handle boolean string values
+      if (optionValue === "true" || optionValue === "false") {
+        value = optionValue === "true";
+      } else {
+        // Handle regular string values, with undefined check
+        value = optionValue || "";
+      }
+      optionValues[option] = value;
     } else {
-      optionValues[option] = ""; // Provide a default value for undefined options
+      optionValues[option] = properties.initial_value ?? "";
     }
   }
 
@@ -378,21 +388,11 @@ export async function handleProjectScaffoldUri(
     },
   );
 
-  if (typeof result === "object" && result !== null && "message" in result) {
-    // Only show error if it's a real error (not success) and not just showing the form
-    if (result?.success !== undefined) {
-      let cleanedErrorMessage = parseErrorMessage((result as PostResponse).message ?? "");
-      vscode.window.showErrorMessage(`Failed to generate project: ${cleanedErrorMessage}`, {
-        detail: cleanedErrorMessage,
-      });
-    }
-  } else if (result !== undefined) {
-    // Only show error if we got an actual undefined result, not just showing the form
-    vscode.window.showErrorMessage("Failed to generate project: Unknown error occurred.");
-  }
-
-  // Only show the form if it hasn't been shown already or if explicit form needed
-  if (!isFormNeeded) {
+  if (result && !result.success) {
+    showErrorNotificationWithButtons(
+      "Error generating project. Check the template options and try again.",
+    );
+    // show the form so the user can adjust inputs as needed
     await scaffoldProjectRequest({ templateName: template, ...options });
   }
 }
