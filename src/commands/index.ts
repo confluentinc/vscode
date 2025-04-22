@@ -15,7 +15,7 @@ export function registerCommandWithLogging(
   const wrappedCommand = async (...args: any[]) => {
     // if the extension was disabled, we need to prevent any commands from running and show an error
     // notification to the user
-    const disabledMessage: string | undefined = checkForExtensionDisabledReason();
+    const disabledMessage: string | undefined = await checkForExtensionDisabledReason();
     if (disabledMessage) {
       showExtensionDisabledNotification(disabledMessage);
       return;

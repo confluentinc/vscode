@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.2.0-39",
+  "version": "1.2.0-43",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -1483,6 +1483,17 @@
             ]
           },
           {
+            "id": "diff-resources",
+            "title": "Compare Resources Side by Side",
+            "description": "Use VS Code's powerful diff viewer to compare topic messages or schema definitions, making it easier to spot changes between different items.",
+            "media": {
+              "markdown": "resources/walkthrough/diffs/diff-guide.md"
+            },
+            "completionEvents": [
+              "onCommand:confluent.diff.compareWithSelected"
+            ]
+          },
+          {
             "id": "generate-project",
             "title": "Generate Files for a New Project",
             "description": "Just starting out? Run ``Generate New Project`` to get a complete scaffolding setup with all the necessary boilerplate files to kickstart your Kafka project.\n[Create new project](command:confluent.scaffold)",
@@ -1509,7 +1520,7 @@
   "devDependencies": {
     "@0no-co/graphqlsp": "^1.12.8",
     "@eslint/js": "^9.4.0",
-    "@openapitools/openapi-generator-cli": "^2.18.2",
+    "@openapitools/openapi-generator-cli": "^2.19.1",
     "@playwright/test": "^1.45.0",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^26.0.1",
@@ -1568,6 +1579,7 @@
     "graphql": "^16.8.2",
     "inertial": "^0.4.1",
     "launchdarkly-electron-client-sdk": "^1.7.0",
+    "launchdarkly-node-client-sdk": "^3.3.0",
     "opentelemetry-instrumentation-fetch-node": "^1.2.3",
     "rotating-file-stream": "^3.2.6",
     "tail": "^2.2.6",

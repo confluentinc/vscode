@@ -12,17 +12,36 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   connectionType!: ConnectionType;
   environmentId!: EnvironmentId;
 
+<<<<<<< HEAD
   name: string;
   metadata: FlinkStatementMetadata;
   status: FlinkStatementStatus;
   spec: FlinkStatementSpec;
+=======
+  /** The flink compute pool that maybe is running/ran the statement. */
+  computePoolId: string | undefined;
+
+  name: string;
+  metadata: FlinkStatementMetadata;
+  status: FlinkStatementStatus;
+>>>>>>> origin/main
 
   // TODO: add more properties as needed
 
   constructor(
     props: Pick<
       FlinkStatement,
+<<<<<<< HEAD
       "connectionId" | "connectionType" | "environmentId" | "spec" | "name" | "metadata" | "status"
+=======
+      | "connectionId"
+      | "connectionType"
+      | "environmentId"
+      | "computePoolId"
+      | "name"
+      | "metadata"
+      | "status"
+>>>>>>> origin/main
     >,
   ) {
     this.connectionId = props.connectionId;
@@ -36,6 +55,7 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   searchableText(): string {
     return `${this.name} ${this.phase} ${this.sqlKindDisplay}`;
+<<<<<<< HEAD
   }
 
   /** The flink compute pool that maybe is running/ran the statement. */
@@ -45,6 +65,8 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   get sqlStatement(): string | undefined {
     return this.spec.sqlStatement;
+=======
+>>>>>>> origin/main
   }
 
   /**
@@ -123,6 +145,7 @@ export class FlinkStatementTraits {
     // have observed so far.
     return this.sqlKind?.replace(/_/g, " ");
   }
+<<<<<<< HEAD
 }
 
 export class FlinkStatementSpec {
@@ -151,6 +174,8 @@ export class FlinkStatementSpec {
     this.stopped = props.stopped;
     this.properties = props.properties;
   }
+=======
+>>>>>>> origin/main
 }
 
 export class FlinkStatementTreeItem extends TreeItem {
@@ -186,12 +211,15 @@ export class FlinkStatementTreeItem extends TreeItem {
         ["Detail", resource.status.detail],
       ],
     );
+<<<<<<< HEAD
 
     this.command = {
       command: "confluent.statements.viewstatementsql",
       title: "View SQL",
       arguments: [this.resource],
     };
+=======
+>>>>>>> origin/main
   }
 
   /**

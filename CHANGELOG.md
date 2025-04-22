@@ -22,6 +22,13 @@ All notable changes to this extension will be documented in this file.
   [`1.97.0`](https://code.visualstudio.com/updates/v1_97) to help development efforts and integrate
   with newer VS Code APIs.
 
+## 1.1.2
+
+### Fixed
+
+- The LaunchDarkly client will now use the Node SDK instead of the Electron SDK for remote
+  environments, which previously prevented the extension from activating properly.
+
 ## 1.1.1
 
 ### Fixed
