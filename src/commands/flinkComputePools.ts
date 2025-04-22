@@ -1,11 +1,15 @@
-import { commands, Disposable } from "vscode";
+import { commands, Disposable, window, workspace } from "vscode";
 import { registerCommandWithLogging } from ".";
 import {
   currentFlinkArtifactsPoolChanged,
   currentFlinkStatementsResourceChanged,
 } from "../emitters";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
-import { flinkComputePoolQuickPickWithViewProgress } from "../quickpicks/flinkComputePools";
+import {
+  flinkComputePoolQuickPick,
+  flinkComputePoolQuickPickWithViewProgress,
+} from "../quickpicks/flinkComputePools";
+import { logger } from "@sentry/core";
 
 /**
  * Select a {@link FlinkComputePool} from the "Resources" view to focus both the "Statements" and
@@ -59,6 +63,37 @@ export async function selectPoolForArtifactsViewCommand(item?: CCloudFlinkComput
   currentFlinkArtifactsPoolChanged.fire(pool);
   commands.executeCommand("confluent-flink-artifacts.focus");
 }
+export interface FlinkSqlSettings {
+  catalog: string;
+  database: string;
+  computePoolId: string;
+  region: string;
+  provider: string;
+}
+export async function configureFlinkDefaults() {
+  const config: Record<string, any> = await workspace.getConfiguration();
+  const flinkConfig = config["confluent.flink.defaults"] || {};
+  const computePool = await flinkComputePoolQuickPick();
+  // TODO db and catalog should be quickpicks too
+  const catalog = await window.showInputBox({
+    prompt: "Enter Flink SQL catalog name",
+    value: config["confluent.flink.defaults.catalog"], // FIXME it's empty
+  });
+  const database = await window.showInputBox({
+    prompt: "Enter Flink SQL database name",
+    value: flinkConfig.database, // FIXME it's empty
+  });
+  // TODO add region and provider selectors
+
+  logger.info("Updating Flink SQL settings", flinkConfig);
+  // FIXME these delete existing keys if undefined even with this code?!
+  if (catalog !== undefined) flinkConfig.catalog = catalog;
+  if (database !== undefined) flinkConfig["database"] = database;
+  if (computePool !== undefined) flinkConfig["computePoolId"] = computePool.id;
+  await workspace.getConfiguration().update("confluent.flink.defaults", flinkConfig, true);
+
+  window.showInformationMessage("Flink SQL settings updated.");
+}
 
 export function registerFlinkComputePoolCommands(): Disposable[] {
   return [
@@ -74,5 +109,6 @@ export function registerFlinkComputePoolCommands(): Disposable[] {
       "confluent.artifacts.flink-compute-pool.select",
       selectPoolForArtifactsViewCommand,
     ),
+    registerCommandWithLogging("confluent.flink.configureFlinkDefaults", configureFlinkDefaults),
   ];
 }

@@ -80,6 +80,7 @@ import { SchemasViewProvider } from "./viewProviders/schemas";
 import { SEARCH_DECORATION_PROVIDER } from "./viewProviders/search";
 import { SupportViewProvider } from "./viewProviders/support";
 import { TopicViewProvider } from "./viewProviders/topics";
+import { ccloudConnected } from "./emitters";
 
 const logger = new Logger("extension");
 
@@ -183,8 +184,6 @@ async function _activateExtension(
     ...resourceViewProvider.disposables,
     ...topicViewProvider.disposables,
     ...schemasViewProvider.disposables,
-    ...statementsViewProvider.disposables,
-    ...artifactsViewProvider.disposables,
     ...supportViewProvider.disposables,
   ];
   logger.info("View providers initialized");
@@ -225,7 +224,6 @@ async function _activateExtension(
     ...registerExtraCommands(),
     ...registerDockerCommands(),
     ...registerProjectGenerationCommands(),
-    ...registerFlinkComputePoolCommands(),
   ];
   logger.info("Commands registered");
 
@@ -241,6 +239,47 @@ async function _activateExtension(
     ...registeredCommands,
     ...documentProviders,
   );
+  const flinkEnabled = vscode.workspace.getConfiguration().get(ENABLE_FLINK, false);
+  let flinkSqlDisposables: vscode.Disposable[] = [
+    ...registerFlinkComputePoolCommands(),
+    ...statementsViewProvider.disposables,
+    ...artifactsViewProvider.disposables,
+  ];
+  const initFlinkSqlFeatures = async (isAuthenticated: boolean) => {
+    if (flinkEnabled) {
+      context.subscriptions.push(...flinkSqlDisposables);
+      logger.info("Flink SQL features initialized");
+      if (isAuthenticated) {
+        logger.info("User authenticated and Flink enabled.");
+        try {
+          // Coming soon: initialize the language server here // const languageClient = await initializeLanguageClient();
+          vscode.window
+            .showWarningMessage(
+              "To use CCloud Flink, update your default FlinkSQL settings",
+              "Configure",
+              "Cancel",
+            )
+            .then((selection) => {
+              if (selection === "Configure") {
+                vscode.commands.executeCommand("confluent.flink.configureFlinkDefaults");
+              } else if (selection === "Cancel") {
+                logger.info("Flink SQL configuration cancelled");
+              }
+            });
+        } catch (e) {
+          logger.error(`Error initializing FlinkSQL defaults: ${e}`);
+        }
+      }
+    } else {
+      logger.info("Flink SQL features disabled");
+      flinkSqlDisposables = [];
+    }
+  };
+
+  const authListener = ccloudConnected.event(async (isConnected) => {
+    await initFlinkSqlFeatures(isConnected);
+  });
+  context.subscriptions.push(authListener);
 
   // these are also just handling command registration and setting disposables
   activateMessageViewer(context);
