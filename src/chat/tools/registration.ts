@@ -1,5 +1,4 @@
 import { Disposable, lm } from "vscode";
-import { ApplyTemplateTool } from "./applyTemplateTool";
 import { BaseLanguageModelTool } from "./base";
 import { ListTemplatesTool } from "./listTemplates";
 import { setToolMap } from "./toolMap";
@@ -9,7 +8,6 @@ export function registerChatTools(): Disposable[] {
 
   const tools = new Map<string, BaseLanguageModelTool<any>>([
     ["list_projectTemplates", new ListTemplatesTool()],
-    ["apply_projectTemplate", new ApplyTemplateTool()],
   ]);
 
   for (const [toolId, tool] of tools.entries()) {

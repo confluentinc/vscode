@@ -79,7 +79,6 @@ export class ListTemplatesTool extends BaseLanguageModelTool<IListTemplatesParam
         message = `${message}\n\n${part.value}`;
       }
       message = `${message}\n\nUse the display names and descriptions when responding to the user. Use the IDs when creating projects with templates.`;
-      message = `${message}\n\nWould you like to apply one of these templates? If so, please provide the template ID and any options you'd like to customize.`;
       messages.push(this.toolMessage(message, "result"));
     } else {
       const errorMessage = `Unexpected result content structure: ${JSON.stringify(result)}`;

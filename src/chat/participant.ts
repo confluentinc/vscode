@@ -9,7 +9,7 @@ import {
   ChatResult,
   LanguageModelChat,
   LanguageModelChatMessage,
-  LanguageModelChatMessageRole,
+  LanguageModelChatRequestOptions,
   LanguageModelChatResponse,
   LanguageModelChatSelector,
   LanguageModelChatToolMode,
@@ -23,6 +23,8 @@ import { INITIAL_PROMPT, PARTICIPANT_ID } from "./constants";
 import { ModelNotSupportedError } from "./errors";
 import { participantMessage, systemMessage, userMessage } from "./messageTypes";
 import { parseReferences } from "./references";
+import { BaseLanguageModelTool } from "./tools/base";
+import { ListTemplatesTool } from "./tools/listTemplates";
 import { getToolMap } from "./tools/toolMap";
 
 const logger = new Logger("chat.participant");
@@ -141,20 +143,35 @@ export async function handleChatMessage(
   token: CancellationToken,
 ): Promise<string[]> {
   const toolsCalled: string[] = [];
+  // keep track of which calls the model has made to prevent repeats by stringifying any
+  // `LanguageModelToolCallPart` results
   const toolCallsMade = new Set<string>();
-  let iterations = 0;
-  const maxIterations = 10;
 
+  // limit number of iterations to prevent infinite loops
+  let iterations = 0;
+  const maxIterations = 10; // TODO: make this user-configurable?
+
+  // hint at focusing recency instead of attempting to (re)respond to older messages
+  messages.push(
+    systemMessage(
+      "Focus on answering the user's most recent query directly unless explicitly asked to address previous messages.",
+    ),
+  );
+
+  // inform the model that tools can be invoked as part of the response stream
+  const requestOptions: LanguageModelChatRequestOptions = {
+    tools: [new ListTemplatesTool().toChatTool()],
+    toolMode: LanguageModelChatToolMode.Auto,
+  };
+  // determine whether or not to continue sending chat requests to the model as a result of any tool
+  // calls
   let continueConversation = true;
   while (continueConversation && iterations < maxIterations) {
     continueConversation = false;
 
     const response: LanguageModelChatResponse = await model.sendRequest(
       messages,
-      {
-        tools: [...getToolMap().values()].map((tool) => tool.toChatTool()),
-        toolMode: LanguageModelChatToolMode.Auto,
-      },
+      requestOptions,
       token,
     );
     iterations++;
@@ -162,54 +179,67 @@ export async function handleChatMessage(
     const toolResultMessages: LanguageModelChatMessage[] = [];
     for await (const fragment of response.stream) {
       if (token.isCancellationRequested) {
+        logger.debug("chat request canceled");
         return toolsCalled;
       }
 
       if (fragment instanceof LanguageModelTextPart) {
+        // basic text response
         stream.markdown(fragment.value);
       } else if (fragment instanceof LanguageModelToolCallPart) {
-        const toolCall: LanguageModelToolCallPart = fragment;
-        const tool = getToolMap().get(toolCall.name);
-
+        // tool call: look up the tool from the map, process its invocation result(s), and continue on
+        const toolCall: LanguageModelToolCallPart = fragment as LanguageModelToolCallPart;
+        const tool: BaseLanguageModelTool<any> | undefined = getToolMap().get(toolCall.name);
         if (!tool) {
-          stream.markdown(`Tool "${toolCall.name}" not found.`);
+          const errorMsg = `Tool "${toolCall.name}" not found.`;
+          logger.error(errorMsg);
+          stream.markdown(errorMsg);
           return toolsCalled;
         }
+        stream.progress(tool.progressMessage);
 
         if (toolCallsMade.has(JSON.stringify(toolCall))) {
-          stream.markdown(
-            `Tool "${toolCall.name}" already called with the same input. Skipping duplicate call.`,
+          // don't process the same tool call twice
+          logger.debug(`Tool "${toolCall.name}" already called with input "${toolCall.input}"`);
+          messages.push(
+            systemMessage(
+              `Tool "${toolCall.name}" already called with input "${JSON.stringify(toolCall.input)}". Do not repeatedly call tools with the same inputs. Use previous result(s) if possible.`,
+            ),
           );
+          continueConversation = true;
           continue;
         }
 
-        toolCallsMade.add(JSON.stringify(toolCall));
-        stream.progress(tool.progressMessage);
-
-        const newMessages = await tool.processInvocation(request, stream, toolCall, token);
+        // each registered tool should contribute its own way of handling the invocation and
+        // interacting with the stream, and can return an array of messages to be sent for another
+        // round of processing
+        logger.debug(`Processing tool invocation for "${toolCall.name}"`);
+        const newMessages: LanguageModelChatMessage[] = await tool.processInvocation(
+          request,
+          stream,
+          toolCall,
+          token,
+        );
         toolResultMessages.push(...newMessages);
 
+        toolCallsMade.add(JSON.stringify(toolCall));
         if (!toolsCalled.includes(toolCall.name)) {
+          // keep track of the tools that have been called so far as part of this chat request flow
           toolsCalled.push(toolCall.name);
         }
       }
     }
 
     if (toolResultMessages.length) {
+      // add results to the messages and let the model process them and decide what to do next
       messages.push(...toolResultMessages);
+      // send synthetic "user" message to the model to indicate that the conversation should continue
+      // (.sendRequest requires the last message to be a `User` message; see
+      // https://github.com/microsoft/vscode-extension-samples/blob/26acb262b8b2b41e9e466115f13a7f72ef63d59d/chat-sample/src/toolsPrompt.tsx#L83)
+      messages.push(
+        systemMessage("Please continue the conversation using the information from the tool call."),
+      );
       continueConversation = true;
-    }
-  }
-
-  // Ensure the final message is a "User" message
-  if (messages.length > 0) {
-    const finalMessage = messages[messages.length - 1];
-    if (finalMessage.role !== LanguageModelChatMessageRole.User) {
-      const finalContent = finalMessage.content
-        .filter((part): part is LanguageModelTextPart => part instanceof LanguageModelTextPart)
-        .map((part) => part.value)
-        .join("");
-      messages.push(userMessage(finalContent));
     }
   }
 
