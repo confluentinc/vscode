@@ -92,26 +92,28 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
     return;
   }
 
-  if (pickedTemplate !== undefined) {
-    let itemType: string | undefined;
-    if (templateRequestOptions?.templateName) {
-      // only URIs will specify the templateName
-      itemType = "uri";
-    } else if (templateRequestOptions?.topic) {
-      // no templateName, but we have a topic name so this must've come from a topic tree item
-      itemType = "topic";
-    } else if (templateRequestOptions?.bootstrap_server) {
-      // no templateName, but we have a bootstrap_server (but no topic name) so this must've come from a Kafka cluster tree item
-      itemType = "cluster";
-    }
-    logUsage(UserEvent.ProjectScaffoldingAction, {
-      status: "template picked",
-      templateName: pickedTemplate.spec!.display_name,
-      itemType,
-    });
-  } else {
+  if (!pickedTemplate) {
+    // user canceled the quickpick
     return;
   }
+
+  let telemetrySource: string | undefined;
+  if (templateRequestOptions?.templateName) {
+    // only URIs will specify the templateName
+    telemetrySource = "uri";
+  } else if (templateRequestOptions?.topic) {
+    // no templateName, but we have a topic name so this must've come from a topic tree item
+    telemetrySource = "topic";
+  } else if (templateRequestOptions?.bootstrap_server) {
+    // no templateName, but we have a bootstrap_server (but no topic name) so this must've come from a Kafka cluster tree item
+    telemetrySource = "cluster";
+  }
+  logUsage(UserEvent.ProjectScaffoldingAction, {
+    status: "template picked",
+    templateId: pickedTemplate.spec!.name,
+    templateName: pickedTemplate.spec!.display_name,
+    itemType: telemetrySource,
+  });
 
   const templateSpec: ScaffoldV1TemplateSpec = pickedTemplate.spec!;
 
@@ -174,11 +176,13 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
       case "Submit": {
         logUsage(UserEvent.ProjectScaffoldingAction, {
           status: "form submitted",
+          templateId: templateSpec.name,
           templateName: templateSpec.display_name,
+          itemType: telemetrySource,
         });
         let res: PostResponse = { success: false, message: "Failed to apply template." };
         if (pickedTemplate) {
-          res = await applyTemplate(pickedTemplate, body.data);
+          res = await applyTemplate(pickedTemplate, body.data, telemetrySource);
           // only dispose the form if the template was successfully applied
           if (res.success) optionsForm.dispose();
         } else vscode.window.showErrorMessage("Failed to apply template.");
@@ -193,6 +197,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
 export async function applyTemplate(
   pickedTemplate: ScaffoldV1Template,
   manifestOptionValues: { [key: string]: unknown },
+  telemetrySource?: string,
 ): Promise<PostResponse> {
   const client: TemplatesScaffoldV1Api = (await getSidecar()).getTemplatesApi();
 
@@ -226,7 +231,9 @@ export async function applyTemplate(
       // This means the user cancelled @ save dialog. Show a message and return
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "cancelled before save",
+        templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
+        itemType: telemetrySource,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
       return { success: false, message: "Project generation cancelled before save." };
@@ -237,7 +244,9 @@ export async function applyTemplate(
     await extractZipContents(arrayBuffer, destination);
     logUsage(UserEvent.ProjectScaffoldingAction, {
       status: "project generated",
+      templateId: pickedTemplate.spec!.name,
       templateName: pickedTemplate.spec!.display_name,
+      itemType: telemetrySource,
     });
     // Notify the user that the project was generated successfully
     const selection = await vscode.window.showInformationMessage(
@@ -253,8 +262,10 @@ export async function applyTemplate(
       const keepsExistingWindow = selection.title === "Open in New Window";
       logUsage(UserEvent.ProjectScaffoldingAction, {
         status: "project folder opened",
+        templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
         keepsExistingWindow,
+        itemType: telemetrySource,
       });
       vscode.commands.executeCommand(
         "vscode.openFolder",
@@ -383,18 +394,32 @@ export async function handleProjectScaffoldUri(
           },
         } as ScaffoldV1Template,
         options,
+        "uri",
       );
     },
   );
 
-  if (result && !result.success) {
-    if (result.message !== "'Project generation canceled before save.'") {
-      showErrorNotificationWithButtons(
-        "Error generating project. Check the template options and try again.",
-      );
+  if (result) {
+    if (!result.success) {
+      if (result.message !== "Project generation canceled before save.") {
+        showErrorNotificationWithButtons(
+          "Error generating project. Check the template options and try again.",
+        );
+        logUsage(UserEvent.ProjectScaffoldingAction, {
+          status: "URI handling failed",
+          templateId: template,
+          itemType: "uri",
+        });
+      }
+      // show the form so the user can adjust inputs as needed
+      await scaffoldProjectRequest({ templateName: template, ...options });
+    } else {
+      logUsage(UserEvent.ProjectScaffoldingAction, {
+        status: "URI handling succeeded",
+        templateId: template,
+        itemType: "uri",
+      });
     }
-    // show the form so the user can adjust inputs as needed
-    await scaffoldProjectRequest({ templateName: template, ...options });
   }
 }
 
