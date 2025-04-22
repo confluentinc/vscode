@@ -9,7 +9,14 @@ import { SchemaRegistry } from "./models/schemaRegistry";
 // NOTE: these are kept at the global level to allow for easy access from any file and track where
 // we .fire() events and where we react to them via .event()
 
-/** Indicate whether or not we have a CCloud connection (controlled by our auth provider). */
+/**
+ * Indicate whether or not we have a CCloud connection (controlled by our auth provider).
+ *
+ * This is controlled by the `ConfluentCloudAuthProvider` and will be fired when a user explicitly
+ * signs in (`createSession()`), signs out (`removeSession()`), or when a new workspace is opened
+ * and its newly-activated extension instance is syncing its own internal CCloud auth state to
+ * transition from "freshly activated, no CCloud auth session" to "found active CCloud auth session".
+ */
 export const ccloudConnected = new vscode.EventEmitter<boolean>();
 /** Fires whenever we see a non-`INVALID_TOKEN` authentication status from the sidecar for the
  * current CCloud connection, and is only used to resolve any open progress notification(s). */
