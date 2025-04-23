@@ -253,6 +253,11 @@
         "enablement": "false"
       },
       {
+        "command": "confluent.statements.viewstatementsql",
+        "title": "View Statement SQL",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.resources.search",
         "icon": "$(search)",
         "title": "Search",
@@ -796,6 +801,10 @@
         {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
+        },
+        {
+          "command": "confluent.statements.viewstatementsql",
+          "when": "false"
         },
         {
           "command": "confluent.schemaViewer.viewLocally",
