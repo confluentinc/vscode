@@ -21,7 +21,7 @@ export class FlinkStatementsViewProvider
   extends BaseViewProvider<CCloudFlinkComputePool | CCloudEnvironment, FlinkStatement>
   implements TreeDataProvider<FlinkStatement>
 {
-  kind = "statements";
+  readonly kind = "statements";
   loggerName = "viewProviders.flinkStatements";
   viewId = "confluent-flink-statements";
 

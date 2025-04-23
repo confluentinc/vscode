@@ -92,7 +92,7 @@ type ResourceViewProviderData =
 export class ResourceViewProvider
   implements vscode.TreeDataProvider<ResourceViewProviderData>, RefreshableTreeViewProvider
 {
-  kind: string = "resources";
+  readonly kind: string = "resources";
   /** Disposables belonging to this provider to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
   disposables: vscode.Disposable[] = [];
