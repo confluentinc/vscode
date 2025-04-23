@@ -8,6 +8,7 @@ import {
   setExtensionContext,
 } from "./context/extension";
 import { ExtensionContextNotSetError } from "./errors";
+import { getRefreshableViewProviders } from "./extension";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
 import { ResourceViewProvider } from "./viewProviders/resources";
@@ -96,6 +97,54 @@ describe("ExtensionContext", () => {
       `${source}: ExtensionContext not set yet`,
     );
   }
+});
+
+describe("Refreshable views tests", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("getRefreshableViewProviders returns unique view providers + name pairs", () => {
+    const seenNames = new Set();
+    const seenViewProviderConstructorNames = new Set();
+
+    for (const [viewProvider, name] of getRefreshableViewProviders()) {
+      assert.ok(
+        !seenNames.has(name),
+        `Duplicate name "${name}" found in refreshable view providers`,
+      );
+      seenNames.add(name);
+
+      assert.ok(
+        !seenViewProviderConstructorNames.has(viewProvider.constructor.name),
+        `Duplicate view provider constructor "${viewProvider.constructor.name}" found`,
+      );
+      seenViewProviderConstructorNames.add(viewProvider.constructor.name);
+    }
+  });
+
+  it("_activateExtension should have registered refresh commands for expected view providers", async () => {
+    const viewProviderNameFragments = ["resources", "topics", "schemas", "statements"];
+
+    const allRegisteredCommands = await vscode.commands.getCommands();
+
+    for (const fragment of viewProviderNameFragments) {
+      const refreshCommand = allRegisteredCommands.find(
+        (cmd) => cmd === `confluent.${fragment}.refresh`,
+      );
+      assert.ok(
+        refreshCommand,
+        `Command confluent.${fragment}.refresh not registered; did activate() run correctly?`,
+      );
+
+      // ensure the refresh command works w/o raising error
+      try {
+        await vscode.commands.executeCommand(refreshCommand);
+      } catch (error) {
+        assert.fail(`Command ${refreshCommand} failed to execute: ${error}`);
+      }
+    }
+  });
 });
 
 describe("Extension manifest tests", () => {

@@ -21,6 +21,11 @@ import { logUsage, UserEvent } from "../telemetry/events";
 import { titleCase } from "../utils";
 import { filterItems, itemMatchesSearch } from "./search";
 
+/** View providers offering our common refresh() pattern. */
+export interface RefreshableTreeViewProvider {
+  refresh(forceDeepRefresh?: boolean): void;
+}
+
 /**
  * Base class for all tree view providers handling a primary resource type.
  * @template P The type of the "parent" resource that can be "focused" in the view to determine which
@@ -28,9 +33,10 @@ import { filterItems, itemMatchesSearch } from "./search";
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class BaseViewProvider<
-  P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-  T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-> implements TreeDataProvider<T>
+    P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+    T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+  >
+  implements TreeDataProvider<T>, RefreshableTreeViewProvider
 {
   abstract loggerName: string;
   logger!: Logger;
@@ -44,7 +50,7 @@ export abstract class BaseViewProvider<
   >();
   readonly onDidChangeTreeData: Event<T | undefined | void> = this._onDidChangeTreeData.event;
 
-  async refresh(): Promise<void> {
+  refresh(): void {
     this._onDidChangeTreeData.fire();
   }
 
