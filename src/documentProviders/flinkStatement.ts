@@ -1,40 +1,38 @@
 import * as vscode from "vscode";
-import { ResourceDocumentProvider } from ".";
 import { FlinkStatement } from "../models/flinkStatement";
 
-/** The URI scheme for read-only flink statements, used by FlinkStatementDocumentProvider. */
-export const FLINKSTATEMENT_URI_SCHEME = "confluent.flinkstatement";
+const SCHEME = "confluent-flinkstatement-active";
+const ACTIVE_URI = vscode.Uri.parse(`${SCHEME}:Current Flink Statement`);
 
-/**
- * Minimal interface for the URI query string portion of a FlinkStatement.
- * The resulting URIs are then durably stored in the workspace's open file list.
- */
-interface FlinkStatementSQL {
-  sqlStatement: string;
-}
-
-/** Makes a read-only editor buffer holding a flink SQL statement */
-export class FlinkStatementDocumentProvider extends ResourceDocumentProvider {
-  scheme = FLINKSTATEMENT_URI_SCHEME;
-
-  /**
-   * Provide the text contents given a URI for this document provider scheme.
-   * Simply extracts the SQL statement from the URI query string and returns it.
-   */
-  public async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
-    // parse the URI query string into a FlinkStatementSQL instance, given that all
-    // our document URIs should have been created with the getStatementDocumentUri() method.
-    const fromUriQuery: FlinkStatementSQL = this.parseUriQueryBody(uri.query) as FlinkStatementSQL;
-
-    return fromUriQuery.sqlStatement;
+export class ActiveFlinkStatementProvider implements vscode.TextDocumentContentProvider {
+  private static instance: ActiveFlinkStatementProvider;
+  static getInstance(): ActiveFlinkStatementProvider {
+    if (!this.instance) {
+      this.instance = new ActiveFlinkStatementProvider();
+    }
+    return this.instance;
   }
 
-  /** Encode the SQL statement portion of the FlinkStatment into URI's query string. */
-  static getStatementDocumentUri(statement: FlinkStatement): vscode.Uri {
-    return ResourceDocumentProvider.baseResourceToUri(
-      FLINKSTATEMENT_URI_SCHEME,
-      { sqlStatement: statement.sqlStatement } as FlinkStatementSQL,
-      statement.name,
-    );
+  readonly scheme: string = SCHEME;
+  readonly ACTIVE_URI: vscode.Uri = ACTIVE_URI;
+
+  private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+  private currentStatement: FlinkStatement | undefined;
+
+  constructor() {
+    this.currentStatement = undefined;
+  }
+
+  get onDidChange(): vscode.Event<vscode.Uri> {
+    return this._onDidChange.event;
+  }
+
+  setStatement(statement: FlinkStatement) {
+    this.currentStatement = statement;
+    this._onDidChange.fire(ACTIVE_URI);
+  }
+
+  provideTextDocumentContent(): string {
+    return this.currentStatement?.sqlStatement ?? "-- No statement selected --";
   }
 }

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
-import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import { ActiveFlinkStatementProvider } from "../documentProviders/flinkStatement";
 import { Logger } from "../logging";
 import { FlinkStatement } from "../models/flinkStatement";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
@@ -19,8 +19,11 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
     return;
   }
 
-  const uri = FlinkStatementDocumentProvider.getStatementDocumentUri(statement);
-  const doc = await vscode.workspace.openTextDocument(uri);
+  const provider = ActiveFlinkStatementProvider.getInstance();
+
+  provider.setStatement(statement);
+
+  const doc = await vscode.workspace.openTextDocument(provider.ACTIVE_URI);
   vscode.languages.setTextDocumentLanguage(doc, "flinksql");
   await vscode.window.showTextDocument(doc, { preview: false });
 }

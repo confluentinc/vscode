@@ -41,7 +41,7 @@ import { ContextValues, setContextValue } from "./context/values";
 import { DirectConnectionManager } from "./directConnectManager";
 import { EventListener } from "./docker/eventListener";
 import { registerLocalResourceWorkflows } from "./docker/workflows/workflowInitialization";
-import { FlinkStatementDocumentProvider } from "./documentProviders/flinkStatement";
+import { ActiveFlinkStatementProvider } from "./documentProviders/flinkStatement";
 import { MESSAGE_URI_SCHEME, MessageDocumentProvider } from "./documentProviders/message";
 import { SCHEMA_URI_SCHEME, SchemaDocumentProvider } from "./documentProviders/schema";
 import { logError } from "./errors";
@@ -479,12 +479,16 @@ function setupDocumentProviders(): vscode.Disposable[] {
   const providerClasses = [
     SchemaDocumentProvider,
     MessageDocumentProvider,
-    FlinkStatementDocumentProvider,
+    ActiveFlinkStatementProvider,
   ];
   for (const providerClass of providerClasses) {
-    const provider = new providerClass();
+    // Prefer getInstance() if available, otherwise use the constructor directly.
+    const instance = (providerClass as any).getInstance
+      ? (providerClass as any).getInstance()
+      : new providerClass();
+
     disposables.push(
-      vscode.workspace.registerTextDocumentContentProvider(provider.scheme, provider),
+      vscode.workspace.registerTextDocumentContentProvider(instance.scheme, instance),
     );
   }
   logger.info("Document providers registered");
