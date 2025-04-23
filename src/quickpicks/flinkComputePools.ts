@@ -8,7 +8,6 @@ import { Logger } from "../logging";
 import { Environment } from "../models/environment";
 import { CCloudFlinkComputePool } from "../models/flinkComputePool";
 import { getConnectionLabel, isCCloud } from "../models/resource";
-import { FlinkArtifactsViewProvider } from "../viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 import { QuickPickItemWithValue } from "./types";
 
@@ -79,8 +78,10 @@ export async function flinkComputePoolQuickPick(): Promise<CCloudFlinkComputePoo
   if (statementsPool) {
     focusedPools.push(statementsPool);
   }
-  const artifactsPool: CCloudFlinkComputePool | null =
-    FlinkArtifactsViewProvider.getInstance().computePool;
+  // TODO: uncomment this if/when we start working with the artifacts view again
+  // const artifactsPool: CCloudFlinkComputePool | null =
+  //   FlinkArtifactsViewProvider.getInstance().computePool;
+  const artifactsPool: CCloudFlinkComputePool | null = null;
   if (artifactsPool) {
     focusedPools.push(artifactsPool);
   }
