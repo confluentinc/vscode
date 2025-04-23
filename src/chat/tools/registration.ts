@@ -1,4 +1,3 @@
-import { logger } from "@sentry/core";
 import { Disposable, lm } from "vscode";
 import { ApplyTemplateTool } from "./applyTemplateTool";
 import { BaseLanguageModelTool } from "./base";
@@ -14,8 +13,6 @@ export function registerChatTools(): Disposable[] {
     ["apply_projectTemplate", new ApplyTemplateTool()],
     ["get_projectOptions", new GetProjectTemplateTool()],
   ]);
-
-  logger.debug("Registering chat tools:", tools);
 
   for (const [toolId, tool] of tools.entries()) {
     disposables.push(lm.registerTool(toolId, tool));
