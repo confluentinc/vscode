@@ -25,6 +25,7 @@ import { BaseViewProvider } from "./base";
 class TestViewProvider extends BaseViewProvider<FlinkComputePool, FlinkStatement> {
   loggerName = "viewProviders.test";
   viewId = "confluent-test";
+  readonly kind = "test";
 
   async getChildren(element?: FlinkStatement): Promise<FlinkStatement[]> {
     const items = [
