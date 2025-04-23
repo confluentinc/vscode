@@ -42,25 +42,21 @@ export class FlinkStatementsViewProvider
     if (this.resource !== null) {
       const loader = ResourceLoader.getInstance(this.resource.connectionId) as CCloudResourceLoader;
 
-      // Fetch statements async using the loader, pushing down need to do deep refresh.
       void this.withProgress(
         "Loading Flink statements...",
         async () => {
-          // sleep for 1s to give the user a chance to see the progress bar.
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Fetch statements, remember them, and indicate to the view that we have new data.
           const statements = await loader.getFlinkStatements(this.resource!);
-          // Repopulate this.resourcesInTreeView from getFlinkStatements() result.
           statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
-          // Inform view that toplevel items have changed.
           this._onDidChangeTreeData.fire();
         },
         false,
       );
     }
 
-    // Inform view that toplevel items have changed. This time, because of edging
-    // from having old contents to empty state. When loading is completed inside
-    // the withProgress, we will call refresh again to update the view.
+    // Inform view that toplevel items have changed (because of edging
+    // from having old contents to new empty state). When loading is completed inside
+    // the withProgress, we will fire _onDidChangeTreeData again to update the view.
     this._onDidChangeTreeData.fire();
   }
 
