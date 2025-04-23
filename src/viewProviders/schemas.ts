@@ -21,6 +21,7 @@ import { isCCloud, ISearchable, isLocal } from "../models/resource";
 import { Schema, SchemaTreeItem, Subject, SubjectTreeItem } from "../models/schema";
 import { SchemaRegistry } from "../models/schemaRegistry";
 import { logUsage, UserEvent } from "../telemetry/events";
+import { RefreshableTreeViewProvider } from "./base";
 import { updateCollapsibleStateFromSearch } from "./collapsing";
 import { filterItems, itemMatchesSearch, SEARCH_DECORATION_URI_SCHEME } from "./search";
 
