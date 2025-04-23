@@ -28,7 +28,7 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
 /** Refresh the statements view. */
 export function refreshFlinkStatementViewCommand(): void {
   const provider = FlinkStatementsViewProvider.getInstance();
-  provider.refresh(true);
+  provider.refresh();
 }
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {

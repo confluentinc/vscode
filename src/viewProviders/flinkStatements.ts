@@ -1,4 +1,4 @@
-import { TreeDataProvider, TreeItem, window } from "vscode";
+import { TreeDataProvider, TreeItem } from "vscode";
 import { ContextValues } from "../context/values";
 import { currentFlinkStatementsResourceChanged } from "../emitters";
 import { CCloudResourceLoader, ResourceLoader } from "../loaders";
@@ -35,30 +35,32 @@ export class FlinkStatementsViewProvider
   /**
    * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the statements.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async refresh(forceDeepRefresh: boolean = false): Promise<void> {
+  async refresh(): Promise<void> {
     // Out with any existing subjects.
     this.resourcesInTreeView.clear();
 
     if (this.resource !== null) {
       const loader = ResourceLoader.getInstance(this.resource.connectionId) as CCloudResourceLoader;
 
-      // Fetch statements using the loader, pushing down need to do deep refresh.
-      const statements: FlinkStatement[] = await window.withProgress(
-        {
-          location: { viewId: this.viewId },
-          title: "Loading Flink statements...",
-        },
+      // Fetch statements async using the loader, pushing down need to do deep refresh.
+      void this.withProgress(
+        "Loading Flink statements...",
         async () => {
-          return await loader.getFlinkStatements(this.resource!);
+          // sleep for 1s to give the user a chance to see the progress bar.
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const statements = await loader.getFlinkStatements(this.resource!);
+          // Repopulate this.resourcesInTreeView from getFlinkStatements() result.
+          statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
+          // Inform view that toplevel items have changed.
+          this._onDidChangeTreeData.fire();
         },
+        false,
       );
-
-      // Repopulate this.resourcesInTreeView from getFlinkStatements() result.
-      statements.forEach((r: FlinkStatement) => this.resourcesInTreeView.set(r.id, r));
     }
 
-    // Indicate to view that toplevel items have changed.
+    // Inform view that toplevel items have changed. This time, because of edging
+    // from having old contents to empty state. When loading is completed inside
+    // the withProgress, we will call refresh again to update the view.
     this._onDidChangeTreeData.fire();
   }
 
