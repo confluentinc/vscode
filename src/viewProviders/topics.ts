@@ -35,6 +35,7 @@ const logger = new Logger("viewProviders.topics");
 type TopicViewProviderData = KafkaTopic | Subject | Schema;
 
 export class TopicViewProvider implements vscode.TreeDataProvider<TopicViewProviderData> {
+  readonly kind = "topics";
   /** Disposables belonging to this provider to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
   disposables: vscode.Disposable[] = [];
