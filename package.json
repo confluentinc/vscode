@@ -91,6 +91,59 @@
             }
           }
         }
+      },
+      {
+        "name": "apply_projectTemplate",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Apply Project Template",
+        "modelDescription": "Apply a selected project template to generate a streaming data project or application. Use this when the user selects a template and provides the necessary options.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the template to apply."
+            },
+            "options": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Key-value pairs of options to configure the template."
+            }
+          },
+          "required": [
+            "name"
+          ]
+        }
+      },
+      {
+        "name": "get_projectOptions",
+        "when": "confluent.chatParticipantEnabled",
+        "tags": [
+          "projects"
+        ],
+        "displayName": "Get Project Options",
+        "modelDescription": "Provides the necessary options for calling apply_projectTemplate. Use this when the user selects a template and provides the necessary options.",
+        "canBeReferencedInPrompt": false,
+        "icon": "$(checklist)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the template to apply."
+            }
+          },
+          "required": [
+            "name"
+          ]
+        }
       }
     ],
     "commands": [
@@ -501,6 +554,16 @@
     "configuration": {
       "title": "Confluent",
       "properties": {
+        "confluent.chat.maxIterations": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 2,
+          "description": "Maximum number of iterations for chat message processing",
+          "tags": [
+            "experimental"
+          ]
+        },
         "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
           "type": "boolean",
           "default": true,
