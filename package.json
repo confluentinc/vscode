@@ -253,6 +253,12 @@
         "enablement": "false"
       },
       {
+        "command": "confluent.statements.refresh",
+        "icon": "$(sync)",
+        "title": "Refresh",
+        "category": "Confluent: Flink Statements"
+      },
+      {
         "command": "confluent.statements.viewstatementsql",
         "title": "View Statement SQL",
         "category": "Confluent: Flink Statements"
@@ -814,6 +820,10 @@
           "when": "false"
         },
         {
+          "command": "confluent.statements.refresh",
+          "when": "false"
+        },
+        {
           "command": "confluent.schemaViewer.viewLocally",
           "when": "false"
         },
@@ -1044,6 +1054,11 @@
           "command": "confluent.statements.flink-compute-pool.select",
           "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
           "group": "navigation@2"
+        },
+        {
+          "command": "confluent.statements.refresh",
+          "when": "view == confluent-flink-statements && confluent.ccloudConnectionAvailable",
+          "group": "navigation@3"
         },
         {
           "command": "confluent.artifacts.flink-compute-pool.select",
