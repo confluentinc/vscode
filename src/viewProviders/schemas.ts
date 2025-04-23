@@ -32,7 +32,9 @@ const logger = new Logger("viewProviders.schemas");
  */
 type SchemasViewProviderData = Subject | Schema;
 
-export class SchemasViewProvider implements vscode.TreeDataProvider<SchemasViewProviderData> {
+export class SchemasViewProvider
+  implements vscode.TreeDataProvider<SchemasViewProviderData>, RefreshableTreeViewProvider
+{
   readonly kind = "schemas";
   /** Disposables belonging to this provider to be added to the extension context during activation,
    * cleaned up on extension deactivation. */
