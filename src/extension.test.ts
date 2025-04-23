@@ -108,18 +108,18 @@ describe("Refreshable views tests", () => {
     const seenNames = new Set();
     const seenViewProviderConstructorNames = new Set();
 
-    for (const [viewProvider, name] of getRefreshableViewProviders()) {
+    for (const { instance, kind } of getRefreshableViewProviders()) {
       assert.ok(
-        !seenNames.has(name),
-        `Duplicate name "${name}" found in refreshable view providers`,
+        !seenNames.has(kind),
+        `Duplicate name "${kind}" found in refreshable view providers`,
       );
-      seenNames.add(name);
+      seenNames.add(kind);
 
       assert.ok(
-        !seenViewProviderConstructorNames.has(viewProvider.constructor.name),
-        `Duplicate view provider constructor "${viewProvider.constructor.name}" found`,
+        !seenViewProviderConstructorNames.has(instance.constructor.name),
+        `Duplicate view provider constructor "${instance.constructor.name}" found`,
       );
-      seenViewProviderConstructorNames.add(viewProvider.constructor.name);
+      seenViewProviderConstructorNames.add(instance.constructor.name);
     }
   });
 
@@ -137,12 +137,10 @@ describe("Refreshable views tests", () => {
         `Command confluent.${fragment}.refresh not registered; did activate() run correctly?`,
       );
 
-      // ensure the refresh command works w/o raising error
-      try {
-        await vscode.commands.executeCommand(refreshCommand);
-      } catch (error) {
-        assert.fail(`Command ${refreshCommand} failed to execute: ${error}`);
-      }
+      // ensure the refresh command works w/o raising error / was able to return
+      // boolean true result.
+      const result = await vscode.commands.executeCommand(refreshCommand);
+      assert.ok(result, `Command ${refreshCommand} failed to execute cleanly`);
     }
   });
 });

@@ -33,11 +33,11 @@ export interface RefreshableTreeViewProvider {
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class BaseViewProvider<
-    P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-    T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-  >
-  implements TreeDataProvider<T>, RefreshableTreeViewProvider
+  P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+  T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+> implements TreeDataProvider<T>
 {
+  // , RefreshableTreeViewProvider
   abstract loggerName: string;
   logger!: Logger;
 

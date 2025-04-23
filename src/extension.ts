@@ -196,10 +196,11 @@ async function _activateExtension(
 
   // Register refresh commands for our refreshable resource view providers.
   const refreshCommands: vscode.Disposable[] = [];
-  for (const [provider, name] of getRefreshableViewProviders()) {
+  for (const { instance, kind } of getRefreshableViewProviders()) {
     refreshCommands.push(
-      registerCommandWithLogging(`confluent.${name}.refresh`, () => {
-        provider.refresh(true);
+      registerCommandWithLogging(`confluent.${kind}.refresh`, (): boolean => {
+        instance.refresh(true);
+        return true;
       }),
     );
   }
@@ -412,15 +413,20 @@ async function setupFeatureFlags(): Promise<void> {
   }
 }
 
+type NamedRefreshableViewProvider = {
+  instance: RefreshableTreeViewProvider;
+  kind: string;
+};
+
 /** Return view provider + name fragment pairs for auto-registering refresh() commands. */
-export function getRefreshableViewProviders(): [RefreshableTreeViewProvider, string][] {
+export function getRefreshableViewProviders(): NamedRefreshableViewProvider[] {
   // When adding a new view provider pair, also update the test
   // mentioning "viewProviderNameFragments" in extension.test.ts.
   return [
-    [ResourceViewProvider.getInstance(), "resources"],
-    [TopicViewProvider.getInstance(), "topics"],
-    [SchemasViewProvider.getInstance(), "schemas"],
-    [FlinkStatementsViewProvider.getInstance(), "statements"],
+    { instance: ResourceViewProvider.getInstance(), kind: "resources" },
+    { instance: TopicViewProvider.getInstance(), kind: "topics" },
+    { instance: SchemasViewProvider.getInstance(), kind: "schemas" },
+    { instance: FlinkStatementsViewProvider.getInstance(), kind: "statements" },
   ];
 }
 
