@@ -22,6 +22,7 @@ import { QuickPickItemWithValue } from "./quickpicks/types";
 import { getSidecar } from "./sidecar";
 import { getResourceManager } from "./storage/resourceManager";
 import { UserEvent, logUsage } from "./telemetry/events";
+import { removeProtocolPrefix } from "./utils/bootstrapServers";
 import { fileUriExists } from "./utils/file";
 import { WebviewPanelCache } from "./webview-cache";
 import { handleWebviewMessage } from "./webview/comms/comms";
@@ -49,15 +50,22 @@ export function registerProjectGenerationCommands(): vscode.Disposable[] {
 
 async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) {
   if (item instanceof KafkaCluster) {
+    const bootstrapServers: string = removeProtocolPrefix(item.bootstrapServers);
     return await scaffoldProjectRequest({
-      bootstrap_server: item.bootstrapServers,
-      cc_bootstrap_server: item.bootstrapServers,
+      bootstrap_server: bootstrapServers,
+      cc_bootstrap_server: bootstrapServers,
     });
   } else if (item instanceof KafkaTopic) {
     const cluster = await getResourceManager().getClusterForTopic(item);
+    if (!cluster) {
+      // shouldn't happen if we have the topic, but just in case
+      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}.`);
+      return;
+    }
+    const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
     return await scaffoldProjectRequest({
-      bootstrap_server: cluster?.bootstrapServers,
-      cc_bootstrap_server: cluster?.bootstrapServers,
+      bootstrap_server: bootstrapServers,
+      cc_bootstrap_server: bootstrapServers,
       cc_topic: item.name,
       topic: item.name,
     });
