@@ -104,7 +104,7 @@ describe("Refreshable views tests", () => {
    * The view controller `kind` values for the refreshable view controllers and should have had
    * refresh commands registered for them / returned by getRefreshableViewProviders().
    *
-   * When a new one is added, it's `kind` attribute value should be added to this list.
+   * When a new one is added, its `kind` attribute value should be added to this list.
    */
   const expectedKinds = ["resources", "topics", "schemas", "statements"];
 
@@ -112,7 +112,7 @@ describe("Refreshable views tests", () => {
     await getTestExtensionContext();
   });
 
-  it("getRefreshableViewProviders returns unique view providers + name pairs", () => {
+  it("getRefreshableViewProviders returns the expected unique view providers / kinds", () => {
     const seenKinds = new Set<string>();
     const seenViewProviderConstructorNames = new Set<string>();
 
