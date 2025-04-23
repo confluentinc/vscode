@@ -41,8 +41,6 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
     options: vscode.LanguageModelToolInvocationPrepareOptions<IApplyTemplateParameters>,
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation | null | undefined> {
-    logger.debug("OPTIONS:", options);
-
     try {
       const inputPart = new LanguageModelTextPart(
         `id="${options.input.name}"; inputOptions=${JSON.stringify(options.input.options)}`, // Remove unnecessary quotes around JSON.stringify
