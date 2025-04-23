@@ -59,7 +59,7 @@ async function resourceScaffoldProjectRequest(item?: KafkaCluster | KafkaTopic) 
     const cluster = await getResourceManager().getClusterForTopic(item);
     if (!cluster) {
       // shouldn't happen if we have the topic, but just in case
-      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}.`);
+      showErrorNotificationWithButtons(`Unable to find Kafka cluster for topic "${item.name}".`);
       return;
     }
     const bootstrapServers: string = removeProtocolPrefix(cluster.bootstrapServers);
