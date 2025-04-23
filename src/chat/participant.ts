@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import {
   CancellationToken,
   ChatContext,
@@ -149,8 +150,8 @@ export async function handleChatMessage(
   const toolCallsMade = new Set<string>();
 
   // limit number of iterations to prevent infinite loops
+  const maxIterations = vscode.workspace.getConfiguration("confluent").get("chat.maxIterations", 2);
   let iterations = 0;
-  const maxIterations = 10; // TODO: make this user-configurable?
 
   // hint at focusing recency instead of attempting to (re)respond to older messages
   messages.push(

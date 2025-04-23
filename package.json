@@ -549,6 +549,16 @@
     "configuration": {
       "title": "Confluent",
       "properties": {
+        "confluent.chat.maxIterations": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 2,
+          "description": "Maximum number of iterations for chat message processing",
+          "tags": [
+            "experimental"
+          ]
+        },
         "confluent.cloud.messageViewer.showSchemaWarningNotifications": {
           "type": "boolean",
           "default": true,
