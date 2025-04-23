@@ -3,6 +3,7 @@ import { registerCommandWithLogging } from ".";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
 import { Logger } from "../logging";
 import { FlinkStatement } from "../models/flinkStatement";
+import { FlinkStatementsViewProvider } from "../viewProviders/flinkStatements";
 
 const logger = new Logger("commands.flinkStatements");
 
@@ -24,8 +25,15 @@ export async function viewStatementSqlCommand(statement: FlinkStatement): Promis
   await vscode.window.showTextDocument(doc, { preview: false });
 }
 
+/** Refresh the statements view. */
+export function refreshFlinkStatementViewCommand(): void {
+  const provider = FlinkStatementsViewProvider.getInstance();
+  provider.refresh(true);
+}
+
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
   return [
+    registerCommandWithLogging("confluent.statements.refresh", refreshFlinkStatementViewCommand),
     registerCommandWithLogging("confluent.statements.viewstatementsql", viewStatementSqlCommand),
   ];
 }
