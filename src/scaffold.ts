@@ -97,8 +97,8 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
           },
         });
         showErrorNotificationWithButtons(errMsg);
+        return;
       }
-      return;
     } else {
       // If no arguments are passed, show all templates
       pickedTemplate = await pickTemplate(templateList);
