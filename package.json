@@ -3,7 +3,7 @@
   "type": "module",
   "displayName": "Confluent",
   "description": "Work with Confluent and Apache Kafka® to design, build and run data streaming applications.",
-  "version": "1.2.0-45",
+  "version": "1.2.0-48",
   "homepage": "https://github.com/confluentinc/vscode",
   "publisher": "confluentinc",
   "author": {
@@ -304,6 +304,11 @@
         "title": "Select Flink Compute Pool",
         "category": "Confluent: Flink Artifacts",
         "enablement": "false"
+      },
+      {
+        "command": "confluent.statements.viewstatementsql",
+        "title": "View Statement SQL",
+        "category": "Confluent: Flink Statements"
       },
       {
         "command": "confluent.resources.search",
@@ -859,6 +864,10 @@
         {
           "command": "confluent.resources.search.clear",
           "when": "confluent.resourceSearchApplied"
+        },
+        {
+          "command": "confluent.statements.viewstatementsql",
+          "when": "false"
         },
         {
           "command": "confluent.schemaViewer.viewLocally",

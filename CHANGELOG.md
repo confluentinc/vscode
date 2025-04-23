@@ -6,6 +6,7 @@ All notable changes to this extension will be documented in this file.
 
 ### Added
 
+- Clicking / selecting a Flink statement will open its SQL statement in a read-only document.
 - New actions in the context (right-click) menu for Kafka Clusters & Topics to generate a new
   project. The project generation form will still be opened, and known form fields will be filled in
   automatically for the clicked resource.
