@@ -112,6 +112,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
     status: "template picked",
     templateId: pickedTemplate.spec!.name,
     templateName: pickedTemplate.spec!.display_name,
+    collectionId: pickedTemplate.spec!.template_collection,
     itemType: telemetrySource,
   });
 
@@ -178,6 +179,7 @@ export const scaffoldProjectRequest = async (templateRequestOptions?: PrefilledT
           status: "form submitted",
           templateId: templateSpec.name,
           templateName: templateSpec.display_name,
+          collectionId: templateSpec.template_collection,
           itemType: telemetrySource,
         });
         let res: PostResponse = { success: false, message: "Failed to apply template." };
@@ -233,6 +235,7 @@ export async function applyTemplate(
         status: "cancelled before save",
         templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
+        collectionId: pickedTemplate.spec!.template_collection,
         itemType: telemetrySource,
       });
       vscode.window.showInformationMessage("Project generation cancelled");
@@ -246,6 +249,7 @@ export async function applyTemplate(
       status: "project generated",
       templateId: pickedTemplate.spec!.name,
       templateName: pickedTemplate.spec!.display_name,
+      collectionId: pickedTemplate.spec!.template_collection,
       itemType: telemetrySource,
     });
     // Notify the user that the project was generated successfully
@@ -264,6 +268,7 @@ export async function applyTemplate(
         status: "project folder opened",
         templateId: pickedTemplate.spec!.name,
         templateName: pickedTemplate.spec!.display_name,
+        collectionId: pickedTemplate.spec!.template_collection,
         keepsExistingWindow,
         itemType: telemetrySource,
       });
@@ -408,6 +413,7 @@ export async function handleProjectScaffoldUri(
         logUsage(UserEvent.ProjectScaffoldingAction, {
           status: "URI handling failed",
           templateId: template,
+          collectionId: collection,
           itemType: "uri",
         });
       }
