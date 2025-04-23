@@ -47,9 +47,7 @@ export class ApplyTemplateTool extends BaseLanguageModelTool<IApplyTemplateParam
       const inputPart = new LanguageModelTextPart(
         `id="${options.input.name}"; inputOptions=${JSON.stringify(options.input.options)}`, // Remove unnecessary quotes around JSON.stringify
       );
-      logger.debug("INPUT PART:", inputPart);
       const parsedParameters = parseListTemplatesOutput(inputPart);
-      logger.debug("Parsed parameters:", parsedParameters);
 
       options.input.options = { ...parsedParameters.options, ...options.input.options };
     } catch (error) {
