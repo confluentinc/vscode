@@ -4,6 +4,8 @@ All notable changes to this extension will be documented in this file.
 
 ## Unreleased
 
+## 1.2.0
+
 ### Added
 
 - Clicking / selecting a Flink statement will open its SQL statement in a read-only document.
