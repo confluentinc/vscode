@@ -121,7 +121,7 @@ blocks:
           commands:
             - npm ci --prefer-offline --include=dev
             - npx playwright install
-            - npx gulp build
+            - npx gulp ci
             - npx gulp test
       epilogue:
         always:
