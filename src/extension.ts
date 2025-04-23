@@ -74,6 +74,7 @@ import { sendTelemetryIdentifyEvent } from "./telemetry/telemetry";
 import { getTelemetryLogger } from "./telemetry/telemetryLogger";
 import { getUriHandler } from "./uriHandler";
 import { WriteableTmpDir } from "./utils/file";
+import { RefreshableTreeViewProvider } from "./viewProviders/base";
 import { FlinkArtifactsViewProvider } from "./viewProviders/flinkArtifacts";
 import { FlinkStatementsViewProvider } from "./viewProviders/flinkStatements";
 import { ResourceViewProvider } from "./viewProviders/resources";
@@ -193,19 +194,16 @@ async function _activateExtension(
   topicViewProvider.reset();
   schemasViewProvider.reset();
 
-  // register refresh commands for our primary resource view providers, which will fetch their
-  // associated data from the sidecar instead of relying on any preloaded/cached data in ext. state
-  const refreshCommands: vscode.Disposable[] = [
-    registerCommandWithLogging("confluent.resources.refresh", () => {
-      resourceViewProvider.refresh(true);
-    }),
-    registerCommandWithLogging("confluent.topics.refresh", () => {
-      topicViewProvider.refresh(true);
-    }),
-    registerCommandWithLogging("confluent.schemas.refresh", () => {
-      schemasViewProvider.refresh(true);
-    }),
-  ];
+  // Register refresh commands for our refreshable resource view providers.
+  const refreshCommands: vscode.Disposable[] = [];
+  for (const { instance, kind } of getRefreshableViewProviders()) {
+    refreshCommands.push(
+      registerCommandWithLogging(`confluent.${kind}.refresh`, (): boolean => {
+        instance.refresh(true);
+        return true;
+      }),
+    );
+  }
 
   // Register the project scaffold listener
   const projectScaffoldListener = setProjectScaffoldListener();
@@ -413,6 +411,23 @@ async function setupFeatureFlags(): Promise<void> {
     showExtensionDisabledNotification(disabledMessage);
     throw new Error(disabledMessage);
   }
+}
+
+type NamedRefreshableViewProvider = {
+  instance: RefreshableTreeViewProvider;
+  kind: string;
+};
+
+/** Return view provider + name fragment pairs for auto-registering refresh() commands. */
+export function getRefreshableViewProviders(): NamedRefreshableViewProvider[] {
+  // When adding a new view provider pair, also update the test
+  // mentioning "viewProviderNameFragments" in extension.test.ts.
+  return [
+    { instance: ResourceViewProvider.getInstance(), kind: "resources" },
+    { instance: TopicViewProvider.getInstance(), kind: "topics" },
+    { instance: SchemasViewProvider.getInstance(), kind: "schemas" },
+    { instance: FlinkStatementsViewProvider.getInstance(), kind: "statements" },
+  ];
 }
 
 /** Initialize the StorageManager singleton instance and handle any necessary migrations. */

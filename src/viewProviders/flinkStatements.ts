@@ -35,7 +35,7 @@ export class FlinkStatementsViewProvider
   /**
    * (Re)paint the view. If forceDeepRefresh=true, then will force a deep fetch of the statements.
    */
-  async refresh(): Promise<void> {
+  refresh(): void {
     // Out with any existing subjects.
     this.resourcesInTreeView.clear();
 

@@ -8,6 +8,7 @@ import {
   setExtensionContext,
 } from "./context/extension";
 import { ExtensionContextNotSetError } from "./errors";
+import { getRefreshableViewProviders } from "./extension";
 import { StorageManager } from "./storage";
 import { ResourceManager } from "./storage/resourceManager";
 import { ResourceViewProvider } from "./viewProviders/resources";
@@ -96,6 +97,52 @@ describe("ExtensionContext", () => {
       `${source}: ExtensionContext not set yet`,
     );
   }
+});
+
+describe("Refreshable views tests", () => {
+  before(async () => {
+    await getTestExtensionContext();
+  });
+
+  it("getRefreshableViewProviders returns unique view providers + name pairs", () => {
+    const seenNames = new Set();
+    const seenViewProviderConstructorNames = new Set();
+
+    for (const { instance, kind } of getRefreshableViewProviders()) {
+      assert.ok(
+        !seenNames.has(kind),
+        `Duplicate name "${kind}" found in refreshable view providers`,
+      );
+      seenNames.add(kind);
+
+      assert.ok(
+        !seenViewProviderConstructorNames.has(instance.constructor.name),
+        `Duplicate view provider constructor "${instance.constructor.name}" found`,
+      );
+      seenViewProviderConstructorNames.add(instance.constructor.name);
+    }
+  });
+
+  it("_activateExtension should have registered refresh commands for expected view providers", async () => {
+    const viewProviderNameFragments = ["resources", "topics", "schemas", "statements"];
+
+    const allRegisteredCommands = await vscode.commands.getCommands();
+
+    for (const fragment of viewProviderNameFragments) {
+      const refreshCommand = allRegisteredCommands.find(
+        (cmd) => cmd === `confluent.${fragment}.refresh`,
+      );
+      assert.ok(
+        refreshCommand,
+        `Command confluent.${fragment}.refresh not registered; did activate() run correctly?`,
+      );
+
+      // ensure the refresh command works w/o raising error / was able to return
+      // boolean true result.
+      const result = await vscode.commands.executeCommand(refreshCommand);
+      assert.ok(result, `Command ${refreshCommand} failed to execute cleanly`);
+    }
+  });
 });
 
 describe("Extension manifest tests", () => {
