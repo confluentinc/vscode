@@ -100,20 +100,36 @@ describe("ExtensionContext", () => {
 });
 
 describe("Refreshable views tests", () => {
+  /**
+   * The view controller `kind` values for the refreshable view controllers and should have had
+   * refresh commands registered for them / returned by getRefreshableViewProviders().
+   *
+   * When a new one is added, it's `kind` attribute value should be added to this list.
+   */
+  const expectedKinds = ["resources", "topics", "schemas", "statements"];
+
   before(async () => {
     await getTestExtensionContext();
   });
 
   it("getRefreshableViewProviders returns unique view providers + name pairs", () => {
-    const seenNames = new Set();
-    const seenViewProviderConstructorNames = new Set();
+    const seenKinds = new Set<string>();
+    const seenViewProviderConstructorNames = new Set<string>();
 
-    for (const { instance, kind } of getRefreshableViewProviders()) {
+    const refreshableViewProviders = getRefreshableViewProviders();
+
+    assert.strictEqual(
+      refreshableViewProviders.length,
+      expectedKinds.length,
+      `Expected ${expectedKinds.length} refreshable view providers, but found ${refreshableViewProviders.length}`,
+    );
+
+    for (const instance of refreshableViewProviders) {
       assert.ok(
-        !seenNames.has(kind),
-        `Duplicate name "${kind}" found in refreshable view providers`,
+        !seenKinds.has(instance.kind),
+        `Duplicate kind "${instance.kind}" found in refreshable view providers`,
       );
-      seenNames.add(kind);
+      seenKinds.add(instance.kind);
 
       assert.ok(
         !seenViewProviderConstructorNames.has(instance.constructor.name),
@@ -124,17 +140,15 @@ describe("Refreshable views tests", () => {
   });
 
   it("_activateExtension should have registered refresh commands for expected view providers", async () => {
-    const viewProviderNameFragments = ["resources", "topics", "schemas", "statements"];
-
     const allRegisteredCommands = await vscode.commands.getCommands();
 
-    for (const fragment of viewProviderNameFragments) {
+    for (const kind of expectedKinds) {
       const refreshCommand = allRegisteredCommands.find(
-        (cmd) => cmd === `confluent.${fragment}.refresh`,
+        (cmd) => cmd === `confluent.${kind}.refresh`,
       );
       assert.ok(
         refreshCommand,
-        `Command confluent.${fragment}.refresh not registered; did activate() run correctly?`,
+        `Command confluent.${kind}.refresh not registered; did activate() run correctly?`,
       );
 
       // ensure the refresh command works w/o raising error / was able to return

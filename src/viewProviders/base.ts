@@ -23,6 +23,7 @@ import { filterItems, itemMatchesSearch } from "./search";
 
 /** View providers offering our common refresh() pattern. */
 export interface RefreshableTreeViewProvider {
+  kind: string;
   refresh(forceDeepRefresh?: boolean): void;
 }
 
@@ -33,12 +34,13 @@ export interface RefreshableTreeViewProvider {
  * @template T The primary resource(s) that will be shown in the view.
  */
 export abstract class BaseViewProvider<
-  P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-  T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
-> implements TreeDataProvider<T>
+    P extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+    T extends IResourceBase & IdItem & ISearchable & { environmentId: EnvironmentId },
+  >
+  implements TreeDataProvider<T>, RefreshableTreeViewProvider
 {
-  // , RefreshableTreeViewProvider
   abstract loggerName: string;
+  abstract readonly kind: string;
   logger!: Logger;
 
   /** Disposables belonging to this provider to be added to the extension context during activation,
