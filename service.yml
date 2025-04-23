@@ -11,6 +11,7 @@ codeowners:
   enable: true
 semaphore:
   enable: true
+  status_level: block
   pipeline_enable: false
   triggers: ["branches", "pull_requests"]
 sonarqube:
