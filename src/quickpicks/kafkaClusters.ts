@@ -24,10 +24,24 @@ export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaClus
   );
 }
 
+/** Type for filter function applied to kafka clusters before showing in kafkaClusterQuickPick() */
 export type KafkaClusterFilter = (cluster: KafkaCluster) => boolean;
+
+export type KafkaClusterQuickPickOptions = {
+  /** Overriding string for the quickpick prompt */
+  placeHolder?: string;
+  /** Function to filter the list of Kafka clusters before making quickpick items. */
+  filter?: KafkaClusterFilter;
+};
+
 /**
  * Create and await a quickpick to let the user choose a {@link KafkaCluster}, separated by
  * connection type and environment.
+ *
+ * @param placeHolder The placeholder text to show in the quickpick.
+ * @param filter A filter function to apply to the list of Kafka clusters. If provided, only
+ *               clusters that pass the filter will be shown.
+ * @returns The selected {@link KafkaCluster}, or undefined if the user cancels the quickpick.
  *
  * Example:
  * ---------------------------------- Local
@@ -41,8 +55,7 @@ export type KafkaClusterFilter = (cluster: KafkaCluster) => boolean;
  * direct-cluster1 (direct-cluster-id1)
  */
 export async function kafkaClusterQuickPick(
-  placeHolder: string = "Select a Kafka cluster",
-  filter: KafkaClusterFilter | undefined = undefined,
+  options: KafkaClusterQuickPickOptions = {},
 ): Promise<KafkaCluster | undefined> {
   const environments: Environment[] = [];
 
@@ -104,9 +117,9 @@ export async function kafkaClusterQuickPick(
     kafkaClusters.unshift(focusedCluster!);
   }
 
-  // filter out any clusters that don't match the filter, if provided
-  if (filter) {
-    kafkaClusters = kafkaClusters.filter((cluster) => filter(cluster));
+  // If caller provides a filter, apply it to the list of Kafka clusters.
+  if (options.filter) {
+    kafkaClusters = kafkaClusters.filter((cluster) => options.filter!(cluster));
   }
 
   let lastSeparator: string = "";
@@ -145,7 +158,7 @@ export async function kafkaClusterQuickPick(
 
   // prompt the user to select a Kafka Cluster
   const chosenClusterItem: QuickPickItem | undefined = await window.showQuickPick(clusterItems, {
-    placeHolder: placeHolder,
+    placeHolder: options.placeHolder || "Select a Kafka cluster",
     ignoreFocusOut: true,
   });
   return chosenClusterItem ? clusterIdMap.get(chosenClusterItem.description!) : undefined;

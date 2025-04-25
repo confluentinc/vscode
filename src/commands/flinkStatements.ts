@@ -87,9 +87,9 @@ export async function sumbitFlinkStatementCommand(): Promise<void> {
 
   // 4. Choose the current / default database / aka kafka cluster
   // within the environment.
-  const currentDatabaseKafkaCluster: KafkaCluster | undefined = await kafkaClusterQuickPick(
-    "Select the Kafka cluster to use as the default database for the statement",
-    (cluster: KafkaCluster) => {
+  const currentDatabaseKafkaCluster: KafkaCluster | undefined = await kafkaClusterQuickPick({
+    placeHolder: "Select the Kafka cluster to use as the default database for the statement",
+    filter: (cluster: KafkaCluster) => {
       if (cluster.environmentId !== computePool.environmentId) {
         return false;
       }
@@ -101,7 +101,7 @@ export async function sumbitFlinkStatementCommand(): Promise<void> {
         ccloudCluster.region === computePool.region
       );
     },
-  );
+  });
   if (!currentDatabaseKafkaCluster) {
     logger.error("sumbitFlinkStatementCommand", "currentDatabaseKafkaCluster is undefined");
     return;
