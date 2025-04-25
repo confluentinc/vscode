@@ -296,13 +296,6 @@ export class ResourceManager {
     return clusters.find((cluster) => cluster.id === clusterId) ?? null;
   }
 
-  /**
-   * Delete the list of available local Kafka clusters from extension state.
-   */
-  async deleteLocalKafkaClusters(): Promise<void> {
-    await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS);
-  }
-
   /** Get the cluster for this topic. May return either a ccloud or local cluster */
   async getClusterForTopic(topic: KafkaTopic): Promise<KafkaCluster | null> {
     if (isLocal(topic)) {

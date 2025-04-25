@@ -323,18 +323,6 @@ describe("ResourceManager Kafka cluster methods", function () {
       await getResourceManager().getLocalKafkaCluster("nonexistent-cluster-id");
     assert.strictEqual(missingCluster, null);
   });
-
-  it("LOCAL: deleteLocalKafkaClusters() should correctly delete Kafka clusters", async () => {
-    // set the clusters in the StorageManager before deleting them
-    const resourceManager = getResourceManager();
-    await resourceManager.setLocalKafkaClusters(localClusters);
-    await resourceManager.deleteLocalKafkaClusters();
-    // verify the clusters were deleted correctly
-    const missingClusters = await storageManager.getWorkspaceState(
-      WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
-    );
-    assert.deepStrictEqual(missingClusters, undefined);
-  });
 });
 
 describe("ResourceManager (CCloud) Schema Registry methods", function () {

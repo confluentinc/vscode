@@ -1,9 +1,4 @@
-import {
-  tryToCreateConnection,
-  tryToDeleteConnection,
-  tryToGetConnection,
-  tryToUpdateConnection,
-} from ".";
+import { tryToCreateConnection, tryToGetConnection, tryToUpdateConnection } from ".";
 import { ContainerListRequest, ContainerSummary, Port } from "../../clients/docker";
 import { Connection, ConnectionSpec } from "../../clients/sidecar";
 import { LOCAL_CONNECTION_ID, LOCAL_CONNECTION_SPEC } from "../../constants";
@@ -58,11 +53,6 @@ export async function updateLocalConnection(schemaRegistryUri?: string): Promise
   } else if (JSON.stringify(spec) !== JSON.stringify(currentLocalConnection?.spec)) {
     await tryToUpdateConnection(spec);
   }
-}
-
-/** Delete the existing local {@link Connection} (if it exists). */
-export async function deleteLocalConnection(): Promise<void> {
-  await tryToDeleteConnection(LOCAL_CONNECTION_ID);
 }
 
 /** Discover any running Schema Registry containers and return the URI to include the REST proxy port. */
