@@ -20,7 +20,11 @@ import { registerDiffCommands } from "./commands/diffs";
 import { registerDockerCommands } from "./commands/docker";
 import { registerEnvironmentCommands } from "./commands/environments";
 import { registerExtraCommands } from "./commands/extra";
-import { registerFlinkComputePoolCommands } from "./commands/flinkComputePools";
+import {
+  promptChooseDefaultComputePool,
+  registerFlinkComputePoolCommands,
+  registerFlinkSqlDocumentListener,
+} from "./commands/flinkComputePools";
 import { registerFlinkStatementCommands } from "./commands/flinkStatements";
 import { registerKafkaClusterCommands } from "./commands/kafkaClusters";
 import { registerOrganizationCommands } from "./commands/organizations";
@@ -242,9 +246,10 @@ async function _activateExtension(
   );
   const flinkEnabled = vscode.workspace.getConfiguration().get(ENABLE_FLINK, false);
   let flinkSqlDisposables: vscode.Disposable[] = [
-    // ...registerFlinkComputePoolCommands(),
+    // ...registerFlinkComputePoolCommands(), // Optional: we could register ALL Flink stuff here
     ...statementsViewProvider.disposables,
     ...artifactsViewProvider.disposables,
+    registerFlinkSqlDocumentListener(),
   ];
   const initFlinkSqlFeatures = async (isAuthenticated: boolean) => {
     if (flinkEnabled) {
@@ -253,20 +258,9 @@ async function _activateExtension(
       if (isAuthenticated) {
         logger.info("User authenticated and Flink enabled.");
         try {
-          // Coming soon: initialize the language server here // const languageClient = await initializeLanguageClient();
-          vscode.window
-            .showWarningMessage(
-              "To use CCloud Flink, update your default FlinkSQL settings",
-              "Configure",
-              "Cancel",
-            )
-            .then((selection) => {
-              if (selection === "Configure") {
-                vscode.commands.executeCommand("confluent.flink.configureFlinkDefaults");
-              } else if (selection === "Cancel") {
-                logger.info("Flink SQL configuration cancelled");
-              }
-            });
+          await promptChooseDefaultComputePool();
+          // Coming soon: initialize the language client here
+          // // const languageClient = await initializeLanguageClient();
         } catch (e) {
           logger.error(`Error initializing FlinkSQL defaults: ${e}`);
         }
@@ -276,8 +270,8 @@ async function _activateExtension(
       flinkSqlDisposables = [];
     }
   };
-
   const authListener = ccloudConnected.event(async (isConnected) => {
+    // Coming soon: close down language client connection on log out
     await initFlinkSqlFeatures(isConnected);
   });
   context.subscriptions.push(authListener);
