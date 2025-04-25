@@ -8,6 +8,7 @@ import { ResourceLoader } from "../loaders";
 import { KafkaCluster, LocalKafkaCluster } from "../models/kafkaCluster";
 import * as topicsViewProviders from "../viewProviders/topics";
 import { kafkaClusterQuickPick } from "./kafkaClusters";
+import { QuickPickItemWithValue } from "./types";
 
 describe("kafkaClusterQuickPick", () => {
   let sandbox: sinon.SinonSandbox;
@@ -63,15 +64,19 @@ describe("kafkaClusterQuickPick", () => {
     // Call with no filter lambda.
     await kafkaClusterQuickPick();
 
-    const itemsCalledWith = showQuickPickStub.getCall(0).args[0];
+    const itemsCalledWith: QuickPickItemWithValue<KafkaCluster>[] =
+      showQuickPickStub.getCall(0).args[0];
 
     // one separator for the single environment, two for the two clusters
     assert.strictEqual(itemsCalledWith.length, 3);
     assert.strictEqual(itemsCalledWith[0].kind, QuickPickItemKind.Separator);
 
     // other two items are the clusters. Their description should be the id.
+    // and their .value should be the cluster.
     assert.strictEqual(itemsCalledWith[1].description, clusters[0].id);
+    assert.strictEqual(itemsCalledWith[1].value, clusters[0]);
     assert.strictEqual(itemsCalledWith[2].description, clusters[1].id);
+    assert.strictEqual(itemsCalledWith[2].value, clusters[1]);
   });
 
   it("Filters Kafka clusters based on the provided filter lambda", async () => {
