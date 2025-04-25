@@ -642,12 +642,6 @@ describe("ResourceManager Kafka topic methods", function () {
       WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS,
       "Expected cloud cluster to map to StateKafkaTopics.CCLOUD",
     );
-
-    assert.equal(
-      manager.topicKeyForCluster(TEST_LOCAL_KAFKA_CLUSTER),
-      WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS,
-      "Expected local cluster to map to StateKafkaTopics.LOCAL",
-    );
   });
 });
 

@@ -273,6 +273,20 @@ export class ResourceManager {
   }
 
   /**
+   * Get the list of available local Kafka clusters from extension state.
+   * @returns The list of local Kafka clusters
+   */
+  async getLocalKafkaClusters(): Promise<LocalKafkaCluster[]> {
+    const plainJsonLocalClusters =
+      (await this.storage.getWorkspaceState<LocalKafkaCluster[]>(
+        WorkspaceStorageKeys.LOCAL_KAFKA_CLUSTERS,
+      )) ?? [];
+
+    // Promote each member to be an instance of LocalKafkaCluster, return.
+    return plainJsonLocalClusters.map((cluster) => LocalKafkaCluster.create(cluster));
+  }
+
+  /**
    * Get a specific local Kafka cluster from extension state.
    * @param clusterId The ID of the cluster to get
    * @returns The local Kafka cluster, or null if the cluster is not found
@@ -600,14 +614,6 @@ export class ResourceManager {
   }
 
   /**
-   * Delete all local topics from workspace state, such as when we notice that the local cluster has been deleted.
-   * or we just started up a new local cluster.
-   */
-  async deleteLocalTopics(): Promise<void> {
-    return await this.storage.deleteWorkspaceState(WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS);
-  }
-
-  /**
    * Return the use-with-storage StateKafkaTopics key for this type of cluster.
    *
    * (not private only for testing)
@@ -615,8 +621,6 @@ export class ResourceManager {
   topicKeyForCluster(cluster: KafkaCluster): WorkspaceStorageKeys {
     if (cluster instanceof CCloudKafkaCluster) {
       return WorkspaceStorageKeys.CCLOUD_KAFKA_TOPICS;
-    } else if (cluster instanceof LocalKafkaCluster) {
-      return WorkspaceStorageKeys.LOCAL_KAFKA_TOPICS;
     } else {
       logger.warn("Unknown cluster type", cluster);
       throw new Error("Unknown cluster type");
