@@ -2,7 +2,18 @@ import { ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscod
 import { ConnectionType } from "../clients/sidecar";
 import { IconNames, UTM_SOURCE_VSCODE } from "../constants";
 import { CustomMarkdownString, IdItem } from "./main";
-import { ConnectionId, EnvironmentId, IResourceBase, ISearchable } from "./resource";
+import {
+  ConnectionId,
+  EnvironmentId,
+  IResourceBase,
+  ISearchable,
+  OrganizationId,
+} from "./resource";
+import {
+  SqlV1StatementMetadata,
+  SqlV1StatementSpec,
+  SqlV1StatementStatus,
+} from "../clients/flinkSql";
 
 /**
  * Model for a Flink statement.
@@ -11,23 +22,32 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   connectionId!: ConnectionId;
   connectionType!: ConnectionType;
   environmentId!: EnvironmentId;
+  organizationId!: OrganizationId;
 
   name: string;
-  metadata: FlinkStatementMetadata;
-  status: FlinkStatementStatus;
-  spec: FlinkStatementSpec;
+  metadata: SqlV1StatementMetadata;
+  status: SqlV1StatementStatus;
+  spec: SqlV1StatementSpec;
 
   // TODO: add more properties as needed
 
   constructor(
     props: Pick<
       FlinkStatement,
-      "connectionId" | "connectionType" | "environmentId" | "spec" | "name" | "metadata" | "status"
+      | "connectionId"
+      | "connectionType"
+      | "environmentId"
+      | "organizationId"
+      | "spec"
+      | "name"
+      | "metadata"
+      | "status"
     >,
   ) {
     this.connectionId = props.connectionId;
     this.connectionType = props.connectionType;
     this.environmentId = props.environmentId;
+    this.organizationId = props.organizationId;
     this.spec = props.spec;
     this.name = props.name;
     this.metadata = props.metadata;
@@ -40,11 +60,11 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
 
   /** The flink compute pool that maybe is running/ran the statement. */
   get computePoolId(): string | undefined {
-    return this.spec.computePoolId;
+    return this.spec.compute_pool_id;
   }
 
   get sqlStatement(): string | undefined {
-    return this.spec.sqlStatement;
+    return this.spec.statement;
   }
 
   /**
@@ -64,15 +84,15 @@ export class FlinkStatement implements IResourceBase, IdItem, ISearchable {
   }
 
   get sqlKindDisplay(): string | undefined {
-    return this.status.traits?.sqlKindDisplay;
+    return this.status.traits?.sql_kind?.replace(/_/g, " ");
   }
 
   get createdAt(): Date | undefined {
-    return this.metadata.createdAt;
+    return this.metadata.created_at;
   }
 
   get updatedAt(): Date | undefined {
-    return this.metadata.updatedAt;
+    return this.metadata.updated_at;
   }
 }
 
@@ -85,71 +105,6 @@ export class FlinkStatementMetadata {
   constructor(props: Pick<FlinkStatementMetadata, "createdAt" | "updatedAt">) {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
-  }
-}
-
-/** Model for the `status` subfield of a Flink statement. */
-export class FlinkStatementStatus {
-  phase: string;
-  detail: string | undefined;
-  traits?: FlinkStatementTraits;
-  // TODO refine in the future.
-  scalingStatus!: any;
-
-  constructor(props: Pick<FlinkStatementStatus, "phase" | "detail" | "traits" | "scalingStatus">) {
-    this.phase = props.phase;
-    this.detail = props.detail;
-    this.traits = props.traits;
-    this.scalingStatus = props.scalingStatus;
-  }
-}
-
-export class FlinkStatementTraits {
-  sqlKind?: string; // CREATE_TABLE_AS, SELECT, ...
-  bounded?: boolean;
-  appendOnly?: boolean;
-  schema: any; // todo flesh out
-
-  constructor(props: Pick<FlinkStatementTraits, "sqlKind" | "bounded" | "appendOnly" | "schema">) {
-    this.sqlKind = props.sqlKind;
-    this.bounded = props.bounded;
-    this.appendOnly = props.appendOnly;
-    this.schema = props.schema;
-  }
-
-  /** "CREATE_TABLE_AS" -> "CREATE TABLE AS" */
-  get sqlKindDisplay(): string | undefined {
-    // "FAILED" phase statements may not have a sqlKind, as far as
-    // have observed so far.
-    return this.sqlKind?.replace(/_/g, " ");
-  }
-}
-
-export class FlinkStatementSpec {
-  computePoolId?: string;
-  principal?: string;
-  authorizedPrincipals?: string[];
-  sqlStatement?: string;
-  stopped?: boolean;
-  properties?: Record<string, string>;
-
-  constructor(
-    props: Pick<
-      FlinkStatementSpec,
-      | "computePoolId"
-      | "principal"
-      | "authorizedPrincipals"
-      | "sqlStatement"
-      | "stopped"
-      | "properties"
-    >,
-  ) {
-    this.computePoolId = props.computePoolId;
-    this.principal = props.principal;
-    this.authorizedPrincipals = props.authorizedPrincipals;
-    this.sqlStatement = props.sqlStatement;
-    this.stopped = props.stopped;
-    this.properties = props.properties;
   }
 }
 
@@ -199,21 +154,21 @@ export class FlinkStatementTreeItem extends TreeItem {
    */
   getThemeIcon(): ThemeIcon {
     switch (this.resource.phase.toUpperCase()) {
-      case "FAILED":
-      case "FAILING":
+      case FAILED_PHASE:
+      case FAILING_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_FAILED, STATUS_RED);
-      case "DEGRADED":
+      case DEGRADED_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DEGRADED, STATUS_YELLOW);
-      case "RUNNING":
+      case RUNNING_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_RUNNING, STATUS_GREEN);
-      case "COMPLETED":
+      case COMPLETED_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_COMPLETED, STATUS_GRAY);
-      case "DELETING":
-      case "STOPPING":
+      case DELETING_PHASE:
+      case STOPPING_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_DELETING, STATUS_GRAY);
-      case "STOPPED":
+      case STOPPED_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_STOPPED, STATUS_BLUE);
-      case "PENDING":
+      case PENDING_PHASE:
         return new ThemeIcon(IconNames.FLINK_STATEMENT_STATUS_PENDING, STATUS_BLUE);
       default:
         return new ThemeIcon(IconNames.FLINK_STATEMENT);
@@ -230,3 +185,16 @@ export const STATUS_BLUE = new ThemeColor("notificationsInfoIcon.foreground");
 // there aren't as many green or gray options to choose from without using `chart` colors
 export const STATUS_GREEN = new ThemeColor("charts.green");
 export const STATUS_GRAY = new ThemeColor("charts.lines");
+
+// Statement phases
+export const RUNNING_PHASE = "RUNNING";
+export const DEGRADED_PHASE = "DEGRADED";
+export const COMPLETED_PHASE = "COMPLETED";
+export const STOPPING_PHASE = "STOPPING";
+export const STOPPED_PHASE = "STOPPED";
+export const FAILED_PHASE = "FAILED";
+export const FAILING_PHASE = "FAILING";
+export const DELETING_PHASE = "DELETING";
+export const PENDING_PHASE = "PENDING";
+
+export const TERMINAL_PHASES = [COMPLETED_PHASE, FAILED_PHASE, STOPPED_PHASE];
