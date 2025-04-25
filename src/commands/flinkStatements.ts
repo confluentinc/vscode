@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { registerCommandWithLogging } from ".";
 import { FlinkStatementDocumentProvider } from "../documentProviders/flinkStatement";
+import { extractResponseBody, isResponseError, showErrorNotificationWithButtons } from "../errors";
 import { Logger } from "../logging";
 import { FlinkStatement } from "../models/flinkStatement";
 import { CCloudKafkaCluster, KafkaCluster } from "../models/kafkaCluster";
@@ -121,13 +122,44 @@ export async function sumbitFlinkStatementCommand(): Promise<void> {
   };
   logger.info("sumbitFlinkStatementCommand", `submission: ${JSON.stringify(submission)}`);
 
-  const response = await submitFlinkStatement(submission);
+  try {
+    const response = await submitFlinkStatement(submission);
 
-  logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(response, null, 2)}`);
+    if (response.status.phase === "FAILED") {
+      // Immediate death of the statement.
+      logger.error("sumbitFlinkStatementCommand", `Statement failed: ${response.status.detail}`);
+      await showErrorNotificationWithButtons(
+        `Error submitting statement: ${response.status.detail}`,
+      );
+      return;
+    }
 
-  // Refresh the statements view onto the compute pool in question,
-  // which will then show the new statement.
-  await selectPoolForStatementsViewCommand(computePool);
+    logger.info(`sumbitFlinkStatementCommand response: ${JSON.stringify(response, null, 2)}`);
+
+    // Refresh the statements view onto the compute pool in question,
+    // which will then show the new statement.
+    await selectPoolForStatementsViewCommand(computePool);
+
+    // TODO telemetry event here.
+
+    // TODO indicate to the view to highlight the new statement
+    // (similar to how we did we creating new schema subjects or versions)
+
+    // TODO open up statement results view (Rohit work here)
+  } catch (err) {
+    logger.error("sumbitFlinkStatementCommand", `Error submitting statement: ${err}`);
+
+    if (isResponseError(err) && err.response.status === 400) {
+      // will be array of objs with 'details' human readable messages.
+      const responseErrors: { errors: [{ detail: string }] } = await extractResponseBody(err);
+      logger.error(JSON.stringify(responseErrors, null, 2));
+
+      const errorMessages = responseErrors.errors
+        .map((e: { detail: string }) => e.detail)
+        .join("\n");
+      await showErrorNotificationWithButtons(`Error submitting statement: ${errorMessages}`);
+    }
+  }
 }
 
 export function registerFlinkStatementCommands(): vscode.Disposable[] {
