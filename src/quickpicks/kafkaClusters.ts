@@ -1,4 +1,4 @@
-import { commands, QuickPickItem, QuickPickItemKind, ThemeIcon, window } from "vscode";
+import { commands, QuickPickItemKind, ThemeIcon, window } from "vscode";
 import { CCLOUD_SIGN_IN_BUTTON_LABEL } from "../authn/constants";
 import { IconNames } from "../constants";
 import { ContextValues, getContextValue } from "../context/values";
@@ -8,6 +8,7 @@ import { Environment } from "../models/environment";
 import { KafkaCluster } from "../models/kafkaCluster";
 import { getConnectionLabel, isCCloud, isDirect, isLocal } from "../models/resource";
 import { getTopicViewProvider } from "../viewProviders/topics";
+import { QuickPickItemWithValue } from "./types";
 
 const logger = new Logger("quickpicks.kafkaClusters");
 
@@ -24,9 +25,24 @@ export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaClus
   );
 }
 
+/** Type for filter function applied to kafka clusters before showing in kafkaClusterQuickPick() */
+export type KafkaClusterFilter = (cluster: KafkaCluster) => boolean;
+
+export type KafkaClusterQuickPickOptions = {
+  /** Overriding string for the quickpick prompt */
+  placeHolder?: string;
+  /** Function to filter the list of Kafka clusters before making quickpick items. */
+  filter?: KafkaClusterFilter;
+};
+
 /**
  * Create and await a quickpick to let the user choose a {@link KafkaCluster}, separated by
  * connection type and environment.
+ *
+ * @param placeHolder The placeholder text to show in the quickpick.
+ * @param filter A filter function to apply to the list of Kafka clusters. If provided, only
+ *               clusters that pass the filter will be shown.
+ * @returns The selected {@link KafkaCluster}, or undefined if the user cancels the quickpick.
  *
  * Example:
  * ---------------------------------- Local
@@ -39,11 +55,12 @@ export async function kafkaClusterQuickPickWithViewProgress(): Promise<KafkaClus
  * ---------------------------------- Other: directEnv1
  * direct-cluster1 (direct-cluster-id1)
  */
-export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined> {
+export async function kafkaClusterQuickPick(
+  options: KafkaClusterQuickPickOptions = {},
+): Promise<KafkaCluster | undefined> {
   const environments: Environment[] = [];
 
-  const kafkaClusters: KafkaCluster[] = [];
-  const clusterIdMap: Map<string, KafkaCluster> = new Map();
+  let kafkaClusters: KafkaCluster[] = [];
 
   // TODO: enforce ordering between CCloud loader, Local loader, and Direct loaders?
   for (const loader of ResourceLoader.loaders()) {
@@ -53,9 +70,6 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
       const clusters: KafkaCluster[] = await loader.getKafkaClustersForEnvironmentId(env.id);
       if (clusters.length > 0) {
         kafkaClusters.push(...clusters);
-        for (const cluster of clusters) {
-          clusterIdMap.set(cluster.id, cluster);
-        }
       }
     }
   }
@@ -86,10 +100,6 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     direct: kafkaClusters.filter((cluster) => isDirect(cluster)).length,
   });
 
-  // convert all available Kafka Clusters to quick pick items and keep track of the last env name
-  // used for the separators
-  const clusterItems: QuickPickItem[] = [];
-
   // if there's a focused cluster, push it to the top of the list
   const focusedCluster: KafkaCluster | null = getTopicViewProvider().kafkaCluster;
   const focusedClusterIndex: number = kafkaClusters.findIndex(
@@ -99,6 +109,15 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
     kafkaClusters.splice(focusedClusterIndex, 1);
     kafkaClusters.unshift(focusedCluster!);
   }
+
+  // If caller provides a filter, apply it to the list of Kafka clusters.
+  if (options.filter) {
+    kafkaClusters = kafkaClusters.filter((cluster) => options.filter!(cluster));
+  }
+
+  // convert all available Kafka Clusters to quick pick items and keep track of the last env name
+  // used for the separators
+  const clusterItems: QuickPickItemWithValue<KafkaCluster>[] = [];
 
   let lastSeparator: string = "";
   for (const cluster of kafkaClusters) {
@@ -131,13 +150,15 @@ export async function kafkaClusterQuickPick(): Promise<KafkaCluster | undefined>
       label: cluster.name,
       description: cluster.id,
       iconPath: new ThemeIcon(icon),
+      value: cluster,
     });
   }
 
   // prompt the user to select a Kafka Cluster
-  const chosenClusterItem: QuickPickItem | undefined = await window.showQuickPick(clusterItems, {
-    placeHolder: "Select a Kafka cluster",
-    ignoreFocusOut: true,
-  });
-  return chosenClusterItem ? clusterIdMap.get(chosenClusterItem.description!) : undefined;
+  const chosenClusterItem: QuickPickItemWithValue<KafkaCluster> | undefined =
+    await window.showQuickPick(clusterItems, {
+      placeHolder: options.placeHolder || "Select a Kafka cluster",
+      ignoreFocusOut: true,
+    });
+  return chosenClusterItem ? chosenClusterItem.value : undefined;
 }
