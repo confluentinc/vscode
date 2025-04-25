@@ -214,14 +214,13 @@ class FlinkStatementResultsViewModel extends ViewModel {
     storage.set({ ...storage.get()!, columnVisibilityFlags: toggled });
   }
 
-  /** Handle column resizing events */
+  /** Handles the beginning of column resizing. */
   handleStartResize(event: PointerEvent, index: number) {
     const target = event.target as HTMLElement;
     target.setPointerCapture(event.pointerId);
     // this is half of the computations for the new column width
     // any new clientX added (via move event) provide the new width
-    const widths = this.colWidth();
-    this.resizeColumnDelta(widths[index] - event.clientX);
+    this.resizeColumnDelta(this.colWidth()[index] - event.clientX);
   }
 
   /** Triggered on each move event while resizing, dynamically changes column width. */
@@ -273,21 +272,13 @@ class FlinkStatementResultsViewModel extends ViewModel {
    * because it always takes the rest of the space available.
    */
   colWidth = this.signal(
-    storage.get()?.colWidth ?? this.calculateInitialColumnWidths(),
+    // conveniently expressed in rems (1rem = 16px)
+    // TODO(rohitsanj): This needs to be set dynamically
+    //                  based on the number of columns.
+    storage.get()?.colWidth ?? [13 * 16, 5.5 * 16, 6.5 * 16, 6 * 16],
     // skip extra re-renders if the user didn't move pointer too much
     (a, b) => a.length === b.length && a.every((v, i) => v === b[i]),
   );
-
-  /** Calculate initial column widths - equal width for all columns */
-  private calculateInitialColumnWidths(): number[] {
-    const schema = this.schema();
-    if (!schema?.columns) return [];
-
-    // Set specific widths for different column types
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // 3 rem default for all columns
-    return schema.columns.map((_: ColumnDetails) => 3 * 16);
-  }
 
   /** The value can be set to `style` prop to pass values to CSS. */
   gridTemplateColumns = this.derive(() => {

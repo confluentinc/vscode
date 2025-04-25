@@ -187,7 +187,7 @@
                       class="grid-cell cell-text-overflow"
                       tabindex="-1"
                       data-children="((this.columns())[this.column()]).children(this.result())"
-                      data-prop-title="((this.columns())[this.column()]).description(this.result())"
+                      data-prop-title="((this.columns())[this.column()]).title()"
                     ></td>
                   </template>
                 </tr>
@@ -370,32 +370,6 @@
       }
       .fixed-min-width > * {
         width: 100%;
-      }
-
-      [popover].partition-control {
-        width: fit-content;
-        min-width: 10rem;
-        /* for better alignment with sibling controls */
-        margin-top: 1px;
-        border-color: var(--focus-border);
-        max-height: 20rem;
-        overflow: auto;
-      }
-      .partition-sticky-header {
-        margin: -0.5rem -0.5rem 0 -0.5rem;
-        padding: 0.5rem;
-        background: var(--vscode-editor-background);
-        position: sticky;
-        top: -0.5rem;
-        z-index: 1;
-      }
-      .partition-sticky-footer {
-        margin: 0 -0.5rem -0.5rem -0.5rem;
-        padding: 0.5rem;
-        background: var(--vscode-editor-background);
-        position: sticky;
-        bottom: -0.5rem;
-        z-index: 1;
       }
 
       .dropdown-container > label {

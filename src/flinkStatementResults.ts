@@ -111,6 +111,8 @@ function shouldContinuePolling(
   streamState: "running" | "paused",
   statement: FlinkStatement,
 ): boolean {
+  // TODO(rohitsanj): This will need to be updated to account for system statements
+  //       that are not long-running.
   return streamState === "running" && !isStatementTerminal(statement);
 }
 
@@ -192,7 +194,7 @@ function flinkStatementResultsStartPollingCommand(
   });
 
   os.watch(async (signal) => {
-    // TODO: Statement details need to be re-fetched every Nth fetch
+    // TODO(rohitsanj): Statement details need to be re-fetched every Nth fetch
     //       of the statement results. 4 is what CCloud UI does.
     if (!shouldContinuePolling(state(), statement)) {
       if (timeoutId) {
@@ -220,7 +222,7 @@ function flinkStatementResultsStartPollingCommand(
         });
         // Log size of the results after update
         latestError(null);
-        // TODO: Wait 800 ms before re-triggering this watcher
+        // TODO(rohitsanj): Wait 800 ms before re-triggering this watcher
         latestResult(response);
         notifyUI();
       });
